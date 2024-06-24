@@ -783,6 +783,7 @@ class BaselineTestDriver(object):
         return False
 
     def filter_file_contents(self, lines, abstol=None):
+        _numpy_scalar_re = re.compile(r'np.(int|float)\d+\(([^\)]+)\)')
         filtered = []
         deprecated = None
         for line in lines:
@@ -823,7 +824,14 @@ class BaselineTestDriver(object):
                     i = i.replace("null", "None")
 
                 try:
-                    item_list.append(float(i))
+                    # Numpy 2.x changed the repr for scalars.  Convert
+                    # the new scalar reprs back to the original (which
+                    # were indistinguishable from python floats/ints)
+                    np_match = _numpy_scalar_re.match(i)
+                    if np_match:
+                        item_list.append(float(np_match.group(2)))
+                    else:
+                        item_list.append(float(i))
                 except:
                     item_list.append(i)
                 if tail:

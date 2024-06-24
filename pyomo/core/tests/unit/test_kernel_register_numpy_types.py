@@ -16,7 +16,10 @@ from pyomo.common.log import LoggingIntercept
 # Boolean
 numpy_bool_names = []
 if numpy_available:
-    numpy_bool_names.append('bool_')
+    if numpy.__version__[0] == '2':
+        numpy_bool_names.append('bool')
+    else:
+        numpy_bool_names.append('bool_')
 # Integers
 numpy_int_names = []
 if numpy_available:
