@@ -108,7 +108,7 @@ class LinearProgrammingDual(object):
     def _take_dual(self, model, std_form):
         if len(std_form.objectives) != 1:
             raise ValueError(
-                "Model '%s' has n o objective or multiple active objectives. Cannot "
+                "Model '%s' has no objective or multiple active objectives. Cannot "
                 "take dual with more than one objective!" % model.name
             )
         primal_sense = std_form.objectives[0].sense
@@ -117,53 +117,56 @@ class LinearProgrammingDual(object):
         # This is a csc matrix, so we'll skipping transposing and just work off
         # of the folumns
         A = std_form.A
-        rows = range(A.shape[1])
-        cols = range(A.shape[0])
-        dual.x = Var(cols, domain=NonNegativeReals)
+        dual_rows = range(A.shape[1])
+        dual_cols = range(A.shape[0])
+        dual.x = Var(dual_cols, domain=NonNegativeReals)
         trans_info = dual.private_data()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
-            if primal_sense is minimize and ineq == 1:
+            # maximize is -1 and minimize is +1 and ineq is +1 for <= and -1 for
+            # >=, so we need to change domain to NonPositiveReals if the product
+            # of these is +1.
+            if primal_sense * ineq == 1:
                 dual.x[j].domain = NonPositiveReals
-            elif primal_sense is maximize and ineq == -1:
-                dual.x[j].domain = NonPositiveReals
-            if ineq == 0:
+            elif ineq == 0:
                 # equality
                 dual.x[j].domain = Reals
             trans_info.primal_constraint[dual.x[j]] = primal_cons
             trans_info.dual_var[primal_cons] = dual.x[j]
 
-        dual.constraints = Constraint(rows)
+        dual.constraints = Constraint(dual_rows)
         for i, primal in enumerate(std_form.columns):
             lhs = 0
-            for j in cols:
-                coef = A[j, i]
-                if not coef:
-                    continue
-                elif isclose_const(coef, 1.0):
-                    lhs += dual.x[j]
-                elif isclose_const(coef, -1.0):
-                    lhs -= dual.x[j]
-                else:
-                    lhs += float(A[j, i]) * dual.x[j]
+            for j in range(A.indptr[i], A.indptr[i+1]):
+                coef = A.data[j]
+                primal_row = A.indices[j]
+                lhs += coef * dual.x[primal_row]
 
-            if primal_sense is minimize:
+                # coef = A[j, i]
+                # if not coef:
+                #     continue
+                # elif isclose_const(coef, 1.0):
+                #     lhs += dual.x[j]
+                # elif isclose_const(coef, -1.0):
+                #     lhs -= dual.x[j]
+                # else:
+                #     lhs += float(A[j, i]) * dual.x[j]
+            if primal.domain is Reals:
+                dual.constraints[i] = lhs == std_form.c[0, i]
+            elif primal_sense is minimize:
                 if primal.domain is NonNegativeReals:
-                    dual.constraints[i] = lhs <= float(std_form.c[0, i])
-                elif primal.domain is NonPositiveReals:
-                    dual.constraints[i] = lhs >= float(std_form.c[0, i])
+                    dual.constraints[i] = lhs <= std_form.c[0, i]
+                else:  # primal.domain is NonPositiveReals
+                    dual.constraints[i] = lhs >= std_form.c[0, i]
             else:
                 if primal.domain is NonNegativeReals:
-                    dual.constraints[i] = lhs >= float(std_form.c[0, i])
-                elif primal.domain is NonPositiveReals:
-                    dual.constraints[i] = lhs <= float(std_form.c[0, i])
-            if primal.domain is Reals:
-                dual.constraints[i] = lhs == float(std_form.c[0, i])
+                    dual.constraints[i] = lhs >= std_form.c[0, i]
+                else: # primal.domain is NonPositiveReals
+                    dual.constraints[i] = lhs <= std_form.c[0, i]
             trans_info.dual_constraint[primal] = dual.constraints[i]
             trans_info.primal_var[dual.constraints[i]] = primal
 
-        dual.obj = Objective(
-            expr=sum(std_form.rhs[j] * dual.x[j] for j in cols), sense=-primal_sense
-        )
+        dual.obj = Objective( expr=sum(std_form.rhs[j] * dual.x[j] for j in
+                                       dual_cols), sense=-primal_sense )
 
         return dual
 
