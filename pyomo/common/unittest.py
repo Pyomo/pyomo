@@ -807,6 +807,15 @@ class BaselineTestDriver(object):
             item_list = []
             items = line.strip().split()
             for i in items:
+                # Split up lists, dicts, and sets
+                while i and i[0] in '[{':
+                    item_list.append(i[0])
+                    i = i[1:]
+                tail = []
+                while i and i[-1] in ',:]}':
+                    tail.append(i[-1])
+                    i = i[:-1]
+
                 # A few substitutions to get tests passing on pypy3
                 if ".inf" in i:
                     i = i.replace(".inf", "inf")
@@ -817,6 +826,9 @@ class BaselineTestDriver(object):
                     item_list.append(float(i))
                 except:
                     item_list.append(i)
+                if tail:
+                    tail.reverse()
+                    item_list.extend(tail)
 
             # We can get printed results objects where the baseline is
             # exactly 0 (and omitted) and the test is slightly non-zero.
