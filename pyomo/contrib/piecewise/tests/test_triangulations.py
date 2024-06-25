@@ -19,7 +19,7 @@ from pyomo.contrib.piecewise.triangulations import (
     get_Gn_hamiltonian,
     get_grid_hamiltonian,
 )
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, numpy_available
 from math import factorial
 import itertools
 
@@ -27,6 +27,7 @@ import itertools
 class TestTriangulations(unittest.TestCase):
 
     # check basic functionality for the unordered j1 triangulation.
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_J1_small(self):
         points = [
             [0.5, 0.5],  # 0
@@ -77,6 +78,7 @@ class TestTriangulations(unittest.TestCase):
                 count = len(set(first_simplex).intersection(set(second_simplex)))
                 self.assertEqual(count, dim)  # (n-1)-face has n points
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_J1_ordered_2d(self):
         self.check_J1_ordered(list(itertools.product([0, 1, 2], [1, 2.4, 3])), 3, 2)
         self.check_J1_ordered(
@@ -100,6 +102,7 @@ class TestTriangulations(unittest.TestCase):
             2,
         )
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_J1_ordered_3d(self):
         self.check_J1_ordered(
             list(itertools.product([0, 1, 2], [1, 2.4, 3], [2, 3, 4])), 3, 3
@@ -134,6 +137,7 @@ class TestTriangulations(unittest.TestCase):
             3,
         )
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_J1_ordered_4d_and_above(self):
         self.check_J1_ordered(
             list(

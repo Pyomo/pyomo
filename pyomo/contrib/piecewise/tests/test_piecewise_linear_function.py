@@ -319,6 +319,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         )
         self.check_pw_linear_approximation(m)
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_pw_linear_approx_of_paraboloid_j1(self):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(
@@ -339,6 +340,7 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertEqual(len(m.pw._simplices), 8)
         self.assertEqual(m.pw.triangulation, Triangulation.OrderedJ1)
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_triangulation_override(self):
         m = self.make_model()
         m.pw = PiecewiseLinearFunction(
