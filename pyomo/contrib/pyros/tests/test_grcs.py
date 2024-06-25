@@ -9065,6 +9065,35 @@ class TestPreprocessModelData(unittest.TestCase):
         self.assertEqual(ep.second_stage_variables, [])
         self.assertEqual(ep.state_variables, [ublk.y1])
 
+        working_model = model_data.working_model
+        self.assertEqual(
+            ComponentSet(working_model.all_nonadjustable_variables),
+            ComponentSet(
+                [
+                    ublk.x1, ublk.x2, ublk.z1, ublk.z2,
+                    ublk.z3, ublk.z4, ublk.z5, ublk.y2,
+                ]
+                + [working_model.epigraph_var]
+            ),
+        )
+        self.assertEqual(
+            ComponentSet(working_model.all_variables),
+            ComponentSet(
+                [
+                    ublk.x1,
+                    ublk.x2,
+                    ublk.z1,
+                    ublk.z2,
+                    ublk.z3,
+                    ublk.z4,
+                    ublk.z5,
+                    ublk.y1,
+                    ublk.y2,
+                ]
+                + [working_model.epigraph_var]
+            ),
+        )
+
     @parameterized.expand([
         ["affine", 1],
         ["quadratic", 2],
@@ -9098,6 +9127,35 @@ class TestPreprocessModelData(unittest.TestCase):
         self.assertEqual(
             ComponentSet(ep.state_variables),
             ComponentSet([ublk.y1]),
+        )
+        working_model = model_data.working_model
+        self.assertEqual(
+            ComponentSet(working_model.all_nonadjustable_variables),
+            ComponentSet(
+                [ublk.x1, ublk.x2, ublk.z1, ublk.z2, ublk.z4, ublk.y2]
+                + [working_model.epigraph_var]
+                + list(working_model.decision_rule_var_0.values())
+                + list(working_model.decision_rule_var_1.values())
+            ),
+        )
+        self.assertEqual(
+            ComponentSet(working_model.all_variables),
+            ComponentSet(
+                [
+                    ublk.x1,
+                    ublk.x2,
+                    ublk.z1,
+                    ublk.z2,
+                    ublk.z3,
+                    ublk.z4,
+                    ublk.z5,
+                    ublk.y1,
+                    ublk.y2,
+                ]
+                + [working_model.epigraph_var]
+                + list(working_model.decision_rule_var_0.values())
+                + list(working_model.decision_rule_var_1.values())
+            ),
         )
 
     @parameterized.expand([
