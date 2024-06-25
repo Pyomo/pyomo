@@ -1365,7 +1365,9 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         return self._filter
 
     def add(self, *values):
-        return self.update(values)
+        N = len(self)
+        self.update(values)
+        return len(self) - N
 
     def _update_impl(self, values):
         self._values.update(values)
@@ -1426,14 +1428,12 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         if self._validate is not None:
             val_iter = self._cb_validate(self._validate, self.parent_block(), val_iter)
 
-        nOrig = len(self)
         # We wrap this check in a try-except because some values
         #  (like lists) are not hashable and can raise exceptions.
         try:
             self._update_impl(val_iter)
         except Set.End:
             pass
-        return len(self) - nOrig
 
     def pop(self):
         return self._values.pop()
@@ -1854,7 +1854,7 @@ class InsertionOrderSetData(OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (type(values).__name__,)
             )
-        return super().update(values)
+        super().update(values)
 
 
 class _InsertionOrderSetData(metaclass=RenamedClass):
