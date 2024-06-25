@@ -9159,12 +9159,16 @@ class TestPreprocessModelData(unittest.TestCase):
         )
 
     @parameterized.expand([
-        ["affine", 1],
+        ["affine_nominal", 1, "nominal"],
+        ["affine_worst_case", 1, "worst_case"],
         # eq1 doesn't get reformulated in coefficient matching
         #  as the polynomial degree is too high
-        ["quadratic", 2],
+        ["quadratic_nominal", 2, "nominal"],
+        ["quadratic_worst_case", 2, "worst_case"],
     ])
-    def test_preprocessor_constraint_partitioning_nonstatic_dr(self, name, dr_order):
+    def test_preprocessor_constraint_partitioning_nonstatic_dr(
+            self, name, dr_order, obj_focus,
+            ):
         """
         Test preprocessor partitions constraints as expected
         for nonstatic DR.
@@ -9173,7 +9177,7 @@ class TestPreprocessModelData(unittest.TestCase):
         om = model_data.original_model
         config = Bunch(
             uncertain_params=[om.q],
-            objective_focus=ObjectiveType.worst_case,
+            objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
@@ -9185,7 +9189,10 @@ class TestPreprocessModelData(unittest.TestCase):
         ublk = working_model.user_model
         self.assertEqual(
             ComponentSet(working_model.effective_first_stage_inequality_cons),
-            ComponentSet([ublk.ineq1, ublk.ineq2]),
+            ComponentSet(
+                [ublk.ineq1, ublk.ineq2]
+                + ([working_model.epigraph_con] if obj_focus == "nominal" else [])
+            ),
         )
         self.assertEqual(
             ComponentSet(working_model.effective_first_stage_equality_cons),
@@ -9199,20 +9206,22 @@ class TestPreprocessModelData(unittest.TestCase):
         )
         self.assertEqual(
             ComponentSet(working_model.effective_performance_inequality_cons),
-            ComponentSet([
-                ublk.find_component("var_x1_uncertain_upper_bound_con"),
-                ublk.find_component("var_z1_uncertain_upper_bound_con"),
-                ublk.find_component("var_z2_uncertain_lower_bound_con"),
-                ublk.find_component("var_z3_certain_upper_bound_con"),
-                ublk.find_component("var_z3_uncertain_lower_bound_con"),
-                ublk.find_component("var_z5_certain_lower_bound_con"),
-                ublk.find_component("var_y1_certain_lower_bound_con"),
-                ublk.find_component("con_ineq1_upper_bound_con"),
-                ublk.find_component("con_ineq3_lower_bound_con"),
-                ublk.find_component("con_ineq3_upper_bound_con"),
-                ublk.ineq4,
-                working_model.epigraph_con,
-            ]),
+            ComponentSet(
+                [
+                    ublk.find_component("var_x1_uncertain_upper_bound_con"),
+                    ublk.find_component("var_z1_uncertain_upper_bound_con"),
+                    ublk.find_component("var_z2_uncertain_lower_bound_con"),
+                    ublk.find_component("var_z3_certain_upper_bound_con"),
+                    ublk.find_component("var_z3_uncertain_lower_bound_con"),
+                    ublk.find_component("var_z5_certain_lower_bound_con"),
+                    ublk.find_component("var_y1_certain_lower_bound_con"),
+                    ublk.find_component("con_ineq1_upper_bound_con"),
+                    ublk.find_component("con_ineq3_lower_bound_con"),
+                    ublk.find_component("con_ineq3_upper_bound_con"),
+                    ublk.ineq4,
+                ]
+                + ([working_model.epigraph_con] if obj_focus == "worst_case" else [])
+            ),
         )
         self.assertEqual(
             ComponentSet(working_model.effective_performance_equality_cons),
