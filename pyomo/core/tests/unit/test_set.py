@@ -3763,8 +3763,8 @@ class TestSet(unittest.TestCase):
             m = ConcreteModel()
             m.I = Set(initialize={1, 3, 2, 4})
             ref = (
-                "Initializing ordered Set I with a "
-                "fundamentally unordered data source (type: set)."
+                'Calling set_value() on an insertion order Set with a fundamentally '
+                'unordered data source (type: set).'
             )
             self.assertIn(ref, output.getvalue())
         self.assertEqual(m.I.sorted_data(), (1, 2, 3, 4))
@@ -3877,12 +3877,13 @@ class TestSet(unittest.TestCase):
         m.I.add(4)
         _verify(m.I, [1, 3, 2, 4])
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.I.add(3)
-        self.assertEqual(
-            output.getvalue(), "Element 3 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
         _verify(m.I, [1, 3, 2, 4])
 
         m.I.remove(3)
@@ -3959,12 +3960,13 @@ class TestSet(unittest.TestCase):
         m.I.add(4)
         _verify(m.I, [1, 2, 3, 4])
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.I.add(3)
-        self.assertEqual(
-            output.getvalue(), "Element 3 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
         _verify(m.I, [1, 2, 3, 4])
 
         m.I.remove(3)
@@ -4052,12 +4054,13 @@ class TestSet(unittest.TestCase):
         m.I.add(4)
         _verify(m.I, [1, 2, 3, 4])
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.I.add(3)
-        self.assertEqual(
-            output.getvalue(), "Element 3 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
         _verify(m.I, [1, 2, 3, 4])
 
         m.I.remove(3)
@@ -4248,24 +4251,23 @@ class TestSet(unittest.TestCase):
         self.assertIn(1, m.I)
         self.assertIn(1.0, m.I)
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.I.add(1))
-        self.assertEqual(
-            output.getvalue(), "Element 1 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.I.add((1,)))
-        self.assertEqual(
-            output.getvalue(), "Element (1,) already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
 
         m.J = Set()
         # Note that pypy raises a different exception from cpython
         err = (
-            r"Unable to insert '{}' into Set J:\n\tTypeError: "
             r"((unhashable type: 'dict')|('dict' objects are unhashable))"
         )
         with self.assertRaisesRegex(TypeError, err):
@@ -4275,9 +4277,9 @@ class TestSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.J.add(1))
-        self.assertEqual(
-            output.getvalue(), "Element 1 already exists in Set J; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
 
         def _l_tri(model, i, j):
             self.assertIs(model, m)
