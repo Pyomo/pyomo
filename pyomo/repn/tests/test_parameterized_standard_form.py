@@ -13,7 +13,14 @@
 from pyomo.common.dependencies import numpy as np, scipy_available, numpy_available
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Constraint, Var
+from pyomo.environ import (
+    ConcreteModel,
+    Constraint,
+    inequality,
+    Objective,
+    maximize,
+    Var,
+)
 from pyomo.core.expr import (
     MonomialTermExpression,
     NegationExpression,
@@ -76,17 +83,26 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(A.todense() == dense))
         self.assertTrue(np.all(A.tocsc().todense() == dense))
 
+        A = _CSRMatrix([5, 6, 7, 2, 1, 1.5], [0, 1, 1, 2, 3, 1], [0, 2, 4, 5, 6], 4, 4)
+        dense = np.array([[5, 6, 0, 0], [0, 7, 2, 0], [0, 0, 0, 1], [0, 1.5, 0, 0]])
+        self.assertTrue(np.all(A.todense() == dense))
+        self.assertTrue(np.all(A.tocsc().todense() == dense))
+
 
 def assertExpressionArraysEqual(self, A, B):
     self.assertEqual(A.shape, B.shape)
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
+            print(A[i, j])
+            print(B[i, j])
             assertExpressionsEqual(self, A[i, j], B[i, j])
 
 
 def assertExpressionListsEqual(self, A, B):
     self.assertEqual(len(A), len(B))
     for i, a in enumerate(A):
+        print(a)
+        print(B[i])
         assertExpressionsEqual(self, a, B[i])
 
 
@@ -217,3 +233,51 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         self.assertEqual(repn.rows, [(m.d, 1), (m.c, -1)])
         self.assertEqual(repn.columns, [m.y[3], m.x, m.y[1]])
 
+    def test_nonnegative_vars(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([0, 1, 3], bounds=lambda m, i: (-1 * (i % 2) * 5, 10 - 12 * (i // 2)))
+        m.data = Var([1, 2])
+        m.more_data = Var()
+        m.c = Constraint(expr=m.data[1] ** 2 * m.x + 2 * m.y[1] >= 3 * m.more_data)
+        m.d = Constraint(expr=m.y[1] + 4 * m.y[3] <= 5 + m.data[2])
+        m.e = Constraint(expr=inequality(-2, m.y[0] + 1 + 6 * m.y[1], 7))
+        m.f = Constraint(expr=m.x + (m.data[2] + m.data[1] ** 3) * m.y[0] + 2 == 10)
+        m.o = Objective([1, 3], rule=lambda m, i: m.x + i * 5 * m.more_data * m.y[i])
+        m.o[1].sense = maximize
+
+        col_order = [m.x, m.y[0], m.y[1], m.y[3]]
+        repn = ParameterizedLinearStandardFormCompiler().write(
+            m, wrt=[m.data, m.more_data], nonnegative_vars=True, column_order=col_order
+        )
+
+        ref = np.array(
+            [
+                [
+                    NegationExpression((ProductExpression((-1, m.data[1] ** 2)),)),
+                    ProductExpression((-1, m.data[1] ** 2)),
+                    0,
+                    2,
+                    -2,
+                    0,
+                ],
+                [0, 0, 0, -1, 1, -4],
+                [0, 0, 1, -6, 6, 0],
+                [0, 0, -1, 6, -6, 0],
+                [-1, 1, m.data[2] + m.data[1] ** 3, 0, 0, 0],
+                [1, -1, -(m.data[2] + m.data[1] ** 3), 0, 0, 0],
+            ]
+        )
+        assertExpressionArraysEqual(self, repn.A.todense(), ref)
+        assertExpressionListsEqual(
+            self,
+            repn.b,
+            [
+                -3 * m.more_data,
+                NegationExpression((ProductExpression((-1, 5 + m.data[2])),)),
+                6,
+                3,
+                8,
+                -8,
+            ],
+        )
