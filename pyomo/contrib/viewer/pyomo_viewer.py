@@ -41,7 +41,7 @@ except NameError:
         model
     except NameError:
         model=None
-    ui, model = get_mainwindow(model=model, ask_close=False)
+    ui = get_mainwindow(model=model, ask_close=False)
 ui.setWindowTitle('Pyomo Model Viewer -- {}')"""
 
     _kernel_cmd_hide_ui = """try:
