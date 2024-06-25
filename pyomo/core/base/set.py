@@ -1383,6 +1383,9 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         self.clear()
         self.update(val)
 
+    def _initialize(self, val):
+        self.update(val)
+
     def update(self, values):
         # _values was initialized above...
         #
@@ -1821,6 +1824,16 @@ class InsertionOrderSetData(OrderedSetData):
     """
 
     __slots__ = ()
+
+    def _initialize(self, val):
+        if type(val) in Set._UnorderedInitializers:
+            logger.warning(
+                "Initializing ordered Set %s with "
+                "a fundamentally unordered data source (type: %s).  "
+                "This WILL potentially lead to nondeterministic behavior "
+                "in Pyomo" % (self.name, type(val).__name__)
+            )
+        super().update(val)
 
     def set_value(self, val):
         if type(val) in Set._UnorderedInitializers:
@@ -2309,7 +2322,7 @@ class Set(IndexedComponent):
                     "Set rule or initializer returned None instead of Set.Skip"
                 )
 
-            obj.set_value(_values)
+            obj._initialize(_values)
         return obj
 
     @staticmethod

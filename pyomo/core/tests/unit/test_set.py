@@ -3763,7 +3763,7 @@ class TestSet(unittest.TestCase):
             m = ConcreteModel()
             m.I = Set(initialize={1, 3, 2, 4})
             ref = (
-                'Calling set_value() on an insertion order Set with a fundamentally '
+                'Initializing ordered Set I with a fundamentally '
                 'unordered data source (type: set).'
             )
             self.assertIn(ref, output.getvalue())
