@@ -54,7 +54,7 @@ from pyomo.contrib.pyros.util import (
     standardize_inequality_constraints,
     standardize_equality_constraints,
     standardize_active_objective,
-    declare_perstage_objective_summands,
+    declare_objective_expressions,
     get_summands,
     new_add_decision_rule_constraints,
     new_add_decision_rule_variables,
@@ -8146,7 +8146,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
 
         return model_data
 
-    def test_declare_perstage_objective_summands(self):
+    def test_declare_objective_expressions(self):
         """
         Test method for identification/declaration
         of per-stage objective summands.
@@ -8155,7 +8155,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         working_model = model_data.working_model
         m = model_data.working_model.user_model
 
-        declare_perstage_objective_summands(working_model, m.obj1)
+        declare_objective_expressions(working_model, m.obj1)
         assertExpressionsEqual(
             self,
             working_model.first_stage_objective.expr,
@@ -8172,7 +8172,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
             m.obj1.expr,
         )
 
-    def test_declare_perstage_objective_summands_maximization_obj(self):
+    def test_declare_objective_expressions_maximization_obj(self):
         """
         Test per-stage objective summand expressions are constructed
         as expected when the objective is of a maximization sense.
@@ -8182,7 +8182,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         m = model_data.working_model.user_model
         m.obj1.sense = maximize
 
-        declare_perstage_objective_summands(working_model, m.obj1)
+        declare_objective_expressions(working_model, m.obj1)
         assertExpressionsEqual(
             self,
             working_model.first_stage_objective.expr,
@@ -8201,8 +8201,8 @@ class TestStandardizeActiveObjective(unittest.TestCase):
 
     def test_standardize_active_obj(self):
         """
-        Test method for identification/declaration
-        of per-stage objective summands.
+        Test preprocesing step for standardization
+        of the active model objective.
         """
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model

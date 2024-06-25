@@ -2032,7 +2032,7 @@ def get_summands(expr):
     return summands
 
 
-def declare_perstage_objective_summands(working_model, objective, sense=minimize):
+def declare_objective_expressions(working_model, objective, sense=minimize):
     """
     Identify the per-stage summands of an objective of interest,
     according to the user-based variable partitioning.
@@ -2138,7 +2138,7 @@ def standardize_active_objective(model_data):
     model_data.active_obj_original_sense = active_obj.sense
 
     # per-stage summands will be useful for reporting later
-    declare_perstage_objective_summands(
+    declare_objective_expressions(
         working_model=working_model,
         objective=active_obj,
     )
