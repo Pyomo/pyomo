@@ -8768,8 +8768,7 @@ class TestCoefficientMatching(unittest.TestCase):
             expr=m.u**2 * (m.x2 - 1)
             + m.u * (m.x1**3 + 0.5)
             - 5 * m.u * m.x1 * m.x2
-            + m.u * (m.x1 + 2)
-            == 0
+            == - m.u * (m.x1 + 2)
         )
 
         working_model.uncertain_params = [m.u]

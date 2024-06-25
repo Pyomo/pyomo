@@ -2441,9 +2441,6 @@ def perform_coefficient_matching(model_data, config):
 
     performance_eq_cons = working_model.effective_performance_equality_cons.copy()
     for con in performance_eq_cons:
-        # check equality constraint standardization
-        assert con.upper == 0
-
         vars_in_con = ComponentSet(identify_variables(con.expr))
         mutable_params_in_con = ComponentSet(identify_mutable_parameters(con.expr))
 
