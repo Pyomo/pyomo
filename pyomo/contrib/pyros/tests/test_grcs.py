@@ -59,6 +59,8 @@ from pyomo.contrib.pyros.util import (
     new_add_decision_rule_constraints,
     new_add_decision_rule_variables,
     perform_coefficient_matching,
+    VariablePartitioning,
+    new_preprocess_model_data,
 )
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
@@ -122,12 +124,15 @@ from pyomo.environ import (
 )
 import logging
 
+from pyomo.common.dependencies import attempt_import
+parameterized, param_available = attempt_import('parameterized')
 
 logger = logging.getLogger(__name__)
 
 
-if not (numpy_available and scipy_available):
-    raise unittest.SkipTest('PyROS unit tests require numpy and scipy')
+if not (numpy_available and scipy_available and param_available):
+    raise unittest.SkipTest('PyROS unit tests require parameterized, numpy, and scipy')
+parameterized = parameterized.parameterized
 
 # === Config args for testing
 nlp_solver = 'ipopt'
@@ -8932,6 +8937,264 @@ class TestCoefficientMatching(unittest.TestCase):
                 r"One reason for this.*equality constraint 'user_model\.eq_con'.*"
             )
         )
+
+
+class TestPreprocessModelData(unittest.TestCase):
+    """
+    Test the PyROS preprocessor.
+    """
+    def build_test_model_data(self):
+        """
+        Build model data object for the preprocessor.
+        """
+        model_data = Bunch()
+        model_data.original_model = m = ConcreteModel()
+
+        # PARAMS: one uncertain, one certain
+        m.p = Param(initialize=2, mutable=True)
+        m.q = Param(initialize=4.5, mutable=True)
+
+        # first-stage variables
+        m.x1 = Var(bounds=(0, m.q), initialize=1)
+        m.x2 = Var(domain=NonNegativeReals, bounds=[m.p, m.p], initialize=m.p)
+
+        # second-stage variables
+        m.z1 = Var(domain=RangeSet(2, 4, 0), bounds=[-m.p, m.q], initialize=2)
+        m.z2 = Var(bounds=(-2 * m.q ** 2, None), initialize=1)
+        m.z3 = Var(bounds=(-m.q, 0), initialize=0)
+        m.z4 = Var(initialize=5)
+        # the bounds produce an equality constraint
+        # that then leads to coefficient matching.
+        # problem is robust infeasible if DR static, else
+        # matching constraints are added
+        m.z5 = Var(domain=NonNegativeReals, bounds=(m.q, m.q))
+
+        # state variables
+        m.y1 = Var(domain=NonNegativeReals, initialize=0)
+        m.y2 = Var(initialize=10)
+        # note: y3 out-of-scope, as it will not appear in the active
+        #       Objective and Constraint objects
+        m.y3 = Var(domain=RangeSet(0, 1, 0), bounds=(0.2, 0.5))
+
+        # fix some variables
+        m.z4.fix()
+        m.y2.fix()
+
+        # EQUALITY CONSTRAINTS
+        # this will be reformulated by coefficient matching
+        m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
+        # ranged constraints with identical bounds are considered equalities
+        # this makes z1 nonadjustable
+        m.eq2 = Constraint(expr=m.x1 - m.z1 == 0)
+        # pretriangular: makes z2 nonadjustable, so first-stage
+        m.eq3 = Constraint(expr=m.x1 ** 2 + m.x2 + m.p * m.z2 == m.p)
+        # performance equality
+        m.eq4 = Constraint(expr=m.z3 + m.y1 == m.q)
+
+        # INEQUALITY CONSTRAINTS
+        # since x1, z1 nonadjustable, LB is first-stage. but UB is performance
+        m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
+        # two first-stage inequalities
+        m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
+        # though the bounds are structurally equal, they are not
+        # identical objects, so this constitutes two performance inequalities
+        # note: these inequalities redundant, as collectively these constraints
+        # are mathematically identical to eq4
+        m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
+        # performance inequality. trivially satisfied/infeasible,
+        # since y2 is fixed
+        m.ineq4 = Constraint(expr=-m.q <= m.y2 ** 2 + log(m.y2))
+
+        # out of scope: deactivated
+        m.ineq5 = Constraint(expr=m.y3 <= m.q)
+        m.ineq5.deactivate()
+
+        # OBJECTIVE
+        # contains a rich combination of first-stage and second-stage terms
+        m.obj = Objective(
+            expr=(
+                m.p ** 2
+                + 2 * m.p * m.q
+                + log(m.x1)
+                + 2 * m.p * m.x1
+                + m.q ** 2 * m.x1
+                + m.p ** 3 * (m.z1 + m.z2 + m.y1)
+                + m.z4
+                + m.z5
+            ),
+        )
+
+        # set up the var partitioning
+        user_var_partitioning = VariablePartitioning(
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[m.z1, m.z2, m.z3, m.z4, m.z5],
+            # note: y3 out of scope, so excluded
+            state_variables=[m.y1, m.y2],
+        )
+
+        return model_data, user_var_partitioning
+
+    def test_preprocessor_effective_var_partitioning_static_dr(self):
+        """
+        Test preprocessor repartitions the variables
+        as expected.
+        """
+        # setup
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType.worst_case,
+            decision_rule_order=0,
+            progress_logger=logger,
+        )
+        new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+        ep = model_data.working_model.effective_var_partitioning
+        ublk = model_data.working_model.user_model
+        self.assertEqual(
+            ComponentSet(ep.first_stage_variables),
+            ComponentSet([
+                # all second-stage variables are nonadjustable
+                # due to the DR
+                ublk.x1, ublk.x2, ublk.z1, ublk.z2,
+                ublk.z3, ublk.z4, ublk.z5, ublk.y2,
+            ]),
+        )
+        self.assertEqual(ep.second_stage_variables, [])
+        self.assertEqual(ep.state_variables, [ublk.y1])
+
+    @parameterized.expand([
+        ["affine", 1],
+        ["quadratic", 2],
+    ])
+    def test_preprocessor_effective_var_partitioning_nonstatic_dr(self, name, dr_order):
+        """
+        Test preprocessor repartitions the variables
+        as expected.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType.worst_case,
+            decision_rule_order=dr_order,
+            progress_logger=logger,
+        )
+        new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+        ep = model_data.working_model.effective_var_partitioning
+        ublk = model_data.working_model.user_model
+        self.assertEqual(
+            ComponentSet(ep.first_stage_variables),
+            ComponentSet([ublk.x1, ublk.x2, ublk.z1, ublk.z2, ublk.z4, ublk.y2]),
+        )
+        self.assertEqual(
+            ComponentSet(ep.second_stage_variables),
+            ComponentSet([ublk.z3, ublk.z5]),
+        )
+        self.assertEqual(
+            ComponentSet(ep.state_variables),
+            ComponentSet([ublk.y1]),
+        )
+
+    @parameterized.expand([
+        ["affine", 1],
+        # eq1 doesn't get reformulated in coefficient matching
+        #  as the polynomial degree is too high
+        ["quadratic", 2],
+    ])
+    def test_preprocessor_constraint_partitioning_nonstatic_dr(self, name, dr_order):
+        """
+        Test preprocessor partitions constraints as expected
+        for nonstatic DR.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType.worst_case,
+            decision_rule_order=dr_order,
+            progress_logger=logger,
+        )
+        new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+
+        working_model = model_data.working_model
+        ublk = working_model.user_model
+        self.assertEqual(
+            ComponentSet(working_model.effective_first_stage_inequality_cons),
+            ComponentSet([ublk.ineq1, ublk.ineq2]),
+        )
+        self.assertEqual(
+            ComponentSet(working_model.effective_first_stage_equality_cons),
+            ComponentSet(
+                [
+                    ublk.eq2,
+                    ublk.eq3,
+                    *working_model.coefficient_matching_conlist.values(),
+                ]
+            ),
+        )
+        self.assertEqual(
+            ComponentSet(working_model.effective_performance_inequality_cons),
+            ComponentSet([
+                ublk.find_component("var_x1_uncertain_upper_bound_con"),
+                ublk.find_component("var_z1_uncertain_upper_bound_con"),
+                ublk.find_component("var_z2_uncertain_lower_bound_con"),
+                ublk.find_component("var_z3_certain_upper_bound_con"),
+                ublk.find_component("var_z3_uncertain_lower_bound_con"),
+                ublk.find_component("var_z5_certain_lower_bound_con"),
+                ublk.find_component("var_y1_certain_lower_bound_con"),
+                ublk.find_component("con_ineq1_upper_bound_con"),
+                ublk.find_component("con_ineq3_lower_bound_con"),
+                ublk.find_component("con_ineq3_upper_bound_con"),
+                ublk.ineq4,
+                working_model.epigraph_con,
+            ]),
+        )
+        self.assertEqual(
+            ComponentSet(working_model.effective_performance_equality_cons),
+            # eq1 doesn't get reformulated in coefficient matching
+            # when DR order is 2 as the polynomial degree is too high
+            ComponentSet([ublk.eq4] + ([ublk.eq1] if dr_order == 2 else [])),
+            msg=(
+                "Performance equality constraints not as expected for "
+                f"{dr_order=}."
+            ),
+        )
+
+    @parameterized.expand([
+        ["static", 0, True],
+        ["affine", 1, False],
+        ["quadratic", 2, False],
+    ])
+    def test_preprocessor_coefficient_matching(
+            self, name, dr_order, expected_robust_infeas,
+            ):
+        """
+        Check preprocessor robust infeasibility return status.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType.worst_case,
+            decision_rule_order=dr_order,
+            progress_logger=logger,
+        )
+
+        # static DR, problem should be robust infeasible
+        # due to the coefficient matching constraints derived
+        # from bounds on z5
+        robust_infeasible = new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+        self.assertIsInstance(robust_infeasible, bool)
+        self.assertEqual(robust_infeasible, expected_robust_infeas)
 
 
 if __name__ == "__main__":
