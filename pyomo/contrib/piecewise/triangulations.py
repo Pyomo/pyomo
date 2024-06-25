@@ -436,10 +436,10 @@ def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
 def get_one_j1_simplex(v_0, pi, sign, dim, points_map):
     simplex = []
     current = list(v_0)
-    simplex.append(points_map[*current])
+    simplex.append(points_map[tuple(current)])
     for i in range(0, dim):
         current[pi[i] - 1] += sign[pi[i] - 1]
-        simplex.append(points_map[*current])
+        simplex.append(points_map[tuple(current)])
     return sorted(simplex)
 
 
