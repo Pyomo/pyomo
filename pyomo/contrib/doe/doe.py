@@ -522,7 +522,7 @@ class DesignOfExperiments_:
             direction=pyo.Suffix.LOCAL,
         )
         
-        # Central finite difference definition
+        # TODO: move to somewhere else (constructor?)
         self.fd_formula = FiniteDifferenceStep(self.fd_formula)
         
         if self.fd_formula == FiniteDifferenceStep.central:
@@ -544,6 +544,12 @@ class DesignOfExperiments_:
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
             b.transfer_attributes_from(self.experiment.get_labeled_model().clone())
+            
+            # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
+            if self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
+                if s == 0:
+                    return
+            
             param = mod.parameter_scenarios[s]
             
             # Grabbing the location of the parameter without the "base_model" precursor
@@ -552,11 +558,10 @@ class DesignOfExperiments_:
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
                 diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
-            # Perturbation at scenario 0 for forward/backward is nothing (stationary case)
             elif self.fd_formula == FiniteDifferenceStep.backward:
-                diff = self.step * -1 * (0 != s)  # Backward always negative perturbation
+                diff = self.step * -1  # Backward always negative perturbation
             elif self.fd_formula == FiniteDifferenceStep.forward:
-                diff = self.step * (0 != s)  # Forward always positive
+                diff = self.step # Forward always positive
             else:
                 diff = 0
                 pass
