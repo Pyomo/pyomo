@@ -76,7 +76,7 @@ class DesignOfExperiments_:
         solver=None,
         prior_FIM=None,
         args=None,
-        only_compute_fim_lower=True,
+        only_compute_fim_lower=False,
         logger_level=logging.WARNING,
     ):
         """
@@ -112,7 +112,7 @@ class DesignOfExperiments_:
         assert callable(getattr(experiment, 'get_labeled_model')), 'The experiment object must have a ``get_labeled_model`` function'
         
         self.experiment = experiment
-        self.formula = FiniteDifferenceStep(fd_formula)
+        self.fd_formula = FiniteDifferenceStep(fd_formula)
 
         # check if user-defined solver is given
         if solver:
@@ -294,7 +294,6 @@ class DesignOfExperiments_:
         -------
         model: the DOE model
         """
-
         # Developer recommendation: use the Cholesky decomposition for D-optimality
         # The explicit formula is available for benchmarking purposes and is NOT recommended
         if (
@@ -309,9 +308,11 @@ class DesignOfExperiments_:
         # Generate scenarios for finite difference formulae
         self._generate_scenario_blocks()
         
-        # variables for jacobian and FIM
-        model.regression_parameters = pyo.Set(initialize=list(self.param.keys()))
-        model.measured_variables = pyo.Set(initialize=self.measure_name)
+        mod = self.model
+        
+        # Set names to index sensitivity matrix (jacobian) and FIM
+        mod.parameter_names = pyo.Set(initialize=[".".join(k.name.split('.')[1:]) for k in mod.scenario_blocks[0].unknown_parameters.keys()])
+        mod.output_names = pyo.Set(initialize=[".".join(k.name.split('.')[1:]) for k in mod.scenario_blocks[0].experiment_outputs.keys()])
 
         def identity_matrix(m, i, j):
             if i == j:
@@ -324,8 +325,8 @@ class DesignOfExperiments_:
         # If the user provides an initial Jacobian, convert it to a dictionary
         if self.jac_initial is not None:
             dict_jac_initialize = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.measured_variables):
+            for i, bu in enumerate(mod.parameter_names):
+                for j, un in enumerate(mod.output_names):
                     if isinstance(self.jac_initial, dict):
                         # Jacobian is a dictionary of arrays or lists where the key is the regression parameter name
                         dict_jac_initialize[(bu, un)] = self.jac_initial[bu][j]
@@ -342,35 +343,38 @@ class DesignOfExperiments_:
             else:
                 return 0.1
 
-        model.sensitivity_jacobian = pyo.Var(
-            model.regression_parameters,
-            model.measured_variables,
+        mod.sensitivity_jacobian = pyo.Var(
+            mod.parameter_names,
+            mod.output_names,
             initialize=initialize_jac,
         )
 
+        # Initialize the FIM
+        # ToDo: add dictionary dependence for FIM? OR remove Jacobian dictionary input option.
         if self.fim_initial is not None:
             dict_fim_initialize = {
                 (bu, un): self.fim_initial[i][j]
-                for i, bu in enumerate(model.regression_parameters)
-                for j, un in enumerate(model.regression_parameters)
+                for i, bu in enumerate(mod.parameter_names)
+                for j, un in enumerate(mod.parameter_names)
             }
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
 
         if self.fim_initial is not None:
-            model.fim = pyo.Var(
-                model.regression_parameters,
-                model.regression_parameters,
+            mod.fim = pyo.Var(
+                mod.parameter_names,
+                mod.parameter_names,
                 initialize=initialize_fim,
             )
         else:
-            model.fim = pyo.Var(
-                model.regression_parameters,
-                model.regression_parameters,
+            mod.fim = pyo.Var(
+                mod.parameter_names,
+                mod.parameter_names,
                 initialize=identity_matrix,
             )
 
+        # To-Do: Look into this functionality.....
         # if cholesky, define L elements as variables
         if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
 
@@ -378,8 +382,8 @@ class DesignOfExperiments_:
             if self.L_initial is not None:
                 dict_cho = {
                     (bu, un): self.L_initial[i][j]
-                    for i, bu in enumerate(model.regression_parameters)
-                    for j, un in enumerate(model.regression_parameters)
+                    for i, bu in enumerate(mod.parameter_names)
+                    for j, un in enumerate(mod.parameter_names)
                 }
 
             # use the L dictionary to initialize L matrix
@@ -389,29 +393,29 @@ class DesignOfExperiments_:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if self.L_initial is not None:
-                model.L_ele = pyo.Var(
-                    model.regression_parameters,
-                    model.regression_parameters,
+                mod.L_ele = pyo.Var(
+                    mod.parameter_names,
+                    mod.parameter_names,
                     initialize=init_cho,
                 )
             # or initialize with the identity matrix
             else:
-                model.L_ele = pyo.Var(
-                    model.regression_parameters,
-                    model.regression_parameters,
+                mod.L_ele = pyo.Var(
+                    mod.parameter_names,
+                    mod.parameter_names,
                     initialize=identity_matrix,
                 )
 
             # loop over parameter name
-            for i, c in enumerate(model.regression_parameters):
-                for j, d in enumerate(model.regression_parameters):
+            for i, c in enumerate(mod.parameter_names):
+                for j, d in enumerate(mod.parameter_names):
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
-                        model.L_ele[c, d].fix(0.0)
+                        mod.L_ele[c, d].fix(0.0)
                     # Give LB to the diagonal entries
                     if self.L_LB:
                         if c == d:
-                            model.L_ele[c, d].setlb(self.L_LB)
+                            mod.L_ele[c, d].setlb(self.L_LB)
 
         # jacobian rule
         def jacobian_rule(m, p, n):
@@ -420,36 +424,57 @@ class DesignOfExperiments_:
             p: parameter
             n: response
             """
+            fd_step_mult = 1
             cuid = pyo.ComponentUID(n)
-            var_up = cuid.find_component_on(m.block[self.scenario_num[p][0]])
-            var_lo = cuid.find_component_on(m.block[self.scenario_num[p][1]])
+            param_ind = self.model.parameter_names.data().index(p)
+            
+            # Different FD schemes lead to different scenarios for the computation
+            if self.fd_formula == FiniteDifferenceStep.central:
+                s1 = param_ind * 2
+                s2 = param_ind * 2 + 1
+                fd_step_mult = 2
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                s1 = param_ind + 1
+                s2 = 0
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                s1 = 0
+                s2 = param_ind + 1
+            
+            var_up = cuid.find_component_on(m.scenario_blocks[s1])
+            var_lo = cuid.find_component_on(m.scenario_blocks[s2])
+            
+            param = mod.parameter_scenarios[max(s1, s2)]
+            param_loc = pyo.ComponentUID(param).find_component_on(mod.scenario_blocks[0])
+            param_val = mod.scenario_blocks[0].unknown_parameters[param_loc]
+            param_diff = param_val * fd_step_mult * self.step
+            
             if self.scale_nominal_param_value:
                 return (
                     m.sensitivity_jacobian[p, n]
                     == (var_up - var_lo)
-                    / self.eps_abs[p]
-                    * self.param[p]
+                    / param_diff
+                    * param_val
                     * self.scale_constant_value
                 )
             else:
                 return (
                     m.sensitivity_jacobian[p, n]
-                    == (var_up - var_lo) / self.eps_abs[p] * self.scale_constant_value
+                    == (var_up - var_lo) / param_diff * self.scale_constant_value
                 )
 
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
         fim_initial_dict = {
             (bu, un): self.prior_FIM[i][j]
-            for i, bu in enumerate(model.regression_parameters)
-            for j, un in enumerate(model.regression_parameters)
+            for i, bu in enumerate(mod.parameter_names)
+            for j, un in enumerate(mod.parameter_names)
         }
 
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
 
-        model.priorFIM = pyo.Expression(
-            model.regression_parameters, model.regression_parameters, rule=read_prior
+        mod.priorFIM = pyo.Expression(
+            mod.parameter_names, mod.parameter_names, rule=read_prior
         )
 
         # The off-diagonal elements are symmetric, thus only half of the elements need to be calculated
@@ -470,31 +495,29 @@ class DesignOfExperiments_:
                     m.fim[p, q]
                     == sum(
                         1
-                        / self.measurement_vars.variance[n]
+                        / self.model.scenario_blocks[0].measurement_error[pyo.ComponentUID(n).find_component_on(mod.scenario_blocks[0])]
                         * m.sensitivity_jacobian[p, n]
                         * m.sensitivity_jacobian[q, n]
-                        for n in model.measured_variables
+                        for n in mod.output_names
                     )
-                    + m.priorFIM[p, q] * self.fim_scale_constant_value
+                    + m.priorFIM[p, q]
                 )
 
-        model.jacobian_constraint = pyo.Constraint(
-            model.regression_parameters, model.measured_variables, rule=jacobian_rule
+        mod.jacobian_constraint = pyo.Constraint(
+            mod.parameter_names, mod.output_names, rule=jacobian_rule
         )
-        model.fim_constraint = pyo.Constraint(
-            model.regression_parameters, model.regression_parameters, rule=fim_rule
+        mod.fim_constraint = pyo.Constraint(
+            mod.parameter_names, mod.parameter_names, rule=fim_rule
         )
 
         if self.only_compute_fim_lower:
             # Fix the upper half of the FIM matrix elements to be 0.0.
             # This eliminates extra variables and ensures the expected number of
             # degrees of freedom in the optimization problem.
-            for p in model.regression_parameters:
-                for q in model.regression_parameters:
+            for p in mod.parameter_names:
+                for q in mod.parameter_names:
                     if p > q:
                         model.fim[p, q].fix(0.0)
-
-        return model
     
     # Create scenario block structure
     def _generate_scenario_blocks(self, mod=None):

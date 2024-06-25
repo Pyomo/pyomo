@@ -207,7 +207,7 @@ class ReactorExperiment(object):
         m.measurement_error = pyo.Suffix(
             direction=pyo.Suffix.LOCAL,
         )
-        m.measurement_error.update((k, 0.0) for k in expand_model_components(m, base_comp_meas, index_sets_meas))
+        m.measurement_error.update((k, 1e-2) for k in expand_model_components(m, base_comp_meas, index_sets_meas))
 
         # Grab design variables
         base_comp_des = [m.CA, m.T]
