@@ -2107,7 +2107,7 @@ def declare_objective_expressions(working_model, objective, sense=minimize):
     )
 
 
-def standardize_active_objective(model_data):
+def standardize_active_objective(model_data, config):
     """
     Standardize the active objective of the working model.
 
@@ -2167,10 +2167,21 @@ def standardize_active_objective(model_data):
         ComponentSet(identify_variables(active_obj.expr))
         & adjustable_vars
     )
-    if uncertain_params_in_obj | adjustable_vars_in_obj:
-        working_model.effective_performance_inequality_cons.append(
-            working_model.epigraph_con
-        )
+    if (uncertain_params_in_obj | adjustable_vars_in_obj):
+        if config.objective_focus == ObjectiveType.worst_case:
+            working_model.effective_performance_inequality_cons.append(
+                working_model.epigraph_con
+            )
+        elif config.objective_focus == ObjectiveType.nominal:
+            working_model.effective_first_stage_inequality_cons.append(
+                working_model.epigraph_con
+            )
+        else:
+            raise ValueError(
+                "Classification of the epigraph constraint with uncertain "
+                "and/or adjustable components not implemented "
+                f"for objective focus {config.objective_focus!r}."
+            )
     else:
         working_model.effective_first_stage_inequality_cons.append(
             working_model.epigraph_con
@@ -2619,7 +2630,7 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
 
     # includes epigraph reformulation
     config.progress_logger.debug("Standardizing the active objective...")
-    standardize_active_objective(model_data)
+    standardize_active_objective(model_data, config)
 
     # DR components are added only per effective second-stage variable
     config.progress_logger.debug("Adding decision rule components...")

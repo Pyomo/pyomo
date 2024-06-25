@@ -8199,7 +8199,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
             -m.obj1.expr,
         )
 
-    def test_standardize_active_obj(self):
+    def test_standardize_active_obj_worst_case_focus(self):
         """
         Test preprocesing step for standardization
         of the active model objective.
@@ -8207,11 +8207,12 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model
         m = model_data.working_model.user_model
+        config = Bunch(objective_focus=ObjectiveType.worst_case)
 
         m.obj1.activate()
         m.obj2.deactivate()
 
-        standardize_active_objective(model_data)
+        standardize_active_objective(model_data, config)
 
         self.assertFalse(
             m.obj1.active,
@@ -8242,6 +8243,66 @@ class TestStandardizeActiveObjective(unittest.TestCase):
             m.obj1.expr - working_model.epigraph_var <= 0,
         )
 
+    def test_standardize_active_obj_nominal_focus(self):
+        """
+        Test standardization of active objective under nominal
+        objective focus.
+        """
+        model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = model_data.working_model.user_model
+        config = Bunch(objective_focus=ObjectiveType.nominal)
+
+        m.obj1.activate()
+        m.obj2.deactivate()
+
+        standardize_active_objective(model_data, config)
+
+        self.assertFalse(
+            m.obj1.active,
+            msg=(
+                f"Objective {m.obj1.name!r} should have been deactivated by "
+                f"{standardize_active_objective}."
+            ),
+        )
+        self.assertIn(
+            working_model.epigraph_con,
+            working_model.effective_first_stage_inequality_cons,
+            msg=(
+                f"Epigraph constraint {working_model.epigraph_con.name!r} "
+                "should be in the list of effective first-stage inequalities."
+            ),
+        )
+        self.assertNotIn(
+            working_model.epigraph_con,
+            working_model.effective_performance_inequality_cons,
+            msg=(
+                f"Epigraph constraint {working_model.epigraph_con.name!r} "
+                "should not be in the list of effective performance inequalities."
+            ),
+        )
+        assertExpressionsEqual(
+            self,
+            working_model.epigraph_con.expr,
+            m.obj1.expr - working_model.epigraph_var <= 0,
+        )
+
+    def test_standardize_active_obj_unsupported_focus(self):
+        """
+        Test standardization of active objective under
+        an objective focus currently not supported
+        """
+        model_data = self.build_simple_test_model_data()
+        m = model_data.working_model.user_model
+        config = Bunch(objective_focus="bad_focus")
+
+        m.obj1.activate()
+        m.obj2.deactivate()
+
+        exc_str = r"Classification.*not implemented for objective focus 'bad_focus'"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            standardize_active_objective(model_data, config)
+
     def test_standardize_active_obj_nonadjustable_max(self):
         """
         Test standardize active objective for case in which
@@ -8251,6 +8312,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model
         m = working_model.user_model
+        config = Bunch(objective_focus=ObjectiveType.worst_case)
 
         # assume all variables nonadjustable
         ep = model_data.working_model.effective_var_partitioning
@@ -8262,7 +8324,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         m.obj2.activate()
         m.obj2.sense = maximize
 
-        standardize_active_objective(model_data)
+        standardize_active_objective(model_data, config)
 
         self.assertFalse(
             m.obj2.active,
