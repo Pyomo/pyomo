@@ -198,121 +198,120 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
 
     # state machine
     while True:
-        match (facing):
-            case Direction.left:
+        if facing == Direction.left:
+            if square_parity_tlbr(x, y):
+                add_bottom_right()
+                add_top_left()
+            else:
+                add_top_right()
+                add_bottom_left()
+            used_squares.add((x, y))
+            if (x - 1, y) in used_squares or x == 0:
+                # can't keep going left so we need to go up or down depending
+                # on parity
                 if square_parity_tlbr(x, y):
-                    add_bottom_right()
-                    add_top_left()
-                else:
-                    add_top_right()
-                    add_bottom_left()
-                used_squares.add((x, y))
-                if (x - 1, y) in used_squares or x == 0:
-                    # can't keep going left so we need to go up or down depending
-                    # on parity
-                    if square_parity_tlbr(x, y):
-                        y += 1
-                        facing = Direction.up
-                        continue
-                    else:
-                        y -= 1
-                        facing = Direction.down
-                        continue
-                else:
-                    x -= 1
-                    continue
-            case Direction.right:
-                if is_turnaround(x, y):
-                    # finished; this case should always eventually be reached
-                    add_bottom_left()
-                    fix_vertices_incremental_order(simplices)
-                    return simplices
-                else:
-                    if square_parity_tlbr(x, y):
-                        add_top_left()
-                        add_bottom_right()
-                    else:
-                        add_bottom_left()
-                        add_top_right()
-                used_squares.add((x, y))
-                if (x + 1, y) in used_squares or x == num_pts - 1:
-                    # can't keep going right so we need to go up or down depending
-                    # on parity
-                    if square_parity_tlbr(x, y):
-                        y -= 1
-                        facing = Direction.down
-                        continue
-                    else:
-                        y += 1
-                        facing = Direction.up
-                        continue
-                else:
-                    x += 1
-                    continue
-            case Direction.down:
-                if is_turnaround(x, y):
-                    # we are always in a TLBR square. Take the TL of this, the TR
-                    # of the one on the left, and continue upwards one to the left
-                    add_top_left()
-                    x -= 1
-                    add_top_right()
                     y += 1
                     facing = Direction.up
                     continue
                 else:
-                    if square_parity_tlbr(x, y):
-                        add_top_left()
-                        add_bottom_right()
-                    else:
-                        add_top_right()
-                        add_bottom_left()
-                    used_squares.add((x, y))
-                    if (x, y - 1) in used_squares or y == 0:
-                        # can't keep going down so we need to turn depending
-                        # on our parity
-                        if square_parity_tlbr(x, y):
-                            x += 1
-                            facing = Direction.right
-                            continue
-                        else:
-                            x -= 1
-                            facing = Direction.left
-                            continue
-                    else:
-                        y -= 1
-                        continue
-            case Direction.up:
-                if is_turnaround(x, y):
-                    # we are always in a non-TLBR square. Take the BL of this, the BR
-                    # of the one on the left, and continue downwards one to the left
-                    add_bottom_left()
-                    x -= 1
+                    y -= 1
+                    facing = Direction.down
+                    continue
+            else:
+                x -= 1
+                continue
+        elif facing == Direction.right:
+            if is_turnaround(x, y):
+                # finished; this case should always eventually be reached
+                add_bottom_left()
+                fix_vertices_incremental_order(simplices)
+                return simplices
+            else:
+                if square_parity_tlbr(x, y):
+                    add_top_left()
                     add_bottom_right()
+                else:
+                    add_bottom_left()
+                    add_top_right()
+            used_squares.add((x, y))
+            if (x + 1, y) in used_squares or x == num_pts - 1:
+                # can't keep going right so we need to go up or down depending
+                # on parity
+                if square_parity_tlbr(x, y):
                     y -= 1
                     facing = Direction.down
                     continue
                 else:
+                    y += 1
+                    facing = Direction.up
+                    continue
+            else:
+                x += 1
+                continue
+        elif facing == Direction.down:
+            if is_turnaround(x, y):
+                # we are always in a TLBR square. Take the TL of this, the TR
+                # of the one on the left, and continue upwards one to the left
+                add_top_left()
+                x -= 1
+                add_top_right()
+                y += 1
+                facing = Direction.up
+                continue
+            else:
+                if square_parity_tlbr(x, y):
+                    add_top_left()
+                    add_bottom_right()
+                else:
+                    add_top_right()
+                    add_bottom_left()
+                used_squares.add((x, y))
+                if (x, y - 1) in used_squares or y == 0:
+                    # can't keep going down so we need to turn depending
+                    # on our parity
                     if square_parity_tlbr(x, y):
-                        add_bottom_right()
-                        add_top_left()
-                    else:
-                        add_bottom_left()
-                        add_top_right()
-                    used_squares.add((x, y))
-                    if (x, y + 1) in used_squares or y == num_pts - 1:
-                        # can't keep going up so we need to turn depending
-                        # on our parity
-                        if square_parity_tlbr(x, y):
-                            x -= 1
-                            facing = Direction.left
-                            continue
-                        else:
-                            x += 1
-                            facing = Direction.right
-                            continue
-                    else:
-                        y += 1
+                        x += 1
+                        facing = Direction.right
                         continue
+                    else:
+                        x -= 1
+                        facing = Direction.left
+                        continue
+                else:
+                    y -= 1
+                    continue
+        elif facing == Direction.up:
+            if is_turnaround(x, y):
+                # we are always in a non-TLBR square. Take the BL of this, the BR
+                # of the one on the left, and continue downwards one to the left
+                add_bottom_left()
+                x -= 1
+                add_bottom_right()
+                y -= 1
+                facing = Direction.down
+                continue
+            else:
+                if square_parity_tlbr(x, y):
+                    add_bottom_right()
+                    add_top_left()
+                else:
+                    add_bottom_left()
+                    add_top_right()
+                used_squares.add((x, y))
+                if (x, y + 1) in used_squares or y == num_pts - 1:
+                    # can't keep going up so we need to turn depending
+                    # on our parity
+                    if square_parity_tlbr(x, y):
+                        x -= 1
+                        facing = Direction.left
+                        continue
+                    else:
+                        x += 1
+                        facing = Direction.right
+                        continue
+                else:
+                    y += 1
+                    continue
 
 
 def _get_ordered_j1_triangulation_3d(points_map, num_pts):
