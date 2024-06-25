@@ -527,6 +527,7 @@ class DesignOfExperiments_:
             direction=pyo.Suffix.LOCAL,
         )
         
+        # Populate parameter scenarios, and scenario inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
             mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
@@ -563,6 +564,7 @@ class DesignOfExperiments_:
             elif self.fd_formula == FiniteDifferenceStep.forward:
                 diff = self.step # Forward always positive
             else:
+                # To-Do: add an error message for this as not being implemented yet
                 diff = 0
                 pass
             
@@ -638,11 +640,6 @@ class DesignOfExperiments_:
             )
         
         self.logger.info('Model has expected labels.')
-    
-    def _scenario_generator(self, ):
-        """
-        Helper function to generate 
-        """
         
     
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
