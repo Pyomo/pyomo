@@ -1596,10 +1596,16 @@ class _OrderedSetMixin(object):
         return iter(self)
 
     def first(self):
-        return self.at(1)
+        try:
+            return next(iter(self))
+        except StopIteration:
+            raise IndexError(f"{self.name} index out of range") from None
 
     def last(self):
-        return self.at(len(self))
+        try:
+            return next(reversed(self))
+        except StopIteration:
+            raise IndexError(f"{self.name} index out of range") from None
 
     def next(self, item, step=1):
         """
@@ -1745,9 +1751,9 @@ class OrderedSetData(_OrderedSetMixin, FiniteSetData):
         try:
             ans = self.last()
         except IndexError:
-            # Map the index error to a KeyError for consistency with
-            # set().pop()
-            raise KeyError('pop from an empty set')
+            # Map the exception for iterating over an empty dict to a
+            # KeyError for consistency with set().pop()
+            raise KeyError('pop from an empty set') from None
         self.discard(ans)
         return ans
 
