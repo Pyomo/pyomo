@@ -8668,6 +8668,8 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         standard form.
         """
         model_data = self.build_simple_test_model_data()
+        working_model = model_data.working_model
+        m = model_data.working_model.user_model
 
         # set up simple config-like object
         config = Bunch()
@@ -8677,135 +8679,45 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         new_add_decision_rule_variables(model_data, config)
         new_add_decision_rule_constraints(model_data, config)
 
-        # DR polynomial terms and order in which they should
-        # appear depends on number of uncertain parameters
-        # and order in which the parameters are listed.
-        # so uncertain parameters participating in each term
-        # of the monomial is known, and listed out here.
-        m = model_data.working_model.user_model
-        dr_monomial_param_combos = [
-            (1,),
-            (m.q[0],),
-            (m.q[1],),
-            (m.q[2],),
-            (m.q[0], m.q[0]),
-            (m.q[0], m.q[1]),
-            (m.q[0], m.q[2]),
-            (m.q[1], m.q[1]),
-            (m.q[1], m.q[2]),
-            (m.q[2], m.q[2]),
-        ]
-
         dr_zip = zip(
             model_data.working_model.effective_var_partitioning.second_stage_variables,
             model_data.working_model.decision_rule_vars,
             model_data.working_model.decision_rule_eqns,
         )
         for ss_var, indexed_dr_var, dr_eq in dr_zip:
-            dr_eq_terms = dr_eq.body.args
-
-            # check constraint body is sum expression
-            self.assertTrue(
-                isinstance(dr_eq.body, SumExpression),
-                msg=(
-                    f"Body of DR constraint {dr_eq.name!r} is not of type "
-                    f"{SumExpression.__name__}."
-                ),
+            expected_dr_eq_expression = (
+                indexed_dr_var[0]
+                + indexed_dr_var[1] * m.q[0]
+                + indexed_dr_var[2] * m.q[1]
+                + indexed_dr_var[3] * m.q[2]
+                + indexed_dr_var[4] * m.q[0] * m.q[0]
+                + indexed_dr_var[5] * m.q[0] * m.q[1]
+                + indexed_dr_var[6] * m.q[0] * m.q[2]
+                + indexed_dr_var[7] * m.q[1] * m.q[1]
+                + indexed_dr_var[8] * m.q[1] * m.q[2]
+                + indexed_dr_var[9] * m.q[2] * m.q[2]
+                - ss_var
+                == 0
             )
+            assertExpressionsEqual(self, dr_eq.expr, expected_dr_eq_expression)
 
-            # ensure DR equation has correct number of (additive) terms
+            expected_dr_var_to_exponent_map = ComponentMap((
+                (indexed_dr_var[0], 0),
+                (indexed_dr_var[1], 1),
+                (indexed_dr_var[2], 1),
+                (indexed_dr_var[3], 1),
+                (indexed_dr_var[4], 2),
+                (indexed_dr_var[5], 2),
+                (indexed_dr_var[6], 2),
+                (indexed_dr_var[7], 2),
+                (indexed_dr_var[8], 2),
+                (indexed_dr_var[9], 2),
+            ))
             self.assertEqual(
-                len(dr_eq_terms),
-                len(dr_monomial_param_combos) + 1,
-                msg=(
-                    "Number of additive terms in the DR expression of "
-                    f"DR constraint with name {dr_eq.name!r} does not match "
-                    "expected value."
-                ),
+                working_model.dr_var_to_exponent_map,
+                expected_dr_var_to_exponent_map,
+                msg="DR variable to exponent map not as expected.",
             )
-
-            # check last term is negative of second-stage variable
-            second_stage_var_term = dr_eq_terms[-1]
-            last_term_is_neg_ss_var = (
-                isinstance(second_stage_var_term, MonomialTermExpression)
-                and (second_stage_var_term.args[0] == -1)
-                and (second_stage_var_term.args[1] is ss_var)
-                and len(second_stage_var_term.args) == 2
-            )
-            self.assertTrue(
-                last_term_is_neg_ss_var,
-                msg=(
-                    "Last argument of last term in second-stage variable"
-                    f"term of DR constraint with name {dr_eq.name!r} "
-                    "is not the negative corresponding second-stage variable "
-                    f"{ss_var.name!r}"
-                ),
-            )
-
-            # now we check the other terms.
-            # these should comprise the DR polynomial expression
-            dr_polynomial_terms = dr_eq_terms[:-1]
-            dr_polynomial_zip = zip(
-                dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
-            )
-            for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
-                # term should be either a monomial expression or scalar variable
-                if isinstance(term, MonomialTermExpression):
-                    # should be of form (uncertain parameter product) *
-                    # (decision rule variable) so length of expression
-                    # object should be 2
-                    self.assertEqual(
-                        len(term.args),
-                        2,
-                        msg=(
-                            f"Length of `args` attribute of term {str(term)} "
-                            f"of DR equation {dr_eq.name!r} is not as expected. "
-                            f"Args: {term.args}"
-                        ),
-                    )
-
-                    # check that uncertain parameters participating in
-                    # the monomial are as expected
-                    param_product_multiplicand = term.args[0]
-                    dr_var_multiplicand = term.args[1]
-                else:
-                    self.assertIsInstance(term, VarData)
-                    param_product_multiplicand = 1
-                    dr_var_multiplicand = term
-
-                if idx == 0:
-                    # static DR term
-                    param_combo_found_in_term = (param_product_multiplicand,)
-                    param_names = (str(param) for param in param_combo)
-                elif len(param_combo) == 1:
-                    # affine DR terms
-                    param_combo_found_in_term = (param_product_multiplicand,)
-                    param_names = (param.name for param in param_combo)
-                else:
-                    # higher-order DR terms
-                    param_combo_found_in_term = param_product_multiplicand.args
-                    param_names = (param.name for param in param_combo)
-
-                self.assertEqual(
-                    param_combo_found_in_term,
-                    param_combo,
-                    msg=(
-                        f"All but last multiplicand of DR monomial {str(term)} "
-                        f"is not the uncertain parameter tuple "
-                        f"({', '.join(param_names)})."
-                    ),
-                )
-
-                # check that DR variable participating in the monomial
-                # is as expected
-                self.assertIs(
-                    dr_var_multiplicand,
-                    dr_var,
-                    msg=(
-                        f"Last multiplicand of DR monomial {str(term)} "
-                        f"is not the DR variable {dr_var.name!r}."
-                    ),
-                )
 
 
 class TestCoefficientMatching(unittest.TestCase):
