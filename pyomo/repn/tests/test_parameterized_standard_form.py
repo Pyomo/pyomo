@@ -13,15 +13,11 @@
 from pyomo.common.dependencies import numpy as np, scipy_available, numpy_available
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (
-    ConcreteModel,
-    Constraint,
-    Var,
-)
+from pyomo.environ import ConcreteModel, Constraint, Var
 from pyomo.core.expr import (
     MonomialTermExpression,
     NegationExpression,
-    ProductExpression
+    ProductExpression,
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -31,9 +27,10 @@ from pyomo.repn.plugins.parameterized_standard_form import (
     _CSCMatrix,
 )
 
+
 @unittest.skipUnless(
-    numpy_available & scipy_available, "CSC and CSR representations require "
-    "scipy and numpy"
+    numpy_available & scipy_available,
+    "CSC and CSR representations require scipy and numpy",
 )
 class TestSparseMatrixRepresentations(unittest.TestCase):
     def test_csr_to_csc_only_data(self):
@@ -49,16 +46,15 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         m.x = Var()
         m.y = Var()
 
-        A = _CSRMatrix([5, 8 * m.x, 3 * m.x * m.y ** 2, 6], [0, 1, 2, 1],
-                       [0, 1, 2, 3, 4], 4, 4)
+        A = _CSRMatrix(
+            [5, 8 * m.x, 3 * m.x * m.y**2, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4], 4, 4
+        )
         thing = A.tocsc()
 
         self.assertEqual(thing.data[0], 5)
-        assertExpressionsEqual(
-            self, thing.data[1], 8 * m.x)
+        assertExpressionsEqual(self, thing.data[1], 8 * m.x)
         self.assertEqual(thing.data[2], 6)
-        assertExpressionsEqual(
-            self, thing.data[3], 3 * m.x * m.y ** 2)
+        assertExpressionsEqual(self, thing.data[3], 3 * m.x * m.y**2)
         self.assertEqual(thing.data.shape, (4,))
 
         self.assertTrue(np.all(thing.indices == np.array([0, 1, 3, 2])))
@@ -72,7 +68,7 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertEqual(thing.indices.size, 0)
         self.assertEqual(thing.shape, (0, 4))
         self.assertTrue(np.all(thing.indptr == np.zeros(5)))
-        
+
 
 def assertExpressionArraysEqual(self, A, B):
     self.assertEqual(A.shape, B.shape)
@@ -88,8 +84,8 @@ def assertExpressionListsEqual(self, A, B):
 
 
 @unittest.skipUnless(
-    numpy_available & scipy_available, "Parameterized standard form requires "
-    "scipy and numpy"
+    numpy_available & scipy_available,
+    "Parameterized standard form requires scipy and numpy",
 )
 class TestParameterizedStandardFormCompiler(unittest.TestCase):
     def test_linear_model(self):
@@ -116,14 +112,31 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         m.c = Constraint(expr=m.x + 2 * m.data[1] * m.data[2] * m.y[1] >= 3)
         m.d = Constraint(expr=m.y[1] + 4 * m.y[3] <= 5 * m.more_data)
 
-        repn = ParameterizedLinearStandardFormCompiler().write(m, wrt=[m.data,
-                                                                       m.more_data])
+        repn = ParameterizedLinearStandardFormCompiler().write(
+            m, wrt=[m.data, m.more_data]
+        )
 
         self.assertTrue(np.all(repn.c == np.array([0, 0, 0])))
-        assertExpressionArraysEqual(self, repn.A.todense(),
-                                    np.array([[-1, NegationExpression((ProductExpression([MonomialTermExpression([2, m.data[1]]), m.data[2]]),)), 0],
-                                              [0, 1, 4]]))
-        assertExpressionListsEqual(self, repn.rhs,
-                                    [-3, 5 * m.more_data])
+        assertExpressionArraysEqual(
+            self,
+            repn.A.todense(),
+            np.array(
+                [
+                    [
+                        -1,
+                        NegationExpression(
+                            (
+                                ProductExpression(
+                                    [MonomialTermExpression([2, m.data[1]]), m.data[2]]
+                                ),
+                            )
+                        ),
+                        0,
+                    ],
+                    [0, 1, 4],
+                ]
+            ),
+        )
+        assertExpressionListsEqual(self, repn.rhs, [-3, 5 * m.more_data])
         self.assertEqual(repn.rows, [(m.c, -1), (m.d, 1)])
         self.assertEqual(repn.columns, [m.x, m.y[1], m.y[3]])

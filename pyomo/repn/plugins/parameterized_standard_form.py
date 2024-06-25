@@ -9,10 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import (
-    ConfigValue,
-    document_kwargs_from_configdict
-)
+from pyomo.common.config import ConfigValue, document_kwargs_from_configdict
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.gc_manager import PauseGC
 
@@ -21,7 +18,7 @@ from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
 from pyomo.repn.plugins.standard_form import (
     LinearStandardFormInfo,
     LinearStandardFormCompiler,
-    _LinearStandardFormCompiler_impl
+    _LinearStandardFormCompiler_impl,
 )
 from pyomo.util.var_list_domain import var_component_set
 
@@ -30,7 +27,7 @@ from pyomo.util.var_list_domain import var_component_set
     'parameterized_standard_form_compiler',
     'Compile an LP to standard form (`min cTx s.t. Ax <= b`) treating some '
     'variables as data (e.g., variables decided by the outer problem in a '
-    'bilevel optimization problem).'
+    'bilevel optimization problem).',
 )
 class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
     CONFIG = LinearStandardFormCompiler.CONFIG()
@@ -99,6 +96,7 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
     def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
         return _CSCMatrix(data, index, index_ptr, nrows, ncols)
 
+
 class _SparseMatrixBase(object):
     def __init__(self, data, indices, indptr, nrows, ncols):
         self.data = np.array(data)
@@ -149,13 +147,13 @@ class _CSRMatrix(_SparseMatrixBase):
                 csc_data[dest] = csr_data[j]
 
                 col_index_ptr[col] += 1
-        
+
         # fix the column index pointer by inserting 0 at the beginning--the rest
         # is right because we know each entry got incremented by 1 in the loop
         # above.
         col_index_ptr = np.insert(col_index_ptr, 0, 0)
 
-        return _CSCMatrix(csc_data, row_index, col_index_ptr, *self.shape)        
+        return _CSCMatrix(csc_data, row_index, col_index_ptr, *self.shape)
 
     def todense(self):
         nrows = self.shape[0]
@@ -184,7 +182,7 @@ class _CSCMatrix(_SparseMatrixBase):
         for col in range(ncols):
             for j in range(col_index_ptr[col], col_index_ptr[col + 1]):
                 dense[row_index[j], col] = data[j]
-            
+
         return dense
 
 

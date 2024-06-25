@@ -255,8 +255,7 @@ class _LinearStandardFormCompiler_impl(object):
         return np.fromiter(linear_repn.values(), float, len(linear_repn))
 
     def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
-        return scipy.sparse.csr_array( (data, index, index_ptr), [nrows, ncols]
-        ).tocsc()
+        return scipy.sparse.csr_array((data, index, index_ptr), [nrows, ncols]).tocsc()
 
     def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
         return scipy.sparse.csc_array((data, index, index_ptr), [nrows, ncols])
@@ -491,13 +490,15 @@ class _LinearStandardFormCompiler_impl(object):
         if obj_data:
             obj_data = np.concatenate(obj_data)
             obj_index = np.concatenate(obj_index)
-        c = self._csc_matrix_from_csr(obj_data, obj_index, obj_index_ptr,
-                                      len(obj_index_ptr) - 1, len(columns))
+        c = self._csc_matrix_from_csr(
+            obj_data, obj_index, obj_index_ptr, len(obj_index_ptr) - 1, len(columns)
+        )
         if rows:
             con_data = np.concatenate(con_data)
             con_index = np.concatenate(con_index)
-        A = self._csc_matrix_from_csr(con_data, con_index, con_index_ptr, len(rows),
-                                      len(columns))
+        A = self._csc_matrix_from_csr(
+            con_data, con_index, con_index_ptr, len(rows), len(columns)
+        )
 
         # Some variables in the var_map may not actually appear in the
         # objective or constraints (e.g., added from col_order, or
@@ -516,12 +517,11 @@ class _LinearStandardFormCompiler_impl(object):
         nCol = len(reduced_A_indptr) - 1
         if nCol != len(columns):
             columns = [v for k, v in zip(active_var_mask, columns) if k]
-            c = self._csc_matrix(c.data, c.indices, c.indptr[augmented_mask],
-                                 c.shape[0], nCol)
-            # active_var_idx[-1] = len(columns)
-            A = self._csc_matrix(
-                A.data, A.indices, reduced_A_indptr, A.shape[0], nCol
+            c = self._csc_matrix(
+                c.data, c.indices, c.indptr[augmented_mask], c.shape[0], nCol
             )
+            # active_var_idx[-1] = len(columns)
+            A = self._csc_matrix(A.data, A.indices, reduced_A_indptr, A.shape[0], nCol)
 
         if self.config.nonnegative_vars:
             # ESJ TODO: Need to rewrite this for parameterized too
