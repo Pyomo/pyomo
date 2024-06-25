@@ -83,6 +83,7 @@ be used with other Pyomo tools / capabilities.
    :skipif: not ipopt_available
    :hide:
 
+   ...
    2 Var Declarations
    ...
    3 Declarations: x y obj
@@ -114,6 +115,7 @@ future methods of specifying solver options are supported:
    :skipif: not ipopt_available
    :hide:
 
+   ...
    2 Var Declarations
    ...
    3 Declarations: x y obj

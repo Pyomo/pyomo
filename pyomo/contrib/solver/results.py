@@ -22,6 +22,7 @@ from pyomo.common.config import (
     NonNegativeFloat,
     ADVANCED_OPTION,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
@@ -337,17 +338,54 @@ legacy_solver_status_map = {
 }
 
 
-legacy_solution_status_map = {
-    SolutionStatus.noSolution: LegacySolutionStatus.unknown,
-    SolutionStatus.noSolution: LegacySolutionStatus.stoppedByLimit,
-    SolutionStatus.noSolution: LegacySolutionStatus.error,
-    SolutionStatus.noSolution: LegacySolutionStatus.other,
-    SolutionStatus.noSolution: LegacySolutionStatus.unsure,
-    SolutionStatus.noSolution: LegacySolutionStatus.unbounded,
-    SolutionStatus.optimal: LegacySolutionStatus.locallyOptimal,
-    SolutionStatus.optimal: LegacySolutionStatus.globallyOptimal,
-    SolutionStatus.optimal: LegacySolutionStatus.optimal,
-    SolutionStatus.infeasible: LegacySolutionStatus.infeasible,
-    SolutionStatus.feasible: LegacySolutionStatus.feasible,
-    SolutionStatus.feasible: LegacySolutionStatus.bestSoFar,
-}
+# The logic for the new solution status to legacy solution status
+# cannot be contained in a dictionary because it is a many -> one
+# relationship.
+def legacy_solution_status_map(results):
+    """
+    Map the new TerminationCondition/SolutionStatus values into LegacySolutionStatus
+    objects. Because we condensed results objects, some of the previous statuses
+    are no longer clearly achievable.
+    """
+    deprecation_warning(
+        """The new interface has condensed LegacySolverStatus,
+LegacyTerminationCondition, and LegacySolutionStatus into TerminationCondition
+and SolutionStatus to reduce complexity. As a result, several LegacySolutionStatus values
+are no longer achievable:
+    - `LegacySolutionStatus.other` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
+    - `SolutionStatus.unsure` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
+    - `SolutionStatus.locallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
+    - `SolutionStatus.glocallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
+    - `SolutionStatus.bestSoFar` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.feasible`
+""",
+        version='6.7.4.dev0',
+    )
+    if results.termination_condition in [
+        TerminationCondition.maxTimeLimit,
+        TerminationCondition.iterationLimit,
+        TerminationCondition.objectiveLimit,
+        TerminationCondition.minStepLength,
+    ]:
+        return LegacySolutionStatus.stoppedByLimit
+    if results.termination_condition in [
+        TerminationCondition.provenInfeasible,
+        TerminationCondition.locallyInfeasible,
+    ]:
+        return LegacySolutionStatus.infeasible
+    if results.termination_condition in [
+        TerminationCondition.error,
+        TerminationCondition.licensingProblems,
+        TerminationCondition.interrupted,
+    ]:
+        return LegacySolutionStatus.error
+    if results.termination_condition == TerminationCondition.unbounded:
+        return LegacySolutionStatus.unbounded
+    if (
+        results.termination_condition
+        == TerminationCondition.convergenceCriteriaSatisfied
+    ):
+        if results.solution_status == SolutionStatus.feasible:
+            return LegacySolutionStatus.feasible
+        else:
+            return LegacySolutionStatus.optimal
+    return LegacySolutionStatus.unknown

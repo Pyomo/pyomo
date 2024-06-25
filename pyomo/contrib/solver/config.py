@@ -21,7 +21,6 @@ from pyomo.common.config import (
     ConfigValue,
     NonNegativeFloat,
     NonNegativeInt,
-    ADVANCED_OPTION,
     Bool,
     Path,
 )
@@ -31,20 +30,23 @@ from pyomo.common.timing import HierarchicalTimer
 
 
 def TextIO_or_Logger(val):
+    """
+    Domain validator for tee options in SolverConfig
+    """
     ans = []
     if not isinstance(val, Sequence):
         val = [val]
-    for v in val:
-        if v.__class__ in native_logical_types:
-            if v:
+    for value in val:
+        if value.__class__ in native_logical_types:
+            if value:
                 ans.append(sys.stdout)
-        elif isinstance(v, io.TextIOBase):
-            ans.append(v)
-        elif isinstance(v, logging.Logger):
-            ans.append(LogStream(level=logging.INFO, logger=v))
+        elif isinstance(value, io.TextIOBase):
+            ans.append(value)
+        elif isinstance(value, logging.Logger):
+            ans.append(LogStream(level=logging.INFO, logger=value))
         else:
             raise ValueError(
-                "Expected bool, TextIOBase, or Logger, but received {v.__class__}"
+                "Expected bool, TextIOBase, or Logger, but received {value.__class__}"
             )
     return ans
 
@@ -332,24 +334,6 @@ class AutoUpdateConfig(ConfigDict):
                 subsequent solves. This includes the expr and sense attributes of objectives. Use 
                 False only when manually updating the solver with opt.set_objective() or when you are 
                 certain objectives are not being modified.""",
-            ),
-        )
-        self.treat_fixed_vars_as_params: bool = self.declare(
-            'treat_fixed_vars_as_params',
-            ConfigValue(
-                domain=bool,
-                default=True,
-                visibility=ADVANCED_OPTION,
-                description="""
-                This is an advanced option that should only be used in special circumstances. 
-                With the default setting of True, fixed variables will be treated like parameters. 
-                This means that z == x*y will be linear if x or y is fixed and the constraint 
-                can be written to an LP file. If the value of the fixed variable gets changed, we have 
-                to completely reprocess all constraints using that variable. If 
-                treat_fixed_vars_as_params is False, then constraints will be processed as if fixed 
-                variables are not fixed, and the solver will be told the variable is fixed. This means 
-                z == x*y could not be written to an LP file even if x and/or y is fixed. However, 
-                updating the values of fixed variables is much faster this way.""",
             ),
         )
 
