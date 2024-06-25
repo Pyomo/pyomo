@@ -4267,9 +4267,7 @@ class TestSet(unittest.TestCase):
 
         m.J = Set()
         # Note that pypy raises a different exception from cpython
-        err = (
-            r"((unhashable type: 'dict')|('dict' objects are unhashable))"
-        )
+        err = r"((unhashable type: 'dict')|('dict' objects are unhashable))"
         with self.assertRaisesRegex(TypeError, err):
             m.J.add({})
 
