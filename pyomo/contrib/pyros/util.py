@@ -1573,12 +1573,18 @@ def create_bound_constraint_expr(expr, bound, bound_type):
     Create a relational expression establishing a bound
     for a numeric expression of interest.
 
+    The expression is such that the bound appears on the
+    right-hand side of the relational (inequality/equality)
+    operator.
+
     Parameters
     ----------
-    expr : VarData or NumericExpression
-        Entity to be bounded by the relational expression.
-    bound : numeric type or NumericExpression
-        Bound for `expr`.
+    expr : NumericValue
+        Expression for which a bound is to be imposed.
+        This can be a Pyomo expression, Var, or Param.
+    bound : native numeric type or NumericValue
+        Bound for `expr`. This should be a numeric constant,
+        Param, or constant/mutable Pyomo expression.
     bound_type : {'lower', 'eq', 'upper'}
         Indicator for whether `expr` is to be lower bounded,
         equality bounded, or upper bounded, by `bound`.
@@ -1862,7 +1868,8 @@ def remove_con_declared_bound(con, bound_type):
 def standardize_inequality_constraints(model_data):
     """
     Standardize the inequality constraints of the working model,
-    as needed.
+    and classify them as first-stage inequalities or performance
+    (i.e., second-stage) inequalities.
 
     Parameters
     ----------
@@ -1960,8 +1967,13 @@ def standardize_inequality_constraints(model_data):
 
 def standardize_equality_constraints(model_data):
     """
-    Standardize equality constraints of the working model,
-    as needed.
+    Classify the original active equality constraints of the
+    working model as first-stage or performance constraints.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object, containing the working model.
     """
     working_model = model_data.working_model
     uncertain_params_set = ComponentSet(working_model.uncertain_params)
@@ -1978,12 +1990,11 @@ def standardize_equality_constraints(model_data):
             ComponentSet(identify_variables(con.body))
             & adjustable_vars_set
         )
+
+        # note: none of the equality constraint expressions are modified
         if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
-            # performance equality; standardize s.t. RHS is 0
-            con.set_value(create_bound_constraint_expr(con.body, con.upper, "eq"))
             working_model.effective_performance_equality_cons.append(con)
         else:
-            # don't modify the first-stage constraints
             working_model.effective_first_stage_equality_cons.append(con)
 
 

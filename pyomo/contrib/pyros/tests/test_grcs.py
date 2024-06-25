@@ -8080,16 +8080,18 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         assertExpressionsEqual(self, m.eq2.expr, RangedExpression((1, m.x2, 1), False))
 
         self.assertTrue(m.eq3.active)
-        assertExpressionsEqual(self, m.eq3.expr, m.x2 * m.q == 1.0)
+        assertExpressionsEqual(self, m.eq3.expr, m.x2 * m.q == 1)
 
         self.assertTrue(m.eq4.active)
-        assertExpressionsEqual(self, m.eq4.expr, m.x2 - m.z1 ** 2 == 0.0)
+        assertExpressionsEqual(self, m.eq4.expr, m.x2 - m.z1 ** 2 == 0)
 
         self.assertTrue(m.eq5.active)
-        assertExpressionsEqual(self, m.eq5.expr, m.y1 == m.q)
+        assertExpressionsEqual(self, m.eq5.expr, m.q == m.y1)
 
         self.assertTrue(m.eq6.active)
-        assertExpressionsEqual(self, m.eq6.expr, m.y1 == m.q)
+        assertExpressionsEqual(
+            self, m.eq6.expr, RangedExpression((m.q, m.y1, m.q), False),
+        )
 
         # excluded from the list of active constraints;
         # state should remain unchanged
