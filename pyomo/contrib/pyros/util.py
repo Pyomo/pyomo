@@ -1149,13 +1149,21 @@ def validate_pyros_inputs(model, config):
         Input deterministic model.
     config : ConfigDict
         PyROS solver options.
+
+    Returns
+    -------
+    user_var_partitioning : VariablePartitioning
+        Partitioning of the in-scope model variables into
+        first-stage, second-stage, and state variables,
+        according to user specification of the first-stage
+        and second-stage variables.
     """
     validate_model(model, config)
-    state_vars = validate_variable_partitioning(model, config)
+    user_var_partitioning = validate_variable_partitioning(model, config)
     validate_uncertainty_specification(model, config)
     validate_separation_problem_options(model, config)
 
-    return state_vars
+    return user_var_partitioning
 
 
 def get_var_bound_pairs(var):

@@ -252,6 +252,8 @@ class PyROS(object):
         -------
         config : ConfigDict
             Standardized arguments.
+        user_var_partitioning : util.VarPartitioning
+            User-based partitioning of the in-scope model variables.
 
         Note
         ----
@@ -266,9 +268,9 @@ class PyROS(object):
         """
         config = self.CONFIG(kwds.pop("options", {}))
         config = config(kwds)
-        var_partitioning = validate_pyros_inputs(model, config)
+        user_var_partitioning = validate_pyros_inputs(model, config)
 
-        return config, var_partitioning
+        return config, user_var_partitioning
 
     @document_kwargs_from_configdict(
         config=CONFIG,
@@ -355,7 +357,7 @@ class PyROS(object):
             self._log_intro(logger=progress_logger, level=logging.INFO)
             self._log_disclaimer(logger=progress_logger, level=logging.INFO)
 
-            config, var_partitioning = self._resolve_and_validate_pyros_args(
+            config, user_var_partitioning = self._resolve_and_validate_pyros_args(
                 model,
                 **kwds,
             )
@@ -368,7 +370,7 @@ class PyROS(object):
 
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
-            preprocess_model_data(model_data, config, var_partitioning)
+            preprocess_model_data(model_data, config, user_var_partitioning)
             model_data.timing.stop_timer("main.preprocessing")
             preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
             config.progress_logger.info(
