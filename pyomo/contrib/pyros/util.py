@@ -2004,7 +2004,7 @@ def get_summands(expr):
 
     Parameters
     ----------
-    expr : expression-like
+    expr : native numeric type or NumericValue
         Expression to be analyzed.
 
     Returns
