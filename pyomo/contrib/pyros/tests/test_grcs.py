@@ -8807,6 +8807,16 @@ class TestCoefficientMatching(unittest.TestCase):
             (-1) + m.x2 == 0,
         )
 
+        # check constraint partitioning updated as expected
+        self.assertEqual(
+            model_data.working_model.effective_performance_equality_cons,
+            [],
+        )
+        self.assertEqual(
+            model_data.working_model.effective_first_stage_equality_cons,
+            list(model_data.working_model.coefficient_matching_conlist.values()),
+        )
+
     def test_coefficient_matching_nonlinear(self):
         """
         Test coefficient matching raises exception in event
@@ -8849,7 +8859,21 @@ class TestCoefficientMatching(unittest.TestCase):
             ),
         )
 
+        # check constraint partitioning updated as expected
+        self.assertEqual(
+            model_data.working_model.effective_performance_equality_cons,
+            [model_data.working_model.user_model.eq_con],
+        )
+        self.assertEqual(
+            model_data.working_model.effective_first_stage_equality_cons,
+            [],
+        )
+
     def test_coefficient_matching_robust_infeasible_proof(self):
+        """
+        Test coefficient matching detects robust infeasibility
+        as expected.
+        """
         # Write the deterministic Pyomo model
         model_data = self.setup_test_model_data()
         m = model_data.working_model.user_model
