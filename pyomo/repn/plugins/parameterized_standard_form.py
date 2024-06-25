@@ -91,22 +91,26 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
     def _get_data_list(self, linear_repn):
         # override this to not attempt conversion to float since that will fail
         # on the Pyomo expressions
-        return [v for v in linear_repn.values()]
+        return np.array([v for v in linear_repn.values()])
 
-    def _compile_matrix(self, data, index, index_ptr, nrows, ncols):
+    def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
         return _CSRMatrix(data, index, index_ptr, nrows, ncols).tocsc()
 
+    def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
+        return _CSCMatrix(data, index, index_ptr, nrows, ncols)
 
-class _CSRMatrix(object):
-    def __init__(self, data, col_index, row_index_ptr, nrows, ncols):
-        # We store the indices and index pointers as numpy arrays for the sake
-        # of duck typing, but not the data because that can contain Pyomo
-        # expressions, so we just use a list.
-        self.data = data
-        self.indices = np.array(col_index)
-        self.indptr = np.array(row_index_ptr)
+class _SparseMatrixBase(object):
+    def __init__(self, data, indices, indptr, nrows, ncols):
+        self.data = np.array(data)
+        self.indices = np.array(indices, dtype=int)
+        self.indptr = np.array(indptr, dtype=int)
         self.shape = (nrows, ncols)
 
+    def __eq__(self, other):
+        return self.todense() == other
+
+
+class _CSRMatrix(_SparseMatrixBase):
     def tocsc(self):
         # Implements the same algorithm as scipy's csr_tocsc function
         csr_data = self.data
@@ -115,10 +119,10 @@ class _CSRMatrix(object):
         nrows = self.shape[0]
 
         num_nonzeros = len(csr_data)
-        csc_data = [None for x in csr_data]
-        row_index = np.empty(num_nonzeros)#[None for i in range(num_nonzeros)]
+        csc_data = np.empty(csr_data.shape[0], dtype=object)
+        row_index = np.empty(num_nonzeros, dtype=int)
         # tally the nonzeros in each column
-        col_index_ptr = np.zeros(num_nonzeros)#[0 for i in range(num_nonzeros)]
+        col_index_ptr = np.zeros(self.shape[1], dtype=int)
         for i in col_index:
             col_index_ptr[int(i)] += 1
 
@@ -137,8 +141,8 @@ class _CSRMatrix(object):
         # means we increment everything by one, so we can fix it at the end.
         for row in range(nrows):
             for j in range(row_index_ptr[row], row_index_ptr[row + 1]):
-                col = int(col_index[j])
-                dest = int(col_index_ptr[col])
+                col = col_index[j]
+                dest = col_index_ptr[col]
                 row_index[dest] = row
                 # Note that the data changes order because now we are looking
                 # for nonzeros through the columns rather than through the rows.
@@ -151,18 +155,37 @@ class _CSRMatrix(object):
         # above.
         col_index_ptr = np.insert(col_index_ptr, 0, 0)
 
-        return _CSCMatrix(csc_data, row_index, col_index_ptr, *self.shape)
+        return _CSCMatrix(csc_data, row_index, col_index_ptr, *self.shape)        
+
+    def todense(self):
+        nrows = self.shape[0]
+        col_index = self.indices
+        row_index_ptr = self.indptr
+        data = self.data
+
+        dense = np.zeros(self.shape, dtype=object)
+
+        for row in range(nrows):
+            for j in range(row_index_ptr[row], row_index_ptr[j + 1]):
+                dense[row, col_index[j]] = data[j]
+
+        return dense
 
 
-class _CSCMatrix(object):
-    def __init__(self, data, row_index, col_index_ptr, nrows, ncols):
-        # We store the indices and index pointers as numpy arrays for the sake
-        # of duck typing, but not the data because that can contain Pyomo
-        # expressions, so we just use a list.
-        self.data = data
-        self.indices = np.array(row_index)
-        self.indptr = np.array(col_index_ptr)
-        self.shape = (nrows, ncols)
+class _CSCMatrix(_SparseMatrixBase):
+    def todense(self):
+        ncols = self.shape[1]
+        row_index = self.indices
+        col_index_ptr = self.indptr
+        data = self.data
+
+        dense = np.zeros(self.shape, dtype=object)
+
+        for col in range(ncols):
+            for j in range(col_index_ptr[col], col_index_ptr[col + 1]):
+                dense[row_index[j], col] = data[j]
+            
+        return dense
 
 
 if __name__ == '__main__':
@@ -173,3 +196,6 @@ if __name__ == '__main__':
     print(thing.data)
     print(thing.indices)
     print(thing.indptr)
+
+    dense = thing.todense()
+    print(dense)

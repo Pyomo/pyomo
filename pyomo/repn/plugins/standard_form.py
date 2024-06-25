@@ -254,9 +254,12 @@ class _LinearStandardFormCompiler_impl(object):
     def _get_data_list(self, linear_repn):
         return np.fromiter(linear_repn.values(), float, len(linear_repn))
 
-    def _compile_matrix(self, data, index, index_ptr, nrows, ncols):
+    def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
         return scipy.sparse.csr_array( (data, index, index_ptr), [nrows, ncols]
         ).tocsc()
+
+    def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
+        return scipy.sparse.csc_array((data, index, index_ptr), [nrows, ncols])
 
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
@@ -463,7 +466,7 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index_ptr.append(con_index_ptr[-1] + len(_index))
             else:
                 N = len(repn.linear)
-                _data = np.fromiter(repn.linear.values(), float, N)
+                _data = self._get_data_list(repn.linear)
                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                 if ub is not None:
                     rows.append(RowEntry(con, 1))
@@ -488,13 +491,13 @@ class _LinearStandardFormCompiler_impl(object):
         if obj_data:
             obj_data = np.concatenate(obj_data)
             obj_index = np.concatenate(obj_index)
-        c = self._compile_matrix(obj_data, obj_index, obj_index_ptr,
-                                 len(obj_index_ptr) - 1, len(columns))
+        c = self._csc_matrix_from_csr(obj_data, obj_index, obj_index_ptr,
+                                      len(obj_index_ptr) - 1, len(columns))
         if rows:
             con_data = np.concatenate(con_data)
             con_index = np.concatenate(con_index)
-        A = self._compile_matrix(con_data, con_index, con_index_ptr, len(rows),
-                                 len(columns))
+        A = self._csc_matrix_from_csr(con_data, con_index, con_index_ptr, len(rows),
+                                      len(columns))
 
         # Some variables in the var_map may not actually appear in the
         # objective or constraints (e.g., added from col_order, or
@@ -503,28 +506,25 @@ class _LinearStandardFormCompiler_impl(object):
         # at the index pointer list (an O(num_var) operation).
         c_ip = c.indptr
         A_ip = A.indptr
-        print(c_ip)
-        print(A_ip)
         active_var_mask = (A_ip[1:] > A_ip[:-1]) | (c_ip[1:] > c_ip[:-1])
 
         # Masks on NumPy arrays are very fast.  Build the reduced A
         # indptr and then check if we actually have to manipulate the
         # columns
-        print(active_var_mask)
         augmented_mask = np.concatenate((active_var_mask, [True]))
         reduced_A_indptr = A.indptr[augmented_mask]
         nCol = len(reduced_A_indptr) - 1
         if nCol != len(columns):
             columns = [v for k, v in zip(active_var_mask, columns) if k]
-            c = scipy.sparse.csc_array(
-                (c.data, c.indices, c.indptr[augmented_mask]), [c.shape[0], nCol]
-            )
+            c = self._csc_matrix(c.data, c.indices, c.indptr[augmented_mask],
+                                 c.shape[0], nCol)
             # active_var_idx[-1] = len(columns)
-            A = scipy.sparse.csc_array(
-                (A.data, A.indices, reduced_A_indptr), [A.shape[0], nCol]
+            A = self._csc_matrix(
+                A.data, A.indices, reduced_A_indptr, A.shape[0], nCol
             )
 
         if self.config.nonnegative_vars:
+            # ESJ TODO: Need to rewrite this for parameterized too
             c, A, columns, eliminated_vars = _csc_to_nonnegative_vars(c, A, columns)
         else:
             eliminated_vars = []
