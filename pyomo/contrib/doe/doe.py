@@ -72,6 +72,7 @@ class DesignOfExperiments_:
     def __init__(
         self,
         experiment,
+        fd_formula='central',
         solver=None,
         prior_FIM=None,
         args=None,
@@ -91,6 +92,9 @@ class DesignOfExperiments_:
             Experiment object that holds the model and labels all the components. The object
             should have a ``get_labeled_model`` where a model is returned with the following
             labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
+        fd_formula:
+            Finite difference formula for computing the sensitivy matrix. Must be one of
+            [``central``, ``forward``, ``backward``]
         solver:
             A ``solver`` object specified by the user, default=None.
             If not specified, default solver is IPOPT MA57.
@@ -108,6 +112,7 @@ class DesignOfExperiments_:
         assert callable(getattr(experiment, 'get_labeled_model')), 'The experiment object must have a ``get_labeled_model`` function'
         
         self.experiment = experiment
+        self.formula = FiniteDifferenceStep(fd_formula)
 
         # check if user-defined solver is given
         if solver:
@@ -522,9 +527,6 @@ class DesignOfExperiments_:
             direction=pyo.Suffix.LOCAL,
         )
         
-        # TODO: move to somewhere else (constructor?)
-        self.fd_formula = FiniteDifferenceStep(self.fd_formula)
-        
         if self.fd_formula == FiniteDifferenceStep.central:
             mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
             mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
@@ -538,9 +540,7 @@ class DesignOfExperiments_:
 
         # To-Do: Fix parameter values if they are not Params?
 
-        # Is there a way to make this general for both? Probably not.
-        # Finite difference scheme-specific function definition
-        # This doesn't work but I think it should.
+        # Generate blocks for finite difference scenarios
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
             b.transfer_attributes_from(self.experiment.get_labeled_model().clone())
@@ -566,15 +566,15 @@ class DesignOfExperiments_:
                 diff = 0
                 pass
             
-            # Update parameter values for the given scenario
+            # Update parameter values for the given finite difference scenario
             pyo.ComponentUID(param_loc).find_component_on(b).set_value(mod.base_model.unknown_parameters[param] * (1 + diff))
         mod.scenario_blocks = pyo.Block(mod.scenarios, rule=build_block_scenarios)
         
         # To-Do: this might have to change if experiment inputs have 
         # a different value in the Suffix (currently it is the CUID)
-        # Add constraints to equate block design with global design:
         design_vars = [k for k, v in mod.scenario_blocks[0].experiment_inputs.items()]
         
+        # Add constraints to equate block design with global design:
         for ind, d in enumerate(design_vars):
             con_name = 'global_design_eq_con_' + str(ind)
             
