@@ -76,7 +76,7 @@ class DesignOfExperiments_:
         prior_FIM=None,
         args=None,
         only_compute_fim_lower=True,
-        logger_level=logging.INFO,
+        logger_level=logging.WARNING,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
@@ -108,21 +108,6 @@ class DesignOfExperiments_:
         assert callable(getattr(experiment, 'get_labeled_model')), 'The experiment object must have a ``get_labeled_model`` function'
         
         self.experiment = experiment
-        
-        # Parameters, Design Variables, and Outputs are now directly connected
-        # to each model instance (meaning we no longer need to specify them
-        # in the constructor
-
-        # Potentially keep something like this for deprecated version? Maybe not
-        # model_option_arg = (
-            # "model_option" in inspect.getfullargspec(self.create_model).args
-        # )
-        # mod_arg = "mod" in inspect.getfullargspec(self.create_model).args
-        # if model_option_arg and mod_arg:
-            # self._original_create_model_interface = True
-        # else:
-            # self._original_create_model_interface = False
-
 
         # check if user-defined solver is given
         if solver:
@@ -155,8 +140,10 @@ class DesignOfExperiments_:
         self.only_compute_fim_lower = only_compute_fim_lower
         
         # model attribute to avoid rebuilding models
-        self.model = None
-        self._built_scenarios = False
+        self.model = pyo.ConcreteModel()  # Build empty model
+        # May need this attribute for more complicated structures?
+        # (i.e., no model rebuilding for large models with sequential)
+        # self._built_scenarios = False
     
     # Perform doe
     def run_doe(
@@ -223,7 +210,7 @@ class DesignOfExperiments_:
             outputs = [k.name for k, v in model.experiment_outputs.items()]
         except:
             RuntimeError(
-                'Experiment list model does not have suffix ' + '"experiment_outputs".'
+                'Experiment model does not have suffix ' + '"experiment_outputs".'
             )
         
         # Check that experimental inputs exist
@@ -524,6 +511,9 @@ class DesignOfExperiments_:
         # Generate initial scenario to populate unknown parameter values
         self.model = self.experiment.get_labeled_model(**self.args).clone()
         
+        # Check the model that labels are correct
+        
+        
         mod = self.model
         
         # Make a new Suffix to hold which scenarios are associated with parameters 
@@ -535,12 +525,10 @@ class DesignOfExperiments_:
         self.fd_formula = FiniteDifferenceStep(self.fd_formula)
         
         if self.fd_formula == FiniteDifferenceStep.central:
-            # mod.parameter_scenarios.update((k, (2*ind, 2*ind + 1)) for k, ind in enumerate(mod.unknown_parameters.keys()))
             mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
             mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
             mod.scenarios = range(len(mod.unknown_parameters) * 2)
         elif self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
-            # mod.parameter_scenarios.update((k, (0, ind + 1)) for k, ind in enumerate(mod.unknown_parameters.keys()))
             mod.parameter_scenarios.update((ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
             mod.scenarios = range(len(mod.unknown_parameters) + 1)
         else:
@@ -564,9 +552,9 @@ class DesignOfExperiments_:
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
                 diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
-            elif self.fd_formula == FiniteDifferenceStep.forward:
-                diff = self.step * -1  # Backward always negative perturbation
             elif self.fd_formula == FiniteDifferenceStep.backward:
+                diff = self.step * -1  # Backward always negative perturbation
+            elif self.fd_formula == FiniteDifferenceStep.forward:
                 diff = self.step  # Forward always positive
             else:
                 diff = 0
@@ -587,12 +575,43 @@ class DesignOfExperiments_:
                 block_design_var = global_design_var.find_component_on(mod.scenario_blocks[s])
                 return d == block_design_var
             setattr(mod, con_name, pyo.Constraint(mod.scenarios, rule=global_design_fixing))
+
+    
+    # Check to see if the model has all the required suffixes
+    def check_model_labels(self, mod=None):
+        # Check that experimental outputs exist
+        try:
+            outputs = [k.name for k, v in mod.experiment_outputs.items()]
+        except:
+            RuntimeError(
+                'Experiment model does not have suffix ' + '"experiment_outputs".'
+            )
+
+        # Check that experimental inputs exist
+        try:
+            outputs = [k.name for k, v in mod.experiment_inputs.items()]
+        except:
+            RuntimeError(
+                'Experiment model does not have suffix ' + '"experiment_inputs".'
+            )
+
+        # Check that unknown parameters exist
+        try:
+            outputs = [k.name for k, v in mod.unknown_parameters.items()]
+        except:
+            RuntimeError(
+                'Experiment model does not have suffix ' + '"unknown_parameters".'
+            )
+    
+        # Check that measurement errors exist
+        try:
+            outputs = [k.name for k, v in mod.measurement_error.items()]
+        except:
+            RuntimeError(
+                'Experiment model does not have suffix ' + '"measurement_error".'
+            )
         
-        # Assuming that the user will specify the design variable bounds...
-        # Otherwise, we will need to add something similar to what is written here
-        # for k, v in mod.experiment_inputs[k]:
-            # v.setlb(self.design_vars.lower_bounds[name])
-            # v.setub(self.design_vars.upper_bounds[name])
+        logger.info('Model has expected labels.')
     
     def _scenario_generator(self, ):
         """
