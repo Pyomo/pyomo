@@ -8745,10 +8745,15 @@ class TestCoefficientMatching(unittest.TestCase):
             == - m.u * (m.x1 + 2)
         )
 
+        # redundant, but makes the tests more rigorous
+        # as we want to check that loops in the coefficient
+        # matching routine are exited appropriately
+        m.eq_con_2 = Constraint(expr=m.u * (m.x2 - 1) == 0)
+
         working_model.uncertain_params = [m.u]
 
         working_model.effective_first_stage_equality_cons = []
-        working_model.effective_performance_equality_cons = [m.eq_con]
+        working_model.effective_performance_equality_cons = [m.eq_con, m.eq_con_2]
 
         working_model.all_variables = [m.x1, m.x2]
         ep = working_model.effective_var_partitioning = Bunch()
@@ -8792,7 +8797,7 @@ class TestCoefficientMatching(unittest.TestCase):
         )
         self.assertEqual(
             len(model_data.working_model.coefficient_matching_conlist),
-            2,
+            3,
             msg="Number of coefficient matching constraints not as expected."
         )
 
@@ -8804,6 +8809,11 @@ class TestCoefficientMatching(unittest.TestCase):
         assertExpressionsEqual(
             self,
             model_data.working_model.coefficient_matching_conlist[2].expr,
+            (-1) + m.x2 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            model_data.working_model.coefficient_matching_conlist[3].expr,
             (-1) + m.x2 == 0,
         )
 
@@ -8840,6 +8850,12 @@ class TestCoefficientMatching(unittest.TestCase):
             + list(model_data.working_model.decision_rule_var_0.values())
         )
 
+        m = model_data.working_model.user_model
+
+        # we want only one of the constraints to trigger the error
+        # change eq_con_2 to give a valid matching constraint
+        m.eq_con_2.set_value(m.u * (m.x1 - 1) == 0)
+
         with LoggingIntercept(level=logging.DEBUG) as LOG:
             robust_infeasible = perform_coefficient_matching(model_data, config)
 
@@ -8866,7 +8882,12 @@ class TestCoefficientMatching(unittest.TestCase):
         )
         self.assertEqual(
             model_data.working_model.effective_first_stage_equality_cons,
-            [],
+            [model_data.working_model.coefficient_matching_conlist[1]],
+        )
+        assertExpressionsEqual(
+            self,
+            model_data.working_model.coefficient_matching_conlist[1].expr,
+            (-1) + m.x1 == 0,
         )
 
     def test_coefficient_matching_robust_infeasible_proof(self):

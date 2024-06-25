@@ -2450,9 +2450,6 @@ def perform_coefficient_matching(model_data, config):
         id(param): var for param, var in uncertain_param_to_temp_var_map.items()
     }
 
-    # track robust infeasibility detection
-    robust_infeasible = False
-
     # constraints generated during the reformulation will be placed here
     working_model.coefficient_matching_conlist = coeff_matching_conlist = (
         ConstraintList()
@@ -2513,6 +2510,9 @@ def perform_coefficient_matching(model_data, config):
                     "We are unable to write a coefficent matching reformulation "
                     "of this constraint."
                 )
+
+                # nothing we can do to reformulate this constraint,
+                # so move on
                 continue
 
             polynomial_repn_coeffs = (
@@ -2556,9 +2556,9 @@ def perform_coefficient_matching(model_data, config):
                             "(additional) second-stage and/or state variable(s)."
                         )
 
-                        # with robust infeasibility detected,
-                        # we are done
-                        break
+                        # robust infeasibility found;
+                        # that is sufficient for termination of PyROS.
+                        return robust_infeasible
 
                 else:
                     # coefficient is dependent on model first-stage
@@ -2566,7 +2566,7 @@ def perform_coefficient_matching(model_data, config):
                     coeff_matching_conlist.add(simplified_coef_expr == 0)
 
                     # matching constraint depends on nonadjustable
-                    # variables only
+                    # variables only, so it is first-stage
                     last_idx = coeff_matching_conlist.index_set().last()
                     working_model.effective_first_stage_equality_cons.append(
                         coeff_matching_conlist[last_idx]
@@ -2578,8 +2578,9 @@ def perform_coefficient_matching(model_data, config):
                         f"{coeff_matching_conlist[last_idx].expr}."
                     )
 
-            # constraint has been reformulated out of the model
-            # (i.e., coefficients have all been matched)
+            # constraint has been reformulated out of the model,
+            # i.e., coefficients have all been matched or found
+            #       to yield trivial satisfaction of the constraint
             con.deactivate()
             working_model.effective_performance_equality_cons.remove(con)
 
@@ -2587,7 +2588,7 @@ def perform_coefficient_matching(model_data, config):
     working_model.del_component(temp_param_vars)
     working_model.del_component(temp_param_vars.index_set())
 
-    return robust_infeasible
+    return False
 
 
 def new_preprocess_model_data(model_data, config, user_var_partitioning):
