@@ -2041,7 +2041,6 @@ class Set(IndexedComponent):
 
     _ValidOrderedAuguments = {True, False, InsertionOrder, SortedOrder}
     _UnorderedInitializers = {set}
-    _SetEndEncountered = False
 
     @overload
     def __new__(cls: Type[Set], *args, **kwds) -> Union[SetData, IndexedSet]: ...
