@@ -38,6 +38,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 from pyomo.core.expr.visitor import (
     identify_variables,
     identify_mutable_parameters,
@@ -377,7 +378,14 @@ def revert_solver_max_time_adjustment(
         elif isinstance(solver, SolverFactory.get_class("baron")):
             options_key = "MaxTime"
         elif isinstance(solver, SolverFactory.get_class("ipopt")):
-            options_key = "max_cpu_time"
+            options_key = (
+                # IPOPT 3.14.0+ added support for specifying
+                # wall time limit explicitly; this is preferred
+                # over CPU time limit
+                "max_wall_time"
+                if solver.version() >= (3, 14, 0, 0)
+                else "max_cpu_time"
+            )
         elif isinstance(solver, SolverFactory.get_class("scip")):
             options_key = "limits/time"
         else:
@@ -1809,6 +1817,16 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
     timing_obj.start_timer(timer_name)
     tt_timer.tic(msg=None)
 
+    # tentative: reduce risk of InfeasibleConstraintException
+    # occurring due to discrepancies between Pyomo NL writer
+    # tolerance and (default) subordinate solver (e.g. IPOPT)
+    # feasibility tolerances.
+    # e.g., a Var fixed outside bounds beyond the Pyomo NL writer
+    # tolerance, but still within the default IPOPT feasibility
+    # tolerance
+    current_nl_writer_tol = pyomo_nl_writer.TOL
+    pyomo_nl_writer.TOL = 1e-4
+
     try:
         results = solver.solve(
             model,
@@ -1827,6 +1845,8 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
             results.solver, TIC_TOC_SOLVE_TIME_ATTR, tt_timer.toc(msg=None, delta=True)
         )
     finally:
+        pyomo_nl_writer.TOL = current_nl_writer_tol
+
         timing_obj.stop_timer(timer_name)
         revert_solver_max_time_adjustment(
             solver, orig_setting, custom_setting_present, config
