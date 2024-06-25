@@ -1,0 +1,21 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [],
+    "con": [],
+    "var": [],
+    "param": [],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}

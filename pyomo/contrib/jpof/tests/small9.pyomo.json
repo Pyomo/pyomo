@@ -1,0 +1,79 @@
+{
+  "__metadata__": {
+    "version": 20210301,
+    "format": "JSON Parameterized Optimization Format (JPOF)"
+  },
+  "model": {
+    "config": {
+      "symbolic_solver_labels": 1,
+      "skip_trivial_constraints": 0,
+      "file_determinism": 3,
+      "include_all_variable_bounds": 0
+    },
+    "obj": [
+      {
+        "expr": "V,0",
+        "sense": "min",
+        "label": "obj"
+      }
+    ],
+    "con": [
+      {
+        "expr": "+,*,*,V,0,V,1,V,2,V,0",
+        "label": "con1",
+        "eq": 1.0
+      },
+      {
+        "expr": "+,*,*,P,0,V,0,V,2,V,0",
+        "label": "con2",
+        "eq": 1.0
+      },
+      {
+        "expr": "V,0",
+        "label": "con3",
+        "eq": 1.0
+      },
+      {
+        "expr": "*,*,V,0,V,1,V,2",
+        "label": "con4",
+        "eq": 1.0
+      },
+      {
+        "expr": "*,*,P,0,V,0,V,2",
+        "label": "con5",
+        "eq": 1.0
+      }
+    ],
+    "var": [
+      {
+        "label": "x",
+        "id": 0,
+        "type": "R",
+        "fixed": 0
+      },
+      {
+        "label": "y",
+        "id": 1,
+        "value": 0.0,
+        "type": "R",
+        "fixed": 1
+      },
+      {
+        "label": "z",
+        "id": 2,
+        "type": "R",
+        "fixed": 0
+      }
+    ],
+    "param": [
+      {
+        "label": "p",
+        "id": 0,
+        "value": 0.0
+      }
+    ],
+    "set": {},
+    "indexed_vars": [],
+    "indexed_params": []
+  }
+}
