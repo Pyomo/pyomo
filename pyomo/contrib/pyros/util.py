@@ -1589,11 +1589,11 @@ def create_bound_constraint_expr(expr, bound, bound_type):
         Establishes a bound on `expr`.
     """
     if bound_type == "lower":
-        return bound - expr <= 0
+        return -expr <= -bound
     elif bound_type == "eq":
-        return expr - bound == 0
+        return expr == bound
     elif bound_type == "upper":
-        return expr - bound <= 0
+        return expr <= bound
     else:
         raise ValueError(
             f"Bound type {bound_type!r} not supported."
