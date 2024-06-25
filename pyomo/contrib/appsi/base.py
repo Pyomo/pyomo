@@ -1007,7 +1007,7 @@ class PersistentBase(abc.ABC):
                 raise ValueError(
                     'constraint {name} has already been added'.format(name=con.name)
                 )
-            self._active_constraints[con] = (con.lower, con.body, con.upper)
+            self._active_constraints[con] = con.expr
             if self.use_extensions and cmodel_available:
                 tmp = cmodel.prep_for_repn(con.body, self._expr_types)
             else:
@@ -1363,40 +1363,13 @@ class PersistentBase(abc.ABC):
         cons_to_remove_and_add = dict()
         need_to_set_objective = False
         if config.update_constraints:
-            cons_to_update = list()
-            sos_to_update = list()
             for c in current_cons_dict.keys():
-                if c not in new_cons_set:
-                    cons_to_update.append(c)
+                if c not in new_cons_set and c.expr is not self._active_constraints[c]:
+                    cons_to_remove_and_add[c] = None
+            sos_to_update = []
             for c in current_sos_dict.keys():
                 if c not in new_sos_set:
                     sos_to_update.append(c)
-            for c in cons_to_update:
-                lower, body, upper = self._active_constraints[c]
-                new_lower, new_body, new_upper = c.lower, c.body, c.upper
-                if new_body is not body:
-                    cons_to_remove_and_add[c] = None
-                    continue
-                if new_lower is not lower:
-                    if (
-                        type(new_lower) is NumericConstant
-                        and type(lower) is NumericConstant
-                        and new_lower.value == lower.value
-                    ):
-                        pass
-                    else:
-                        cons_to_remove_and_add[c] = None
-                        continue
-                if new_upper is not upper:
-                    if (
-                        type(new_upper) is NumericConstant
-                        and type(upper) is NumericConstant
-                        and new_upper.value == upper.value
-                    ):
-                        pass
-                    else:
-                        cons_to_remove_and_add[c] = None
-                        continue
             self.remove_sos_constraints(sos_to_update)
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')

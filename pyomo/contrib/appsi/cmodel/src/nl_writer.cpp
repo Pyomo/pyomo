@@ -527,7 +527,7 @@ void process_nl_constraints(NLWriter *nl_writer, PyomoExprTypes &expr_types,
   py::handle repn_nonlinear_expr;
 
   for (py::handle c : cons) {
-    lower_body_upper = active_constraints[c];
+    lower_body_upper = c.attr("normalize_constraint")();
     repn = generate_standard_repn(
         lower_body_upper[1], "compute_values"_a = false, "quadratic"_a = false);
     _const = appsi_expr_from_pyomo_expr(repn.attr("constant"), var_map,
