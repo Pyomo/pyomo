@@ -9263,6 +9263,62 @@ class TestPreprocessModelData(unittest.TestCase):
         self.assertIsInstance(robust_infeasible, bool)
         self.assertEqual(robust_infeasible, expected_robust_infeas)
 
+    @parameterized.expand([
+        ["static", 0],
+        ["affine", 1],
+        ["quadratic", 2],
+    ])
+    def test_preprocessor_objective_standardization(self, name, dr_order):
+        """
+        Test preprocessor standardizes the active objective as
+        expected.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType.worst_case,
+            decision_rule_order=dr_order,
+            progress_logger=logger,
+        )
+        new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+
+        ublk = model_data.working_model.user_model
+        working_model = model_data.working_model
+        assertExpressionsEqual(
+            self,
+            working_model.epigraph_con.expr,
+            ublk.obj.expr - working_model.epigraph_var <= 0
+        )
+        assertExpressionsEqual(
+            self,
+            working_model.full_objective.expr,
+            ublk.obj.expr,
+        )
+
+        # recall: objective summands are classified according
+        # to dependence on uncertain parameters and variables
+        # the *user* considers adjustable
+        # so the summands should be independent of the DR order
+        assertExpressionsEqual(
+            self,
+            working_model.first_stage_objective.expr,
+            ublk.p ** 2 + log(ublk.x1) + 2 * ublk.p * ublk.x1,
+        )
+        assertExpressionsEqual(
+            self,
+            working_model.second_stage_objective.expr,
+            (
+                2 * ublk.p * ublk.q
+                + ublk.q ** 2 * ublk.x1
+                + ublk.p ** 3 * (ublk.z1 + ublk.z2 + ublk.y1)
+                + ublk.z4
+                + ublk.z5
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
