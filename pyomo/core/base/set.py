@@ -1432,7 +1432,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         #  (like lists) are not hashable and can raise exceptions.
         try:
             self._update_impl(val_iter)
-        except Set.End:
+        except Set._SetEndException:
             pass
 
     def pop(self):
@@ -2023,11 +2023,14 @@ class Set(IndexedComponent):
 
     """
 
-    class SetEndType(type):
-        def __hash__(self):
-            raise Set.End()
+    class _SetEndException(Exception):
+        pass
 
-    class End(Exception, metaclass=SetEndType):
+    class _SetEndType(type):
+        def __hash__(self):
+            raise Set._SetEndException()
+
+    class End(metaclass=_SetEndType):
         pass
 
     class InsertionOrder(object):
