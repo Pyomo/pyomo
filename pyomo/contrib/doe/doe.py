@@ -300,10 +300,10 @@ class DesignOfExperiments_:
             raise ValueError(
                 "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
             )
-            
-        self._generate_scenario_blocks(mod=mod)
         
-
+        # Generate scenarios for finite difference formulae
+        self._generate_scenario_blocks()
+        
         # variables for jacobian and FIM
         model.regression_parameters = pyo.Set(initialize=list(self.param.keys()))
         model.measured_variables = pyo.Set(initialize=self.measure_name)
@@ -509,11 +509,12 @@ class DesignOfExperiments_:
         """
         
         # Generate initial scenario to populate unknown parameter values
-        self.model = self.experiment.get_labeled_model(**self.args).clone()
+        self.model.base_model = self.experiment.get_labeled_model(**self.args).clone()
         
         # Check the model that labels are correct
+        self.check_model_labels()
         
-        
+        # Set shorthand for self.model
         mod = self.model
         
         # Make a new Suffix to hold which scenarios are associated with parameters 
@@ -525,12 +526,12 @@ class DesignOfExperiments_:
         self.fd_formula = FiniteDifferenceStep(self.fd_formula)
         
         if self.fd_formula == FiniteDifferenceStep.central:
-            mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
-            mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
-            mod.scenarios = range(len(mod.unknown_parameters) * 2)
+            mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
+            mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
+            mod.scenarios = range(len(mod.base_model.unknown_parameters) * 2)
         elif self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
-            mod.parameter_scenarios.update((ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
-            mod.scenarios = range(len(mod.unknown_parameters) + 1)
+            mod.parameter_scenarios.update((ind + 1, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
+            mod.scenarios = range(len(mod.base_model.unknown_parameters) + 1)
         else:
             # To-Do: add an error message for this as not being implemented yet
             pass
@@ -545,40 +546,60 @@ class DesignOfExperiments_:
             b.transfer_attributes_from(self.experiment.get_labeled_model().clone())
             param = mod.parameter_scenarios[s]
             
-            param.pprint()
-            print(pyo.ComponentUID(param))
-            print(pyo.ComponentUID(param).find_component_on(b))
+            # Grabbing the location of the parameter without the "base_model" precursor
+            param_loc = ".".join(param.name.split('.')[1:])
             
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
                 diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
+            # Perturbation at scenario 0 for forward/backward is nothing (stationary case)
             elif self.fd_formula == FiniteDifferenceStep.backward:
-                diff = self.step * -1  # Backward always negative perturbation
+                diff = self.step * -1 * (0 != s)  # Backward always negative perturbation
             elif self.fd_formula == FiniteDifferenceStep.forward:
-                diff = self.step  # Forward always positive
+                diff = self.step * (0 != s)  # Forward always positive
             else:
                 diff = 0
                 pass
             
             # Update parameter values for the given scenario
-            pyo.ComponentUID(param).find_component_on(b).set_value(mod.unknown_parameters[param] * (1 + diff))
+            pyo.ComponentUID(param_loc).find_component_on(b).set_value(mod.base_model.unknown_parameters[param] * (1 + diff))
         mod.scenario_blocks = pyo.Block(mod.scenarios, rule=build_block_scenarios)
         
         # To-Do: this might have to change if experiment inputs have 
         # a different value in the Suffix (currently it is the CUID)
-        # Add constraints to equate block design with global design
-        design_vars = [k for k, v in mod.experiment_inputs.items()]
+        # Add constraints to equate block design with global design:
+        design_vars = [k for k, v in mod.scenario_blocks[0].experiment_inputs.items()]
+        
         for ind, d in enumerate(design_vars):
             con_name = 'global_design_eq_con_' + str(ind)
+            
+            # Constraint rule for global design constraints
             def global_design_fixing(m, s):
-                global_design_var = mod.experiment_inputs[d]
-                block_design_var = global_design_var.find_component_on(mod.scenario_blocks[s])
+                if s == 0:
+                    return pyo.Constraint.Skip
+                ref_design_var = mod.scenario_blocks[0].experiment_inputs[d]
+                ref_design_var_loc = ".".join(ref_design_var.get_repr().split('.')[0:])
+                block_design_var = pyo.ComponentUID(ref_design_var_loc).find_component_on(mod.scenario_blocks[s])
                 return d == block_design_var
             setattr(mod, con_name, pyo.Constraint(mod.scenarios, rule=global_design_fixing))
+        
+        # Clean up the base model used to generate the scenarios
+        self.model.del_component(self.model.base_model)
 
     
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, mod=None):
+        """
+        Checks if the model contains the necessary suffixes for the
+        DoE model to be constructed automatically.
+        
+        Parameters
+        ----------
+        mod: model for suffix checking, Default: None, (self.model)
+        """
+        if mod is None:
+            mod = self.model.base_model
+        
         # Check that experimental outputs exist
         try:
             outputs = [k.name for k, v in mod.experiment_outputs.items()]
@@ -611,7 +632,7 @@ class DesignOfExperiments_:
                 'Experiment model does not have suffix ' + '"measurement_error".'
             )
         
-        logger.info('Model has expected labels.')
+        self.logger.info('Model has expected labels.')
     
     def _scenario_generator(self, ):
         """
