@@ -308,6 +308,7 @@ class DesignOfExperiments_:
         # Generate scenarios for finite difference formulae
         self._generate_scenario_blocks()
         
+        # Shorthand for easier reading
         mod = self.model
         
         # Set names to index sensitivity matrix (jacobian) and FIM
