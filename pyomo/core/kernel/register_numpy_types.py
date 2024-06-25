@@ -45,10 +45,12 @@ if _has_numpy:
     # Historically, the lists included several numpy aliases
     numpy_int_names.extend(('int_', 'intc', 'intp'))
     numpy_int.extend((numpy.int_, numpy.intc, numpy.intp))
-    numpy_float_names.append('float_')
-    numpy_float.append(numpy.float_)
-    numpy_complex_names.append('complex_')
-    numpy_complex.append(numpy.complex_)
+    if hasattr(numpy, 'float_'):
+        numpy_float_names.append('float_')
+        numpy_float.append(numpy.float_)
+    if hasattr(numpy, 'complex_'):
+        numpy_complex_names.append('complex_')
+        numpy_complex.append(numpy.complex_)
 
 # Re-build the old numpy_* lists
 for t in native_boolean_types:
