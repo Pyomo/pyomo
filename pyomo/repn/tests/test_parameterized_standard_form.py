@@ -69,6 +69,13 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertEqual(thing.shape, (0, 4))
         self.assertTrue(np.all(thing.indptr == np.zeros(5)))
 
+    def test_todense(self):
+        A = _CSRMatrix([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4], 4, 4)
+        dense = np.array([[5, 0, 0, 0], [0, 8, 0, 0], [0, 0, 3, 0], [0, 6, 0, 0]])
+
+        self.assertTrue(np.all(A.todense() == dense))
+        self.assertTrue(np.all(A.tocsc().todense() == dense))
+
 
 def assertExpressionArraysEqual(self, A, B):
     self.assertEqual(A.shape, B.shape)
@@ -209,3 +216,4 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         assertExpressionListsEqual(self, repn.rhs, np.array([5 * m.more_data, -3]))
         self.assertEqual(repn.rows, [(m.d, 1), (m.c, -1)])
         self.assertEqual(repn.columns, [m.y[3], m.x, m.y[1]])
+

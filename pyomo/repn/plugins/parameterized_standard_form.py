@@ -164,7 +164,7 @@ class _CSRMatrix(_SparseMatrixBase):
         dense = np.zeros(self.shape, dtype=object)
 
         for row in range(nrows):
-            for j in range(row_index_ptr[row], row_index_ptr[j + 1]):
+            for j in range(row_index_ptr[row], row_index_ptr[row + 1]):
                 dense[row, col_index[j]] = data[j]
 
         return dense
@@ -184,16 +184,3 @@ class _CSCMatrix(_SparseMatrixBase):
                 dense[row_index[j], col] = data[j]
 
         return dense
-
-
-if __name__ == '__main__':
-    A = _CSRMatrix([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4], 4, 4)
-
-    thing = A.tocsc()
-
-    print(thing.data)
-    print(thing.indices)
-    print(thing.indptr)
-
-    dense = thing.todense()
-    print(dense)
