@@ -690,6 +690,23 @@ class TestScaleModelTransformation(unittest.TestCase):
         sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v3)
         assert sf == float(0.3)
 
+    def test_propagate_solution_uninitialized_variable(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2], initialize=1.0)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x[1]] = 10.0
+        m.scaling_factor[m.x[2]] = 10.0
+        scaled_model = pyo.TransformationFactory("core.scale_model").create_using(m)
+        scaled_model.scaled_x[1] = 20.0
+        scaled_model.scaled_x[2] = None
+        pyo.TransformationFactory("core.scale_model").propagate_solution(
+            scaled_model, m
+        )
+        self.assertAlmostEqual(m.x[1].value, 2.0, delta=1e-8)
+        # Note that because x[2] was None in the scaled model, its value is unchanged
+        # (and has not been overridden and set to None).
+        self.assertEqual(m.x[2].value, 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

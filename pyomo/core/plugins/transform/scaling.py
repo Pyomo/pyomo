@@ -313,10 +313,13 @@ class ScaleModel(Transformation):
             original_v = original_model.find_component(original_v_path)
 
             for k in scaled_v:
-                original_v[k].set_value(
-                    value(scaled_v[k]) / component_scaling_factor_map[scaled_v[k]],
-                    skip_validation=True,
-                )
+                if scaled_v[k].value is not None:
+                    # NOTE: if the variable is set to None in the scaled model,
+                    # we don't attempt to change its value in the original model
+                    original_v[k].set_value(
+                        value(scaled_v[k]) / component_scaling_factor_map[scaled_v[k]],
+                        skip_validation=True,
+                    )
                 if check_reduced_costs and scaled_v[k] in scaled_model.rc:
                     original_model.rc[original_v[k]] = (
                         scaled_model.rc[scaled_v[k]]
