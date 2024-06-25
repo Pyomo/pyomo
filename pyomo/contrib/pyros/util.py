@@ -1488,7 +1488,7 @@ def get_effective_var_partitioning(model_data, config):
                         in zip(ccon_expr_repn.linear_vars, ccon_expr_repn.linear_coefs)
                         if lvar is adj_var_in_con
                     )
-                    if var_linear_coeff > PRETRIANGULAR_VAR_COEFF_TOL:
+                    if abs(var_linear_coeff) > PRETRIANGULAR_VAR_COEFF_TOL:
                         new_pretriangular_con_var_map[ccon] = adj_var_in_con
                         config.progress_logger.debug(
                             f" The variable {adj_var_in_con.name!r} is "

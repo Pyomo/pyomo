@@ -7465,9 +7465,9 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         m.q = Param(mutable=True, initialize=1)
 
         m.c0 = Constraint(expr=m.q + m.x1 + m.z == 0)
-        m.c1 = Constraint(expr=(0, m.x1 + m.z, 0))
-        m.c2 = Constraint(expr=m.x1 ** 2 + m.z + m.y[1] == 0)
-        m.c2_dupl = Constraint(expr=m.x1 ** 2 + m.z + m.y[1] == 0)
+        m.c1 = Constraint(expr=(0, m.x1 - m.z, 0))
+        m.c2 = Constraint(expr=m.x1 ** 2 - m.z + m.y[1] == 0)
+        m.c2_dupl = Constraint(expr=m.x1 ** 2 - m.z + m.y[1] == 0)
         m.c3 = Constraint(expr=m.x1 ** 3 + m.y[1] + 2 * m.y[2] == 0)
         m.c4 = Constraint(
             expr=m.x2 ** 2 + m.y[1] + m.y[2] + m.y[3] + m.y[4] == 0
