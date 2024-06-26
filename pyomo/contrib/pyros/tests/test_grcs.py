@@ -100,15 +100,11 @@ from pyomo.environ import (
 )
 import logging
 
-from pyomo.common.dependencies import attempt_import
-parameterized, param_available = attempt_import('parameterized')
-
 logger = logging.getLogger(__name__)
 
 
-if not (numpy_available and scipy_available and param_available):
+if not (numpy_available and scipy_available):
     raise unittest.SkipTest('PyROS unit tests require parameterized, numpy, and scipy')
-parameterized = parameterized.parameterized
 
 # === Config args for testing
 nlp_solver = 'ipopt'
