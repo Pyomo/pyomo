@@ -348,7 +348,6 @@ class DesignOfExperiments_:
         )
 
         # Initialize the FIM
-        # ToDo: add dictionary dependence for FIM? OR remove Jacobian dictionary input option.
         if self.fim_initial is not None:
             dict_fim_initialize = {
                 (bu, un): self.fim_initial[i][j]
@@ -640,9 +639,6 @@ class DesignOfExperiments_:
         mod.del_component(mod.base_model)
 
 
-
-
-    
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, mod=None):
         """
