@@ -1,13 +1,15 @@
 from experiment_class_example import *
 from pyomo.contrib.doe import *
 
+from simple_reaction_example import *
+
 import numpy as np
 
 doe_obj = [0, 0, 0, 0,]
 
 for ind, fd in enumerate(['central', 'backward', 'forward']):
     print(fd)
-    experiment = FullReactorExperiment(data_ex, 32, 3)
+    experiment = FullReactorExperiment(data_ex, 10, 3)
     doe_obj[ind] = DesignOfExperiments_(experiment, fd_formula=fd)
     doe_obj[ind].jac_initial = None
     doe_obj[ind].prior_FIM = np.eye(4)
