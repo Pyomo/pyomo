@@ -125,12 +125,8 @@ class DesignOfExperiments_:
             solver.options["max_iter"] = 3000
             self.solver = solver
 
-        # check if there is prior info
-        if prior_FIM is None:
-            pass  # Since the parameters are not yet populated, the prior_FIM will be 
-                  # set to zero when the prior_FIM is set.
-        else:
-            self.prior_FIM = prior_FIM
+        # Prior FIM will be checked when the first model instance is built.
+        self.prior_FIM = prior_FIM
         
         # To-Do: Add check when parameters are populated that input FIM is the correct size
         
@@ -542,6 +538,30 @@ class DesignOfExperiments_:
         
         # Check the model that labels are correct
         self.check_model_labels()
+
+        # Gather lengths of label structures for later use in the model build process
+        self.n_parameters = len(self.model.base_model.unknown_parameters)
+        self.n_measurement_error = len(self.model.base_model.measurement_error)
+        self.n_experiment_inputs = len(self.model.base_model.experiment_inputs)
+        self.n_experiment_outputs = len(self.model.base_model.experiment_outputs)
+
+        assert (self.n_measurement_error == self.n_experiment_outputs), "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(self.n_experiment_outputs, self.n_measurement_error)
+
+        self.logger.info('Experiment output and measurement error lengths match.')
+
+        # Check that the user input FIM and Jacobian are the correct dimension
+        if self.prior_FIM is not None:
+            self.check_model_FIM(self.prior_FIM)
+        else:
+            self.prior_FIM = np.zeros(self.n_parameters, self.n_parameters)
+        if self.fim_initial is not None:
+            self.check_model_FIM(self.fim_initial)
+        else:
+            self.fim_initial = np.eye(self.n_parameters) + self.prior_FIM
+        if self.jac_initial is not None:
+            self.check_model_jac(self.jac_initial)
+        else:
+            self.jac_initial = np.eye(self.n_experiment_outputs, self.n_parameters)
         
         # Set shorthand for self.model
         mod = self.model
@@ -568,7 +588,7 @@ class DesignOfExperiments_:
         # Generate blocks for finite difference scenarios
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
-            b.transfer_attributes_from(self.experiment.get_labeled_model().clone())
+            b.transfer_attributes_from(self.model.base_model.clone())
             
             # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
             if self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
@@ -666,6 +686,30 @@ class DesignOfExperiments_:
         self.logger.info('Model has expected labels.')
         
     
+    # Check the FIM shape against what is expected from the model.
+    def check_model_FIM(self, FIM=None):
+        """
+        Checks if the specified matrix, FIM, matches the shape expected
+        from the model. This method should only be called after the
+        model has been probed for the length of the unknown parameter,
+        experiment input, experiment output, and measurement error 
+        has been stored to the object. 
+        
+        Parameters
+        ----------
+        mod: model for suffix checking, Default: None, (self.model)
+        """
+        assert FIM.shape == (self.n_parameters, self.n_parameters), "Shape of FIM provided should be n_parameters x n_parameters, or {}, FIM provided has shape: {}".format((self.n_parameters, self.n_parameters), FIM.shape)
+
+        self.logger.info('FIM provided matches expected dimensions from model.')
+    
+
+    # Check the jacobian shape against what is expected from the model.
+    def check_model_jac(self, jac=None):
+        assert jac.shape == (self.n_experiment_outputs, self.n_parameters), "Shape of Jacobian provided should be n_experiment_outputs x n_parameters, or {}, Jacobian provided has shape: {}".format((self.n_experiment_outputs, self.n_parameters), jac.shape)
+
+        self.logger.info('Jacobian provided matches expected dimensions from model.')
+
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(self, ):
         return
