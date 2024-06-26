@@ -85,6 +85,8 @@ def construct_initial_master_problem(model_data, config):
     -------
     master_model : ConcreteModel
         Initial master problem model object.
+        Contains a single scenario block fully cloned from
+        the working model.
     """
     master_model = m = ConcreteModel()
     m.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
@@ -119,15 +121,17 @@ def add_scenario_block_to_master_problem(
 
     Parameters
     ----------
-    master_data : MasterProblemData
-        Master problem data.
+    master_model : ConcreteModel
+        Master model.
     scenario_idx : tuple
-        Index of ``master_data.master_model.scenarios`` at
-        which to place the new scenario block.
+        Index of ``master_model.scenarios`` for the new block.
     param_realization : Iterable of numeric type
-        Uncertain parameter realization for new parameter block.
+        Uncertain parameter realization for new block.
     from_block : BlockData
         Block from which to transfer attributes.
+        This can be an existing scenario block, or a block
+        with the same hierarchical structure as the
+        preprocessed working model.
     clone_first_stage_components : bool
         True to clone first-stage components
         when transferring attributes to the new block
