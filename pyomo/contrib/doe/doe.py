@@ -144,7 +144,7 @@ class DesignOfExperiments_:
         self.model = pyo.ConcreteModel()  # Build empty model
         # May need this attribute for more complicated structures?
         # (i.e., no model rebuilding for large models with sequential)
-        # self._built_scenarios = False
+        self._built_model = False
     
     # Perform doe
     def run_doe(
@@ -185,7 +185,7 @@ class DesignOfExperiments_:
         L_LB:
             L is the Cholesky decomposition matrix for FIM, i.e. FIM = L*L.T.
             L_LB is the lower bound for every element in L.
-            if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
+            if FIM is positive definite, the diagonal element should be positive, so we can set a LB similar to 1E-10
         L_initial:
             initialize the L
         jac_initial:
@@ -281,15 +281,22 @@ class DesignOfExperiments_:
     def create_doe_model(self, mod=None):
         """
         Add equations to compute sensitivities, FIM, and objective.
-
+        Builds the DoE model. Adds the scenarios, the sensitivity matrix
+        Q, the FIM, as well as the objective function to the model.
+        
+        The function alters the ``mod`` input.
+        
+        In the single experiment case, ``mod`` will be self.model. In the 
+        multi-experiment case, ``mod`` will be one experiment to be enumerated.
+        
         Parameters
-        -----------
-        no_obj: if True, objective function is 0.
+        ----------
+        mod: model to add finite difference scenarios
 
-        Return
-        -------
-        model: the DOE model
         """
+        if mod is None:
+            mod = self.model
+
         # Developer recommendation: use the Cholesky decomposition for D-optimality
         # The explicit formula is available for benchmarking purposes and is NOT recommended
         if (
@@ -302,14 +309,12 @@ class DesignOfExperiments_:
             )
         
         # Generate scenarios for finite difference formulae
-        self._generate_scenario_blocks()
-        
-        # Shorthand for easier reading
-        mod = self.model
+        self._generate_scenario_blocks(mod=mod)
         
         # Set names to index sensitivity matrix (jacobian) and FIM
-        mod.parameter_names = pyo.Set(initialize=[".".join(k.name.split('.')[1:]) for k in mod.scenario_blocks[0].unknown_parameters.keys()])
-        mod.output_names = pyo.Set(initialize=[".".join(k.name.split('.')[1:]) for k in mod.scenario_blocks[0].experiment_outputs.keys()])
+        scen_block_ind = min([k.name.split('.').index('scenario_blocks[0]') for k in mod.scenario_blocks[0].unknown_parameters.keys()])
+        mod.parameter_names = pyo.Set(initialize=[".".join(k.name.split('.')[(scen_block_ind + 1):]) for k in mod.scenario_blocks[0].unknown_parameters.keys()])
+        mod.output_names = pyo.Set(initialize=[".".join(k.name.split('.')[(scen_block_ind + 1):]) for k in mod.scenario_blocks[0].experiment_outputs.keys()])
 
         def identity_matrix(m, i, j):
             if i == j:
@@ -414,12 +419,12 @@ class DesignOfExperiments_:
         def jacobian_rule(m, n, p):
             """
             m: Pyomo model
-            p: parameter
-            n: response
+            n: experimental output
+            p: unknown parameter
             """
             fd_step_mult = 1
             cuid = pyo.ComponentUID(n)
-            param_ind = self.model.parameter_names.data().index(p)
+            param_ind = mod.parameter_names.data().index(p)
             
             # Different FD schemes lead to different scenarios for the computation
             if self.fd_formula == FiniteDifferenceStep.central:
@@ -432,10 +437,10 @@ class DesignOfExperiments_:
             elif self.fd_formula == FiniteDifferenceStep.backward:
                 s1 = 0
                 s2 = param_ind + 1
-            
+
             var_up = cuid.find_component_on(m.scenario_blocks[s1])
             var_lo = cuid.find_component_on(m.scenario_blocks[s2])
-            
+
             param = mod.parameter_scenarios[max(s1, s2)]
             param_loc = pyo.ComponentUID(param).find_component_on(mod.scenario_blocks[0])
             param_val = mod.scenario_blocks[0].unknown_parameters[param_loc]
@@ -470,12 +475,12 @@ class DesignOfExperiments_:
             mod.parameter_names, mod.parameter_names, rule=read_prior
         )
 
-        # The off-diagonal elements are symmetric, thus only half of the elements need to be calculated
+        # Off-diagonal elements are symmetric, so only half of the off-diagonal elements need to be specified.
         def fim_rule(m, p, q):
             """
             m: Pyomo model
-            p: parameter
-            q: parameter
+            p: unknown parameter
+            q: unknown parameter
             """
 
             if p > q:
@@ -488,7 +493,7 @@ class DesignOfExperiments_:
                     m.fim[p, q]
                     == sum(
                         1
-                        / self.model.scenario_blocks[0].measurement_error[pyo.ComponentUID(n).find_component_on(mod.scenario_blocks[0])]
+                        / mod.scenario_blocks[0].measurement_error[pyo.ComponentUID(n).find_component_on(mod.scenario_blocks[0])]
                         * m.sensitivity_jacobian[n, p]
                         * m.sensitivity_jacobian[n, q]
                         for n in mod.output_names
@@ -528,18 +533,21 @@ class DesignOfExperiments_:
         ----------
         mod: model to add finite difference scenarios
         """
-        
+        # If model is none, assume it is self.model
+        if mod is None:
+            mod = self.model
+
         # Generate initial scenario to populate unknown parameter values
-        self.model.base_model = self.experiment.get_labeled_model(**self.args).clone()
+        mod.base_model = self.experiment.get_labeled_model(**self.args).clone()
         
         # Check the model that labels are correct
-        self.check_model_labels()
+        self.check_model_labels(mod=mod)
 
         # Gather lengths of label structures for later use in the model build process
-        self.n_parameters = len(self.model.base_model.unknown_parameters)
-        self.n_measurement_error = len(self.model.base_model.measurement_error)
-        self.n_experiment_inputs = len(self.model.base_model.experiment_inputs)
-        self.n_experiment_outputs = len(self.model.base_model.experiment_outputs)
+        self.n_parameters = len(mod.base_model.unknown_parameters)
+        self.n_measurement_error = len(mod.base_model.measurement_error)
+        self.n_experiment_inputs = len(mod.base_model.experiment_inputs)
+        self.n_experiment_outputs = len(mod.base_model.experiment_outputs)
 
         assert (self.n_measurement_error == self.n_experiment_outputs), "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(self.n_experiment_outputs, self.n_measurement_error)
 
@@ -558,9 +566,6 @@ class DesignOfExperiments_:
             self.check_model_jac(self.jac_initial)
         else:
             self.jac_initial = np.eye(self.n_experiment_outputs, self.n_parameters)
-        
-        # Set shorthand for self.model
-        mod = self.model
         
         # Make a new Suffix to hold which scenarios are associated with parameters 
         mod.parameter_scenarios = pyo.Suffix(
@@ -584,7 +589,7 @@ class DesignOfExperiments_:
         # Generate blocks for finite difference scenarios
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
-            b.transfer_attributes_from(self.model.base_model.clone())
+            b.transfer_attributes_from(mod.base_model.clone())
             
             # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
             if self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
@@ -594,8 +599,9 @@ class DesignOfExperiments_:
             param = mod.parameter_scenarios[s]
             
             # Grabbing the location of the parameter without the "base_model" precursor
-            param_loc = ".".join(param.name.split('.')[1:])
-            
+            base_model_loc = param.name.split('.').index('base_model')
+            param_loc = ".".join(param.name.split('.')[(base_model_loc + 1):])
+
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
                 diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
@@ -631,7 +637,10 @@ class DesignOfExperiments_:
             setattr(mod, con_name, pyo.Constraint(mod.scenarios, rule=global_design_fixing))
         
         # Clean up the base model used to generate the scenarios
-        self.model.del_component(self.model.base_model)
+        mod.del_component(mod.base_model)
+
+
+
 
     
     # Check to see if the model has all the required suffixes
