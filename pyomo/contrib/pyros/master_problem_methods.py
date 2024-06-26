@@ -68,32 +68,95 @@ def initial_construct_master(model_data):
     return master_data
 
 
-def get_state_vars(model, iterations):
+def construct_initial_master_problem(model_data, config):
     """
-    Obtain the state variables of a two-stage model
-    for a given (sequence of) iterations corresponding
-    to model blocks.
+    Construct the initial master problem model object
+    from the preprocessed working model.
 
     Parameters
     ----------
-    model : ConcreteModel
-        PyROS model.
-    iterations : iterable
-        Iterations to consider.
+    model_data : model data object
+        Main model data object,
+        containing the preprocessed working model.
+    config : ConfigDict
+        PyROS solver settings.
 
     Returns
     -------
-    iter_state_var_map : dict
-        Mapping from iterations to list(s) of state vars.
+    master_model : ConcreteModel
+        Initial master problem model object.
     """
-    iter_state_var_map = dict()
-    for itn in iterations:
-        state_vars = [
-            var for blk in model.scenarios[itn, :] for var in blk.util.state_vars
-        ]
-        iter_state_var_map[itn] = state_vars
+    master_model = m = ConcreteModel()
+    m.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
+    add_scenario_block_to_master_problem(
+        master_model=master_model,
+        scenario_idx=(0, 0),
+        param_realization=config.nominal_uncertain_param_vals,
+        from_block=model_data.working_model,
+        clone_first_stage_components=True,
+    )
 
-    return iter_state_var_map
+    # epigraph Objective was not added during preprocessing,
+    # as we wanted to add it to the root block of the master
+    # model rather than to the model to prevent
+    # duplication across scenario sub-blocks
+    master_model.epigraph_obj = Objective(
+        expr=master_model.scenarios[0, 0].epigraph_var,
+    )
+
+    return master_model
+
+
+def add_scenario_block_to_master_problem(
+        master_model,
+        scenario_idx,
+        param_realization,
+        from_block,
+        clone_first_stage_components,
+        ):
+    """
+    Add new scenario block to the master model.
+
+    Parameters
+    ----------
+    master_data : MasterProblemData
+        Master problem data.
+    scenario_idx : tuple
+        Index of ``master_data.master_model.scenarios`` at
+        which to place the new scenario block.
+    param_realization : Iterable of numeric type
+        Uncertain parameter realization for new parameter block.
+    from_block : BlockData
+        Block from which to transfer attributes.
+    clone_first_stage_components : bool
+        True to clone first-stage components
+        when transferring attributes to the new block
+        to the new block (as opposed to using the objects as
+        they are in `from_block`), False otherwise.
+    """
+    # Note for any of the Vars not copied:
+    # - if Var is not a member of an indexed var, then
+    #   the 'name' attribute changes from
+    #   '{from_block.name}.{var.name}'
+    #   to 'scenarios[{scenario_idx}].{var.name}'
+    # - otherwise, the name stays the same
+    memo = dict()
+    if not clone_first_stage_components:
+        nonadjustable_comps = (
+            from_block.all_nonadjustable_variables
+            + from_block.effective_first_stage_inequality_cons
+            + from_block.effective_first_stage_equality_cons
+        )
+        memo = {id(comp): comp for comp in nonadjustable_comps}
+    new_block = from_block.clone(memo=memo)
+    master_model.scenarios[scenario_idx].transfer_attributes_from(new_block)
+
+    # update uncertain parameter values in new block
+    new_uncertain_params = (
+        master_model.scenarios[scenario_idx].uncertain_params
+    )
+    for param, val in zip(new_uncertain_params, param_realization):
+        param.set_value(val)
 
 
 def construct_master_feasibility_problem(model_data, config):
