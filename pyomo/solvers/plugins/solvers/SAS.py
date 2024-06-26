@@ -28,7 +28,7 @@ from pyomo.opt.results import (
 )
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base import Var
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.common.log import LogStream
 from pyomo.common.tee import capture_output, TeeStream
@@ -157,7 +157,7 @@ class SASAbc(ABC, OptSolver):
 
         # Store the model, too bad this is not done in the base class
         for arg in args:
-            if isinstance(arg, (_BlockData, IBlock)):
+            if isinstance(arg, (BlockData, IBlock)):
                 # Store the instance
                 self._instance = arg
                 self._vars = []
@@ -282,16 +282,17 @@ class SAS94(SASAbc):
             self._python_api_exists = True
             self._sas.logger.setLevel(logger.level)
 
-        # Create the session only as its needed
-        self._sas_session = None
-
         # Store other options for the SAS session
         self._session_options = kwds
+
+        # Create the session
+        self._sas_session = self._sas.SASsession(**self._session_options)
 
     def __del__(self):
         # Close the session, if we created one
         if self._sas_session:
             self._sas_session.endsas()
+            del self._sas_session
 
     def _create_statement_str(self, statement):
         """Helper function to create the strings for the statements of the proc OPTLP/OPTMILP code."""
@@ -369,7 +370,10 @@ class SAS94(SASAbc):
         sas_options = "option notes nonumber nodate nosource pagesize=max;"
 
         # Get the current SAS session, submit the code and return the results
-        sas = self._sas_session = self._sas.SASsession(**self._session_options)
+        if not self._sas_session:
+            sas = self._sas_session = self._sas.SASsession(**self._session_options)
+        else:
+            sas = self._sas_session
 
         # Find the version of 9.4 we are using
         self._sasver = sas.sasver
@@ -576,14 +580,16 @@ class SASCAS(SASAbc):
         else:
             self._python_api_exists = True
 
-        # Create the session only as its needed
-        self._sas_session = None
         self._session_options = kwds
+
+        # Create the session
+        self._sas_session = self._sas.CAS(**self._session_options)
 
     def __del__(self):
         # Close the session, if we created one
         if self._sas_session:
             self._sas_session.close()
+            del self._sas_session
 
     def _uploadMpsFile(self, s, unique):
         # Declare a unique table name for the mps table
