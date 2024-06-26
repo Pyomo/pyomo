@@ -7,6 +7,8 @@ objects.
 import logging
 import unittest
 
+from pyomo.common.collections import Bunch
+from pyomo.common.dependencies import numpy_available, scipy_available
 from pyomo.core.base import (
     ConcreteModel,
     Constraint,
@@ -14,18 +16,16 @@ from pyomo.core.base import (
     Param,
     Var,
 )
-from pyomo.common.collections import Bunch
-from pyomo.common.dependencies import numpy_available, scipy_available
 from pyomo.core.expr import exp
 
+from pyomo.contrib.pyros.master_problem_methods import (
+    add_scenario_block_to_master_problem,
+    construct_initial_master_problem,
+)
 from pyomo.contrib.pyros.util import (
     new_preprocess_model_data,
-    VariablePartitioning,
     ObjectiveType,
-)
-from pyomo.contrib.pyros.master_problem_methods import (
-    construct_initial_master_problem,
-    add_scenario_block_to_master_problem,
+    VariablePartitioning,
 )
 
 
