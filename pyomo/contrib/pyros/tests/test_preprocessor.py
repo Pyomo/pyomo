@@ -4,6 +4,7 @@ Tests for the PyROS preprocessor.
 
 
 import logging
+import textwrap
 import unittest
 
 from pyomo.common.collections import Bunch, ComponentSet, ComponentMap
@@ -53,6 +54,7 @@ from pyomo.contrib.pyros.util import (
     setup_working_model,
     VariablePartitioning,
     new_preprocess_model_data,
+    log_model_statistics,
 )
 parameterized, param_available = attempt_import('parameterized')
 
@@ -2718,6 +2720,110 @@ class TestPreprocessModelData(unittest.TestCase):
                 + ublk.z5
             ),
         )
+
+    @parameterized.expand([["nominal"], ["worst_case"]])
+    def test_preprocessor_log_model_statistics_affine_dr(self, obj_focus):
+        """
+        Test statistics of the preprocessed working model are
+        logged as expected.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType[obj_focus],
+            decision_rule_order=1,
+            progress_logger=logger,
+        )
+        new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+
+        # expected model stats worked out by hand
+        expected_log_str = textwrap.dedent(
+            f"""
+            Model Statistics:
+              Number of variables : 14
+                First-stage variables : 2
+                Second-stage variables : 5 (2 adj.)
+                State variables : 2 (1 adj.)
+                Epigraph variable : 1
+                Decision rule variables : 4
+              Number of uncertain parameters : 1
+              Number of constraints : 23
+                Equality constraints : 9
+                  Coefficient matching constraints : 4
+                  Other first-stage equations : 2
+                  Performance equations : 1
+                  Decision rule equations : 2
+                Inequality constraints : 14
+                  First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
+                  Performance inequalities : {11 if obj_focus == 'nominal' else 12}
+            """
+        )
+
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            log_model_statistics(model_data, config)
+        log_str = LOG.getvalue()
+
+        log_lines = log_str.splitlines()[1:]
+        expected_log_lines = expected_log_str.splitlines()[1:]
+
+        self.assertEqual(len(log_lines), len(expected_log_lines))
+        for line, expected_line in zip(log_lines, expected_log_lines):
+            self.assertEqual(line, expected_line)
+
+    @parameterized.expand([["nominal"], ["worst_case"]])
+    def test_preprocessor_log_model_statistics_quadratic_dr(self, obj_focus):
+        """
+        Test statistics of the preprocessed working model are
+        logged as expected.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(
+            uncertain_params=[om.q],
+            objective_focus=ObjectiveType[obj_focus],
+            decision_rule_order=2,
+            progress_logger=logger,
+        )
+        new_preprocess_model_data(
+            model_data, config, user_var_partitioning,
+        )
+
+        # expected model stats worked out by hand
+        expected_log_str = textwrap.dedent(
+            f"""
+            Model Statistics:
+              Number of variables : 16
+                First-stage variables : 2
+                Second-stage variables : 5 (2 adj.)
+                State variables : 2 (1 adj.)
+                Epigraph variable : 1
+                Decision rule variables : 6
+              Number of uncertain parameters : 1
+              Number of constraints : 23
+                Equality constraints : 9
+                  Coefficient matching constraints : 3
+                  Other first-stage equations : 2
+                  Performance equations : 2
+                  Decision rule equations : 2
+                Inequality constraints : 14
+                  First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
+                  Performance inequalities : {11 if obj_focus == 'nominal' else 12}
+            """
+        )
+
+        with LoggingIntercept(level=logging.INFO) as LOG:
+            log_model_statistics(model_data, config)
+        log_str = LOG.getvalue()
+
+        log_lines = log_str.splitlines()[1:]
+        expected_log_lines = expected_log_str.splitlines()[1:]
+
+        self.assertEqual(len(log_lines), len(expected_log_lines))
+        for line, expected_line in zip(log_lines, expected_log_lines):
+            self.assertEqual(line, expected_line)
 
 
 if __name__ == "__main__":
