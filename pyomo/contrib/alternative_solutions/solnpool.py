@@ -11,9 +11,10 @@
 
 try:
     import gurobipy
-    gurobi_available=True
+
+    gurobi_available = True
 except:
-    gurobi_available=False
+    gurobi_available = False
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
