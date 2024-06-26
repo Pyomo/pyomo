@@ -9228,11 +9228,107 @@ class TestPreprocessModelData(unittest.TestCase):
             # eq1 doesn't get reformulated in coefficient matching
             # when DR order is 2 as the polynomial degree is too high
             ComponentSet([ublk.eq4] + ([ublk.eq1] if dr_order == 2 else [])),
-            msg=(
-                "Performance equality constraints not as expected for "
-                f"{dr_order=}."
-            ),
         )
+
+        # verify the constraints are active
+        for fs_eq_con in working_model.effective_first_stage_equality_cons:
+            self.assertTrue(fs_eq_con.active, msg=f"{fs_eq_con.name} inactive")
+        for fs_ineq_con in working_model.effective_first_stage_inequality_cons:
+            self.assertTrue(fs_ineq_con.active, msg=f"{fs_ineq_con.name} inactive")
+        for perf_eq_con in working_model.effective_performance_equality_cons:
+            self.assertTrue(perf_eq_con.active, msg=f"{perf_eq_con.name} inactive")
+        for perf_ineq_con in working_model.effective_performance_inequality_cons:
+            self.assertTrue(perf_ineq_con.active, msg=f"{perf_ineq_con.name} inactive")
+
+        # verify the constraint expressions
+        m = ublk
+        assertExpressionsEqual(self, m.x1.lower, 0)
+        assertExpressionsEqual(
+            self,
+            m.var_x1_uncertain_upper_bound_con.expr, m.x1 <= m.q,
+        )
+
+        assertExpressionsEqual(
+            self,
+            m.var_z1_uncertain_upper_bound_con.expr,
+            m.z1 <= m.q,
+        )
+        assertExpressionsEqual(
+            self,
+            m.var_z2_uncertain_lower_bound_con.expr,
+            -m.z2 <= -(-2 * m.q ** 2),
+        )
+        assertExpressionsEqual(
+            self,
+            m.var_z3_uncertain_lower_bound_con.expr,
+            -m.z3 <= -(-m.q),
+        )
+        assertExpressionsEqual(
+            self,
+            m.var_z3_certain_upper_bound_con.expr,
+            m.z3 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.var_z5_certain_lower_bound_con.expr,
+            -m.z5 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.var_y1_certain_lower_bound_con.expr,
+            -m.y1 <= 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.ineq1.expr,
+            -m.p <= m.x1 + m.z1,
+        )
+        assertExpressionsEqual(
+            self,
+            m.con_ineq1_upper_bound_con.expr,
+            m.x1 + m.z1 <= exp(m.q),
+        )
+        assertExpressionsEqual(
+            self,
+            m.ineq2.expr,
+            RangedExpression((0, m.x1 + m.x2, 10), False),
+        )
+        assertExpressionsEqual(
+            self,
+            m.con_ineq3_lower_bound_con.expr,
+            -(2 * (m.z3 + m.y1)) <= -(2 * m.q),
+        )
+        assertExpressionsEqual(
+            self,
+            m.con_ineq3_upper_bound_con.expr,
+            2 * (m.z3 + m.y1) <= 2 * m.q,
+        )
+        assertExpressionsEqual(
+            self,
+            m.ineq3.upper,
+            None,
+        )
+        self.assertFalse(m.ineq3.active)
+        assertExpressionsEqual(
+            self,
+            m.ineq4.expr,
+            -(m.y2 ** 2 + log(m.y2)) <= -(-m.q),
+        )
+        self.assertFalse(m.ineq5.active)
+
+        assertExpressionsEqual(
+            self,
+            m.eq2.expr,
+            m.x1 - m.z1 == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            m.eq3.expr,
+            m.x1 ** 2 + m.x2 + m.p * m.z2 == m.p,
+        )
+        if dr_order < 2:
+            # due to coefficient matching
+            self.assertFalse(m.eq1.active)
 
     @parameterized.expand([
         ["static", 0, True],
@@ -9262,6 +9358,57 @@ class TestPreprocessModelData(unittest.TestCase):
         )
         self.assertIsInstance(robust_infeasible, bool)
         self.assertEqual(robust_infeasible, expected_robust_infeas)
+
+        # check the coefficient matching constraint expressions
+        working_model = model_data.working_model
+        m = model_data.working_model.user_model
+        working_model.coefficient_matching_conlist.pprint()
+        if config.decision_rule_order == 1:
+            # check the constraint expressions of eq1 and z5 bound
+            self.assertFalse(m.eq1.active)
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[1].expr,
+                working_model.decision_rule_vars[1][0] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[2].expr,
+                -1 + working_model.decision_rule_vars[1][1] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[3].expr,
+                working_model.decision_rule_vars[0][0] + m.x2 == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[4].expr,
+                working_model.decision_rule_vars[0][1] == 0,
+            )
+        if config.decision_rule_order == 2:
+            # check the constraint expressions of eq1 and eq4
+            self.assertTrue(m.eq1.active)
+            assertExpressionsEqual(
+                self,
+                m.eq1.expr,
+                m.q * (m.z3 + m.x2) == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[1].expr,
+                working_model.decision_rule_vars[1][0] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[2].expr,
+                -1 + working_model.decision_rule_vars[1][1] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                working_model.coefficient_matching_conlist[3].expr,
+                working_model.decision_rule_vars[1][2] == 0,
+            )
 
     @parameterized.expand([
         ["static", 0],
