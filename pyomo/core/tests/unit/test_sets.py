@@ -210,8 +210,8 @@ class SimpleSetA(PyomoModel):
         # is, the default within is None
         #
         self.assertEqual(self.instance.A.domain, Any)
-        self.instance.A.add('2', '3', '4')
-        self.assertFalse('2' not in self.instance.A, "Found invalid new element in A")
+        self.instance.A.add("2", "3", "4")
+        self.assertFalse("2" not in self.instance.A, "Found invalid new element in A")
 
     def test_removeValid(self):
         """Check that we can remove a valid set element"""
@@ -298,7 +298,7 @@ class SimpleSetA(PyomoModel):
         """Various checks for contains() method"""
         self.assertEqual(self.e1 in self.instance.A, True)
         self.assertEqual(self.e2 in self.instance.A, False)
-        self.assertEqual('2' in self.instance.A, False)
+        self.assertEqual("2" in self.instance.A, False)
 
     def test_or(self):
         """Check that set union works"""
@@ -550,9 +550,9 @@ class TestRangeSet(SimpleSetA):
         # is, the default within is None
         #
         with self.assertRaises(AttributeError):
-            self.instance.A.add('2', '3', '4')
+            self.instance.A.add("2", "3", "4")
         self.assertFalse(
-            '2' in self.instance.A, "Value we attempted to add is not in A"
+            "2" in self.instance.A, "Value we attempted to add is not in A"
         )
 
     def test_removeValid(self):
@@ -589,7 +589,7 @@ class TestRangeSet(SimpleSetA):
         """Various checks for contains() method"""
         self.assertEqual(self.e1 in self.instance.A, True)
         self.assertEqual(self.e2 in self.instance.A, True)
-        self.assertEqual('2' in self.instance.A, False)
+        self.assertEqual("2" in self.instance.A, False)
 
     def test_len(self):
         """Check that a simple set of numeric elements has the right size"""
@@ -844,49 +844,49 @@ class SimpleSetB(SimpleSetA):
         #
         # Misc datasets
         #
-        self.model.tmpset1 = Set(initialize=['A1', 'A3', 'A5', 'A7'])
-        self.model.tmpset2 = Set(initialize=['A1', 'A2', 'A3', 'A5', 'A7'])
-        self.model.tmpset3 = Set(initialize=['A2', 'A3', 'A5', 'A7', 'A9'])
+        self.model.tmpset1 = Set(initialize=["A1", "A3", "A5", "A7"])
+        self.model.tmpset2 = Set(initialize=["A1", "A2", "A3", "A5", "A7"])
+        self.model.tmpset3 = Set(initialize=["A2", "A3", "A5", "A7", "A9"])
 
-        self.model.setunion = Set(initialize=['A1', 'A2', 'A3', 'A5', 'A7', 'A9'])
-        self.model.setintersection = Set(initialize=['A3', 'A5', 'A7'])
-        self.model.setxor = Set(initialize=['A1', 'A2', 'A9'])
-        self.model.setdiff = Set(initialize=['A1'])
+        self.model.setunion = Set(initialize=["A1", "A2", "A3", "A5", "A7", "A9"])
+        self.model.setintersection = Set(initialize=["A3", "A5", "A7"])
+        self.model.setxor = Set(initialize=["A1", "A2", "A9"])
+        self.model.setdiff = Set(initialize=["A1"])
         self.model.setmul = Set(
             initialize=[
-                ('A1', 'A2'),
-                ('A1', 'A3'),
-                ('A1', 'A5'),
-                ('A1', 'A7'),
-                ('A1', 'A9'),
-                ('A3', 'A2'),
-                ('A3', 'A3'),
-                ('A3', 'A5'),
-                ('A3', 'A7'),
-                ('A3', 'A9'),
-                ('A5', 'A2'),
-                ('A5', 'A3'),
-                ('A5', 'A5'),
-                ('A5', 'A7'),
-                ('A5', 'A9'),
-                ('A7', 'A2'),
-                ('A7', 'A3'),
-                ('A7', 'A5'),
-                ('A7', 'A7'),
-                ('A7', 'A9'),
+                ("A1", "A2"),
+                ("A1", "A3"),
+                ("A1", "A5"),
+                ("A1", "A7"),
+                ("A1", "A9"),
+                ("A3", "A2"),
+                ("A3", "A3"),
+                ("A3", "A5"),
+                ("A3", "A7"),
+                ("A3", "A9"),
+                ("A5", "A2"),
+                ("A5", "A3"),
+                ("A5", "A5"),
+                ("A5", "A7"),
+                ("A5", "A9"),
+                ("A7", "A2"),
+                ("A7", "A3"),
+                ("A7", "A5"),
+                ("A7", "A7"),
+                ("A7", "A9"),
             ]
         )
 
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.e1 = 'A1'
-        self.e2 = 'A2'
-        self.e3 = 'A3'
-        self.e4 = 'A4'
-        self.e5 = 'A5'
-        self.e6 = 'A6'
+        self.e1 = "A1"
+        self.e2 = "A2"
+        self.e3 = "A3"
+        self.e4 = "A4"
+        self.e5 = "A5"
+        self.e6 = "A6"
 
     def test_bounds(self):
-        self.assertEqual(self.instance.A.bounds(), ('A1', 'A7'))
+        self.assertEqual(self.instance.A.bounds(), ("A1", "A7"))
 
 
 class SimpleSetC(SimpleSetA):
@@ -911,60 +911,60 @@ class SimpleSetC(SimpleSetA):
         # Misc datasets
         #
         self.model.tmpset1 = Set(
-            initialize=[('A1', 1), ('A3', 1), ('A5', 1), ('A7', 1)]
+            initialize=[("A1", 1), ("A3", 1), ("A5", 1), ("A7", 1)]
         )
         self.model.tmpset2 = Set(
-            initialize=[('A1', 1), ('A2', 1), ('A3', 1), ('A5', 1), ('A7', 1)]
+            initialize=[("A1", 1), ("A2", 1), ("A3", 1), ("A5", 1), ("A7", 1)]
         )
         self.model.tmpset3 = Set(
-            initialize=[('A2', 1), ('A3', 1), ('A5', 1), ('A7', 1), ('A9', 1)]
+            initialize=[("A2", 1), ("A3", 1), ("A5", 1), ("A7", 1), ("A9", 1)]
         )
 
         self.model.setunion = Set(
             initialize=[
-                ('A1', 1),
-                ('A2', 1),
-                ('A3', 1),
-                ('A5', 1),
-                ('A7', 1),
-                ('A9', 1),
+                ("A1", 1),
+                ("A2", 1),
+                ("A3", 1),
+                ("A5", 1),
+                ("A7", 1),
+                ("A9", 1),
             ]
         )
-        self.model.setintersection = Set(initialize=[('A3', 1), ('A5', 1), ('A7', 1)])
-        self.model.setxor = Set(initialize=[('A1', 1), ('A2', 1), ('A9', 1)])
-        self.model.setdiff = Set(initialize=[('A1', 1)])
+        self.model.setintersection = Set(initialize=[("A3", 1), ("A5", 1), ("A7", 1)])
+        self.model.setxor = Set(initialize=[("A1", 1), ("A2", 1), ("A9", 1)])
+        self.model.setdiff = Set(initialize=[("A1", 1)])
         self.model.setmul = Set(
             initialize=[
-                (('A1', 1, 'A2', 1)),
-                (('A1', 1, 'A3', 1)),
-                (('A1', 1, 'A5', 1)),
-                (('A1', 1, 'A7', 1)),
-                (('A1', 1, 'A9', 1)),
-                (('A3', 1, 'A2', 1)),
-                (('A3', 1, 'A3', 1)),
-                (('A3', 1, 'A5', 1)),
-                (('A3', 1, 'A7', 1)),
-                (('A3', 1, 'A9', 1)),
-                (('A5', 1, 'A2', 1)),
-                (('A5', 1, 'A3', 1)),
-                (('A5', 1, 'A5', 1)),
-                (('A5', 1, 'A7', 1)),
-                (('A5', 1, 'A9', 1)),
-                (('A7', 1, 'A2', 1)),
-                (('A7', 1, 'A3', 1)),
-                (('A7', 1, 'A5', 1)),
-                (('A7', 1, 'A7', 1)),
-                (('A7', 1, 'A9', 1)),
+                (("A1", 1, "A2", 1)),
+                (("A1", 1, "A3", 1)),
+                (("A1", 1, "A5", 1)),
+                (("A1", 1, "A7", 1)),
+                (("A1", 1, "A9", 1)),
+                (("A3", 1, "A2", 1)),
+                (("A3", 1, "A3", 1)),
+                (("A3", 1, "A5", 1)),
+                (("A3", 1, "A7", 1)),
+                (("A3", 1, "A9", 1)),
+                (("A5", 1, "A2", 1)),
+                (("A5", 1, "A3", 1)),
+                (("A5", 1, "A5", 1)),
+                (("A5", 1, "A7", 1)),
+                (("A5", 1, "A9", 1)),
+                (("A7", 1, "A2", 1)),
+                (("A7", 1, "A3", 1)),
+                (("A7", 1, "A5", 1)),
+                (("A7", 1, "A7", 1)),
+                (("A7", 1, "A9", 1)),
             ]
         )
 
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.e1 = ('A1', 1)
-        self.e2 = ('A2', 1)
-        self.e3 = ('A3', 1)
-        self.e4 = ('A4', 1)
-        self.e5 = ('A5', 1)
-        self.e6 = ('A6', 1)
+        self.e1 = ("A1", 1)
+        self.e2 = ("A2", 1)
+        self.e3 = ("A3", 1)
+        self.e4 = ("A4", 1)
+        self.e5 = ("A5", 1)
+        self.e6 = ("A6", 1)
 
     def tearDown(self):
         #
@@ -974,7 +974,7 @@ class SimpleSetC(SimpleSetA):
         PyomoModel.tearDown(self)
 
     def test_bounds(self):
-        self.assertEqual(self.instance.A.bounds(), (('A1', 1), ('A7', 1)))
+        self.assertEqual(self.instance.A.bounds(), (("A1", 1), ("A7", 1)))
 
     def test_addInvalid(self):
         """Check that we get an error when adding invalid set elements"""
@@ -984,13 +984,13 @@ class SimpleSetC(SimpleSetA):
         #
         self.assertEqual(self.instance.A.domain, Any)
         try:
-            self.instance.A.add('2', '3', '4')
+            self.instance.A.add("2", "3", "4")
         except ValueError:
             pass
         else:
             self.fail("fail test_addInvalid")
-        self.assertFalse('2' in self.instance.A, "Found invalid new element in A")
-        self.instance.A.add(('2', '3'))
+        self.assertFalse("2" in self.instance.A, "Found invalid new element in A")
+        self.instance.A.add(("2", "3"))
 
 
 @unittest.skipIf(not _has_numpy, "Numpy is not installed")
@@ -1107,7 +1107,7 @@ class ArraySet(PyomoModel):
         self.model.Q_c = Set(initialize=[3, 5, 7, 9])
 
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.e1 = ('A1', 1)
+        self.e1 = ("A1", 1)
 
     def Xtest_bounds(self):
         self.assertEqual(self.instance.A.bounds(), None)
@@ -1116,14 +1116,14 @@ class ArraySet(PyomoModel):
         """Check the access to items"""
         try:
             tmp = []
-            for val in self.instance.A['A']:
+            for val in self.instance.A["A"]:
                 tmp.append(val)
             tmp.sort()
         except:
             self.fail("Problems getting a valid set from a set array")
         self.assertEqual(tmp, [1, 3, 5, 7])
         try:
-            tmp = self.instance.A['D']
+            tmp = self.instance.A["D"]
         except KeyError:
             pass
         else:
@@ -1131,15 +1131,15 @@ class ArraySet(PyomoModel):
 
     def test_setitem(self):
         """Check the access to items"""
-        self.model.Z = Set(initialize=['A', 'C'])
-        self.model.A = Set(self.model.Z, initialize={'A': [1]})
+        self.model.Z = Set(initialize=["A", "C"])
+        self.model.A = Set(self.model.Z, initialize={"A": [1]})
         self.instance = self.model.create_instance()
         tmp = [1, 6, 9]
-        self.instance.A['A'] = tmp
-        self.instance.A['C'] = tmp
+        self.instance.A["A"] = tmp
+        self.instance.A["C"] = tmp
 
         try:
-            self.instance.A['D'] = tmp
+            self.instance.A["D"] = tmp
         except KeyError:
             pass
         else:
@@ -1149,7 +1149,7 @@ class ArraySet(PyomoModel):
         """Check the keys for the array"""
         tmp = list(self.instance.A.keys())
         tmp.sort()
-        self.assertEqual(tmp, ['A', 'C'])
+        self.assertEqual(tmp, ["A", "C"])
 
     def test_len(self):
         """Check that a simple set of numeric elements has the right size"""
@@ -1281,7 +1281,7 @@ class ArraySet(PyomoModel):
         """Check that set union works"""
         with self.assertRaisesRegex(
             TypeError,
-            r'Cannot apply a Set operator to an indexed Set ' r'component \(A\)',
+            r"Cannot apply a Set operator to an indexed Set " r"component \(A\)",
         ):
             self.instance.A | self.instance.tmpset3
 
@@ -1289,7 +1289,7 @@ class ArraySet(PyomoModel):
         """Check that set intersection works"""
         with self.assertRaisesRegex(
             TypeError,
-            r'Cannot apply a Set operator to an indexed Set ' r'component \(A\)',
+            r"Cannot apply a Set operator to an indexed Set " r"component \(A\)",
         ):
             self.instance.A & self.instance.tmpset3
 
@@ -1297,7 +1297,7 @@ class ArraySet(PyomoModel):
         """Check that set exclusive or works"""
         with self.assertRaisesRegex(
             TypeError,
-            r'Cannot apply a Set operator to an indexed Set ' r'component \(A\)',
+            r"Cannot apply a Set operator to an indexed Set " r"component \(A\)",
         ):
             self.instance.A ^ self.instance.tmpset3
 
@@ -1305,7 +1305,7 @@ class ArraySet(PyomoModel):
         """Check that set difference works"""
         with self.assertRaisesRegex(
             TypeError,
-            r'Cannot apply a Set operator to an indexed Set ' r'component \(A\)',
+            r"Cannot apply a Set operator to an indexed Set " r"component \(A\)",
         ):
             self.instance.A - self.instance.tmpset3
 
@@ -1313,7 +1313,7 @@ class ArraySet(PyomoModel):
         """Check that set cross-product works"""
         with self.assertRaisesRegex(
             TypeError,
-            r'Cannot apply a Set operator to an indexed Set ' r'component \(A\)',
+            r"Cannot apply a Set operator to an indexed Set " r"component \(A\)",
         ):
             self.instance.A * self.instance.tmpset3
 
@@ -1362,16 +1362,16 @@ class ArraySet2(PyomoModel):
         self.model.tmpset3 = Set()
 
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.e1 = ('A1', 1)
+        self.e1 = ("A1", 1)
 
     def test_bounds(self):
-        self.assertEqual(self.instance.A['A', 1].bounds(), (1, 7))
+        self.assertEqual(self.instance.A["A", 1].bounds(), (1, 7))
 
     def test_getitem(self):
         """Check the access to items"""
         try:
             tmp = []
-            for val in self.instance.A['A', 1]:
+            for val in self.instance.A["A", 1]:
                 tmp.append(val)
             tmp.sort()
         except:
@@ -1379,12 +1379,12 @@ class ArraySet2(PyomoModel):
         self.assertEqual(tmp, [1, 3, 5, 7])
 
         try:
-            tmp = self.instance.A['A', 2]
+            tmp = self.instance.A["A", 2]
         except:
             self.fail("Problems getting a valid uninitialized subset from a set array")
 
         try:
-            tmp = self.instance.A['A', 3]
+            tmp = self.instance.A["A", 3]
         except KeyError:
             pass
         else:
@@ -1394,16 +1394,16 @@ class ArraySet2(PyomoModel):
         """Check the access to items"""
         try:
             self.model.Y = Set(initialize=[1, 2])
-            self.model.Z = Set(initialize=['A', 'C'])
-            self.model.A = Set(self.model.Z, self.model.Y, initialize={'A': [1]})
+            self.model.Z = Set(initialize=["A", "C"])
+            self.model.A = Set(self.model.Z, self.model.Y, initialize={"A": [1]})
             self.instance = self.model.create_instance()
             tmp = [1, 6, 9]
-            self.instance.A['A'] = tmp
-            self.instance.A['C'] = tmp
+            self.instance.A["A"] = tmp
+            self.instance.A["C"] = tmp
         except:
             self.fail("Problems setting a valid set into a set array")
         try:
-            self.instance.A['D'] = tmp
+            self.instance.A["D"] = tmp
         except KeyError:
             pass
         else:
@@ -1413,7 +1413,7 @@ class ArraySet2(PyomoModel):
         """Check the keys for the array"""
         tmp = self.instance.A.keys()
         tmp.sort()
-        self.assertEqual(tmp, ['A', 'C'])
+        self.assertEqual(tmp, ["A", "C"])
 
     def Xtest_len(self):
         """Check that a simple set of numeric elements has the right size"""
@@ -1587,11 +1587,11 @@ class TestRealSet(unittest.TestCase):
         #
         # self.assertEqual(x.name, None)
         # self.assertTrue('RealSet' in str(x))
-        self.assertEqual(x.name, 'Reals')
-        self.assertEqual('Reals', str(x))
+        self.assertEqual(x.name, "Reals")
+        self.assertEqual("Reals", str(x))
         x = RealSet(name="x")
-        self.assertEqual(x.name, 'x')
-        self.assertEqual(str(x), 'x')
+        self.assertEqual(x.name, "x")
+        self.assertEqual(str(x), "x")
 
     @unittest.skip("_VirtualSet was removed during the set rewrite")
     def test_contains(self):
@@ -1779,11 +1779,11 @@ class TestIntegerSet(unittest.TestCase):
         #
         # self.assertEqual(x.name, None)
         # self.assertTrue('IntegerSet' in str(x))
-        self.assertEqual(x.name, 'Integers')
-        self.assertEqual('Integers', str(x))
+        self.assertEqual(x.name, "Integers")
+        self.assertEqual("Integers", str(x))
         x = IntegerSet(name="x")
-        self.assertEqual(x.name, 'x')
-        self.assertEqual(str(x), 'x')
+        self.assertEqual(x.name, "x")
+        self.assertEqual(str(x), "x")
 
     def test_contains(self):
         x = IntegerSet()
@@ -1934,11 +1934,11 @@ class TestBooleanSet(unittest.TestCase):
         #
         # self.assertEqual(x.name, None)
         # self.assertTrue('BooleanSet' in str(x))
-        self.assertEqual(x.name, 'Boolean')
-        self.assertEqual('Boolean', str(x))
+        self.assertEqual(x.name, "Boolean")
+        self.assertEqual("Boolean", str(x))
         x = BooleanSet(name="x")
-        self.assertEqual(x.name, 'x')
-        self.assertEqual(str(x), 'x')
+        self.assertEqual(x.name, "x")
+        self.assertEqual(str(x), "x")
 
     def test_contains(self):
         x = BooleanSet()
@@ -2008,15 +2008,15 @@ class TestAnySet(SimpleSetA):
         #
         # Misc datasets
         #
-        self.model.tmpset1 = Set(initialize=[1, '3', 5, 7])
-        self.model.tmpset2 = Set(initialize=[1, 2, '3', 5, 7])
-        self.model.tmpset3 = Set(initialize=[2, '3', 5, 7, 9])
+        self.model.tmpset1 = Set(initialize=[1, "3", 5, 7])
+        self.model.tmpset2 = Set(initialize=[1, 2, "3", 5, 7])
+        self.model.tmpset3 = Set(initialize=[2, "3", 5, 7, 9])
 
         y = _AnySet()
         # y.concrete=True
         self.model.setunion = y
         y.concrete = False
-        self.model.setintersection = Set(initialize=[1, '3', 5, 7])
+        self.model.setintersection = Set(initialize=[1, "3", 5, 7])
         self.model.setxor = Set(initialize=[])
         self.model.setdiff = Set(initialize=[])
         self.model.setmul = None
@@ -2024,7 +2024,7 @@ class TestAnySet(SimpleSetA):
         self.instance = self.model.create_instance()
         self.e1 = 1
         self.e2 = 2
-        self.e3 = '3'
+        self.e3 = "3"
         self.e4 = 4
         self.e5 = 5
         self.e6 = 6
@@ -2037,7 +2037,7 @@ class TestAnySet(SimpleSetA):
         """Various checks for contains() method"""
         self.assertEqual(self.e1 in self.instance.A, True)
         self.assertEqual(self.e2 in self.instance.A, True)
-        self.assertEqual('2' in self.instance.A, True)
+        self.assertEqual("2" in self.instance.A, True)
 
     def test_None1(self):
         self.assertEqual(None in Any, True)
@@ -2223,7 +2223,7 @@ class TestSetArgs1(PyomoModel):
         PyomoModel.tearDown(self)
 
     def test_initialize1_list(self):
-        self.model.A = Set(initialize=[1, 2, 3, 'A'])
+        self.model.A = Set(initialize=[1, 2, 3, "A"])
         self.instance = self.model.create_instance()
         self.assertEqual(len(self.instance.A), 4)
 
@@ -2570,7 +2570,7 @@ class TestSetArgs1(PyomoModel):
 
     def test_other1(self):
         self.model.A = Set(
-            initialize=[1, 2, 3, 'A'], validate=lambda model, x: x in Integers
+            initialize=[1, 2, 3, "A"], validate=lambda model, x: x in Integers
         )
         try:
             self.instance = self.model.create_instance()
@@ -2580,7 +2580,7 @@ class TestSetArgs1(PyomoModel):
             self.fail("fail test_other1")
 
     def test_other2(self):
-        self.model.A = Set(initialize=[1, 2, 3, 'A'], within=Integers)
+        self.model.A = Set(initialize=[1, 2, 3, "A"], within=Integers)
         try:
             self.instance = self.model.create_instance()
         except ValueError:
@@ -2655,9 +2655,9 @@ class TestSetArgs2(PyomoModel):
         # Create model instance
         #
         self.model.Z = Set()
-        self.model.A = Set(self.model.Z, initialize={'A': [1, 2, 3, 'A']})
-        self.instance = self.model.create_instance(currdir + 'setA.dat')
-        self.assertEqual(len(self.instance.A['A']), 4)
+        self.model.A = Set(self.model.Z, initialize={"A": [1, 2, 3, "A"]})
+        self.instance = self.model.create_instance(currdir + "setA.dat")
+        self.assertEqual(len(self.instance.A["A"]), 4)
 
     def test_dimen(self):
         #
@@ -2700,7 +2700,7 @@ class TestSetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize=tmp_init)
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.assertEqual(len(self.instance.A['A']), 5)
+        self.assertEqual(len(self.instance.A["A"]), 5)
 
     def test_rule2(self):
         #
@@ -2720,7 +2720,7 @@ class TestSetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize=tmp_rule2)
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.assertEqual(len(self.instance.A['A']), 5)
+        self.assertEqual(len(self.instance.A["A"]), 5)
 
     def test_rule3(self):
         #
@@ -2739,7 +2739,7 @@ class TestSetArgs2(PyomoModel):
         self.model.Z = Set()
         self.model.A = Set(self.model.Z, initialize=tmp_rule2)
         self.instance = self.model.create_instance(currdir + "setA.dat")
-        self.assertEqual(len(self.instance.A['A']), 5)
+        self.assertEqual(len(self.instance.A["A"]), 5)
 
     def test_within1(self):
         #
@@ -2816,13 +2816,15 @@ class TestSetArgs2(PyomoModel):
             self.fail("fail test_within2")
         else:
             pass
-        
+
     def test_validation3_pass(self):
         #
         # Create data file to test a successful validation using indexed sets
         #
         OUTPUT = open(currdir + "setsAB.dat", "w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;")
+        OUTPUT.write(
+            "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;"
+        )
         OUTPUT.close()
         #
         # Create A with an error
@@ -2831,13 +2833,15 @@ class TestSetArgs2(PyomoModel):
         self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
         self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
         self.instance = self.model.create_instance(currdir + "setsAB.dat")
-        
+
     def test_validation3_fail(self):
         #
         # Create data file to test a failed validation using indexed sets
         #
         OUTPUT = open(currdir + "setsAB.dat", "w")
-        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;")
+        OUTPUT.write(
+            "data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;"
+        )
         OUTPUT.close()
         #
         # Create A with an error
@@ -2851,32 +2855,36 @@ class TestSetArgs2(PyomoModel):
         except ValueError:
             error_raised = True
         assert error_raised
-        
+
     def test_validation4_pass(self):
         #
         # Test a successful validation using indexed sets and tuple entries
         #
-        self.model.Z = Set(initialize=['A','B'])
-        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        self.model.Z = Set(initialize=["A", "B"])
+        self.model.A = Set(
+            self.model.Z, dimen=2, initialize={"A": [(1, 2), (3, 4)], "B": [(5, 6)]}
+        )
         self.model.B = Set(
             self.model.Z,
             dimen=2,
-            initialize={'A': [(1, 2), (3, 4)]},
-            validate=lambda model, x, y, i: (x,y) in model.A[i],
+            initialize={"A": [(1, 2), (3, 4)]},
+            validate=lambda model, x, y, i: (x, y) in model.A[i],
         )
         self.instance = self.model.create_instance()
-        
+
     def test_validation4_fail(self):
         #
         # Test a failed validation using indexed sets and tuple entries
         #
-        self.model.Z = Set(initialize=['A','B'])
-        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        self.model.Z = Set(initialize=["A", "B"])
+        self.model.A = Set(
+            self.model.Z, dimen=2, initialize={"A": [(1, 2), (3, 4)], "B": [(5, 6)]}
+        )
         self.model.B = Set(
             self.model.Z,
             dimen=2,
-            initialize={'A': [(1, 2), (3, 4), (5, 6)]},
-            validate=lambda model, x, y, i: (x,y) in model.A[i],
+            initialize={"A": [(1, 2), (3, 4), (5, 6)]},
+            validate=lambda model, x, y, i: (x, y) in model.A[i],
         )
         error_raised = False
         try:
@@ -2884,35 +2892,43 @@ class TestSetArgs2(PyomoModel):
         except ValueError:
             error_raised = True
         assert error_raised
-        
+
     def test_validation5_pass(self):
         #
         # Test a successful validation using indexed sets and tuple entries
         #
-        self.model.Z = Set(initialize=['A','B'])
-        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        self.model.Z = Set(initialize=["A", "B"])
+        self.model.A = Set(
+            self.model.Z, dimen=2, initialize={"A": [(1, 2), (3, 4)], "B": [(5, 6)]}
+        )
+
         def validate_B(m, e1, e2, i):
             return (e1, e2) in m.A[i]
+
         self.model.B = Set(
             self.model.Z,
             dimen=2,
-            initialize={'A': [(1, 2), (3, 4)]},
+            initialize={"A": [(1, 2), (3, 4)]},
             validate=validate_B,
         )
         self.instance = self.model.create_instance()
-        
+
     def test_validation5_fail(self):
         #
         # Test a failed validation using indexed sets and tuple entries
         #
-        self.model.Z = Set(initialize=['A','B'])
-        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        self.model.Z = Set(initialize=["A", "B"])
+        self.model.A = Set(
+            self.model.Z, dimen=2, initialize={"A": [(1, 2), (3, 4)], "B": [(5, 6)]}
+        )
+
         def validate_B(m, e1, e2, i):
             return (e1, e2) in m.A[i]
+
         self.model.B = Set(
             self.model.Z,
             dimen=2,
-            initialize={'A': [(1, 2), (3, 4), (5, 6)]},
+            initialize={"A": [(1, 2), (3, 4), (5, 6)]},
             validate=validate_B,
         )
         error_raised = False
@@ -2923,10 +2939,10 @@ class TestSetArgs2(PyomoModel):
         assert error_raised
 
     def test_other1(self):
-        self.model.Z = Set(initialize=['A'])
+        self.model.Z = Set(initialize=["A"])
         self.model.A = Set(
             self.model.Z,
-            initialize={'A': [1, 2, 3, 'A']},
+            initialize={"A": [1, 2, 3, "A"]},
             validate=lambda model, x, i: x in Integers,
         )
         try:
@@ -2937,9 +2953,9 @@ class TestSetArgs2(PyomoModel):
             self.fail("fail test_other1")
 
     def test_other2(self):
-        self.model.Z = Set(initialize=['A'])
+        self.model.Z = Set(initialize=["A"])
         self.model.A = Set(
-            self.model.Z, initialize={'A': [1, 2, 3, 'A']}, within=Integers
+            self.model.Z, initialize={"A": [1, 2, 3, "A"]}, within=Integers
         )
         try:
             self.instance = self.model.create_instance()
@@ -2956,9 +2972,11 @@ class TestSetArgs2(PyomoModel):
             return tmp
 
         self.model.n = Param(initialize=5)
-        self.model.Z = Set(initialize=['A'])
+        self.model.Z = Set(initialize=["A"])
         self.model.A = Set(
-            self.model.Z, initialize=tmp_init, validate=lambda model, x, i: x in Integers
+            self.model.Z,
+            initialize=tmp_init,
+            validate=lambda model, x, i: x in Integers,
         )
         try:
             self.instance = self.model.create_instance()
@@ -2975,7 +2993,7 @@ class TestSetArgs2(PyomoModel):
             return tmp
 
         self.model.n = Param(initialize=5)
-        self.model.Z = Set(initialize=['A'])
+        self.model.Z = Set(initialize=["A"])
         self.model.A = Set(self.model.Z, initialize=tmp_init, within=Integers)
         self.model.B = Set(self.model.Z, initialize=tmp_init, within=Integers)
         try:
@@ -2996,7 +3014,7 @@ class TestMisc(PyomoModel):
         #
         #
         self.model.A = Set(initialize=[1, 2, 3])
-        self.model.B = Set(initialize=['a', 'b', 'c'])
+        self.model.B = Set(initialize=["a", "b", "c"])
         self.model.C = Set(initialize=[4, 5, 6])
 
     def tearDown(self):
@@ -3035,8 +3053,8 @@ class TestSetsInPython3(unittest.TestCase):
         # In Python3, sorting a mixed string fails.  We have added a
         # fallback more "robust" sorter, and this exercises that code
         m = ConcreteModel()
-        m.Z = Set(initialize=['A', 'C'])
-        m.A = Set(m.Z, initialize={'A': [1, 2, 3, 'A']})
+        m.Z = Set(initialize=["A", "C"])
+        m.A = Set(m.Z, initialize={"A": [1, 2, 3, "A"]})
         buf = StringIO()
         m.pprint(ostream=buf)
         ref = """2 Set Declarations
@@ -3237,7 +3255,7 @@ class TestSetIO(PyomoModel):
         self.instance = self.model.create_instance(currdir + "setA.dat")
         self.assertEqual(self.instance.F.dim(), 1)
         self.assertEqual(len(list(self.instance.F.keys())), 3)
-        self.assertEqual(len(self.instance.F['A1']), 3)
+        self.assertEqual(len(self.instance.F["A1"]), 3)
 
     def test_io8(self):
         OUTPUT = open(currdir + "setA.dat", "w")
@@ -3270,7 +3288,7 @@ class TestSetIO(PyomoModel):
         OUTPUT.write("data;\n")
         OUTPUT.write("set A := 'A1 x' ' A2' \"A3\";\n")
         OUTPUT.write("set F['A1 x'] := 1 3 5;\n")
-        OUTPUT.write("set F[\" A2\"] := 2 4 6;\n")
+        OUTPUT.write('set F[" A2"] := 2 4 6;\n')
         OUTPUT.write("set F['A3'] := 3 5 7;\n")
         OUTPUT.write("end;\n")
         OUTPUT.close()
@@ -3279,7 +3297,7 @@ class TestSetIO(PyomoModel):
         self.instance = self.model.create_instance(currdir + "setA.dat")
         self.assertEqual(self.instance.F.dim(), 1)
         self.assertEqual(len(list(self.instance.F.keys())), 3)
-        self.assertEqual(len(self.instance.F['A1 x']), 3)
+        self.assertEqual(len(self.instance.F["A1 x"]), 3)
 
 
 class TestSetErrors(PyomoModel):
@@ -3852,7 +3870,7 @@ class TestNestedSetOperations(unittest.TestCase):
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
-        s2 = set(['a', 'b'])
+        s2 = set(["a", "b"])
         model.s2 = Set(initialize=s2)
         s3 = set([None, True])
         model.s3 = Set(initialize=s3)
@@ -3875,7 +3893,7 @@ class TestNestedSetOperations(unittest.TestCase):
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
-        s2 = set(['a', 'b'])
+        s2 = set(["a", "b"])
         model.s2 = Set(initialize=s2)
         s3 = set([None, True])
         model.s3 = Set(initialize=s3)
@@ -3914,7 +3932,7 @@ class TestNestedSetOperations(unittest.TestCase):
         model = AbstractModel()
         s1 = set([1, 2])
         model.s1 = Set(initialize=s1)
-        s2 = set(['a', 'b'])
+        s2 = set(["a", "b"])
         model.s2 = Set(initialize=s2)
         s3 = set([None, True])
         model.s3 = Set(initialize=s3)

@@ -27,7 +27,7 @@ from .set import (
 from pyomo.common.deprecation import deprecation_warning
 
 deprecation_warning(
-    'The pyomo.core.base.sets module is deprecated.  '
-    'Import Set objects from pyomo.core.base.set or pyomo.core.',
-    version='5.7',
+    "The pyomo.core.base.sets module is deprecated.  "
+    "Import Set objects from pyomo.core.base.set or pyomo.core.",
+    version="5.7",
 )
