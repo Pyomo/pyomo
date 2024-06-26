@@ -311,7 +311,7 @@ class DesignOfExperiments_:
         # Generate scenarios for finite difference formulae
         self._generate_scenario_blocks(mod=mod)
         
-        # Set names to index sensitivity matrix (jacobian) and FIM
+        # Set names for indexing sensitivity matrix (jacobian) and FIM
         scen_block_ind = min([k.name.split('.').index('scenario_blocks[0]') for k in mod.scenario_blocks[0].unknown_parameters.keys()])
         mod.parameter_names = pyo.Set(initialize=[".".join(k.name.split('.')[(scen_block_ind + 1):]) for k in mod.scenario_blocks[0].unknown_parameters.keys()])
         mod.output_names = pyo.Set(initialize=[".".join(k.name.split('.')[(scen_block_ind + 1):]) for k in mod.scenario_blocks[0].experiment_outputs.keys()])
@@ -598,9 +598,9 @@ class DesignOfExperiments_:
             
             param = mod.parameter_scenarios[s]
             
-            # Grabbing the location of the parameter without the "base_model" precursor
-            base_model_loc = param.name.split('.').index('base_model')
-            param_loc = ".".join(param.name.split('.')[(base_model_loc + 1):])
+            # Grabbing the index of the parameter without the "base_model" precursor
+            base_model_ind = param.name.split('.').index('base_model')
+            param_loc = ".".join(param.name.split('.')[(base_model_ind + 1):])
 
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
