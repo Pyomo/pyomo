@@ -50,6 +50,7 @@ from pyomo.contrib.pyros.util import (
     new_add_decision_rule_constraints,
     new_add_decision_rule_variables,
     perform_coefficient_matching,
+    setup_working_model,
     VariablePartitioning,
     new_preprocess_model_data,
 )
@@ -327,6 +328,143 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
                         f"Actual: {[var.name for var in actual_vars]}"
                     ),
                 )
+
+
+class TestSetupModelData(unittest.TestCase):
+    """
+    Test method for setting up the working model works as expected.
+    """
+    def build_test_model_data(self):
+        """
+        Build model data object for the preprocessor.
+        """
+        model_data = Bunch()
+        model_data.original_model = m = ConcreteModel()
+
+        # PARAMS: one uncertain, one certain
+        m.p = Param(initialize=2, mutable=True)
+        m.q = Param(initialize=4.5, mutable=True)
+
+        # first-stage variables
+        m.x1 = Var(bounds=(0, m.q), initialize=1)
+        m.x2 = Var(domain=NonNegativeReals, bounds=[m.p, m.p], initialize=m.p)
+
+        # second-stage variables
+        m.z1 = Var(domain=RangeSet(2, 4, 0), bounds=[-m.p, m.q], initialize=2)
+        m.z2 = Var(bounds=(-2 * m.q ** 2, None), initialize=1)
+        m.z3 = Var(bounds=(-m.q, 0), initialize=0)
+        m.z4 = Var(initialize=5)
+        m.z5 = Var(domain=NonNegativeReals, bounds=(m.q, m.q))
+
+        # state variables
+        m.y1 = Var(domain=NonNegativeReals, initialize=0)
+        m.y2 = Var(initialize=10)
+        # note: y3 out-of-scope, as it will not appear in the active
+        #       Objective and Constraint objects
+        m.y3 = Var(domain=RangeSet(0, 1, 0), bounds=(0.2, 0.5))
+
+        # fix some variables
+        m.z4.fix()
+        m.y2.fix()
+
+        # EQUALITY CONSTRAINTS
+        m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
+        m.eq2 = Constraint(expr=m.x1 - m.z1 == 0)
+        m.eq3 = Constraint(expr=m.x1 ** 2 + m.x2 + m.p * m.z2 == m.p)
+        m.eq4 = Constraint(expr=m.z3 + m.y1 == m.q)
+
+        # INEQUALITY CONSTRAINTS
+        m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
+        m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
+        m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
+        m.ineq4 = Constraint(expr=-m.q <= m.y2 ** 2 + log(m.y2))
+
+        # out of scope: deactivated
+        m.ineq5 = Constraint(expr=m.y3 <= m.q)
+        m.ineq5.deactivate()
+
+        # OBJECTIVE
+        # contains a rich combination of first-stage and second-stage terms
+        m.obj = Objective(
+            expr=(
+                m.p ** 2
+                + 2 * m.p * m.q
+                + log(m.x1)
+                + 2 * m.p * m.x1
+                + m.q ** 2 * m.x1
+                + m.p ** 3 * (m.z1 + m.z2 + m.y1)
+                + m.z4
+                + m.z5
+            ),
+        )
+
+        # set up the var partitioning
+        user_var_partitioning = VariablePartitioning(
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[m.z1, m.z2, m.z3, m.z4, m.z5],
+            # note: y3 out of scope, so excluded
+            state_variables=[m.y1, m.y2],
+        )
+
+        return model_data, user_var_partitioning
+
+    def test_setup_working_model(self):
+        """
+        Test method for setting up the working model is as expected.
+        """
+        model_data, user_var_partitioning = self.build_test_model_data()
+        om = model_data.original_model
+        config = Bunch(uncertain_params=[om.q])
+
+        setup_working_model(model_data, config, user_var_partitioning)
+        working_model = model_data.working_model
+
+        # active constraints
+        m = model_data.working_model.user_model
+        self.assertEqual(
+            ComponentSet(working_model.original_active_equality_cons),
+            ComponentSet([m.eq1, m.eq2, m.eq3, m.eq4]),
+        )
+        self.assertEqual(
+            ComponentSet(working_model.original_active_inequality_cons),
+            ComponentSet([m.ineq1, m.ineq2, m.ineq3, m.ineq4]),
+        )
+
+        # active objective
+        self.assertTrue(m.obj.active)
+
+        # user var partitioning
+        up = working_model.user_var_partitioning
+        self.assertEqual(
+            ComponentSet(up.first_stage_variables),
+            ComponentSet([m.x1, m.x2]),
+        )
+        self.assertEqual(
+            ComponentSet(up.second_stage_variables),
+            ComponentSet([m.z1, m.z2, m.z3, m.z4, m.z5]),
+        )
+        self.assertEqual(
+            ComponentSet(up.state_variables),
+            ComponentSet([m.y1, m.y2]),
+        )
+
+        # uncertain params
+        self.assertEqual(
+            ComponentSet(working_model.uncertain_params),
+            ComponentSet([m.q]),
+        )
+
+        # ensure original model unchanged
+        self.assertFalse(
+            hasattr(om, "util"),
+            msg="Original model still has temporary util block",
+        )
+
+        # constraint partitioning initialization
+        self.assertEqual(working_model.effective_first_stage_inequality_cons, [])
+        self.assertEqual(working_model.effective_performance_inequality_cons, [])
+        self.assertEqual(working_model.effective_first_stage_equality_cons, [])
+        self.assertEqual(working_model.effective_performance_equality_cons, [])
 
 
 class TestResolveVarBounds(unittest.TestCase):
