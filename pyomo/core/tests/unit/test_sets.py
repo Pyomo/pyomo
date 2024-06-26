@@ -2816,6 +2816,111 @@ class TestSetArgs2(PyomoModel):
             self.fail("fail test_within2")
         else:
             pass
+        
+    def test_validation3_pass(self):
+        #
+        # Create data file to test a successful validation using indexed sets
+        #
+        OUTPUT = open(currdir + "setsAB.dat", "w")
+        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5; end;")
+        OUTPUT.close()
+        #
+        # Create A with an error
+        #
+        self.model.Z = Set()
+        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
+        self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
+        self.instance = self.model.create_instance(currdir + "setsAB.dat")
+        
+    def test_validation3_fail(self):
+        #
+        # Create data file to test a failed validation using indexed sets
+        #
+        OUTPUT = open(currdir + "setsAB.dat", "w")
+        OUTPUT.write("data; set Z := A C; set A[A] := 1 3 5 5.5; set B[A] := 1 3 5 6; end;")
+        OUTPUT.close()
+        #
+        # Create A with an error
+        #
+        self.model.Z = Set()
+        self.model.A = Set(self.model.Z, validate=lambda model, x, i: x < 6)
+        self.model.B = Set(self.model.Z, validate=lambda model, x, i: x in model.A[i])
+        error_raised = False
+        try:
+            self.instance = self.model.create_instance(currdir + "setsAB.dat")
+        except ValueError:
+            error_raised = True
+        assert error_raised
+        
+    def test_validation4_pass(self):
+        #
+        # Test a successful validation using indexed sets and tuple entries
+        #
+        self.model.Z = Set(initialize=['A','B'])
+        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        self.model.B = Set(
+            self.model.Z,
+            dimen=2,
+            initialize={'A': [(1, 2), (3, 4)]},
+            validate=lambda model, x, y, i: (x,y) in model.A[i],
+        )
+        self.instance = self.model.create_instance()
+        
+    def test_validation4_fail(self):
+        #
+        # Test a failed validation using indexed sets and tuple entries
+        #
+        self.model.Z = Set(initialize=['A','B'])
+        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        self.model.B = Set(
+            self.model.Z,
+            dimen=2,
+            initialize={'A': [(1, 2), (3, 4), (5, 6)]},
+            validate=lambda model, x, y, i: (x,y) in model.A[i],
+        )
+        error_raised = False
+        try:
+            self.instance = self.model.create_instance()
+        except ValueError:
+            error_raised = True
+        assert error_raised
+        
+    def test_validation5_pass(self):
+        #
+        # Test a successful validation using indexed sets and tuple entries
+        #
+        self.model.Z = Set(initialize=['A','B'])
+        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        def validate_B(m, e1, e2, i):
+            return (e1, e2) in m.A[i]
+        self.model.B = Set(
+            self.model.Z,
+            dimen=2,
+            initialize={'A': [(1, 2), (3, 4)]},
+            validate=validate_B,
+        )
+        self.instance = self.model.create_instance()
+        
+    def test_validation5_fail(self):
+        #
+        # Test a failed validation using indexed sets and tuple entries
+        #
+        self.model.Z = Set(initialize=['A','B'])
+        self.model.A = Set(self.model.Z, dimen=2, initialize={'A': [(1, 2), (3, 4)], 'B': [(5, 6)]})
+        def validate_B(m, e1, e2, i):
+            return (e1, e2) in m.A[i]
+        self.model.B = Set(
+            self.model.Z,
+            dimen=2,
+            initialize={'A': [(1, 2), (3, 4), (5, 6)]},
+            validate=validate_B,
+        )
+        error_raised = False
+        try:
+            self.instance = self.model.create_instance()
+        except ValueError:
+            error_raised = True
+        assert error_raised
 
     def test_other1(self):
         self.model.Z = Set(initialize=['A'])
