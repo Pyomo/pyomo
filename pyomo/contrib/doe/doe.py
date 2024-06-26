@@ -165,7 +165,7 @@ class DesignOfExperiments_:
         """
         Optimize an experimental design. The procedure has a two steps
             (1) Solve a square problem with the experimental design fixed [initializes model equations]
-            (2) Solve the unfixed system for optimal experimental design
+            (2) Solve the unfixed system for optimal experimental design [optimizes experimental outputs]
 
         Parameters
         ----------
@@ -322,14 +322,10 @@ class DesignOfExperiments_:
         # If the user provides an initial Jacobian, convert it to a dictionary
         if self.jac_initial is not None:
             dict_jac_initialize = {}
-            for i, bu in enumerate(mod.parameter_names):
-                for j, un in enumerate(mod.output_names):
-                    if isinstance(self.jac_initial, dict):
-                        # Jacobian is a dictionary of arrays or lists where the key is the regression parameter name
-                        dict_jac_initialize[(bu, un)] = self.jac_initial[bu][j]
-                    elif isinstance(self.jac_initial, np.ndarray):
-                        # Jacobian is a numpy array, rows are regression parameters, columns are measured variables
-                        dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
+            for i, bu in enumerate(mod.output_names):
+                for j, un in enumerate(mod.parameter_names):
+                    # Jacobian is a numpy array, rows are experimental outputs, columns are unknown parameters
+                    dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
 
         # Initialize the Jacobian matrix
         def initialize_jac(m, i, j):
@@ -341,8 +337,8 @@ class DesignOfExperiments_:
                 return 0.1
 
         mod.sensitivity_jacobian = pyo.Var(
-            mod.parameter_names,
             mod.output_names,
+            mod.parameter_names,
             initialize=initialize_jac,
         )
 
@@ -415,7 +411,7 @@ class DesignOfExperiments_:
                             mod.L_ele[c, d].setlb(self.L_LB)
 
         # jacobian rule
-        def jacobian_rule(m, p, n):
+        def jacobian_rule(m, n, p):
             """
             m: Pyomo model
             p: parameter
@@ -447,7 +443,7 @@ class DesignOfExperiments_:
             
             if self.scale_nominal_param_value:
                 return (
-                    m.sensitivity_jacobian[p, n]
+                    m.sensitivity_jacobian[n, p]
                     == (var_up - var_lo)
                     / param_diff
                     * param_val
@@ -455,7 +451,7 @@ class DesignOfExperiments_:
                 )
             else:
                 return (
-                    m.sensitivity_jacobian[p, n]
+                    m.sensitivity_jacobian[n, p]
                     == (var_up - var_lo) / param_diff * self.scale_constant_value
                 )
 
@@ -493,15 +489,15 @@ class DesignOfExperiments_:
                     == sum(
                         1
                         / self.model.scenario_blocks[0].measurement_error[pyo.ComponentUID(n).find_component_on(mod.scenario_blocks[0])]
-                        * m.sensitivity_jacobian[p, n]
-                        * m.sensitivity_jacobian[q, n]
+                        * m.sensitivity_jacobian[n, p]
+                        * m.sensitivity_jacobian[n, q]
                         for n in mod.output_names
                     )
                     + m.priorFIM[p, q]
                 )
 
         mod.jacobian_constraint = pyo.Constraint(
-            mod.parameter_names, mod.output_names, rule=jacobian_rule
+            mod.output_names, mod.parameter_names, rule=jacobian_rule
         )
         mod.fim_constraint = pyo.Constraint(
             mod.parameter_names, mod.parameter_names, rule=fim_rule
