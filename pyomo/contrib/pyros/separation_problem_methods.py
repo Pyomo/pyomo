@@ -13,22 +13,26 @@
 Functions for the construction and solving of the GRCS separation problem via ROsolver
 """
 
+from itertools import product
+import os
+
+from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.dependencies import numpy as np
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.objective import Objective, maximize, value
 from pyomo.core.base import Var, Param
-from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.dependencies import numpy as np
-from pyomo.contrib.pyros.solve_data import (
-    DiscreteSeparationSolveCallResults,
-    SeparationSolveCallResults,
-    SeparationLoopResults,
-    SeparationResults,
-)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import (
     replace_expressions,
     identify_mutable_parameters,
     identify_variables,
+)
+
+from pyomo.contrib.pyros.solve_data import (
+    DiscreteSeparationSolveCallResults,
+    SeparationSolveCallResults,
+    SeparationLoopResults,
+    SeparationResults,
 )
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.contrib.pyros.util import (
@@ -39,9 +43,6 @@ from pyomo.contrib.pyros.util import (
     is_certain_parameter,
     ObjectiveType,
 )
-import os
-from copy import deepcopy
-from itertools import product
 
 
 def new_add_uncertainty_set_constraints(separation_model, config):
