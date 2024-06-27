@@ -163,6 +163,118 @@ def add_scenario_block_to_master_problem(
         param.set_value(val)
 
 
+def new_construct_master_feasibility_problem(master_data, config):
+    """
+    Construct slack variable minimization problem from the master
+    model.
+
+    Slack variables are added only to the performance constraints
+    of the blocks added for the current PyROS iteration.
+
+    Parameters
+    ----------
+    model_data : MasterProblemData
+        Master problem data.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    slack_model : ConcreteModel
+        Slack variable model.
+    """
+    # to prevent use of find_component when copying variable values
+    # from the slack model to the master problem later, we will
+    # map corresponding variables before/during slack model construction
+    varmap_name = unique_component_name(master_data.master_model, 'pyros_var_map')
+    setattr(
+        master_data.master_model,
+        varmap_name,
+        list(master_data.master_model.component_data_objects(Var)),
+    )
+
+    slack_model = master_data.master_model.clone()
+
+    # construct the variable mapping
+    master_data.feasibility_problem_varmap = list(
+        zip(
+            getattr(master_data.master_model, varmap_name),
+            getattr(slack_model, varmap_name),
+        )
+    )
+    delattr(master_data.master_model, varmap_name)
+    delattr(slack_model, varmap_name)
+
+    for obj in slack_model.component_data_objects(Objective):
+        obj.deactivate()
+    iteration = master_data.iteration
+
+    # add slacks only to performance inequality constraints for the newest
+    # master block. these should be the only constraints which
+    # may have been violated by the previous master and separation
+    # solution(s)
+    targets = []
+    for blk in slack_model.scenarios[iteration, :]:
+        targets.extend(blk.effective_performance_inequality_cons)
+
+    # retain original constraint expressions before adding slacks
+    # (to facilitate slack initialization and scaling)
+    pre_slack_con_exprs = ComponentMap((con, con.body - con.upper) for con in targets)
+
+    # add slack variables and objective
+    # inequalities g(v) <= b become g(v) - s^- <= b
+    TransformationFactory("core.add_slack_variables").apply_to(
+        slack_model,
+        targets=targets,
+    )
+    slack_vars = ComponentSet(
+        slack_model
+        ._core_add_slack_variables
+        .component_data_objects(Var, descend_into=True)
+    )
+
+    # initialize slack variables
+    for con in pre_slack_con_exprs:
+        # get mapping from slack variables to their (linear)
+        # coefficients (+/-1) in the updated constraint expressions
+        repn = generate_standard_repn(con.body)
+        slack_var_coef_map = ComponentMap()
+        for idx in range(len(repn.linear_vars)):
+            var = repn.linear_vars[idx]
+            if var in slack_vars:
+                slack_var_coef_map[var] = repn.linear_coefs[idx]
+
+        # use this dict if we elect custom scaling in future
+        # slack_substitution_map = dict()
+        for slack_var in slack_var_coef_map:
+            # coefficient determines whether the slack
+            # is a +ve or -ve slack
+            if slack_var_coef_map[slack_var] == -1:
+                con_slack = max(0, value(pre_slack_con_exprs[con]))
+            else:
+                con_slack = max(0, -value(pre_slack_con_exprs[con]))
+
+            # initialize slack variable, evaluate scaling coefficient
+            slack_var.set_value(con_slack)
+
+            # (we will probably want to change scaling later)
+            # # update expression replacement map for slack scaling
+            # scaling_coeff = 1  # we may want to change scaling later
+            # slack_substitution_map[id(slack_var)] = scaling_coeff * slack_var
+            # slack_substitution_map[id(slack_var)] = slack_var
+
+        # # finally, scale slack(s)
+        # con.set_value(
+        #     (
+        #         replace_expressions(con.lower, slack_substitution_map),
+        #         replace_expressions(con.body, slack_substitution_map),
+        #         replace_expressions(con.upper, slack_substitution_map),
+        #     )
+        # )
+
+    return slack_model
+
+
 def construct_master_feasibility_problem(model_data, config):
     """
     Construct a slack-variable based master feasibility model.
