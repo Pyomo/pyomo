@@ -114,11 +114,7 @@ class TestBalasUnit:
             1, weights=[3, 4, 6, 5], values=[2, 3, 1, 4], capacity=8
         )
         results = enumerate_binary_solutions(
-            m,
-            num_solutions=3,
-            solver=mip_solver,
-            search_mode="random",
-            seed=1118798374,
+            m, num_solutions=3, solver=mip_solver, search_mode="random", seed=1118798374
         )
         objectives = list(
             sorted((round(result.objective[1], 2) for result in results), reverse=True)
