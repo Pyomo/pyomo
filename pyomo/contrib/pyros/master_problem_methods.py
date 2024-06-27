@@ -10,46 +10,42 @@
 #  ___________________________________________________________________________
 
 """
-Functions for handling the construction and solving of the GRCS master problem via ROSolver
+Functions for construction and solution of the PyROS master problem.
 """
 
+import os
+
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.modeling import unique_component_name
+from pyomo.core import TransformationFactory
 from pyomo.core.base import (
     ConcreteModel,
     Block,
     Var,
     Objective,
     Constraint,
-    ConstraintList,
-    SortComponents,
 )
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverResults
-from pyomo.core.expr import value
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
+from pyomo.core.expr.visitor import replace_expressions
+from pyomo.core.expr import value
+from pyomo.opt import (
+    check_optimal_termination,
+    SolverResults,
+    TerminationCondition as tc,
+)
+from pyomo.repn.standard_repn import generate_standard_repn
+
+from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
 from pyomo.contrib.pyros.util import (
     call_solver,
-    selective_clone,
-    ObjectiveType,
-    pyrosTerminationCondition,
-    process_termination_condition_master_problem,
-    adjust_solver_time_settings,
-    revert_solver_max_time_adjustment,
+    enforce_dr_degree,
     get_main_elapsed_time,
+    ObjectiveType,
+    process_termination_condition_master_problem,
+    pyrosTerminationCondition,
+    selective_clone,
+    TIC_TOC_SOLVE_TIME_ATTR,
 )
-from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
-from pyomo.opt.results import check_optimal_termination
-from pyomo.core.expr.visitor import replace_expressions, identify_variables
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core import TransformationFactory
-import itertools as it
-import os
-from copy import deepcopy
-from pyomo.common.errors import ApplicationError
-from pyomo.common.modeling import unique_component_name
-
-from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.pyros.util import TIC_TOC_SOLVE_TIME_ATTR, enforce_dr_degree
 
 
 def initial_construct_master(model_data):
