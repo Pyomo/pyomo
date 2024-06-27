@@ -234,6 +234,10 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             if v_scaling is not None:
                 need_scaling = True
                 self._primals_scaling[i] = v_scaling
+        # maintain backwards compatibility
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
+            need_scaling = True
 
         self._constraints_scaling = BlockVector(len(nlps))
         for i, nlp in enumerate(nlps):

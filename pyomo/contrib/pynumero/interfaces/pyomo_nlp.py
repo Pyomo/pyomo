@@ -300,7 +300,12 @@ class PyomoNLP(AslNLP):
     def get_obj_scaling(self):
         obj = self.get_pyomo_objective()
         val = SuffixFinder('scaling_factor').find(obj)
-        return val
+        # maintain backwards compatibility
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
+            return 1.0 if val is None else val
+        else:
+            return val
 
     # overloaded from NLP
     def get_primals_scaling(self):
@@ -312,7 +317,12 @@ class PyomoNLP(AslNLP):
             if val is not None:
                 primals_scaling[i] = val
                 ret = primals_scaling
-        return ret
+        # maintain backwards compatibility
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
+            return primals_scaling
+        else:
+            return ret
 
     # overloaded from NLP
     def get_constraints_scaling(self):
@@ -324,7 +334,12 @@ class PyomoNLP(AslNLP):
             if val is not None:
                 constraints_scaling[i] = val
                 ret = constraints_scaling
-        return ret
+        # maintain backwards compatibility
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
+            return constraints_scaling
+        else:
+            return ret
 
     def extract_subvector_grad_objective(self, pyomo_variables):
         """Compute the gradient of the objective and return the entries
@@ -612,6 +627,10 @@ class PyomoGreyBoxNLP(NLP):
             if v_scaling is not None:
                 need_scaling = True
                 self._primals_scaling[i] = v_scaling
+        # maintain backwards compatibility
+        scaling_suffix = self._pyomo_model.component('scaling_factor')
+        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
+            need_scaling = True
 
         self._constraints_scaling = []
         pyomo_nlp_scaling = self._pyomo_nlp.get_constraints_scaling()
