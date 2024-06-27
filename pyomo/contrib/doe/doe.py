@@ -514,7 +514,7 @@ class DesignOfExperiments_:
             for p in mod.parameter_names:
                 for q in mod.parameter_names:
                     if p > q:
-                        model.fim[p, q].fix(0.0)
+                        mod.fim[p, q].fix(0.0)
     
     # Create scenario block structure
     def _generate_scenario_blocks(self, mod=None):
