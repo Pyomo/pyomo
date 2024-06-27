@@ -131,7 +131,7 @@ def add_scenario_block_to_master_problem(
         with the same hierarchical structure as the
         preprocessed working model.
     clone_first_stage_components : bool
-        True to clone first-stage components
+        True to clone first-stage variables
         when transferring attributes to the new block
         to the new block (as opposed to using the objects as
         they are in `from_block`), False otherwise.
@@ -144,12 +144,15 @@ def add_scenario_block_to_master_problem(
     # - otherwise, the name stays the same
     memo = dict()
     if not clone_first_stage_components:
-        nonadjustable_comps = (
-            from_block.all_nonadjustable_variables
-            + from_block.effective_first_stage_inequality_cons
-            + from_block.effective_first_stage_equality_cons
-        )
+        nonadjustable_comps = from_block.all_nonadjustable_variables
         memo = {id(comp): comp for comp in nonadjustable_comps}
+
+        # we will clone the first-stage constraints
+        # (mostly to prevent symbol map name clashes).
+        # the duplicate constraints are redundant.
+        # consider deactivating these constraints in the
+        # off-nominal blocks?
+
     new_block = from_block.clone(memo=memo)
     master_model.scenarios[scenario_idx].transfer_attributes_from(new_block)
 

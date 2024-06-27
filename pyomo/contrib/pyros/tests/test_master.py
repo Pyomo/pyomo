@@ -119,7 +119,7 @@ class TestConstructMasterProblem(unittest.TestCase):
         """
         Test method for adding scenario block to an already
         constructed master problem, without cloning of the
-        first-stage components.
+        first-stage variables.
         """
         model_data, config = build_simple_model_data()
         master_model = construct_initial_master_problem(model_data, config)
@@ -144,17 +144,20 @@ class TestConstructMasterProblem(unittest.TestCase):
                 msg=f"Variable {var_00.name} was cloned across scenario blocks.",
             )
 
+        # the first-stage inequality and equality constraints
+        # should be cloned. we do this to avoid issues with the solver
+        # interfaces (such as issues with manipulating symbol maps)
         nadj_ineq_con_zip = zip(
             master_model.scenarios[0, 0].effective_first_stage_inequality_cons,
             master_model.scenarios[0, 1].effective_first_stage_inequality_cons,
         )
         for ineq_con_00, ineq_con_01 in nadj_ineq_con_zip:
-            self.assertIs(
+            self.assertIsNot(
                 ineq_con_00,
                 ineq_con_01,
                 msg=(
-                    f"first-stage inequality con {ineq_con_00.name} was cloned "
-                    "across scenario blocks."
+                    f"first-stage inequality con {ineq_con_00.name} was not "
+                    "cloned across scenario blocks."
                 ),
             )
 
@@ -163,11 +166,11 @@ class TestConstructMasterProblem(unittest.TestCase):
             master_model.scenarios[0, 1].effective_first_stage_equality_cons,
         )
         for eq_con_00, eq_con_01 in nadj_eq_con_zip:
-            self.assertIs(
+            self.assertIsNot(
                 eq_con_00,
                 eq_con_01,
                 msg=(
-                    f"first-stage equality con {eq_con_00.name} was cloned "
+                    f"first-stage equality con {eq_con_00.name} was not cloned "
                     "across scenario blocks."
                 ),
             )
