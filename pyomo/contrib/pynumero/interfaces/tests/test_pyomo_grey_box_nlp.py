@@ -2249,7 +2249,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.egb.outputs['Pout'].setub(70)
         return m
 
-    def test_scaling_all_one(self):
+    def test_scaling_all_missing(self):
         m = self.create_model_two_equalities_two_outputs(
             ex_models.PressureDropTwoEqualitiesTwoOutputs()
         )
@@ -2258,9 +2258,9 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         fs = pyomo_nlp.get_obj_scaling()
         xs = pyomo_nlp.get_primals_scaling()
         cs = pyomo_nlp.get_constraints_scaling()
-        self.assertEqual(fs, 1.0)
-        self.assertTrue((xs == 1.0).all())
-        self.assertTrue((cs == 1.0).all())
+        self.assertIsNone(fs)
+        self.assertIsNone(xs)
+        self.assertIsNone(cs)
 
     def test_scaling_pyomo_model_only(self):
         m = self.create_model_two_equalities_two_outputs(

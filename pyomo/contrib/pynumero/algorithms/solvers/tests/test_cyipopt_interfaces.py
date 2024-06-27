@@ -156,9 +156,9 @@ class TestCyIpoptNLP(unittest.TestCase):
 
         cynlp = CyIpoptNLP(PyomoNLP(m))
         obj_scaling, x_scaling, g_scaling = cynlp.scaling_factors()
-        self.assertTrue(obj_scaling == 1.0)
-        self.assertTrue((x_scaling == 1.0).all())
-        self.assertTrue((g_scaling == 1.0).all())
+        self.assertTrue(obj_scaling is None)
+        self.assertTrue(x_scaling is None)
+        self.assertTrue(g_scaling is None)
 
     def _check_model1(self, nlp, cynlp):
         # test x_init
