@@ -699,6 +699,25 @@ class TestPyomoNLP(unittest.TestCase):
         dense_hess = hess.todense()
         self.assertTrue(np.array_equal(dense_hess, expected_hess))
 
+    def test_subblock_scaling(self):
+        m = pyo.ConcreteModel()
+        m.b = b = pyo.Block()
+        b.x = pyo.Var(bounds=(5e-17, 5e-16), initialize=1e-16)
+        b.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        b.scaling_factor[b.x] = 1e16
+
+        b.c = pyo.Constraint(rule=b.x == 1e-16)
+        b.scaling_factor[b.c] = 1e16
+
+        b.o = pyo.Objective(expr=b.x)
+        b.scaling_factor[b.o] = 1e16
+
+        nlp = PyomoNLP(m)
+
+        assert nlp.get_obj_scaling() == 1e16
+        assert nlp.get_primals_scaling()[0] == 1e16
+        assert nlp.get_constraints_scaling()[0] == 1e16
+
     def test_no_objective(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
