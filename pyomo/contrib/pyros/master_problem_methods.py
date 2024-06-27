@@ -39,6 +39,8 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
 from pyomo.contrib.pyros.util import (
     call_solver,
     enforce_dr_degree,
+    generate_all_decision_rule_var_data_objects,
+    get_dr_expression,
     get_main_elapsed_time,
     ObjectiveType,
     process_termination_condition_master_problem,
@@ -460,6 +462,138 @@ def solve_master_feasibility_problem(model_data, config):
         master_var.set_value(feas_var.value, skip_validation=True)
 
     return results
+
+
+def new_construct_dr_polishing_problem(master_data, config):
+    """
+    Construct DR polishing problem from the master problem.
+
+    Parameters
+    ----------
+    master_data : MasterProblemData
+        Master problem data.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Returns
+    -------
+    polishing_model : ConcreteModel
+        Polishing model.
+
+    Note
+    ----
+    Polishing problem is to minimize the L1-norm of the vector of
+    all decision rule polynomial terms, subject to the original
+    master problem constraints, with all first-stage variables
+    (including epigraph) fixed. Optimality of the polished
+    DR with respect to the master objective is also enforced.
+    """
+    master_model = master_data.master_model
+    polishing_model = master_model.clone()
+    nominal_polishing_block = polishing_model.scenarios[0, 0]
+
+    nominal_eff_var_partitioning = nominal_polishing_block.effective_var_partitioning
+
+    nondr_nonadjustable_vars = (
+        nominal_eff_var_partitioning.first_stage_variables
+        # fixing epigraph variable constrains the problem
+        # to the optimal master problem solution set
+        + [nominal_polishing_block.epigraph_var]
+    )
+    for var in nondr_nonadjustable_vars:
+        var.fix()
+
+    # we will add the polishing objective later
+    polishing_model.epigraph_obj.deactivate()
+
+    decision_rule_vars = nominal_polishing_block.decision_rule_vars
+    nominal_polishing_block.polishing_vars = polishing_vars = []
+    for idx, indexed_dr_var in enumerate(decision_rule_vars):
+        # declare auxiliary 'polishing' variables.
+        # these are meant to represent the absolute values
+        # of the terms of DR polynomial; we need these for the
+        # L1-norm
+        indexed_polishing_var = Var(
+            list(indexed_dr_var.keys()), domain=NonNegativeReals
+        )
+        nominal_polishing_block.add_component(
+            unique_component_name(nominal_polishing_block, f"dr_polishing_var_{idx}"),
+            indexed_polishing_var,
+        )
+        polishing_vars.append(indexed_polishing_var)
+
+    # we need the DR expressions to set up the
+    # absolute value constraints and initialize the
+    # auxiliary polishing variables
+    eff_ss_var_to_dr_expr_pairs = [
+        (ss_var, get_dr_expression(nominal_polishing_block, ss_var))
+        for ss_var in nominal_eff_var_partitioning.second_stage_variables
+    ]
+
+    dr_eq_var_zip = zip(
+        polishing_vars,
+        eff_ss_var_to_dr_expr_pairs,
+    )
+    nominal_polishing_block.polishing_abs_val_lb_cons = all_lb_cons = []
+    nominal_polishing_block.polishing_abs_val_ub_cons = all_ub_cons = []
+    for idx, (indexed_polishing_var, (ss_var, dr_expr)) in enumerate(dr_eq_var_zip):
+        # set up absolute value constraint components
+        polishing_absolute_value_lb_cons = Constraint(indexed_polishing_var.index_set())
+        polishing_absolute_value_ub_cons = Constraint(indexed_polishing_var.index_set())
+
+        # add indexed constraints to polishing model
+        nominal_polishing_block.add_component(
+            unique_component_name(polishing_model, f"polishing_abs_val_lb_con_{idx}"),
+            polishing_absolute_value_lb_cons,
+        )
+        nominal_polishing_block.add_component(
+            unique_component_name(polishing_model, f"polishing_abs_val_ub_con_{idx}"),
+            polishing_absolute_value_ub_cons,
+        )
+
+        # update list of absolute value cons
+        all_lb_cons.append(polishing_absolute_value_lb_cons)
+        all_ub_cons.append(polishing_absolute_value_ub_cons)
+
+        for dr_monomial in dr_expr.args:
+            if dr_monomial.is_expression_type():
+                # degree > 1 monomial expression of form
+                # (product of uncertain params) * dr variable
+                dr_var_in_term = dr_monomial.args[-1]
+            else:
+                # the static term (intercept)
+                dr_var_in_term = dr_monomial
+
+            # we want the DR variable and corresponding polishing
+            # variable to have the same index
+            dr_var_in_term_idx = dr_var_in_term.index()
+            polishing_var = indexed_polishing_var[dr_var_in_term_idx]
+
+            # add polishing constraints
+            polishing_absolute_value_lb_cons[dr_var_in_term_idx] = (
+                -polishing_var - dr_monomial <= 0
+            )
+            polishing_absolute_value_ub_cons[dr_var_in_term_idx] = (
+                dr_monomial - polishing_var <= 0
+            )
+
+            # some DR variables may be fixed in the earlier
+            # PyROS iterations for efficiency purposes
+            if dr_var_in_term.fixed:
+                polishing_var.fix()
+                polishing_absolute_value_lb_cons[dr_var_in_term_idx].deactivate()
+                polishing_absolute_value_ub_cons[dr_var_in_term_idx].deactivate()
+
+            # ensure the polishing constraints
+            # are satisfied (to equality) at the initial point
+            polishing_var.set_value(abs(value(dr_monomial)))
+
+    # finally, the 1-norm objective
+    polishing_model.polishing_obj = Objective(
+        expr=sum(sum(polishing_var.values()) for polishing_var in polishing_vars)
+    )
+
+    return polishing_model
 
 
 def construct_dr_polishing_problem(model_data, config):

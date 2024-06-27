@@ -23,6 +23,7 @@ from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_block_to_master_problem,
     construct_initial_master_problem,
     new_construct_master_feasibility_problem,
+    new_construct_dr_polishing_problem,
 )
 from pyomo.contrib.pyros.util import (
     new_preprocess_model_data,
@@ -275,6 +276,101 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         self.assertTrue(
             slack_model._core_add_slack_variables._slack_objective.active
         )
+
+
+class TestDRPolishingProblem(unittest.TestCase):
+    """
+    Tests for the PyROS DR polishing problem.
+    """
+    def build_simple_master_data(self):
+        """
+        Construct master data-like object for feasibility problem
+        tests.
+        """
+        model_data, config = build_simple_model_data()
+        master_model = construct_initial_master_problem(model_data, config)
+        add_scenario_block_to_master_problem(
+            master_model=master_model,
+            scenario_idx=[1, 0],
+            param_realization=[0.1],
+            from_block=master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        master_data = Bunch(master_model=master_model, iteration=1)
+
+        return master_data, config
+
+    def test_construct_dr_polishing_problem_nonadj_components(self):
+        """
+        Test state of the nonadjustable components
+        of the DR polishing problem.
+        """
+        master_data, config = self.build_simple_master_data()
+        polishing_model = new_construct_dr_polishing_problem(master_data, config)
+        eff_first_stage_vars = (
+            polishing_model
+            .scenarios[0, 0]
+            .effective_var_partitioning
+            .first_stage_variables
+        )
+        for effective_first_stage_var in eff_first_stage_vars:
+            self.assertTrue(
+                effective_first_stage_var.fixed,
+                msg=(
+                    "Effective first-stage variable "
+                    f"{effective_first_stage_var.name!r} "
+                    "not fixed."
+                ),
+            )
+
+        nom_polishing_block = polishing_model.scenarios[0, 0]
+        self.assertTrue(nom_polishing_block.epigraph_var.fixed)
+        self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
+        self.assertFalse(nom_polishing_block.decision_rule_vars[0][1].fixed)
+
+    def test_construct_dr_polishing_problem_polishing_components(self):
+        """
+        Test auxiliary Var/Constraint components of the DR polishing
+        problem.
+        """
+        master_data, config = self.build_simple_master_data()
+        # DR order is 1, and x3 is second-stage.
+        # to test fixing efficiency, fix the affine DR variable
+        master_data.master_model.scenarios[0, 0].decision_rule_vars[0][1].fix()
+        polishing_model = new_construct_dr_polishing_problem(master_data, config)
+
+        nom_polishing_block = polishing_model.scenarios[0, 0]
+        self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
+        self.assertFalse(nom_polishing_block.polishing_vars[0][0].fixed)
+        self.assertTrue(nom_polishing_block.polishing_abs_val_lb_con_0[0].active)
+        self.assertTrue(nom_polishing_block.polishing_abs_val_ub_con_0[0].active)
+
+        # polishing components for the affine DR term should be
+        # fixed/deactivated since the DR variable was fixed
+        self.assertTrue(nom_polishing_block.decision_rule_vars[0][1].fixed)
+        self.assertTrue(nom_polishing_block.polishing_vars[0][1].fixed)
+        self.assertFalse(nom_polishing_block.polishing_abs_val_lb_con_0[1].active)
+        self.assertFalse(nom_polishing_block.polishing_abs_val_ub_con_0[1].active)
+
+        # check initialization of polishing vars
+        self.assertEqual(
+            nom_polishing_block.polishing_vars[0][0].value,
+            abs(nom_polishing_block.decision_rule_vars[0][0].value),
+        )
+        self.assertEqual(
+            nom_polishing_block.polishing_vars[0][1].value,
+            abs(nom_polishing_block.decision_rule_vars[0][1].value),
+        )
+
+    def test_construct_dr_polishing_problem_objectives(self):
+        """
+        Test states of the Objective components of the DR
+        polishing model.
+        """
+        master_data, config = self.build_simple_master_data()
+        polishing_model = new_construct_dr_polishing_problem(master_data, config)
+        self.assertFalse(polishing_model.epigraph_obj.active)
+        self.assertTrue(polishing_model.polishing_obj.active)
 
 
 if __name__ == "__main__":
