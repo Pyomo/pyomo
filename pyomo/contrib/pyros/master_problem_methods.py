@@ -39,7 +39,6 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
 from pyomo.contrib.pyros.util import (
     call_solver,
     enforce_dr_degree,
-    generate_all_decision_rule_var_data_objects,
     get_dr_expression,
     get_main_elapsed_time,
     ObjectiveType,
