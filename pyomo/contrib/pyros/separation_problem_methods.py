@@ -30,17 +30,14 @@ from pyomo.core.expr import (
     identify_mutable_parameters,
     identify_variables,
 )
-from pyomo.contrib.pyros.util import get_main_elapsed_time, is_certain_parameter
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
-from pyomo.common.errors import ApplicationError
-from pyomo.contrib.pyros.util import ABS_CON_CHECK_FEAS_TOL
-from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.pyros.util import (
-    adjust_solver_time_settings,
+    ABS_CON_CHECK_FEAS_TOL,
+    are_param_vars_fixed_by_bounds,
     call_solver,
+    get_main_elapsed_time,
+    is_certain_parameter,
     ObjectiveType,
-    revert_solver_max_time_adjustment,
-    TIC_TOC_SOLVE_TIME_ATTR,
 )
 import os
 from copy import deepcopy
@@ -55,9 +52,10 @@ def new_add_uncertainty_set_constraints(separation_model, config):
     on the uncertain parameters are also imposed as bounds
     specified on the proxy variables.
     """
+    indexed_param_var = separation_model.uncertain_param_indexed_var
     separation_model.uncertainty_set_conlist = (
         config.uncertainty_set.set_as_constraint(
-            uncertain_params=separation_model.uncertain_param_indexed_var,
+            uncertain_params=indexed_param_var,
             model=separation_model,
             config=config,
         )
@@ -65,20 +63,19 @@ def new_add_uncertainty_set_constraints(separation_model, config):
     config.uncertainty_set.add_bounds_on_uncertain_parameters(
         model=separation_model,
         config=config,
-        uncertain_param_vars=list(
-            separation_model.uncertain_param_indexed_var.values()
-        ),
+        uncertain_param_vars=list(indexed_param_var.values()),
     )
 
     # preprocess uncertain parameters which have been fixed by bounds
     # in order to simplify the separation problems
-    param_var_nomval_zip = zip(
+    param_var_certain_nomval_zip = zip(
         separation_model.uncertain_param_indexed_var.values(),
+        are_param_vars_fixed_by_bounds(indexed_param_var.values()),
         config.nominal_uncertain_param_vals,
     )
-    for idx, (var, nomval) in enumerate(param_var_nomval_zip):
-        if is_certain_parameter(uncertain_param_index=idx, config=config):
-            var.fix(nomval)
+    for idx, (param_var, is_certain, nomval) in enumerate(param_var_certain_nomval_zip):
+        if is_certain:
+            param_var.fix(nomval)
 
 
 def construct_separation_problem(model_data, config):
