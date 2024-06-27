@@ -502,33 +502,42 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         return is_in_set
 
     @staticmethod
-    def add_bounds_on_uncertain_parameters(**kwargs):
+    def add_bounds_on_uncertain_parameters(model, config, uncertain_param_vars=None):
         """
-        Specify the numerical bounds for the uncertain parameters
-        restricted by the set. Each uncertain parameter is represented
-        by a Pyomo `Var` object in a model passed to this method,
-        and the numerical bounds are specified by setting the
-        `.lb()` and `.ub()` attributes of the `Var` object.
+        Specify declared bounds for Vars representing the uncertain
+        parameters constrained to an uncertainty set.
 
         Parameters
         ----------
-        kwargs : dict
-            Keyword arguments consisting of a Pyomo `ConfigDict` and a
-            Pyomo `ConcreteModel` object, representing a PyROS solver
-            configuration and the optimization model of interest.
+        model : ConcreteModel
+            Model containing the uncertain parameter variables.
+        config : ConfigDict
+            PyROS solver options. Should at least contain
+            the attribute `uncertainty_set`, through which the
+            uncertainty set from which bounds are taken is
+            retrieved.
+        uncertain_param_vars : None or list of VarData, optional
+            Variables representing the uncertain parameter objects.
+            If None is passed, then this method will attempt to
+            retrieve ``list(model.util.uncertain_param_vars.values())``
+            and add bounds.
 
         Notes
         -----
         This method is invoked in advance of a PyROS separation
         subproblem.
+
+        TODO
+        ----
+        Modify default retrieval of `uncertain_param_vars`
+        once subproblem formulations have been updated.
         """
-        config = kwargs.pop('config')
-        model = kwargs.pop('model')
-        _set = config.uncertainty_set
-        parameter_bounds = _set.parameter_bounds
-        for i, p in enumerate(model.util.uncertain_param_vars.values()):
-            p.setlb(parameter_bounds[i][0])
-            p.setub(parameter_bounds[i][1])
+        if uncertain_param_vars is None:
+            uncertain_param_vars = list(model.util.uncertain_param_vars.values())
+        parameter_bounds = config.uncertainty_set.parameter_bounds
+        for (lb, ub), param_var in zip(parameter_bounds, uncertain_param_vars):
+            param_var.setlb(lb)
+            param_var.setub(ub)
 
 
 class UncertaintySetList(MutableSequence):

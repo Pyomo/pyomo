@@ -47,6 +47,113 @@ from copy import deepcopy
 from itertools import product
 
 
+def new_add_uncertainty_set_constraints(separation_model, config):
+    """
+    Add to the separation model constraints restricting
+    the uncertain parameter proxy variables to the user-provided
+    uncertainty set. Note that inferred interval enclosures
+    on the uncertain parameters are also imposed as bounds
+    specified on the proxy variables.
+    """
+    separation_model.uncertainty_set_conlist = (
+        config.uncertainty_set.set_as_constraint(
+            uncertain_params=separation_model.uncertain_param_indexed_var,
+            model=separation_model,
+            config=config,
+        )
+    )
+    config.uncertainty_set.add_bounds_on_uncertain_parameters(
+        model=separation_model,
+        config=config,
+        uncertain_param_vars=list(
+            separation_model.uncertain_param_indexed_var.values()
+        ),
+    )
+
+    # preprocess uncertain parameters which have been fixed by bounds
+    # in order to simplify the separation problems
+    param_var_nomval_zip = zip(
+        separation_model.uncertain_param_indexed_var.values(),
+        config.nominal_uncertain_param_vals,
+    )
+    for idx, (var, nomval) in enumerate(param_var_nomval_zip):
+        if is_certain_parameter(uncertain_param_index=idx, config=config):
+            var.fix(nomval)
+
+
+def construct_separation_problem(model_data, config):
+    """
+    Construct the separation problem model from the fully preprocessed
+    working model.
+
+    Parameters
+    ----------
+    model_data : model data object
+        Main model data object.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Returns
+    -------
+    separation_model : ConcreteModel
+        Separation problem model.
+    """
+    separation_model = model_data.working_model.clone()
+
+    # fix/deactivate all nonadjustable components
+    for var in separation_model.all_nonadjustable_variables:
+        var.fix()
+    nonadjustable_cons = (
+        separation_model.effective_first_stage_inequality_cons
+        + separation_model.effective_first_stage_equality_cons
+    )
+    for nadjcon in nonadjustable_cons:
+        nadjcon.deactivate()
+
+    # the uncertain params function as decision variables
+    # in the separation problems
+    uncertain_params = separation_model.uncertain_params
+    separation_model.uncertain_param_indexed_var = uncertain_param_indexed_var = Var(
+        range(len(uncertain_params)),
+        initialize={idx: param.value for idx, param in enumerate(uncertain_params)},
+    )
+    param_id_to_var_map = {
+        id(param): var
+        for param, var in zip(uncertain_params, uncertain_param_indexed_var.values())
+    }
+    uncertain_params_set = ComponentSet(uncertain_params)
+    adjustable_cons = (
+        separation_model.effective_performance_inequality_cons
+        + separation_model.effective_performance_equality_cons
+        + separation_model.decision_rule_eqns
+    )
+    for adjcon in adjustable_cons:
+        uncertain_params_in_con = ComponentSet(
+            identify_mutable_parameters(adjcon.expr)
+        ) & uncertain_params_set
+        if uncertain_params_in_con:
+            adjcon.set_value(
+                replace_expressions(adjcon.expr, substitution_map=param_id_to_var_map)
+            )
+    new_add_uncertainty_set_constraints(separation_model, config)
+
+    # performance inequality constraint expressions
+    # become maximization objectives in the separation problems
+    separation_model.perf_ineq_con_to_obj_map = ComponentMap()
+    perf_ineq_cons = separation_model.effective_performance_inequality_cons
+    for idx, perf_con in enumerate(perf_ineq_cons):
+        perf_con.deactivate()
+        separation_obj = Objective(expr=perf_con.body - perf_con.upper, sense=maximize)
+        separation_model.add_component(
+            f"separation_obj_{idx}",
+            separation_obj,
+        )
+        separation_model.perf_ineq_con_to_obj_map[perf_con] = separation_obj
+        separation_obj.deactivate()
+
+    return separation_model
+
+
 def add_uncertainty_set_constraints(model, config):
     """
     Add inequality constraint(s) representing the uncertainty set.
