@@ -524,8 +524,9 @@ class _LinearStandardFormCompiler_impl(object):
             A = self._csc_matrix(A.data, A.indices, reduced_A_indptr, A.shape[0], nCol)
 
         if self.config.nonnegative_vars:
-            c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(c, A,
-                                                                           columns)
+            c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(
+                c, A, columns
+            )
         else:
             eliminated_vars = []
 
@@ -595,11 +596,17 @@ class _LinearStandardFormCompiler_impl(object):
 
         nCol = len(new_columns)
         c = self._csc_matrix(
-            np.concatenate(new_c_data), np.concatenate(new_c_indices), new_c_indptr,
-            c.shape[0], nCol,
+            np.concatenate(new_c_data),
+            np.concatenate(new_c_indices),
+            new_c_indptr,
+            c.shape[0],
+            nCol,
         )
         A = self._csc_matrix(
-            np.concatenate(new_A_data), np.concatenate(new_A_indices), new_A_indptr,
-            A.shape[0], nCol,
+            np.concatenate(new_A_data),
+            np.concatenate(new_A_indices),
+            new_A_indptr,
+            A.shape[0],
+            nCol,
         )
         return c, A, new_columns, eliminated_vars

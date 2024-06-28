@@ -241,8 +241,9 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
             # the standard_form tests and makes life much easier. Unforuntately
             # I wrote a lot of tests before I thought of this, so I'm leaving in
             # both variations for the moment.
-            m.c = Constraint(expr=m.data[1] ** 2 * m.x + 2 * m.y[1] - 3 * m.more_data 
-                             >= 0)
+            m.c = Constraint(
+                expr=m.data[1] ** 2 * m.x + 2 * m.y[1] - 3 * m.more_data >= 0
+            )
         else:
             m.c = Constraint(expr=m.data[1] ** 2 * m.x + 2 * m.y[1] >= 3 * m.more_data)
         m.d = Constraint(expr=m.y[1] + 4 * m.y[3] <= 5 + m.data[2])
@@ -303,7 +304,7 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         c_ref = np.array(
             [
                 [1, -1, 0, 5 * m.more_data, -5 * m.more_data, 0],
-                [-1, 1, 0, 0, 0, -15 * m.more_data]
+                [-1, 1, 0, 0, 0, -15 * m.more_data],
             ]
         )
         assertExpressionArraysEqual(self, repn.c.todense(), c_ref)
@@ -312,10 +313,9 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         m = self.make_model()
         col_order = [m.x, m.y[0], m.y[1], m.y[3]]
         repn = ParameterizedLinearStandardFormCompiler().write(
-            m, wrt=[m.data, m.more_data], slack_form=True,
-            column_order=col_order
+            m, wrt=[m.data, m.more_data], slack_form=True, column_order=col_order
         )
-    
+
         self.assertEqual(repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.f, 1)])
         self.assertEqual(
             list(map(str, repn.x)),
@@ -328,7 +328,7 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         )
         ref = np.array(
             [
-                [ProductExpression((-1, m.data[1] ** 2)), 0, - 2, 0, 1, 0, 0],
+                [ProductExpression((-1, m.data[1] ** 2)), 0, -2, 0, 1, 0, 0],
                 [0, 0, 1, 4, 0, 1, 0],
                 [0, 1, 6, 0, 0, 0, 1],
                 [1, m.data[2] + m.data[1] ** 3, 0, 0, 0, 0, 0],
@@ -336,13 +336,21 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         )
         assertExpressionArraysEqual(self, repn.A.todense(), ref)
         assertExpressionListsEqual(
-            self, repn.b,
-            np.array([-3 * m.more_data,
-                      NegationExpression((ProductExpression((-1, 5 + m.data[2])),)), -3, 8]))
+            self,
+            repn.b,
+            np.array(
+                [
+                    -3 * m.more_data,
+                    NegationExpression((ProductExpression((-1, 5 + m.data[2])),)),
+                    -3,
+                    8,
+                ]
+            ),
+        )
         c_ref = np.array(
             [
                 [-1, 0, -5 * m.more_data, 0, 0, 0, 0],
-                [1, 0, 0, 15 * m.more_data, 0, 0, 0]
+                [1, 0, 0, 15 * m.more_data, 0, 0, 0],
             ]
         )
         assertExpressionArraysEqual(self, repn.c.todense(), c_ref)
@@ -355,37 +363,46 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         )
 
         # m.c gets is opposite again
-        self.assertEqual(
-            repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 0)]
-        )
+        self.assertEqual(repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 0)])
         self.assertEqual(list(map(str, repn.x)), ['x', 'y[0]', 'y[1]', 'y[3]'])
         self.assertEqual(
             list(v.bounds for v in repn.x), [(None, None), (0, 10), (-5, 10), (-5, -2)]
         )
         ref = np.array(
-            [[ProductExpression((-1,  m.data[1] ** 2)), 0, - 2, 0],
-             [0, 0, 1, 4],
-             [0, 1, 6, 0],
-             [0, 1, 6, 0],
-             [1, m.data[2] + m.data[1] ** 3, 0, 0]]
+            [
+                [ProductExpression((-1, m.data[1] ** 2)), 0, -2, 0],
+                [0, 0, 1, 4],
+                [0, 1, 6, 0],
+                [0, 1, 6, 0],
+                [1, m.data[2] + m.data[1] ** 3, 0, 0],
+            ]
         )
         assertExpressionArraysEqual(self, repn.A.todense(), ref)
         assertExpressionListsEqual(
-            self, repn.b,
-            np.array([- 3 * m.more_data, NegationExpression((ProductExpression((-1, 5 + m.data[2])),)), 6, -3, 8])
+            self,
+            repn.b,
+            np.array(
+                [
+                    -3 * m.more_data,
+                    NegationExpression((ProductExpression((-1, 5 + m.data[2])),)),
+                    6,
+                    -3,
+                    8,
+                ]
+            ),
         )
-        ref_c = np.array([
-            [-1, 0, -5 * m.more_data, 0],
-            [1, 0, 0, 15 * m.more_data]
-        ])
+        ref_c = np.array([[-1, 0, -5 * m.more_data, 0], [1, 0, 0, 15 * m.more_data]])
         assertExpressionArraysEqual(self, repn.c.todense(), ref_c)
 
     def test_slack_form_nonnegative_vars(self):
         m = self.make_model(do_not_flip_c=True)
         col_order = [m.x, m.y[0], m.y[1], m.y[3]]
         repn = ParameterizedLinearStandardFormCompiler().write(
-            m, wrt=[m.data, m.more_data], slack_form=True, nonnegative_vars=True,
-            column_order=col_order
+            m,
+            wrt=[m.data, m.more_data],
+            slack_form=True,
+            nonnegative_vars=True,
+            column_order=col_order,
         )
 
         self.assertEqual(repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.f, 1)])
@@ -426,9 +443,22 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
             ]
         )
         assertExpressionArraysEqual(self, repn.A.todense(), ref)
-        assertExpressionListsEqual(self, repn.b, np.array([3 * m.more_data, NegationExpression((ProductExpression((-1, 5 + m.data[2])),)), -3, 8]))
-        c_ref = np.array([
-            [1, -1, 0, 5 * m.more_data, -5 * m.more_data, 0, 0, 0, 0],
-            [-1, 1, 0, 0, 0, -15 * m.more_data, 0, 0, 0]
-        ])
+        assertExpressionListsEqual(
+            self,
+            repn.b,
+            np.array(
+                [
+                    3 * m.more_data,
+                    NegationExpression((ProductExpression((-1, 5 + m.data[2])),)),
+                    -3,
+                    8,
+                ]
+            ),
+        )
+        c_ref = np.array(
+            [
+                [1, -1, 0, 5 * m.more_data, -5 * m.more_data, 0, 0, 0, 0],
+                [-1, 1, 0, 0, 0, -15 * m.more_data, 0, 0, 0],
+            ]
+        )
         assertExpressionArraysEqual(self, repn.c.todense(), c_ref)
