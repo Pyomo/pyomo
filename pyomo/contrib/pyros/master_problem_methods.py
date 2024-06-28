@@ -828,7 +828,7 @@ def solver_call_master(master_data, config, solve_data):
             (
                 config.uncertainty_set.type
                 + "_"
-                + master_data.original.name
+                + master_data.original_model_name
                 + "_master_"
                 + str(master_data.iteration)
                 + ".bar"
@@ -918,6 +918,8 @@ class NewMasterProblemData:
 
         """
         self.master_model = construct_initial_master_problem(model_data, config)
+        # we track the original model name for serialization purposes
+        self.original_model_name = model_data.original_model.name
         self.iteration = 0
         self.timing = model_data.timing
         self.config = config
