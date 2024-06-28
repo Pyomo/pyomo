@@ -276,7 +276,7 @@ def ROSolver_iterative_solve(model_data, config):
         if check_time_limit_reached(master_data.timing, config):
             iter_log_record = IterationLogRecord(
                 iteration=k,
-                objective=value(master_data.master_model.obj),
+                objective=value(master_data.master_model.epigraph_obj),
                 first_stage_var_shift=fsv_shift,
                 second_stage_var_shift=ssv_shift,
                 dr_var_shift=dr_var_shift,

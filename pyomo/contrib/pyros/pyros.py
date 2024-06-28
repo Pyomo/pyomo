@@ -408,14 +408,21 @@ class PyROS(object):
                         original_user_var_partitioning=user_var_partitioning,
                     )
 
-                # account for sense of the original model objective
-                # when reporting the final PyROS (master) objective,
-                # since maximization objective is changed to
-                # minimization objective during preprocessing
-                return_soln.final_objective_value = (
-                    model_data.active_obj_original_sense
-                    * value(pyros_soln.master_soln.master_model.epigraph_obj)
+                # get the most recent master objective, if available
+                return_soln.final_objective_value = None
+                master_epigraph_obj_value = value(
+                    pyros_soln.master_soln.master_model.epigraph_obj,
+                    exception=False,
                 )
+                if master_epigraph_obj_value is not None:
+                    # account for sense of the original model objective
+                    # when reporting the final PyROS (master) objective,
+                    # since maximization objective is changed to
+                    # minimization objective during preprocessing
+                    return_soln.final_objective_value = (
+                        model_data.active_obj_original_sense * master_epigraph_obj_value
+                    )
+
                 return_soln.pyros_termination_condition = (
                     pyros_soln.pyros_termination_condition
                 )
