@@ -900,10 +900,6 @@ def solve_master(master_data, config):
             )
             return master_soln
 
-    solver = (
-        config.global_solver if config.solve_master_globally else config.local_solver
-    )
-
     return solver_call_master(
         master_data=master_data, config=config, solve_data=master_soln
     )
