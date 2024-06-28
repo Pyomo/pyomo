@@ -93,16 +93,12 @@ def assertExpressionArraysEqual(self, A, B):
     self.assertEqual(A.shape, B.shape)
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
-            print(A[i, j])
-            print(B[i, j])
             assertExpressionsEqual(self, A[i, j], B[i, j])
 
 
 def assertExpressionListsEqual(self, A, B):
     self.assertEqual(len(A), len(B))
     for i, a in enumerate(A):
-        print(a)
-        print(B[i])
         assertExpressionsEqual(self, a, B[i])
 
 
@@ -233,24 +229,46 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         self.assertEqual(repn.rows, [(m.d, 1), (m.c, -1)])
         self.assertEqual(repn.columns, [m.y[3], m.x, m.y[1]])
 
-    def test_nonnegative_vars(self):
+    def make_model(self, do_not_flip_c=False):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var([0, 1, 3], bounds=lambda m, i: (-1 * (i % 2) * 5, 10 - 12 * (i // 2)))
         m.data = Var([1, 2])
         m.more_data = Var()
-        m.c = Constraint(expr=m.data[1] ** 2 * m.x + 2 * m.y[1] >= 3 * m.more_data)
+        if do_not_flip_c:
+            # [ESJ: 06/24]: I should have done this sooner, but if you write c
+            # this way, it gets interpretted as a >= constraint, which matches
+            # the standard_form tests and makes life much easier. Unforuntately
+            # I wrote a lot of tests before I thought of this, so I'm leaving in
+            # both variations for the moment.
+            m.c = Constraint(expr=m.data[1] ** 2 * m.x + 2 * m.y[1] - 3 * m.more_data 
+                             >= 0)
+        else:
+            m.c = Constraint(expr=m.data[1] ** 2 * m.x + 2 * m.y[1] >= 3 * m.more_data)
         m.d = Constraint(expr=m.y[1] + 4 * m.y[3] <= 5 + m.data[2])
         m.e = Constraint(expr=inequality(-2, m.y[0] + 1 + 6 * m.y[1], 7))
         m.f = Constraint(expr=m.x + (m.data[2] + m.data[1] ** 3) * m.y[0] + 2 == 10)
         m.o = Objective([1, 3], rule=lambda m, i: m.x + i * 5 * m.more_data * m.y[i])
         m.o[1].sense = maximize
 
+        return m
+
+    def test_nonnegative_vars(self):
+        m = self.make_model()
         col_order = [m.x, m.y[0], m.y[1], m.y[3]]
         repn = ParameterizedLinearStandardFormCompiler().write(
             m, wrt=[m.data, m.more_data], nonnegative_vars=True, column_order=col_order
         )
 
+        # m.c comes back opposite how it does in test_standard_form, but that's
+        # not unexpected.
+        self.assertEqual(
+            repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 1), (m.f, -1)]
+        )
+        self.assertEqual(
+            list(map(str, repn.x)),
+            ['_neg_0', '_pos_0', 'y[0]', '_neg_2', '_pos_2', '_neg_3'],
+        )
         ref = np.array(
             [
                 [
@@ -281,3 +299,136 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
                 -8,
             ],
         )
+
+        c_ref = np.array(
+            [
+                [1, -1, 0, 5 * m.more_data, -5 * m.more_data, 0],
+                [-1, 1, 0, 0, 0, -15 * m.more_data]
+            ]
+        )
+        assertExpressionArraysEqual(self, repn.c.todense(), c_ref)
+
+    def test_slack_form(self):
+        m = self.make_model()
+        col_order = [m.x, m.y[0], m.y[1], m.y[3]]
+        repn = ParameterizedLinearStandardFormCompiler().write(
+            m, wrt=[m.data, m.more_data], slack_form=True,
+            column_order=col_order
+        )
+    
+        self.assertEqual(repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.f, 1)])
+        self.assertEqual(
+            list(map(str, repn.x)),
+            ['x', 'y[0]', 'y[1]', 'y[3]', '_slack_0', '_slack_1', '_slack_2'],
+        )
+        # m.c is flipped again, so the bounds on _slack_0 are flipped
+        self.assertEqual(
+            list(v.bounds for v in repn.x),
+            [(None, None), (0, 10), (-5, 10), (-5, -2), (0, None), (0, None), (-9, 0)],
+        )
+        ref = np.array(
+            [
+                [ProductExpression((-1, m.data[1] ** 2)), 0, - 2, 0, 1, 0, 0],
+                [0, 0, 1, 4, 0, 1, 0],
+                [0, 1, 6, 0, 0, 0, 1],
+                [1, m.data[2] + m.data[1] ** 3, 0, 0, 0, 0, 0],
+            ]
+        )
+        assertExpressionArraysEqual(self, repn.A.todense(), ref)
+        assertExpressionListsEqual(
+            self, repn.b,
+            np.array([-3 * m.more_data,
+                      NegationExpression((ProductExpression((-1, 5 + m.data[2])),)), -3, 8]))
+        c_ref = np.array(
+            [
+                [-1, 0, -5 * m.more_data, 0, 0, 0, 0],
+                [1, 0, 0, 15 * m.more_data, 0, 0, 0]
+            ]
+        )
+        assertExpressionArraysEqual(self, repn.c.todense(), c_ref)
+
+    def test_mixed_form(self):
+        m = self.make_model()
+        col_order = [m.x, m.y[0], m.y[1], m.y[3]]
+        repn = ParameterizedLinearStandardFormCompiler().write(
+            m, wrt=[m.data, m.more_data], mixed_form=True, column_order=col_order
+        )
+
+        # m.c gets is opposite again
+        self.assertEqual(
+            repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.e, -1), (m.f, 0)]
+        )
+        self.assertEqual(list(map(str, repn.x)), ['x', 'y[0]', 'y[1]', 'y[3]'])
+        self.assertEqual(
+            list(v.bounds for v in repn.x), [(None, None), (0, 10), (-5, 10), (-5, -2)]
+        )
+        ref = np.array(
+            [[ProductExpression((-1,  m.data[1] ** 2)), 0, - 2, 0],
+             [0, 0, 1, 4],
+             [0, 1, 6, 0],
+             [0, 1, 6, 0],
+             [1, m.data[2] + m.data[1] ** 3, 0, 0]]
+        )
+        assertExpressionArraysEqual(self, repn.A.todense(), ref)
+        assertExpressionListsEqual(
+            self, repn.b,
+            np.array([- 3 * m.more_data, NegationExpression((ProductExpression((-1, 5 + m.data[2])),)), 6, -3, 8])
+        )
+        ref_c = np.array([
+            [-1, 0, -5 * m.more_data, 0],
+            [1, 0, 0, 15 * m.more_data]
+        ])
+        assertExpressionArraysEqual(self, repn.c.todense(), ref_c)
+
+    def test_slack_form_nonnegative_vars(self):
+        m = self.make_model(do_not_flip_c=True)
+        col_order = [m.x, m.y[0], m.y[1], m.y[3]]
+        repn = ParameterizedLinearStandardFormCompiler().write(
+            m, wrt=[m.data, m.more_data], slack_form=True, nonnegative_vars=True,
+            column_order=col_order
+        )
+
+        self.assertEqual(repn.rows, [(m.c, 1), (m.d, 1), (m.e, 1), (m.f, 1)])
+        self.assertEqual(
+            list(map(str, repn.x)),
+            [
+                '_neg_0',
+                '_pos_0',
+                'y[0]',
+                '_neg_2',
+                '_pos_2',
+                '_neg_3',
+                '_neg_4',
+                '_slack_1',
+                '_neg_6',
+            ],
+        )
+        self.assertEqual(
+            list(v.bounds for v in repn.x),
+            [
+                (0, None),
+                (0, None),
+                (0, 10),
+                (0, 5),
+                (0, 10),
+                (2, 5),
+                (0, None),
+                (0, None),
+                (0, 9),
+            ],
+        )
+        ref = np.array(
+            [
+                [-m.data[1] ** 2, m.data[1] ** 2, 0, -2, 2, 0, -1, 0, 0],
+                [0, 0, 0, -1, 1, -4, 0, 1, 0],
+                [0, 0, 1, -6, 6, 0, 0, 0, -1],
+                [-1, 1, m.data[2] + m.data[1] ** 3, 0, 0, 0, 0, 0, 0],
+            ]
+        )
+        assertExpressionArraysEqual(self, repn.A.todense(), ref)
+        assertExpressionListsEqual(self, repn.b, np.array([3 * m.more_data, NegationExpression((ProductExpression((-1, 5 + m.data[2])),)), -3, 8]))
+        c_ref = np.array([
+            [1, -1, 0, 5 * m.more_data, -5 * m.more_data, 0, 0, 0, 0],
+            [-1, 1, 0, 0, 0, -15 * m.more_data, 0, 0, 0]
+        ])
+        assertExpressionArraysEqual(self, repn.c.todense(), c_ref)
