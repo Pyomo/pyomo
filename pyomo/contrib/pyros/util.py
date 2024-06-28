@@ -652,64 +652,61 @@ def get_time_from_solver(results):
     return float("nan") if solve_time is None else solve_time
 
 
-def add_bounds_for_uncertain_parameters(model, config):
-    '''
-    This function solves a set of optimization problems to determine bounds on the uncertain parameters
-    given the uncertainty set description. These bounds will be added as additional constraints to the uncertainty_set_constr
-    constraint. Should only be called once set_as_constraint() has been called on the separation_model object.
-    :param separation_model: the model on which to add the bounds
-    :param config: solver config
-    :return:
-    '''
+def add_bounds_for_uncertain_parameters(config, uncertain_param_vars):
+    """
+    Solve bounding problems globally to evaluate the
+    bounds for each dimension of an uncertainty set,
+    and use the results to the uncertain parameter
+    proxy variable bounds.
+
+    Parameters
+    ----------
+    config : ConfigDict
+        PyROS solver settings, containing the uncertainty set.
+    uncertain_param_vars : list of VarData, optional
+        Proxy variables.
+    """
     # === Determine bounds on all uncertain params
-    uncertain_param_bounds = []
     bounding_model = ConcreteModel()
-    bounding_model.util = Block()
-    bounding_model.util.uncertain_param_vars = IndexedVar(
-        model.util.uncertain_param_vars.index_set()
-    )
-    for tup in model.util.uncertain_param_vars.items():
-        bounding_model.util.uncertain_param_vars[tup[0]].set_value(
-            tup[1].value, skip_validation=True
+    bounding_model.uncertain_param_indexed_var = Var(range(len(uncertain_param_vars)))
+    for idx, orig_var in enumerate(uncertain_param_vars):
+        bounding_model.uncertain_param_indexed_var[idx].set_value(
+            orig_var.value, skip_validation=True,
         )
 
     bounding_model.add_component(
         "uncertainty_set_constraint",
         config.uncertainty_set.set_as_constraint(
-            uncertain_params=bounding_model.util.uncertain_param_vars,
+            uncertain_params=bounding_model.uncertain_param_indexed_var,
             model=bounding_model,
             config=config,
         ),
     )
 
-    for idx, param in enumerate(
-        list(bounding_model.util.uncertain_param_vars.values())
-    ):
-        bounding_model.add_component(
-            "lb_obj_" + str(idx), Objective(expr=param, sense=minimize)
-        )
-        bounding_model.add_component(
-            "ub_obj_" + str(idx), Objective(expr=param, sense=maximize)
-        )
+    all_objs_by_dimension = []
+    for idx, param in bounding_model.uncertain_param_indexed_var.items():
+        dimension_objs = []
+        for btype, sense in zip(["lb", "ub"], [minimize, maximize]):
+            obj = Objective(expr=param, sense=sense)
+            bounding_model.add_component(f"{btype}_obj_{idx}", obj)
+            obj.deactivate()
+            dimension_objs.append(obj)
+        all_objs_by_dimension.append(dimension_objs)
 
-    for o in bounding_model.component_data_objects(Objective):
-        o.deactivate()
-
-    for i in range(len(bounding_model.util.uncertain_param_vars)):
-        bounds = []
-        for limit in ("lb", "ub"):
-            getattr(bounding_model, limit + "_obj_" + str(i)).activate()
-            res = config.global_solver.solve(bounding_model, tee=False)
-            bounds.append(bounding_model.util.uncertain_param_vars[i].value)
-            getattr(bounding_model, limit + "_obj_" + str(i)).deactivate()
-        uncertain_param_bounds.append(bounds)
+    parameter_bounds_by_dimension = []
+    for idx, objs in enumerate(all_objs_by_dimension):
+        dim_bounds = []
+        for obj in objs:
+            obj.activate()
+            config.global_solver.solve(bounding_model, tee=False)
+            dim_bounds.append(bounding_model.uncertain_param_indexed_var[idx].value)
+            obj.deactivate()
+        parameter_bounds_by_dimension.append(dim_bounds)
 
     # === Add bounds as constraints to uncertainty_set_constraint ConstraintList
-    for idx, bound in enumerate(uncertain_param_bounds):
-        model.util.uncertain_param_vars[idx].setlb(bound[0])
-        model.util.uncertain_param_vars[idx].setub(bound[1])
-
-    return
+    for idx, (lb, ub) in enumerate(parameter_bounds_by_dimension):
+        uncertain_param_vars[idx].setlb(lb)
+        uncertain_param_vars[idx].setub(ub)
 
 
 def transform_to_standard_form(model):
@@ -2342,6 +2339,16 @@ def get_all_nonadjustable_variables(working_model):
     return [epigraph_var] + decision_rule_vars + effective_first_stage_vars
 
 
+def get_all_adjustable_variables(working_model):
+    """
+    Get all variables considered adjustable.
+    """
+    return (
+        working_model.effective_var_partitioning.second_stage_variables
+        + working_model.effective_var_partitioning.state_variables
+    )
+
+
 def generate_all_decision_rule_var_data_objects(working_blk):
     """
     Generate a sequence of all decision rule variable data
@@ -2387,6 +2394,55 @@ def get_dr_expression(working_blk, second_stage_var):
     """
     dr_con = working_blk.eff_ss_var_to_dr_eqn_map[second_stage_var]
     return sum(dr_con.body.args[:-1])
+
+
+def get_dr_var_to_monomial_map(working_blk):
+    """
+    Get mapping from all decision rule variables in the working
+    block to their corresponding DR equation monomials.
+
+    Parameters
+    ----------
+    working_blk : BlockData
+        Working model Block, containing the decision rule
+        components.
+
+    Returns
+    -------
+    ComponentMap
+        The desired mapping.
+    """
+    dr_var_to_monomial_map = ComponentMap()
+    for ss_var in working_blk.effective_var_partitioning.second_stage_variables:
+        dr_expr = get_dr_expression(working_blk, ss_var)
+        for dr_monomial in dr_expr.args:
+            if dr_monomial.is_expression_type():
+                # degree > 1 monomial expression of form
+                # (product of uncertain params) * dr variable
+                dr_var_in_term = dr_monomial.args[-1]
+            else:
+                # the static term (intercept)
+                dr_var_in_term = dr_monomial
+
+            dr_var_to_monomial_map[dr_var_in_term] = dr_monomial
+
+    return dr_var_to_monomial_map
+
+
+def check_time_limit_reached(timing_data, config):
+    """
+    Return true if the PyROS solver time limit is reached,
+    False otherwise.
+
+    Returns
+    -------
+    bool
+        True if time limit reached, False otherwise.
+    """
+    return (
+        config.time_limit is not None
+        and timing_data.get_main_elapsed_time() >= config.time_limit
+    )
 
 
 def perform_coefficient_matching(model_data, config):
@@ -2642,6 +2698,9 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
     config.progress_logger.debug("Finalizing nonadjustable variables...")
     model_data.working_model.all_nonadjustable_variables = (
         get_all_nonadjustable_variables(model_data.working_model)
+    )
+    model_data.working_model.all_adjustable_variables = (
+        get_all_adjustable_variables(model_data.working_model)
     )
     model_data.working_model.all_variables = (
         model_data.working_model.all_nonadjustable_variables
@@ -3298,14 +3357,9 @@ def enforce_dr_degree(blk, config, degree):
     degree : int
         Degree of the DR polynomials that is to be enforced.
     """
-    second_stage_vars = blk.util.second_stage_variables
-    indexed_dr_vars = blk.util.decision_rule_vars
-    dr_var_to_exponent_map = blk.util.dr_var_to_exponent_map
-
-    for ss_var, indexed_dr_var in zip(second_stage_vars, indexed_dr_vars):
+    for indexed_dr_var in blk.decision_rule_vars:
         for dr_var in indexed_dr_var.values():
-            dr_var_degree = dr_var_to_exponent_map[dr_var]
-
+            dr_var_degree = blk.dr_var_to_exponent_map[dr_var]
             if dr_var_degree > degree:
                 dr_var.fix(0)
             else:
@@ -3365,36 +3419,46 @@ def identify_objective_functions(model, objective):
     model.second_stage_objective = Expression(expr=second_stage_cost_expr)
 
 
-def load_final_solution(model_data, master_soln, config):
-    '''
-    load the final solution into the original model object
-    :param model_data: model data container object
-    :param master_soln: results data container object returned to user
-    :return:
-    '''
+def load_final_solution(
+        model_data,
+        master_soln,
+        config,
+        original_user_var_partitioning,
+        ):
+    """
+    Load variable values from the master problem to the
+    original model.
+
+    Parameters
+    ----------
+    master_soln : master solution object
+        Master solution object, containing the master model.
+    config : ConfigDict
+        PyROS solver options.
+    original_user_var_partitioning : VariablePartitioning
+        User partitioning of the variables of the original
+        model.
+    """
     if config.objective_focus == ObjectiveType.nominal:
-        model = model_data.original_model
-        soln = master_soln.nominal_block
+        soln_master_blk = master_soln.nominal_block
     elif config.objective_focus == ObjectiveType.worst_case:
-        model = model_data.original_model
-        indices = range(len(master_soln.master_model.scenarios))
-        k = max(
-            indices,
-            key=lambda i: value(
-                master_soln.master_model.scenarios[i, 0].first_stage_objective
-                + master_soln.master_model.scenarios[i, 0].second_stage_objective
-            ),
+        soln_master_blk = max(
+            master_soln.master_model.scenarios.values(),
+            key=lambda blk: value(blk.full_objective),
         )
-        soln = master_soln.master_model.scenarios[k, 0]
 
-    src_vars = getattr(model, 'tmp_var_list')
-    local_vars = getattr(soln, 'tmp_var_list')
-    varMap = list(zip(src_vars, local_vars))
-
-    for src, local in varMap:
-        src.set_value(local.value, skip_validation=True)
-
-    return
+    original_model_vars = (
+        original_user_var_partitioning.first_stage_variables
+        + original_user_var_partitioning.second_stage_variables
+        + original_user_var_partitioning.state_variables
+    )
+    master_soln_vars = (
+        soln_master_blk.user_var_partitioning.first_stage_variables
+        + soln_master_blk.user_var_partitioning.second_stage_variables
+        + soln_master_blk.user_var_partitioning.state_variables
+    )
+    for orig_var, master_blk_var in zip(original_model_vars, master_soln_vars):
+        orig_var.set_value(master_blk_var.value, skip_validation=True)
 
 
 def process_termination_condition_master_problem(config, results):

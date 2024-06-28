@@ -60,8 +60,6 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     Geometry,
 )
 from pyomo.contrib.pyros.master_problem_methods import (
-    add_scenario_to_master,
-    initial_construct_master,
     solve_master,
     minimize_dr_vars,
 )
@@ -3693,49 +3691,6 @@ class testIntersectionSetClass(unittest.TestCase):
         )
 
 
-# === master_problem_methods.py
-class testInitialConstructMaster(unittest.TestCase):
-    def test_initial_construct_master(self):
-        model_data = MasterProblemData()
-        model_data.timing = None
-        model_data.working_model = ConcreteModel()
-        master_data = initial_construct_master(model_data)
-        self.assertTrue(
-            hasattr(master_data, "master_model"),
-            msg="Initial construction of master problem "
-            "did not create a master problem ConcreteModel object.",
-        )
-
-
-class testAddScenarioToMaster(unittest.TestCase):
-    def test_add_scenario_to_master(self):
-        working_model = ConcreteModel()
-        working_model.p = Param([1, 2], initialize=0, mutable=True)
-        working_model.x = Var()
-        model_data = MasterProblemData()
-        model_data.working_model = working_model
-        model_data.timing = None
-        master_data = initial_construct_master(model_data)
-        master_data.master_model.scenarios[0, 0].transfer_attributes_from(
-            working_model.clone()
-        )
-        master_data.master_model.scenarios[0, 0].util = Block()
-        master_data.master_model.scenarios[0, 0].util.first_stage_variables = [
-            master_data.master_model.scenarios[0, 0].x
-        ]
-        master_data.master_model.scenarios[0, 0].util.uncertain_params = [
-            master_data.master_model.scenarios[0, 0].p[1],
-            master_data.master_model.scenarios[0, 0].p[2],
-        ]
-        add_scenario_to_master(master_data, violations=[1, 1])
-
-        self.assertEqual(
-            len(master_data.master_model.scenarios),
-            2,
-            msg="Scenario not added to master correctly. Expected 2 scenarios.",
-        )
-
-
 global_solver = "baron"
 
 
@@ -5100,57 +5055,6 @@ class RegressionTest(unittest.TestCase):
                     f"first-stage vars {[fsv.name for fsv in partitioning['fsv']]} "
                     f"second-stage vars {[ssv.name for ssv in partitioning['ssv']]} "
                     "not as expected"
-                ),
-            )
-
-    def test_coefficient_matching_raises_error_4_3(self):
-        """
-        Check that result for instance with constraint subject to
-        coefficient matching results in exception certifying robustness
-        cannot be certified where expected. Model
-        is based on Mitsos (2011) semi-infinite programming instance
-        4_3.
-        """
-        m = self.create_mitsos_4_3()
-
-        # instantiate BARON subsolver and PyROS solver
-        baron = SolverFactory("baron")
-        pyros_solver = SolverFactory("pyros")
-
-        # solve with PyROS
-        dr_orders = [1, 2]
-        for dr_order in dr_orders:
-            regex_assert_mgr = self.assertRaisesRegex(
-                ValueError,
-                expected_regex=(
-                    "Coefficient matching unsuccessful. See the solver logs."
-                ),
-            )
-            logging_intercept_mgr = LoggingIntercept(level=logging.ERROR)
-
-            with regex_assert_mgr, logging_intercept_mgr as LOG:
-                pyros_solver.solve(
-                    model=m,
-                    first_stage_variables=[],
-                    second_stage_variables=[m.x1, m.x2, m.x3],
-                    uncertain_params=[m.u],
-                    uncertainty_set=BoxSet(bounds=[[0, 1]]),
-                    local_solver=baron,
-                    global_solver=baron,
-                    objective_focus=ObjectiveType.worst_case,
-                    decision_rule_order=dr_order,
-                    solve_master_globally=True,
-                    bypass_local_separation=True,
-                    robust_feasibility_tolerance=1e-4,
-                )
-
-            detailed_error_msg = LOG.getvalue()
-            self.assertRegex(
-                detailed_error_msg[:-1],
-                (
-                    r"Equality constraint.*cannot be guaranteed to "
-                    r"be robustly feasible.*"
-                    r"Consider editing this constraint.*"
                 ),
             )
 

@@ -22,7 +22,8 @@ from pyomo.contrib.pyros.util import (
     pyrosTerminationCondition,
     ObjectiveType,
     validate_pyros_inputs,
-    preprocess_model_data,
+    log_model_statistics,
+    new_preprocess_model_data,
     IterationLogRecord,
     setup_pyros_logger,
     TimingData,
@@ -370,7 +371,11 @@ class PyROS(object):
 
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
-            preprocess_model_data(model_data, config, user_var_partitioning)
+            robust_infeasible = new_preprocess_model_data(
+                model_data,
+                config,
+                user_var_partitioning,
+            )
             model_data.timing.stop_timer("main.preprocessing")
             preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
             config.progress_logger.info(
@@ -378,46 +383,44 @@ class PyROS(object):
                 f"{preprocessing_time:.3f}s."
             )
 
-            # === Solve and load solution into model
-            pyros_soln, final_iter_separation_solns = ROSolver_iterative_solve(
-                model_data, config
-            )
-            IterationLogRecord.log_header_rule(config.progress_logger.info)
+            log_model_statistics(model_data, config)
 
+            # === Solve and load solution into model
             return_soln = ROSolveResults()
-            if pyros_soln is not None and final_iter_separation_solns is not None:
-                if config.load_solution and (
+            if not robust_infeasible:
+                pyros_soln, final_iter_separation_solns = ROSolver_iterative_solve(
+                    model_data, config
+                )
+                IterationLogRecord.log_header_rule(config.progress_logger.info)
+
+                termination_acceptable = (
                     pyros_soln.pyros_termination_condition
-                    is pyrosTerminationCondition.robust_optimal
-                    or pyros_soln.pyros_termination_condition
-                    is pyrosTerminationCondition.robust_feasible
-                ):
-                    load_final_solution(model_data, pyros_soln.master_soln, config)
+                    in {
+                        pyrosTerminationCondition.robust_optimal,
+                        pyrosTerminationCondition.robust_feasible
+                    }
+                )
+                if termination_acceptable:
+                    load_final_solution(
+                        model_data=model_data,
+                        master_soln=pyros_soln.master_soln,
+                        config=config,
+                        original_user_var_partitioning=user_var_partitioning,
+                    )
 
                 # account for sense of the original model objective
                 # when reporting the final PyROS (master) objective,
                 # since maximization objective is changed to
                 # minimization objective during preprocessing
-                active_obj_original_sense = model_data.active_obj_original_sense
-                if config.objective_focus == ObjectiveType.nominal:
-                    return_soln.final_objective_value = (
-                        active_obj_original_sense
-                        * value(pyros_soln.master_soln.master_model.obj)
-                    )
-                elif config.objective_focus == ObjectiveType.worst_case:
-                    return_soln.final_objective_value = (
-                        active_obj_original_sense
-                        * value(pyros_soln.master_soln.master_model.zeta)
-                    )
+                return_soln.final_objective_value = (
+                    model_data.active_obj_original_sense
+                    * value(pyros_soln.master_soln.master_model.epigraph_obj)
+                )
                 return_soln.pyros_termination_condition = (
                     pyros_soln.pyros_termination_condition
                 )
                 return_soln.iterations = pyros_soln.total_iters + 1
 
-                # === Remove util block
-                model.del_component(model_data.util_block)
-
-                del pyros_soln.util_block
                 del pyros_soln.working_model
             else:
                 return_soln.final_objective_value = None

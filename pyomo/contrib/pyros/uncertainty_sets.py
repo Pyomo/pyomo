@@ -1368,7 +1368,7 @@ class PolyhedralSet(UncertaintySet):
         return conlist
 
     @staticmethod
-    def add_bounds_on_uncertain_parameters(model, config):
+    def add_bounds_on_uncertain_parameters(model, config, uncertain_param_vars=None):
         """
         Specify the numerical bounds for each of a sequence of uncertain
         parameters, represented by Pyomo `Var` objects, in a modeling
@@ -1388,7 +1388,12 @@ class PolyhedralSet(UncertaintySet):
         This method is invoked in advance of a PyROS separation
         subproblem.
         """
-        add_bounds_for_uncertain_parameters(model=model, config=config)
+        if uncertain_param_vars is None:
+            uncertain_param_vars = list(model.util.uncertain_param_vars.values())
+        add_bounds_for_uncertain_parameters(
+            config=config,
+            uncertain_param_vars=uncertain_param_vars,
+        )
 
 
 class BudgetSet(UncertaintySet):
@@ -3000,7 +3005,7 @@ class IntersectionSet(UncertaintySet):
             )
 
     @staticmethod
-    def add_bounds_on_uncertain_parameters(model, config):
+    def add_bounds_on_uncertain_parameters(model, config, uncertain_param_vars=None):
         """
         Specify the numerical bounds for each of a sequence of uncertain
         parameters, represented by Pyomo `Var` objects, in a modeling
@@ -3020,6 +3025,9 @@ class IntersectionSet(UncertaintySet):
         This method is invoked in advance of a PyROS separation
         subproblem.
         """
-
-        add_bounds_for_uncertain_parameters(model=model, config=config)
-        return
+        if uncertain_param_vars is None:
+            uncertain_param_vars = list(model.util.uncertain_param_vars.values())
+        return add_bounds_for_uncertain_parameters(
+            config=config,
+            uncertain_param_vars=uncertain_param_vars,
+        )
