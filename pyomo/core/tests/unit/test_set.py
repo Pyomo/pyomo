@@ -6452,52 +6452,33 @@ c : Size=3, Index=CHOICES, Active=True
         # try adding elements to test the domains (1 compatible, 1 incompatible)
         # set subset_A
         problem.subset_A.add(1)
-        error_raised = False
-        try:
+        error_message = (
+            "Cannot add value %s to Set %s.\n"
+            "\tThe value is not in the domain %s"
+            % (4, 'subset_A', 'A')
+            )
+        with self.assertRaisesRegex(ValueError, error_message):
             problem.subset_A.add(4)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set subset_B
         problem.subset_B.add((3, 4))
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.subset_B.add((7, 8))
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set subset_C
         problem.subset_C[2].add(7)
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value 8 to Set"):
             problem.subset_C[2].add(8)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set subset_D
-        problem.subset_D[(3, 4)].add(3)
-        error_raised = False
-        try:
-            problem.subset_D[(3, 4)].add(4)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
+        problem.subset_D[(5, 6)].add(9)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value 2 to Set"):
+            problem.subset_D[(3, 4)].add(2)
         # set E
         problem.E[1].add(2)
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value 4 to Set"):
             problem.E[1].add(4)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set F
         problem.F[(1, 2, 3)].add((3, 4))
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.F[(4, 5, 6)].add((4, 3))
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # check them
         self.assertEqual(list(problem.A), [1, 2, 3])
         self.assertEqual(list(problem.B), [(1, 2), (3, 4), (5, 6)])
@@ -6513,8 +6494,8 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(list(problem.subset_C[2]), [4, 7])
         self.assertEqual(list(problem.subset_C[3]), [3, 8])
         self.assertEqual(list(problem.subset_D[(1, 2)]), [1, 5])
-        self.assertEqual(list(problem.subset_D[(3, 4)]), [3])
-        self.assertEqual(list(problem.subset_D[(5, 6)]), [6])
+        self.assertEqual(list(problem.subset_D[(3, 4)]), [])
+        self.assertEqual(list(problem.subset_D[(5, 6)]), [6, 9])
         self.assertEqual(list(problem.E[0]), [1, 2])
         self.assertEqual(list(problem.E[1]), [3, 2])
         self.assertEqual(list(problem.F[(1, 2, 3)]), [(1, 2), (3, 4)])
@@ -6581,52 +6562,28 @@ c : Size=3, Index=CHOICES, Active=True
         # try adding elements to test the domains (1 compatible, 1 incompatible)
         # set subset_A
         problem.subset_A.add(5)
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.subset_A.add(6)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set subset_B
         problem.subset_B.add((7, 8))
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.subset_B.add((3, 4))
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set subset_C
         problem.subset_C[4].add(4)
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.subset_C[4].add(9)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set subset_D
         problem.subset_D[(1, 2)].add(2)
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.subset_D[(1, 2)].add(3)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set E
         problem.E[1].add(4)
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.E[1].add(1)
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # set F
         problem.F[(1, 2, 3)].add((7, 8))
-        error_raised = False
-        try:
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             problem.F[(4, 5, 6)].add((4, 3))
-        except ValueError:
-            error_raised = True
-        self.assertEqual(error_raised, True)
         # check them
         self.assertEqual(list(problem.A), [3, 4, 5])
         self.assertEqual(list(problem.B), [(1, 2), (7, 8)])

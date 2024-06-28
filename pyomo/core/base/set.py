@@ -2218,8 +2218,8 @@ class Set(IndexedComponent):
             _d = None
 
         domain = self._init_domain(_block, index, self)
-        if domain is not None and hasattr(domain, "construct"):
-            domain.construct()
+        if domain is not None:
+            domain.parent_component().construct()
         if _d is UnknownSetDimen and domain is not None and domain.dimen is not None:
             _d = domain.dimen
 
