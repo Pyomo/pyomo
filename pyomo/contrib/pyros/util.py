@@ -1921,22 +1921,16 @@ def standardize_inequality_constraints(model_data):
                         "Report this case to the Pyomo/PyROS developers."
                     )
 
-                uncertain_params_in_body = ComponentSet(
-                    identify_mutable_parameters(con.body)
-                )
-                uncertain_params_in_bound = ComponentSet(
-                    identify_mutable_parameters(bound)
+                std_con_expr = create_bound_constraint_expr(con.body, bound, btype)
+
+                uncertain_params_in_std_expr = ComponentSet(
+                    identify_mutable_parameters(std_con_expr)
                 ) & uncertain_params_set
-                uncertain_params_in_body_or_bound = (
-                    uncertain_params_in_body | uncertain_params_in_bound
-                )
-                if adjustable_vars_in_con_body | uncertain_params_in_body_or_bound:
+                if adjustable_vars_in_con_body | uncertain_params_in_std_expr:
                     if len(finite_bounds) == 1:
                         # modify constraints with only a single inequality
                         # operator in place, for efficiency
-                        con.set_value(
-                            create_bound_constraint_expr(con.body, bound, btype)
-                        )
+                        con.set_value(std_con_expr)
                         new_con = con
                     else:
                         # ranged constraint: declare a new constraint for
@@ -1946,9 +1940,7 @@ def standardize_inequality_constraints(model_data):
                             relative_to=working_model.user_model,
                             fully_qualified=True,
                         )
-                        new_con = Constraint(
-                            expr=create_bound_constraint_expr(con.body, bound, btype)
-                        )
+                        new_con = Constraint(expr=std_con_expr)
                         working_model.user_model.add_component(
                             f"con_{new_con_name}_{btype}_bound_con",
                             new_con,
