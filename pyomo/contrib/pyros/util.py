@@ -1921,11 +1921,16 @@ def standardize_inequality_constraints(model_data):
                         "Report this case to the Pyomo/PyROS developers."
                     )
 
+                uncertain_params_in_body = ComponentSet(
+                    identify_mutable_parameters(con.body)
+                )
                 uncertain_params_in_bound = ComponentSet(
                     identify_mutable_parameters(bound)
                 ) & uncertain_params_set
-
-                if adjustable_vars_in_con_body | uncertain_params_in_bound:
+                uncertain_params_in_body_or_bound = (
+                    uncertain_params_in_body | uncertain_params_in_bound
+                )
+                if adjustable_vars_in_con_body | uncertain_params_in_body_or_bound:
                     if len(finite_bounds) == 1:
                         # modify constraints with only a single inequality
                         # operator in place, for efficiency
