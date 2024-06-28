@@ -171,6 +171,13 @@ model.R = Set(model.B, initialize=R_init)
 #
 model.S = Set(model.B, within=model.A)
 
+#
+# Validation of a set array can also be linked to another set array. If so, the
+# elements under each index must also be found under the corresponding index in
+# the validation set array:
+#
+model.X = Set(model.B, within=model.S)
+
 
 #
 # Validation of set arrays can also be performed with the _validate_ option.
