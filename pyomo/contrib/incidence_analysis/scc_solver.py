@@ -85,6 +85,8 @@ def generate_strongly_connected_components(
         subsets, include_fixed=include_fixed
     ):
         # TODO: How does len scale for reference-to-list?
+        # If this assert fails, it may be due to a bug in block_triangularize
+        # or generate_subsystem_block.
         assert len(block.vars) == len(block.cons)
         yield (block, inputs)
 
