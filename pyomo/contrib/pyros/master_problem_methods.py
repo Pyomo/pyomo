@@ -147,6 +147,16 @@ def add_scenario_block_to_master_problem(
     for param, val in zip(new_uncertain_params, param_realization):
         param.set_value(val)
 
+    # deactivate the first-stage constraints: they are duplicate
+    if scenario_idx != (0, 0):
+        new_blk = master_model.scenarios[scenario_idx]
+        new_blk_first_stage_cons = (
+            new_blk.effective_first_stage_inequality_cons
+            + new_blk.effective_first_stage_equality_cons
+        )
+        for con in new_blk_first_stage_cons:
+            con.deactivate()
+
 
 def new_construct_master_feasibility_problem(master_data, config):
     """
