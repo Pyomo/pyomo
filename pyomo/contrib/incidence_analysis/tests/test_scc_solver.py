@@ -501,5 +501,23 @@ class TestSolveSCC(unittest.TestCase):
         self.assertEqual(m.x[3].value, 1.0)
 
 
+@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(networkx_available, "NetworkX is not available")
+class TestExceptions(unittest.TestCase):
+
+    def test_nonsquare_system(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2], initialize=1)
+        m.eq = pyo.Constraint(expr=m.x[1] + m.x[2] == 1)
+
+        msg = "Got 2 variables and 1 constraints"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            list(
+                generate_strongly_connected_components(
+                    constraints=[m.eq], variables=[m.x[1], m.x[2]]
+                )
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

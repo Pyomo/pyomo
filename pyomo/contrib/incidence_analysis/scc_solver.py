@@ -66,7 +66,14 @@ def generate_strongly_connected_components(
             )
         )
 
-    assert len(variables) == len(constraints)
+    if len(variables) != len(constraints):
+        nvar = len(variables)
+        ncon = len(constraints)
+        raise RuntimeError(
+            f"generate_strongly_connected_components only supports variables"
+            f" systems with the same numbers of variables and equality constraints."
+            f" Got {nvar} variables and {ncon} constraints."
+        )
     if igraph is None:
         igraph = IncidenceGraphInterface()
 
