@@ -504,7 +504,6 @@ class TestSolveSCC(unittest.TestCase):
 @unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(networkx_available, "NetworkX is not available")
 class TestExceptions(unittest.TestCase):
-
     def test_nonsquare_system(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2], initialize=1)
