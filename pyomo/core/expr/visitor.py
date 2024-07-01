@@ -894,7 +894,7 @@ class ExpressionValueVisitor(object):
         if flag:
             return self.finalize(value)
         # _stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [(node, node._args_, 0, node.nargs(), [])]
+        _stack = [(node, node.args, 0, node.nargs(), [])]
         #
         # Iterate until the stack is empty
         #
@@ -926,7 +926,7 @@ class ExpressionValueVisitor(object):
                     _stack.append((_obj, _argList, _idx, _len, _result))
                     _obj = _sub
                     # _argList                = self.children(_sub)
-                    _argList = _sub._args_
+                    _argList = _sub.args
                     _idx = 0
                     _len = _sub.nargs()
                     _result = []
@@ -1659,7 +1659,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
         for i, val in enumerate(values):
-            arg = node._args_[i]
+            arg = node.arg(i)
 
             if arg is None:
                 values[i] = 'Undefined'
@@ -1681,7 +1681,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
                     elif node.PRECEDENCE == arg.PRECEDENCE:
                         if i == 0:
                             parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
-                        elif i == len(node._args_) - 1:
+                        elif i == node.nargs() - 1:
                             parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
