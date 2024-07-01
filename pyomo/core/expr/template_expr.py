@@ -41,6 +41,8 @@ from pyomo.core.expr.relational_expr import tuple_to_relational_expr
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor,
     StreamBasedExpressionVisitor,
+    expression_to_string,
+    _ToStringVisitor,
 )
 
 logger = logging.getLogger(__name__)
@@ -492,18 +494,26 @@ class TemplateSumExpression(NumericExpression):
     def _apply_operation(self, result):
         return sum(result)
 
-    def _to_string(self, values, verbose, smap):
+    def to_string(self, verbose=None, smap=None):
         ans = ''
-        val = values[0]
+        assert len(self._local_args_) == 1
+        val = expression_to_string(self._local_args_[0], verbose=verbose, smap=smap)
         if val[0] == '(' and val[-1] == ')' and _balanced_parens(val[1:-1]):
             val = val[1:-1]
         iterStrGenerator = (
             (
-                ', '.join(str(i) for i in iterGroup),
+                ', '.join(
+                    (smap.getSymbol(i) if smap is not None else str(i))
+                    for i in iterGroup
+                ),
                 (
-                    iterGroup[0]._set.to_string(verbose=verbose)
+                    iterGroup[0]._set.to_string(verbose=verbose, smap=smap)
                     if hasattr(iterGroup[0]._set, 'to_string')
-                    else str(iterGroup[0]._set)
+                    else (
+                        smap.getSymbol(iterGroup[0]._set)
+                        if smap is not None
+                        else str(iterGroup[0]._set)
+                    )
                 ),
             )
             for iterGroup in self._iters
@@ -525,6 +535,10 @@ class TemplateSumExpression(NumericExpression):
             return 0
         else:
             return e.arg(0)
+
+
+# FIXME: This is a hack to get certain complex cases to print without error
+_ToStringVisitor._leaf_node_types.add(TemplateSumExpression)
 
 
 class IndexTemplate(NumericValue):

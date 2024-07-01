@@ -1650,6 +1650,7 @@ RIGHT_TO_LEFT = common.OperatorAssociativity.RIGHT_TO_LEFT
 
 class _ToStringVisitor(ExpressionValueVisitor):
     _expression_handlers = None
+    _leaf_node_types = set()
 
     def __init__(self, verbose, smap):
         super(_ToStringVisitor, self).__init__()
@@ -1666,7 +1667,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
             elif arg.__class__ in native_numeric_types:
                 pass
             elif arg.__class__ in nonpyomo_leaf_types:
-                values[i] = f"'{val}'"
+                values[i] = f"{val}"
             else:
                 parens = False
                 if (
@@ -1703,13 +1704,15 @@ class _ToStringVisitor(ExpressionValueVisitor):
             return True, None
 
         if node.__class__ in nonpyomo_leaf_types:
-            return True, str(node)
+            return True, repr(node)
 
-        if node.is_expression_type():
+        if node.is_expression_type() and node.__class__ not in self._leaf_node_types:
             return False, None
 
         if hasattr(node, 'to_string'):
             return True, node.to_string(verbose=self.verbose, smap=self.smap)
+        elif self.smap is not None:
+            return True, self.smap.getSymbol(node)
         else:
             return True, str(node)
 
