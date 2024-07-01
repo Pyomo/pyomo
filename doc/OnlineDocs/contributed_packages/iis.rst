@@ -31,7 +31,6 @@ as part of the watertap project (https://github.com/watertap-org/watertap)
 and is therefore governed by a license shown
 at the top of ``mis.py``.
 
-The algorithms come from John Chinneck's slides, see: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
 
 Solver
 ------

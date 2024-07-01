@@ -31,7 +31,6 @@ That's why this file has the watertap copyright notice.
 
 copied by DLW 18Feb2024 and edited
 
-See: https://www.sce.carleton.ca/faculty/chinneck/docs/CPAIOR07InfeasibilityTutorial.pdf
 """
 
 import logging
