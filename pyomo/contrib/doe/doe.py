@@ -791,8 +791,6 @@ class DesignOfExperiments_:
             raise DeveloperError(
                 "Objective option not recognized. Please contact the developers as you should not see this error."
             )
-        
-
 
 
     # Check to see if the model has all the required suffixes
