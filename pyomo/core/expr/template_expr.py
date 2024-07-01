@@ -669,20 +669,8 @@ class IndexTemplate(NumericValue):
 register_arg_type(IndexTemplate, ARG_TYPE.NPV)
 
 
-def resolve_template(expr):
-    """Resolve a template into a concrete expression
-
-    This takes a template expression and returns the concrete equivalent
-    by substituting the current values of all IndexTemplate objects and
-    resolving (evaluating and removing) all GetItemExpression,
-    GetAttrExpression, and TemplateSumExpression expression nodes.
-
-    """
-    wildcards = []
-    wildcard_groups = {}
-    level = -1
-
-    def beforeChild(node, child, child_idx):
+class _TemplateResolver(StreamBasedExpressionVisitor):
+    def beforeChild(self, node, child, child_idx):
         # Efficiency: do not descend into leaf nodes.
         if type(child) in native_types:
             return False, child
@@ -693,7 +681,7 @@ def resolve_template(expr):
         else:
             return True, None
 
-    def exitNode(node, args):
+    def exitNode(self, node, args):
         if hasattr(node, '_resolve_template'):
             return node._resolve_template(args)
         if len(args) == node.nargs() and all(a is b for a, b in zip(node.args, args)):
@@ -703,12 +691,25 @@ def resolve_template(expr):
         else:
             return node.create_node_with_local_data(args)
 
-    walker = StreamBasedExpressionVisitor(
-        initializeWalker=lambda x: beforeChild(None, x, None),
-        beforeChild=beforeChild,
-        exitNode=exitNode,
-    )
-    return walker.walk_expression(expr)
+    def initializeWalker(self, expr):
+        return self.beforeChild(None, expr, None)
+
+
+def resolve_template(expr):
+    """Resolve a template into a concrete expression
+
+    This takes a template expression and returns the concrete equivalent
+    by substituting the current values of all IndexTemplate objects and
+    resolving (evaluating and removing) all GetItemExpression,
+    GetAttrExpression, and TemplateSumExpression expression nodes.
+
+    """
+    if resolve_template.visitor is None:
+        resolve_template.visitor = _TemplateResolver()
+    return resolve_template.visitor.walk_expression(expr)
+
+
+resolve_template.visitor = None
 
 
 class _wildcard_info(object):
