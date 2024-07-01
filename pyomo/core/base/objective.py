@@ -23,7 +23,7 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr.numvalue import value
-from pyomo.core.expr.template_expr import TemplatizedDataStore, templatize_rule
+from pyomo.core.expr.template_expr import templatize_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -157,6 +157,37 @@ class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+class TemplateObjectiveData(ObjectiveData):
+    __slots__ = ()
+
+    def __init__(self, template_info, component, index, sense):
+        #
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ConstraintData,
+        #   - ActiveComponentData
+        #   - ComponentData
+        self._component = component
+        self._active = True
+        self._index = index
+        self._args_ = template_info
+        self._sense = sense
+
+    @property
+    def args(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        return self._args_
+
+    def template_expr(self):
+        return self._args_
+
+    def set_value(self, expr):
+        self.__class__ = ObjectiveData
+        return self.set_value(expr)
+
+
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
 class Objective(ActiveIndexedComponent):
     """
@@ -280,8 +311,14 @@ class Objective(ActiveIndexedComponent):
             else:
                 if TEMPLATIZE_OBJECTIVES:
                     try:
-                        expr, indices = templatize_rule(block, rule, self.index_set())
-                        self._data = TemplatizedDataStore(self, expr, indices)
+                        template_info = templatize_rule(block, rule, self.index_set())
+                        comp = weakref_ref(self)
+                        self._data = {
+                            idx: TemplateObjectiveData(
+                                template_info, comp, idx, self._init_sense(block, index)
+                            )
+                            for idx in self.index_set()
+                        }
                         return
                     except TemplateExpressionError:
                         pass

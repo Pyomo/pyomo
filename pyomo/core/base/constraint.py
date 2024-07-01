@@ -38,7 +38,7 @@ from pyomo.core.expr import (
     InequalityExpression,
     RangedExpression,
 )
-from pyomo.core.expr.template_expr import TemplatizedDataStore, templatize_constraint
+from pyomo.core.expr.template_expr import templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -501,6 +501,42 @@ class _GeneralConstraintData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+class TemplateConstraintData(ConstraintData):
+    __slots__ = ()
+
+    def __init__(self, template_info, component, index):
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ConstraintData,
+        #   - ActiveComponentData
+        #   - ComponentData
+        self._component = component
+        self._active = True
+        self._index = index
+        self._expr = template_info
+
+    @property
+    def expr(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        return self.expr
+
+    def template_expr(self):
+        return self._expr
+
+    def set_value(self, expr):
+        self.__class__ = ConstraintData
+        return self.set_value(expr)
+
+    def normalize_constraint(self):
+        tmp, self._expr = self._expr, self._expr[0]
+        try:
+            return super().normalize_constraint()
+        finally:
+            self._expr = tmp
+
+
 @ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
     """
@@ -633,8 +669,12 @@ class Constraint(ActiveIndexedComponent):
             else:
                 if TEMPLATIZE_CONSTRAINTS:
                     try:
-                        expr, indices = templatize_constraint(self)
-                        self._data = TemplatizedDataStore(self, expr, indices)
+                        template_info = templatize_constraint(self)
+                        comp = weakref_ref(self)
+                        self._data = {
+                            idx: TemplateConstraintData(template_info, comp, idx)
+                            for idx in self.index_set()
+                        }
                         return
                     except TemplateExpressionError:
                         pass

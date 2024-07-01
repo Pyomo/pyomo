@@ -1185,6 +1185,7 @@ def templatize_constraint(con):
     return expr, indices
 
 
+'''
 class TemplatizedDataStore(MutableMapping):
     def __init__(self, component, expr, indices):
         self._component = component
@@ -1223,3 +1224,4 @@ class TemplatizedDataStore(MutableMapping):
         with PauseGC():
             for index in comp.index_set():
                 comp._setitem_when_not_present(index, rule(block, index))
+'''
