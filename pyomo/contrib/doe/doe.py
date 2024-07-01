@@ -83,6 +83,7 @@ class DesignOfExperiments_:
         L_initial=None,
         L_LB=1e-7,
         solver=None,
+        tee=False,
         args=None,
         logger_level=logging.WARNING,
         _Cholesky_option=True,
@@ -137,6 +138,8 @@ class DesignOfExperiments_:
         solver:
             A ``solver`` object specified by the user, default=None.
             If not specified, default solver is set to IPOPT with MA57.
+        tee:
+            Solver option to be passed for verbose output.
         args:
             Additional arguments for the ``get_labeled_model`` function on the Experiment object.
         _Cholesky_option:
@@ -189,6 +192,8 @@ class DesignOfExperiments_:
             solver.options["max_iter"] = 3000
             self.solver = solver
         
+        self.tee = tee
+        
         # Set args as an empty dict if no arguments are passed
         if args is None:
             args = {}
@@ -207,67 +212,47 @@ class DesignOfExperiments_:
         
         # May need this attribute for more complicated structures?
         # (i.e., no model rebuilding for large models with sequential)
-        self._built_model = False
+        self._built_scenarios = False
     
     # Perform doe
-    def run_doe(
-        self,
-        objective_option="det",
-        scale_nominal_param_value=False,
-        scale_constant_value=1,
-        optimize_opt=None,
-        if_Cholesky=False,
-        L_LB=1e-7,
-        L_initial=None,
-        jac_initial=None,
-        fim_initial=None,
-        formula="central",
-        step=0.001,
-        tee_opt=True,
-    ):
-        # store inputs in object
-        self.design_values = self.design_vars.variable_names_value
-        self.optimize = if_optimize
-        self.objective_option = ObjectiveLib(objective_option)
-        self.scale_nominal_param_value = scale_nominal_param_value
-        self.scale_constant_value = scale_constant_value
-        self.Cholesky_option = if_Cholesky
-        self.L_LB = L_LB
-        self.L_initial = L_initial
-        self.jac_initial = jac_initial
-        self.fim_initial = fim_initial
-        self.formula = FiniteDifferenceStep(formula)
-        self.step = step
-        self.tee_opt = tee_opt
-
+    def run_doe(self, mod=None):
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
+        self.logger.info("Beginning experimental optimization.")
 
         # Generate model
         if self.model is None:
             self.model = pyo.ConcreteModel()
         
+        # ToDo: potentially work with this for more complicated models
         # build the large DOE pyomo model
         if not self._built_scenarios:
             self.create_doe_model(mod=self.model)
 
-        # solve model, achieve results for square problem, and results for optimization problem
-        m, analysis_square = self._compute_stochastic_program(m, optimize_opt)
-
-        if self.optimize:
-            # If set to optimize, solve the optimization problem (with degrees of freedom)
-            analysis_optimize = self._optimize_stochastic_program(m)
-            dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f seconds" % dT)
-            # Return both square problem and optimization problem results
-            return analysis_square, analysis_optimize
-
-        else:
-            dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f seconds" % dT)
-            # Return only square problem results
-            return analysis_square
+        # Add the objective function to the model
+        self.create_objective_function(mod=self.model)
+        
+        # Solve the square problem first to initialize the fim and
+        # sensitivity constraints
+        # Deactivate object and fix experimental design decisions to make square
+        self.model.Obj.deactivate()
+        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
+            comp.fix()
+        
+        self.solver.solve(self.model, tee=self.tee)
+        
+        # Reactivate objective and unfix experimental design decisions
+        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
+            comp.unfix()
+        self.model.Obj.activate()
+        
+        # Solve the full model, which has now been initialized with the square solve
+        self.solver.solve(self.model, tee=self.tee)
+        
+        # Finish timing
+        dT = sp_timer.toc(msg=None)
+        self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % dT)
     
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
@@ -568,7 +553,7 @@ class DesignOfExperiments_:
         if self.prior_FIM is not None:
             self.check_model_FIM(self.prior_FIM)
         else:
-            self.prior_FIM = np.zeros(self.n_parameters, self.n_parameters)
+            self.prior_FIM = np.zeros((self.n_parameters, self.n_parameters))
         if self.fim_initial is not None:
             self.check_model_FIM(self.fim_initial)
         else:
