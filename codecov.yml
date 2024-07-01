@@ -1,7 +1,7 @@
 codecov:
   notify:
     # GHA: 5, Jenkins: 11
-    # Accurate as of Jun 26, 2024
+    # Accurate as of July 1, 2024
     # Potential to change when Python versions change
     after_n_builds: 16
     wait_for_ci: true
