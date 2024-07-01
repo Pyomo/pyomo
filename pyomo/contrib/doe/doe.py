@@ -585,6 +585,16 @@ class DesignOfExperiments_:
 
         # To-Do: Fix parameter values if they are not Params?
 
+        # Run base model to get initialized model and check model function
+        for comp, _ in mod.base_model.experiment_inputs.items():
+            comp.fix()
+        
+        self.solver.solve(mod.base_model, tee='True')
+
+        for comp, _ in mod.base_model.experiment_inputs.items():
+            comp.unfix()
+
+
         # Generate blocks for finite difference scenarios
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
@@ -637,6 +647,152 @@ class DesignOfExperiments_:
         
         # Clean up the base model used to generate the scenarios
         mod.del_component(mod.base_model)
+
+
+    # Create objective function
+    def create_objective_function(self, mod=None):
+        """
+        Generates the objective function as an expression and as a
+        Pyomo Objective object
+        
+        The function alters the ``mod`` input.
+        
+        In the single experiment case, ``mod`` will be self.model. In the 
+        multi-experiment case, ``mod`` will be one experiment to be enumerated.
+        
+        Parameters
+        ----------
+        mod: model to add finite difference scenarios
+        """
+        if mod is None:
+            mod = self.model
+        
+        small_number = 1e-10
+
+        # Assemble the FIM matrix. This is helpful for initialization!
+        #
+        # Suggestion from JS: "It might be more efficient to form the NP array in one shot
+        # (from a list or using fromatter), and then reshaping to the 2-D matrix"
+        #
+        
+        # fim = np.zeros((len(self.param), len(self.param)))
+        # for i, bu in enumerate(m.regression_parameters):
+        #     for j, un in enumerate(m.regression_parameters):
+        #         # Copy value from Pyomo model into numpy array
+        #         fim[i][j] = m.fim[bu, un].value
+
+        mod.fim.pprint()
+
+        fim_vals = [
+            mod.fim[bu, un].value
+            for i, bu in enumerate(mod.parameter_names)
+            for j, un in enumerate(mod.parameter_names)
+        ]
+        fim = np.array(fim_vals).reshape(len(mod.parameter_names), len(mod.parameter_names))
+
+        ### Initialize the Cholesky decomposition matrix
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+
+            # Calculate the eigenvalues of the FIM matrix
+            eig = np.linalg.eigvals(fim)
+
+            # If the smallest eigenvalue is (practically) negative, add a diagonal matrix to make it positive definite
+            small_number = 1e-10
+            if min(eig) < small_number:
+                fim = fim + np.eye(len(mod.parameter_names)) * (small_number - min(eig))
+
+            # Compute the Cholesky decomposition of the FIM matrix
+            L = np.linalg.cholesky(fim)
+
+            # Initialize the Cholesky matrix
+            for i, c in enumerate(mod.parameter_names):
+                for j, d in enumerate(mod.parameter_names):
+                    mod.L_ele[c, d].value = L[i, j]
+
+        def cholesky_imp(m, c, d):
+            """
+            Calculate Cholesky L matrix using algebraic constraints
+            """
+            # If it is the left bottom half of L
+            if list(mod.parameter_names).index(c) >= list(mod.parameter_names).index(d):
+                return m.fim[c, d] == sum(
+                    m.L_ele[c, mod.parameter_names[k + 1]]
+                    * m.L_ele[d, mod.parameter_names[k + 1]]
+                    for k in range(list(mod.parameter_names).index(d) + 1)
+                )
+            else:
+                # This is the empty half of L above the diagonal
+                return pyo.Constraint.Skip
+
+        def trace_calc(m):
+            """
+            Calculate FIM elements. Can scale each element with 1000 for performance
+            """
+            return m.trace == sum(m.fim[j, j] for j in mod.parameter_names)
+
+        def det_general(m):
+            r"""Calculate determinant. Can be applied to FIM of any size.
+            det(A) = \sum_{\sigma in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            Use permutation() to get permutations, sgn() to get signature
+            """
+            r_list = list(range(len(mod.parameter_names)))
+            # get all permutations
+            object_p = permutations(r_list)
+            list_p = list(object_p)
+
+            # generate a name_order to iterate \sigma_i
+            det_perm = 0
+            for i in range(len(list_p)):
+                name_order = []
+                x_order = list_p[i]
+                # sigma_i is the value in the i-th position after the reordering \sigma
+                for x in range(len(x_order)):
+                    for y, element in enumerate(mod.parameter_names):
+                        if x_order[x] == y:
+                            name_order.append(element)
+
+            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            det_perm = sum(
+                self._sgn(list_p[d])
+                * sum(
+                    m.fim[each, name_order[b]]
+                    for b, each in enumerate(mod.parameter_names)
+                )
+                for d in range(len(list_p))
+            )
+            return m.det == det_perm
+
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+            mod.cholesky_cons = pyo.Constraint(
+                mod.parameter_names, mod.parameter_names, rule=cholesky_imp
+            )
+            mod.Obj = pyo.Objective(
+                expr=2 * sum(pyo.log10(mod.L_ele[j, j]) for j in mod.parameter_names),
+                sense=pyo.maximize,
+            )
+
+        elif self.objective_option == ObjectiveLib.det:
+            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            mod.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
+            mod.det_rule = pyo.Constraint(rule=det_general)
+            mod.Obj = pyo.Objective(expr=pyo.log10(mod.det), sense=pyo.maximize)
+
+        elif self.objective_option == ObjectiveLib.trace:
+            # if not determinant or cholesky, calculating the OBJ with trace
+            mod.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
+            mod.trace_rule = pyo.Constraint(rule=trace_calc)
+            mod.Obj = pyo.Objective(expr=pyo.log10(mod.trace), sense=pyo.maximize)
+
+        elif self.objective_option == ObjectiveLib.zero:
+            # add dummy objective function
+            mod.Obj = pyo.Objective(expr=0)
+        else:
+            # something went wrong!
+            raise DeveloperError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
+        
+
 
 
     # Check to see if the model has all the required suffixes
@@ -710,6 +866,19 @@ class DesignOfExperiments_:
         assert jac.shape == (self.n_experiment_outputs, self.n_parameters), "Shape of Jacobian provided should be n_experiment_outputs x n_parameters, or {}, Jacobian provided has shape: {}".format((self.n_experiment_outputs, self.n_parameters), jac.shape)
 
         self.logger.info('Jacobian provided matches expected dimensions from model.')
+
+    # Rescale FIM (a scaling function to help rescale FIM from parameter values)
+    def rescale_FIM(self, FIM, param_vals):
+        if isinstance(param_vals, list):
+            param_vals = np.array([param_vals, ])
+        elif isinstance(param_vals, np.ndarray):
+            if len(param_vals.shape) > 2 or ((len(param_vals.shape) == 2) and (param_vals.shape[0] != 1)):
+                raise ValueError('param_vals should be a vector of dimensions (1, n_params). The shape you provided is {}.'.format(param_vals.shape))
+            if len(param_vals.shape) == 1:
+                param_vals = np.array([param_vals, ])
+        scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
+        scaled_FIM = np.multiply(FIM, scaling_mat)
+        return scaled_FIM
 
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(self, ):

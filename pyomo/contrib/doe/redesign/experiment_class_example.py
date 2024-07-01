@@ -168,6 +168,9 @@ class ReactorExperiment(object):
         m.E1.fix(self.data['E1'])
         m.E2.fix(self.data['E2'])
 
+        m.CA[0].setlb(self.data['CA_bounds'][0])
+        m.CA[0].setub(self.data['CA_bounds'][1])
+
         # m.T[0].fix(control_points[0])
 
         m.t_control = control_points
@@ -187,6 +190,8 @@ class ReactorExperiment(object):
             if t in control_points:
                 cv = control_points[t]
                 # m.T[t].fix(cv)
+            m.T[t].setlb(self.data['T_bounds'][0])
+            m.T[t].setub(self.data['T_bounds'][1])
             m.T[t] = cv
 
         # m.extra_con = pyo.Constraint(expr=m.T[0.0] == m.T[1.0])

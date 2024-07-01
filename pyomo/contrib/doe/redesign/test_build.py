@@ -6,6 +6,7 @@ from simple_reaction_example import *
 import numpy as np
 
 doe_obj = [0, 0, 0, 0,]
+obj = ['trace', 'det', 'det']
 
 for ind, fd in enumerate(['central', 'backward', 'forward']):
     print(fd)
@@ -17,11 +18,12 @@ for ind, fd in enumerate(['central', 'backward', 'forward']):
     doe_obj[ind].L_initial = None
     doe_obj[ind].L_LB = 1e-7
     doe_obj[ind].Cholesky_option = True
-    doe_obj[ind].objective_option = ObjectiveLib.det
-    doe_obj[ind].scale_nominal_param_value = True
+    doe_obj[ind].objective_option = ObjectiveLib(obj[ind])
+    doe_obj[ind].scale_nominal_param_value = (True and (ind != 2))
     doe_obj[ind].scale_constant_value = 1
     doe_obj[ind].step = 0.001
     doe_obj[ind].create_doe_model()
+    doe_obj[ind].create_objective_function()
 
 
 ind = 3
