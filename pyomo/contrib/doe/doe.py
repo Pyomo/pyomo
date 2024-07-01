@@ -62,22 +62,31 @@ class ModelOptionLib(Enum):
     stage2 = "stage2"
 
 
-class FiniteDifferenceStep(Enum):
-    forward = "forward"
-    central = "central"
-    backward = "backward"
+# class FiniteDifferenceStep(Enum):
+    # forward = "forward"
+    # central = "central"
+    # backward = "backward"
 
 
 class DesignOfExperiments_:
     def __init__(
         self,
         experiment,
-        fd_formula='central',
-        solver=None,
+        fd_formula="central",
+        step=1e-3,
+        objective_option='det',
+        scale_constant_value=1,
+        scale_nominal_param_value=False,
         prior_FIM=None,
+        jac_initial=None,
+        fim_initial=None,
+        L_initial=None,
+        L_LB=1e-7,
+        solver=None,
         args=None,
-        only_compute_fim_lower=False,
         logger_level=logging.WARNING,
+        _Cholesky_option=True,
+        _only_compute_fim_lower=True,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo. 
@@ -95,24 +104,79 @@ class DesignOfExperiments_:
         fd_formula:
             Finite difference formula for computing the sensitivy matrix. Must be one of
             [``central``, ``forward``, ``backward``]
+        step:
+            Relative step size for the finite difference formula. 
+            default: 1e-3
+        objective_option:
+            String representation of the objective option. Current available options are:
+            ``det`` (for determinant, or D-optimality) and ``trace`` (for trace or
+            A-optimality)
+        scale_constant_value:
+            Constant scaling for the sensitivty matrix. Every element will be multiplied by this
+            scaling factor. 
+            default: 1
+        scale_nominal_param_value:
+            Boolean for whether or not to scale the sensitivity matrix by the nominal parameter
+            values. Every column of the sensitivity matrix will be divided by the respective
+            nominal paramter value. 
+            default: False
+        prior_FIM:
+            2D numpy array representing information from prior experiments. If no value is given,
+            the assumed prior will be a matrix of zeros. This matrix will be assumed to be scaled
+            as the user has specified (i.e., if scale_nominal_param_value is true, we will assume
+            the FIM provided here has been scaled by the parameter values)
+        jac_initial:
+            2D numpy array as the initial values for the sensitivity matrix.
+        fim_initial:
+            2D numpy array as the initial values for the FIM.
+        L_initial:
+            2D numpy array as the initial values for the Cholesky matrix.
+        L_LB:
+            Lower bound for the values of the lower triangular Cholesky factorization matrix.
+            default: 1e-7
         solver:
             A ``solver`` object specified by the user, default=None.
-            If not specified, default solver is IPOPT MA57.
-        prior_FIM:
-            A 2D numpy array containing Fisher information matrix (FIM) for prior experiments.
-            The default None means there is no prior information.
+            If not specified, default solver is set to IPOPT with MA57.
         args:
             Additional arguments for the ``get_labeled_model`` function on the Experiment object.
-        only_compute_fim_lower:
-            If True, only the lower triangle of the FIM is computed. Default is True.
+        _Cholesky_option:
+            Boolean value of whether or not to use the choleskyn factorization to compute the
+            determinant for the D-optimality criteria. This parameter should not be changed
+            unless the user intends to make performance worse (i.e., compare an existing tool
+            that uses the full FIM to this algorithm)
+        _only_compute_fim_lower:
+            If True, only the lower triangle of the FIM is computed. This parameter should not
+            be changed unless the user intends to make performance worse (i.e., compare an
+            existing tool that uses the full FIM to this algorithm)
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
         # Assert that the Experiment object has callable ``get_labeled_model`` function
         assert callable(getattr(experiment, 'get_labeled_model')), 'The experiment object must have a ``get_labeled_model`` function'
         
+        # Set the experiment object from the user
         self.experiment = experiment
+        
+        # Set the finite difference and subsequent step size
         self.fd_formula = FiniteDifferenceStep(fd_formula)
+        self.step = step
+
+        # Set the objective type and scaling options:
+        self.objective_option = ObjectiveLib(objective_option)
+        
+        self.scale_constant_value = scale_constant_value
+        self.scale_nominal_param_value = scale_nominal_param_value
+        
+        # Set the prior FIM (will be checked upon model construction)
+        self.prior_FIM = prior_FIM
+        
+        # Set the initial values for the jacobian, fim, and L matrices
+        self.jac_initial = jac_initial
+        self.fim_initial = fim_initial
+        self.L_initial = L_initial
+        
+        # Set the lower bound on the Cholesky lower triangular matrix
+        self.L_LB = L_LB
 
         # check if user-defined solver is given
         if solver:
@@ -124,24 +188,23 @@ class DesignOfExperiments_:
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
             self.solver = solver
-
-        # Prior FIM will be checked when the first model instance is built.
-        self.prior_FIM = prior_FIM
-        
-        # To-Do: Add check when parameters are populated that input FIM is the correct size
         
         # Set args as an empty dict if no arguments are passed
         if args is None:
             args = {}
         self.args = args
 
+        # Revtrieve logger and set logging level
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level=logger_level)
 
-        self.only_compute_fim_lower = only_compute_fim_lower
+        # Set the private options if passed (only developers should pass these)
+        self.Cholesky_option = _Cholesky_option
+        self.only_compute_fim_lower = _only_compute_fim_lower
         
         # model attribute to avoid rebuilding models
         self.model = pyo.ConcreteModel()  # Build empty model
+        
         # May need this attribute for more complicated structures?
         # (i.e., no model rebuilding for large models with sequential)
         self._built_model = False
@@ -162,61 +225,6 @@ class DesignOfExperiments_:
         step=0.001,
         tee_opt=True,
     ):
-        """
-        Optimize an experimental design. The procedure has a two steps
-            (1) Solve a square problem with the experimental design fixed [initializes model equations]
-            (2) Solve the unfixed system for optimal experimental design [optimizes experimental outputs]
-
-        Parameters
-        ----------
-        objective_option:
-            choose from the ObjectiveLib enum options,
-            "det": the determinant of the FIM,
-            "trace": the trace of the FIM,
-            "zero": a value of zero
-        scale_nominal_param_value:
-            if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value:
-            scale all elements in Jacobian matrix, default is 1.
-        optimize_opt:
-            A dictionary, keys are design variables, values are True or False deciding if this design variable will be optimized as DOF or not
-        if_Cholesky:
-            if True, Cholesky decomposition is used for Objective function for D-optimality.
-        L_LB:
-            L is the Cholesky decomposition matrix for FIM, i.e. FIM = L*L.T.
-            L_LB is the lower bound for every element in L.
-            if FIM is positive definite, the diagonal element should be positive, so we can set a LB similar to 1E-10
-        L_initial:
-            initialize the L
-        jac_initial:
-            a matrix used to initialize jacobian matrix
-        fim_initial:
-            a matrix used to initialize FIM matrix
-        formula:
-            choose from "central", "forward", "backward",
-            which refers to the Enum FiniteDifferenceStep.central, .forward, or .backward
-        step:
-            Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-        tee_opt:
-            if True, IPOPT console output is printed
-
-        Returns
-        -------
-        analysis_square: result summary of the square problem solved at the initial point
-        analysis_optimize: result summary of the optimization problem solved
-
-        """
-        # Check that experimental outputs exist
-        try:
-            outputs = [k.name for k, v in model.experiment_outputs.items()]
-        except:
-            RuntimeError(
-                'Experiment model does not have suffix ' + '"experiment_outputs".'
-            )
-        
-        # Check that experimental inputs exist
-        # Check that unknown parameters exist
-        # Check that measurement errors exist
         # store inputs in object
         self.design_values = self.design_vars.variable_names_value
         self.optimize = if_optimize
@@ -272,6 +280,10 @@ class DesignOfExperiments_:
         raise NotImplementedError(
             "Multipled experiment optimization note yet supported."
         )
+    
+    # ToDo: Add "Update FIM" method
+    def update_FIM(self, ):
+        return
     
     # Compute FIM for the DoE object
     def compute_FIM(self, ):
@@ -647,6 +659,9 @@ class DesignOfExperiments_:
         
         # Clean up the base model used to generate the scenarios
         mod.del_component(mod.base_model)
+        
+        # ToDo: consider this logic? Multi-block systems need something more fancy
+        # self._built_scenarios = True
 
 
     # Create objective function
@@ -680,8 +695,6 @@ class DesignOfExperiments_:
         #     for j, un in enumerate(m.regression_parameters):
         #         # Copy value from Pyomo model into numpy array
         #         fim[i][j] = m.fim[bu, un].value
-
-        mod.fim.pprint()
 
         fim_vals = [
             mod.fim[bu, un].value
