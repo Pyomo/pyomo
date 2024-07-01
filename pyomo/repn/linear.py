@@ -50,6 +50,7 @@ from pyomo.repn.util import (
     InvalidNumber,
     apply_node_operation,
     complex_number_error,
+    initialize_exit_node_dispatcher,
     nan,
     sum_like_expression_types,
 )
@@ -539,8 +540,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         self[LinearExpression] = self._before_linear
         self[SumExpression] = self._before_general_expression
 
-    @staticmethod
-    def _record_var(visitor, var):
+    def record_var(self, visitor, var):
         # We always add all indices to the var_map at once so that
         # we can honor deterministic ordering of unordered sets
         # (because the user could have iterated over an unordered
@@ -569,7 +569,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         if _id not in visitor.var_map:
             if child.fixed:
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
-            LinearBeforeChildDispatcher._record_var(visitor, child)
+            visitor.before_child_dispatcher.record_var(visitor, child)
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (_LINEAR, ans)
@@ -598,7 +598,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     _CONSTANT,
                     arg1 * visitor.check_constant(arg2.value, arg2),
                 )
-            LinearBeforeChildDispatcher._record_var(visitor, arg2)
+            visitor.before_child_dispatcher.record_var(visitor, arg2)
 
         # Trap multiplication by 0 and nan.
         if not arg1:
@@ -653,7 +653,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     if arg2.fixed:
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
-                    LinearBeforeChildDispatcher._record_var(visitor, arg2)
+                    visitor.before_child_dispatcher.record_var(visitor, arg2)
                     linear[_id] = arg1
                 elif _id in linear:
                     linear[_id] += arg1
@@ -667,7 +667,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     if arg.fixed:
                         const += visitor.check_constant(arg.value, arg)
                         continue
-                    LinearBeforeChildDispatcher._record_var(visitor, arg)
+                    visitor.before_child_dispatcher.record_var(visitor, arg)
                     linear[_id] = 1
                 elif _id in linear:
                     linear[_id] += 1
@@ -709,28 +709,12 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         return False, (_GENERAL, ans)
 
 
-_before_child_dispatcher = LinearBeforeChildDispatcher()
-
-
-#
-# Initialize the _exit_node_dispatcher
-#
-def _initialize_exit_node_dispatcher(exit_handlers):
-    exit_dispatcher = {}
-    for cls, handlers in exit_handlers.items():
-        for args, fcn in handlers.items():
-            if args is None:
-                exit_dispatcher[cls] = fcn
-            else:
-                exit_dispatcher[(cls, *args)] = fcn
-    return exit_dispatcher
-
-
 class LinearRepnVisitor(StreamBasedExpressionVisitor):
     Result = LinearRepn
+    before_child_dispatcher = LinearBeforeChildDispatcher()
     exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(_exit_node_handlers)
+        initialize_exit_node_dispatcher(_exit_node_handlers)
     )
     expand_nonlinear_products = False
     max_exponential_expansion = 1
@@ -783,7 +767,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        return _before_child_dispatcher[child.__class__](self, child)
+        return self.before_child_dispatcher[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly

@@ -490,6 +490,17 @@ class ExitNodeDispatcher(collections.defaultdict):
         )
 
 
+def initialize_exit_node_dispatcher(exit_handlers):
+    exit_dispatcher = {}
+    for cls, handlers in exit_handlers.items():
+        for args, fcn in handlers.items():
+            if args is None:
+                exit_dispatcher[cls] = fcn
+            else:
+                exit_dispatcher[(cls, *args)] = fcn
+    return exit_dispatcher
+
+
 def apply_node_operation(node, args):
     try:
         ans = node._apply_operation(args)
