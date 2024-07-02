@@ -290,7 +290,7 @@ class SAS94(SASAbc):
 
     def __del__(self):
         # Close the session, if we created one
-        if self._sas_session:
+        if hasattr(self, '_sas_session'):
             self._sas_session.endsas()
             del self._sas_session
 
