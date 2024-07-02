@@ -205,7 +205,7 @@ class ParameterizedLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_PSEUDO_CONSTANT, child)
             # This is a normal situation
-            ParameterizedLinearBeforeChildDispatcher._record_var(visitor, child)
+            visitor.before_child_dispatcher.record_var(visitor, child)
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (ExprType.LINEAR, ans)

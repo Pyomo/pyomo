@@ -262,6 +262,9 @@ class _LinearStandardFormCompiler_impl(object):
     def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
         return scipy.sparse.csc_array((data, index, index_ptr), [nrows, ncols])
 
+    def _csr_matrix(self, data, index, index_ptr, nrows, ncols):
+        return scipy.sparse.csr_array((data, index, index_ptr), [nrows, ncols])
+
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
         timer = TicTocTimer(logger=timing_logger)
@@ -572,25 +575,32 @@ class _LinearStandardFormCompiler_impl(object):
             )
             # obj_index = list(itertools.chain(*obj_index))
             obj_index_ptr = np.array(obj_index_ptr, dtype=np.int32)
-        c = scipy.sparse.csr_array(
-            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, nCol]
-        )
+        c = self._csr_matrix(obj_data, obj_index, obj_index_ptr,
+                             len(obj_index_ptr) - 1, nCol)
+        # c = scipy.sparse.csr_array(
+        #     (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, nCol]
+        # )
+        c = c.tocsc()
         c.sum_duplicates()
         c.eliminate_zeros()
-        c = c.tocsc()
         if rows:
-            con_data = np.fromiter(
-                itertools.chain.from_iterable(con_data), np.float64, con_nnz
-            )
+            con_data = self._to_vector(itertools.chain.from_iterable(con_data),
+                                       con_nnz, np.float64)
+            # con_data = np.fromiter(
+            #     itertools.chain.from_iterable(con_data), np.float64, con_nnz
+            # )
             # con_data = list(itertools.chain(*con_data))
-            con_index = np.fromiter(
-                itertools.chain.from_iterable(con_index), np.int32, con_nnz
-            )
+            # con_index = np.fromiter(
+            #     itertools.chain.from_iterable(con_index), np.int32, con_nnz
+            # )
+            con_index = self._to_vector(
+                itertools.chain.from_iterable(con_index), con_nnz, np.int32)
             # con_index = list(itertools.chain(*con_index))
             con_index_ptr = np.array(con_index_ptr, dtype=np.int32)
-        A = scipy.sparse.csr_array(
-            (con_data, con_index, con_index_ptr), [len(rows), nCol]
-        )
+        A = self._csr_matrix(con_data, con_index, con_index_ptr, len(rows), nCol)
+        # A = scipy.sparse.csr_array(
+        #     (con_data, con_index, con_index_ptr), [len(rows), nCol]
+        # )
         A = A.tocsc()
         A.sum_duplicates()
         A.eliminate_zeros()

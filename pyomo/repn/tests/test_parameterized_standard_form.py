@@ -26,7 +26,10 @@ from pyomo.core.expr import (
     NegationExpression,
     ProductExpression,
 )
-from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual
+)
 
 from pyomo.repn.plugins.parameterized_standard_form import (
     ParameterizedLinearStandardFormCompiler,
@@ -93,7 +96,7 @@ def assertExpressionArraysEqual(self, A, B):
     self.assertEqual(A.shape, B.shape)
     for i in range(A.shape[0]):
         for j in range(A.shape[1]):
-            assertExpressionsEqual(self, A[i, j], B[i, j])
+            assertExpressionsStructurallyEqual(self, A[i, j], B[i, j])
 
 
 def assertExpressionListsEqual(self, A, B):

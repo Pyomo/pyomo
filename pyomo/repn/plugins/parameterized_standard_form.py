@@ -96,6 +96,9 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
     def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
         return _CSCMatrix(data, index, index_ptr, nrows, ncols)
 
+    def _csr_matrix(self, data, index, index_ptr, nrows, ncols):
+        return _CSRMatrix(data, index, index_ptr, nrows, ncols)
+
 
 class _SparseMatrixBase(object):
     def __init__(self, data, indices, indptr, nrows, ncols):
@@ -169,12 +172,6 @@ class _CSRMatrix(_SparseMatrixBase):
 
         return dense
 
-    def sum_duplicates(self):
-        pass
-
-    def eliminate_zeros(self):
-        pass
-
 
 class _CSCMatrix(_SparseMatrixBase):
     def todense(self):
@@ -190,3 +187,9 @@ class _CSCMatrix(_SparseMatrixBase):
                 dense[row_index[j], col] = data[j]
 
         return dense
+
+    def sum_duplicates(self):
+        pass
+
+    def eliminate_zeros(self):
+        pass
