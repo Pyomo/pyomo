@@ -286,11 +286,14 @@ class SAS94(SASAbc):
         self._session_options = kwds
 
         # Create the session
-        self._sas_session = self._sas.SASsession(**self._session_options)
+        try:
+            self._sas_session = self._sas.SASsession(**self._session_options)
+        except:
+            self._sas_session = None
 
     def __del__(self):
         # Close the session, if we created one
-        if hasattr(self, '_sas_session'):
+        if self._sas_session:
             self._sas_session.endsas()
             del self._sas_session
 
@@ -583,7 +586,10 @@ class SASCAS(SASAbc):
         self._session_options = kwds
 
         # Create the session
-        self._sas_session = self._sas.CAS(**self._session_options)
+        try:
+            self._sas_session = self._sas.CAS(**self._session_options)
+        except:
+            self._sas_session = None
 
     def __del__(self):
         # Close the session, if we created one
