@@ -22,6 +22,7 @@ from pyomo.common.config import (
 from pyomo.common.dependencies import scipy, numpy as np
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.numeric_types import native_types
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.core.base import (
@@ -34,10 +35,10 @@ from pyomo.core.base import (
     SortComponents,
     Suffix,
     SymbolMap,
-    maximize,
 )
 from pyomo.opt import WriterFactory
 from pyomo.repn.linear import LinearRepnVisitor
+from pyomo.repn.linear_template import LinearTemplateRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
@@ -294,6 +295,7 @@ class _LinearStandardFormCompiler_impl(object):
         var_order = {_id: i for i, _id in enumerate(var_map)}
 
         visitor = LinearRepnVisitor({}, var_map, var_order, sorter)
+        template_visitor = LinearTemplateRepnVisitor({}, var_map, var_order, sorter)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -332,26 +334,37 @@ class _LinearStandardFormCompiler_impl(object):
                     Objective, active=True, descend_into=False, sort=sorter
                 )
             )
+        obj_nnz = 0
         obj_offset = []
         obj_data = []
         obj_index = []
         obj_index_ptr = [0]
         for obj in objectives:
-            repn = visitor.walk_expression(obj.expr)
-            if repn.nonlinear is not None:
-                raise ValueError(
-                    f"Model objective ({obj.name}) contains nonlinear terms that "
-                    "cannot be compiled to standard (linear) form."
+            if hasattr(obj, 'template_expr'):
+                offset, linear_index, linear_data, _, _ = (
+                    template_visitor.expand_expression(obj, obj.template_expr())
                 )
-            N = len(repn.linear)
-            obj_data.append(np.fromiter(repn.linear.values(), float, N))
-            obj_offset.append(repn.constant)
+                N = len(linear_index)
+                obj_index.append(map(var_order.__getitem__, linear_index))
+                obj_data.append(linear_data)
+                obj_offset.append(offset)
+            else:
+                repn = visitor.walk_expression(obj.expr)
+                N = len(repn.linear)
+                obj_index.append(map(var_order.__getitem__, repn.linear))
+                obj_data.append(repn.linear.values())
+                obj_offset.append(repn.constant)
+
+                if repn.nonlinear is not None:
+                    raise ValueError(
+                        f"Model objective ({obj.name}) contains nonlinear terms that "
+                        "cannot be compiled to standard (linear) form."
+                    )
+
+            obj_nnz += N
             if set_sense is not None and set_sense != obj.sense:
-                obj_data[-1] *= -1
+                obj_data[-1] = -np.fromiter(obj_data[-1], float, N)
                 obj_offset[-1] *= -1
-            obj_index.append(
-                np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
-            )
             obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
                 timer.toc('Objective %s', obj, level=logging.DEBUG)
@@ -365,38 +378,53 @@ class _LinearStandardFormCompiler_impl(object):
             raise ValueError("cannot specify both slack_form and mixed_form")
         rows = []
         rhs = []
+        con_nnz = 0
         con_data = []
         con_index = []
         con_index_ptr = [0]
         last_parent = None
         for con in ordered_active_constraints(model, self.config):
-            if with_debug_timing and con.parent_component() is not last_parent:
+            if with_debug_timing and con._component is not last_parent:
                 if last_parent is not None:
-                    timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
-                last_parent = con.parent_component()
-            # Note: Constraint.lb/ub guarantee a return value that is
-            # either a (finite) native_numeric_type, or None
-            lb = con.lb
-            ub = con.ub
+                    timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
+                last_parent = con._component
 
-            repn = visitor.walk_expression(con.body)
+            if hasattr(con, 'template_expr'):
+                offset, linear_index, linear_data, lb, ub = (
+                    template_visitor.expand_expression(con, con.template_expr())
+                )
+                N = len(linear_data)
+                linear_index = map(var_order.__getitem__, linear_index)
+            else:
+                # Note: Constraint.lb/ub guarantee a return value that is
+                # either a (finite) native_numeric_types, or None
+                lb, body, ub = con.normalize_constraint()
+                if lb.__class__ not in native_types:
+                    lb = value(lb)
+                if ub.__class__ not in native_types:
+                    ub = value(ub)
+                repn = visitor.walk_expression(body)
+                if repn.nonlinear is not None:
+                    raise ValueError(
+                        f"Model constraint ({con.name}) contains nonlinear terms that "
+                        "cannot be compiled to standard (linear) form."
+                    )
+
+                N = len(repn.linear)
+                # Pull out the constant: we will move it to the bounds
+                offset = repn.constant
+                linear_index = map(var_order.__getitem__, repn.linear)
+                linear_data = repn.linear.values()
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
                 # constraints in matrix format.  I suppose we could add a
                 # slack variable, but that seems rather silly.
                 continue
-            if repn.nonlinear is not None:
-                raise ValueError(
-                    f"Model constraint ({con.name}) contains nonlinear terms that "
-                    "cannot be compiled to standard (linear) form."
-                )
 
-            # Pull out the constant: we will move it to the bounds
-            offset = repn.constant
-            repn.constant = 0
-
-            if not repn.linear:
+            if not N:
+                # This is a constant constraint
+                # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
                     continue
                 raise InfeasibleError(
@@ -404,35 +432,36 @@ class _LinearStandardFormCompiler_impl(object):
                 )
 
             if mixed_form:
-                N = len(repn.linear)
-                _data = np.fromiter(repn.linear.values(), float, N)
-                _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
-                if ub == lb:
+                if lb == ub:
+                    con_nnz += N
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
-                    con_data.append(_data)
-                    con_index.append(_index)
-                    con_index_ptr.append(con_index_ptr[-1] + N)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
                 else:
                     if ub is not None:
+                        if lb is not None:
+                            linear_index = list(linear_index)
+                        con_nnz += N
                         rows.append(RowEntry(con, 1))
                         rhs.append(ub - offset)
-                        con_data.append(_data)
-                        con_index.append(_index)
-                        con_index_ptr.append(con_index_ptr[-1] + N)
+                        con_data.append(linear_data)
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
                     if lb is not None:
+                        con_nnz += N
                         rows.append(RowEntry(con, -1))
                         rhs.append(lb - offset)
-                        con_data.append(_data)
-                        con_index.append(_index)
-                        con_index_ptr.append(con_index_ptr[-1] + N)
+                        con_data.append(linear_data)
+                        con_index.append(linear_index)
+                        con_index_ptr.append(con_nnz)
             elif slack_form:
-                _data = list(repn.linear.values())
-                _index = list(map(var_order.__getitem__, repn.linear))
                 if lb == ub:  # TODO: add tolerance?
                     rhs.append(ub - offset)
                 else:
                     # add slack variable
+                    con_nnz += 1
                     v = Var(name=f'_slack_{len(rhs)}', bounds=(None, None))
                     v.construct()
                     if lb is None:
@@ -445,48 +474,77 @@ class _LinearStandardFormCompiler_impl(object):
                             v.lb = lb - ub
                     var_map[id(v)] = v
                     var_order[id(v)] = slack_col = len(var_order)
-                    _data.append(1)
-                    _index.append(slack_col)
+                    linear_data = list(linear_data)
+                    linear_data.append(1)
+                    linear_index = list(linear_index)
+                    linear_index.append(slack_col)
+                con_nnz += N
                 rows.append(RowEntry(con, 1))
-                con_data.append(np.array(_data))
-                con_index.append(np.array(_index))
-                con_index_ptr.append(con_index_ptr[-1] + len(_index))
+                con_data.append(linear_data)
+                con_index.append(linear_index)
+                con_index_ptr.append(con_nnz)
             else:
-                N = len(repn.linear)
-                _data = np.fromiter(repn.linear.values(), float, N)
-                _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                 if ub is not None:
+                    if lb is not None:
+                        linear_index = list(linear_index)
+                    con_nnz += N
                     rows.append(RowEntry(con, 1))
                     rhs.append(ub - offset)
-                    con_data.append(_data)
-                    con_index.append(_index)
-                    con_index_ptr.append(con_index_ptr[-1] + N)
+                    con_data.append(linear_data)
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
                 if lb is not None:
+                    con_nnz += N
                     rows.append(RowEntry(con, -1))
                     rhs.append(offset - lb)
-                    con_data.append(-_data)
-                    con_index.append(_index)
-                    con_index_ptr.append(con_index_ptr[-1] + N)
+                    con_data.append(-np.array(list(linear_data)))
+                    con_index.append(linear_index)
+                    con_index_ptr.append(con_nnz)
 
         if with_debug_timing:
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
 
         # Get the variable list
+        var_order.update({_id: i for i, _id in enumerate(var_map)})
         columns = list(var_map.values())
+        nCol = len(columns)
         # Convert the compiled data to scipy sparse matrices
         if obj_data:
-            obj_data = np.concatenate(obj_data)
-            obj_index = np.concatenate(obj_index)
+            obj_data = np.fromiter(
+                itertools.chain.from_iterable(obj_data), np.float64, obj_nnz
+            )
+            # obj_data = list(itertools.chain(*obj_data))
+            obj_index = np.fromiter(
+                itertools.chain.from_iterable(obj_index), np.int32, obj_nnz
+            )
+            # obj_index = list(itertools.chain(*obj_index))
+            obj_index_ptr = np.array(obj_index_ptr, dtype=np.int32)
         c = scipy.sparse.csr_array(
-            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, len(columns)]
-        ).tocsc()
+            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, nCol]
+        )
+        c.sum_duplicates()
+        c.eliminate_zeros()
+        c = c.tocsc()
         if rows:
-            con_data = np.concatenate(con_data)
-            con_index = np.concatenate(con_index)
+            con_data = np.fromiter(
+                itertools.chain.from_iterable(con_data), np.float64, con_nnz
+            )
+            # con_data = list(itertools.chain(*con_data))
+            con_index = np.fromiter(
+                itertools.chain.from_iterable(con_index), np.int32, con_nnz
+            )
+            # con_index = list(itertools.chain(*con_index))
+            con_index_ptr = np.array(con_index_ptr, dtype=np.int32)
         A = scipy.sparse.csr_array(
-            (con_data, con_index, con_index_ptr), [len(rows), len(columns)]
-        ).tocsc()
+            (con_data, con_index, con_index_ptr), [len(rows), nCol]
+        )
+        A = A.tocsc()
+        A.sum_duplicates()
+        A.eliminate_zeros()
+
+        if with_debug_timing:
+            timer.toc('Formed matrices', level=logging.DEBUG)
 
         # Some variables in the var_map may not actually appear in the
         # objective or constraints (e.g., added from col_order, or
@@ -502,16 +560,20 @@ class _LinearStandardFormCompiler_impl(object):
         # columns
         augmented_mask = np.concatenate((active_var_mask, [True]))
         reduced_A_indptr = A.indptr[augmented_mask]
-        nCol = len(reduced_A_indptr) - 1
-        if nCol != len(columns):
+        nCol -= len(reduced_A_indptr) - 1
+        if nCol > 0:
             columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = scipy.sparse.csc_array(
-                (c.data, c.indices, c.indptr[augmented_mask]), [c.shape[0], nCol]
+                (c.data, c.indices, c.indptr[augmented_mask]),
+                [c.shape[0], len(columns)],
             )
             # active_var_idx[-1] = len(columns)
             A = scipy.sparse.csc_array(
-                (A.data, A.indices, reduced_A_indptr), [A.shape[0], nCol]
+                (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
             )
+
+        if with_debug_timing:
+            timer.toc('Eliminated %s unused columns', nCol, level=logging.DEBUG)
 
         if self.config.nonnegative_vars:
             c, A, columns, eliminated_vars = _csc_to_nonnegative_vars(c, A, columns)

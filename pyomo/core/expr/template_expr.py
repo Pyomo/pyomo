@@ -468,6 +468,15 @@ class TemplateSumExpression(NumericExpression):
     def _args_(self, args):
         self._local_args_ = args
 
+    def template_args(self):
+        ans = list(self._local_args_)
+        for itergroup in self._iters:
+            ans.append(itergroup[0]._set)
+        return tuple(ans)
+
+    def template_iters(self):
+        return self._iters
+
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._iters)
 
