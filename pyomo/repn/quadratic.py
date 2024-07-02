@@ -163,7 +163,7 @@ _exit_node_handlers = copy.deepcopy(linear.LinearRepnVisitor.exit_node_handlers)
 #
 # NEGATION
 #
-_exit_node_handlers[NegationExpression][(_QUADRATIC,)] = linear._handle_negation_ANY
+# (no changes needed)
 
 
 #
