@@ -85,7 +85,7 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
             wrt = []
         return ParameterizedLinearRepnVisitor({}, var_map, var_order, sorter, wrt=wrt)
 
-    def _get_data_list(self, linear_repn):
+    def _to_vector(self, linear_repn):
         # override this to not attempt conversion to float since that will fail
         # on the Pyomo expressions
         return np.array([v for v in linear_repn.values()])
@@ -168,6 +168,12 @@ class _CSRMatrix(_SparseMatrixBase):
                 dense[row, col_index[j]] = data[j]
 
         return dense
+
+    def sum_duplicates(self):
+        pass
+
+    def eliminate_zeros(self):
+        pass
 
 
 class _CSCMatrix(_SparseMatrixBase):

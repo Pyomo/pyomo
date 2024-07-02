@@ -251,7 +251,7 @@ class _LinearStandardFormCompiler_impl(object):
     def _get_visitor(self, var_map, var_order, sorter):
         return LinearRepnVisitor({}, var_map, var_order, sorter)
 
-    def _get_data_list(self, linear_repn):
+    def _to_vector(self, linear_repn):
         return np.fromiter(linear_repn.values(), float, len(linear_repn))
 
     def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
@@ -356,7 +356,7 @@ class _LinearStandardFormCompiler_impl(object):
                     "cannot be compiled to standard (linear) form."
                 )
             N = len(repn.linear)
-            obj_data.append(self._get_data_list(repn.linear))
+            obj_data.append(self._to_vector(repn.linear))
             obj_offset.append(repn.constant)
             if set_sense is not None and set_sense != obj.sense:
                 obj_data[-1] *= -1
@@ -417,7 +417,7 @@ class _LinearStandardFormCompiler_impl(object):
 
             if mixed_form:
                 N = len(repn.linear)
-                _data = self._get_data_list(repn.linear)
+                _data = self._to_vector(repn.linear)
                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                 if ub == lb:
                     rows.append(RowEntry(con, 0))
@@ -465,7 +465,7 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index_ptr.append(con_index_ptr[-1] + len(_index))
             else:
                 N = len(repn.linear)
-                _data = self._get_data_list(repn.linear)
+                _data = self._to_vector(repn.linear)
                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
                 if ub is not None:
                     rows.append(RowEntry(con, 1))
