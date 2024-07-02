@@ -511,39 +511,10 @@ class _LinearStandardFormCompiler_impl(object):
         var_order.update({_id: i for i, _id in enumerate(var_map)})
         columns = list(var_map.values())
         nCol = len(columns)
+
         # Convert the compiled data to scipy sparse matrices
-        if obj_data:
-            obj_data = np.fromiter(
-                itertools.chain.from_iterable(obj_data), np.float64, obj_nnz
-            )
-            # obj_data = list(itertools.chain(*obj_data))
-            obj_index = np.fromiter(
-                itertools.chain.from_iterable(obj_index), np.int32, obj_nnz
-            )
-            # obj_index = list(itertools.chain(*obj_index))
-            obj_index_ptr = np.array(obj_index_ptr, dtype=np.int32)
-        c = scipy.sparse.csr_array(
-            (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, nCol]
-        )
-        c.sum_duplicates()
-        c.eliminate_zeros()
-        c = c.tocsc()
-        if rows:
-            con_data = np.fromiter(
-                itertools.chain.from_iterable(con_data), np.float64, con_nnz
-            )
-            # con_data = list(itertools.chain(*con_data))
-            con_index = np.fromiter(
-                itertools.chain.from_iterable(con_index), np.int32, con_nnz
-            )
-            # con_index = list(itertools.chain(*con_index))
-            con_index_ptr = np.array(con_index_ptr, dtype=np.int32)
-        A = scipy.sparse.csr_array(
-            (con_data, con_index, con_index_ptr), [len(rows), nCol]
-        )
-        A = A.tocsc()
-        A.sum_duplicates()
-        A.eliminate_zeros()
+        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, nCol)
+        A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, nCol)
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
@@ -587,6 +558,23 @@ class _LinearStandardFormCompiler_impl(object):
         )
         timer.toc("Generated linear standard form representation", delta=False)
         return info
+
+    def _create_csc(self, data, index, index_ptr, nnz, nCol):
+        if not nnz:
+            return scipy.sparse.csc_array(
+                (data, index, index_ptr), [len(index_ptr) - 1, nCol]
+            )
+
+        data = np.fromiter(itertools.chain.from_iterable(data), np.float64, nnz)
+        # data = list(itertools.chain(*data))
+        con_index = np.fromiter(itertools.chain.from_iterable(index), np.int32, nnz)
+        # index = list(itertools.chain(*index))
+        index_ptr = np.array(index_ptr, dtype=np.int32)
+        A = scipy.sparse.csr_array((data, index, index_ptr), [len(index_ptr) - 1, nCol])
+        A = A.tocsc()
+        A.sum_duplicates()
+        A.eliminate_zeros()
+        return A
 
 
 def _csc_to_nonnegative_vars(c, A, columns):
