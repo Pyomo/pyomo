@@ -284,7 +284,8 @@ class GurobiDirect(SolverBase):
                     gurobi_model.setAttr('ObjCon', repn.c_offset[0])
                     gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
                 # Note: calling gurobi_model.update() here is not
-                # necessary (it will happen as part of optimize())
+                # necessary (it will happen as part of optimize()):
+                # gurobi_model.update()
                 timer.stop('transfer_model')
 
                 options = config.solver_options
@@ -319,6 +320,7 @@ class GurobiDirect(SolverBase):
                 gurobi_model, A, x, repn.rows, repn.columns, repn.objectives
             ),
         )
+
         res.solver_configuration = config
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()

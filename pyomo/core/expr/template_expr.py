@@ -647,7 +647,7 @@ class IndexTemplate(NumericValue):
         # is not present.
         if lock is not self._lock:
             raise RuntimeError(
-                "The TemplateIndex %s is currently locked by %s and "
+                "The IndexTemplate %s is currently locked by %s and "
                 "cannot be set through lock %s" % (self, self._lock, lock)
             )
         if values is _NotSpecified:

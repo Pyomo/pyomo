@@ -936,7 +936,8 @@ class ExpressionValueVisitor(object):
             ans = self.visit(_obj, _result)
             if _stack:
                 #
-                # "return" the recursion by putting the return value on the end of the results stack
+                # "return" the recursion by putting the return value on
+                # the end of the results stack
                 #
                 _stack[-1][-1].append(ans)
             else:
@@ -1244,9 +1245,13 @@ class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
                 # opportunity to map the error to a NonConstant / Fixed
                 # expression error
                 if not node.is_fixed():
-                    raise NonConstantExpressionError()
+                    raise NonConstantExpressionError(
+                        f"{node} ({type(node).__name__}) is not fixed"
+                    )
                 if not node.is_constant():
-                    raise FixedExpressionError()
+                    raise FixedExpressionError(
+                        f"{node} ({type(node).__name__}) is not constant"
+                    )
                 raise
 
             if not node.is_fixed():

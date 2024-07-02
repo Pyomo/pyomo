@@ -10,8 +10,9 @@
 #  ___________________________________________________________________________
 
 import collections
+import itertools
+import operator
 import logging
-from operator import attrgetter
 
 from pyomo.common.config import (
     ConfigBlock,
@@ -284,7 +285,8 @@ class _LinearStandardFormCompiler_impl(object):
                 % (
                     model.name,
                     "\n\t".join(
-                        "%s:\n\t\t%s" % (k, "\n\t\t".join(map(attrgetter('name'), v)))
+                        "%s:\n\t\t%s"
+                        % (k, "\n\t\t".join(map(operator.attrgetter('name'), v)))
                         for k, v in unknown.items()
                     ),
                 )
@@ -503,7 +505,7 @@ class _LinearStandardFormCompiler_impl(object):
 
         if with_debug_timing:
             # report the last constraint
-            timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
+            timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
 
         # Get the variable list
         var_order.update({_id: i for i, _id in enumerate(var_map)})

@@ -185,7 +185,7 @@ class InvalidNumber(PyomoObject):
     def __repr__(self):
         # We want attempts to convert InvalidNumber to a string
         # representation to raise a InvalidValueError.
-        self._error(f'Cannot emit {str(self)} in compiled representation')
+        return self._error(f'Cannot emit {str(self)} in compiled representation')
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
@@ -193,12 +193,12 @@ class InvalidNumber(PyomoObject):
         # InvalidValueError.  However, at the moment, this breaks some
         # tests in PyROS.
         # return self.value.__format__(format_spec)
-        self._error(f'Cannot emit {str(self)} in compiled representation')
+        return self._error(f'Cannot emit {str(self)} in compiled representation')
 
     def __float__(self):
         # We want attempts to convert InvalidNumber to a float
         # representation to raise a InvalidValueError.
-        self._error(f'Cannot convert {str(self)} to float')
+        return self._error(f'Cannot convert {str(self)} to float')
 
     def __neg__(self):
         return self._op(operator.neg, self)
@@ -371,28 +371,28 @@ class BeforeChildDispatcher(collections.defaultdict):
     @staticmethod
     def _before_index_template(visitor, child):
         raise NotImplementedError(
-            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
         )
 
     @staticmethod
     def _before_indexed_expr(visitor, child):
         raise NotImplementedError(
-            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
         )
 
     @staticmethod
     def _before_indexed_param(visitor, child):
         raise NotImplementedError(
-            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
         )
 
     @staticmethod
     def _before_indexed_var(visitor, child):
         raise NotImplementedError(
-            f"{visitor.__class__.__name__} can not handle template expressions "
+            f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
         )
 
@@ -439,8 +439,8 @@ class ExitNodeDispatcher(collections.defaultdict):
 
     def __missing__(self, key):
         if type(key) is tuple:
-            # Only lookup/cache argument-specific handlers for unary,
-            # binary and ternary operators
+            # Only lookup/cache argument-specific handlers for unary or
+            # binary operators
             if len(key) <= 3:
                 node_class = key[0]
                 node_args = key[1:]
