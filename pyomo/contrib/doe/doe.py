@@ -863,6 +863,43 @@ class DesignOfExperiments_:
 
         self.logger.info('Jacobian provided matches expected dimensions from model.')
 
+
+    # Update the FIM for the specified model
+    def update_FIM_prior(self, mod=None, FIM=None):
+        """
+        Updates the prior FIM on the model object. This may be useful when
+        running a loop and the user doesn't want to rebuild the model
+        because it is expensive to build/initialize.
+        
+        Parameters
+        ----------
+        mod: model where FIM prior is to be updated, Default: None, (self.model)
+        FIM: 2D np array to be the new FIM prior, Default: None
+        """
+        if mod is None:
+            mod = self.model
+        
+        # Check FIM input
+        if FIM is None:
+            raise ValueError('FIM input for update_FIM_prior must be a 2D, square numpy array.')
+
+        assert hasattr(mod, 'fim'), '``fim`` is not defined on the model provided. Please build the model first.'
+
+        self.check_model_FIM(mod, FIM)
+
+        # Update FIM prior
+        for ind1, p1 in enumerate(mod.parameter_names):
+            for ind2, p2 in enumerate(mod.parameter_names):
+                mod.prior_FIM[p1, p2].set_value(FIM[ind1, ind2]) 
+
+        self.logger.info('FIM prior has been updated.')
+    
+
+    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # Or leave this to the user?????
+    def udpate_unknown_parameter_values(self, mod=None, param_vals=None):
+        return
+
     # Rescale FIM (a scaling function to help rescale FIM from parameter values)
     def rescale_FIM(self, FIM, param_vals):
         if isinstance(param_vals, list):
