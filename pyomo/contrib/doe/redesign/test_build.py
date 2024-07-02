@@ -71,7 +71,7 @@ def create_model(m=None, ):
 # Control time set [h]
 t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
 # Define parameter nominal value
-parameter_dict = {"A1": 85, "A2": 372, "E1": 8, "E2": 15}
+parameter_dict = {"A1": 84.79, "A2": 371.72, "E1": 7.78, "E2": 15.05}
 
 # measurement object
 measurements = MeasurementVariables()
@@ -175,6 +175,23 @@ square_result2, optimize_result2 = doe_object2.stochastic_program(
     scale_nominal_param_value=False,  # if scale nominal parameter value
     objective_option="det",  # objective option
 )
+
+# Testing the kaug runs
+doe_object3 = DesignOfExperiments(
+    parameter_dict,  # dictionary of parameters
+    exp_design,  # design variables
+    measurements,  # measurement variables
+    create_model,  # function to create model
+    only_compute_fim_lower=True,
+)
+
+res = doe_object3.compute_FIM()
+res.result_analysis()
+doe_obj[0]._direct_kaug()
+
+print(res.FIM)
+print(doe_obj[0].kaug_fim)
+
 
 # Optimal values
 print("Optimal values for determinant optimized experimental design:")

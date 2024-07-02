@@ -223,32 +223,32 @@ class DesignOfExperiments_:
 
         # Model is none, set it to self.model
         if mod is None:
-            mod = self.model()
+            mod = self.model
         
         # ToDo: potentially work with this for more complicated models
         # build the large DOE pyomo model
         if not self._built_scenarios:
-            self.create_doe_model(mod=self.model)
+            self.create_doe_model(mod=mod)
 
         # Add the objective function to the model
-        self.create_objective_function(mod=self.model)
+        self.create_objective_function(mod=mod)
         
         # Solve the square problem first to initialize the fim and
         # sensitivity constraints
         # Deactivate object and fix experimental design decisions to make square
-        self.model.Obj.deactivate()
-        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
+        mod.Obj.deactivate()
+        for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
             comp.fix()
         
         self.solver.solve(self.model, tee=self.tee)
         
         # Reactivate objective and unfix experimental design decisions
-        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
+        for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
             comp.unfix()
-        self.model.Obj.activate()
+        mod.Obj.activate()
         
         # Solve the full model, which has now been initialized with the square solve
-        self.solver.solve(self.model, tee=self.tee)
+        self.solver.solve(mod, tee=self.tee)
         
         # Finish timing
         dT = sp_timer.toc(msg=None)
@@ -266,14 +266,91 @@ class DesignOfExperiments_:
             "Multipled experiment optimization note yet supported."
         )
     
-    # ToDo: Add "Update FIM" method
-    def update_FIM(self, ):
-        return
-    
     # Compute FIM for the DoE object
-    def compute_FIM(self, ):
+    def compute_FIM(self, mod=None):
+        
         return
     
+    # Use kaug to get FIM
+    def _direct_kaug(self):
+        """
+        Used to compute the FIM using kaug, a sensitivity-based approach instead
+        of forming the finite differencing blocks.
+
+        """
+        # Make a special version of the model for kaug
+        self.kaug_model = self.experiment.get_labeled_model(**self.args).clone()
+        mod = self.kaug_model
+
+        # Check the model labels on the kaug model
+        self.check_model_labels(mod=mod)
+
+        # add zero (dummy/placeholder) objective function
+        mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
+
+        # call k_aug get_dsdp function
+        # Solve the square problem
+        # Deactivate object and fix experimental design decisions to make square
+        for comp, _ in mod.experiment_inputs.items():
+            comp.fix()
+        
+        self.solver.solve(mod, tee=self.tee)
+
+        # Probe the solved model for dsdp results (sensitivities s.t. parameters)
+        params_dict = {k.name: v for k, v in mod.unknown_parameters.items()}
+        params_names = list(params_dict.keys())
+
+        dsdp_re, col = get_dsdp(
+            mod, params_names, params_dict, tee=self.tee
+        )
+
+        # analyze result
+        dsdp_array = dsdp_re.toarray().T
+
+        # store dsdp returned
+        dsdp_extract = []
+        # get right lines from results
+        measurement_index = []
+
+        # loop over measurement variables and their time points
+        for k, v in mod.experiment_outputs.items():
+            name = k.name
+            try:
+                kaug_no = col.index(name)
+                measurement_index.append(kaug_no)
+                # get right line of dsdp
+                dsdp_extract.append(dsdp_array[kaug_no])
+            except:
+                # k_aug does not provide value for fixed variables
+                self.logger.debug("The variable is fixed:  %s", name)
+                # produce the sensitivity for fixed variables
+                zero_sens = np.zeros(len(params_names))
+                # for fixed variables, the sensitivity are a zero vector
+                dsdp_extract.append(zero_sens)
+
+        # Extract and calculate sensitivity if scaled by constants or parameters.
+        jac = [[] for k in params_names]
+
+        for d in range(len(dsdp_extract)):
+            for k, v in mod.unknown_parameters.items():
+                p = params_names.index(k.name)  # Index of parameter in np array
+                # if scaled by parameter value or constant value
+                sensi = dsdp_extract[d][p] * self.scale_constant_value
+                if self.scale_nominal_param_value:
+                    sensi *= v
+                jac[p].append(sensi)
+
+        # record kaug jacobian
+        self.kaug_jac = np.array(jac).T
+
+        # Compute FIM
+        if self.prior_FIM is None:
+            self.prior_FIM = np.zeros((len(params_names), len(params_names)))
+        else:
+            self.check_model_FIM(FIM=self.prior_FIM)
+
+        self.kaug_fim = self.kaug_jac.T @ self.kaug_jac + self.prior_FIM
+
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
     def create_doe_model(self, mod=None):
         """
@@ -648,7 +725,6 @@ class DesignOfExperiments_:
         # ToDo: consider this logic? Multi-block systems need something more fancy
         self._built_scenarios = True
 
-
     # Create objective function
     def create_objective_function(self, mod=None):
         """
@@ -670,17 +746,6 @@ class DesignOfExperiments_:
         small_number = 1e-10
 
         # Assemble the FIM matrix. This is helpful for initialization!
-        #
-        # Suggestion from JS: "It might be more efficient to form the NP array in one shot
-        # (from a list or using fromatter), and then reshaping to the 2-D matrix"
-        #
-        
-        # fim = np.zeros((len(self.param), len(self.param)))
-        # for i, bu in enumerate(m.regression_parameters):
-        #     for j, un in enumerate(m.regression_parameters):
-        #         # Copy value from Pyomo model into numpy array
-        #         fim[i][j] = m.fim[bu, un].value
-
         fim_vals = [
             mod.fim[bu, un].value
             for i, bu in enumerate(mod.parameter_names)
@@ -714,8 +779,8 @@ class DesignOfExperiments_:
             # If it is the left bottom half of L
             if list(mod.parameter_names).index(c) >= list(mod.parameter_names).index(d):
                 return m.fim[c, d] == sum(
-                    m.L_ele[c, mod.parameter_names[k + 1]]
-                    * m.L_ele[d, mod.parameter_names[k + 1]]
+                    m.L_ele[c, mod.parameter_names.at(k + 1)]
+                    * m.L_ele[d, mod.parameter_names.at(k + 1)]
                     for k in range(list(mod.parameter_names).index(d) + 1)
                 )
             else:
@@ -790,7 +855,6 @@ class DesignOfExperiments_:
                 "Objective option not recognized. Please contact the developers as you should not see this error."
             )
 
-
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, mod=None):
         """
@@ -837,8 +901,7 @@ class DesignOfExperiments_:
             )
         
         self.logger.info('Model has expected labels.')
-        
-    
+           
     # Check the FIM shape against what is expected from the model.
     def check_model_FIM(self, FIM=None):
         """
@@ -856,13 +919,11 @@ class DesignOfExperiments_:
 
         self.logger.info('FIM provided matches expected dimensions from model.')
     
-
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
         assert jac.shape == (self.n_experiment_outputs, self.n_parameters), "Shape of Jacobian provided should be n_experiment_outputs x n_parameters, or {}, Jacobian provided has shape: {}".format((self.n_experiment_outputs, self.n_parameters), jac.shape)
 
         self.logger.info('Jacobian provided matches expected dimensions from model.')
-
 
     # Update the FIM for the specified model
     def update_FIM_prior(self, mod=None, FIM=None):
@@ -894,7 +955,6 @@ class DesignOfExperiments_:
 
         self.logger.info('FIM prior has been updated.')
     
-
     # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def udpate_unknown_parameter_values(self, mod=None, param_vals=None):
@@ -925,7 +985,7 @@ class DesignOfExperiments_:
         ----------
         mod: model to perform the full factorial exploration on
         design_ranges: dict of lists, of the form {<var_name>: [upper, lower, numsteps]}
-        
+
         """
         # Start timer
         sp_timer = TicTocTimer()
@@ -940,9 +1000,8 @@ class DesignOfExperiments_:
         # build the large DOE pyomo model
         if not self._built_scenarios:
             self.create_doe_model(mod=self.model)
+
         
-
-
         # Solve the square problem first to initialize the fim and
         # sensitivity constraints
         # Deactivate object and fix experimental design decisions to make square
