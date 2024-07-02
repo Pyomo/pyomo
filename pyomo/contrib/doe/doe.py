@@ -240,7 +240,9 @@ class DesignOfExperiments_:
         for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
             comp.fix()
         
+        mod.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(self.model, tee=self.tee)
+        mod.dummy_obj.deactivate()
         
         # Reactivate objective and unfix experimental design decisions
         for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
@@ -349,7 +351,22 @@ class DesignOfExperiments_:
         else:
             self.check_model_FIM(FIM=self.prior_FIM)
 
-        self.kaug_fim = self.kaug_jac.T @ self.kaug_jac + self.prior_FIM
+        self.kaug_fim = np.zeros((len(params_names), len(params_names)))
+        for p in range(len(params_names)):
+            for q in range(len(params_names)):
+                n = 0
+                for k, v in mod.measurement_error.items():
+                    self.kaug_fim[p, q] += 1 / v * self.kaug_jac[n, p] * self.kaug_jac[n, q]
+                    n += 1
+        # sum(
+        # 1
+        # / mod.scenario_blocks[0].measurement_error[pyo.ComponentUID(n).find_component_on(mod.scenario_blocks[0])]
+        # * m.sensitivity_jacobian[n, p]
+        # * m.sensitivity_jacobian[n, q]
+        
+        # The fim expression below doesn't include measurement error. 
+        # Can we add measurement error in a one-line matrix multiplication?
+        #self.kaug_fim = self.kaug_jac.T @ self.kaug_jac + self.prior_FIM
 
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
     def create_doe_model(self, mod=None):
@@ -413,6 +430,7 @@ class DesignOfExperiments_:
                 return dict_jac_initialize[(i, j)]
             # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
             else:
+                # Add flag as this should never be reached.
                 return 0.1
 
         mod.sensitivity_jacobian = pyo.Var(

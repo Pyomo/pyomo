@@ -115,7 +115,7 @@ exp_design.add_variables(
     indices={0: t_control},  # indices of design variable
     time_index_position=0,  # position of time index
     values=[
-        300,
+        500,
         300,
         300,
         300,
@@ -130,7 +130,7 @@ exp_design.add_variables(
 )
 
 design_names = exp_design.variable_names
-exp1 = [5, 300, 300, 300, 300, 300, 300, 300, 300, 300]
+exp1 = [5, 500, 300, 300, 300, 300, 300, 300, 300, 300]
 exp1_design_dict = dict(zip(design_names, exp1))
 exp_design.update_values(exp1_design_dict)
 
@@ -185,7 +185,7 @@ doe_object3 = DesignOfExperiments(
     only_compute_fim_lower=True,
 )
 
-res = doe_object3.compute_FIM()
+res = doe_object3.compute_FIM(scale_nominal_param_value=True)
 res.result_analysis()
 doe_obj[0]._direct_kaug()
 
