@@ -2399,11 +2399,13 @@ class TestSetArgs1(PyomoModel):
         with self.assertRaisesRegex(ValueError, ".*Cannot tuplize list data for set"):
             self.model.A = Set(initialize=[4, 5, 6], dimen=2)
             self.instance = self.model.create_instance()
-        
+
         self.model.A = Set(initialize=[(1, 2), (2, 3), (3, 4)], dimen=2)
         self.instance = self.model.create_instance()
         #
-        with self.assertRaisesRegex(ValueError, ".*has dimension 2 and is not valid for "):
+        with self.assertRaisesRegex(
+            ValueError, ".*has dimension 2 and is not valid for "
+        ):
             self.model.A = Set(initialize=[(1, 2), (2, 3), (3, 4)], dimen=1)
             self.instance = self.model.create_instance()
 
@@ -2414,12 +2416,16 @@ class TestSetArgs1(PyomoModel):
         self.model.A = Set(initialize=f, dimen=2)
         self.instance = self.model.create_instance()
         #
-        with self.assertRaisesRegex(ValueError, ".*has dimension 2 and is not valid for "):
+        with self.assertRaisesRegex(
+            ValueError, ".*has dimension 2 and is not valid for "
+        ):
             self.model.A = Set(initialize=f, dimen=3)
             self.instance = self.model.create_instance()
 
     def test_dimen2(self):
-        with self.assertRaisesRegex(ValueError, ".*has dimension 2 and is not valid for "):
+        with self.assertRaisesRegex(
+            ValueError, ".*has dimension 2 and is not valid for "
+        ):
             self.model.A = Set(initialize=[1, 2, (3, 4)])
             self.instance = self.model.create_instance()
         self.model.A = Set(dimen=None, initialize=[1, 2, (3, 4)])
@@ -2506,7 +2512,7 @@ class TestSetArgs1(PyomoModel):
         #
         self.model.A = Set(within=Reals)
         self.instance = self.model.create_instance(currdir + "setA.dat")
-            # pass
+        # pass
 
     def test_validation_fail(self):
         #
@@ -2579,6 +2585,7 @@ class TestSetArgs1(PyomoModel):
         with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             self.instance = self.model.create_instance(currdir + "setA.dat")
 
+
 class TestSetArgs2(PyomoModel):
     def setUp(self):
         #
@@ -2621,7 +2628,9 @@ class TestSetArgs2(PyomoModel):
             self.instance = self.model.create_instance()
         self.model.A = Set(self.model.Z, initialize=[(1, 2), (2, 3), (3, 4)], dimen=2)
         self.instance = self.model.create_instance()
-        with self.assertRaisesRegex(ValueError, ".*has dimension 2 and is not valid for"):
+        with self.assertRaisesRegex(
+            ValueError, ".*has dimension 2 and is not valid for"
+        ):
             self.model.A = Set(
                 self.model.Z, initialize=[(1, 2), (2, 3), (3, 4)], dimen=1
             )
@@ -2898,6 +2907,7 @@ class TestSetArgs2(PyomoModel):
         self.model.B = Set(self.model.Z, initialize=tmp_init, within=Integers)
         with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             self.instance = self.model.create_instance()
+
 
 class TestMisc(PyomoModel):
     def setUp(self):
