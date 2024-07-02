@@ -221,9 +221,9 @@ class DesignOfExperiments_:
         sp_timer.tic(msg=None)
         self.logger.info("Beginning experimental optimization.")
 
-        # Generate model
-        if self.model is None:
-            self.model = pyo.ConcreteModel()
+        # Model is none, set it to self.model
+        if mod is None:
+            mod = self.model()
         
         # ToDo: potentially work with this for more complicated models
         # build the large DOE pyomo model
@@ -646,7 +646,7 @@ class DesignOfExperiments_:
         mod.del_component(mod.base_model)
         
         # ToDo: consider this logic? Multi-block systems need something more fancy
-        # self._built_scenarios = True
+        self._built_scenarios = True
 
 
     # Create objective function
@@ -914,8 +914,190 @@ class DesignOfExperiments_:
         return scaled_FIM
 
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
-    def compute_FIM_full_factorial(self, ):
-        return
+    def compute_FIM_full_factorial(self, mod=None, design_ranges=None):
+        """
+        Will run a simulation-based full factorial exploration of
+        the experimental input space. (i.e., a ``grid search`` or
+        ``parameter sweep`` to see how sensitive the FIM is to the
+        experimental design parameters).
+        
+        Parameters
+        ----------
+        mod: model to perform the full factorial exploration on
+        design_ranges: dict of lists, of the form {<var_name>: [upper, lower, numsteps]}
+        
+        """
+        # Start timer
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info("Beginning Full Factorial Design.")
+
+        # Generate model
+        if mod is None:
+            mod = self.model()
+        
+        # ToDo: potentially work with this for more complicated models
+        # build the large DOE pyomo model
+        if not self._built_scenarios:
+            self.create_doe_model(mod=self.model)
+        
+
+
+        # Solve the square problem first to initialize the fim and
+        # sensitivity constraints
+        # Deactivate object and fix experimental design decisions to make square
+        self.model.Obj.deactivate()
+        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
+            comp.fix()
+        
+        self.solver.solve(self.model, tee=self.tee)
+        
+        # Reactivate objective and unfix experimental design decisions
+        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
+            comp.unfix()
+        self.model.Obj.activate()
+        
+        # Solve the full model, which has now been initialized with the square solve
+        self.solver.solve(self.model, tee=self.tee)
+        
+        # Finish timing
+        dT = sp_timer.toc(msg=None)
+        self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % dT)
+
+        # Set the Objective Function to 0 helps solve square problem quickly
+        self.objective_option = ObjectiveLib.zero
+        self.store_optimality_as_csv = store_optimality_as_csv
+
+        # calculate how much the FIM element is scaled
+        self.fim_scale_constant_value = scale_constant_value**2
+
+        # to store all FIM results
+        result_combine = {}
+
+        # all lists of values of each design variable to go over
+        design_ranges_list = list(design_ranges.values())
+        # design variable names to go over
+        design_dimension_names = list(design_ranges.keys())
+
+        # iteration 0
+        count = 0
+        failed_count = 0
+        # how many sets of design variables will be run
+        total_count = 1
+        for rng in design_ranges_list:
+            total_count *= len(rng)
+
+        time_set = []  # record time for every iteration
+
+        # generate combinations of design variable values to go over
+        search_design_set = product(*design_ranges_list)
+
+        # loop over design value combinations
+        for design_set_iter in search_design_set:
+            # generate the design variable dictionary needed for running compute_FIM
+            # first copy value from design_values
+            design_iter = self.design_vars.variable_names_value.copy()
+
+            # convert to a list and cache
+            list_design_set_iter = list(design_set_iter)
+
+            # update the controlled value of certain time points for certain design variables
+            for i, names in enumerate(design_dimension_names):
+                if isinstance(names, str):
+                    # if 'names' is simply a string, copy the new value
+                    design_iter[names] = list_design_set_iter[i]
+                elif isinstance(names, collections.abc.Sequence):
+                    # if the element is a list, all design variables in this list share the same values
+                    for n in names:
+                        design_iter[n] = list_design_set_iter[i]
+                else:
+                    # otherwise just copy the value
+                    # design_iter[names] = list(design_set_iter)[i]
+                    raise NotImplementedError(
+                        "You should not see this error message. Please report it to the Pyomo.DoE developers."
+                    )
+
+            self.design_vars.variable_names_value = design_iter
+            iter_timer = TicTocTimer()
+            self.logger.info("=======Iteration Number: %s =====", count + 1)
+            self.logger.debug(
+                "Design variable values of this iteration: %s", design_iter
+            )
+            iter_timer.tic(msg=None)
+            # generate store name
+            if store_name is None:
+                store_output_name = None
+            else:
+                store_output_name = store_name + str(count)
+
+            if read_name is not None:
+                read_input_name = read_name + str(count)
+            else:
+                read_input_name = None
+
+            # call compute_FIM to get FIM
+            try:
+                result_iter = self.compute_FIM(
+                    mode=mode,
+                    tee_opt=tee_option,
+                    scale_nominal_param_value=scale_nominal_param_value,
+                    scale_constant_value=scale_constant_value,
+                    store_output=store_output_name,
+                    read_output=read_input_name,
+                    formula=formula,
+                    step=step,
+                )
+
+                count += 1
+
+                result_iter.result_analysis()
+
+                # iteration time
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+                # give run information at each iteration
+                self.logger.info("This is run %s out of %s.", count, total_count)
+                self.logger.info(
+                    "The code has run  %s seconds.", round(sum(time_set), 2)
+                )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (count) * (total_count - count), 2
+                    ),  # need to check this math... it gives a negative number for the final count
+                )
+
+                if post_processing_function is not None:
+                    # Call the post processing function
+                    post_processing_function(self._square_model_from_compute_FIM)
+
+                # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
+                result_combine[tuple(design_set_iter)] = result_iter
+
+            except:
+                self.logger.warning(
+                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                )
+                count += 1
+                failed_count += 1
+                self.logger.warning("failed count:", failed_count)
+                result_combine[tuple(design_set_iter)] = None
+
+        # For user's access
+        self.all_fim = result_combine
+
+        # Create figure drawing object
+        figure_draw_object = GridSearchResult(
+            design_ranges_list,
+            design_dimension_names,
+            result_combine,
+            store_optimality_name=store_optimality_as_csv,
+        )
+
+        self.logger.info("Overall wall clock time [s]:  %s", sum(time_set))
+
+        return figure_draw_object
 
 
 ##############################
