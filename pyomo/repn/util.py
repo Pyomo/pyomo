@@ -67,6 +67,7 @@ int_float = {int, float}
 
 class ExprType(enum.IntEnum):
     CONSTANT = 0
+    VARIABLE = 5
     MONOMIAL = 10
     LINEAR = 20
     QUADRATIC = 30
@@ -286,17 +287,22 @@ class BeforeChildDispatcher(collections.defaultdict):
                 cdata = child._ComponentDataClass(child)
                 if cdata.is_expression_type():
                     self[child_type] = self._before_indexed_expr
-                elif cdata.is_potentially_variable():
-                    self[child_type] = self._before_indexed_var
-                else:
-                    self[child_type] = self._before_indexed_param
-            else:
+                elif cdata.is_numeric_type() or child.is_logical_type():
+                    if cdata.is_potentially_variable():
+                        self[child_type] = self._before_indexed_var
+                    else:
+                        self[child_type] = self._before_indexed_param
+                elif child.is_component_type():
+                    self[child_type] = self._before_indexed_component
+            elif child.is_numeric_type() or child.is_logical_type():
                 if child.is_potentially_variable():
                     self[child_type] = self._before_var
                 elif isinstance(child, EXPR.IndexTemplate):
                     self[child_type] = self._before_index_template
                 else:
                     self[child_type] = self._before_param
+            elif child.is_component_type():
+                self[child_type] = self._before_component
         elif not child.is_potentially_variable():
             self[child_type] = self._before_npv
             pv_base_type = child.potentially_variable_base_class()
@@ -391,6 +397,13 @@ class BeforeChildDispatcher(collections.defaultdict):
 
     @staticmethod
     def _before_indexed_var(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_component(visitor, child):
         raise NotImplementedError(
             f"{visitor.__class__.__name__} can not handle expressions "
             f"containing {child.__class__} nodes"
