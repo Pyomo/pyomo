@@ -38,16 +38,124 @@ from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_m
 
 
 class TestMeasurementError(unittest.TestCase):
-    def test(self):
-        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-        variable_name = "C"
-        indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
-        # measurement object
-        measurements = MeasurementVariables()
+
+    def test_with_time_plus_one_extra_index(self):
+        """This tests confirms the typical usage with a time index plus one extra index.
+
+        This test should execute without throwing any errors.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "C", indices={0: ["A", "B", "C"], 1: [0, 0.5, 1.0]}, time_index_position=1
+        )
+
+    def test_with_time_plus_two_extra_indices(self):
+        """This tests confirms the typical usage with a time index plus two extra indices.
+
+        This test should execute without throwing any errors.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "C",
+            indices={
+                0: ["A", "B", "C"],  # species
+                1: [0, 0.5, 1.0],  # time
+                2: [1, 2, 3],
+            },  # position
+            time_index_position=1,
+        )
+
+    def test_time_index_position_out_of_bounds(self):
+        """This test confirms that an error is thrown when the time index position is out of bounds."""
+
         # if time index is not in indices, an value error is thrown.
         with self.assertRaises(ValueError):
-            measurements.add_variables(
-                variable_name, indices=indices, time_index_position=2
+            MeasurementVariables().add_variables(
+                "C",
+                indices={0: ["CA", "CB", "CC"], 1: [0, 0.5, 1.0]},  # species  # time
+                time_index_position=2,  # this is out of bounds
+            )
+
+    def test_single_measurement_variable(self):
+        """This test confirms we can specify a single measurement variable without
+        specifying the indices.
+
+        The test should execute with no errors.
+        """
+        measurements = MeasurementVariables()
+        measurements.add_variables("HelloWorld", indices=None, time_index_position=None)
+
+    def test_without_time_index(self):
+        """This test confirms we can add a measurement variable without specifying the time index.
+
+        The test should execute with no errors.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "C",
+            indices={0: ["CA", "CB", "CC"]},  # species as only index
+            time_index_position=None,  # no time index
+        )
+
+    def test_only_time_index(self):
+        """This test confirms we can add a measurement variable without specifying the variable name.
+
+        The test should execute with no errors.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "HelloWorld",  # name of the variable
+            indices={0: [0, 0.5, 1.0]},
+            time_index_position=0,
+        )
+
+    def test_with_no_measurement_name(self):
+        """This test confirms that an error is thrown when None is used as the measurement name."""
+
+        with self.assertRaises(TypeError):
+            MeasurementVariables().add_variables(
+                None, indices={0: [0, 0.5, 1.0]}, time_index_position=0
+            )
+
+    def test_with_non_string_measurement_name(self):
+        """This test confirms that an error is thrown when a non-string is used as the measurement name."""
+
+        with self.assertRaises(TypeError):
+            MeasurementVariables().add_variables(
+                1, indices={0: [0, 0.5, 1.0]}, time_index_position=0
+            )
+
+    def test_non_integer_index_keys(self):
+        """This test confirms that strings can be used as keys for specifying the indices.
+
+        Warning: it is possible this usage breaks something else in Pyomo.DoE.
+        There may be an implicit assumption that the order of the keys must match the order
+        of the indices in the Pyomo model.
+
+        """
+
+        MeasurementVariables().add_variables(
+            "C",
+            indices={"species": ["CA", "CB", "CC"], "time": [0, 0.5, 1.0]},
+            time_index_position="time",
+        )
+
+    def test_no_measurements(self):
+        """This test confirms that an error is thrown when the user forgets to add any measurements.
+
+        It's okay to have no decision variables. With no measurement variables, the FIM is the zero matrix.
+        This (no measurements) is a common user mistake.
+        """
+
+        with self.assertRaises(ValueError):
+            decisions = DesignVariables()
+            measurements = MeasurementVariables()
+            DesignOfExperiments(
+                {}, decisions, measurements, create_model, disc_for_measure
             )
 
 
@@ -58,7 +166,7 @@ class TestDesignError(unittest.TestCase):
         exp_design = DesignVariables()
 
         # add T as design variable
-        var_T = 'T'
+        var_T = "T"
         indices_T = {0: t_control}
         exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
 
@@ -94,7 +202,7 @@ class TestPriorFIMError(unittest.TestCase):
         t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
         # measurement object
         variable_name = "C"
-        indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
+        indices = {0: ["CA", "CB", "CC"], 1: t_control}
 
         measurements = MeasurementVariables()
         measurements.add_variables(
@@ -105,7 +213,7 @@ class TestPriorFIMError(unittest.TestCase):
         exp_design = DesignVariables()
 
         # add CAO as design variable
-        var_C = 'CA0'
+        var_C = "CA0"
         indices_C = {0: [0]}
         exp1_C = [5]
         exp_design.add_variables(
@@ -118,7 +226,7 @@ class TestPriorFIMError(unittest.TestCase):
         )
 
         # add T as design variable
-        var_T = 'T'
+        var_T = "T"
         indices_T = {0: t_control}
         exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
 
@@ -165,7 +273,7 @@ class TestMeasurement(unittest.TestCase):
 
         # add variable C
         variable_name = "C"
-        indices = {0: ['CA', 'CB', 'CC'], 1: t_control}
+        indices = {0: ["CA", "CB", "CC"], 1: t_control}
         measurements.add_variables(
             variable_name, indices=indices, time_index_position=1
         )
@@ -178,36 +286,36 @@ class TestMeasurement(unittest.TestCase):
         )
 
         # check variable names
-        self.assertEqual(measurements.variable_names[0], 'C[CA,0]')
-        self.assertEqual(measurements.variable_names[1], 'C[CA,0.125]')
-        self.assertEqual(measurements.variable_names[-1], 'T[5,0.8]')
-        self.assertEqual(measurements.variable_names[-2], 'T[5,0.6]')
-        self.assertEqual(measurements.variance['T[5,0.4]'], 10)
-        self.assertEqual(measurements.variance['T[5,0.6]'], 10)
-        self.assertEqual(measurements.variance['T[5,0.4]'], 10)
-        self.assertEqual(measurements.variance['T[5,0.6]'], 10)
+        self.assertEqual(measurements.variable_names[0], "C[CA,0]")
+        self.assertEqual(measurements.variable_names[1], "C[CA,0.125]")
+        self.assertEqual(measurements.variable_names[-1], "T[5,0.8]")
+        self.assertEqual(measurements.variable_names[-2], "T[5,0.6]")
+        self.assertEqual(measurements.variance["T[5,0.4]"], 10)
+        self.assertEqual(measurements.variance["T[5,0.6]"], 10)
+        self.assertEqual(measurements.variance["T[5,0.4]"], 10)
+        self.assertEqual(measurements.variance["T[5,0.6]"], 10)
 
         ### specify function
         var_names = [
-            'C[CA,0]',
-            'C[CA,0.125]',
-            'C[CA,0.875]',
-            'C[CA,1]',
-            'C[CB,0]',
-            'C[CB,0.125]',
-            'C[CB,0.25]',
-            'C[CB,0.375]',
-            'C[CC,0]',
-            'C[CC,0.125]',
-            'C[CC,0.25]',
-            'C[CC,0.375]',
+            "C[CA,0]",
+            "C[CA,0.125]",
+            "C[CA,0.875]",
+            "C[CA,1]",
+            "C[CB,0]",
+            "C[CB,0.125]",
+            "C[CB,0.25]",
+            "C[CB,0.375]",
+            "C[CC,0]",
+            "C[CC,0.125]",
+            "C[CC,0.25]",
+            "C[CC,0.375]",
         ]
 
         measurements2 = MeasurementVariables()
         measurements2.set_variable_name_list(var_names)
 
-        self.assertEqual(measurements2.variable_names[1], 'C[CA,0.125]')
-        self.assertEqual(measurements2.variable_names[-1], 'C[CC,0.375]')
+        self.assertEqual(measurements2.variable_names[1], "C[CA,0.125]")
+        self.assertEqual(measurements2.variable_names[-1], "C[CC,0.375]")
 
         ### check_subset function
         self.assertTrue(measurements.check_subset(measurements2))
@@ -223,7 +331,7 @@ class TestDesignVariable(unittest.TestCase):
         exp_design = DesignVariables()
 
         # add CAO as design variable
-        var_C = 'CA0'
+        var_C = "CA0"
         indices_C = {0: [0]}
         exp1_C = [5]
         exp_design.add_variables(
@@ -236,7 +344,7 @@ class TestDesignVariable(unittest.TestCase):
         )
 
         # add T as design variable
-        var_T = 'T'
+        var_T = "T"
         indices_T = {0: t_control}
         exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
 
@@ -252,31 +360,31 @@ class TestDesignVariable(unittest.TestCase):
         self.assertEqual(
             exp_design.variable_names,
             [
-                'CA0[0]',
-                'T[0]',
-                'T[0.125]',
-                'T[0.25]',
-                'T[0.375]',
-                'T[0.5]',
-                'T[0.625]',
-                'T[0.75]',
-                'T[0.875]',
-                'T[1]',
+                "CA0[0]",
+                "T[0]",
+                "T[0.125]",
+                "T[0.25]",
+                "T[0.375]",
+                "T[0.5]",
+                "T[0.625]",
+                "T[0.75]",
+                "T[0.875]",
+                "T[1]",
             ],
         )
-        self.assertEqual(exp_design.variable_names_value['CA0[0]'], 5)
-        self.assertEqual(exp_design.variable_names_value['T[0]'], 470)
-        self.assertEqual(exp_design.upper_bounds['CA0[0]'], 5)
-        self.assertEqual(exp_design.upper_bounds['T[0]'], 700)
-        self.assertEqual(exp_design.lower_bounds['CA0[0]'], 1)
-        self.assertEqual(exp_design.lower_bounds['T[0]'], 300)
+        self.assertEqual(exp_design.variable_names_value["CA0[0]"], 5)
+        self.assertEqual(exp_design.variable_names_value["T[0]"], 470)
+        self.assertEqual(exp_design.upper_bounds["CA0[0]"], 5)
+        self.assertEqual(exp_design.upper_bounds["T[0]"], 700)
+        self.assertEqual(exp_design.lower_bounds["CA0[0]"], 1)
+        self.assertEqual(exp_design.lower_bounds["T[0]"], 300)
 
         design_names = exp_design.variable_names
         exp1 = [4, 600, 300, 300, 300, 300, 300, 300, 300, 300]
         exp1_design_dict = dict(zip(design_names, exp1))
         exp_design.update_values(exp1_design_dict)
-        self.assertEqual(exp_design.variable_names_value['CA0[0]'], 4)
-        self.assertEqual(exp_design.variable_names_value['T[0]'], 600)
+        self.assertEqual(exp_design.variable_names_value["CA0[0]"], 4)
+        self.assertEqual(exp_design.variable_names_value["T[0]"], 600)
 
 
 class TestParameter(unittest.TestCase):
@@ -284,19 +392,19 @@ class TestParameter(unittest.TestCase):
 
     def test_setup(self):
         # set up parameter class
-        param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+        param_dict = {"A1": 84.79, "A2": 371.72, "E1": 7.78, "E2": 15.05}
 
         scenario_gene = ScenarioGenerator(param_dict, formula="central", step=0.1)
         parameter_set = scenario_gene.ScenarioData
 
-        self.assertAlmostEqual(parameter_set.eps_abs['A1'], 16.9582, places=1)
-        self.assertAlmostEqual(parameter_set.eps_abs['E1'], 1.5554, places=1)
-        self.assertEqual(parameter_set.scena_num['A2'], [2, 3])
-        self.assertEqual(parameter_set.scena_num['E1'], [4, 5])
-        self.assertAlmostEqual(parameter_set.scenario[0]['A1'], 93.2699, places=1)
-        self.assertAlmostEqual(parameter_set.scenario[2]['A2'], 408.8895, places=1)
-        self.assertAlmostEqual(parameter_set.scenario[-1]['E2'], 13.54, places=1)
-        self.assertAlmostEqual(parameter_set.scenario[-2]['E2'], 16.55, places=1)
+        self.assertAlmostEqual(parameter_set.eps_abs["A1"], 16.9582, places=1)
+        self.assertAlmostEqual(parameter_set.eps_abs["E1"], 1.5554, places=1)
+        self.assertEqual(parameter_set.scena_num["A2"], [2, 3])
+        self.assertEqual(parameter_set.scena_num["E1"], [4, 5])
+        self.assertAlmostEqual(parameter_set.scenario[0]["A1"], 93.2699, places=1)
+        self.assertAlmostEqual(parameter_set.scenario[2]["A2"], 408.8895, places=1)
+        self.assertAlmostEqual(parameter_set.scenario[-1]["E2"], 13.54, places=1)
+        self.assertAlmostEqual(parameter_set.scenario[-2]["E2"], 16.55, places=1)
 
 
 class TestVariablesWithIndices(unittest.TestCase):
@@ -307,7 +415,7 @@ class TestVariablesWithIndices(unittest.TestCase):
         t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
         ### add_element function
         # add CAO as design variable
-        var_C = 'CA0'
+        var_C = "CA0"
         indices_C = {0: [0]}
         exp1_C = [5]
         special.add_variables(
@@ -320,7 +428,7 @@ class TestVariablesWithIndices(unittest.TestCase):
         )
 
         # add T as design variable
-        var_T = 'T'
+        var_T = "T"
         indices_T = {0: t_control}
         exp1_T = [470, 300, 300, 300, 300, 300, 300, 300, 300]
 
@@ -336,25 +444,25 @@ class TestVariablesWithIndices(unittest.TestCase):
         self.assertEqual(
             special.variable_names,
             [
-                'CA0[0]',
-                'T[0]',
-                'T[0.125]',
-                'T[0.25]',
-                'T[0.375]',
-                'T[0.5]',
-                'T[0.625]',
-                'T[0.75]',
-                'T[0.875]',
-                'T[1]',
+                "CA0[0]",
+                "T[0]",
+                "T[0.125]",
+                "T[0.25]",
+                "T[0.375]",
+                "T[0.5]",
+                "T[0.625]",
+                "T[0.75]",
+                "T[0.875]",
+                "T[1]",
             ],
         )
-        self.assertEqual(special.variable_names_value['CA0[0]'], 5)
-        self.assertEqual(special.variable_names_value['T[0]'], 470)
-        self.assertEqual(special.upper_bounds['CA0[0]'], 5)
-        self.assertEqual(special.upper_bounds['T[0]'], 700)
-        self.assertEqual(special.lower_bounds['CA0[0]'], 1)
-        self.assertEqual(special.lower_bounds['T[0]'], 300)
+        self.assertEqual(special.variable_names_value["CA0[0]"], 5)
+        self.assertEqual(special.variable_names_value["T[0]"], 470)
+        self.assertEqual(special.upper_bounds["CA0[0]"], 5)
+        self.assertEqual(special.upper_bounds["T[0]"], 700)
+        self.assertEqual(special.lower_bounds["CA0[0]"], 1)
+        self.assertEqual(special.lower_bounds["T[0]"], 300)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

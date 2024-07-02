@@ -262,7 +262,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         coeff_list = list()
         constr_list = list()
         for val, c in zip(coefficients, constraints):
-            c._body += val * var
+            lb, body, ub = c.normalize_constraint()
+            body += val * var
+            c.set_value((lb, body, ub))
             self._vars_referenced_by_con[c].add(var)
 
             cval = _convert_to_const(val)

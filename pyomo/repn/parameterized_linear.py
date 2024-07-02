@@ -31,12 +31,11 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.repn.linear import (
     ExitNodeDispatcher,
-    _initialize_exit_node_dispatcher,
     LinearBeforeChildDispatcher,
     LinearRepn,
     LinearRepnVisitor,
 )
-from pyomo.repn.util import ExprType
+from pyomo.repn.util import ExprType, initialize_exit_node_dispatcher
 import pyomo.repn.linear as linear
 
 
@@ -337,7 +336,7 @@ class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
     Result = ParameterizedLinearRepn
     exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(_exit_node_handlers)
+        initialize_exit_node_dispatcher(_exit_node_handlers)
     )
 
     def __init__(self, subexpression_cache, var_map, var_order, sorter, wrt):

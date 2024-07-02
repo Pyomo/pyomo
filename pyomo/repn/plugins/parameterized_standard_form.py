@@ -85,10 +85,10 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
             wrt = []
         return ParameterizedLinearRepnVisitor({}, var_map, var_order, sorter, wrt=wrt)
 
-    def _to_vector(self, linear_repn):
+    def _to_vector(self, data, N, vector_type):
         # override this to not attempt conversion to float since that will fail
         # on the Pyomo expressions
-        return np.array([v for v in linear_repn.values()])
+        return np.array([v for v in data])
 
     def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
         return _CSRMatrix(data, index, index_ptr, nrows, ncols).tocsc()

@@ -1524,7 +1524,7 @@ class TestLinear(unittest.TestCase):
         cfg = VisitorConfig()
         visitor = LinearRepnVisitor(*cfg)
 
-        _orig_dispatcher = linear._before_child_dispatcher
+        _orig_dispatcher = visitor.before_child_dispatcher
         linear._before_child_dispatcher = bcd = _orig_dispatcher.__class__()
         bcd.clear()
         try:
