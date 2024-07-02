@@ -361,11 +361,11 @@ class _LinearStandardFormCompiler_impl(object):
                 offset, linear_index, linear_data, _, _ = (
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
-# <<<<<<< HEAD
-#             N = len(repn.linear)
-#             obj_data.append(self._to_vector(repn.linear))
-#             obj_offset.append(repn.constant)
-# =======
+                # <<<<<<< HEAD
+                #             N = len(repn.linear)
+                #             obj_data.append(self._to_vector(repn.linear))
+                #             obj_offset.append(repn.constant)
+                # =======
                 N = len(linear_index)
                 obj_index.append(map(var_order.__getitem__, linear_index))
                 obj_data.append(linear_data)
@@ -386,10 +386,12 @@ class _LinearStandardFormCompiler_impl(object):
                     )
 
             obj_nnz += N
-#>>>>>>> templatized-writer
+            # >>>>>>> templatized-writer
             if set_sense is not None and set_sense != obj.sense:
                 # ESJ TODO: This is gonna need _to_vector I think
-                obj_data[-1] = - self._to_vector(obj_data[-1], N, float) #-np.fromiter(obj_data[-1], float, N)
+                obj_data[-1] = -self._to_vector(
+                    obj_data[-1], N, float
+                )  # -np.fromiter(obj_data[-1], float, N)
                 obj_offset[-1] *= -1
             obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
@@ -458,15 +460,15 @@ class _LinearStandardFormCompiler_impl(object):
                 )
 
             if mixed_form:
-# <<<<<<< HEAD
-#                 N = len(repn.linear)
-#                 _data = self._to_vector(repn.linear)
-#                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
-#                 if ub == lb:
-# =======
+                # <<<<<<< HEAD
+                #                 N = len(repn.linear)
+                #                 _data = self._to_vector(repn.linear)
+                #                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
+                #                 if ub == lb:
+                # =======
                 if lb == ub:
                     con_nnz += N
-#>>>>>>> templatized-writer
+                    # >>>>>>> templatized-writer
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)
@@ -517,12 +519,12 @@ class _LinearStandardFormCompiler_impl(object):
                 con_index.append(linear_index)
                 con_index_ptr.append(con_nnz)
             else:
-# <<<<<<< HEAD
-#                 N = len(repn.linear)
-#                 _data = self._to_vector(repn.linear)
-#                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
-# =======
-# >>>>>>> templatized-writer
+                # <<<<<<< HEAD
+                #                 N = len(repn.linear)
+                #                 _data = self._to_vector(repn.linear)
+                #                 _index = np.fromiter(map(var_order.__getitem__, repn.linear), float, N)
+                # =======
+                # >>>>>>> templatized-writer
                 if ub is not None:
                     if lb is not None:
                         linear_index = list(linear_index)
@@ -550,22 +552,23 @@ class _LinearStandardFormCompiler_impl(object):
         nCol = len(columns)
         # Convert the compiled data to scipy sparse matrices
         if obj_data:
-# <<<<<<< HEAD
-#             obj_data = np.concatenate(obj_data)
-#             obj_index = np.concatenate(obj_index)
-#         c = self._csc_matrix_from_csr(
-#             obj_data, obj_index, obj_index_ptr, len(obj_index_ptr) - 1, len(columns)
-#         )
-#         if rows:
-#             con_data = np.concatenate(con_data)
-#             con_index = np.concatenate(con_index)
-#         A = self._csc_matrix_from_csr(
-#             con_data, con_index, con_index_ptr, len(rows), len(columns)
-#         )
-# =======
+            # <<<<<<< HEAD
+            #             obj_data = np.concatenate(obj_data)
+            #             obj_index = np.concatenate(obj_index)
+            #         c = self._csc_matrix_from_csr(
+            #             obj_data, obj_index, obj_index_ptr, len(obj_index_ptr) - 1, len(columns)
+            #         )
+            #         if rows:
+            #             con_data = np.concatenate(con_data)
+            #             con_index = np.concatenate(con_index)
+            #         A = self._csc_matrix_from_csr(
+            #             con_data, con_index, con_index_ptr, len(rows), len(columns)
+            #         )
+            # =======
             # ESJ TODO: This is gonna need _to_vector...
-            obj_data = self._to_vector(itertools.chain.from_iterable(obj_data),
-                                       obj_nnz, np.float64)
+            obj_data = self._to_vector(
+                itertools.chain.from_iterable(obj_data), obj_nnz, np.float64
+            )
             # obj_data = np.fromiter(
             #     itertools.chain.from_iterable(obj_data), np.float64, obj_nnz
             # )
@@ -575,8 +578,9 @@ class _LinearStandardFormCompiler_impl(object):
             )
             # obj_index = list(itertools.chain(*obj_index))
             obj_index_ptr = np.array(obj_index_ptr, dtype=np.int32)
-        c = self._csr_matrix(obj_data, obj_index, obj_index_ptr,
-                             len(obj_index_ptr) - 1, nCol)
+        c = self._csr_matrix(
+            obj_data, obj_index, obj_index_ptr, len(obj_index_ptr) - 1, nCol
+        )
         # c = scipy.sparse.csr_array(
         #     (obj_data, obj_index, obj_index_ptr), [len(obj_index_ptr) - 1, nCol]
         # )
@@ -584,8 +588,9 @@ class _LinearStandardFormCompiler_impl(object):
         c.sum_duplicates()
         c.eliminate_zeros()
         if rows:
-            con_data = self._to_vector(itertools.chain.from_iterable(con_data),
-                                       con_nnz, np.float64)
+            con_data = self._to_vector(
+                itertools.chain.from_iterable(con_data), con_nnz, np.float64
+            )
             # con_data = np.fromiter(
             #     itertools.chain.from_iterable(con_data), np.float64, con_nnz
             # )
@@ -594,7 +599,8 @@ class _LinearStandardFormCompiler_impl(object):
             #     itertools.chain.from_iterable(con_index), np.int32, con_nnz
             # )
             con_index = self._to_vector(
-                itertools.chain.from_iterable(con_index), con_nnz, np.int32)
+                itertools.chain.from_iterable(con_index), con_nnz, np.int32
+            )
             # con_index = list(itertools.chain(*con_index))
             con_index_ptr = np.array(con_index_ptr, dtype=np.int32)
         A = self._csr_matrix(con_data, con_index, con_index_ptr, len(rows), nCol)
@@ -607,7 +613,7 @@ class _LinearStandardFormCompiler_impl(object):
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
-#>>>>>>> templatized-writer
+        # >>>>>>> templatized-writer
 
         # Some variables in the var_map may not actually appear in the
         # objective or constraints (e.g., added from col_order, or
@@ -630,8 +636,9 @@ class _LinearStandardFormCompiler_impl(object):
                 c.data, c.indices, c.indptr[augmented_mask], c.shape[0], len(columns)
             )
             # active_var_idx[-1] = len(columns)
-            A = self._csc_matrix(A.data, A.indices, reduced_A_indptr,
-                                 A.shape[0], len(columns))
+            A = self._csc_matrix(
+                A.data, A.indices, reduced_A_indptr, A.shape[0], len(columns)
+            )
 
         if with_debug_timing:
             timer.toc('Eliminated %s unused columns', nCol, level=logging.DEBUG)

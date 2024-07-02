@@ -28,7 +28,7 @@ from pyomo.core.expr import (
 )
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
-    assertExpressionsStructurallyEqual
+    assertExpressionsStructurallyEqual,
 )
 
 from pyomo.repn.plugins.parameterized_standard_form import (
