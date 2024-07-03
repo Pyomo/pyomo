@@ -20,8 +20,11 @@
 #
 # CODECOV_TOKEN: the token to use when uploading results to codecov.io
 #
-# CODECOV_ARGS: additional arguments to pass to the codecov uploader
-#     (e.g., to support SSL certificates)
+# CODECOV_SOURCE_BRANCH: passed to the 'codecov-cli' command; branch of Pyomo
+#     (e.g., to enable correct codecov uploads)
+#
+# CODECOV_REPO_OWNER: passed to the 'codecov-cli' command; owner of repo
+#     (e.g., to enable correct codecov uploads)
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
@@ -208,16 +211,23 @@ if test -z "$MODE" -o "$MODE" == test; then
             coverage xml
         else
             CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
+            if test -z "$CODECOV_REPO_OWNER"; then
+                CODECOV_REPO_OWNER="pyomo"
+            fi
+            if test -z "CODECOV_SOURCE_BRANCH"; then
+                CODECOV_SOURCE_BRANCH="main"
+            fi
             i=0
             while /bin/true; do
                 i=$[$i+1]
                 echo "Uploading coverage to codecov (attempt $i)"
-                codecov -X gcovcodecov -X gcov -X s3 --no-color \
-                    -t $CODECOV_TOKEN --root `pwd` -e OS,python \
-                    --name $CODECOV_JOB_NAME $CODECOV_ARGS \
-                    | tee .cover.upload
-                if test $? == 0 -a `grep -i error .cover.upload \
-                        | grep -v branch= | wc -l` -eq 0; then
+                codecovcli -v upload-process --sha $PYOMO_SOURCE_SHA \
+                    --fail-on-error --git-service github --token $CODECOV_TOKEN \
+                    --slug pyomo/pyomo --file coverage.xml --disable-search \
+                    --name $CODECOV_JOB_NAME \
+                    --branch $CODECOV_REPO_OWNER:$CODECOV_SOURCE_BRANCH \
+                    --env OS,python --network-root-folder `pwd` --plugin noop
+                if test $? == 0; then
                     break
                 elif test $i -ge 4; then
                     exit 1
