@@ -235,8 +235,9 @@ class DesignOfExperiments_:
         
         # Solve the square problem first to initialize the fim and
         # sensitivity constraints
-        # Deactivate object and fix experimental design decisions to make square
+        # Deactivate object and objective constraints, and fix design variables
         mod.Obj.deactivate()
+        mod.obj_cons.deactivate()
         for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
             comp.fix()
         
@@ -248,6 +249,7 @@ class DesignOfExperiments_:
         for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
             comp.unfix()
         mod.Obj.activate()
+        mod.obj_cons.activate()
         
         # Solve the full model, which has now been initialized with the square solve
         self.solver.solve(mod, tee=self.tee)
@@ -269,7 +271,8 @@ class DesignOfExperiments_:
         )
     
     # Compute FIM for the DoE object
-    def compute_FIM(self, mod=None):
+    def compute_FIM(self, mod=None, method='sequential'):
+        
         
         return
     
@@ -351,22 +354,20 @@ class DesignOfExperiments_:
         else:
             self.check_model_FIM(FIM=self.prior_FIM)
 
-        self.kaug_fim = np.zeros((len(params_names), len(params_names)))
-        for p in range(len(params_names)):
-            for q in range(len(params_names)):
-                n = 0
-                for k, v in mod.measurement_error.items():
-                    self.kaug_fim[p, q] += 1 / v * self.kaug_jac[n, p] * self.kaug_jac[n, q]
-                    n += 1
-        # sum(
-        # 1
-        # / mod.scenario_blocks[0].measurement_error[pyo.ComponentUID(n).find_component_on(mod.scenario_blocks[0])]
-        # * m.sensitivity_jacobian[n, p]
-        # * m.sensitivity_jacobian[n, q]
         
-        # The fim expression below doesn't include measurement error. 
-        # Can we add measurement error in a one-line matrix multiplication?
-        #self.kaug_fim = self.kaug_jac.T @ self.kaug_jac + self.prior_FIM
+        # Constructing the Covariance of the measurements for the FIM calculation
+        # The following assumes independent measurement error.
+        cov_y = np.zeros((len(mod.measurement_error), len(mod.measurement_error)))
+        count = 0
+        for k, v in mod.measurement_error.items():
+            cov_y[count, count] = 1 / v
+            count += 1
+        
+        # ToDo: need to add a covariance matrix for measurements (sigma inverse)
+        # i.e., cov_y = self.cov_y or mod.cov_y
+        # Still deciding where this would be best.
+        
+        self.kaug_fim = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
 
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
     def create_doe_model(self, mod=None):
@@ -681,7 +682,12 @@ class DesignOfExperiments_:
         for comp, _ in mod.base_model.experiment_inputs.items():
             comp.fix()
         
-        self.solver.solve(mod.base_model, tee='True')
+        try:
+            self.solver.solve(mod.base_model, tee='True')
+            self.logger.info('Model from experiment solved.')
+        except:
+            raise RuntimeError('Model from experiment did not solve appropriately. Make sure the model is well-posed.')
+            
 
         for comp, _ in mod.base_model.experiment_inputs.items():
             comp.unfix()
@@ -762,6 +768,9 @@ class DesignOfExperiments_:
             mod = self.model
         
         small_number = 1e-10
+        
+        # Make objective block for constraints connected to objective
+        mod.obj_cons = pyo.Block()
 
         # Assemble the FIM matrix. This is helpful for initialization!
         fim_vals = [
@@ -796,9 +805,9 @@ class DesignOfExperiments_:
             """
             # If it is the left bottom half of L
             if list(mod.parameter_names).index(c) >= list(mod.parameter_names).index(d):
-                return m.fim[c, d] == sum(
-                    m.L_ele[c, mod.parameter_names.at(k + 1)]
-                    * m.L_ele[d, mod.parameter_names.at(k + 1)]
+                return mod.fim[c, d] == sum(
+                    mod.L_ele[c, mod.parameter_names.at(k + 1)]
+                    * mod.L_ele[d, mod.parameter_names.at(k + 1)]
                     for k in range(list(mod.parameter_names).index(d) + 1)
                 )
             else:
@@ -809,7 +818,7 @@ class DesignOfExperiments_:
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            return m.trace == sum(m.fim[j, j] for j in mod.parameter_names)
+            return mod.trace == sum(mod.fim[j, j] for j in mod.parameter_names)
 
         def det_general(m):
             r"""Calculate determinant. Can be applied to FIM of any size.
@@ -836,15 +845,15 @@ class DesignOfExperiments_:
             det_perm = sum(
                 self._sgn(list_p[d])
                 * sum(
-                    m.fim[each, name_order[b]]
+                    mod.fim[each, name_order[b]]
                     for b, each in enumerate(mod.parameter_names)
                 )
                 for d in range(len(list_p))
             )
-            return m.det == det_perm
+            return mod.det == det_perm
 
         if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
-            mod.cholesky_cons = pyo.Constraint(
+            mod.obj_cons.cholesky_cons = pyo.Constraint(
                 mod.parameter_names, mod.parameter_names, rule=cholesky_imp
             )
             mod.Obj = pyo.Objective(
@@ -855,13 +864,13 @@ class DesignOfExperiments_:
         elif self.objective_option == ObjectiveLib.det:
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det
             mod.det = pyo.Var(initialize=np.linalg.det(fim), bounds=(small_number, None))
-            mod.det_rule = pyo.Constraint(rule=det_general)
+            mod.obj_cons.det_rule = pyo.Constraint(rule=det_general)
             mod.Obj = pyo.Objective(expr=pyo.log10(mod.det), sense=pyo.maximize)
 
         elif self.objective_option == ObjectiveLib.trace:
             # if not determinant or cholesky, calculating the OBJ with trace
             mod.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
-            mod.trace_rule = pyo.Constraint(rule=trace_calc)
+            mod.obj_cons.trace_rule = pyo.Constraint(rule=trace_calc)
             mod.Obj = pyo.Objective(expr=pyo.log10(mod.trace), sense=pyo.maximize)
 
         elif self.objective_option == ObjectiveLib.zero:
