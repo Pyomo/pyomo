@@ -397,12 +397,12 @@ class SAS94(SASAbc):
             )
             upload_pin = True
 
-        # Using a function call to make it easier to moch the version check
+        # Using a function call to make it easier to mock the version check
         major_version = self.sas_version()[0]
         minor_version = self.sas_version().split("M", 1)[1][0]
         if major_version == "9" and int(minor_version) < 5:
             raise NotImplementedError(
-                "Support for SAS 9.4 M4 and earlier is no implemented."
+                "Support for SAS 9.4 M4 and earlier is not implemented."
             )
         elif major_version == "9" and int(minor_version) == 5:
             # In 9.4M5 we have to create an MPS data set from an MPS file first
@@ -529,7 +529,7 @@ class SAS94(SASAbc):
 
             if proc == "OPTLP":
                 # Convert primal out data set to variable dictionary
-                # Use panda functions for efficiency
+                # Use pandas functions for efficiency
                 primal_out = primal_out[["_VAR_", "_VALUE_", "_STATUS_", "_R_COST_"]]
                 primal_out = primal_out.set_index("_VAR_", drop=True)
                 primal_out = primal_out.rename(
