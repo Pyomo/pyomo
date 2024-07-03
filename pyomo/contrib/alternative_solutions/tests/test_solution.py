@@ -1,8 +1,10 @@
+import pyomo.opt
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 from pyomo.contrib.alternative_solutions import Solution
 
+pyomo.opt.check_available_solvers("gurobi")
 mip_solver = "gurobi"
 
 

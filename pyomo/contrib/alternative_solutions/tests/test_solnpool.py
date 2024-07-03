@@ -8,6 +8,9 @@ from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
 
+@unittest.skipUnless(
+        pe.SolverFactory("gurobi").available(), "Gurobi MIP solver not available"
+)
 @unittest.pytest.mark.solver("gurobi")
 class TestSolnPoolUnit(unittest.TestCase):
     """
