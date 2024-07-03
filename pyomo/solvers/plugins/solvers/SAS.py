@@ -12,13 +12,13 @@
 import logging
 import sys
 from os import stat
-from uuid import uuid4
 from abc import ABC, abstractmethod
 from io import StringIO
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.common.collections import Bunch
+from pyomo.common.dependencies import attempt_import
 from pyomo.opt.results import (
     SolverResults,
     SolverStatus,
@@ -34,6 +34,7 @@ from pyomo.common.log import LogStream
 from pyomo.common.tee import capture_output, TeeStream
 
 
+uuid, uuid_available = attempt_import('uuid')
 logger = logging.getLogger("pyomo.solvers")
 
 
@@ -338,7 +339,7 @@ class SAS94(SASAbc):
         rootnode_str = self._create_statement_str("rootnode")
 
         # Get a unique identifier, always use the same with different prefixes
-        unique = uuid4().hex[:16]
+        unique = uuid.uuid4().hex[:16]
 
         # Create unique filename for output datasets
         primalout_dataset_name = "pout" + unique
