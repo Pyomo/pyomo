@@ -1027,6 +1027,18 @@ class DesignOfExperiments_:
 
     # Rescale FIM (a scaling function to help rescale FIM from parameter values)
     def rescale_FIM(self, FIM, param_vals):
+        """
+        Rescales the FIM based on the input and parameter vals.
+        It is assumed the parameter vals align with the FIM
+        dimensions such that (1, i) corresponds to the i-th
+        column or row of the FIM.
+        
+        Parameters
+        ----------
+        FIM: 2D numpy array to be scaled
+        param_vals: scaling factors for the parameters
+
+        """
         if isinstance(param_vals, list):
             param_vals = np.array([param_vals, ])
         elif isinstance(param_vals, np.ndarray):
