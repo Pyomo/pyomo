@@ -1005,7 +1005,7 @@ def _finalize_numpy(np, available):
     # Register them only if they are present
     if hasattr(np, 'float_'):
         # Prepend to preserve previous functionality
-        _floats.insert(0, np.float_)
+        _floats.insert(0, np.float64)
     if hasattr(np, 'float96'):
         _floats.append(np.float96)
     if hasattr(np, 'float128'):
