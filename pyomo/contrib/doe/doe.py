@@ -261,35 +261,73 @@ class DesignOfExperiments_:
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
         raise NotImplementedError(
-            "Multipled experiment optimization note yet supported."
+            "Multipled experiment optimization not yet supported."
         )
     
     # Perform multi-experiment doe (simultaneous, optimal approach)
     def run_multi_doe_simultaneous(self, N_exp=1):
         raise NotImplementedError(
-            "Multipled experiment optimization note yet supported."
+            "Multipled experiment optimization not yet supported."
         )
     
     # Compute FIM for the DoE object
-    def compute_FIM(self, mod=None, method='sequential'):
-        
-        
-        return
-    
-    # Use kaug to get FIM
-    def _direct_kaug(self):
+    def compute_FIM(self, method='sequential'):
         """
-        Used to compute the FIM using kaug, a sensitivity-based approach instead
-        of forming the finite differencing blocks.
-
+        Computes the FIM for the experimental design that is
+        initialized from the experiment`s ``get_labeled_model()``
+        function.
+        
+        Parameters
+        ----------
+        mod: model to compute FIM, default: None, (self.model)
+        method: string to specify which method should be used
+                options are ``kaug`` and ``sequential``
+        
         """
-        # Make a special version of the model for kaug
-        self.kaug_model = self.experiment.get_labeled_model(**self.args).clone()
-        mod = self.kaug_model
-
-        # Check the model labels on the kaug model
+        self.compute_FIM_model = self.experiment.get_labeled_model(**self.args).clone()
+        
+        mod = self.compute_FIM_model
+        
         self.check_model_labels(mod=mod)
+        
+        # Check FIM input, if it exists. Otherwise, set the prior_FIM attribute
+        if self.prior_FIM is None:
+            self.prior_FIM = np.zeros((len(mod.unknown_parameters), len(mod.unknown_parameters)))
+        else:
+            self.check_model_FIM(FIM=self.prior_FIM)
+        
+        # ToDo: Decide where the FIM should be saved.
+        if method == 'sequential':
+            self._sequential_FIM()
+            self._computed_FIM = self.sequential_FIM
+        elif method == 'kaug':
+            self._kaug_FIM()
+            self._computed_FIM = self.kaug_FIM
+        else:
+            raise ValueError('The method provided, {}, must be either `sequential` or `kaug`'.format(method))
 
+    # Use a sequential method to get the FIM
+    def _sequential_FIM(self):
+        """
+        Used to compute the FIM using a sequential approach,
+        solving the model consecutively under each of the
+        finite difference scenarios to build the sensitivity
+        matrix to subsequently compute the FIM.
+
+        """
+        raise NotImplementedError(
+            "Sequential FIM calculation not yet supported."
+        )
+
+    # Use kaug to get FIM
+    def _kaug_FIM(self):
+        """
+        Used to compute the FIM using kaug, a sensitivity-based
+        approach that directly computes the FIM.
+
+        """
+        mod = self.compute_FIM_model
+        
         # add zero (dummy/placeholder) objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
@@ -367,7 +405,7 @@ class DesignOfExperiments_:
         # i.e., cov_y = self.cov_y or mod.cov_y
         # Still deciding where this would be best.
         
-        self.kaug_fim = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
+        self.kaug_FIM = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
 
     # Create the DoE model (with ``scenarios`` from finite differencing scheme)
     def create_doe_model(self, mod=None):

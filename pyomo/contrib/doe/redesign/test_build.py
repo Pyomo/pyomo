@@ -187,10 +187,10 @@ doe_object3 = DesignOfExperiments(
 
 res = doe_object3.compute_FIM(scale_nominal_param_value=True)
 res.result_analysis()
-doe_obj[0]._direct_kaug()
+doe_obj[0].compute_FIM(method='kaug')
 
 print(res.FIM)
-print(doe_obj[0].kaug_fim)
+print(doe_obj[0].kaug_FIM)
 
 
 # Optimal values
