@@ -123,9 +123,9 @@ class FisherResults:
         if self.prior_FIM is not None:
             try:
                 fim = fim + self.prior_FIM
-                self.logger.info('Existed information has been added.')
+                self.logger.info("Existed information has been added.")
             except:
-                raise ValueError('Check the shape of prior FIM.')
+                raise ValueError("Check the shape of prior FIM.")
 
         if np.linalg.cond(fim) > self.max_condition_number:
             self.logger.info(
@@ -133,7 +133,7 @@ class FisherResults:
                 np.linalg.cond(fim),
             )
             self.logger.info(
-                'A condition number bigger than %s is considered near singular.',
+                "A condition number bigger than %s is considered near singular.",
                 self.max_condition_number,
             )
 
@@ -239,10 +239,10 @@ class FisherResults:
         self.eig_vecs = np.linalg.eig(FIM)[1]
 
         self.logger.info(
-            'FIM: %s; \n Trace: %s; \n Determinant: %s;', self.FIM, self.trace, self.det
+            "FIM: %s; \n Trace: %s; \n Determinant: %s;", self.FIM, self.trace, self.det
         )
         self.logger.info(
-            'Condition number: %s; \n Min eigenvalue: %s.', self.cond, self.min_eig
+            "Condition number: %s; \n Min eigenvalue: %s.", self.cond, self.min_eig
         )
 
     def _solution_info(self, m, dv_set):
@@ -268,11 +268,11 @@ class FisherResults:
         # When scaled with constant values, the effect of the scaling factors are removed here
         # For determinant, the scaling factor to determinant is scaling factor ** (Dim of FIM)
         # For trace, the scaling factor to trace is the scaling factor.
-        if self.obj == 'det':
+        if self.obj == "det":
             self.obj_det = np.exp(value(m.obj)) / (self.fim_scale_constant_value) ** (
                 len(self.parameter_names)
             )
-        elif self.obj == 'trace':
+        elif self.obj == "trace":
             self.obj_trace = np.exp(value(m.obj)) / (self.fim_scale_constant_value)
 
         design_variable_names = list(dv_set.keys())
@@ -314,11 +314,11 @@ class FisherResults:
         if (self.result.solver.status == SolverStatus.ok) and (
             self.result.solver.termination_condition == TerminationCondition.optimal
         ):
-            self.status = 'converged'
+            self.status = "converged"
         elif (
             self.result.solver.termination_condition == TerminationCondition.infeasible
         ):
-            self.status = 'infeasible'
+            self.status = "infeasible"
         else:
             self.status = self.result.solver.status
 
@@ -399,10 +399,10 @@ class GridSearchResult:
                 column_names.append(i)
 
         # Each design criteria has a column to store values
-        column_names.append('A')
-        column_names.append('D')
-        column_names.append('E')
-        column_names.append('ME')
+        column_names.append("A")
+        column_names.append("D")
+        column_names.append("E")
+        column_names.append("ME")
         # generate the dataframe
         store_all_results = np.asarray(store_all_results)
         self.store_all_results_dataframe = pd.DataFrame(
@@ -458,7 +458,7 @@ class GridSearchResult:
             self.design_names
         ):
             raise ValueError(
-                'Error: All dimensions except for those the figures are drawn by should be fixed.'
+                "Error: All dimensions except for those the figures are drawn by should be fixed."
             )
 
         if len(self.sensitivity_dimension) not in [1, 2]:
@@ -467,15 +467,15 @@ class GridSearchResult:
         # generate a combination of logic sentences to filter the results of the DOF needed.
         # an example filter: (self.store_all_results_dataframe["CA0"]==5).
         if len(self.fixed_design_names) != 0:
-            filter = ''
+            filter = ""
             for i in range(len(self.fixed_design_names)):
-                filter += '(self.store_all_results_dataframe['
+                filter += "(self.store_all_results_dataframe["
                 filter += str(self.fixed_design_names[i])
-                filter += ']=='
+                filter += "]=="
                 filter += str(self.fixed_design_values[i])
-                filter += ')'
+                filter += ")"
                 if i != (len(self.fixed_design_names) - 1):
-                    filter += '&'
+                    filter += "&"
             # extract results with other dimensions fixed
             figure_result_data = self.store_all_results_dataframe.loc[eval(filter)]
         # if there is no other fixed dimensions
@@ -526,78 +526,78 @@ class GridSearchResult:
 
         # decide if the results are log scaled
         if log_scale:
-            y_range_A = np.log10(self.figure_result_data['A'].values.tolist())
-            y_range_D = np.log10(self.figure_result_data['D'].values.tolist())
-            y_range_E = np.log10(self.figure_result_data['E'].values.tolist())
-            y_range_ME = np.log10(self.figure_result_data['ME'].values.tolist())
+            y_range_A = np.log10(self.figure_result_data["A"].values.tolist())
+            y_range_D = np.log10(self.figure_result_data["D"].values.tolist())
+            y_range_E = np.log10(self.figure_result_data["E"].values.tolist())
+            y_range_ME = np.log10(self.figure_result_data["ME"].values.tolist())
         else:
-            y_range_A = self.figure_result_data['A'].values.tolist()
-            y_range_D = self.figure_result_data['D'].values.tolist()
-            y_range_E = self.figure_result_data['E'].values.tolist()
-            y_range_ME = self.figure_result_data['ME'].values.tolist()
+            y_range_A = self.figure_result_data["A"].values.tolist()
+            y_range_D = self.figure_result_data["D"].values.tolist()
+            y_range_E = self.figure_result_data["E"].values.tolist()
+            y_range_ME = self.figure_result_data["ME"].values.tolist()
 
         # Draw A-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_A)
         ax.scatter(x_range, y_range_A)
-        ax.set_ylabel('$log_{10}$ Trace')
+        ax.set_ylabel("$log_{10}$ Trace")
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - A optimality')
+        plt.pyplot.title(title_text + ": A-optimality")
         plt.pyplot.show()
 
         # Draw D-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_D)
         ax.scatter(x_range, y_range_D)
-        ax.set_ylabel('$log_{10}$ Determinant')
+        ax.set_ylabel("$log_{10}$ Determinant")
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - D optimality')
+        plt.pyplot.title(title_text + ": D-optimality")
         plt.pyplot.show()
 
         # Draw E-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_E)
         ax.scatter(x_range, y_range_E)
-        ax.set_ylabel('$log_{10}$ Minimal eigenvalue')
+        ax.set_ylabel("$log_{10}$ Minimal eigenvalue")
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - E optimality')
+        plt.pyplot.title(title_text + ": E-optimality")
         plt.pyplot.show()
 
         # Draw Modified E-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         # plt.rcParams.update(params)
         ax.plot(x_range, y_range_ME)
         ax.scatter(x_range, y_range_ME)
-        ax.set_ylabel('$log_{10}$ Condition number')
+        ax.set_ylabel("$log_{10}$ Condition number")
         ax.set_xlabel(xlabel_text)
-        plt.pyplot.title(title_text + ' - Modified E optimality')
+        plt.pyplot.title(title_text + ": Modified E-optimality")
         plt.pyplot.show()
 
     def _heatmap(
@@ -641,10 +641,10 @@ class GridSearchResult:
         y_range = sensitivity_dict[self.sensitivity_dimension[1]]
 
         # extract the design criteria values
-        A_range = self.figure_result_data['A'].values.tolist()
-        D_range = self.figure_result_data['D'].values.tolist()
-        E_range = self.figure_result_data['E'].values.tolist()
-        ME_range = self.figure_result_data['ME'].values.tolist()
+        A_range = self.figure_result_data["A"].values.tolist()
+        D_range = self.figure_result_data["D"].values.tolist()
+        E_range = self.figure_result_data["E"].values.tolist()
+        ME_range = self.figure_result_data["ME"].values.tolist()
 
         # reshape the design criteria values for heatmaps
         cri_a = np.asarray(A_range).reshape(len(x_range), len(y_range))
@@ -675,12 +675,12 @@ class GridSearchResult:
 
         # A-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
@@ -690,18 +690,18 @@ class GridSearchResult:
         ax.set_xlabel(xlabel_text)
         im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
-        ba.set_label('log10(trace(FIM))')
-        plt.pyplot.title(title_text + ' - A optimality')
+        ba.set_label("log10(trace(FIM))")
+        plt.pyplot.title(title_text + ": A-optimality")
         plt.pyplot.show()
 
         # D-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
@@ -711,18 +711,18 @@ class GridSearchResult:
         ax.set_xlabel(xlabel_text)
         im = ax.imshow(hes_d.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
-        ba.set_label('log10(det(FIM))')
-        plt.pyplot.title(title_text + ' - D optimality')
+        ba.set_label("log10(det(FIM))")
+        plt.pyplot.title(title_text + ": D-optimality")
         plt.pyplot.show()
 
         # E-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
@@ -732,18 +732,18 @@ class GridSearchResult:
         ax.set_xlabel(xlabel_text)
         im = ax.imshow(hes_e.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
-        ba.set_label('log10(minimal eig(FIM))')
-        plt.pyplot.title(title_text + ' - E optimality')
+        ba.set_label("log10(minimal eig(FIM))")
+        plt.pyplot.title(title_text + ": E-optimality")
         plt.pyplot.show()
 
         # modified E-optimality
         fig = plt.pyplot.figure()
-        plt.pyplot.rc('axes', titlesize=font_axes)
-        plt.pyplot.rc('axes', labelsize=font_axes)
-        plt.pyplot.rc('xtick', labelsize=font_tick)
-        plt.pyplot.rc('ytick', labelsize=font_tick)
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
         ax = fig.add_subplot(111)
-        params = {'mathtext.default': 'regular'}
+        params = {"mathtext.default": "regular"}
         plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
@@ -753,6 +753,6 @@ class GridSearchResult:
         ax.set_xlabel(xlabel_text)
         im = ax.imshow(hes_e2.T, cmap=plt.pyplot.cm.hot_r)
         ba = plt.pyplot.colorbar(im)
-        ba.set_label('log10(cond(FIM))')
-        plt.pyplot.title(title_text + ' - Modified E-optimality')
+        ba.set_label("log10(cond(FIM))")
+        plt.pyplot.title(title_text + ": Modified E-optimality")
         plt.pyplot.show()
