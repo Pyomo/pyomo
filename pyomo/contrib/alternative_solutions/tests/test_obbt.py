@@ -65,7 +65,9 @@ class TestOBBTUnit:
         Check that relative mip gap constraints are added for a mip with indexed vars and constraints
         """
         m = tc.get_indexed_pentagonal_pyramid_mip()
-        all_bounds, solns = obbt_analysis_bounds_and_solutions(m, rel_opt_gap=0.5, solver=mip_solver)
+        all_bounds, solns = obbt_analysis_bounds_and_solutions(
+            m, rel_opt_gap=0.5, solver=mip_solver
+        )
         assert len(solns) == 2 * len(all_bounds) + 1
         assert m._obbt.optimality_tol_rel.lb == pytest.approx(2.5)
 
@@ -74,7 +76,9 @@ class TestOBBTUnit:
         Check that absolute mip gap constraints are added
         """
         m = tc.get_pentagonal_pyramid_mip()
-        all_bounds, solns = obbt_analysis_bounds_and_solutions(m, abs_opt_gap=1.99, solver=mip_solver)
+        all_bounds, solns = obbt_analysis_bounds_and_solutions(
+            m, abs_opt_gap=1.99, solver=mip_solver
+        )
         assert len(solns) == 2 * len(all_bounds) + 1
         assert m._obbt.optimality_tol_abs.lb == pytest.approx(3.01)
 
