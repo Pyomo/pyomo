@@ -337,7 +337,8 @@ class DesignOfExperiments_:
             mod = self.compute_FIM_model
         
         # add zero (dummy/placeholder) objective function
-        mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
+        if not hasattr(mod, 'Obj'):
+            mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
         # call k_aug get_dsdp function
         # Solve the square problem
@@ -729,7 +730,7 @@ class DesignOfExperiments_:
             comp.fix()
         
         try:
-            self.solver.solve(mod.base_model, tee='True')
+            self.solver.solve(mod.base_model, tee=self.tee)
             self.logger.info('Model from experiment solved.')
         except:
             raise RuntimeError('Model from experiment did not solve appropriately. Make sure the model is well-posed.')
@@ -1059,7 +1060,7 @@ class DesignOfExperiments_:
         return scaled_FIM
 
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
-    def compute_FIM_full_factorial(self, mod=None, design_ranges=None):
+    def compute_FIM_full_factorial(self, design_ranges=None, method='sequential'):
         """
         Will run a simulation-based full factorial exploration of
         the experimental input space (i.e., a ``grid search`` or
@@ -1069,7 +1070,9 @@ class DesignOfExperiments_:
         Parameters
         ----------
         mod: model to perform the full factorial exploration on
-        design_ranges: dict of lists, of the form {<var_name>: [upper, lower, numsteps]}
+        design_ranges: dict of lists, of the form {<var_name>: [start, stop, numsteps]}
+        method: string to specify which method should be used
+                options are ``kaug`` and ``sequential``
 
         """
         # Start timer
@@ -1077,171 +1080,104 @@ class DesignOfExperiments_:
         sp_timer.tic(msg=None)
         self.logger.info("Beginning Full Factorial Design.")
 
-        # Set model as self.model if no model is provided
-        if mod is None:
-            mod = self.model()
+        # Make new model for factorial design
+        self.factorial_model = self.experiment.get_labeled_model(**self.args).clone()
+        mod = self.factorial_model
         
-        # ToDo: potentially work with this for more complicated models
-        # build the large DOE pyomo model
-        if not self._built_scenarios:
-            self.create_doe_model(mod=self.model)
-
+        # Permute the inputs to be aligned with the experiment input indicies
+        design_ranges_enum = {k: np.linspace(*v) for k, v in design_ranges.items()}
+        design_map = {ind: (k[0].name, k[0]) for ind, k in enumerate(mod.experiment_inputs.items())}
         
-        # Solve the square problem first to initialize the fim and
-        # sensitivity constraints
-        # Deactivate object and fix experimental design decisions to make square
-        self.model.Obj.deactivate()
-        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
-            comp.fix()
+        # Make the full space
+        try:
+            valid_inputs = 0
+            des_ranges = []
+            for k,v in design_map.items():
+                if v[0] in design_ranges_enum.keys():
+                    des_ranges.append(design_ranges_enum[v[0]])
+                    valid_inputs += 1
+            assert (valid_inputs > 0)
+            
+            factorial_points = product(*des_ranges)
+        except:
+            raise ValueError('Design ranges keys must be a subset of experimental design names.')
         
-        self.solver.solve(self.model, tee=self.tee)
+        # ToDo: Add more objetive types? i.e., modified-E; G-opt; V-opt; etc?
+        # ToDo: Also, make this a result object, or more user friendly.
+        fim_factorial_results = {
+            'design_points': [],
+            'log D-opt': [],
+            'log A-opt': [],
+            'log E-opt': [],
+            'solve_time': [],
+        }
         
-        # Reactivate objective and unfix experimental design decisions
-        for comp, _ in self.model.scenario_blocks[0].experiment_inputs.items():
-            comp.unfix()
-        self.model.Obj.activate()
-        
-        # Solve the full model, which has now been initialized with the square solve
-        self.solver.solve(self.model, tee=self.tee)
-        
-        # Finish timing
-        dT = sp_timer.toc(msg=None)
-        self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % dT)
-
-        # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = ObjectiveLib.zero
-        self.store_optimality_as_csv = store_optimality_as_csv
-
-        # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = scale_constant_value**2
-
-        # to store all FIM results
-        result_combine = {}
-
-        # all lists of values of each design variable to go over
-        design_ranges_list = list(design_ranges.values())
-        # design variable names to go over
-        design_dimension_names = list(design_ranges.keys())
-
-        # iteration 0
-        count = 0
-        failed_count = 0
-        # how many sets of design variables will be run
-        total_count = 1
-        for rng in design_ranges_list:
-            total_count *= len(rng)
-
-        time_set = []  # record time for every iteration
-
-        # generate combinations of design variable values to go over
-        search_design_set = product(*design_ranges_list)
-
-        # loop over design value combinations
-        for design_set_iter in search_design_set:
-            # generate the design variable dictionary needed for running compute_FIM
-            # first copy value from design_values
-            design_iter = self.design_vars.variable_names_value.copy()
-
-            # convert to a list and cache
-            list_design_set_iter = list(design_set_iter)
-
-            # update the controlled value of certain time points for certain design variables
-            for i, names in enumerate(design_dimension_names):
-                if isinstance(names, str):
-                    # if 'names' is simply a string, copy the new value
-                    design_iter[names] = list_design_set_iter[i]
-                elif isinstance(names, collections.abc.Sequence):
-                    # if the element is a list, all design variables in this list share the same values
-                    for n in names:
-                        design_iter[n] = list_design_set_iter[i]
-                else:
-                    # otherwise just copy the value
-                    # design_iter[names] = list(design_set_iter)[i]
-                    raise NotImplementedError(
-                        "You should not see this error message. Please report it to the Pyomo.DoE developers."
-                    )
-
-            self.design_vars.variable_names_value = design_iter
+        succeses = 0
+        failures = 0
+        total_points = np.prod(np.array([len(v) for k, v in design_ranges_enum.items()]))
+        time_set = []
+        curr_point = 1  # Initial current point
+        for design_point in factorial_points:
+            print(design_point)
+            # Fix design variables at fixed experimental design point
+            for i in range(len(design_point)):
+                design_map[i][1].fix(design_point[i])
+            
+            # Timing and logging objects
+            self.logger.info("=======Iteration Number: %s =====", curr_point)
             iter_timer = TicTocTimer()
-            self.logger.info("=======Iteration Number: %s =====", count + 1)
-            self.logger.debug(
-                "Design variable values of this iteration: %s", design_iter
-            )
             iter_timer.tic(msg=None)
-            # generate store name
-            if store_name is None:
-                store_output_name = None
-            else:
-                store_output_name = store_name + str(count)
-
-            if read_name is not None:
-                read_input_name = read_name + str(count)
-            else:
-                read_input_name = None
-
-            # call compute_FIM to get FIM
+            
+            # Compute FIM with given options
             try:
-                result_iter = self.compute_FIM(
-                    mode=mode,
-                    tee_opt=tee_option,
-                    scale_nominal_param_value=scale_nominal_param_value,
-                    scale_constant_value=scale_constant_value,
-                    store_output=store_output_name,
-                    read_output=read_input_name,
-                    formula=formula,
-                    step=step,
-                )
+                curr_point = succeses + failures + 1
 
-                count += 1
-
-                result_iter.result_analysis()
-
+                # Logging information for each run
+                self.logger.info("This is run %s out of %s.", curr_point, total_points)
+                
+                # Attempt the FIM computation
+                self.compute_FIM(mod=mod, method=method)
+                succeses += 1
+                
                 # iteration time
                 iter_t = iter_timer.toc(msg=None)
                 time_set.append(iter_t)
-
-                # give run information at each iteration
-                self.logger.info("This is run %s out of %s.", count, total_count)
+                
+                # More logging
                 self.logger.info(
-                    "The code has run  %s seconds.", round(sum(time_set), 2)
+                    "The code has run for %s seconds.", round(sum(time_set), 2)
                 )
                 self.logger.info(
                     "Estimated remaining time:  %s seconds",
                     round(
-                        sum(time_set) / (count) * (total_count - count), 2
-                    ),  # need to check this math... it gives a negative number for the final count
+                        sum(time_set) / (curr_point) * (total_points - curr_point + 1), 2
+                    ),
                 )
-
-                if post_processing_function is not None:
-                    # Call the post processing function
-                    post_processing_function(self._square_model_from_compute_FIM)
-
-                # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
-                result_combine[tuple(design_set_iter)] = result_iter
-
             except:
                 self.logger.warning(
                     ":::::::::::Warning: Cannot converge this run.::::::::::::"
                 )
-                count += 1
-                failed_count += 1
-                self.logger.warning("failed count:", failed_count)
-                result_combine[tuple(design_set_iter)] = None
-
-        # For user's access
-        self.all_fim = result_combine
-
-        # Create figure drawing object
-        figure_draw_object = GridSearchResult(
-            design_ranges_list,
-            design_dimension_names,
-            result_combine,
-            store_optimality_name=store_optimality_as_csv,
-        )
-
-        self.logger.info("Overall wall clock time [s]:  %s", sum(time_set))
-
-        return figure_draw_object
+                failures += 1
+                self.logger.warning("failed count:", failures)
+                
+                self._computed_FIM = np.zeros(self.prior_FIM.shape)
+                iter_timer.tic(msg=None)
+            
+            FIM = self._computed_FIM
+            
+            # Compute and record metrics on FIM
+            D_opt = np.log10(np.linalg.det(FIM))
+            A_opt = np.log10(np.trace(FIM))
+            E_opt = np.log10(min(np.linalg.eig(FIM)[0]))
+            
+            fim_factorial_results['design_points'].append({design_map[ind][0]: design_point[ind] for ind, _ in enumerate(design_point)})
+            fim_factorial_results['log D-opt'].append(D_opt)
+            fim_factorial_results['log A-opt'].append(A_opt)
+            fim_factorial_results['log E-opt'].append(E_opt)
+        
+        self.fim_factorial_results = fim_factorial_results
+        # ToDo: add automated figure drawing as it was before (perhaps reuse the code)
+        
 
 
 ##############################

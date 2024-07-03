@@ -4,6 +4,7 @@ from pyomo.contrib.doe import *
 from simple_reaction_example import *
 
 import numpy as np
+import logging
 
 doe_obj = [0, 0, 0, 0,]
 obj = ['trace', 'det', 'det']
@@ -24,10 +25,11 @@ for ind, fd in enumerate(['central', 'backward', 'forward']):
         L_initial=None,
         L_LB=1e-7,
         solver=None,
-        tee=True,
+        tee=False,
         args=None,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
+        logger_level=logging.INFO,
     )
     doe_obj[ind].run_doe()
 
@@ -51,6 +53,7 @@ doe_obj[ind] = DesignOfExperiments_(
         args=None,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
+        logger_level=logging.INFO,
     )
 doe_obj[ind].model.set_blocks = pyo.Set(initialize=[0, 1, 2])
 doe_obj[ind].model.block_instances = pyo.Block(doe_obj[ind].model.set_blocks)
@@ -187,6 +190,13 @@ doe_object3 = DesignOfExperiments(
 
 res = doe_object3.compute_FIM(scale_nominal_param_value=True)
 res.result_analysis()
+
+design_ranges = {
+    'CA[0]': [1, 5, 3], 
+    'T[0]': [300, 700, 3],
+}
+doe_obj[0].compute_FIM_full_factorial(design_ranges=design_ranges, method='kaug')
+
 doe_obj[0].compute_FIM(method='kaug')
 
 print(res.FIM)
