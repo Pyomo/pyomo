@@ -271,7 +271,7 @@ class DesignOfExperiments_:
         )
     
     # Compute FIM for the DoE object
-    def compute_FIM(self, method='sequential'):
+    def compute_FIM(self, mod=None, method='sequential'):
         """
         Computes the FIM for the experimental design that is
         initialized from the experiment`s ``get_labeled_model()``
@@ -279,14 +279,14 @@ class DesignOfExperiments_:
         
         Parameters
         ----------
-        mod: model to compute FIM, default: None, (self.model)
+        mod: model to compute FIM, default: None, (self.compute_FIM_model)
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
         
         """
-        self.compute_FIM_model = self.experiment.get_labeled_model(**self.args).clone()
-        
-        mod = self.compute_FIM_model
+        if mod is None:
+            self.compute_FIM_model = self.experiment.get_labeled_model(**self.args).clone()
+            mod = self.compute_FIM_model
         
         self.check_model_labels(mod=mod)
         
@@ -298,10 +298,10 @@ class DesignOfExperiments_:
         
         # ToDo: Decide where the FIM should be saved.
         if method == 'sequential':
-            self._sequential_FIM()
+            self._sequential_FIM(mod=mod)
             self._computed_FIM = self.sequential_FIM
         elif method == 'kaug':
-            self._kaug_FIM()
+            self._kaug_FIM(mod=mod)
             self._computed_FIM = self.kaug_FIM
         else:
             raise ValueError('The method provided, {}, must be either `sequential` or `kaug`'.format(method))
@@ -320,13 +320,21 @@ class DesignOfExperiments_:
         )
 
     # Use kaug to get FIM
-    def _kaug_FIM(self):
+    def _kaug_FIM(self, mod=None):
         """
         Used to compute the FIM using kaug, a sensitivity-based
         approach that directly computes the FIM.
+        
+        Parameters
+        ----------
+        mod: model to compute FIM, default: None, (self.compute_FIM_model)
 
         """
-        mod = self.compute_FIM_model
+        # Remake compute_FIM_model if model is None.
+        # compute_FIM_model needs to be the right version for function to work.
+        if mod is None:
+            self.compute_FIM_model = self.experiment.get_labeled_model(**self.args).clone()
+            mod = self.compute_FIM_model
         
         # add zero (dummy/placeholder) objective function
         mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
@@ -1054,9 +1062,9 @@ class DesignOfExperiments_:
     def compute_FIM_full_factorial(self, mod=None, design_ranges=None):
         """
         Will run a simulation-based full factorial exploration of
-        the experimental input space. (i.e., a ``grid search`` or
-        ``parameter sweep`` to see how sensitive the FIM is to the
-        experimental design parameters).
+        the experimental input space (i.e., a ``grid search`` or
+        ``parameter sweep``) to understand how the FIM metrics
+        change as a function of the experimental design space.
         
         Parameters
         ----------
@@ -1069,7 +1077,7 @@ class DesignOfExperiments_:
         sp_timer.tic(msg=None)
         self.logger.info("Beginning Full Factorial Design.")
 
-        # Generate model
+        # Set model as self.model if no model is provided
         if mod is None:
             mod = self.model()
         
