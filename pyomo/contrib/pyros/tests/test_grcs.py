@@ -5107,6 +5107,11 @@ class RegressionTest(unittest.TestCase):
         )
 
     def test_coefficient_matching_nonlinear_expr(self):
+        """
+        Test behavior of PyROS solver for model with
+        equality constraint that cannot be reformulated via
+        coefficient matching due to nonlinearity.
+        """
         # Write the deterministic Pyomo model
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -5133,11 +5138,7 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        with self.assertRaises(
-            ValueError,
-            msg="ValueError should be raised for general "
-            "nonlinear expressions in h(x,z,q)=0 constraints.",
-        ):
+        with LoggingIntercept(module="pyomo.contrib.pyros", level=logging.DEBUG) as LOG:
             results = pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1],
@@ -5152,6 +5153,19 @@ class RegressionTest(unittest.TestCase):
                     "decision_rule_order": 1,
                 },
             )
+
+        pyros_log = LOG.getvalue()
+        self.assertRegex(
+            pyros_log,
+            r".*Equality constraint 'user_model\.eq_con'.*cannot be written.*",
+        )
+
+        # should still solve in spite of coefficient matching
+        # failure
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
 
 
 @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
