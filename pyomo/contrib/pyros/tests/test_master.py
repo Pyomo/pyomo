@@ -156,8 +156,22 @@ class TestConstructMasterProblem(unittest.TestCase):
                 ineq_con_00,
                 ineq_con_01,
                 msg=(
-                    f"first-stage inequality con {ineq_con_00.name} was not "
+                    f"first-stage inequality con {ineq_con_00.name!r} was not "
                     "cloned across scenario blocks."
+                ),
+            )
+            self.assertTrue(
+                ineq_con_00.active,
+                msg=(
+                    "First-stage inequality constraint "
+                    f"{ineq_con_00.name!r} should be active."
+                ),
+            )
+            self.assertFalse(
+                ineq_con_01.active,
+                msg=(
+                    "Duplicate first-stage inequality constraint "
+                    f"{ineq_con_01.name!r} should be deactivated"
                 ),
             )
 
@@ -172,6 +186,20 @@ class TestConstructMasterProblem(unittest.TestCase):
                 msg=(
                     f"first-stage equality con {eq_con_00.name} was not cloned "
                     "across scenario blocks."
+                ),
+            )
+            self.assertTrue(
+                eq_con_00.active,
+                msg=(
+                    "First-stage equality constraint "
+                    f"{eq_con_00.name!r} should be active."
+                ),
+            )
+            self.assertFalse(
+                eq_con_01.active,
+                msg=(
+                    "Duplicate first-stage equality constraint "
+                    f"{eq_con_01.name!r} should be deactivated"
                 ),
             )
 
