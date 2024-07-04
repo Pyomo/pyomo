@@ -25,7 +25,7 @@ for ind, fd in enumerate(['central', 'backward', 'forward']):
         L_initial=None,
         L_LB=1e-7,
         solver=None,
-        tee=False,
+        tee=True,
         args=None,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
@@ -209,3 +209,43 @@ print("New formulation, scaled: {}".format(pyo.value(doe_obj[1].model.Obj)))
 print("New formulation, unscaled: {}".format(pyo.value(doe_obj[2].model.Obj)))
 print("Old formulation, scaled: {}".format(pyo.value(optimize_result.model.Obj)))
 print("Old formulation, unscaled: {}".format(pyo.value(optimize_result2.model.Obj)))
+
+# Old values
+FIM_vals_old = [pyo.value(optimize_result.model.fim[i, j]) for i in optimize_result.model.regression_parameters for j in optimize_result.model.regression_parameters]
+L_vals_old = [pyo.value(optimize_result.model.L_ele[i, j]) for i in optimize_result.model.regression_parameters for j in optimize_result.model.regression_parameters]
+Q_vals_old = [pyo.value(optimize_result.model.sensitivity_jacobian[i, j]) for i in optimize_result.model.regression_parameters for j in optimize_result.model.measured_variables]
+sigma_inv_old = [1 / v for k,v in doe_object.measurement_vars.variance.items()]
+
+FIM_vals_old_np = np.array(FIM_vals_old).reshape((4, 4))
+
+for i in range(4):
+    for j in range(4):
+        if j > i:
+            FIM_vals_old_np[j, i] = FIM_vals_old_np[i, j]
+
+L_vals_old_np = np.array(L_vals_old).reshape((4, 4))
+Q_vals_old_np = np.array(Q_vals_old).reshape((4, 27))
+
+sigma_inv_old_np = np.zeros((27, 27))
+for i in range(27):
+    sigma_inv_old_np[i, i] = sigma_inv_old[i]
+
+# New values
+FIM_vals_new = [pyo.value(doe_obj[1].model.fim[i, j]) for i in doe_obj[1].model.parameter_names for j in doe_obj[1].model.parameter_names]
+L_vals_new = [pyo.value(doe_obj[1].model.L_ele[i, j]) for i in doe_obj[1].model.parameter_names for j in doe_obj[1].model.parameter_names]
+Q_vals_new = [pyo.value(doe_obj[1].model.sensitivity_jacobian[i, j]) for i in doe_obj[1].model.output_names for j in doe_obj[1].model.parameter_names]
+sigma_inv_new = [1 / v for k,v in doe_obj[1].model.scenario_blocks[0].measurement_error.items()]
+
+FIM_vals_new_np = np.array(FIM_vals_new).reshape((4, 4))
+
+for i in range(4):
+    for j in range(4):
+        if j > i:
+            FIM_vals_new_np[j, i] = FIM_vals_new_np[i, j]
+
+L_vals_new_np = np.array(L_vals_new).reshape((4, 4))
+Q_vals_new_np = np.array(Q_vals_new).reshape((27, 4))
+
+sigma_inv_new_np = np.zeros((27, 27))
+for i in range(27):
+    sigma_inv_new_np[i, i] = sigma_inv_new[i]

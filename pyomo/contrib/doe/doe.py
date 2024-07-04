@@ -251,6 +251,18 @@ class DesignOfExperiments_:
         mod.Obj.activate()
         mod.obj_cons.activate()
         
+        # ToDo: add a ``get FIM from model`` function
+        # If the model has L_ele, initialize it with the solved FIM
+        if hasattr(mod, 'L_ele'):
+            # Get the FIM values --> ToDo: add this as a function
+            fim_vals = [pyo.value(mod.fim[i, j]) for i in mod.parameter_names for j in mod.parameter_names]
+            fim_np = np.array(fim_vals).reshape((len(mod.parameter_names), len(mod.parameter_names)))
+            
+            L_vals_sq = np.linalg.cholesky(fim_np)
+            for i, c in enumerate(mod.parameter_names):
+                for j, d in enumerate(mod.parameter_names):
+                    mod.L_ele[c, d].value = L_vals_sq[i, j]
+        
         # Solve the full model, which has now been initialized with the square solve
         self.solver.solve(mod, tee=self.tee)
         
@@ -621,8 +633,13 @@ class DesignOfExperiments_:
             p: unknown parameter
             q: unknown parameter
             """
-
-            if p > q:
+            p_ind = list(mod.parameter_names).index(p)
+            q_ind = list(mod.parameter_names).index(q)
+            
+            # If the row is less than the column, skip the constraint
+            # This logic is consistent with making the FIM a lower
+            # triangular matrix (as is done later in this function)
+            if p_ind < q_ind:
                 if self.only_compute_fim_lower:
                     return pyo.Constraint.Skip
                 else:
@@ -651,9 +668,9 @@ class DesignOfExperiments_:
             # Fix the upper half of the FIM matrix elements to be 0.0.
             # This eliminates extra variables and ensures the expected number of
             # degrees of freedom in the optimization problem.
-            for p in mod.parameter_names:
-                for q in mod.parameter_names:
-                    if p > q:
+            for ind_p, p in enumerate(mod.parameter_names):
+                for ind_q, q in enumerate(mod.parameter_names):
+                    if ind_p < ind_q:
                         mod.fim[p, q].fix(0.0)
     
     # Create scenario block structure
@@ -850,7 +867,9 @@ class DesignOfExperiments_:
             """
             Calculate Cholesky L matrix using algebraic constraints
             """
-            # If it is the left bottom half of L
+            # If the row is greater than or equal to the column, we are in the
+            # lower traingle region of the L and FIM matrices.
+            # This region is where our equations are well-defined.
             if list(mod.parameter_names).index(c) >= list(mod.parameter_names).index(d):
                 return mod.fim[c, d] == sum(
                     mod.L_ele[c, mod.parameter_names.at(k + 1)]
