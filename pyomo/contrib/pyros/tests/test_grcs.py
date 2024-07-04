@@ -4954,6 +4954,10 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid and scip_available and scip_license_is_valid,
         "Global solvers BARON and SCIP not both available and licensed",
     )
+    @unittest.skipIf(
+        (24, 1, 5) <= baron_version and baron_version <= (24, 5, 8),
+        f"Test expected to fail for BARON version {baron_version}"
+    )
     def test_coeff_matching_solver_insensitive(self):
         """
         Check that result for instance with constraint subject to
@@ -4993,6 +4997,8 @@ class RegressionTest(unittest.TestCase):
             )
             np.testing.assert_allclose(
                 actual=res.final_objective_value,
+                # this value can be hand-calculated by analyzing the
+                # initial master problem
                 desired=0.9781633,
                 rtol=0,
                 atol=5e-3,
