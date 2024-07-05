@@ -1220,13 +1220,8 @@ class DesignOfExperiments_:
         
         # ToDo: Add more objetive types? i.e., modified-E; G-opt; V-opt; etc?
         # ToDo: Also, make this a result object, or more user friendly.
-        fim_factorial_results = {
-            'design_points': [],
-            'log D-opt': [],
-            'log A-opt': [],
-            'log E-opt': [],
-            'solve_time': [],
-        }
+        fim_factorial_results = {k.name: [] for k, v in mod.experiment_inputs.items()}
+        fim_factorial_results.update({'log D-opt': [], 'log A-opt': [], 'log E-opt': [], 'solve_time': [], })
         
         succeses = 0
         failures = 0
@@ -1234,7 +1229,7 @@ class DesignOfExperiments_:
         time_set = []
         curr_point = 1  # Initial current point
         for design_point in factorial_points:
-            print(design_point)
+            
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
                 design_map[i][1].fix(design_point[i])
@@ -1286,10 +1281,14 @@ class DesignOfExperiments_:
             A_opt = np.log10(np.trace(FIM))
             E_opt = np.log10(min(np.linalg.eig(FIM)[0]))
             
-            fim_factorial_results['design_points'].append({design_map[ind][0]: design_point[ind] for ind, _ in enumerate(design_point)})
+            # Append the values for each of the experiment inputs
+            for k, v in mod.experiment_inputs.items():
+                fim_factorial_results[k.name].append(pyo.value(k))
+            
             fim_factorial_results['log D-opt'].append(D_opt)
             fim_factorial_results['log A-opt'].append(A_opt)
             fim_factorial_results['log E-opt'].append(E_opt)
+            fim_factorial_results['solve_time'].append(time_set[-1])
         
         self.fim_factorial_results = fim_factorial_results
         # ToDo: add automated figure drawing as it was before (perhaps reuse the code)
