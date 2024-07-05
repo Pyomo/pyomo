@@ -1291,6 +1291,8 @@ class DesignOfExperiments_:
             fim_factorial_results['solve_time'].append(time_set[-1])
         
         self.fim_factorial_results = fim_factorial_results
+        
+        return self.fim_factorial_results
         # ToDo: add automated figure drawing as it was before (perhaps reuse the code)
         
 
