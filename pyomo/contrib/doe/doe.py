@@ -41,6 +41,8 @@ from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 import collections.abc
 
 import inspect
+import json
+from pathlib import Path
 
 from pyomo.common import DeveloperError
 
@@ -210,12 +212,27 @@ class DesignOfExperiments_:
         # model attribute to avoid rebuilding models
         self.model = pyo.ConcreteModel()  # Build empty model
         
+        # Empty results object
+        self.results = {}
+        
         # May need this attribute for more complicated structures?
         # (i.e., no model rebuilding for large models with sequential)
         self._built_scenarios = False
     
     # Perform doe
-    def run_doe(self, mod=None):
+    def run_doe(self, mod=None, results_file=None):
+        """
+        Runs DoE for a single experiment estimation. Can save results in
+        a file based on the flag.
+        
+        Parameters
+        ----------
+        mod: model to run the DoE, default: None (self.model)
+        results_file: string name of the file path to save the results
+                      to in the form of a .json file
+                      default: None --> don't save
+        
+        """
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -266,6 +283,31 @@ class DesignOfExperiments_:
         # Solve the full model, which has now been initialized with the square solve
         self.solver.solve(mod, tee=self.tee)
         
+        # ToDo: Make this more complicated? --> Should results be an object? Or just a dict?
+        # Populate results object; Important info: FIM, Q, outputs, inputs, param values,
+        #                                          measurement error, prior FIM, <etc.>
+        fim_local = self.get_FIM()
+        self.results['FIM'] = fim_local
+        self.results['Sensitivity Matrix'] = self.get_sensitivity_matrix()
+        self.results['Experiment Design'] = self.get_experiment_input_values()
+        self.results['Experiment Outputs'] = self.get_experiment_output_values()
+        self.results['Unknown Parameters'] = self.get_unknown_parameter_values()
+        self.results['Measurement Error'] = self.get_measurement_error_values()
+        
+        self.results['Prior FIM'] = [list(row) for row in list(self.prior_FIM)]
+        
+        # Saving some stats on the FIM for convenience
+        self.results['log10 A-opt'] = np.log10(np.trace(fim_local))
+        self.results['log10 D-opt'] = np.log10(np.linalg.det(fim_local))
+        self.results['log10 E-opt'] = np.log10(min(np.linalg.eig(fim_local)[0]))
+        self.results['FIM Condition Number'] = np.linalg.cond(fim_local)
+        
+        # If the user specifies to save the file, do it here as a json
+        if results_file is not None:
+            assert type(results_file) in [Path, str], "`results_file` must be either a Path object or a string."
+            with open(results_file, 'w') as file:
+                json.dump(self.results, file)
+        
         # Finish timing
         dT = sp_timer.toc(msg=None)
         self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % dT)
@@ -295,6 +337,9 @@ class DesignOfExperiments_:
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
         
+        Returns
+        -------
+        computed FIM: 2D numpy array of the FIM
         """
         if mod is None:
             self.compute_FIM_model = self.experiment.get_labeled_model(**self.args).clone()
@@ -317,6 +362,8 @@ class DesignOfExperiments_:
             self._computed_FIM = self.kaug_FIM
         else:
             raise ValueError('The method provided, {}, must be either `sequential` or `kaug`'.format(method))
+        
+        return self._computed_FIM
 
     # Use a sequential method to get the FIM
     def _sequential_FIM(self, mod=None):
@@ -1054,6 +1101,7 @@ class DesignOfExperiments_:
         Parameters
         ----------
         mod: model for suffix checking, Default: None, (self.model)
+        
         """
         if mod is None:
             mod = self.model.base_model
@@ -1292,10 +1340,178 @@ class DesignOfExperiments_:
         
         self.fim_factorial_results = fim_factorial_results
         
-        return self.fim_factorial_results
         # ToDo: add automated figure drawing as it was before (perhaps reuse the code)
+        return self.fim_factorial_results
         
+    
+    # Gets the FIM from an existing model
+    def get_FIM(self, mod=None):
+        """
+        Gets the FIM values from the model specified
+        
+        Parameters
+        ----------
+        mod: model to grab FIM from, Default: None, (self.model)
+        
+        Returns
+        -------
+        FIM: 2D list representation of the FIM (can be cast to numpy)
+        
+        """
+        if mod is None:
+            mod = self.model
+        
+        assert hasattr(mod, 'fim'), "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+        
+        fim_vals = [pyo.value(mod.fim[i, j]) for i in mod.parameter_names for j in mod.parameter_names]
+        fim_np = np.array(fim_vals).reshape((len(mod.parameter_names), len(mod.parameter_names)))
+        
+        # FIM is a lower triangular matrix for the optimal DoE problem.
+        # Exploit symmetry to fill in the zeros.
+        for i in range(4):
+            for j in range(4):
+                if j < i:
+                    fim_np[j, i] = fim_np[i, j]
+        
+        return [list(row) for row in list(fim_np)]
+    
+    # Gets the sensitivity matrix from an existing model
+    def get_sensitivity_matrix(self, mod=None):
+        """
+        Gets the sensitivity matrix (Q) values from the model specified.
+        
+        Parameters
+        ----------
+        mod: model to grab Q from, Default: None, (self.model)
+        
+        Returns
+        -------
+        Q: 2D list representation of the sensitivity matrix (can be cast to numpy)
+        
+        """
+        if mod is None:
+            mod = self.model
+        
+        assert hasattr(mod, 'sensitivity_jacobian'), "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+        
+        Q_vals = [pyo.value(mod.sensitivity_jacobian[i, j]) for i in mod.output_names for j in mod.parameter_names]
+        Q_np = np.array(Q_vals).reshape((len(mod.output_names), len(mod.parameter_names)))
 
+        return [list(row) for row in list(Q_np)]
+    
+    # Gets the experiment input values from an existing model
+    def get_experiment_input_values(self, mod=None):
+        """
+        Gets the experiment input values (experimental design) 
+        from the model specified.
+        
+        Parameters
+        ----------
+        mod: model to grab the experimental design from, 
+             default: None, (self.model)
+        
+        Returns
+        -------
+        d: 1D list of experiment input values (optimal or specified design)
+        
+        """
+        if mod is None:
+            mod = self.model
+        
+        if not hasattr(mod, 'experiment_inputs'):
+            assert hasattr(mod, 'scenario_blocks'), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            
+            d_vals = [pyo.value(k) for k, v in mod.scenario_blocks[0].experiment_inputs.items()]
+        else:
+            d_vals = [pyo.value(k) for k, v in mod.experiment_inputs.items()]
+        
+        return d_vals
+    
+    # Gets the unknown parameter values from an existing model
+    def get_unknown_parameter_values(self, mod=None):
+        """
+        Gets the unknown parameter values (theta) 
+        from the model specified.
+        
+        Parameters
+        ----------
+        mod: model to grab theta from, 
+             default: None, (self.model)
+        
+        Returns
+        -------
+        theta: 1D list of unknown parameter values at which this experiment was designed
+        
+        """
+        if mod is None:
+            mod = self.model
+        
+        if not hasattr(mod, 'unknown_parameters'):
+            assert hasattr(mod, 'scenario_blocks'), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            
+            theta_vals = [pyo.value(k) for k, v in mod.scenario_blocks[0].unknown_parameters.items()]
+        else:
+            theta_vals = [pyo.value(k) for k, v in mod.unknown_parameters.items()]
+        
+        return theta_vals
+    
+    # Gets the experiment output values from an existing model
+    def get_experiment_output_values(self, mod=None):
+        """
+        Gets the experiment output values (y hat) 
+        from the model specified.
+        
+        Parameters
+        ----------
+        mod: model to grab y hat from, 
+             default: None, (self.model)
+        
+        Returns
+        -------
+        y_hat: 1D list of experiment output values from the design experiment
+        
+        """
+        if mod is None:
+            mod = self.model
+        
+        if not hasattr(mod, 'experiment_outputs'):
+            assert hasattr(mod, 'scenario_blocks'), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            
+            y_hat_vals = [pyo.value(k) for k, v in mod.scenario_blocks[0].measurement_error.items()]
+        else:
+            y_hat_vals = [pyo.value(k) for k, v in mod.measurement_error.items()]
+        
+        return y_hat_vals
+    
+    # ToDo: For more complicated error structures, this should become
+    #       get cov_y, or so, and this method will be deprecated
+    # Gets the measurement error values from an existing model
+    def get_measurement_error_values(self, mod=None):
+        """
+        Gets the experiment output values (sigma) 
+        from the model specified.
+        
+        Parameters
+        ----------
+        mod: model to grab sigma values from, 
+             default: None, (self.model)
+        
+        Returns
+        -------
+        sigma_diag: 1D list of measurement errors used to design the experiment
+        
+        """
+        if mod is None:
+            mod = self.model
+        
+        if not hasattr(mod, 'measurement_error'):
+            assert hasattr(mod, 'scenario_blocks'), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            
+            sigma_vals = [pyo.value(k) for k, v in mod.scenario_blocks[0].measurement_error.items()]
+        else:
+            sigma_vals = [pyo.value(k) for k, v in mod.measurement_error.items()]
+        
+        return sigma_vals
 
 ##############################
 #  Below is deprecated code  #

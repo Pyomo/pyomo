@@ -8,9 +8,9 @@ import logging
 
 doe_obj = [0, 0, 0, 0,]
 obj = ['trace', 'det', 'det']
+file_name = ['trash1.json', 'trash2.json', 'trash3.json']
 
 for ind, fd in enumerate(['central', 'backward', 'forward']):
-    print(fd)
     experiment = FullReactorExperiment(data_ex, 10, 3)
     doe_obj[ind] = DesignOfExperiments_(
         experiment, 
@@ -31,7 +31,7 @@ for ind, fd in enumerate(['central', 'backward', 'forward']):
         _only_compute_fim_lower=True,
         logger_level=logging.INFO,
     )
-    doe_obj[ind].run_doe()
+    doe_obj[ind].run_doe(results_file=file_name[ind])
 
 
 ind = 3
