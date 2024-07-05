@@ -104,7 +104,7 @@ class DesignOfExperiments_:
             labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
         fd_formula:
             Finite difference formula for computing the sensitivy matrix. Must be one of
-            [``central``, ``forward``, ``backward``]
+            [``central``, ``forward``, ``backward``], default: ``central``
         step:
             Relative step size for the finite difference formula. 
             default: 1e-3
@@ -311,7 +311,7 @@ class DesignOfExperiments_:
         # ToDo: Decide where the FIM should be saved.
         if method == 'sequential':
             self._sequential_FIM(mod=mod)
-            self._computed_FIM = self.sequential_FIM
+            self._computed_FIM = self.seq_FIM
         elif method == 'kaug':
             self._kaug_FIM(mod=mod)
             self._computed_FIM = self.kaug_FIM
@@ -319,7 +319,7 @@ class DesignOfExperiments_:
             raise ValueError('The method provided, {}, must be either `sequential` or `kaug`'.format(method))
 
     # Use a sequential method to get the FIM
-    def _sequential_FIM(self):
+    def _sequential_FIM(self, mod=None):
         """
         Used to compute the FIM using a sequential approach,
         solving the model consecutively under each of the
@@ -327,9 +327,105 @@ class DesignOfExperiments_:
         matrix to subsequently compute the FIM.
 
         """
-        raise NotImplementedError(
-            "Sequential FIM calculation not yet supported."
+        # Build a singular model instance
+        if mod is None:
+            self.compute_FIM_model = self.experiment.get_labeled_model(**self.args).clone()
+            mod = self.compute_FIM_model
+        
+        # Create suffix to keep track of parameter scenarios
+        mod.parameter_scenarios = pyo.Suffix(
+            direction=pyo.Suffix.LOCAL,
         )
+        
+        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        if self.fd_formula == FiniteDifferenceStep.central:
+            mod.parameter_scenarios.update((2*ind, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
+            mod.parameter_scenarios.update((2*ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
+            mod.scenarios = range(len(mod.unknown_parameters) * 2)
+        elif self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]:
+            mod.parameter_scenarios.update((ind + 1, k) for ind, k in enumerate(mod.unknown_parameters.keys()))
+            mod.scenarios = range(len(mod.unknown_parameters) + 1)
+        else:
+            # To-Do: add an error message for this as not being implemented yet
+            pass
+        
+        measurement_vals = []
+        # In a loop.....
+        # Calculate measurement values for each scenario
+        for s in mod.scenarios:
+            param = mod.parameter_scenarios[s]
+            
+            # Perturbation to be (1 + diff) * param_value
+            if self.fd_formula == FiniteDifferenceStep.central:
+                diff = self.step * ((-1) ** s)  # Positive perturbation, even; negative, odd
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                diff = self.step * -1 * (s != 0)  # Backward always negative perturbation; 0 at s = 0
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                diff = self.step * (s != 0) # Forward always positive; 0 at s = 0
+            else:
+                raise DeveloperError(
+                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            )
+                diff = 0
+                pass
+            
+            # Update parameter values for the given finite difference scenario
+            param.set_value(mod.unknown_parameters[param] * (1 + diff))
+            
+            param.pprint()
+            
+            # Simulate the model
+            self.solver.solve(mod)
+            
+            # Extract the measurement values for the scenario and append
+            measurement_vals.append([pyo.value(k) for k, v in mod.experiment_outputs.items()])
+        
+        # Use the measurement outputs to make the Q matrix
+        measurement_vals_np = np.array(measurement_vals).T
+        
+        self.seq_jac = np.zeros((len(mod.experiment_outputs.items()), len(mod.unknown_parameters.items())))
+        
+        # Counting variable for loop
+        i = 0
+        
+        # Loop over parameter values and grab correct columns for finite difference calculation
+        
+        for k, v in mod.unknown_parameters.items():
+            curr_step = v * self.step
+            
+            if self.fd_formula == FiniteDifferenceStep.central:
+                col_1 = 2*i
+                col_2 = 2*i + 1
+                curr_step *= 2
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                col_1 = i
+                col_2 = 0
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                col_1 = 0
+                col_2 = i
+            
+            k.pprint()
+            print(curr_step)
+            
+            # If scale_nominal_param_value is False, v ** 0 = 1 (not scaled with parameter value)
+            scale_factor = (1 / curr_step) * self.scale_constant_value * (v ** self.scale_nominal_param_value)
+            
+            # Calculate the column of the sensitivity matrix
+            self.seq_jac[:, i] = (measurement_vals_np[:, col_1] - measurement_vals_np[:, col_2]) * scale_factor
+            
+            # Increment the count
+            i += 1
+        
+        # ToDo: As more complex measurement error schemes are put in place, this needs to change
+        # Add independent (non-correlated) measurement error for FIM calculation
+        cov_y = np.zeros((len(mod.measurement_error), len(mod.measurement_error)))
+        count = 0
+        for k, v in mod.measurement_error.items():
+            cov_y[count, count] = 1 / v
+            count += 1
+        
+        # Compute and record FIM
+        self.seq_FIM = self.seq_jac.T @ cov_y @ self.seq_jac + self.prior_FIM
 
     # Use kaug to get FIM
     def _kaug_FIM(self, mod=None):
@@ -737,8 +833,9 @@ class DesignOfExperiments_:
             mod.parameter_scenarios.update((ind + 1, k) for ind, k in enumerate(mod.base_model.unknown_parameters.keys()))
             mod.scenarios = range(len(mod.base_model.unknown_parameters) + 1)
         else:
-            # To-Do: add an error message for this as not being implemented yet
-            pass
+            raise DeveloperError(
+                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            )
 
         # To-Do: Fix parameter values if they are not Params?
 

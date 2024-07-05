@@ -199,6 +199,8 @@ doe_obj[0].compute_FIM_full_factorial(design_ranges=design_ranges, method='kaug'
 
 doe_obj[0].compute_FIM(method='kaug')
 
+doe_obj[0].compute_FIM(method='sequential')
+
 print(res.FIM)
 print(doe_obj[0].kaug_FIM)
 
@@ -257,6 +259,9 @@ rescaled_FIM = doe_obj[1].rescale_FIM(FIM_vals_new_np, param_vals)
 print("Results from using compute FIM (first old, then new)")
 print(res.FIM)
 print(doe_obj[0].kaug_FIM)
+print(doe_obj[0].seq_FIM)
+print(np.log10(np.linalg.det(doe_obj[0].kaug_FIM)))
+print(np.log10(np.linalg.det(doe_obj[0].seq_FIM)))
 
 
 # Optimal values
