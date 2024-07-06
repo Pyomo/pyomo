@@ -1,5 +1,6 @@
 from experiment_class_example import *
 from pyomo.contrib.doe import *
+from pyomo.contrib.doe import *
 
 from simple_reaction_example import *
 
@@ -253,7 +254,7 @@ sigma_inv_new_np = np.zeros((27, 27))
 for i in range(27):
     sigma_inv_new_np[i, i] = sigma_inv_new[i]
 
-rescaled_FIM = doe_obj[1].rescale_FIM(FIM_vals_new_np, param_vals)
+rescaled_FIM = rescale_FIM(FIM=FIM_vals_new_np, param_vals=param_vals)
 
 # Comparing values from compute FIM
 print("Results from using compute FIM (first old, then new)")
@@ -264,10 +265,7 @@ print(np.log10(np.linalg.det(doe_obj[0].kaug_FIM)))
 print(np.log10(np.linalg.det(doe_obj[0].seq_FIM)))
 A = doe_obj[0].kaug_jac
 B = doe_obj[0].seq_jac
-C = np.array(doe_obj[0].jac_debug)
 print(np.sum((A - B) ** 2))
-print(np.sum((A - C) ** 2))
-print(np.sum((B - C) ** 2))
 
 measurement_vals_model = []
 meas_from_model = []
@@ -302,3 +300,9 @@ print("New formulation, unscaled: {}".format(pyo.value(doe_obj[2].model.Obj)))
 print("New formulation, rescaled: {}".format(np.log10(np.linalg.det(rescaled_FIM))))
 print("Old formulation, scaled: {}".format(pyo.value(optimize_result.model.Obj)))
 print("Old formulation, unscaled: {}".format(pyo.value(optimize_result2.model.Obj)))
+
+# Draw figures
+sens_vars = ['CA[0]', 'T[0]']
+des_vars_fixed = {'T[' + str((i + 1) / 8) + ']': 300 for i in range(7)}
+des_vars_fixed['T[1]'] = 300
+doe_obj[0].draw_factorial_figure(title_text='', xlabel_text='', ylabel_text='', sensitivity_design_variables=sens_vars, fixed_design_variables=des_vars_fixed,)

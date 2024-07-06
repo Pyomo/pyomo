@@ -26,7 +26,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import numpy as np, numpy_available, pandas as pd, matplotlib as plt
 
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
@@ -1199,31 +1199,6 @@ class DesignOfExperiments_:
     def udpate_unknown_parameter_values(self, mod=None, param_vals=None):
         return
 
-    # Rescale FIM (a scaling function to help rescale FIM from parameter values)
-    def rescale_FIM(self, FIM, param_vals):
-        """
-        Rescales the FIM based on the input and parameter vals.
-        It is assumed the parameter vals align with the FIM
-        dimensions such that (1, i) corresponds to the i-th
-        column or row of the FIM.
-        
-        Parameters
-        ----------
-        FIM: 2D numpy array to be scaled
-        param_vals: scaling factors for the parameters
-
-        """
-        if isinstance(param_vals, list):
-            param_vals = np.array([param_vals, ])
-        elif isinstance(param_vals, np.ndarray):
-            if len(param_vals.shape) > 2 or ((len(param_vals.shape) == 2) and (param_vals.shape[0] != 1)):
-                raise ValueError('param_vals should be a vector of dimensions (1, n_params). The shape you provided is {}.'.format(param_vals.shape))
-            if len(param_vals.shape) == 1:
-                param_vals = np.array([param_vals, ])
-        scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
-        scaled_FIM = np.multiply(FIM, scaling_mat)
-        return scaled_FIM
-
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(self, design_ranges=None, method='sequential'):
         """
@@ -1270,7 +1245,7 @@ class DesignOfExperiments_:
         # ToDo: Add more objetive types? i.e., modified-E; G-opt; V-opt; etc?
         # ToDo: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in mod.experiment_inputs.items()}
-        fim_factorial_results.update({'log D-opt': [], 'log A-opt': [], 'log E-opt': [], 'solve_time': [], })
+        fim_factorial_results.update({'log10 D-opt': [], 'log10 A-opt': [], 'log10 E-opt': [], 'log10 ME-opt': [], 'solve_time': [], })
         
         succeses = 0
         failures = 0
@@ -1329,20 +1304,418 @@ class DesignOfExperiments_:
             D_opt = np.log10(np.linalg.det(FIM))
             A_opt = np.log10(np.trace(FIM))
             E_opt = np.log10(min(np.linalg.eig(FIM)[0]))
+            # ToDo: Make this complex check bit more intuitive
+            if np.iscomplex(E_opt):
+                E_opt = 0.0
+            ME_opt = np.log10(np.linalg.cond(FIM))
             
             # Append the values for each of the experiment inputs
             for k, v in mod.experiment_inputs.items():
                 fim_factorial_results[k.name].append(pyo.value(k))
             
-            fim_factorial_results['log D-opt'].append(D_opt)
-            fim_factorial_results['log A-opt'].append(A_opt)
-            fim_factorial_results['log E-opt'].append(E_opt)
+            fim_factorial_results['log10 D-opt'].append(D_opt)
+            fim_factorial_results['log10 A-opt'].append(A_opt)
+            fim_factorial_results['log10 E-opt'].append(E_opt)
+            fim_factorial_results['log10 ME-opt'].append(ME_opt)
             fim_factorial_results['solve_time'].append(time_set[-1])
         
         self.fim_factorial_results = fim_factorial_results
         
         # ToDo: add automated figure drawing as it was before (perhaps reuse the code)
         return self.fim_factorial_results
+        
+    
+    # Plotting 
+    def draw_factorial_figure(
+        self,
+        results=None,
+        sensitivity_design_variables=None,
+        fixed_design_variables=None,
+        full_design_variable_names=None,
+        title_text=None,
+        xlabel_text=None,
+        ylabel_text=None,
+        figure_file_name=None,
+        font_axes=16,
+        font_tick=14,
+        log_scale=True,
+    ):
+        """
+        Extract results needed for drawing figures from the results dictionary provided by 
+        the ``compute_FIM_full_factorial`` function.
+
+        Draw either the 1D sensitivity curve or 2D heatmap.
+
+        Parameters
+        ----------
+        results: dictionary, results dictionary from ``compute_FIM_full_factorial``, default: None (self.fim_factorial_results)
+        sensitivity_design_variables: a list, design variable names to draw sensitivity
+        fixed_design_variables: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
+        full_design_variable_names: a list, all the design variables in the problem.
+        title_text: a string, name for the figure
+        xlabel_text: a string, label for the x-axis of the figure (default: last design variable name)
+            In a 1D sensitivity curve, it should be design variable by which the curve is drawn.
+            In a 2D heatmap, it should be the second design variable in the design_ranges
+        ylabel_text: a string, label for the y-axis of the figure (default: None (1D); first design variable name (2D))
+            A 1D sensitivity curve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
+        figure_file_name: string or Path, path to save the figure as
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        """
+        if results is None:
+            assert hasattr(self, 'fim_factorial_results'), "Results must be provided or the compute_FIM_full_factorial function must be run."
+            results = self.fim_factorial_results
+            full_design_variable_names = [k.name for k, v in self.factorial_model.experiment_inputs.items()]
+        else:
+            assert full_design_variable_names is not None, "If results object is provided, you must include all the design variable names."
+        
+        des_names = full_design_variable_names
+        
+        # Inputs must exist for the function to do anything
+        # ToDo: Put in a default value function?????
+        assert (sensitivity_design_variables is not None), "``sensitivity_design_variables`` must be included."
+        assert (fixed_design_variables is not None), "``sensitivity_design_variables`` must be included."
+        
+        # Check that the provided design variables are within the results object
+        check_des_vars = True
+        for k,v in fixed_design_variables.items():
+            check_des_vars *= (k in [k for k,v in results.items()])
+        check_sens_vars = True
+        for k in sensitivity_design_variables:
+            check_sens_vars *= (k in [k for k,v in results.items()])
+        
+        assert (check_des_vars), "Fixed design variables {} do not all appear in the results object keys {}.".format(fixed_design_variables.keys(), results.keys())
+        assert (check_sens_vars), "Sensitivity design variables {} do not all appear in the results object keys {}.".format(sensitivity_design_variables.keys(), results.keys())
+
+        # ToDo: Make it possible to plot pair-wise sensitivities for all variables
+        #       e.g. a curve like low-dimensional posterior distributions
+        if len(sensitivity_design_variables) > 2:
+            raise NotImplementedError(
+                "Currently, only 1D and 2D sensitivity plotting is supported."
+            )
+
+        if len(fixed_design_variables.keys()) + len(sensitivity_design_variables) != len(
+            des_names
+        ):
+            raise ValueError(
+                "Error: All design variables that are not used to generate sensitivity plots must be fixed."
+            )
+
+        if type(results) is dict:
+            results_pd = pd.DataFrame(results)
+        else:
+            results_pd = results
+
+        # generate a combination of logic sentences to filter the results of the DOF needed.
+        # an example filter: (self.store_all_results_dataframe["CA0"]==5).
+        if len(fixed_design_variables.keys()) != 0:
+            filter = ""
+            i = 0
+            for k, v in fixed_design_variables.items():
+                filter += "(results_pd['"
+                filter += str(k)
+                filter += "']=="
+                filter += str(v)
+                filter += ")"
+                if i < (len(fixed_design_variables.keys()) - 1):
+                    filter += "&"
+                i += 1
+            # extract results with other dimensions fixed
+            print(filter)
+            figure_result_data = results_pd.loc[eval(filter)]
+            
+        # if there is no other fixed dimensions
+        else:
+            figure_result_data = results_pd
+
+        # Add attributes for drawing figures in later functions
+        self.figure_result_data = figure_result_data
+        self.figure_sens_des_vars = sensitivity_design_variables
+        self.figure_fixed_des_vars = fixed_design_variables
+
+        # ToDo: Add figure saving capabilities
+        if figure_file_name is not None:
+            self.logger.warning('File saving for drawing is not yet implemented.')
+        
+        # if one design variable name is given as DOF, draw 1D sensitivity curve
+        if len(self.figure_sens_des_vars) == 1:
+            self._curve1D(
+                title_text, 
+                xlabel_text, 
+                font_axes=font_axes, 
+                font_tick=font_tick, 
+                log_scale=log_scale, 
+                figure_file_name=figure_file_name,
+            )
+        # if two design variable names are given as DOF, draw 2D heatmaps
+        elif len(self.figure_sens_des_vars) == 2:
+            self._heatmap(
+                title_text,
+                xlabel_text,
+                ylabel_text,
+                font_axes=font_axes,
+                font_tick=font_tick,
+                log_scale=log_scale,
+                figure_file_name=figure_file_name,
+            )
+        # ToDo: Add the multidimensional plotting
+        else:
+            pass
+
+    def _curve1D(
+        self, title_text, xlabel_text, font_axes=16, font_tick=14, figure_file_name=None, log_scale=True
+    ):
+        """
+        Draw 1D sensitivity curves for all design criteria
+
+        Parameters
+        ----------
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns
+        --------
+        4 Figures of 1D sensitivity curves for each criteria
+        """
+
+        # extract the range of the DOF design variable
+        x_range = self.figure_result_data[self.figure_sens_des_vars[0]].values.tolist()
+
+        # decide if the results are log scaled
+        if log_scale:
+            y_range_A = np.log10(self.figure_result_data["log10 A-opt"].values.tolist())
+            y_range_D = np.log10(self.figure_result_data["log10 D-opt"].values.tolist())
+            y_range_E = np.log10(self.figure_result_data["log10 E-opt"].values.tolist())
+            y_range_ME = np.log10(self.figure_result_data["log10 ME-opt"].values.tolist())
+        else:
+            y_range_A = self.figure_result_data["log10 A-opt"].values.tolist()
+            y_range_D = self.figure_result_data["log10 D-opt"].values.tolist()
+            y_range_E = self.figure_result_data["log10 E-opt"].values.tolist()
+            y_range_ME = self.figure_result_data["log10 ME-opt"].values.tolist()
+
+        # Draw A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_A)
+        ax.scatter(x_range, y_range_A)
+        ax.set_ylabel("$log_{10}$ Trace")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": A-optimality")
+        plt.pyplot.show()
+
+        # Draw D-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_D)
+        ax.scatter(x_range, y_range_D)
+        ax.set_ylabel("$log_{10}$ Determinant")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": D-optimality")
+        plt.pyplot.show()
+
+        # Draw E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_E)
+        ax.scatter(x_range, y_range_E)
+        ax.set_ylabel("$log_{10}$ Minimal eigenvalue")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": E-optimality")
+        plt.pyplot.show()
+
+        # Draw Modified E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_ME)
+        ax.scatter(x_range, y_range_ME)
+        ax.set_ylabel("$log_{10}$ Condition number")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": Modified E-optimality")
+        plt.pyplot.show()
+
+    def _heatmap(
+        self,
+        title_text,
+        xlabel_text,
+        ylabel_text,
+        font_axes=16,
+        font_tick=14,
+        figure_file_name=None,
+        log_scale=True,
+    ):
+        """
+        Draw 2D heatmaps for all design criteria
+
+        Parameters
+        ----------
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 2D heatmap, it should be the second design variable in the design_ranges
+        ylabel_text: y label title, a string.
+            In a 2D heatmap, it should be the first design variable in the dv_ranges
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns
+        --------
+        4 Figures of 2D heatmap for each criteria
+        """
+        des_names = [k for k,v in self.figure_fixed_des_vars.items()]
+        sens_ranges = {}
+        for i in self.figure_sens_des_vars:
+            sens_ranges[i] = list(self.figure_result_data[i].unique())
+
+        x_range = sens_ranges[self.figure_sens_des_vars[0]]
+        y_range = sens_ranges[self.figure_sens_des_vars[1]]
+
+        # extract the design criteria values
+        A_range = self.figure_result_data["log10 A-opt"].values.tolist()
+        D_range = self.figure_result_data["log10 D-opt"].values.tolist()
+        E_range = self.figure_result_data["log10 E-opt"].values.tolist()
+        ME_range = self.figure_result_data["log10 ME-opt"].values.tolist()
+
+        # reshape the design criteria values for heatmaps
+        cri_a = np.asarray(A_range).reshape(len(x_range), len(y_range))
+        cri_d = np.asarray(D_range).reshape(len(x_range), len(y_range))
+        cri_e = np.asarray(E_range).reshape(len(x_range), len(y_range))
+        cri_e_cond = np.asarray(ME_range).reshape(len(x_range), len(y_range))
+
+        self.cri_a = cri_a
+        self.cri_d = cri_d
+        self.cri_e = cri_e
+        self.cri_e_cond = cri_e_cond
+
+        # decide if log scaled
+        if log_scale:
+            hes_a = np.log10(self.cri_a)
+            hes_e = np.log10(self.cri_e)
+            hes_d = np.log10(self.cri_d)
+            hes_e2 = np.log10(self.cri_e_cond)
+        else:
+            hes_a = self.cri_a
+            hes_e = self.cri_e
+            hes_d = self.cri_d
+            hes_e2 = self.cri_e_cond
+
+        # set heatmap x,y ranges
+        xLabel = x_range
+        yLabel = y_range
+
+        # A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(trace(FIM))")
+        plt.pyplot.title(title_text + ": A-optimality")
+        plt.pyplot.show()
+
+        # D-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_d.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(det(FIM))")
+        plt.pyplot.title(title_text + ": D-optimality")
+        plt.pyplot.show()
+
+        # E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_e.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(minimal eig(FIM))")
+        plt.pyplot.title(title_text + ": E-optimality")
+        plt.pyplot.show()
+
+        # modified E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_e2.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(cond(FIM))")
+        plt.pyplot.title(title_text + ": Modified E-optimality")
+        plt.pyplot.show()
+        
         
     
     # Gets the FIM from an existing model

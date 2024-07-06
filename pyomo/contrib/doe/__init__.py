@@ -12,3 +12,4 @@ from .measurements import MeasurementVariables, DesignVariables, VariablesWithIn
 from .doe import DesignOfExperiments, CalculationMode, ObjectiveLib, ModelOptionLib, DesignOfExperiments_
 from .scenario import ScenarioGenerator, FiniteDifferenceStep
 from .result import FisherResults, GridSearchResult
+from .utils import rescale_FIM
