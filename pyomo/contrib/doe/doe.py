@@ -77,7 +77,7 @@ class DesignOfExperiments_:
         fd_formula="central",
         step=1e-3,
         objective_option='det',
-        scale_constant_value=1,
+        scale_constant_value=1.0,
         scale_nominal_param_value=False,
         prior_FIM=None,
         jac_initial=None,
@@ -396,6 +396,10 @@ class DesignOfExperiments_:
             # To-Do: add an error message for this as not being implemented yet
             pass
         
+        # Fix design variables
+        for comp, _ in mod.experiment_inputs.items():
+            comp.fix()
+        
         measurement_vals = []
         # In a loop.....
         # Calculate measurement values for each scenario
@@ -418,8 +422,6 @@ class DesignOfExperiments_:
             
             # Update parameter values for the given finite difference scenario
             param.set_value(mod.unknown_parameters[param] * (1 + diff))
-            
-            param.pprint()
             
             # Simulate the model
             self.solver.solve(mod)
@@ -451,11 +453,10 @@ class DesignOfExperiments_:
                 col_1 = 0
                 col_2 = i
             
-            k.pprint()
-            print(curr_step)
-            
-            # If scale_nominal_param_value is False, v ** 0 = 1 (not scaled with parameter value)
-            scale_factor = (1 / curr_step) * self.scale_constant_value * (v ** self.scale_nominal_param_value)
+            # If scale_nominal_param_value is active, scale by nominal parameter value (v)
+            scale_factor = (1.0 / curr_step) * self.scale_constant_value
+            if self.scale_nominal_param_value:
+                scale_factor *= v
             
             # Calculate the column of the sensitivity matrix
             self.seq_jac[:, i] = (measurement_vals_np[:, col_1] - measurement_vals_np[:, col_2]) * scale_factor

@@ -262,6 +262,37 @@ print(doe_obj[0].kaug_FIM)
 print(doe_obj[0].seq_FIM)
 print(np.log10(np.linalg.det(doe_obj[0].kaug_FIM)))
 print(np.log10(np.linalg.det(doe_obj[0].seq_FIM)))
+A = doe_obj[0].kaug_jac
+B = doe_obj[0].seq_jac
+C = np.array(doe_obj[0].jac_debug)
+print(np.sum((A - B) ** 2))
+print(np.sum((A - C) ** 2))
+print(np.sum((B - C) ** 2))
+
+measurement_vals_model = []
+meas_from_model = []
+mod = doe_obj[0].model
+for p in mod.parameter_names:
+    fd_step_mult = 1
+    param_ind = mod.parameter_names.data().index(p)
+    
+    # Different FD schemes lead to different scenarios for the computation
+    if doe_obj[0].fd_formula == FiniteDifferenceStep.central:
+        s1 = param_ind * 2
+        s2 = param_ind * 2 + 1
+        fd_step_mult = 2
+    elif doe_obj[0].fd_formula == FiniteDifferenceStep.forward:
+        s1 = param_ind + 1
+        s2 = 0
+    elif doe_obj[0].fd_formula == FiniteDifferenceStep.backward:
+        s1 = 0
+        s2 = param_ind + 1
+
+    var_up = [pyo.value(k) for k, v in mod.scenario_blocks[s1].experiment_outputs.items()]
+    var_lo = [pyo.value(k) for k, v in mod.scenario_blocks[s2].experiment_outputs.items()]
+    
+    meas_from_model.append(var_up)
+    meas_from_model.append(var_lo)
 
 
 # Optimal values
