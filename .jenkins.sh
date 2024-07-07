@@ -205,11 +205,10 @@ if test -z "$MODE" -o "$MODE" == test; then
         # Note, that the PWD should still be $WORKSPACE/pyomo
         #
         coverage combine || exit 1
-        coverage report -i
+        coverage report -i || exit 1
+        coverage xml -i || exit 1
         export OS=`uname`
-        if test -z "$CODECOV_TOKEN"; then
-            coverage xml
-        else
+        if test -n "$CODECOV_TOKEN"; then
             CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
             if test -z "$CODECOV_REPO_OWNER"; then
                 CODECOV_REPO_OWNER="pyomo"
