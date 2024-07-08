@@ -256,9 +256,6 @@ class _LinearStandardFormCompiler_impl(object):
     def _to_vector(self, data, N, vector_type):
         return np.fromiter(data, vector_type, N)
 
-    def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
-        return scipy.sparse.csr_array((data, index, index_ptr), [nrows, ncols]).tocsc()
-
     def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
         return scipy.sparse.csc_array((data, index, index_ptr), [nrows, ncols])
 
@@ -451,7 +448,6 @@ class _LinearStandardFormCompiler_impl(object):
             if mixed_form:
                 if lb == ub:
                     con_nnz += N
-                    # >>>>>>> templatized-writer
                     rows.append(RowEntry(con, 0))
                     rhs.append(ub - offset)
                     con_data.append(linear_data)

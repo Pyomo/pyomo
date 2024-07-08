@@ -90,9 +90,6 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
         # on the Pyomo expressions
         return np.array([v for v in data])
 
-    def _csc_matrix_from_csr(self, data, index, index_ptr, nrows, ncols):
-        return _CSRMatrix(data, index, index_ptr, nrows, ncols).tocsc()
-
     def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
         return _CSCMatrix(data, index, index_ptr, nrows, ncols)
 
