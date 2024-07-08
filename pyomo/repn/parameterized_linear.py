@@ -211,8 +211,10 @@ _before_child_dispatcher = ParameterizedLinearBeforeChildDispatcher()
 # NEGATION handlers
 #
 
+
 def _handle_negation_pseudo_constant(visitor, node, arg):
     return (_FIXED, -1 * arg[1])
+
 
 #
 # PRODUCT handlers
@@ -243,7 +245,6 @@ def _handle_division_ANY_pseudo_constant(visitor, node, arg1, arg2):
     return arg1
 
 
-
 #
 # EXPONENTIATION handlers
 #
@@ -259,7 +260,6 @@ def _handle_pow_nonlinear(visitor, node, arg1, arg2):
     ans = visitor.Result()
     ans.nonlinear = to_expression(visitor, arg1) ** to_expression(visitor, arg2)
     return _GENERAL, ans
-
 
 
 #
@@ -280,7 +280,7 @@ def define_exit_node_handlers(exit_node_handlers=None):
     exit_node_handlers[NegationExpression].update(
         {(_FIXED,): _handle_negation_pseudo_constant}
     )
-    
+
     exit_node_handlers[ProductExpression].update(
         {
             (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
