@@ -206,8 +206,6 @@ class ParameterizedLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
 
 
 _before_child_dispatcher = ParameterizedLinearBeforeChildDispatcher()
-_exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
-
 
 #
 # NEGATION handlers
@@ -274,15 +272,16 @@ def _handle_unary_pseudo_constant(visitor, node, arg):
     return _FIXED, node.create_node_with_local_data((to_expression(visitor, arg),))
 
 
-def define_exit_node_handlers(_exit_node_handlers=None):
-    if _exit_node_handlers is None:
-        _exit_node_handlers = {}
+def define_exit_node_handlers(exit_node_handlers=None):
+    if exit_node_handlers is None:
+        exit_node_handlers = {}
+    linear.define_exit_node_handlers(exit_node_handlers)
 
-    _exit_node_handlers[NegationExpression].update(
+    exit_node_handlers[NegationExpression].update(
         {(_FIXED,): _handle_negation_pseudo_constant}
     )
     
-    _exit_node_handlers[ProductExpression].update(
+    exit_node_handlers[ProductExpression].update(
         {
             (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
             (_FIXED, _FIXED): _handle_product_pseudo_constant_constant,
@@ -295,11 +294,11 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         }
     )
 
-    _exit_node_handlers[MonomialTermExpression].update(
-        _exit_node_handlers[ProductExpression]
+    exit_node_handlers[MonomialTermExpression].update(
+        exit_node_handlers[ProductExpression]
     )
 
-    _exit_node_handlers[DivisionExpression].update(
+    exit_node_handlers[DivisionExpression].update(
         {
             (_FIXED, _FIXED): _handle_division_pseudo_constant_constant,
             (_FIXED, _CONSTANT): _handle_division_pseudo_constant_constant,
@@ -309,7 +308,7 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         }
     )
 
-    _exit_node_handlers[PowExpression].update(
+    exit_node_handlers[PowExpression].update(
         {
             (_FIXED, _FIXED): _handle_pow_pseudo_constant_constant,
             (_FIXED, _CONSTANT): _handle_pow_pseudo_constant_constant,
@@ -320,19 +319,18 @@ def define_exit_node_handlers(_exit_node_handlers=None):
             (_FIXED, _GENERAL): _handle_pow_nonlinear,
         }
     )
-    _exit_node_handlers[UnaryFunctionExpression].update(
+    exit_node_handlers[UnaryFunctionExpression].update(
         {(_FIXED,): _handle_unary_pseudo_constant}
     )
-    _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
+    exit_node_handlers[AbsExpression] = exit_node_handlers[UnaryFunctionExpression]
 
-    return _exit_node_handlers
+    return exit_node_handlers
 
 
 class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
     Result = ParameterizedLinearRepn
-    exit_node_handlers = define_exit_node_handlers(_exit_node_handlers)
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(exit_node_handlers)
+        _initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
     def __init__(self, subexpression_cache, var_map, var_order, sorter, wrt):
