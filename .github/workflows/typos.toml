@@ -69,4 +69,6 @@ RO = "RO"
 EOF = "EOF"
 # Ignore lst as shorthand for list
 lst = "lst"
+# Abbreviation of gamma (used in stochpdegas1_automatic.py)
+gam = "gam"
 # AS NEEDED: Add More Words Below

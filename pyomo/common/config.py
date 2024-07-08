@@ -996,7 +996,7 @@ documentation: :py:meth:`display()`,
 :py:meth:`generate_documentation()`.  The simplest is
 :py:meth:`display()`, which prints out the current values of the
 configuration object (and if it is a container type, all of it's
-children).  :py:meth:`generate_yaml_template` is simular to
+children).  :py:meth:`generate_yaml_template` is similar to
 :py:meth:`display`, but also includes the description fields as
 formatted comments.
 
