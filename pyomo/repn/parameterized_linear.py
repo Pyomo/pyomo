@@ -283,9 +283,7 @@ _exit_node_handlers[DivisionExpression].update(
 
 
 def _handle_pow_pseudo_constant_constant(visitor, node, arg1, arg2):
-    return _FIXED, to_expression(visitor, arg1) ** to_expression(
-        visitor, arg2
-    )
+    return _FIXED, to_expression(visitor, arg1) ** to_expression(visitor, arg2)
 
 
 def _handle_pow_nonlinear(visitor, node, arg1, arg2):
@@ -315,9 +313,7 @@ _exit_node_handlers[PowExpression].update(
 
 def _handle_unary_pseudo_constant(visitor, node, arg):
     # We override this because we can't blindly use apply_node_operation in this case
-    return _FIXED, node.create_node_with_local_data(
-        (to_expression(visitor, arg),)
-    )
+    return _FIXED, node.create_node_with_local_data((to_expression(visitor, arg),))
 
 
 _exit_node_handlers[UnaryFunctionExpression].update(
