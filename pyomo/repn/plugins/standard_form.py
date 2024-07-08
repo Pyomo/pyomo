@@ -250,6 +250,18 @@ class _LinearStandardFormCompiler_impl(object):
     def __init__(self, config):
         self.config = config
 
+    def _get_visitor(self, var_map, var_order, sorter):
+        return LinearRepnVisitor({}, var_map, var_order, sorter)
+
+    def _to_vector(self, data, N, vector_type):
+        return np.fromiter(data, vector_type, N)
+
+    def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
+        return scipy.sparse.csc_array((data, index, index_ptr), [nrows, ncols])
+
+    def _csr_matrix(self, data, index, index_ptr, nrows, ncols):
+        return scipy.sparse.csr_array((data, index, index_ptr), [nrows, ncols])
+
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
         timer = TicTocTimer(logger=timing_logger)
@@ -296,7 +308,7 @@ class _LinearStandardFormCompiler_impl(object):
         initialize_var_map_from_column_order(model, self.config, var_map)
         var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        visitor = LinearRepnVisitor({}, var_map, var_order, sorter)
+        visitor = self._get_visitor(var_map, var_order, sorter)
         template_visitor = LinearTemplateRepnVisitor({}, var_map, var_order, sorter)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
@@ -365,7 +377,7 @@ class _LinearStandardFormCompiler_impl(object):
 
             obj_nnz += N
             if set_sense is not None and set_sense != obj.sense:
-                obj_data[-1] = -np.fromiter(obj_data[-1], float, N)
+                obj_data[-1] = -self._to_vector(obj_data[-1], N, float)
                 obj_offset[-1] *= -1
             obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
@@ -536,20 +548,21 @@ class _LinearStandardFormCompiler_impl(object):
         nCol -= len(reduced_A_indptr) - 1
         if nCol > 0:
             columns = [v for k, v in zip(active_var_mask, columns) if k]
-            c = scipy.sparse.csc_array(
-                (c.data, c.indices, c.indptr[augmented_mask]),
-                [c.shape[0], len(columns)],
+            c = self._csc_matrix(
+                c.data, c.indices, c.indptr[augmented_mask], c.shape[0], len(columns)
             )
             # active_var_idx[-1] = len(columns)
-            A = scipy.sparse.csc_array(
-                (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
+            A = self._csc_matrix(
+                A.data, A.indices, reduced_A_indptr, A.shape[0], len(columns)
             )
 
         if with_debug_timing:
             timer.toc('Eliminated %s unused columns', nCol, level=logging.DEBUG)
 
         if self.config.nonnegative_vars:
-            c, A, columns, eliminated_vars = _csc_to_nonnegative_vars(c, A, columns)
+            c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(
+                c, A, columns
+            )
         else:
             eliminated_vars = []
 
@@ -560,58 +573,74 @@ class _LinearStandardFormCompiler_impl(object):
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, nCol):
-        if not nnz:
-            return scipy.sparse.csc_array(
-                (data, index, index_ptr), [len(index_ptr) - 1, nCol]
-            )
+        # ESJ TODO: I don't understand why, but even the standard form tests
+        # don't pass with these two lines uncommented... I'm not sure what
+        # changed here compared to the templatized-writer branch...
+        # if not nnz:
+        #     return self._csc_matrix(data, index, index_ptr, nnz, nCol)
 
-        data = np.fromiter(itertools.chain.from_iterable(data), np.float64, nnz)
-        # data = list(itertools.chain(*data))
-        con_index = np.fromiter(itertools.chain.from_iterable(index), np.int32, nnz)
-        # index = list(itertools.chain(*index))
+        data = self._to_vector(
+            itertools.chain.from_iterable(data), nnz, np.float64
+        )
+        index = self._to_vector(
+            itertools.chain.from_iterable(index), nnz, np.int32
+        )
         index_ptr = np.array(index_ptr, dtype=np.int32)
-        A = scipy.sparse.csr_array((data, index, index_ptr), [len(index_ptr) - 1, nCol])
+        A = self._csr_matrix(data, index, index_ptr, len(index_ptr) - 1, nCol)
         A = A.tocsc()
         A.sum_duplicates()
         A.eliminate_zeros()
         return A
 
-
-def _csc_to_nonnegative_vars(c, A, columns):
-    eliminated_vars = []
-    new_columns = []
-    new_c_data = []
-    new_c_indices = []
-    new_c_indptr = [0]
-    new_A_data = []
-    new_A_indices = []
-    new_A_indptr = [0]
-    for i, v in enumerate(columns):
-        lb, ub = v.bounds
-        if lb is None or lb < 0:
-            name = v.name
-            new_columns.append(
-                Var(
-                    name=f'_neg_{i}',
-                    domain=v.domain,
-                    bounds=(0, None if lb is None else -lb),
-                )
-            )
-            new_columns[-1].construct()
-            s, e = A.indptr[i : i + 2]
-            new_A_data.append(-A.data[s:e])
-            new_A_indices.append(A.indices[s:e])
-            new_A_indptr.append(new_A_indptr[-1] + e - s)
-            s, e = c.indptr[i : i + 2]
-            new_c_data.append(-c.data[s:e])
-            new_c_indices.append(c.indices[s:e])
-            new_c_indptr.append(new_c_indptr[-1] + e - s)
-            if ub is None or ub > 0:
-                # Crosses 0; split into 2 vars
+    def _csc_to_nonnegative_vars(self, c, A, columns):
+        eliminated_vars = []
+        new_columns = []
+        new_c_data = []
+        new_c_indices = []
+        new_c_indptr = [0]
+        new_A_data = []
+        new_A_indices = []
+        new_A_indptr = [0]
+        for i, v in enumerate(columns):
+            lb, ub = v.bounds
+            if lb is None or lb < 0:
+                name = v.name
                 new_columns.append(
-                    Var(name=f'_pos_{i}', domain=v.domain, bounds=(0, ub))
+                    Var(
+                        name=f'_neg_{i}',
+                        domain=v.domain,
+                        bounds=(0, None if lb is None else -lb),
+                    )
                 )
                 new_columns[-1].construct()
+                s, e = A.indptr[i : i + 2]
+                new_A_data.append(-A.data[s:e])
+                new_A_indices.append(A.indices[s:e])
+                new_A_indptr.append(new_A_indptr[-1] + e - s)
+                s, e = c.indptr[i : i + 2]
+                new_c_data.append(-c.data[s:e])
+                new_c_indices.append(c.indices[s:e])
+                new_c_indptr.append(new_c_indptr[-1] + e - s)
+                if ub is None or ub > 0:
+                    # Crosses 0; split into 2 vars
+                    new_columns.append(
+                        Var(name=f'_pos_{i}', domain=v.domain, bounds=(0, ub))
+                    )
+                    new_columns[-1].construct()
+                    s, e = A.indptr[i : i + 2]
+                    new_A_data.append(A.data[s:e])
+                    new_A_indices.append(A.indices[s:e])
+                    new_A_indptr.append(new_A_indptr[-1] + e - s)
+                    s, e = c.indptr[i : i + 2]
+                    new_c_data.append(c.data[s:e])
+                    new_c_indices.append(c.indices[s:e])
+                    new_c_indptr.append(new_c_indptr[-1] + e - s)
+                    eliminated_vars.append((v, new_columns[-1] - new_columns[-2]))
+                else:
+                    new_columns[-1].lb = -ub
+                    eliminated_vars.append((v, -new_columns[-1]))
+            else:  # lb >= 0
+                new_columns.append(v)
                 s, e = A.indptr[i : i + 2]
                 new_A_data.append(A.data[s:e])
                 new_A_indices.append(A.indices[s:e])
@@ -620,28 +649,20 @@ def _csc_to_nonnegative_vars(c, A, columns):
                 new_c_data.append(c.data[s:e])
                 new_c_indices.append(c.indices[s:e])
                 new_c_indptr.append(new_c_indptr[-1] + e - s)
-                eliminated_vars.append((v, new_columns[-1] - new_columns[-2]))
-            else:
-                new_columns[-1].lb = -ub
-                eliminated_vars.append((v, -new_columns[-1]))
-        else:  # lb >= 0
-            new_columns.append(v)
-            s, e = A.indptr[i : i + 2]
-            new_A_data.append(A.data[s:e])
-            new_A_indices.append(A.indices[s:e])
-            new_A_indptr.append(new_A_indptr[-1] + e - s)
-            s, e = c.indptr[i : i + 2]
-            new_c_data.append(c.data[s:e])
-            new_c_indices.append(c.indices[s:e])
-            new_c_indptr.append(new_c_indptr[-1] + e - s)
 
-    nCol = len(new_columns)
-    c = scipy.sparse.csc_array(
-        (np.concatenate(new_c_data), np.concatenate(new_c_indices), new_c_indptr),
-        [c.shape[0], nCol],
-    )
-    A = scipy.sparse.csc_array(
-        (np.concatenate(new_A_data), np.concatenate(new_A_indices), new_A_indptr),
-        [A.shape[0], nCol],
-    )
-    return c, A, new_columns, eliminated_vars
+        nCol = len(new_columns)
+        c = self._csc_matrix(
+            np.concatenate(new_c_data),
+            np.concatenate(new_c_indices),
+            new_c_indptr,
+            c.shape[0],
+            nCol,
+        )
+        A = self._csc_matrix(
+            np.concatenate(new_A_data),
+            np.concatenate(new_A_indices),
+            new_A_indptr,
+            A.shape[0],
+            nCol,
+        )
+        return c, A, new_columns, eliminated_vars
