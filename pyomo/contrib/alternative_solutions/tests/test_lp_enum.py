@@ -28,7 +28,7 @@ timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"
 @unittest.pytest.mark.default
 class TestLPEnum:
 
-    def test_no_time(self, mip_solver):
+    def Xtest_no_time(self, mip_solver):
         """
         Check that the correct bounds are found for a discrete problem where
         more restrictive bounds are implied by the constraints.

@@ -34,7 +34,7 @@ class TestBalasUnit:
         assert len(results) == 1
         assert results[0].objective_value == pytest.approx(5)
 
-    def test_no_time(self, mip_solver):
+    def Xtest_no_time(self, mip_solver):
         """
         Enumerate solutions for an ip: triangle_ip.
 

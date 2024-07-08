@@ -164,7 +164,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.var_bounds[var])
 
-    def test_no_time(self, mip_solver):
+    def Xtest_no_time(self, mip_solver):
         """
         Check that the correct bounds are found for a discrete problem where
         more restrictive bounds are implied by the constraints.

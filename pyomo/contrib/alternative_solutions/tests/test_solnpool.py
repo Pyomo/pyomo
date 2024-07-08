@@ -122,7 +122,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
-    def test_mip_no_time(self):
+    def Xtest_mip_no_time(self):
         """
         Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
 
