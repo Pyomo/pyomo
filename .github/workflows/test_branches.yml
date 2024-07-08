@@ -855,9 +855,6 @@ jobs:
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
-        # downgrading after v0.7.0 broke tokenless upload
-        # see codecov/codecov-action#1487
-        version: v0.6.0
         fail_ci_if_error: true
 
     - name: Upload other coverage reports
@@ -870,7 +867,4 @@ jobs:
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
-        # downgrading after v0.7.0 broke tokenless upload
-        # see codecov/codecov-action#1487
-        version: v0.6.0
         fail_ci_if_error: true
