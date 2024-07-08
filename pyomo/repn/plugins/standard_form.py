@@ -580,10 +580,9 @@ class _LinearStandardFormCompiler_impl(object):
             # the C (numpy) side, as opposed to ceating the large [0] *
             # (nCol + 1) array on the Python side and transfer it to C
             # (numpy)
-            return self._csr_matrix(data, index, index_ptr, len(index_ptr) - 1, nCol).tocsc()
-            # return scipy.sparse.csr_array(
-            #     (data, index, index_ptr), [len(index_ptr) - 1, nCol]
-            # ).tocsc()
+            return self._csr_matrix(
+                data, index, index_ptr, len(index_ptr) - 1, nCol
+            ).tocsc()
 
         data = self._to_vector(itertools.chain.from_iterable(data), nnz, np.float64)
         # data = list(itertools.chain(*data))
