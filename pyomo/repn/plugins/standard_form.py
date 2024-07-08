@@ -561,13 +561,19 @@ class _LinearStandardFormCompiler_impl(object):
 
     def _create_csc(self, data, index, index_ptr, nnz, nCol):
         if not nnz:
-            return scipy.sparse.csc_array(
+            # The empty CSC has no (or few) rows and a large number of
+            # columns and no nonzeros: it is faster / easier to create
+            # the empty CSR on the python side and convert it to CSC on
+            # the C (numpy) side, as opposed to ceating the large [0] *
+            # (nCol + 1) array on the Python side and transfer it to C
+            # (numpy)
+            return scipy.sparse.csr_array(
                 (data, index, index_ptr), [len(index_ptr) - 1, nCol]
-            )
+            ).tocsc()
 
         data = np.fromiter(itertools.chain.from_iterable(data), np.float64, nnz)
         # data = list(itertools.chain(*data))
-        con_index = np.fromiter(itertools.chain.from_iterable(index), np.int32, nnz)
+        index = np.fromiter(itertools.chain.from_iterable(index), np.int32, nnz)
         # index = list(itertools.chain(*index))
         index_ptr = np.array(index_ptr, dtype=np.int32)
         A = scipy.sparse.csr_array((data, index, index_ptr), [len(index_ptr) - 1, nCol])
