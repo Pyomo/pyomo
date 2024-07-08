@@ -189,7 +189,23 @@ class _CSCMatrix(_SparseMatrixBase):
         return dense
 
     def sum_duplicates(self):
-        pass
+        nnz = 0
+        ncols = self.shape[1]
+        col_end = 0
+        for i in range(ncols):
+            jj = col_end
+            col_end = self.row_index[i + 1]
+            while jj < col_end:
+                j = self.index[jj]
+                x = self.data[jj]
+                jj += 1
+                while jj < col_end and self.index[jj] == j:
+                    x += self.data[jj]
+                    jj += 1
+                self.row_index[nnz] = j
+                self.data[nnz] = x
+                nnz += 1
+            self.indptr[i + 1] = nnz
 
     def eliminate_zeros(self):
-        pass
+        raise NotImplementedError
