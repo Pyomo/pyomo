@@ -23,7 +23,7 @@ from pyomo.common.config import (
 from pyomo.common.dependencies import scipy, numpy as np
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.gc_manager import PauseGC
-from pyomo.common.numeric_types import native_types
+from pyomo.common.numeric_types import native_types, value
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.core.base import (
