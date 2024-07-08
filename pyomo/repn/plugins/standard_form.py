@@ -247,20 +247,14 @@ class LinearStandardFormCompiler(object):
 
 
 class _LinearStandardFormCompiler_impl(object):
+    # Making these methods class attributes so that others can change the hooks
+    _get_visitor = LinearRepnVisitor
+    _to_vector = np.fromiter
+    _csc_matrix = scipy.sparse.csc_array
+    _csr_matrix = scipy.sparse.csr_array
+
     def __init__(self, config):
         self.config = config
-
-    def _get_visitor(self, var_map, var_order, sorter):
-        return LinearRepnVisitor({}, var_map, var_order, sorter)
-
-    def _to_vector(self, data, N, vector_type):
-        return np.fromiter(data, vector_type, N)
-
-    def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
-        return scipy.sparse.csc_array((data, index, index_ptr), [nrows, ncols])
-
-    def _csr_matrix(self, data, index, index_ptr, nrows, ncols):
-        return scipy.sparse.csr_array((data, index, index_ptr), [nrows, ncols])
 
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
@@ -308,7 +302,7 @@ class _LinearStandardFormCompiler_impl(object):
         initialize_var_map_from_column_order(model, self.config, var_map)
         var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        visitor = self._get_visitor(var_map, var_order, sorter)
+        visitor = self._get_visitor({}, var_map, var_order, sorter)
         template_visitor = LinearTemplateRepnVisitor({}, var_map, var_order, sorter)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
@@ -377,7 +371,7 @@ class _LinearStandardFormCompiler_impl(object):
 
             obj_nnz += N
             if set_sense is not None and set_sense != obj.sense:
-                obj_data[-1] = -self._to_vector(obj_data[-1], N, float)
+                obj_data[-1] = -self._to_vector(obj_data[-1], float, N)
                 obj_offset[-1] *= -1
             obj_index_ptr.append(obj_index_ptr[-1] + N)
             if with_debug_timing:
@@ -549,11 +543,11 @@ class _LinearStandardFormCompiler_impl(object):
         if nCol > 0:
             columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = self._csc_matrix(
-                c.data, c.indices, c.indptr[augmented_mask], c.shape[0], len(columns)
+                (c.data, c.indices, c.indptr[augmented_mask]), [c.shape[0], len(columns)]
             )
             # active_var_idx[-1] = len(columns)
             A = self._csc_matrix(
-                A.data, A.indices, reduced_A_indptr, A.shape[0], len(columns)
+                (A.data, A.indices, reduced_A_indptr), [A.shape[0], len(columns)]
             )
 
         if with_debug_timing:
@@ -581,15 +575,15 @@ class _LinearStandardFormCompiler_impl(object):
             # (nCol + 1) array on the Python side and transfer it to C
             # (numpy)
             return self._csr_matrix(
-                data, index, index_ptr, len(index_ptr) - 1, nCol
+                (data, index, index_ptr), [len(index_ptr) - 1, nCol]
             ).tocsc()
 
-        data = self._to_vector(itertools.chain.from_iterable(data), nnz, np.float64)
+        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
         # data = list(itertools.chain(*data))
-        index = self._to_vector(itertools.chain.from_iterable(index), nnz, np.int32)
+        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         # index = list(itertools.chain(*index))
         index_ptr = np.array(index_ptr, dtype=np.int32)
-        A = self._csr_matrix(data, index, index_ptr, len(index_ptr) - 1, nCol)
+        A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, nCol])
         A = A.tocsc()
         A.sum_duplicates()
         A.eliminate_zeros()
@@ -655,17 +649,17 @@ class _LinearStandardFormCompiler_impl(object):
 
         nCol = len(new_columns)
         c = self._csc_matrix(
-            np.concatenate(new_c_data),
+            (np.concatenate(new_c_data),
             np.concatenate(new_c_indices),
-            new_c_indptr,
-            c.shape[0],
-            nCol,
+            new_c_indptr),
+            [c.shape[0],
+            nCol],
         )
         A = self._csc_matrix(
-            np.concatenate(new_A_data),
+            (np.concatenate(new_A_data),
             np.concatenate(new_A_indices),
-            new_A_indptr,
-            A.shape[0],
-            nCol,
+            new_A_indptr),
+            [A.shape[0],
+            nCol],
         )
         return c, A, new_columns, eliminated_vars
