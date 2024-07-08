@@ -573,18 +573,22 @@ class _LinearStandardFormCompiler_impl(object):
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, nCol):
-        # ESJ TODO: I don't understand why, but even the standard form tests
-        # don't pass with these two lines uncommented... I'm not sure what
-        # changed here compared to the templatized-writer branch...
-        # if not nnz:
-        #     return self._csc_matrix(data, index, index_ptr, nnz, nCol)
+        if not nnz:
+            # The empty CSC has no (or few) rows and a large number of
+            # columns and no nonzeros: it is faster / easier to create
+            # the empty CSR on the python side and convert it to CSC on
+            # the C (numpy) side, as opposed to ceating the large [0] *
+            # (nCol + 1) array on the Python side and transfer it to C
+            # (numpy)
+            return self._csr_matrix(data, index, index_ptr, len(index_ptr) - 1, nCol).tocsc()
+            # return scipy.sparse.csr_array(
+            #     (data, index, index_ptr), [len(index_ptr) - 1, nCol]
+            # ).tocsc()
 
-        data = self._to_vector(
-            itertools.chain.from_iterable(data), nnz, np.float64
-        )
-        index = self._to_vector(
-            itertools.chain.from_iterable(index), nnz, np.int32
-        )
+        data = self._to_vector(itertools.chain.from_iterable(data), nnz, np.float64)
+        # data = list(itertools.chain(*data))
+        index = self._to_vector(itertools.chain.from_iterable(index), nnz, np.int32)
+        # index = list(itertools.chain(*index))
         index_ptr = np.array(index_ptr, dtype=np.int32)
         A = self._csr_matrix(data, index, index_ptr, len(index_ptr) - 1, nCol)
         A = A.tocsc()
