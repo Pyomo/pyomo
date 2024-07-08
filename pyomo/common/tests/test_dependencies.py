@@ -209,7 +209,7 @@ class TestDependencies(unittest.TestCase):
         _and_or = avail0 & avail1 | avail2
         self.assertTrue(_and_or)
 
-        # Verify operator prescedence
+        # Verify operator precedence
         _or_and = avail0 | avail2 & avail2
         self.assertTrue(_or_and)
         _or_and = (avail0 | avail2) & avail2
