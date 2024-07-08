@@ -1987,7 +1987,7 @@ class Set(IndexedComponent):
     class SortedOrder(object):
         pass
 
-    _ValidOrderedAuguments = {True, False, InsertionOrder, SortedOrder}
+    _ValidOrderedArguments = {True, False, InsertionOrder, SortedOrder}
     _UnorderedInitializers = {set}
 
     @overload
@@ -2016,7 +2016,7 @@ class Set(IndexedComponent):
         ordered = kwds.get('ordered', Set.InsertionOrder)
         if ordered is True:
             ordered = Set.InsertionOrder
-        if ordered not in Set._ValidOrderedAuguments:
+        if ordered not in Set._ValidOrderedArguments:
             if inspect.isfunction(ordered):
                 ordered = Set.SortedOrder
             else:
@@ -2033,7 +2033,7 @@ class Set(IndexedComponent):
                             str(_)
                             for _ in sorted_robust(
                                 'Set.' + x.__name__ if isinstance(x, type) else x
-                                for x in Set._ValidOrderedAuguments.union(
+                                for x in Set._ValidOrderedArguments.union(
                                     {'<function>'}
                                 )
                             )

@@ -68,8 +68,9 @@ jobs:
         verbose: true
         # How many times to retry a failed request (defaults to 1)
         retry_count: 3
-        # Exclude Jenkins because it's behind a firewall; ignore RTD because
-        # a magically-generated string is triggering a failure
+        # Exclude:
+        #  - Jenkins because it's behind a firewall
+        #  - RTD because a magically-generated string triggers failures
         exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
 
 
@@ -899,9 +900,6 @@ jobs:
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
-        # downgrading after v0.7.0 broke tokenless upload
-        # see codecov/codecov-action#1487
-        version: v0.6.0
         fail_ci_if_error: true
 
     - name: Upload other coverage reports
@@ -914,7 +912,4 @@ jobs:
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
-        # downgrading after v0.7.0 broke tokenless upload
-        # see codecov/codecov-action#1487
-        version: v0.6.0
         fail_ci_if_error: true
