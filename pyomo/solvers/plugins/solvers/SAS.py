@@ -629,6 +629,7 @@ class SASCAS(SASAbc):
                 data=mpscsv_table_name,
                 casOut={"name": mpsdata_table_name, "replace": True},
                 format="FREE",
+                maxLength=256
             )
 
             # Delete the table we don't need anymore
@@ -641,6 +642,7 @@ class SASCAS(SASAbc):
                     mpsFileString=mps_file.read(),
                     casout={"name": mpsdata_table_name, "replace": True},
                     format="FREE",
+                    maxLength=256
                 )
         return mpsdata_table_name
 
@@ -716,7 +718,7 @@ class SASCAS(SASAbc):
             action = "solveMilp" if self._has_integer_variables() else "solveLp"
 
         # Get a unique identifier, always use the same with different prefixes
-        unique = uuid4().hex[:16]
+        unique = uuid.uuid4().hex[:16]
 
         # Creat the output stream, we want to print to a log string as well as to the console
         self._log = StringIO()
