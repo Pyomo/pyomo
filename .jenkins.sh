@@ -208,7 +208,10 @@ if test -z "$MODE" -o "$MODE" == test; then
         coverage report -i || exit 1
         coverage xml -i || exit 1
         export OS=`uname`
-        if test -n "$CODECOV_TOKEN"; then
+        if test -z "$PYOMO_SOURCE_SHA"; then
+            PYOMO_SOURCE_SHA=$GIT_COMMIT
+        fi
+        if test -n "$CODECOV_TOKEN" -a -n "$PYOMO_SOURCE_SHA"; then
             CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
             if test -z "$CODECOV_REPO_OWNER"; then
                 CODECOV_REPO_OWNER="pyomo"
