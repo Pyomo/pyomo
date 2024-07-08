@@ -10,10 +10,8 @@
 #  ___________________________________________________________________________
 
 import copy
-import enum
 
 from pyomo.common.collections import ComponentSet
-from pyomo.common.enums import ExtendedEnumType
 from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
 from pyomo.core.expr.logical_expr import _flattened
@@ -40,15 +38,10 @@ from pyomo.repn.util import ExprType
 import pyomo.repn.linear as linear
 
 
-class ParameterizedExprType(enum.IntEnum, metaclass=ExtendedEnumType):
-    __base_enum__ = ExprType
-    PSEUDO_CONSTANT = 5
-
-
-_PSEUDO_CONSTANT = ParameterizedExprType.PSEUDO_CONSTANT
-_CONSTANT = ParameterizedExprType.CONSTANT
-_LINEAR = ParameterizedExprType.LINEAR
-_GENERAL = ParameterizedExprType.GENERAL
+_FIXED = ExprType.FIXED
+_CONSTANT = ExprType.CONSTANT
+_LINEAR = ExprType.LINEAR
+_GENERAL = ExprType.GENERAL
 
 
 def _merge_dict(dest_dict, mult, src_dict):
@@ -67,7 +60,7 @@ def _merge_dict(dest_dict, mult, src_dict):
 
 
 def to_expression(visitor, arg):
-    if arg[0] in (_CONSTANT, _PSEUDO_CONSTANT):
+    if arg[0] in (_CONSTANT, _FIXED):
         return arg[1]
     else:
         return arg[1].to_expression(visitor)
@@ -88,7 +81,7 @@ class ParameterizedLinearRepn(LinearRepn):
         elif self.constant.__class__ in native_numeric_types:
             return _CONSTANT, self.multiplier * self.constant
         else:
-            return _PSEUDO_CONSTANT, self.multiplier * self.constant
+            return _FIXED, self.multiplier * self.constant
 
     def to_expression(self, visitor):
         if self.nonlinear is not None:
@@ -131,7 +124,7 @@ class ParameterizedLinearRepn(LinearRepn):
 
         """
         _type, other = other
-        if _type is _CONSTANT or _type is _PSEUDO_CONSTANT:
+        if _type is _CONSTANT or _type is _FIXED:
             self.constant += other
             return
 
@@ -204,7 +197,7 @@ class ParameterizedLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
             if child in visitor.wrt:
                 # pseudo-constant
                 # We aren't treating this Var as a Var for the purposes of this walker
-                return False, (_PSEUDO_CONSTANT, child)
+                return False, (_FIXED, child)
             # This is a normal situation
             ParameterizedLinearBeforeChildDispatcher._record_var(visitor, child)
         ans = visitor.Result()
@@ -221,11 +214,11 @@ _exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
 
 
 def _handle_negation_pseudo_constant(visitor, node, arg):
-    return (_PSEUDO_CONSTANT, -1 * arg[1])
+    return (_FIXED, -1 * arg[1])
 
 
 _exit_node_handlers[NegationExpression].update(
-    {(_PSEUDO_CONSTANT,): _handle_negation_pseudo_constant}
+    {(_FIXED,): _handle_negation_pseudo_constant}
 )
 
 
@@ -241,19 +234,19 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
 
 
 def _handle_product_pseudo_constant_constant(visitor, node, arg1, arg2):
-    return _PSEUDO_CONSTANT, arg1[1] * arg2[1]
+    return _FIXED, arg1[1] * arg2[1]
 
 
 _exit_node_handlers[ProductExpression].update(
     {
         (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
-        (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_product_pseudo_constant_constant,
-        (_PSEUDO_CONSTANT, _CONSTANT): _handle_product_pseudo_constant_constant,
-        (_CONSTANT, _PSEUDO_CONSTANT): _handle_product_pseudo_constant_constant,
-        (_PSEUDO_CONSTANT, _LINEAR): linear._handle_product_constant_ANY,
-        (_LINEAR, _PSEUDO_CONSTANT): linear._handle_product_ANY_constant,
-        (_PSEUDO_CONSTANT, _GENERAL): linear._handle_product_constant_ANY,
-        (_GENERAL, _PSEUDO_CONSTANT): linear._handle_product_ANY_constant,
+        (_FIXED, _FIXED): _handle_product_pseudo_constant_constant,
+        (_FIXED, _CONSTANT): _handle_product_pseudo_constant_constant,
+        (_CONSTANT, _FIXED): _handle_product_pseudo_constant_constant,
+        (_FIXED, _LINEAR): linear._handle_product_constant_ANY,
+        (_LINEAR, _FIXED): linear._handle_product_ANY_constant,
+        (_FIXED, _GENERAL): linear._handle_product_constant_ANY,
+        (_GENERAL, _FIXED): linear._handle_product_ANY_constant,
     }
 )
 _exit_node_handlers[MonomialTermExpression].update(
@@ -266,7 +259,7 @@ _exit_node_handlers[MonomialTermExpression].update(
 
 
 def _handle_division_pseudo_constant_constant(visitor, node, arg1, arg2):
-    return _PSEUDO_CONSTANT, arg1[1] / arg2[1]
+    return _FIXED, arg1[1] / arg2[1]
 
 
 def _handle_division_ANY_pseudo_constant(visitor, node, arg1, arg2):
@@ -276,11 +269,11 @@ def _handle_division_ANY_pseudo_constant(visitor, node, arg1, arg2):
 
 _exit_node_handlers[DivisionExpression].update(
     {
-        (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_division_pseudo_constant_constant,
-        (_PSEUDO_CONSTANT, _CONSTANT): _handle_division_pseudo_constant_constant,
-        (_CONSTANT, _PSEUDO_CONSTANT): _handle_division_pseudo_constant_constant,
-        (_LINEAR, _PSEUDO_CONSTANT): _handle_division_ANY_pseudo_constant,
-        (_GENERAL, _PSEUDO_CONSTANT): _handle_division_ANY_pseudo_constant,
+        (_FIXED, _FIXED): _handle_division_pseudo_constant_constant,
+        (_FIXED, _CONSTANT): _handle_division_pseudo_constant_constant,
+        (_CONSTANT, _FIXED): _handle_division_pseudo_constant_constant,
+        (_LINEAR, _FIXED): _handle_division_ANY_pseudo_constant,
+        (_GENERAL, _FIXED): _handle_division_ANY_pseudo_constant,
     }
 )
 
@@ -290,7 +283,7 @@ _exit_node_handlers[DivisionExpression].update(
 
 
 def _handle_pow_pseudo_constant_constant(visitor, node, arg1, arg2):
-    return _PSEUDO_CONSTANT, to_expression(visitor, arg1) ** to_expression(
+    return _FIXED, to_expression(visitor, arg1) ** to_expression(
         visitor, arg2
     )
 
@@ -305,13 +298,13 @@ def _handle_pow_nonlinear(visitor, node, arg1, arg2):
 
 _exit_node_handlers[PowExpression].update(
     {
-        (_PSEUDO_CONSTANT, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_constant,
-        (_PSEUDO_CONSTANT, _CONSTANT): _handle_pow_pseudo_constant_constant,
-        (_CONSTANT, _PSEUDO_CONSTANT): _handle_pow_pseudo_constant_constant,
-        (_LINEAR, _PSEUDO_CONSTANT): _handle_pow_nonlinear,
-        (_PSEUDO_CONSTANT, _LINEAR): _handle_pow_nonlinear,
-        (_GENERAL, _PSEUDO_CONSTANT): _handle_pow_nonlinear,
-        (_PSEUDO_CONSTANT, _GENERAL): _handle_pow_nonlinear,
+        (_FIXED, _FIXED): _handle_pow_pseudo_constant_constant,
+        (_FIXED, _CONSTANT): _handle_pow_pseudo_constant_constant,
+        (_CONSTANT, _FIXED): _handle_pow_pseudo_constant_constant,
+        (_LINEAR, _FIXED): _handle_pow_nonlinear,
+        (_FIXED, _LINEAR): _handle_pow_nonlinear,
+        (_GENERAL, _FIXED): _handle_pow_nonlinear,
+        (_FIXED, _GENERAL): _handle_pow_nonlinear,
     }
 )
 
@@ -322,13 +315,13 @@ _exit_node_handlers[PowExpression].update(
 
 def _handle_unary_pseudo_constant(visitor, node, arg):
     # We override this because we can't blindly use apply_node_operation in this case
-    return _PSEUDO_CONSTANT, node.create_node_with_local_data(
+    return _FIXED, node.create_node_with_local_data(
         (to_expression(visitor, arg),)
     )
 
 
 _exit_node_handlers[UnaryFunctionExpression].update(
-    {(_PSEUDO_CONSTANT,): _handle_unary_pseudo_constant}
+    {(_FIXED,): _handle_unary_pseudo_constant}
 )
 _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
 
@@ -397,6 +390,6 @@ class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
             return ans
 
         ans = self.Result()
-        assert result[0] in (_CONSTANT, _PSEUDO_CONSTANT)
+        assert result[0] in (_CONSTANT, _FIXED)
         ans.constant = result[1]
         return ans

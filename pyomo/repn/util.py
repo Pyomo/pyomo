@@ -67,6 +67,7 @@ int_float = {int, float}
 
 class ExprType(enum.IntEnum):
     CONSTANT = 0
+    FIXED = 5
     MONOMIAL = 10
     LINEAR = 20
     QUADRATIC = 30
