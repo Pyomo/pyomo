@@ -629,7 +629,7 @@ class SASCAS(SASAbc):
                 data=mpscsv_table_name,
                 casOut={"name": mpsdata_table_name, "replace": True},
                 format="FREE",
-                maxLength=256
+                maxLength=256,
             )
 
             # Delete the table we don't need anymore
@@ -642,7 +642,7 @@ class SASCAS(SASAbc):
                     mpsFileString=mps_file.read(),
                     casout={"name": mpsdata_table_name, "replace": True},
                     format="FREE",
-                    maxLength=256
+                    maxLength=256,
                 )
         return mpsdata_table_name
 
