@@ -1,5 +1,9 @@
 import pytest
-from numpy.testing import assert_array_almost_equal
+try:
+    from numpy.testing import assert_array_almost_equal
+    numpy_available=True
+except:
+    numpy_available=False
 
 import pyomo.environ as pe
 import pyomo.opt
@@ -22,6 +26,7 @@ pytestmark = pytest.mark.parametrize("lp_solver", solvers)
 @unittest.pytest.mark.default
 class TestShiftedIP:
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_abs_objective(self, lp_solver):
         m = tc.get_indexed_pentagonal_pyramid_mip()
         m.x.domain = pe.Reals

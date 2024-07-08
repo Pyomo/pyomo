@@ -9,10 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import numpy.random
-
-# from numpy.random import normal
-from numpy.linalg import norm
+try:
+    import numpy.random
+    from numpy.linalg import norm
+    numpy_available=True
+except:
+    numpy_available=False
 
 import pyomo.environ as pe
 from pyomo.common.modeling import unique_component_name
@@ -102,7 +104,10 @@ def _add_objective_constraint(
     return objective_constraints
 
 
-rng = numpy.random.default_rng(9283749387)
+if numpy_available:
+    rng = numpy.random.default_rng(9283749387)
+else:
+    rng = None
 
 
 def _set_numpy_rng(seed):
@@ -131,7 +136,6 @@ def _get_random_direction(num_dimensions):
             "less than {}.".format(iterations, min_norm)
         )
     )
-
 
 def _filter_model_variables(
     variable_set,

@@ -1,4 +1,9 @@
 import pytest
+try:
+    import numpy
+    numpy_available=True
+except:
+    numpy_available=False
 
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
@@ -63,6 +68,7 @@ class TestLPEnum:
         assert sols[0].objective_value == pytest.approx(6.789473684210527)
         assert sols[1].objective_value == pytest.approx(3.6923076923076916)
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_pentagonal_pyramid(self, mip_solver):
         n = tc.get_pentagonal_pyramid_mip()
         n.o.sense = pe.minimize
@@ -76,6 +82,7 @@ class TestLPEnum:
             print(s)
         assert len(sols) == 6
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_pentagon(self, mip_solver):
         n = tc.get_pentagonal_lp()
 

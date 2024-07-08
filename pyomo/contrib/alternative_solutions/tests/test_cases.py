@@ -1,7 +1,10 @@
 from itertools import product
 from math import ceil, floor
 from collections import Counter
-import numpy as np
+try:
+    import numpy as np
+except:
+    pass
 
 import pyomo.environ as pe
 

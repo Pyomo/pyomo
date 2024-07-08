@@ -1,6 +1,10 @@
-from numpy.testing import assert_array_almost_equal
-import pytest
 import math
+import pytest
+try:
+    from numpy.testing import assert_array_almost_equal
+    numpy_available=True
+except:
+    numpy_available=False
 
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
@@ -21,6 +25,7 @@ timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"
 @unittest.pytest.mark.default
 class TestOBBTUnit:
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_analysis(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.
@@ -36,6 +41,7 @@ class TestOBBTUnit:
         with pytest.raises(AssertionError):
             obbt_analysis_bounds_and_solutions(m, variables=[m.x], solver=mip_solver)
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_some_vars(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.
@@ -49,6 +55,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_continuous(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.
@@ -60,6 +67,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_rel_objective(self, mip_solver):
         """
         Check that relative mip gap constraints are added for a mip with indexed vars and constraints
@@ -71,6 +79,7 @@ class TestOBBTUnit:
         assert len(solns) == 2 * len(all_bounds) + 1
         assert m._obbt.optimality_tol_rel.lb == pytest.approx(2.5)
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_abs_objective(self, mip_solver):
         """
         Check that absolute mip gap constraints are added
@@ -82,6 +91,7 @@ class TestOBBTUnit:
         assert len(solns) == 2 * len(all_bounds) + 1
         assert m._obbt.optimality_tol_abs.lb == pytest.approx(3.01)
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_warmstart(self, mip_solver):
         """
         Check that warmstarting works.
@@ -97,6 +107,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_mip(self, mip_solver):
         """
         Check that bound tightening only occurs for continuous variables
@@ -121,6 +132,7 @@ class TestOBBTUnit:
         assert bounds_tightened
         assert bounds_not_tightened
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_unbounded(self, mip_solver):
         """
         Check that the correct bounds are found for an unbounded problem.
@@ -137,6 +149,7 @@ class TestOBBTUnit:
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
         assert len(solns) == num
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_bound_tightening(self, mip_solver):
         """
         Check that the correct bounds are found for a discrete problem where

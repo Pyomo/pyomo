@@ -1,4 +1,9 @@
-from numpy.linalg import norm
+import pytest
+try:
+    from numpy.linalg import norm
+    numpy_available=True
+except:
+    numpy_available=False
 
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
@@ -137,6 +142,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         self.assertEqual(None, cons[1].upper)
         self.assertEqual(9, cons[1].lower)
 
+    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_random_direction(self):
         """
         Ensure that _get_random_direction returns a normal vector.
