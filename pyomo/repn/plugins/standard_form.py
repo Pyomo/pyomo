@@ -543,7 +543,8 @@ class _LinearStandardFormCompiler_impl(object):
         if nCol > 0:
             columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = self._csc_matrix(
-                (c.data, c.indices, c.indptr[augmented_mask]), [c.shape[0], len(columns)]
+                (c.data, c.indices, c.indptr[augmented_mask]),
+                [c.shape[0], len(columns)],
             )
             # active_var_idx[-1] = len(columns)
             A = self._csc_matrix(
@@ -649,17 +650,11 @@ class _LinearStandardFormCompiler_impl(object):
 
         nCol = len(new_columns)
         c = self._csc_matrix(
-            (np.concatenate(new_c_data),
-            np.concatenate(new_c_indices),
-            new_c_indptr),
-            [c.shape[0],
-            nCol],
+            (np.concatenate(new_c_data), np.concatenate(new_c_indices), new_c_indptr),
+            [c.shape[0], nCol],
         )
         A = self._csc_matrix(
-            (np.concatenate(new_A_data),
-            np.concatenate(new_A_indices),
-            new_A_indptr),
-            [A.shape[0],
-            nCol],
+            (np.concatenate(new_A_data), np.concatenate(new_A_indices), new_A_indptr),
+            [A.shape[0], nCol],
         )
         return c, A, new_columns, eliminated_vars
