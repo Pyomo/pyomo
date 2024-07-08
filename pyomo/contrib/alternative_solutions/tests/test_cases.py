@@ -1,6 +1,7 @@
 from itertools import product
 from math import ceil, floor
 from collections import Counter
+
 try:
     import numpy as np
 except:

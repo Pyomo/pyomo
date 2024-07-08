@@ -1,9 +1,11 @@
 import pytest
+
 try:
     import numpy
-    numpy_available=True
+
+    numpy_available = True
 except:
-    numpy_available=False
+    numpy_available = False
 
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest

@@ -1,9 +1,11 @@
 import pytest
+
 try:
     from numpy.testing import assert_array_almost_equal
-    numpy_available=True
+
+    numpy_available = True
 except:
-    numpy_available=False
+    numpy_available = False
 from collections import Counter
 
 import pyomo.environ as pe
