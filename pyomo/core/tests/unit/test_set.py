@@ -6459,7 +6459,7 @@ c : Size=3, Index=CHOICES, Active=True
             problem.subset_A.add(4)
         # set subset_B
         problem.subset_B.add((3, 4))
-        with self.assertRaisesRegex(ValueError, ".*Cannot add value \(7, 8\)"):
+        with self.assertRaisesRegex(ValueError, r".*Cannot add value \(7, 8\)"):
             problem.subset_B.add((7, 8))
         # set subset_C
         problem.subset_C[2].add(7)
@@ -6475,7 +6475,7 @@ c : Size=3, Index=CHOICES, Active=True
             problem.E[1].add(4)
         # set F
         problem.F[(1, 2, 3)].add((3, 4))
-        with self.assertRaisesRegex(ValueError, ".*Cannot add value \(4, 3\)"):
+        with self.assertRaisesRegex(ValueError, r".*Cannot add value \(4, 3\)"):
             problem.F[(4, 5, 6)].add((4, 3))
         # check them
         self.assertEqual(list(problem.A), [1, 2, 3])
