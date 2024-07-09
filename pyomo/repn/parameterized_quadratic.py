@@ -12,26 +12,26 @@
 from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core.expr.numeric_expr import (
     DivisionExpression,
+    Expr_ifExpression,
     mutable_expression,
     PowExpression,
     ProductExpression,
-    Expr_ifExpression,
 )
 from pyomo.repn.linear import (
     ExitNodeDispatcher,
-    _initialize_exit_node_dispatcher,
+    _handle_division_ANY_constant,
+    _handle_expr_if_const,
+    _handle_pow_ANY_constant,
     _handle_product_ANY_constant,
     _handle_product_constant_ANY,
-    _handle_division_ANY_constant,
-    _handle_pow_ANY_constant,
-    _handle_expr_if_const,
+    _initialize_exit_node_dispatcher,
 )
 from pyomo.repn.parameterized_linear import (
-    ParameterizedLinearRepnVisitor,
-    ParameterizedLinearBeforeChildDispatcher,
-    _handle_division_ANY_pseudo_constant,
     define_exit_node_handlers as _param_linear_def_exit_node_handlers,
+    ParameterizedLinearBeforeChildDispatcher,
+    ParameterizedLinearRepnVisitor,
     to_expression,
+    _handle_division_ANY_pseudo_constant,
 )
 from pyomo.repn.quadratic import (
     QuadraticRepn,
