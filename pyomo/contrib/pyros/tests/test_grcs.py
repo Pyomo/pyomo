@@ -42,6 +42,7 @@ from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
+from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 import time
 import math
 from pyomo.contrib.pyros.util import time_code
@@ -68,7 +69,7 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -4613,6 +4614,76 @@ class RegressionTest(unittest.TestCase):
             msg=(
                 "Returned termination condition for separation error"
                 f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_pyros_nl_writer_tol(self):
+        """
+        Test PyROS subsolver call routine behavior
+        with respect to the NL writer tolerance is as
+        expected.
+        """
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+        m.x2 = Var(initialize=2, bounds=(0, m.q))
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        # fixed just inside the PyROS-specified NL writer tolerance.
+        m.x1.fix(m.x1.upper + 9.9e-5)
+
+        current_nl_writer_tol = pyomo_nl_writer.TOL
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+            decision_rule_order=0,
+            solve_master_globally=False,
+            bypass_global_separation=True,
+        )
+
+        self.assertEqual(
+            pyomo_nl_writer.TOL,
+            current_nl_writer_tol,
+            msg="Pyomo NL writer tolerance not restored as expected.",
+        )
+
+        # fixed just outside the PyROS-specified NL writer tolerance.
+        # this should be exceptional.
+        m.x1.fix(m.x1.upper + 1.01e-4)
+
+        err_msg = (
+            "model contains a trivially infeasible variable.*x1"
+            ".*fixed.*outside bounds"
+        )
+        with self.assertRaisesRegex(InfeasibleConstraintException, err_msg):
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=BoxSet([[0, 1]]),
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+                decision_rule_order=0,
+                solve_master_globally=False,
+                bypass_global_separation=True,
+            )
+
+        self.assertEqual(
+            pyomo_nl_writer.TOL,
+            current_nl_writer_tol,
+            msg=(
+                "Pyomo NL writer tolerance not restored as expected "
+                "after exceptional test."
             ),
         )
 
