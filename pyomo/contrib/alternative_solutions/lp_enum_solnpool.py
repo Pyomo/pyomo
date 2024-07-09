@@ -9,18 +9,61 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from gurobipy import GRB
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import (
     aos_utils,
     shifted_lp,
     solution,
-    solnpool,
 )
+from pyomo.contrib import appsi
 
-#
-# A draft enum tool using the gurobi solution pool
-#
-
+class NoGoodCutGenerator:   
+    def __init__(self, model, variable_groups, zero_threshold, orig_model, 
+                 all_variables, orig_objective, num_solutions):
+        self.model = model
+        self.zero_threshold = zero_threshold
+        self.variable_groups = variable_groups
+        self.variables = aos_utils.get_model_variables(model)
+        self.orig_model = orig_model
+        self.all_variables = all_variables
+        self.orig_objective = orig_objective
+        self.solutions = []
+        self.num_solutions = num_solutions
+                
+    def cut_generator_callback(self, cb_m, cb_opt, cb_where):
+        if cb_where == GRB.Callback.MIPSOL:
+            cb_opt.cbGetSolution(vars=self.variables)
+            print('***FOUND SOLUTION***')
+            
+            for var, index in self.model.var_map.items():
+                var.set_value(var.lb + self.model.var_lower[index].value)
+            sol = solution.Solution(self.orig_model, self.all_variables, 
+                                    objective=self.orig_objective)
+            self.solutions.append(sol)
+            
+            if len(self.solutions) >= self.num_solutions:
+                # TODO: (nicely) terminate the solve
+                continue
+            
+            num_non_zero = 0
+            non_zero_basic_expr = 1
+            for idx in range(len(self.variable_groups)):
+                continuous_var, binary_var = self.variable_groups[idx]
+                for var in continuous_var:
+                    if continuous_var[var].value > self.zero_threshold:
+                        num_non_zero += 1                        
+                        non_zero_basic_expr += binary_var[var]
+            # TODO: JLG - If we want to add the mixed binary case, I think we
+            # need to do it here. Essentially we would want to continue to 
+            # build up the num_non_zero as follows
+            # for binary in binary_vars:
+                # if binary.value > 0.5:
+                    # num_non_zero += 1 - binary
+                # else:
+                    # num_non_zero += binary
+            new_con = self.model.cl.add(non_zero_basic_expr <= num_non_zero)
+            cb_opt.cbLazy(new_con)
 
 def enumerate_linear_solutions_soln_pool(
     model,
@@ -28,12 +71,13 @@ def enumerate_linear_solutions_soln_pool(
     variables="all",
     rel_opt_gap=None,
     abs_opt_gap=None,
+    zero_threshold=1e-5,
     solver_options={},
     tee=False,
 ):
     """
-    Finds alternative optimal solutions a (mixed-integer) linear program using
-    Gurobi's solution pool feature.
+    Finds alternative optimal solutions for a (mixed-binary) linear program
+    using Gurobi's solution pool feature.
 
         Parameters
         ----------
@@ -53,6 +97,9 @@ def enumerate_linear_solutions_soln_pool(
             The absolute optimality gap for the original objective for which
             variable bounds will be found. None indicates that an absolute gap
             constraint will not be added to the model.
+        zero_threshold: float
+            The threshold for which a continuous variables' value is considered
+            to be equal to zero.
         solver_options : dict
             Solver option-value pairs to be passed to the solver.
         tee : boolean
@@ -64,12 +111,15 @@ def enumerate_linear_solutions_soln_pool(
             A list of Solution objects.
             [Solution]
     """
-    opt = pe.SolverFactory("gurobi")
     print("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
 
     # For now keeping things simple
-    # TODO: Relax this
+    # TODO: See if this can be relaxed, but for now just leave as all
     assert variables == "all"
+    if variables == "all":
+        all_variables = aos_utils.get_model_variables(model, "all")
+        
+    # TODO: Check if problem is continuous or mixed binary
 
     opt = pe.SolverFactory("gurobi")
     for parameter, value in solver_options.items():
@@ -100,10 +150,12 @@ def enumerate_linear_solutions_soln_pool(
 
     canonical_block = shifted_lp.get_shifted_linear_model(model)
     cb = canonical_block
-
+    lower_index = list(cb.var_lower.keys())
+    upper_index = list(cb.var_upper.keys())
+    
     # w variables
-    cb.basic_lower = pe.Var(cb.var_lower_index, domain=pe.Binary)
-    cb.basic_upper = pe.Var(cb.var_upper_index, domain=pe.Binary)
+    cb.basic_lower = pe.Var(lower_index, domain=pe.Binary)
+    cb.basic_upper = pe.Var(upper_index, domain=pe.Binary)
     cb.basic_slack = pe.Var(cb.slack_index, domain=pe.Binary)
 
     # w upper bounds constraints
@@ -112,78 +164,45 @@ def enumerate_linear_solutions_soln_pool(
             m.var_lower[var_index]
             <= m.var_lower[var_index].ub * m.basic_lower[var_index]
         )
-
-    cb.bound_lower = pe.Constraint(cb.var_lower_index, rule=bound_lower_rule)
+    cb.bound_lower = pe.Constraint(lower_index, rule=bound_lower_rule)
 
     def bound_upper_rule(m, var_index):
         return (
             m.var_upper[var_index]
             <= m.var_upper[var_index].ub * m.basic_upper[var_index]
         )
-
-    cb.bound_upper = pe.Constraint(cb.var_upper_index, rule=bound_upper_rule)
+    cb.bound_upper = pe.Constraint(upper_index, rule=bound_upper_rule)
 
     def bound_slack_rule(m, var_index):
         return (
             m.slack_vars[var_index]
             <= m.slack_vars[var_index].ub * m.basic_slack[var_index]
         )
-
     cb.bound_slack = pe.Constraint(cb.slack_index, rule=bound_slack_rule)
-    cb.pprint()
-    results = solnpool.gurobi_generate_solutions(cb, num_solutions)
+    
+    cb.cl = pe.ConstraintList()
+    
+    # TODO: If we go the mixed binary route we also want to list the binary variables
+    variable_groups = [
+        (cb.var_lower, cb.basic_lower),
+        (cb.var_upper, cb.basic_upper),
+        (cb.slack_vars, cb.basic_slack),
+    ]
+    cut_generator = NoGoodCutGenerator(cb, variable_groups, zero_threshold,
+                                       model, all_variables, orig_objective,
+                                       num_solutions)
 
-    #     print('Solving Iteration {}: '.format(solution_number), end='')
-    #     results = opt.solve(cb, tee=tee)
-    #     status = results.solver.status
-    #     condition = results.solver.termination_condition
-    #     if condition == pe.TerminationCondition.optimal:
-    #         for var, index in cb.var_map.items():
-    #             var.set_value(var.lb + cb.var_lower[index].value)
-    #         sol = solution.Solution(model, all_variables,
-    #                                  objective=orig_objective)
-    #         solutions.append(sol)
-    #         orig_objective_value = sol.objective[1]
-    #         print('Solved, objective = {}'.format(orig_objective_value))
-    #         for var, index in cb.var_map.items():
-    #             print('{} = {}'.format(var.name, var.lb + cb.var_lower[index].value))
-    #         if hasattr(cb, 'force_out'):
-    #             cb.del_component('force_out')
-    #         if hasattr(cb, 'link_in_out'):
-    #             cb.del_component('link_in_out')
+    opt = appsi.solvers.Gurobi()
+    for parameter, value in solver_options.items():
+        opt.gurobi_options[parameter] = value
+    opt.config.stream_solver = True
+    opt.config.load_solution = False
+    opt.gurobi_options["LazyConstraints"] = 1
+    opt.set_instance(cb)
+    opt.set_callback(cut_generator.cut_generator_callback)
+    opt.solve(cb)
+    
+    aos_block.deactivate()
+    print('COMPLETED LP ENUMERATION ANALYSIS')
 
-    #         if hasattr(cb, 'basic_last_lower'):
-    #             cb.del_component('basic_last_lower')
-    #         if hasattr(cb, 'basic_last_upper'):
-    #             cb.del_component('basic_last_upper')
-    #         if hasattr(cb, 'basic_last_slack'):
-    #             cb.del_component('basic_last_slack')
-
-    #         cb.link_in_out = pe.Constraint(pe.Any)
-    #         cb.basic_last_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    #         cb.basic_last_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    #         cb.basic_last_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    #         basic_last_list = [cb.basic_last_lower, cb.basic_last_upper,
-    #                            cb.basic_last_slack]
-
-    #         num_non_zero = 0
-    #         force_out_expr = -1
-    #         non_zero_basic_expr = 1
-    #         for idx in range(len(variable_groups)):
-    #             continuous_var, binary_var, constraint = variable_groups[idx]
-    #             for var in continuous_var:
-    #                 if continuous_var[var].value > zero_threshold:
-    #                     num_non_zero += 1
-    #                     if var not in binary_var:
-    #                         binary_var[var]
-    #                         constraint[var] = continuous_var[var] <= \
-    #                             continuous_var[var].ub * binary_var[var]
-    #                     non_zero_basic_expr += binary_var[var]
-    #                     basic_var = basic_last_list[idx][var]
-    #                     force_out_expr += basic_var
-    #                     cb.link_in_out[var] = basic_var + binary_var[var] <= 1
-
-    # aos_block.deactivate()
-    # print('COMPLETED LP ENUMERATION ANALYSIS')
-
-    # return solutions
+    return cut_generator.solutions

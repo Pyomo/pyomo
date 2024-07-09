@@ -90,11 +90,11 @@ def enumerate_linear_solutions(
     if not quiet:  # pragma: no cover
         print("STARTING LP ENUMERATION ANALYSIS")
 
-    # TODO: Set this intelligently
+    # TODO: Make this a parameter
     zero_threshold = 1e-5
 
     # For now keeping things simple
-    # TODO: See if this can be relaxed
+    # TODO: See if this can be relaxed, but for now just leave as all
     assert variables == "all"
 
     assert search_mode in [
@@ -102,6 +102,12 @@ def enumerate_linear_solutions(
         "random",
         "norm",
     ], 'search mode must be "optimal", "random", or "norm".'
+    # TODO: Implement thethe random and norm objectives. I think it is sufficent
+    # to only consider the cb.var_lower variables in the objective for these two 
+    # cases. The cb.var_upper variables are directly linked to these to diversity
+    # in one implies diversity in the other. Diversity in the cb.basic_slack 
+    # variables doesn't really matter since we only really care about diversity 
+    # in the original problem and not in the slack space (I think)
 
     if variables == "all":
         all_variables = aos_utils.get_model_variables(model, "all")
@@ -120,7 +126,7 @@ def enumerate_linear_solutions(
     # all_variables = aos_utils.get_model_variables(model, 'all',
     #                                               include_fixed=True)
 
-    # TODO: Relax this if possible
+    # TODO: Relax this if possible - Should allow for the mixed-binary case
     for var in all_variables:
         assert var.is_continuous(), "Model must be an LP"
 
