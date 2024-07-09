@@ -215,10 +215,10 @@ if test -z "$MODE" -o "$MODE" == test; then
             CODECOV_JOB_NAME=$(echo ${JOB_NAME} \
                 | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/').$BUILD_NUMBER.$python
             if test -z "$CODECOV_REPO_OWNER"; then
-                if test -n "$PYOMO_SOURCE_REPO"
-                    CODECOV_REPO_OWNER=$(echo $PYOMO_SOURCE_REPO | cut -d '/' -f 4)
+                if test -n "$PYOMO_SOURCE_REPO"; then
+                    CODECOV_REPO_OWNER=$(echo "$PYOMO_SOURCE_REPO" | cut -d '/' -f 4)
                 elif test -n "$GIT_URL"; then
-                    CODECOV_REPO_OWNER=$(echo $GIT_URL | cut -d '/' -f 4)
+                    CODECOV_REPO_OWNER=$(echo "$GIT_URL" | cut -d '/' -f 4)
                 else
                     CODECOV_REPO_OWNER=""
                 fi
