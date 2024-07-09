@@ -6453,9 +6453,8 @@ c : Size=3, Index=CHOICES, Active=True
         # set subset_A
         problem.subset_A.add(1)
         error_message = (
-            "Cannot add value 4 to Set subset_A.\n"
-            "\tThe value is not in the domain A"
-            )
+            "Cannot add value 4 to Set subset_A.\n\tThe value is not in the domain A"
+        )
         with self.assertRaisesRegex(ValueError, error_message):
             problem.subset_A.add(4)
         # set subset_B
