@@ -347,8 +347,8 @@ class ConstraintData(ActiveComponentData):
             if getattr(expr, 'strict', False) in _strict_relational_exprs:
                 raise ValueError(
                     "Constraint '%s' encountered a strict "
-                    "inequality expression ('>' or '< '). All"
-                    " constraints must be formulated using "
+                    "inequality expression ('>' or '<').  All "
+                    "constraints must be formulated using "
                     "using '<=', '>=', or '=='." % (self.name,)
                 )
             self._expr = expr
