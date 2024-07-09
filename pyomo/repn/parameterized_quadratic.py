@@ -421,13 +421,14 @@ class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
                 for vid, coef in linear_zeros:
                     del ans.linear[vid]
 
-                quadratic_zeros = [
-                    (vidpair, coef)
-                    for vidpair, coef in ans.quadratic.items()
-                    if is_zero(coef)
-                ]
-                for vidpair, coef in quadratic_zeros:
-                    del ans.quadratic[vidpair]
+                if ans.quadratic:
+                    quadratic_zeros = [
+                        (vidpair, coef)
+                        for vidpair, coef in ans.quadratic.items()
+                        if is_zero(coef)
+                    ]
+                    for vidpair, coef in quadratic_zeros:
+                        del ans.quadratic[vidpair]
             elif not mult:
                 # the multiplier has cleared out the entire expression.  Check
                 # if this is suppressing a NaN because we can't clear everything
