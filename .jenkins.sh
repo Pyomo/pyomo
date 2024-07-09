@@ -208,13 +208,28 @@ if test -z "$MODE" -o "$MODE" == test; then
         coverage report -i || exit 1
         coverage xml -i || exit 1
         export OS=`uname`
-        if test -n "$CODECOV_TOKEN"; then
-            CODECOV_JOB_NAME=`echo ${JOB_NAME} | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/'`.$BUILD_NUMBER.$python
+        if test -z "$PYOMO_SOURCE_SHA"; then
+            PYOMO_SOURCE_SHA=$GIT_COMMIT
+        fi
+        if test -n "$CODECOV_TOKEN" -a -n "$PYOMO_SOURCE_SHA"; then
+            CODECOV_JOB_NAME=$(echo ${JOB_NAME} \
+                | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/').$BUILD_NUMBER.$python
             if test -z "$CODECOV_REPO_OWNER"; then
-                CODECOV_REPO_OWNER="pyomo"
+                if test -n "$PYOMO_SOURCE_REPO"
+                    CODECOV_REPO_OWNER=$(echo $PYOMO_SOURCE_REPO | cut -d '/' -f 4)
+                elif test -n "$GIT_URL"; then
+                    CODECOV_REPO_OWNER=$(echo $GIT_URL | cut -d '/' -f 4)
+                else
+                    CODECOV_REPO_OWNER=""
+                fi
             fi
-            if test -z "CODECOV_SOURCE_BRANCH"; then
-                CODECOV_SOURCE_BRANCH="main"
+            if test -z "$CODECOV_SOURCE_BRANCH"; then
+                CODECOV_SOURCE_BRANCH=$(git branch -av --contains "$PYOMO_SOURCE_SHA" \
+                    | grep "${PYOMO_SOURCE_SHA:0:7}" | grep "/origin/" \
+                    | cut -d '/' -f 3 | cut -d' ' -f 1)
+                if test -z "$CODECOV_SOURCE_BRANCH"; then
+                    CODECOV_SOURCE_BRANCH=main
+                fi
             fi
             i=0
             while /bin/true; do
