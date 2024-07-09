@@ -33,10 +33,7 @@ from pyomo.repn.parameterized_linear import (
     to_expression,
     _handle_division_ANY_pseudo_constant,
 )
-from pyomo.repn.quadratic import (
-    QuadraticRepn,
-    _mul_linear_linear,
-)
+from pyomo.repn.quadratic import QuadraticRepn, _mul_linear_linear
 from pyomo.repn.util import ExprType
 
 
@@ -189,8 +186,8 @@ class ParameterizedQuadraticRepn(QuadraticRepn):
 
 
 class ParameterizedQuadraticBeforeChildDispatcher(
-        ParameterizedLinearBeforeChildDispatcher
-        ):
+    ParameterizedLinearBeforeChildDispatcher
+):
     @staticmethod
     def _before_linear(visitor, child):
         return True, None
@@ -419,9 +416,7 @@ class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
                 return ans
             if mult == 1:
                 linear_zeros = [
-                    (vid, coef)
-                    for vid, coef in ans.linear.items()
-                    if is_zero(coef)
+                    (vid, coef) for vid, coef in ans.linear.items() if is_zero(coef)
                 ]
                 for vid, coef in linear_zeros:
                     del ans.linear[vid]
