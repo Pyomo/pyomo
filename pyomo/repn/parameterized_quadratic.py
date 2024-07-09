@@ -31,11 +31,10 @@ from pyomo.repn.parameterized_linear import (
     ParameterizedLinearBeforeChildDispatcher,
     _handle_division_ANY_pseudo_constant,
     define_exit_node_handlers as _param_linear_def_exit_node_handlers,
+    to_expression,
 )
 from pyomo.repn.quadratic import (
     QuadraticRepn,
-    _handle_product_linear_linear,
-    _handle_product_nonlinear,
     _mul_linear_linear,
 )
 from pyomo.repn.util import ExprType
@@ -49,6 +48,10 @@ _QUADRATIC = ExprType.QUADRATIC
 
 
 def _merge_dict(dest_dict, mult, src_dict):
+    """
+    Slightly different from `merge_dict` of
+    from the parameterized module.
+    """
     if not is_equal_to(mult, 1):
         for vid, coef in src_dict.items():
             if vid in dest_dict:
@@ -61,13 +64,6 @@ def _merge_dict(dest_dict, mult, src_dict):
                 dest_dict[vid] += coef
             else:
                 dest_dict[vid] = coef
-
-
-def to_expression(visitor, arg):
-    if arg[0] in (_CONSTANT, _FIXED):
-        return arg[1]
-    else:
-        return arg[1].to_expression(visitor)
 
 
 class ParameterizedQuadraticRepn(QuadraticRepn):
@@ -192,7 +188,9 @@ class ParameterizedQuadraticRepn(QuadraticRepn):
                     self.nonlinear += nl
 
 
-class ParameterizedQuadraticBeforeChildDispatcher(ParameterizedLinearBeforeChildDispatcher):
+class ParameterizedQuadraticBeforeChildDispatcher(
+        ParameterizedLinearBeforeChildDispatcher
+        ):
     @staticmethod
     def _before_linear(visitor, child):
         return True, None
