@@ -481,7 +481,7 @@ class Highs(PersistentBase, PersistentSolver):
             indices_to_remove.append(con_ndx)
             self._mutable_helpers.pop(con, None)
         self._solver_model.deleteRows(
-            len(indices_to_remove), np.array(indices_to_remove)
+            len(indices_to_remove), np.sort(np.array(indices_to_remove))
         )
         con_ndx = 0
         new_con_map = dict()
