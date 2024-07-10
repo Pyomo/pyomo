@@ -1576,14 +1576,14 @@ class BoundsManager(object):
         if comp.ctype == Constraint:
             if comp.is_indexed():
                 for c in comp.values():
-                    self._vars.update(identify_variables(c.body))
+                    self._vars.update(identify_variables(c.expr))
             else:
-                self._vars.update(identify_variables(comp.body))
+                self._vars.update(identify_variables(comp.expr))
         else:
             for c in comp.component_data_objects(
                 Constraint, descend_into=True, active=True, sort=True
             ):
-                self._vars.update(identify_variables(c.body))
+                self._vars.update(identify_variables(c.expr))
 
     def save_bounds(self):
         bnds = ComponentMap()
