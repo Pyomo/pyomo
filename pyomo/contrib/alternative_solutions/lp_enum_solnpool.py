@@ -18,9 +18,18 @@ from pyomo.contrib.alternative_solutions import (
 )
 from pyomo.contrib import appsi
 
-class NoGoodCutGenerator:   
-    def __init__(self, model, variable_groups, zero_threshold, orig_model, 
-                 all_variables, orig_objective, num_solutions):
+
+class NoGoodCutGenerator:
+    def __init__(
+        self,
+        model,
+        variable_groups,
+        zero_threshold,
+        orig_model,
+        all_variables,
+        orig_objective,
+        num_solutions,
+    ):
         self.model = model
         self.zero_threshold = zero_threshold
         self.variable_groups = variable_groups
@@ -30,40 +39,42 @@ class NoGoodCutGenerator:
         self.orig_objective = orig_objective
         self.solutions = []
         self.num_solutions = num_solutions
-                
+
     def cut_generator_callback(self, cb_m, cb_opt, cb_where):
         if cb_where == GRB.Callback.MIPSOL:
             cb_opt.cbGetSolution(vars=self.variables)
-            print('***FOUND SOLUTION***')
-            
+            print("***FOUND SOLUTION***")
+
             for var, index in self.model.var_map.items():
                 var.set_value(var.lb + self.model.var_lower[index].value)
-            sol = solution.Solution(self.orig_model, self.all_variables, 
-                                    objective=self.orig_objective)
+            sol = solution.Solution(
+                self.orig_model, self.all_variables, objective=self.orig_objective
+            )
             self.solutions.append(sol)
-            
+
             if len(self.solutions) >= self.num_solutions:
                 # TODO: (nicely) terminate the solve
-                continue
-            
+                return
+
             num_non_zero = 0
             non_zero_basic_expr = 1
             for idx in range(len(self.variable_groups)):
                 continuous_var, binary_var = self.variable_groups[idx]
                 for var in continuous_var:
                     if continuous_var[var].value > self.zero_threshold:
-                        num_non_zero += 1                        
+                        num_non_zero += 1
                         non_zero_basic_expr += binary_var[var]
             # TODO: JLG - If we want to add the mixed binary case, I think we
-            # need to do it here. Essentially we would want to continue to 
+            # need to do it here. Essentially we would want to continue to
             # build up the num_non_zero as follows
             # for binary in binary_vars:
-                # if binary.value > 0.5:
-                    # num_non_zero += 1 - binary
-                # else:
-                    # num_non_zero += binary
+            # if binary.value > 0.5:
+            # num_non_zero += 1 - binary
+            # else:
+            # num_non_zero += binary
             new_con = self.model.cl.add(non_zero_basic_expr <= num_non_zero)
             cb_opt.cbLazy(new_con)
+
 
 def enumerate_linear_solutions_soln_pool(
     model,
@@ -118,7 +129,7 @@ def enumerate_linear_solutions_soln_pool(
     assert variables == "all"
     if variables == "all":
         all_variables = aos_utils.get_model_variables(model, "all")
-        
+
     # TODO: Check if problem is continuous or mixed binary
 
     opt = pe.SolverFactory("gurobi")
@@ -152,7 +163,7 @@ def enumerate_linear_solutions_soln_pool(
     cb = canonical_block
     lower_index = list(cb.var_lower.keys())
     upper_index = list(cb.var_upper.keys())
-    
+
     # w variables
     cb.basic_lower = pe.Var(lower_index, domain=pe.Binary)
     cb.basic_upper = pe.Var(upper_index, domain=pe.Binary)
@@ -164,6 +175,7 @@ def enumerate_linear_solutions_soln_pool(
             m.var_lower[var_index]
             <= m.var_lower[var_index].ub * m.basic_lower[var_index]
         )
+
     cb.bound_lower = pe.Constraint(lower_index, rule=bound_lower_rule)
 
     def bound_upper_rule(m, var_index):
@@ -171,6 +183,7 @@ def enumerate_linear_solutions_soln_pool(
             m.var_upper[var_index]
             <= m.var_upper[var_index].ub * m.basic_upper[var_index]
         )
+
     cb.bound_upper = pe.Constraint(upper_index, rule=bound_upper_rule)
 
     def bound_slack_rule(m, var_index):
@@ -178,19 +191,26 @@ def enumerate_linear_solutions_soln_pool(
             m.slack_vars[var_index]
             <= m.slack_vars[var_index].ub * m.basic_slack[var_index]
         )
+
     cb.bound_slack = pe.Constraint(cb.slack_index, rule=bound_slack_rule)
-    
+
     cb.cl = pe.ConstraintList()
-    
+
     # TODO: If we go the mixed binary route we also want to list the binary variables
     variable_groups = [
         (cb.var_lower, cb.basic_lower),
         (cb.var_upper, cb.basic_upper),
         (cb.slack_vars, cb.basic_slack),
     ]
-    cut_generator = NoGoodCutGenerator(cb, variable_groups, zero_threshold,
-                                       model, all_variables, orig_objective,
-                                       num_solutions)
+    cut_generator = NoGoodCutGenerator(
+        cb,
+        variable_groups,
+        zero_threshold,
+        model,
+        all_variables,
+        orig_objective,
+        num_solutions,
+    )
 
     opt = appsi.solvers.Gurobi()
     for parameter, value in solver_options.items():
@@ -201,8 +221,8 @@ def enumerate_linear_solutions_soln_pool(
     opt.set_instance(cb)
     opt.set_callback(cut_generator.cut_generator_callback)
     opt.solve(cb)
-    
+
     aos_block.deactivate()
-    print('COMPLETED LP ENUMERATION ANALYSIS')
+    print("COMPLETED LP ENUMERATION ANALYSIS")
 
     return cut_generator.solutions

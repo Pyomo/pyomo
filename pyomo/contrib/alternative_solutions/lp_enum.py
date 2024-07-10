@@ -103,10 +103,10 @@ def enumerate_linear_solutions(
         "norm",
     ], 'search mode must be "optimal", "random", or "norm".'
     # TODO: Implement thethe random and norm objectives. I think it is sufficent
-    # to only consider the cb.var_lower variables in the objective for these two 
+    # to only consider the cb.var_lower variables in the objective for these two
     # cases. The cb.var_upper variables are directly linked to these to diversity
-    # in one implies diversity in the other. Diversity in the cb.basic_slack 
-    # variables doesn't really matter since we only really care about diversity 
+    # in one implies diversity in the other. Diversity in the cb.basic_slack
+    # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
 
     if variables == "all":
