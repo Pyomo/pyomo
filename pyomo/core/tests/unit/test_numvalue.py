@@ -552,10 +552,10 @@ class Test_as_numeric(unittest.TestCase):
 
     @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_numpy_basic_float_registration(self):
-        self.assertIn(numpy.float_, native_numeric_types)
-        self.assertNotIn(numpy.float_, native_integer_types)
-        self.assertIn(numpy.float_, _native_boolean_types)
-        self.assertIn(numpy.float_, native_types)
+        self.assertIn(numpy.float64, native_numeric_types)
+        self.assertNotIn(numpy.float64, native_integer_types)
+        self.assertIn(numpy.float64, _native_boolean_types)
+        self.assertIn(numpy.float64, native_types)
 
     @unittest.skipUnless(numpy_available, "This test requires NumPy")
     def test_numpy_basic_int_registration(self):
