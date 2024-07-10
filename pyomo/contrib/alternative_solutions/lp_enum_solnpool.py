@@ -9,7 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from gurobipy import GRB
+try:
+    from gurobipy import GRB
+
+    gurobi_available = True
+except:
+    gurobi_available = False
+
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
 from pyomo.contrib import appsi
@@ -119,6 +125,11 @@ def enumerate_linear_solutions_soln_pool(
             [Solution]
     """
     print("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
+    #
+    # Setup gurobi
+    #
+    if not gurobi_available:
+        return []
 
     # For now keeping things simple
     # TODO: See if this can be relaxed, but for now just leave as all
