@@ -485,7 +485,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         """
         if self._intermediate_callback is not None:
             if self._use_13arg_callback:
-                # This is the callback signature expected as of Pyomo vTBD
+                # This is the callback signature expected as of Pyomo 6.7.4.dev0
                 return self._intermediate_callback(
                     self._nlp,
                     self,
@@ -502,7 +502,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
                     ls_trials,
                 )
             else:
-                # This is the callback signature expected pre-Pyomo vTBD and
+                # This is the callback signature expected pre-Pyomo 6.7.4.dev0 and
                 # is supported for backwards compatibility.
                 return self._intermediate_callback(
                     self._nlp,
