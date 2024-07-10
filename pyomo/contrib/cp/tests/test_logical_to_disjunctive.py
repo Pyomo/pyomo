@@ -223,10 +223,10 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
 
         # z[3] == a v ! c
         assertExpressionsEqual(
-            self, m.cons[4].expr, (1 - m.z[3]) + (1 - 1) + m.z[1] >= 1
+            self, m.cons[4].expr, (1 - m.z[3]) + m.z[1] >= 1
         )
         assertExpressionsEqual(self, m.cons[5].expr, m.z[3] + (1 - m.z[1]) >= 1)
-        assertExpressionsEqual(self, m.cons[6].expr, 1 - (1 - 1) + m.z[3] >= 1)
+        assertExpressionsEqual(self, m.cons[6].expr, m.z[3] + 1 >= 1)
 
         # z[4] == z[2] ^ z[3]
         assertExpressionsEqual(self, m.cons[7].expr, m.z[4] <= m.z[2])

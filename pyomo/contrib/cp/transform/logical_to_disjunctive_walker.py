@@ -243,6 +243,13 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
+        if child.__class__ is bool:
+            # If we encounter a bool, we are going to need to treat it as
+            # binary explicitly because we are finally pedantic enough in the
+            # expression system to not allow some of the mixing we will need
+            # (like summing a LinearExpression with a bool)
+            return False, int(child)
+
         if child.__class__ in EXPR.native_types:
             return False, child
 
