@@ -1331,7 +1331,17 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.x.lb, 2)
         self.assertAlmostEqual(m.x.ub, 3)
 
+
+class TestFBBT(FbbtTestBase, unittest.TestCase):
+    def setUp(self) -> None:
+        self.tightener = fbbt
+
     def test_ranged_expression(self):
+        # The python version of FBBT is slightly more flexible than
+        # APPSI's cmodel (it allows - and correctly handles -
+        # RangedExpressions with variable lower / upper bounds.  If we
+        # ever port that functionality into APPSI, then this test can be
+        # moved into the base class.
         m = pyo.ConcreteModel()
         m.l = pyo.Var(bounds=(2, None))
         m.x = pyo.Var()
@@ -1353,8 +1363,3 @@ class FbbtTestBase(object):
         self.assertEqual(m.l.bounds, (2, 7))
         self.assertEqual(m.x.bounds, (3, 7))
         self.assertEqual(m.u.bounds, (3, 8))
-
-
-class TestFBBT(FbbtTestBase, unittest.TestCase):
-    def setUp(self) -> None:
-        self.tightener = fbbt
