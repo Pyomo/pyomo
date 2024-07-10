@@ -1389,7 +1389,7 @@ def _fbbt_block(m, config):
     for c in m.component_data_objects(
         ctype=Constraint, active=True, descend_into=config.descend_into, sort=True
     ):
-        for v in identify_variables(c.body):
+        for v in identify_variables(c.expr):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
             if v.lb is None:

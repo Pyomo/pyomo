@@ -1331,6 +1331,29 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.x.lb, 2)
         self.assertAlmostEqual(m.x.ub, 3)
 
+    def test_ranged_expression(self):
+        m = pyo.ConcreteModel()
+        m.l = pyo.Var(bounds=(2, None))
+        m.x = pyo.Var()
+        m.u = pyo.Var(bounds=(None, 8))
+        m.c = pyo.Constraint(expr=pyo.inequality(m.l, m.x, m.u))
+        self.tightener(m)
+        self.tightener(m)
+        self.assertEqual(m.l.bounds, (2, 8))
+        self.assertEqual(m.x.bounds, (2, 8))
+        self.assertEqual(m.u.bounds, (2, 8))
+
+        m = pyo.ConcreteModel()
+        m.l = pyo.Var(bounds=(2, None))
+        m.x = pyo.Var(bounds=(3, 7))
+        m.u = pyo.Var(bounds=(None, 8))
+        m.c = pyo.Constraint(expr=pyo.inequality(m.l, m.x, m.u))
+        self.tightener(m)
+        self.tightener(m)
+        self.assertEqual(m.l.bounds, (2, 7))
+        self.assertEqual(m.x.bounds, (3, 7))
+        self.assertEqual(m.u.bounds, (3, 8))
+
 
 class TestFBBT(FbbtTestBase, unittest.TestCase):
     def setUp(self) -> None:
