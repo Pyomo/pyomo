@@ -243,7 +243,7 @@ class DesignOfExperiments_:
             mod = self.model
         
         # ToDo: potentially work with this for more complicated models
-        # build the large DOE pyomo model
+        # Create the full DoE model (build scenarios for F.D. scheme)
         if not self._built_scenarios:
             self.create_doe_model(mod=mod)
 
@@ -252,7 +252,7 @@ class DesignOfExperiments_:
         
         # Solve the square problem first to initialize the fim and
         # sensitivity constraints
-        # Deactivate object and objective constraints, and fix design variables
+        # Deactivate objective expression and objective constraints (on a block), and fix design variables
         mod.Obj.deactivate()
         mod.obj_cons.deactivate()
         for comp, _ in mod.scenario_blocks[0].experiment_inputs.items():
@@ -282,11 +282,19 @@ class DesignOfExperiments_:
         
         # Solve the full model, which has now been initialized with the square solve
         self.solver.solve(mod, tee=self.tee)
+
+        # Finish timing
+        solve_time = sp_timer.toc(msg=None)
+        self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % dT)        
         
         # ToDo: Make this more complicated? --> Should results be an object? Or just a dict?
         # Populate results object; Important info: FIM, Q, outputs, inputs, param values,
         #                                          measurement error, prior FIM, <etc.>
         fim_local = self.get_FIM()
+        
+        # Make sure stale results don't follow the DoE object instance
+        self.results = {}
+        
         self.results['FIM'] = fim_local
         self.results['Sensitivity Matrix'] = self.get_sensitivity_matrix()
         self.results['Experiment Design'] = self.get_experiment_input_values()
@@ -301,16 +309,20 @@ class DesignOfExperiments_:
         self.results['log10 D-opt'] = np.log10(np.linalg.det(fim_local))
         self.results['log10 E-opt'] = np.log10(min(np.linalg.eig(fim_local)[0]))
         self.results['FIM Condition Number'] = np.linalg.cond(fim_local)
+        self.results['Wall-clock Time'] = solve_time
+        
+        # ToDo: Add ``useful`` fields to the results object?
+        #       objective type (i.e., det, trace, etc.)
+        #       Finite Difference Formula type
+        #       Finite Difference step size
+        #       If parameter scaling is used or not (self.scale_nominal_param_value)
+        #       
         
         # If the user specifies to save the file, do it here as a json
         if results_file is not None:
             assert type(results_file) in [Path, str], "`results_file` must be either a Path object or a string."
             with open(results_file, 'w') as file:
                 json.dump(self.results, file)
-        
-        # Finish timing
-        dT = sp_timer.toc(msg=None)
-        self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % dT)
     
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
@@ -1307,6 +1319,9 @@ class DesignOfExperiments_:
             # ToDo: Make this complex check bit more intuitive
             if np.iscomplex(E_opt):
                 E_opt = 0.0
+                print("Imaginary eigenvalues")
+                print(FIM)
+                print(np.linalg.eig(FIM))
             ME_opt = np.log10(np.linalg.cond(FIM))
             
             # Append the values for each of the experiment inputs
