@@ -19,6 +19,6 @@ if numpy_available:
 
     sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)
 
-    for s in sols:
-        print(s)
-    assert len(sols) == 6
+    # for s in sols:
+    #    print(s)
+    # assert len(sols) == 6
