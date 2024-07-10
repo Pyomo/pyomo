@@ -266,8 +266,6 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         raise NotImplementedError()
 
 
-_exit_node_handlers = deepcopy(linear.LinearRepnVisitor.exit_node_handlers)
-
 
 def _handle_getitem(visitor, node, comp, *args):
     expr = comp[1][tuple(arg[1] for arg in args)]
@@ -292,16 +290,22 @@ def _handle_templatesum(visitor, node, comp, *args):
         raise DeveloperError()
 
 
-_exit_node_handlers[expr.GetItemExpression] = {None: _handle_getitem}
-_exit_node_handlers[expr.TemplateSumExpression] = {None: _handle_templatesum}
+def define_exit_node_handlers(_exit_node_handlers=None):
+    if _exit_node_handlers is None:
+        _exit_node_handlers = {}
+    linear.define_exit_node_handlers(_exit_node_handlers)
+
+    _exit_node_handlers[expr.GetItemExpression] = {None: _handle_getitem}
+    _exit_node_handlers[expr.TemplateSumExpression] = {None: _handle_templatesum}
+
+    return _exit_node_handlers
 
 
 class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
     Result = LinearTemplateRepn
     before_child_dispatcher = LinearTemplateBeforeChildDispatcher()
-    exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = linear.ExitNodeDispatcher(
-        util.initialize_exit_node_dispatcher(_exit_node_handlers)
+        util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
     def __init__(
