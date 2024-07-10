@@ -634,7 +634,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
                         lower_M = self._solve_disjunct_for_M(
-                            other_disjunct, scratch, unsuccessful_solve_msg, active_disjuncts
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            active_disjuncts,
                         )
                 if constraint.upper is not None and upper_M is None:
                     # last resort: calculate
@@ -642,7 +645,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
                         upper_M = self._solve_disjunct_for_M(
-                            other_disjunct, scratch, unsuccessful_solve_msg, active_disjuncts
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            active_disjuncts,
                         )
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
                 transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)

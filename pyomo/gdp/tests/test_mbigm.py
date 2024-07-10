@@ -1033,8 +1033,7 @@ class EdgeCases(unittest.TestCase):
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            21 + m.x - m.y
-            <= 12.0 * m.disjunction.disjuncts[2].binary_indicator_var,
+            21 + m.x - m.y <= 12.0 * m.disjunction.disjuncts[2].binary_indicator_var,
         )
 
         cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[2].constraint[1])
@@ -1042,14 +1041,12 @@ class EdgeCases(unittest.TestCase):
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var
-            <= m.x - (m.y - 9),
+            -12.0 * m.disjunction_disjuncts[1].binary_indicator_var <= m.x - (m.y - 9),
         )
         assertExpressionsEqual(
             self,
             cons[1].expr,
-            m.x - (m.y - 9)
-            <= - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
+            m.x - (m.y - 9) <= -12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
         )
 
     @unittest.skipUnless(
