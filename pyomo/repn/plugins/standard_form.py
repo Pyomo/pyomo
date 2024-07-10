@@ -23,7 +23,7 @@ from pyomo.common.config import (
 from pyomo.common.dependencies import scipy, numpy as np
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.gc_manager import PauseGC
-from pyomo.common.numeric_types import native_types
+from pyomo.common.numeric_types import native_types, value
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.core.base import (
@@ -404,8 +404,7 @@ class _LinearStandardFormCompiler_impl(object):
                 N = len(linear_data)
                 linear_index = map(var_order.__getitem__, linear_index)
             else:
-                # Note: Constraint.lb/ub guarantee a return value that is
-                # either a (finite) native_numeric_types, or None
+                # Note: lb and ub could be a number, expression, or None
                 lb, body, ub = con.normalize_constraint()
                 if lb.__class__ not in native_types:
                     lb = value(lb)
