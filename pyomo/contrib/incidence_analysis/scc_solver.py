@@ -70,9 +70,9 @@ def generate_strongly_connected_components(
         nvar = len(variables)
         ncon = len(constraints)
         raise RuntimeError(
-            f"generate_strongly_connected_components only supports variables"
-            f" systems with the same numbers of variables and equality constraints."
-            f" Got {nvar} variables and {ncon} constraints."
+            "generate_strongly_connected_components only supports systems with the"
+            f" same numbers of variables and equality constraints. Got {nvar}"
+            f" variables and {ncon} constraints."
         )
     if igraph is None:
         igraph = IncidenceGraphInterface()
