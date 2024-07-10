@@ -118,13 +118,13 @@ class TestConstructSeparationProblem(unittest.TestCase):
         # check these individually
         # (i.e. uncertain params have been replaced)
         m = separation_model.user_model
-        u_var = separation_model.uncertain_param_indexed_var[0]
-        u2_var = separation_model.uncertain_param_indexed_var[1]
+        u1_var = separation_model.uncertainty.uncertain_param_var_list[0]
+        u2_var = separation_model.uncertainty.uncertain_param_var_list[1]
         assertExpressionsEqual(
             self,
             separation_model.epigraph_con.expr,
             (
-                m.x1 + m.x2 / 2 + m.x3 / 3 + u_var + u2_var
+                m.x1 + m.x2 / 2 + m.x3 / 3 + u1_var + u2_var
                 - separation_model.epigraph_var <= 0
             ),
         )
@@ -158,14 +158,14 @@ class TestConstructSeparationProblem(unittest.TestCase):
 
         self.assertTrue(separation_model.decision_rule_eqns[0].active)
 
-        u_var = separation_model.uncertain_param_indexed_var[0]
-        u2_var = separation_model.uncertain_param_indexed_var[1]
+        u1_var = separation_model.uncertainty.uncertain_param_var_list[0]
+        u2_var = separation_model.uncertainty.uncertain_param_var_list[1]
         assertExpressionsEqual(
             self,
             separation_model.decision_rule_eqns[0].expr,
             (
                 separation_model.decision_rule_vars[0][0]
-                + u_var * separation_model.decision_rule_vars[0][1]
+                + u1_var * separation_model.decision_rule_vars[0][1]
                 + u2_var * separation_model.decision_rule_vars[0][2]
                 - separation_model.user_model.x3
                 == 0
@@ -181,9 +181,13 @@ class TestConstructSeparationProblem(unittest.TestCase):
         separation_model = construct_separation_problem(model_data, config)
 
         # u, bounds [0, 1]
-        self.assertFalse(separation_model.uncertain_param_indexed_var[0].fixed)
+        self.assertFalse(separation_model.uncertainty.uncertain_param_var_list[0].fixed)
         # u2, bounds [0, 0]
-        separation_model.uncertain_param_indexed_var[1].pprint()
-        self.assertTrue(separation_model.uncertain_param_indexed_var[1].fixed)
-        for con in separation_model.uncertainty_set_conlist.values():
+        separation_model.uncertainty.uncertain_param_var_list[1].pprint()
+        self.assertTrue(separation_model.uncertainty.uncertain_param_var_list[1].fixed)
+        for con in separation_model.uncertainty.uncertainty_cons_list:
             self.assertTrue(con.active, f"Uncertainty set con {con.name!r} inactive.")
+
+
+if __name__ == "__main__":
+    unittest.main()

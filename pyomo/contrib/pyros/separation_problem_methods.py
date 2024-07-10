@@ -10,7 +10,8 @@
 #  ___________________________________________________________________________
 
 """
-Functions for the construction and solving of the GRCS separation problem via ROsolver
+Methods for constructing and solving PyROS separation problems
+and related objects.
 """
 
 from itertools import product
@@ -18,9 +19,14 @@ import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.objective import Objective, maximize, value
-from pyomo.core.base import Var
+from pyomo.core.base import (
+    Block,
+    Constraint,
+    maximize,
+    Objective,
+    value,
+    Var,
+)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import (
     replace_expressions,
@@ -38,12 +44,11 @@ from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
     are_param_vars_fixed_by_bounds,
     call_solver,
-    get_main_elapsed_time,
     check_time_limit_reached,
 )
 
 
-def new_add_uncertainty_set_constraints(separation_model, config):
+def add_uncertainty_set_constraints(separation_model, config):
     """
     Add to the separation model constraints restricting
     the uncertain parameter proxy variables to the user-provided
@@ -51,25 +56,38 @@ def new_add_uncertainty_set_constraints(separation_model, config):
     on the uncertain parameters are also imposed as bounds
     specified on the proxy variables.
     """
-    indexed_param_var = separation_model.uncertain_param_indexed_var
-    separation_model.uncertainty_set_conlist = (
+    separation_model.uncertainty = Block()
+    separation_model.uncertainty.uncertain_param_indexed_var = Var(
+        range(config.uncertainty_set.dim),
+        initialize={
+            idx: nom_val
+            for idx, nom_val in enumerate(config.nominal_uncertain_param_vals)
+        },
+    )
+    indexed_param_var = separation_model.uncertainty.uncertain_param_indexed_var
+    uncertainty_quantification = (
         config.uncertainty_set.set_as_constraint(
             uncertain_params=indexed_param_var,
-            model=separation_model,
-            config=config,
+            block=separation_model.uncertainty,
         )
     )
+
+    # facilitate retrieval later
+    _, uncertainty_cons, param_var_list, aux_vars = uncertainty_quantification
+    separation_model.uncertainty.uncertain_param_var_list = param_var_list
+    separation_model.uncertainty.auxiliary_var_list = aux_vars
+    separation_model.uncertainty.uncertainty_cons_list = uncertainty_cons
+
     config.uncertainty_set.add_bounds_on_uncertain_parameters(
-        model=separation_model,
         config=config,
-        uncertain_param_vars=list(indexed_param_var.values()),
+        uncertain_param_vars=param_var_list,
     )
 
     # preprocess uncertain parameters which have been fixed by bounds
     # in order to simplify the separation problems
     param_var_certain_nomval_zip = zip(
-        separation_model.uncertain_param_indexed_var.values(),
-        are_param_vars_fixed_by_bounds(indexed_param_var.values()),
+        param_var_list,
+        are_param_vars_fixed_by_bounds(param_var_list),
         config.nominal_uncertain_param_vals,
     )
     for idx, (param_var, is_certain, nomval) in enumerate(param_var_certain_nomval_zip):
@@ -106,16 +124,18 @@ def construct_separation_problem(model_data, config):
     for nadjcon in nonadjustable_cons:
         nadjcon.deactivate()
 
+    # add block for the uncertainty set quantification
+    add_uncertainty_set_constraints(separation_model, config)
+
     # the uncertain params function as decision variables
-    # in the separation problems
+    # in the separation problems.
+    # note: expression replacement is performed only for
+    #       the active constraints
     uncertain_params = separation_model.uncertain_params
-    separation_model.uncertain_param_indexed_var = uncertain_param_indexed_var = Var(
-        range(len(uncertain_params)),
-        initialize={idx: param.value for idx, param in enumerate(uncertain_params)},
-    )
+    uncertain_param_vars = separation_model.uncertainty.uncertain_param_var_list
     param_id_to_var_map = {
         id(param): var
-        for param, var in zip(uncertain_params, uncertain_param_indexed_var.values())
+        for param, var in zip(uncertain_params, uncertain_param_vars)
     }
     uncertain_params_set = ComponentSet(uncertain_params)
     adjustable_cons = (
@@ -131,7 +151,6 @@ def construct_separation_problem(model_data, config):
             adjcon.set_value(
                 replace_expressions(adjcon.expr, substitution_map=param_id_to_var_map)
             )
-    new_add_uncertainty_set_constraints(separation_model, config)
 
     # performance inequality constraint expressions
     # become maximization objectives in the separation problems
@@ -756,10 +775,11 @@ def evaluate_performance_constraint_violations(
         of ``model_data.separation_model``.
     """
     # parameter realization for current separation problem solution
+    uncertain_param_vars = (
+        separation_data.separation_model.uncertainty.uncertain_param_var_list
+    )
     violating_param_realization = list(
-        param.value
-        for param
-        in separation_data.separation_model.uncertain_param_indexed_var.values()
+        param_var.value for param_var in uncertain_param_vars
     )
 
     # evaluate violations for all performance constraints provided
@@ -839,11 +859,11 @@ def initialize_separation(perf_con_to_maximize, separation_data, master_data, co
     # for discrete uncertainty sets, the uncertain parameters
     # have already been addressed
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
-        indexed_param_var = sep_model.uncertain_param_indexed_var
+        param_vars = sep_model.uncertainty.uncertain_param_var_list
         param_values = separation_data.points_added_to_master[
             worst_master_block_idx
         ]
-        for param_var, val in zip(indexed_param_var.values(), param_values):
+        for param_var, val in zip(param_vars, param_values):
             param_var.set_value(val)
 
     # confirm the initial point is feasible for cases where
@@ -1106,10 +1126,8 @@ def discrete_solve(
     of scenarios in the uncertainty set.
     """
 
-    # Ensure uncertainty set constraints deactivated
-    separation_data.separation_model.uncertainty_set_conlist.deactivate()
     uncertain_param_vars = list(
-        separation_data.separation_model.uncertain_param_indexed_var.values()
+        separation_data.separation_model.uncertainty.uncertain_param_var_list
     )
 
     # skip scenarios already added to most recent master problem

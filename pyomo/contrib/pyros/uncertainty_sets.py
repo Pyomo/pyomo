@@ -59,19 +59,116 @@ import abc
 import math
 import functools
 from numbers import Integral
+from collections import namedtuple
 from collections.abc import Iterable, MutableSequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
-from pyomo.core.base import ConcreteModel, Objective, maximize, minimize, Block
-from pyomo.core.base.constraint import ConstraintList
-from pyomo.core.base.var import Var, IndexedVar
+from pyomo.core.base import (
+    Block,
+    ConstraintList,
+    ConcreteModel,
+    maximize,
+    minimize,
+    Var,
+    VarData,
+)
 from pyomo.core.expr.numvalue import value, native_numeric_types
+from pyomo.core.util import quicksum, dot_product
 from pyomo.opt.results import check_optimal_termination
-from pyomo.contrib.pyros.util import add_bounds_for_uncertain_parameters
+from pyomo.contrib.pyros.util import standardize_component_data
 
 
 valid_num_types = tuple(native_numeric_types)
+
+
+def standardize_uncertain_param_vars(obj, dim):
+    """
+    Standardize uncertain param vars argument,
+    and check that the length of the resulting list is equal
+    to the specified dimension.
+    """
+    var_data_list = standardize_component_data(
+        obj=obj,
+        valid_ctype=Var,
+        valid_cdatatype=VarData,
+        ctype_validator=None,
+        cdatatype_validator=None,
+        allow_repeats=False,
+        from_iterable=obj,
+    )
+    if len(var_data_list) != dim:
+        raise ValueError(
+            f"Passed {len(var_data_list)} VarData objects representing "
+            "the uncertain parameters, but the uncertainty set is of "
+            f"dimension {dim}."
+        )
+
+    return var_data_list
+
+
+def _setup_standard_uncertainty_set_constraint_block(
+        block,
+        uncertain_param_vars,
+        dim,
+        num_auxiliary_vars=None,
+        ):
+    """
+    Set up block to prepare for declaration of uncertainty
+    set constraints.
+    """
+    if block is None:
+        block = Block(concrete=True)
+
+    if uncertain_param_vars is None:
+        block.uncertain_param_indexed_var = Var(range(dim))
+        param_var_data_list = list(block.uncertain_param_indexed_var.values())
+    else:
+        # resolve arguments
+        param_var_data_list = standardize_uncertain_param_vars(
+            uncertain_param_vars,
+            dim=dim,
+        )
+    block.uncertainty_set_conlist = conlist = ConstraintList()
+
+    auxiliary_var_list = []
+    if num_auxiliary_vars is not None:
+        block.auxiliary_param_var = Var(range(num_auxiliary_vars))
+        auxiliary_var_list = list(block.auxiliary_param_var.values())
+
+    return block, param_var_data_list, conlist, auxiliary_var_list
+
+
+UncertaintyQuantification = namedtuple(
+    "UncertaintyQuantification",
+    ("block", "uncertainty_cons", "uncertain_param_vars", "auxiliary_vars"),
+)
+UncertaintyQuantification.__doc__ = """
+    A collection of modeling components
+    generated or addressed by the `set_as_constraint` method of
+    an uncertainty set object.
+
+    The UncertaintyQuantification class was generated using
+    the builtin `namedtuple()` factory function, so the standard
+    `namedtuple()` attributes and methods (e.g., `_asdict`)
+    are available.
+
+    Parameters
+    ----------
+    block : BlockData
+        Block on which the uncertainty set constraints
+        were added.
+    uncertainty_cons : list of ConstraintData
+        The added uncertainty set constraints.
+    uncertain_param_vars : list of VarData
+        Variables representing the (main) uncertain parameters.
+    auxiliary_vars : list of VarData
+        Variables representing the auxiliary uncertain parameters.
+
+    Attributes
+    ----------
+    Same as Parameters.
+"""
 
 
 def validate_arg_type(
@@ -337,32 +434,27 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    def bounding_model(self, config=None):
+    def _create_bounding_model(self):
         """
         Make uncertain parameter value bounding problems (optimize
         value of each uncertain parameter subject to constraints on the
         uncertain parameters).
 
-        Parameters
-        ----------
-        config : None or ConfigDict, optional
-            If a ConfigDict is provided, then it contains
-            arguments passed to the PyROS solver.
-
         Returns
         -------
         model : ConcreteModel
-            Bounding problem, with all Objectives deactivated.
+            Bounding model, with an indexed mimimization sense
+            Objective with name 'param_var_objectives' consisting
+            of `N` entries, all of which have been deactivated.
         """
         model = ConcreteModel()
-        model.util = Block()
 
         # construct param vars, initialize to nominal point
         model.param_vars = Var(range(self.dim))
 
         # add constraints
-        model.cons = self.set_as_constraint(
-            uncertain_params=model.param_vars, model=model, config=config
+        self.set_as_constraint(
+            uncertain_params=model.param_vars, block=model,
         )
 
         @model.Objective(range(self.dim))
@@ -400,32 +492,19 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This method is invoked during the validation step of a PyROS
         solver call.
         """
-        bounding_model = self.bounding_model(config=config)
-        solver = config.global_solver
-
         # initialize uncertain parameter variables
-        for param, param_var in zip(
-            config.uncertain_params, bounding_model.param_vars.values()
-        ):
-            param_var.set_value(param.value, skip_validation=True)
+        param_bounds_arr = np.array(
+            self._compute_parameter_bounds(solver=config.global_solver)
+        )
 
-        for idx, obj in bounding_model.param_var_objectives.items():
-            # activate objective for corresponding dimension
-            obj.activate()
+        all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+        if not all_bounds_finite:
+            config.progress_logger.info(
+                "Computed coordinate value bounds are not all finite. "
+                f"Got bounds: {param_bounds_arr}"
+            )
 
-            # solve for lower bound, then upper bound
-            for sense in (minimize, maximize):
-                obj.sense = sense
-                res = solver.solve(bounding_model, load_solutions=False, tee=False)
-
-                if not check_optimal_termination(res):
-                    return False
-
-            # ensure sense is minimize when done, deactivate
-            obj.sense = minimize
-            obj.deactivate()
-
-        return True
+        return all_bounds_finite
 
     def is_nonempty(self, config):
         """
@@ -484,25 +563,68 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         # === Ensure point is of correct dimensionality as the uncertain parameters
         if len(point) != self.dim:
             raise AttributeError(
-                "Point must have same dimensions as uncertain parameters."
+                f"Point has {len(point)} entries, but the dimension "
+                f"of the uncertainty set is {self.dim}."
             )
 
         m = ConcreteModel()
-        the_params = []
-        for i in range(self.dim):
-            m.add_component("x_%s" % i, Var(initialize=point[i]))
-            the_params.append(getattr(m, "x_%s" % i))
+        uncertainty_quantification = self.set_as_constraint(block=m)
+        for var, val in zip(uncertainty_quantification.uncertain_param_vars, point):
+            var.set_value(val)
 
-        # === Generate constraint for set
-        set_constraint = self.set_as_constraint(uncertain_params=the_params)
-
-        # === value() returns True if the constraint is satisfied, False else.
-        is_in_set = all(value(con.expr) for con in set_constraint.values())
+        # since constraint expressions are relational,
+        # `value()` returns True if constraint satisfied, False else
+        # NOTE: this check may be inaccurate if there are auxiliary
+        #       variables and they have not been initialized to
+        #       feasible values
+        is_in_set = all(
+            value(con.expr) for con in uncertainty_quantification.uncertainty_cons
+        )
 
         return is_in_set
 
+    def _compute_parameter_bounds(self, solver):
+        """
+        Compute coordinate value bounds for every dimension
+        of `self` by solving a bounding model.
+        """
+        bounding_model = self._create_bounding_model()
+        param_bounds = []
+        for idx, obj in bounding_model.param_var_objectives.items():
+            # activate objective for corresponding dimension
+            obj.activate()
+            bounds = []
+
+            # solve for lower bound, then upper bound
+            # solve should be successful
+            for sense in (minimize, maximize):
+                obj.sense = sense
+                res = solver.solve(
+                    bounding_model,
+                    load_solutions=False,
+                )
+                if check_optimal_termination(res):
+                    bounding_model.solutions.load_from(res)
+                else:
+                    raise ValueError(
+                        "Could not compute "
+                        f"{'lower' if sense == minimize else 'upper'} "
+                        f"bound in dimension {idx + 1} of {self.dim}. "
+                        f"Solver status summary:\n {res.solver}."
+                    )
+                bounds.append(value(obj))
+
+            # add parameter bounds for current dimension
+            param_bounds.append(tuple(bounds))
+
+            # ensure sense is minimize when done, deactivate
+            obj.sense = minimize
+            obj.deactivate()
+
+        return param_bounds
+
     @staticmethod
-    def add_bounds_on_uncertain_parameters(model, config, uncertain_param_vars=None):
+    def add_bounds_on_uncertain_parameters(config, uncertain_param_vars):
         """
         Specify declared bounds for Vars representing the uncertain
         parameters constrained to an uncertainty set.
@@ -532,9 +654,17 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Modify default retrieval of `uncertain_param_vars`
         once subproblem formulations have been updated.
         """
-        if uncertain_param_vars is None:
-            uncertain_param_vars = list(model.util.uncertain_param_vars.values())
-        parameter_bounds = config.uncertainty_set.parameter_bounds
+        uncertainty_set = config.uncertainty_set
+        uncertain_param_vars = standardize_uncertain_param_vars(
+            uncertain_param_vars, uncertainty_set.dim,
+        )
+
+        parameter_bounds = uncertainty_set.parameter_bounds
+        if not parameter_bounds:
+            parameter_bounds = uncertainty_set._compute_parameter_bounds(
+                solver=config.global_solver,
+            )
+
         for (lb, ub), param_var in zip(parameter_bounds, uncertain_param_vars):
             param_var.setlb(lb)
             param_var.setub(ub)
@@ -844,16 +974,16 @@ class BoxSet(UncertaintySet):
         """
         return [tuple(bound) for bound in self.bounds]
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of box constraints on a given sequence
         of uncertain parameter objects.
 
         Parameters
         ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
+        uncertain_params : Var, VarData, or list of (Var, VarData)
+            Variables representing the uncertain parameters upon
+            which the constraints are to be imposed.
         **kwargs : dict, optional
             Additional arguments. These arguments are currently
             ignored.
@@ -863,16 +993,25 @@ class BoxSet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-        conlist = ConstraintList()
-        conlist.construct()
+        block, param_var_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
+            )
+        )
 
-        set_i = list(range(len(uncertain_params)))
+        vardata_bound_zip = zip(param_var_list, self.bounds)
+        for idx, (param_var, (lb, ub)) in enumerate(vardata_bound_zip):
+            uncertainty_conlist.add((lb, param_var, ub))
 
-        for i in set_i:
-            conlist.add(uncertain_params[i] >= self.bounds[i][0])
-            conlist.add(uncertain_params[i] <= self.bounds[i][1])
-
-        return conlist
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_list,
+            uncertainty_cons=list(uncertainty_conlist.values()),
+            auxiliary_vars=aux_var_list,
+        )
 
 
 class CardinalitySet(UncertaintySet):
@@ -1055,7 +1194,7 @@ class CardinalitySet(UncertaintySet):
         ]
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params, block=None):
         """
         Construct a list of cardinality set constraints on
         a sequence of uncertain parameter objects.
@@ -1076,28 +1215,32 @@ class CardinalitySet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-        # === Ensure dimensions
-        if len(uncertain_params) != len(self.origin):
-            raise AttributeError(
-                "Dimensions of origin and uncertain_param lists must be equal."
+        # resolve arguments
+        block, param_var_data_list, conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
             )
+        )
 
-        model = kwargs['model']
-        set_i = list(range(len(uncertain_params)))
-        model.util.cassi = Var(set_i, initialize=0, bounds=(0, 1))
+        cardinality_zip = zip(
+            self.origin,
+            self.positive_deviation,
+            aux_var_list,
+            param_var_data_list,
+        )
+        for orig_val, pos_dev, auxvar, param_var in cardinality_zip:
+            conlist.add(orig_val + pos_dev * auxvar == param_var)
 
-        # Make n equality constraints
-        conlist = ConstraintList()
-        conlist.construct()
-        for i in set_i:
-            conlist.add(
-                self.origin[i] + self.positive_deviation[i] * model.util.cassi[i]
-                == uncertain_params[i]
-            )
+        conlist.add(quicksum(aux_var_list) <= self.gamma)
 
-        conlist.add(sum(model.util.cassi[i] for i in set_i) <= self.gamma)
-
-        return conlist
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=list(conlist.values()),
+            auxiliary_vars=aux_var_list,
+        )
 
     def point_in_set(self, point):
         """
@@ -1327,7 +1470,7 @@ class PolyhedralSet(UncertaintySet):
         """
         return []
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of polyhedral constraints on a given sequence
         of uncertain parameter objects.
@@ -1346,53 +1489,23 @@ class PolyhedralSet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-
-        # === Ensure valid dimensions of lhs and rhs w.r.t uncertain_params
-        if np.asarray(self.coefficients_mat).shape[1] != len(uncertain_params):
-            raise AttributeError(
-                "Columns of coefficients_mat matrix "
-                "must equal length of uncertain parameters list."
+        block, param_var_data_list, conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
             )
+        )
 
-        set_i = list(range(len(self.coefficients_mat)))
+        for row, rhs_val in zip(self.coefficients_mat, self.rhs_vec):
+            lhs_expr = dot_product(row, param_var_data_list, index=range(row.size))
+            conlist.add(lhs_expr <= rhs_val)
 
-        conlist = ConstraintList()
-        conlist.construct()
-
-        for i in set_i:
-            constraint = 0
-            for j in range(len(uncertain_params)):
-                constraint += float(self.coefficients_mat[i][j]) * uncertain_params[j]
-            conlist.add(constraint <= float(self.rhs_vec[i]))
-
-        return conlist
-
-    @staticmethod
-    def add_bounds_on_uncertain_parameters(model, config, uncertain_param_vars=None):
-        """
-        Specify the numerical bounds for each of a sequence of uncertain
-        parameters, represented by Pyomo `Var` objects, in a modeling
-        object. The numerical bounds are specified through the `.lb()`
-        and `.ub()` attributes of the `Var` objects.
-
-        Parameters
-        ----------
-        model : ConcreteModel
-            Model of interest (parent model of the uncertain parameter
-            objects for which to specify bounds).
-        config : ConfigDict
-            PyROS solver config.
-
-        Notes
-        -----
-        This method is invoked in advance of a PyROS separation
-        subproblem.
-        """
-        if uncertain_param_vars is None:
-            uncertain_param_vars = list(model.util.uncertain_param_vars.values())
-        add_bounds_for_uncertain_parameters(
-            config=config,
-            uncertain_param_vars=uncertain_param_vars,
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=list(conlist.values()),
+            auxiliary_vars=aux_var_list,
         )
 
 
@@ -1675,59 +1788,22 @@ class BudgetSet(UncertaintySet):
 
         return bounds
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, **kwargs):
         """
         Construct a list of the constraints defining the budget
         set on a given sequence of uncertain parameter objects.
 
         Parameters
         ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
         **kwargs : dict, optional
-            Additional arguments. These arguments are currently
-            ignored.
+            Arguments to ``PolyhedralSet.set_as_constraint``.
 
         Returns
         -------
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-        # === Ensure matrix cols == len uncertain params
-        if self.dim != len(uncertain_params):
-            raise ValueError(
-                f"Argument 'uncertain_params' must contain {self.dim}"
-                "Param objects to match BudgetSet dimension"
-                f"(provided {len(uncertain_params)} objects)"
-            )
-
-        return PolyhedralSet.set_as_constraint(self, uncertain_params)
-
-    @staticmethod
-    def add_bounds_on_uncertain_parameters(model, config):
-        """
-        Specify the numerical bounds for each of a sequence of uncertain
-        parameters, represented by Pyomo `Var` objects, in a modeling
-        object. The numerical bounds are specified through the `.lb()`
-        and `.ub()` attributes of the `Var` objects.
-
-        Parameters
-        ----------
-        model : ConcreteModel
-            Model of interest (parent model of the uncertain parameter
-            objects for which to specify bounds).
-        config : ConfigDict
-            PyROS solver config.
-
-        Notes
-        -----
-        This method is invoked in advance of a PyROS separation
-        subproblem.
-        """
-        # In this case, we use the UncertaintySet class method
-        # because we have numerical parameter_bounds
-        UncertaintySet.add_bounds_on_uncertain_parameters(model=model, config=config)
+        return PolyhedralSet.set_as_constraint(self, **kwargs)
 
 
 class FactorModelSet(UncertaintySet):
@@ -1988,7 +2064,7 @@ class FactorModelSet(UncertaintySet):
 
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of factor model constraints on a given sequence
         of uncertain parameter objects.
@@ -2009,36 +2085,36 @@ class FactorModelSet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-        model = kwargs['model']
-
-        # === Ensure dimensions
-        if len(uncertain_params) != len(self.origin):
-            raise AttributeError(
-                "Dimensions of origin and uncertain_param lists must be equal."
+        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=self.number_of_factors,
             )
-
-        # Make F-dim cassi variable
-        n = list(range(self.number_of_factors))
-        model.util.cassi = Var(n, initialize=0, bounds=(-1, 1))
-
-        conlist = ConstraintList()
-        conlist.construct()
-
-        disturbances = [
-            sum(self.psi_mat[i][j] * model.util.cassi[j] for j in n)
-            for i in range(len(uncertain_params))
-        ]
-
-        # Make n equality constraints
-        for i in range(len(uncertain_params)):
-            conlist.add(self.origin[i] + disturbances[i] == uncertain_params[i])
-        conlist.add(
-            sum(model.util.cassi[i] for i in n) <= +self.beta * self.number_of_factors
         )
-        conlist.add(
-            sum(model.util.cassi[i] for i in n) >= -self.beta * self.number_of_factors
+
+        factor_zip = zip(self.origin, self.psi_mat, param_var_data_list)
+        for orig_val, psi_row, param_var in factor_zip:
+            psi_dot_product = dot_product(
+                psi_row, aux_var_list, index=range(self.number_of_factors)
+            )
+            uncertainty_conlist.add(orig_val + psi_dot_product == param_var)
+
+        # absolute value constraints on sum of auxiliary vars
+        beta_F = self.beta * self.number_of_factors
+        uncertainty_conlist.add((-beta_F, quicksum(aux_var_list), beta_F))
+
+        for var in aux_var_list:
+            var.setlb(-1)
+            var.setub(1)
+
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=list(uncertainty_conlist.values()),
+            auxiliary_vars=aux_var_list,
         )
-        return conlist
 
     def point_in_set(self, point):
         """
@@ -2054,18 +2130,52 @@ class FactorModelSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        inv_psi = np.linalg.pinv(self.psi_mat)
-        diff = np.asarray(list(point[i] - self.origin[i] for i in range(len(point))))
-        cassis = np.dot(inv_psi, np.transpose(diff))
+        point_arr = np.array(point)
 
-        if abs(
-            sum(cassi for cassi in cassis)
-        ) <= self.beta * self.number_of_factors and all(
-            cassi >= -1 and cassi <= 1 for cassi in cassis
-        ):
-            return True
+        is_pinv_applicable = (
+            self.dim > self.number_of_factors
+            and np.linalg.matrix_rank(self.psi_mat) == self.number_of_factors
+        )
+        if is_pinv_applicable:
+            # full-rank skinny matrix.
+            # pseudoinverse uniquely determines the values of the
+            # auxiliary parameters
+            inv_psi = np.linalg.pinv(self.psi_mat)
+            aux_space_pt = inv_psi @ (point_arr - self.origin)
+
+            # account for (im)precision
+            tol = 1e-8
+
+            return (
+                abs(aux_space_pt.sum()) <= self.beta * self.number_of_factors + tol
+                and np.all(np.abs(aux_space_pt) <= 1 + tol)
+            )
         else:
-            return False
+            # check existence of point in auxiliary variable
+            # space using LPs
+            res = sp.optimize.linprog(
+                c=np.zeros(self.number_of_factors),
+                A_eq=self.psi_mat,
+                b_eq=point_arr - self.origin,
+                A_ub=np.vstack(
+                    [np.ones(self.number_of_factors), -np.ones(self.number_of_factors)]
+                ),
+                b_ub=np.full(2, self.beta * self.number_of_factors),
+                bounds=(-1, 1),
+                method="simplex",
+            )
+
+            # check termination
+            if res.success and res.status == 0:
+                return True
+            elif res.status == 2:
+                return False
+            else:
+                raise ValueError(
+                    f"Could not conclude whether the point {point} "
+                    f"is in the factor model set {self}."
+                    f" Linprog results:\n {res} "
+                )
 
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
@@ -2212,7 +2322,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         ]
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, model=None, config=None):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of ellipsoidal constraints on a given sequence
         of uncertain parameter objects.
@@ -2232,43 +2342,35 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-        all_params = list()
-
-        # expand all uncertain parameters to a list.
-        # this accounts for the cases in which `uncertain_params`
-        # consists of indexed model components,
-        # or is itself a single indexed component
-        if not isinstance(uncertain_params, (tuple, list)):
-            uncertain_params = [uncertain_params]
-
-        all_params = []
-        for uparam in uncertain_params:
-            all_params.extend(uparam.values())
-
-        if len(all_params) != len(self.center):
-            raise AttributeError(
-                f"Center of ellipsoid is of dimension {len(self.center)},"
-                f" but vector of uncertain parameters is of dimension"
-                f" {len(all_params)}"
+        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
             )
-
-        zip_all = zip(all_params, self.center, self.half_lengths)
-        diffs_squared = list()
+        )
 
         # now construct the constraints
-        conlist = ConstraintList()
-        conlist.construct()
+        diffs_squared = list()
+        zip_all = zip(param_var_data_list, self.center, self.half_lengths)
         for param, ctr, half_len in zip_all:
             if half_len > 0:
                 diffs_squared.append((param - ctr) ** 2 / (half_len) ** 2)
             else:
                 # equality constraints for parameters corresponding to
                 # half-lengths of zero
-                conlist.add(param == ctr)
+                uncertainty_conlist.add(param == ctr)
 
-        conlist.add(sum(diffs_squared) <= 1)
+        if diffs_squared:
+            uncertainty_conlist.add(quicksum(diffs_squared) <= 1)
 
-        return conlist
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=list(uncertainty_conlist.values()),
+            auxiliary_vars=aux_var_list,
+        )
 
 
 class EllipsoidalSet(UncertaintySet):
@@ -2510,7 +2612,7 @@ class EllipsoidalSet(UncertaintySet):
         ]
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of ellipsoidal constraints on a given sequence
         of uncertain parameter objects.
@@ -2530,34 +2632,37 @@ class EllipsoidalSet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-        inv_covar = np.linalg.inv(self.shape_matrix)
-
-        if len(uncertain_params) != len(self.center):
-            raise AttributeError(
-                "Center of ellipsoid must be same dimensions as vector of uncertain parameters."
+        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
             )
+        )
 
-        # Calculate row vector of differences
-        diff = []
-        # === Assume VarList uncertain_param_vars
-        for idx, i in enumerate(uncertain_params):
-            if uncertain_params[idx].is_indexed():
-                for index in uncertain_params[idx]:
-                    diff.append(uncertain_params[idx][index] - self.center[idx])
-            else:
-                diff.append(uncertain_params[idx] - self.center[idx])
-
-        # Calculate inner product of difference vector and covar matrix
-        product1 = [
-            sum([x * y for x, y in zip(diff, column(inv_covar, i))])
-            for i in range(len(inv_covar))
+        center_offset_exprs = [
+            param_var - ctrval
+            for param_var, ctrval in zip(param_var_data_list, self.center)
         ]
-        constraint = sum([x * y for x, y in zip(product1, diff)])
 
-        conlist = ConstraintList()
-        conlist.construct()
-        conlist.add(constraint <= self.scale)
-        return conlist
+        left_product_exprs = [
+            dot_product(column, center_offset_exprs, index=range(self.dim))
+            for column in np.linalg.inv(self.shape_matrix).T
+        ]
+        final_lhs_expr = dot_product(
+            left_product_exprs,
+            center_offset_exprs,
+            index=range(self.dim),
+        )
+        uncertainty_conlist.add(final_lhs_expr <= self.scale)
+
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=list(uncertainty_conlist.values()),
+            auxiliary_vars=aux_var_list,
+        )
 
 
 class DiscreteScenarioSet(UncertaintySet):
@@ -2673,7 +2778,7 @@ class DiscreteScenarioSet(UncertaintySet):
         """
         return True
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of constraints on a given sequence
         of uncertain parameter objects.
@@ -2693,21 +2798,24 @@ class DiscreteScenarioSet(UncertaintySet):
             The constraints on the uncertain parameters.
         """
         # === Ensure point is of correct dimensionality as the uncertain parameters
-        dim = len(uncertain_params)
-        if any(len(d) != dim for d in self.scenarios):
-            raise AttributeError(
-                "All scenarios must have same dimensions as uncertain parameters."
+        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
             )
+        )
 
-        conlist = ConstraintList()
-        conlist.construct()
+        # no constraints declared for the discrete set;
+        # instead, the param vars are fixed during separation
 
-        for n in list(range(len(self.scenarios))):
-            for i in list(range(len(uncertain_params))):
-                conlist.add(uncertain_params[i] == self.scenarios[n][i])
-
-        conlist.deactivate()
-        return conlist
+        return UncertaintyQuantification(
+            block=block,
+            uncertainty_cons=uncertainty_conlist,
+            uncertain_param_vars=param_var_data_list,
+            auxiliary_vars=aux_var_list,
+        )
 
     def point_in_set(self, point):
         """
@@ -2855,61 +2963,13 @@ class IntersectionSet(UncertaintySet):
         else:
             return False
 
-    def is_empty_intersection(self, uncertain_params, nlp_solver):
-        """
-        Determine if intersection is empty.
-
-        Arguments
-        ---------
-        uncertain_params : list of Param or list of Var
-            List of uncertain parameter objects.
-        nlp_solver : Pyomo SolverFactory object
-            NLP solver.
-
-        Returns
-        -------
-        is_empty_intersection : bool
-            True if the intersection is certified to be empty,
-            and False otherwise.
-        """
-
-        # === Non-emptiness check for the set intersection
-        is_empty_intersection = True
-        if any(a_set.type == "discrete" for a_set in self.all_sets):
-            disc_sets = (a_set for a_set in self.all_sets if a_set.type == "discrete")
-            disc_set = min(
-                disc_sets, key=lambda x: len(x.scenarios)
-            )  # minimum set of scenarios
-            # === Ensure there is at least one scenario from this discrete set which is a member of all other sets
-            for scenario in disc_set.scenarios:
-                if all(a_set.point_in_set(point=scenario) for a_set in self.all_sets):
-                    is_empty_intersection = False
-                    break
-        else:
-            # === Compile constraints and solve NLP
-            m = ConcreteModel()
-            m.obj = Objective(expr=0)  # dummy objective required if using baron
-            m.param_vars = Var(uncertain_params.index_set())
-            for a_set in self.all_sets:
-                m.add_component(
-                    a_set.type + "_constraints",
-                    a_set.set_as_constraint(uncertain_params=m.param_vars),
-                )
-            try:
-                res = nlp_solver.solve(m)
-            except:
-                raise ValueError(
-                    "Solver terminated with an error while checking set intersection non-emptiness."
-                )
-            if check_optimal_termination(res):
-                is_empty_intersection = False
-        return is_empty_intersection
-
     # === Define pairwise intersection function
     @staticmethod
     def intersect(Q1, Q2):
         """
-        Obtain the intersection of two uncertainty sets.
+        Obtain the intersection of two uncertainty sets,
+        accounting for the case where either of the two sets
+        is discrete.
 
         Parameters
         ----------
@@ -2918,29 +2978,21 @@ class IntersectionSet(UncertaintySet):
 
         Returns
         -------
-        : DiscreteScenarioSet or IntersectionSet
+        DiscreteScenarioSet or IntersectionSet
             Intersection of the sets. A `DiscreteScenarioSet` is
             returned if both operand sets are `DiscreteScenarioSet`
             instances; otherwise, an `IntersectionSet` is returned.
         """
-        constraints = ConstraintList()
-        constraints.construct()
-
-        for set in (Q1, Q2):
-            other = Q1 if set is Q2 else Q2
-            if set.type == "discrete":
-                intersected_scenarios = []
-                for point in set.scenarios:
-                    if other.point_in_set(point=point):
-                        intersected_scenarios.append(point)
-                return DiscreteScenarioSet(scenarios=intersected_scenarios)
+        for set1, set2 in zip((Q1, Q2), (Q2, Q1)):
+            if isinstance(set1, DiscreteScenarioSet):
+                return DiscreteScenarioSet(
+                    scenarios=[pt for pt in set1.scenarios if set1.point_in_set(pt)],
+                )
 
         # === This case is if both sets are continuous
         return IntersectionSet(set1=Q1, set2=Q2)
 
-        return
-
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
         Construct a list of constraints on a given sequence
         of uncertain parameter objects. In advance of constructing
@@ -2969,65 +3021,36 @@ class IntersectionSet(UncertaintySet):
         AttributeError
             If the intersection set is found to be empty.
         """
-        try:
-            nlp_solver = kwargs["config"].global_solver
-        except:
-            raise AttributeError(
-                "set_as_constraint for SetIntersection requires access to an NLP solver via"
-                "the PyROS Solver config."
+        block, param_var_data_list, uncertainty_conlist, aux_var_list = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
             )
-        is_empty_intersection = self.is_empty_intersection(
-            uncertain_params=uncertain_params, nlp_solver=nlp_solver
         )
 
-        def _intersect(Q1, Q2):
-            return self.intersect(Q1, Q2)
-
-        if not is_empty_intersection:
-            Qint = functools.reduce(_intersect, self.all_sets)
-
-            if Qint.type == "discrete":
-                return Qint.set_as_constraint(uncertain_params=uncertain_params)
-            else:
-                conlist = ConstraintList()
-                conlist.construct()
-                for set in Qint.all_sets:
-                    for con in list(
-                        set.set_as_constraint(
-                            uncertain_params=uncertain_params
-                        ).values()
-                    ):
-                        conlist.add(con.expr)
-                return conlist
-        else:
-            raise AttributeError(
-                "Set intersection is empty, cannot proceed with PyROS robust optimization."
+        intersection_set = functools.reduce(self.intersect, self.all_sets)
+        if isinstance(intersection_set, DiscreteScenarioSet):
+            return intersection_set.set_as_constraint(
+                uncertain_params=uncertain_params,
+                block=block,
             )
 
-    @staticmethod
-    def add_bounds_on_uncertain_parameters(model, config, uncertain_param_vars=None):
-        """
-        Specify the numerical bounds for each of a sequence of uncertain
-        parameters, represented by Pyomo `Var` objects, in a modeling
-        object. The numerical bounds are specified through the `.lb()`
-        and `.ub()` attributes of the `Var` objects.
+        all_cons, all_aux_vars = [], []
+        for idx, unc_set in enumerate(intersection_set.all_sets):
+            sub_block = Block()
+            block.add_component(f"sub_block_{idx}", sub_block)
+            set_quantification = unc_set.set_as_constraint(
+                block=sub_block,
+                uncertain_params=param_var_data_list,
+            )
+            all_cons.extend(set_quantification.uncertain_param_vars)
+            all_aux_vars.extend(set_quantification.auxiliary_vars)
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            Model of interest (parent model of the uncertain parameter
-            objects for which to specify bounds).
-        config : ConfigDict
-            PyROS solver config.
-
-        Notes
-        -----
-        This method is invoked in advance of a PyROS separation
-        subproblem.
-        """
-        if uncertain_param_vars is None:
-            uncertain_param_vars = list(model.util.uncertain_param_vars.values())
-        return add_bounds_for_uncertain_parameters(
-            config=config,
-            uncertain_param_vars=uncertain_param_vars,
+        return UncertaintyQuantification(
+            block=block,
+            uncertain_param_vars=param_var_data_list,
+            uncertainty_cons=all_cons,
+            auxiliary_vars=all_aux_vars,
         )

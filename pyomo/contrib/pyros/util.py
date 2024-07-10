@@ -14,56 +14,51 @@ Utility functions for the PyROS solver
 '''
 
 from collections import namedtuple
-from itertools import chain, count
+from collections.abc import Iterable
+from contextlib import contextmanager
 import copy
 from enum import Enum, auto
+import itertools as it
+import logging
+import math
+import timeit
+
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.dependencies import scipy as sp
 from pyomo.common.errors import ApplicationError
+from pyomo.common.log import Preformatted
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.timing import TicTocTimer
+from pyomo.common.timing import HierarchicalTimer, TicTocTimer
 from pyomo.core.base import (
-    Constraint,
-    Var,
-    ConstraintList,
-    Objective,
-    minimize,
-    Expression,
-    ConcreteModel,
-    maximize,
     Block,
-    Param,
+    Component,
+    ConcreteModel,
+    Constraint,
+    ConstraintList,
+    Expression,
+    Objective,
+    maximize,
+    minimize,
+    Reals,
+    Var,
+    value,
 )
-from pyomo.core.util import prod
-from pyomo.core.base.var import IndexedVar
-from pyomo.core.base.set_types import Reals
-from pyomo.opt import TerminationCondition as tc
-from pyomo.core.expr import value, EqualityExpression, InequalityExpression
 from pyomo.core.expr.numeric_expr import (
-    LinearExpression,
     NPV_MaxExpression,
     NPV_MinExpression,
-    NPV_SumExpression,
     SumExpression,
 )
-from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
+from pyomo.core.expr.numvalue import native_types
 from pyomo.core.expr.visitor import (
     identify_variables,
     identify_mutable_parameters,
     replace_expressions,
 )
-from pyomo.common.dependencies import scipy as sp
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.util import prod
+from pyomo.opt import SolverFactory, TerminationCondition as tc
+from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.environ import SolverFactory
-
-import itertools as it
-import timeit
-from contextlib import contextmanager
-import logging
-import math
-from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.log import Preformatted
 
 
 # Tolerances used in the code
@@ -652,63 +647,6 @@ def get_time_from_solver(results):
     return float("nan") if solve_time is None else solve_time
 
 
-def add_bounds_for_uncertain_parameters(config, uncertain_param_vars):
-    """
-    Solve bounding problems globally to evaluate the
-    bounds for each dimension of an uncertainty set,
-    and use the results to the uncertain parameter
-    proxy variable bounds.
-
-    Parameters
-    ----------
-    config : ConfigDict
-        PyROS solver settings, containing the uncertainty set.
-    uncertain_param_vars : list of VarData, optional
-        Proxy variables.
-    """
-    # === Determine bounds on all uncertain params
-    bounding_model = ConcreteModel()
-    bounding_model.uncertain_param_indexed_var = Var(range(len(uncertain_param_vars)))
-    for idx, orig_var in enumerate(uncertain_param_vars):
-        bounding_model.uncertain_param_indexed_var[idx].set_value(
-            orig_var.value, skip_validation=True,
-        )
-
-    bounding_model.add_component(
-        "uncertainty_set_constraint",
-        config.uncertainty_set.set_as_constraint(
-            uncertain_params=bounding_model.uncertain_param_indexed_var,
-            model=bounding_model,
-            config=config,
-        ),
-    )
-
-    all_objs_by_dimension = []
-    for idx, param in bounding_model.uncertain_param_indexed_var.items():
-        dimension_objs = []
-        for btype, sense in zip(["lb", "ub"], [minimize, maximize]):
-            obj = Objective(expr=param, sense=sense)
-            bounding_model.add_component(f"{btype}_obj_{idx}", obj)
-            obj.deactivate()
-            dimension_objs.append(obj)
-        all_objs_by_dimension.append(dimension_objs)
-
-    parameter_bounds_by_dimension = []
-    for idx, objs in enumerate(all_objs_by_dimension):
-        dim_bounds = []
-        for obj in objs:
-            obj.activate()
-            config.global_solver.solve(bounding_model, tee=False)
-            dim_bounds.append(bounding_model.uncertain_param_indexed_var[idx].value)
-            obj.deactivate()
-        parameter_bounds_by_dimension.append(dim_bounds)
-
-    # === Add bounds as constraints to uncertainty_set_constraint ConstraintList
-    for idx, (lb, ub) in enumerate(parameter_bounds_by_dimension):
-        uncertain_param_vars[idx].setlb(lb)
-        uncertain_param_vars[idx].setub(ub)
-
-
 def transform_to_standard_form(model):
     """
     Recast all model inequality constraints of the form `a <= g(v)` (`<= b`)
@@ -826,6 +764,75 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
             for l_bnd in lower_bounds:
                 uncertain_var_bound_constrs.add(l_bnd - v <= 0)
             v.setlb(None)
+
+
+def standardize_component_data(
+        obj,
+        valid_ctype,
+        valid_cdatatype,
+        ctype_validator=None,
+        cdatatype_validator=None,
+        allow_repeats=False,
+        from_iterable=None,
+        ):
+    """
+    Standardize object to a list of component data objects.
+    """
+    if isinstance(obj, valid_ctype):
+        if ctype_validator is not None:
+            ctype_validator(obj)
+        return list(obj.values())
+    elif isinstance(obj, valid_cdatatype):
+        if cdatatype_validator is not None:
+            cdatatype_validator(obj)
+        return [obj]
+    elif isinstance(obj, Component):
+        # deal with this case separately from general
+        # iterables to prevent iteration over an invalid
+        # component type
+        raise TypeError(
+            f"Input object {obj!r} "
+            "is not of valid component type "
+            f"{valid_ctype.__name__} or component data type "
+            f"(got type {type(obj).__name__})."
+        )
+    elif isinstance(obj, Iterable) and not isinstance(obj, str):
+        ans = []
+        for item in obj:
+            ans.extend(
+                standardize_component_data(
+                    item,
+                    valid_ctype=valid_ctype,
+                    valid_cdatatype=valid_cdatatype,
+                    ctype_validator=ctype_validator,
+                    cdatatype_validator=cdatatype_validator,
+                    allow_repeats=allow_repeats,
+                    from_iterable=obj,
+                )
+            )
+    else:
+        from_iterable_qual = (
+            f" (entry of iterable {from_iterable})"
+            if from_iterable is not None
+            else ""
+        )
+        raise TypeError(
+            f"Input object {obj!r}{from_iterable_qual} "
+            "is not of valid component type "
+            f"{valid_ctype.__name__} or component data type "
+            f"{valid_cdatatype.__name__} (got type {type(obj).__name__})."
+        )
+
+    # check for duplicates if desired
+    if not allow_repeats and len(ans) != len(ComponentSet(ans)):
+        comp_name_list = [comp.name for comp in ans]
+        raise ValueError(
+            f"Standardized component list {comp_name_list} "
+            f"derived from input {obj} "
+            "contains duplicate entries."
+        )
+
+    return ans
 
 
 def check_components_descended_from_model(model, components, components_name, config):
@@ -1450,7 +1457,7 @@ def get_effective_var_partitioning(model_data, config):
         certain_eq_cons.add(wcon)
 
     pretriangular_con_var_map = ComponentMap()
-    for num_passes in count(1):
+    for num_passes in it.count(1):
         config.progress_logger.debug(
             f"Performing pass number {num_passes} over the certain constraints."
         )
