@@ -310,6 +310,17 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         # cyipopt.Problem.__init__
         super(CyIpoptNLP, self).__init__()
 
+        # Pre-Pyomo 6.7.4.dev0, we had no way to pass the cyipopt.Problem object
+        # to the user in an intermediate callback. This prevented them from calling
+        # the useful get_current_iterate and get_current_violations methods. Now,
+        # we support this by adding the Problem object to the args we pass to a user's
+        # callback. To preserve backwards compatibility, we inspect the user's
+        # callback to infer whether they want this argument. To preserve backwards
+        # if the user asked for variable-length *args, we only pass the Problem as
+        # an argument if their callback asks for exactly 13 arguments.
+        # A more maintainable solution may be to force users to accept **kwds if they
+        # want "extra info." If we find ourselves continuing to augment this callback,
+        # this may be worth considering. -RBP
         self._use_13arg_callback = None
         if self._intermediate_callback is not None:
             signature = inspect.signature(self._intermediate_callback)
