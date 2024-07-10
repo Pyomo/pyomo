@@ -337,9 +337,9 @@ class CyIpoptNLP(CyIpoptProblemInterface):
                 self._use_13arg_callback = False
             else:
                 raise ValueError(
-                    "Invalid intermediate callback. A function with either 12"
-                    "or 13 positional arguments, or a variable number of arguments,"
-                    "is expected."
+                    "Invalid intermediate callback. A function with either 12 or 13"
+                    " positional arguments, or a variable number of arguments, is"
+                    " expected."
                 )
 
     def _set_primals_if_necessary(self, x):
