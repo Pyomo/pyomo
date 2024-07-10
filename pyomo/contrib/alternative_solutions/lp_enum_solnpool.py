@@ -11,11 +11,7 @@
 
 from gurobipy import GRB
 import pyomo.environ as pe
-from pyomo.contrib.alternative_solutions import (
-    aos_utils,
-    shifted_lp,
-    solution,
-)
+from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
 from pyomo.contrib import appsi
 
 
