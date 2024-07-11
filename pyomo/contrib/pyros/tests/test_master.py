@@ -370,6 +370,14 @@ class TestDRPolishingProblem(unittest.TestCase):
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][1].fixed)
 
+        # ensure constraints in fixed vars were deactivated
+        self.assertFalse(nom_polishing_block.user_model.eq_con.active)
+
+        # these have either unfixed DR or adjustable variables,
+        # so they should remain active
+        self.assertTrue(nom_polishing_block.user_model.con.active)
+        self.assertTrue(nom_polishing_block.decision_rule_eqns[0].active)
+
     def test_construct_dr_polishing_problem_polishing_components(self):
         """
         Test auxiliary Var/Constraint components of the DR polishing

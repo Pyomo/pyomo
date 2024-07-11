@@ -26,7 +26,7 @@ from pyomo.core.base import (
     Constraint,
 )
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
-from pyomo.core.expr import value
+from pyomo.core.expr import identify_variables, value
 from pyomo.opt import (
     check_optimal_termination,
     SolverResults,
@@ -40,6 +40,7 @@ from pyomo.contrib.pyros.util import (
     enforce_dr_degree,
     get_dr_expression,
     check_time_limit_reached,
+    generate_all_decision_rule_var_data_objects,
     ObjectiveType,
     process_termination_condition_master_problem,
     pyrosTerminationCondition,
@@ -385,6 +386,23 @@ def new_construct_dr_polishing_problem(master_data, config):
     )
     for var in nondr_nonadjustable_vars:
         var.fix()
+
+    # deactivate original constraints that involved
+    # only vars that have been fixed.
+    # we do this mostly to ensure the number of active
+    # equality constraints does not outnumber the number of
+    # unfixed Vars
+    fixed_dr_vars = [
+        var
+        for var in generate_all_decision_rule_var_data_objects(nominal_polishing_block)
+        if var.fixed
+    ]
+    fixed_nonadjustable_vars = ComponentSet(nondr_nonadjustable_vars + fixed_dr_vars)
+    for blk in polishing_model.scenarios.values():
+        for con in blk.component_data_objects(Constraint, active=True):
+            vars_in_con = ComponentSet(identify_variables(con.body))
+            if not (vars_in_con - fixed_nonadjustable_vars):
+                con.deactivate()
 
     # we will add the polishing objective later
     polishing_model.epigraph_obj.deactivate()
