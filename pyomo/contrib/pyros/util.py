@@ -544,70 +544,6 @@ class ObjectiveType(Enum):
     nominal = auto()
 
 
-def recast_to_min_obj(model, obj):
-    """
-    Recast model objective to a minimization objective, as necessary.
-
-    Parameters
-    ----------
-    model : ConcreteModel
-        Model of interest.
-    obj : ScalarObjective
-        Objective of interest.
-    """
-    if obj.sense is not minimize:
-        if isinstance(obj.expr, SumExpression):
-            # ensure additive terms in objective
-            # are split in accordance with user declaration
-            obj.expr = sum(-term for term in obj.expr.args)
-        else:
-            obj.expr = -obj.expr
-        obj.sense = minimize
-
-
-def turn_bounds_to_constraints(variable, model, config=None):
-    '''
-    Turn the variable in question's "bounds" into direct inequality constraints on the model.
-    :param variable: the variable with bounds to be turned to None and made into constraints.
-    :param model: the model in which the variable resides
-    :param config: solver config
-    :return: the list of inequality constraints that are the bounds
-    '''
-    lb, ub = variable.lower, variable.upper
-    if variable.domain is not Reals:
-        variable.domain = Reals
-
-    if isinstance(lb, NPV_MaxExpression):
-        lb_args = lb.args
-    else:
-        lb_args = (lb,)
-
-    if isinstance(ub, NPV_MinExpression):
-        ub_args = ub.args
-    else:
-        ub_args = (ub,)
-
-    count = 0
-    for arg in lb_args:
-        if arg is not None:
-            name = unique_component_name(
-                model, variable.name + f"_lower_bound_con_{count}"
-            )
-            model.add_component(name, Constraint(expr=arg - variable <= 0))
-            count += 1
-            variable.setlb(None)
-
-    count = 0
-    for arg in ub_args:
-        if arg is not None:
-            name = unique_component_name(
-                model, variable.name + f"_upper_bound_con_{count}"
-            )
-            model.add_component(name, Constraint(expr=variable - arg <= 0))
-            count += 1
-            variable.setub(None)
-
-
 def get_time_from_solver(results):
     """
     Obtain solver time from a Pyomo `SolverResults` object.
@@ -646,125 +582,6 @@ def get_time_from_solver(results):
             break
 
     return float("nan") if solve_time is None else solve_time
-
-
-def transform_to_standard_form(model):
-    """
-    Recast all model inequality constraints of the form `a <= g(v)` (`<= b`)
-    to the 'standard' form `a - g(v) <= 0` (and `g(v) - b <= 0`),
-    in which `v` denotes all model variables and `a` and `b` are
-    contingent on model parameters.
-
-    Parameters
-    ----------
-    model : ConcreteModel
-        The model to search for constraints. This will descend into all
-        active Blocks and sub-Blocks as well.
-
-    Note
-    ----
-    If `a` and `b` are identical and the constraint is not classified as an
-    equality (i.e. the `equality` attribute of the constraint object
-    is `False`), then the constraint is recast to the equality `g(v) == a`.
-    """
-    # Note: because we will be adding / modifying the number of
-    # constraints, we want to resolve the generator to a list before
-    # starting.
-    cons = list(
-        model.component_data_objects(Constraint, descend_into=True, active=True)
-    )
-    for con in cons:
-        if not con.equality:
-            has_lb = con.lower is not None
-            has_ub = con.upper is not None
-
-            if has_lb and has_ub:
-                if con.lower is con.upper:
-                    # recast as equality Constraint
-                    con.set_value(con.lower == con.body)
-                else:
-                    # range inequality; split into two Constraints.
-                    uniq_name = unique_component_name(model, con.name + '_lb')
-                    model.add_component(
-                        uniq_name, Constraint(expr=con.lower - con.body <= 0)
-                    )
-                    con.set_value(con.body - con.upper <= 0)
-            elif has_lb:
-                # not in standard form; recast.
-                con.set_value(con.lower - con.body <= 0)
-            elif has_ub:
-                # move upper bound to body.
-                con.set_value(con.body - con.upper <= 0)
-            else:
-                # unbounded constraint: deactivate
-                con.deactivate()
-
-
-def get_vars_from_component(block, ctype):
-    """Determine all variables used in active components within a block.
-
-    Parameters
-    ----------
-    block: Block
-        The block to search for components.  This is a recursive
-        generator and will descend into any active sub-Blocks as well.
-    ctype:  class
-        The component type (typically either :py:class:`Constraint` or
-        :py:class:`Objective` to search for).
-
-    """
-
-    return get_vars_from_components(block, ctype, active=True, descend_into=True)
-
-
-def replace_uncertain_bounds_with_constraints(model, uncertain_params):
-    """
-    For variables of which the bounds are dependent on the parameters
-    in the list `uncertain_params`, remove the bounds and add
-    explicit variable bound inequality constraints.
-
-    :param model: Model in which to make the bounds/constraint replacements
-    :type model: class:`pyomo.core.base.PyomoModel.ConcreteModel`
-    :param uncertain_params: List of uncertain model parameters
-    :type uncertain_params: list
-    """
-    uncertain_param_set = ComponentSet(uncertain_params)
-
-    # component for explicit inequality constraints
-    uncertain_var_bound_constrs = ConstraintList()
-    model.add_component(
-        unique_component_name(model, 'uncertain_var_bound_cons'),
-        uncertain_var_bound_constrs,
-    )
-
-    # get all variables in active objective and constraint expression(s)
-    vars_in_cons = ComponentSet(get_vars_from_component(model, Constraint))
-    vars_in_obj = ComponentSet(get_vars_from_component(model, Objective))
-
-    for v in vars_in_cons | vars_in_obj:
-        # get mutable parameters in variable bounds expressions
-        ub = v.upper
-        mutable_params_ub = ComponentSet(identify_mutable_parameters(ub))
-        lb = v.lower
-        mutable_params_lb = ComponentSet(identify_mutable_parameters(lb))
-
-        # add explicit inequality constraint(s), remove variable bound(s)
-        if mutable_params_ub & uncertain_param_set:
-            if type(ub) is NPV_MinExpression:
-                upper_bounds = ub.args
-            else:
-                upper_bounds = (ub,)
-            for u_bnd in upper_bounds:
-                uncertain_var_bound_constrs.add(v - u_bnd <= 0)
-            v.setub(None)
-        if mutable_params_lb & uncertain_param_set:
-            if type(ub) is NPV_MaxExpression:
-                lower_bounds = lb.args
-            else:
-                lower_bounds = (lb,)
-            for l_bnd in lower_bounds:
-                uncertain_var_bound_constrs.add(l_bnd - v <= 0)
-            v.setlb(None)
 
 
 def standardize_component_data(
@@ -2190,139 +2007,6 @@ def standardize_active_objective(model_data, config):
         )
 
 
-def new_add_decision_rule_variables(model_data, config):
-    """
-    Add variables parameterizing the (polynomial)
-    decision rules to the working model.
-
-    Parameters
-    ----------
-    model_data : model data object
-        Model data.
-    config : ConfigDict
-        PyROS solver options.
-
-    Notes
-    -----
-    1. One set of decision rule variables is added for each
-       effective second-stage variable.
-    2. As an efficiency, no decision rule variables
-       are added for the nonadjustable, user-defined second-stage
-       variables, since the decision rules for such variables
-       are necessarily nonstatic.
-    """
-    effective_second_stage_vars = (
-        model_data.working_model.effective_var_partitioning.second_stage_variables
-    )
-    model_data.working_model.decision_rule_vars = decision_rule_vars = []
-
-    # facilitate matching of effective second-stage vars to DR vars later
-    model_data.working_model.eff_ss_var_to_dr_var_map = eff_ss_var_to_dr_var_map = (
-        ComponentMap()
-    )
-
-    # since DR expression is a general polynomial in the uncertain
-    # parameters, the exact number of DR variables
-    # per effective second-stage variable
-    # depends only on the DR order and uncertainty set dimension
-    degree = config.decision_rule_order
-    num_uncertain_params = len(model_data.working_model.uncertain_params)
-    num_dr_vars = sp.special.comb(
-        N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
-    )
-
-    for idx, eff_ss_var in enumerate(effective_second_stage_vars):
-        indexed_dr_var = Var(
-            range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
-        )
-        model_data.working_model.add_component(
-            f"decision_rule_var_{idx}", indexed_dr_var
-        )
-
-        # index 0 entry of the IndexedVar is the static
-        # DR term. initialize to user-provided value of
-        # the corresponding second-stage variable.
-        # all other entries remain initialized to 0.
-        indexed_dr_var[0].set_value(value(eff_ss_var, exception=False))
-
-        # update attributes
-        decision_rule_vars.append(indexed_dr_var)
-        eff_ss_var_to_dr_var_map[eff_ss_var] = indexed_dr_var
-
-
-def new_add_decision_rule_constraints(model_data, config):
-    """
-    Add decision rule equality constraints to the working model.
-
-    Parameters
-    ----------
-    model_data : model data object
-        Main model data object.
-    config : ConfigDict
-        PyROS solver options.
-    """
-
-    effective_second_stage_vars = (
-        model_data.working_model.effective_var_partitioning.second_stage_variables
-    )
-    indexed_dr_var_list = model_data.working_model.decision_rule_vars
-    uncertain_params = model_data.working_model.uncertain_params
-    degree = config.decision_rule_order
-
-    model_data.working_model.decision_rule_eqns = decision_rule_eqns = []
-
-    # keeping track of degree of monomial
-    # (in terms of the uncertain parameters)
-    # in which each DR coefficient participates will be useful for
-    # later
-    model_data.working_model.dr_var_to_exponent_map = dr_var_to_exponent_map = (
-        ComponentMap()
-    )
-
-    # facilitate retrieval of DR equation for a given
-    # effective second-stage variable later
-    model_data.working_model.eff_ss_var_to_dr_eqn_map = eff_ss_var_to_dr_eqn_map = (
-        ComponentMap()
-    )
-
-    # set up uncertain parameter combinations for
-    # construction of the monomials of the DR expressions
-    monomial_param_combos = []
-    for power in range(degree + 1):
-        power_combos = it.combinations_with_replacement(uncertain_params, power)
-        monomial_param_combos.extend(power_combos)
-
-    # now construct DR equations and declare them on the working model
-    second_stage_dr_var_zip = zip(effective_second_stage_vars, indexed_dr_var_list)
-    for idx, (eff_ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
-        # for each DR equation, the number of coefficients should match
-        # the number of monomial terms exactly
-        if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
-            raise ValueError(
-                f"Mismatch between number of DR coefficient variables "
-                f"and number of DR monomials for DR equation index {idx}, "
-                "corresponding to effective second-stage variable "
-                f"{eff_ss_var.name!r}. "
-                f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
-            )
-
-        # construct the DR polynomial
-        dr_expression = 0
-        for dr_var, param_combo in zip(indexed_dr_var.values(), monomial_param_combos):
-            dr_expression += dr_var * prod(param_combo)
-
-            # map decision rule var to degree (exponent) of the
-            # associated monomial with respect to the uncertain params
-            dr_var_to_exponent_map[dr_var] = len(param_combo)
-
-        # declare constraint on model
-        dr_eqn = Constraint(expr=dr_expression - eff_ss_var == 0)
-        model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
-
-        decision_rule_eqns.append(dr_eqn)
-        eff_ss_var_to_dr_eqn_map[eff_ss_var] = dr_eqn
-
-
 def get_all_nonadjustable_variables(working_model):
     """
     Get all nonadjustable variables of the working model.
@@ -2806,133 +2490,6 @@ def log_model_statistics(model_data, config):
     info_log_func(f"      Performance inequalities : {num_performance_ineq_cons}")
 
 
-def preprocess_model_data(model_data, config, var_partitioning):
-    """
-    Preprocess model data.
-    """
-    original_model = model_data.original_model
-
-    # new_preprocess_model_data(model_data, config, var_partitioning)
-
-    # temporary block to track variable partitioning
-    # and uncertain parameters after cloning.
-    # TODO: model may already have an attribute called `util`;
-    #       fix that edge case
-    original_model.util = Block(concrete=True)
-    original_model.util.first_stage_variables = var_partitioning.first_stage_variables
-    original_model.util.second_stage_variables = var_partitioning.second_stage_variables
-    original_model.util.state_vars = var_partitioning.state_variables
-    original_model.util.uncertain_params = config.uncertain_params
-
-    model_data.util_block = original_model.util
-
-    # keep track of variables after cloning
-    cname = unique_component_name(model_data.original_model, 'tmp_var_list')
-    src_vars = list(model_data.original_model.component_data_objects(Var))
-    setattr(model_data.original_model, cname, src_vars)
-    model_data.working_model = model_data.original_model.clone()
-
-    # identify active objective function.
-    # (there should only be one at this point)
-    # recast to minimization if necessary
-    active_objs = list(
-        model_data.working_model.component_data_objects(
-            Objective, active=True, descend_into=True
-        )
-    )
-    assert len(active_objs) == 1
-    active_obj = active_objs[0]
-    model_data.active_obj_original_sense = active_obj.sense
-    recast_to_min_obj(model_data.working_model, active_obj)
-
-    # === Determine first and second-stage objectives
-    identify_objective_functions(model_data.working_model, active_obj)
-    active_obj.deactivate()
-
-    # === Put model in standard form
-    transform_to_standard_form(model_data.working_model)
-
-    # === Replace variable bounds depending on uncertain params with
-    #     explicit inequality constraints
-    replace_uncertain_bounds_with_constraints(
-        model_data.working_model, model_data.working_model.util.uncertain_params
-    )
-
-    # === Add decision rule information
-    add_decision_rule_variables(model_data, config)
-    add_decision_rule_constraints(model_data, config)
-
-    # === Move bounds on control variables to explicit ineq constraints
-    wm_util = model_data.working_model
-
-    # cast bounds on second-stage and state variables to
-    # explicit constraints for separation objectives
-    for c in model_data.working_model.util.second_stage_variables:
-        turn_bounds_to_constraints(c, wm_util, config)
-    for c in model_data.working_model.util.state_vars:
-        turn_bounds_to_constraints(c, wm_util, config)
-
-    # === Make control_variable_bounds array
-    wm_util.ssv_bounds = []
-    for c in model_data.working_model.component_data_objects(
-        Constraint, descend_into=True
-    ):
-        if "bound_con" in c.name:
-            wm_util.ssv_bounds.append(c)
-
-
-def substitute_ssv_in_dr_constraints(model, constraint):
-    '''
-    Generate the standard_repn for the dr constraints. Generate new expression with replace_expression to ignore
-    the ssv component.
-    Then, replace_expression with substitution_map between ssv and the new expression.
-    Deactivate or del_component the original dr equation.
-    Then, return modified model and do coefficient matching as normal.
-    :param model: the working_model
-    :param constraint: an equality constraint from the working model identified to be of the form h(x,z,q) = 0.
-    :return:
-    '''
-    dr_eqns = model.util.decision_rule_eqns
-    fsv = ComponentSet(model.util.first_stage_variables)
-    if not hasattr(model, "dr_substituted_constraints"):
-        model.dr_substituted_constraints = ConstraintList()
-
-    substitution_map = {}
-    for eqn in dr_eqns:
-        repn = generate_standard_repn(eqn.body, compute_values=False)
-        new_expression = 0
-        map_linear_coeff_to_var = [
-            x
-            for x in zip(repn.linear_coefs, repn.linear_vars)
-            if x[1] in ComponentSet(fsv)
-        ]
-        map_quad_coeff_to_var = [
-            x
-            for x in zip(repn.quadratic_coefs, repn.quadratic_vars)
-            if x[1] in ComponentSet(fsv)
-        ]
-        if repn.linear_coefs:
-            for coeff, var in map_linear_coeff_to_var:
-                new_expression += coeff * var
-        if repn.quadratic_coefs:
-            for coeff, var in map_quad_coeff_to_var:
-                new_expression += coeff * var[0] * var[1]  # var here is a 2-tuple
-
-        substitution_map[id(repn.linear_vars[-1])] = new_expression
-
-    model.dr_substituted_constraints.add(
-        replace_expressions(expr=constraint.lower, substitution_map=substitution_map)
-        == replace_expressions(expr=constraint.body, substitution_map=substitution_map)
-    )
-
-    # === Delete the original constraint
-    model.del_component(constraint.name)
-
-    return model.dr_substituted_constraints[
-        max(model.dr_substituted_constraints.keys())
-    ]
-
-
 def selective_clone(block, first_stage_vars):
     """
     Clone everything in a base_model except for the first-stage variables
@@ -2949,40 +2506,48 @@ def selective_clone(block, first_stage_vars):
     return new_block
 
 
-def add_decision_rule_variables(model_data, config):
+def new_add_decision_rule_variables(model_data, config):
     """
-    Add variables for polynomial decision rules to the working
-    model.
+    Add variables parameterizing the (polynomial)
+    decision rules to the working model.
 
     Parameters
     ----------
-    model_data : ROSolveResults
+    model_data : model data object
         Model data.
-    config : config_dict
+    config : ConfigDict
         PyROS solver options.
 
-    Note
-    ----
-    Decision rule variables are considered first-stage decision
-    variables which do not get copied at each iteration.
-    PyROS currently supports static (zeroth order),
-    affine (first-order), and quadratic DR.
+    Notes
+    -----
+    1. One set of decision rule variables is added for each
+       effective second-stage variable.
+    2. As an efficiency, no decision rule variables
+       are added for the nonadjustable, user-defined second-stage
+       variables, since the decision rules for such variables
+       are necessarily nonstatic.
     """
-    second_stage_variables = model_data.working_model.util.second_stage_variables
-    first_stage_variables = model_data.working_model.util.first_stage_variables
-    decision_rule_vars = []
+    effective_second_stage_vars = (
+        model_data.working_model.effective_var_partitioning.second_stage_variables
+    )
+    model_data.working_model.decision_rule_vars = decision_rule_vars = []
+
+    # facilitate matching of effective second-stage vars to DR vars later
+    model_data.working_model.eff_ss_var_to_dr_var_map = eff_ss_var_to_dr_var_map = (
+        ComponentMap()
+    )
 
     # since DR expression is a general polynomial in the uncertain
-    # parameters, the exact number of DR variables per second-stage
-    # variable depends on DR order and uncertainty set dimension
+    # parameters, the exact number of DR variables
+    # per effective second-stage variable
+    # depends only on the DR order and uncertainty set dimension
     degree = config.decision_rule_order
-    num_uncertain_params = len(model_data.working_model.util.uncertain_params)
+    num_uncertain_params = len(model_data.working_model.uncertain_params)
     num_dr_vars = sp.special.comb(
         N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
     )
 
-    for idx, ss_var in enumerate(second_stage_variables):
-        # declare DR coefficients for current second-stage variable
+    for idx, eff_ss_var in enumerate(effective_second_stage_vars):
         indexed_dr_var = Var(
             range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
         )
@@ -2994,36 +2559,47 @@ def add_decision_rule_variables(model_data, config):
         # DR term. initialize to user-provided value of
         # the corresponding second-stage variable.
         # all other entries remain initialized to 0.
-        indexed_dr_var[0].set_value(value(ss_var, exception=False))
+        indexed_dr_var[0].set_value(value(eff_ss_var, exception=False))
 
         # update attributes
-        first_stage_variables.extend(indexed_dr_var.values())
         decision_rule_vars.append(indexed_dr_var)
+        eff_ss_var_to_dr_var_map[eff_ss_var] = indexed_dr_var
 
-    model_data.working_model.util.decision_rule_vars = decision_rule_vars
 
-
-def add_decision_rule_constraints(model_data, config):
+def new_add_decision_rule_constraints(model_data, config):
     """
     Add decision rule equality constraints to the working model.
 
     Parameters
     ----------
-    model_data : ROSolveResults
-        Model data.
+    model_data : model data object
+        Main model data object.
     config : ConfigDict
         PyROS solver options.
     """
 
-    second_stage_variables = model_data.working_model.util.second_stage_variables
-    uncertain_params = model_data.working_model.util.uncertain_params
-    decision_rule_eqns = []
-    decision_rule_vars_list = model_data.working_model.util.decision_rule_vars
+    effective_second_stage_vars = (
+        model_data.working_model.effective_var_partitioning.second_stage_variables
+    )
+    indexed_dr_var_list = model_data.working_model.decision_rule_vars
+    uncertain_params = model_data.working_model.uncertain_params
     degree = config.decision_rule_order
 
-    # keeping track of degree of monomial in which each
-    # DR coefficient participates will be useful for later
-    dr_var_to_exponent_map = ComponentMap()
+    model_data.working_model.decision_rule_eqns = decision_rule_eqns = []
+
+    # keeping track of degree of monomial
+    # (in terms of the uncertain parameters)
+    # in which each DR coefficient participates will be useful for
+    # later
+    model_data.working_model.dr_var_to_exponent_map = dr_var_to_exponent_map = (
+        ComponentMap()
+    )
+
+    # facilitate retrieval of DR equation for a given
+    # effective second-stage variable later
+    model_data.working_model.eff_ss_var_to_dr_eqn_map = eff_ss_var_to_dr_eqn_map = (
+        ComponentMap()
+    )
 
     # set up uncertain parameter combinations for
     # construction of the monomials of the DR expressions
@@ -3033,15 +2609,16 @@ def add_decision_rule_constraints(model_data, config):
         monomial_param_combos.extend(power_combos)
 
     # now construct DR equations and declare them on the working model
-    second_stage_dr_var_zip = zip(second_stage_variables, decision_rule_vars_list)
-    for idx, (ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
+    second_stage_dr_var_zip = zip(effective_second_stage_vars, indexed_dr_var_list)
+    for idx, (eff_ss_var, indexed_dr_var) in enumerate(second_stage_dr_var_zip):
         # for each DR equation, the number of coefficients should match
         # the number of monomial terms exactly
         if len(monomial_param_combos) != len(indexed_dr_var.index_set()):
             raise ValueError(
                 f"Mismatch between number of DR coefficient variables "
                 f"and number of DR monomials for DR equation index {idx}, "
-                f"corresponding to second-stage variable {ss_var.name!r}. "
+                "corresponding to effective second-stage variable "
+                f"{eff_ss_var.name!r}. "
                 f"({len(indexed_dr_var.index_set())}!= {len(monomial_param_combos)})"
             )
 
@@ -3055,15 +2632,11 @@ def add_decision_rule_constraints(model_data, config):
             dr_var_to_exponent_map[dr_var] = len(param_combo)
 
         # declare constraint on model
-        dr_eqn = Constraint(expr=dr_expression - ss_var == 0)
+        dr_eqn = Constraint(expr=dr_expression - eff_ss_var == 0)
         model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
 
-        # append to list of DR equality constraints
         decision_rule_eqns.append(dr_eqn)
-
-    # finally, add attributes to util block
-    model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
-    model_data.working_model.util.dr_var_to_exponent_map = dr_var_to_exponent_map
+        eff_ss_var_to_dr_eqn_map[eff_ss_var] = dr_eqn
 
 
 def enforce_dr_degree(blk, config, degree):
