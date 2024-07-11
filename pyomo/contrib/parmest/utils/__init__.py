@@ -18,7 +18,10 @@ from pyomo.contrib.parmest.utils.create_ef import (
 
 from pyomo.contrib.parmest.utils.ipopt_solver_wrapper import ipopt_solve_with_stats
 
-from pyomo.contrib.parmest.utils.model_utils import convert_params_to_vars, convert_params_to_vars_deprecated
+from pyomo.contrib.parmest.utils.model_utils import (
+    convert_params_to_vars,
+    convert_params_to_vars_deprecated,
+)
 
 from pyomo.contrib.parmest.utils.mpi_utils import MPIInterface, ParallelTaskManager
 
