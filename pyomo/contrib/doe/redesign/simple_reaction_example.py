@@ -150,10 +150,14 @@ class SimpleReactorExperiment(object):
 
         m.t_control = control_points
 
+        print('SIMULATING MODEL.')
+
         # TODO: add simulation for initialization?????
         # Call the simulator (optional)
         sim = Simulator(m, package='casadi')
         tsim, profiles = sim.simulate(integrator='idas')
+
+        print('SIMULATION COMPLETE.')
 
         # Discretizing the model
         discr = pyo.TransformationFactory("dae.collocation")
@@ -206,3 +210,5 @@ data_ex['control_points'] = {float(k): v for k, v in data_ex['control_points'].i
 experiments_simple = [
     SimpleReactorExperiment(data_ex, 32, 3),
 ]
+
+expanded_experiments_simple = [e.get_labeled_model() for e in experiments_simple]
