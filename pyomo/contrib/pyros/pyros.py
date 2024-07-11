@@ -10,29 +10,27 @@
 #  ___________________________________________________________________________
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
+from datetime import datetime
 import logging
+
 from pyomo.common.config import document_kwargs_from_configdict
-from pyomo.core.base.block import Block
 from pyomo.core.expr import value
-from pyomo.contrib.pyros.util import time_code
 from pyomo.opt import SolverFactory
+
 from pyomo.contrib.pyros.config import pyros_config, logger_domain
+from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
+from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.util import (
     load_final_solution,
     pyrosTerminationCondition,
-    ObjectiveType,
     validate_pyros_inputs,
     log_model_statistics,
     preprocess_model_data,
     IterationLogRecord,
     setup_pyros_logger,
+    time_code,
     TimingData,
 )
-from pyomo.contrib.pyros.solve_data import ROSolveResults
-from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
-from pyomo.core.base import Constraint
-
-from datetime import datetime
 
 
 __version__ = "1.2.11"

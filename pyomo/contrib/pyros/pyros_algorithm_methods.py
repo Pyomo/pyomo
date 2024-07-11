@@ -13,29 +13,21 @@
 Methods for execution of the main PyROS cutting set algorithm.
 """
 
-from itertools import chain
-
 from pyomo.common.dependencies import numpy as np
-from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.core.base import Constraint, Block, value, VarData
-from pyomo.core.expr import MonomialTermExpression
+from pyomo.common.collections import ComponentMap
+from pyomo.core.base import Block, value
 
-from pyomo.contrib.pyros import master_problem_methods, separation_problem_methods
 import pyomo.contrib.pyros.master_problem_methods as mp_methods
 import pyomo.contrib.pyros.separation_problem_methods as sp_methods
-from pyomo.contrib.pyros.solve_data import SeparationProblemData
-from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.contrib.pyros.util import (
     check_time_limit_reached,
     ObjectiveType,
     get_time_from_solver,
     pyrosTerminationCondition,
     IterationLogRecord,
-    generate_all_decision_rule_var_data_objects,
     get_main_elapsed_time,
     get_dr_var_to_monomial_map,
 )
-
 
 
 def update_grcs_solve_data(
