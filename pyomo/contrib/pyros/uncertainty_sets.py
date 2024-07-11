@@ -515,21 +515,28 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         return self.is_nonempty(config=config) and self.is_bounded(config=config)
 
     @abc.abstractmethod
-    def set_as_constraint(self, **kwargs):
+    def set_as_constraint(self, uncertain_params=None, block=None):
         """
-        Construct a (sequence of) mathematical constraint(s)
-        (represented by Pyomo `Constraint` objects) on the uncertain
-        parameters to represent the uncertainty set for use in a
-        two-stage robust optimization problem or subproblem (such as a
-        PyROS separation subproblem).
+        Construct a block of Pyomo constraint(s) defining the
+        uncertainty set on variables representing the uncertain
+        parameters, for use in a two-stage robust optimization
+        problem or subproblem (such as a PyROS separation subproblem).
 
         Parameters
         ----------
-        **kwargs : dict
-            Keyword arguments containing, at the very least, a sequence
-            of `Param` or `Var` objects representing the uncertain
-            parameters of interest, and any additional information
-            needed to generate the constraints.
+        uncertain_params : None, Var, or list of Var, optional
+            Variable objects representing the (main) uncertain
+            parameters. If `None` is passed, then
+            new variable objects are constructed.
+        block : BlockData or None, optional
+            Block on which to declare the constraints and any auxiliary
+            variables. If `None` is passed, then a new block is
+            constructed.
+
+        Returns
+        -------
+        UncertaintyQuantification
+            A collection of the components added or addressed.
         """
         pass
 
@@ -989,25 +996,8 @@ class BoxSet(UncertaintySet):
         """
         return [tuple(bound) for bound in self.bounds]
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of box constraints on a given sequence
-        of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : Var, VarData, or list of (Var, VarData)
-            Variables representing the uncertain parameters upon
-            which the constraints are to be imposed.
-        **kwargs : dict, optional
-            Additional arguments. These arguments are currently
-            ignored.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         block, param_var_list, uncertainty_conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
@@ -1209,27 +1199,8 @@ class CardinalitySet(UncertaintySet):
         ]
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, block=None):
-        """
-        Construct a list of cardinality set constraints on
-        a sequence of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
-        **kwargs : dict
-            Additional arguments. This dictionary should consist
-            of a `model` entry, which maps to a `ConcreteModel`
-            object representing the model of interest (parent model
-            of the uncertain parameter objects).
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
+    @copy_docstring(UncertaintySet.set_as_constraint)
+    def set_as_constraint(self, uncertain_params=None, block=None):
         # resolve arguments
         block, param_var_data_list, conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
@@ -1510,25 +1481,8 @@ class PolyhedralSet(UncertaintySet):
         """
         return []
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of polyhedral constraints on a given sequence
-        of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
-        **kwargs : dict, optional
-            Additional arguments. These arguments are currently
-            ignored.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         block, param_var_data_list, conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
@@ -1828,21 +1782,8 @@ class BudgetSet(UncertaintySet):
 
         return bounds
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, **kwargs):
-        """
-        Construct a list of the constraints defining the budget
-        set on a given sequence of uncertain parameter objects.
-
-        Parameters
-        ----------
-        **kwargs : dict, optional
-            Arguments to ``PolyhedralSet.set_as_constraint``.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         return PolyhedralSet.set_as_constraint(self, **kwargs)
 
 
@@ -2104,27 +2045,8 @@ class FactorModelSet(UncertaintySet):
 
         return parameter_bounds
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of factor model constraints on a given sequence
-        of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
-        **kwargs : dict
-            Additional arguments. This dictionary should consist
-            of a `model` entry, which maps to a `ConcreteModel`
-            object representing the model of interest (parent model
-            of the uncertain parameter objects).
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         block, param_var_data_list, uncertainty_conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
@@ -2367,26 +2289,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         ]
         return parameter_bounds
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of ellipsoidal constraints on a given sequence
-        of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : {IndexedParam, IndexedVar, list of Param/Var}
-            Uncertain parameter objects upon which the constraints
-            are imposed. Indexed parameters are accepted, and
-            are unpacked for constraint generation.
-        **kwargs : dict, optional
-            Additional arguments. These arguments are currently
-            ignored.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         block, param_var_data_list, uncertainty_conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
@@ -2657,26 +2561,8 @@ class EllipsoidalSet(UncertaintySet):
         ]
         return parameter_bounds
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of ellipsoidal constraints on a given sequence
-        of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : {IndexedParam, IndexedVar, list of Param/Var}
-            Uncertain parameter objects upon which the constraints
-            are imposed. Indexed parameters are accepted, and
-            are unpacked for constraint generation.
-        **kwargs : dict, optional
-            Additional arguments. These arguments are currently
-            ignored.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         block, param_var_data_list, uncertainty_conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
@@ -2817,25 +2703,8 @@ class DiscreteScenarioSet(UncertaintySet):
         """
         return True
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of constraints on a given sequence
-        of uncertain parameter objects.
-
-        Parameters
-        ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
-        **kwargs : dict, optional
-            Additional arguments. These arguments are currently
-            ignored.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-        """
         # === Ensure point is of correct dimensionality as the uncertain parameters
         block, param_var_data_list, uncertainty_conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
@@ -3027,35 +2896,8 @@ class IntersectionSet(UncertaintySet):
         # === This case is if both sets are continuous
         return IntersectionSet(set1=Q1, set2=Q2)
 
+    @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
-        """
-        Construct a list of constraints on a given sequence
-        of uncertain parameter objects. In advance of constructing
-        the constraints, a check is performed to determine whether
-        the set is empty.
-
-        Parameters
-        ----------
-        uncertain_params : list of Param or list of Var
-            Uncertain parameter objects upon which the constraints
-            are imposed.
-        **kwargs : dict
-            Additional arguments. Must contain a `config` entry,
-            which maps to a `ConfigDict` containing an entry
-            entitled `global_solver`. The `global_solver`
-            key maps to an NLP solver, purportedly with global
-            optimization capabilities.
-
-        Returns
-        -------
-        conlist : ConstraintList
-            The constraints on the uncertain parameters.
-
-        Raises
-        ------
-        AttributeError
-            If the intersection set is found to be empty.
-        """
         block, param_var_data_list, uncertainty_conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
                 block=block,
