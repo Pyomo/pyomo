@@ -70,12 +70,12 @@ from pyomo.common.deprecation import deprecation_warning
 
 from pyomo.core.base.suffix import Suffix
 
-DEPRECATION_VERSION = '6.7.2.dev0'
+DEPRECATION_VERSION = "6.7.2.dev0"
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
-    'pyomo.contrib.interior_point.inverse_reduced_hessian'
+    "pyomo.contrib.interior_point.inverse_reduced_hessian"
 )
 
 logger = logging.getLogger(__name__)
@@ -119,7 +119,7 @@ def _experiment_instance_creation_callback(
     """
     assert cb_data is not None
     outer_cb_data = cb_data
-    scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
+    scen_num_str = re.compile(r"(\d+)$").search(scenario_name).group(1)
     scen_num = int(scen_num_str)
     basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
 
@@ -186,7 +186,7 @@ def _experiment_instance_creation_callback(
         """
     if hasattr(instance, "_mpisppy_node_list"):
         raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
-    
+
     # get any parameters that are in this model
     nonant_list = _expand_indexed_unknowns(instance)
 
@@ -230,6 +230,7 @@ def _experiment_instance_creation_callback(
 
     return instance
 
+
 def _expand_indexed_unknowns(model_temp):
     """
     Expand indexed variables to get full list of parameters
@@ -244,7 +245,8 @@ def _expand_indexed_unknowns(model_temp):
             model_param_list.append(c)
 
     return model_param_list
-    
+
+
 def SSE(model):
     """
     Sum of squared error between `experiment_output` model and data values
@@ -306,17 +308,18 @@ class Estimator(object):
                 model = self.exp_list[i].get_labeled_model()
             except:
                 RuntimeError(
-                    'Experiment list model ' + str(i) + 
-                    ' is missing ".get_labeled_model()" function.'
+                    "Experiment list model "
+                    + str(i)
+                    + ' is missing ".get_labeled_model()" function.'
                 )
-            
-            # check that each model has experiment_outputs 
+
+            # check that each model has experiment_outputs
             # (although this is optional for design of experiments)
             outputs = getattr(model, "experiment_outputs", None)
             if outputs is None:
                 logger.warning(
-                    "Experiment outputs missing for experiment " +
-                    str(i) + ".")
+                    "Experiment outputs missing for experiment " + str(i) + "."
+                )
 
             # check that each model has unknown parameters (not optional)
             params = getattr(model, "unknown_parameters", None)
@@ -363,7 +366,7 @@ class Estimator(object):
             "You're using the deprecated parmest interface (model_function, "
             "data, theta_names). This interface will be removed in a future release, "
             "please update to the new parmest interface using experiment lists.",
-            version='6.7.2',
+            version="6.7.2",
         )
         self.pest_deprecated = _DeprecatedEstimator(
             model_function,
@@ -390,9 +393,9 @@ class Estimator(object):
 
             # Check for component naming conflicts
             reserved_names = [
-                'Total_Cost_Objective',
-                'FirstStageCost',
-                'SecondStageCost',
+                "Total_Cost_Objective",
+                "FirstStageCost",
+                "SecondStageCost",
             ]
             for n in reserved_names:
                 if model.component(n) or hasattr(model, n):
@@ -406,7 +409,7 @@ class Estimator(object):
 
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
-            if self.obj_function == 'SSE':
+            if self.obj_function == "SSE":
                 second_stage_rule = SSE
             else:
                 # A custom function uses model.experiment_outputs as data
@@ -490,7 +493,7 @@ class Estimator(object):
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
-                solver = SolverFactory('ipopt')
+                solver = SolverFactory("ipopt")
                 if self.solver_options is not None:
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
@@ -520,7 +523,7 @@ class Estimator(object):
 
             if self.diagnostic_mode:
                 print(
-                    '    Solver termination condition = ',
+                    "    Solver termination condition = ",
                     str(solve_result.solver.termination_condition),
                 )
 
@@ -546,7 +549,7 @@ class Estimator(object):
                 # Assumption: Objective value is sum of squared errors
                 sse = objval
 
-                '''Calculate covariance assuming experimental observation errors are
+                """Calculate covariance assuming experimental observation errors are
                 independent and follow a Gaussian
                 distribution with constant variance.
 
@@ -556,7 +559,7 @@ class Estimator(object):
                 This formula is also applicable if the objective is scaled by a constant;
                 the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
-                '''
+                """
                 cov = 2 * sse / (n - l) * inv_red_hes
                 cov = pd.DataFrame(
                     cov, index=paramvals.keys(), columns=paramvals.keys()
@@ -630,7 +633,7 @@ class Estimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
-        optimizer = pyo.SolverFactory('ipopt')
+        optimizer = pyo.SolverFactory("ipopt")
 
         if len(paramvals) > 0:
             dummy_cb = {
@@ -646,9 +649,9 @@ class Estimator(object):
 
         if self.diagnostic_mode:
             if len(paramvals) > 0:
-                print('    Compute objective at parameter = ', str(paramvals))
+                print("    Compute objective at parameter = ", str(paramvals))
             else:
-                print('    Compute objective at initial parameters')
+                print("    Compute objective at initial parameters")
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
@@ -694,14 +697,14 @@ class Estimator(object):
                             param_init_vals.append(var_validate)
                         except:
                             logger.warning(
-                                'Unable to fix model parameter value for %s (not a Pyomo model Var)',
+                                "Unable to fix model parameter value for %s (not a Pyomo model Var)",
                                 (var_validate.name),
                             )
 
             if active_constraints:
                 if self.diagnostic_mode:
-                    print('      Experiment = ', snum)
-                    print('     First solve with special diagnostics wrapper')
+                    print("      Experiment = ", snum)
+                    print("     First solve with special diagnostics wrapper")
                     (status_obj, solved, iters, time, regu) = (
                         utils.ipopt_solve_with_stats(
                             instance, optimizer, max_iter=500, max_cpu_time=120
@@ -719,7 +722,7 @@ class Estimator(object):
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
                     print(
-                        'standard solve solver termination condition=',
+                        "standard solve solver termination condition=",
                         str(results.solver.termination_condition),
                     )
 
@@ -760,12 +763,12 @@ class Estimator(object):
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
-        
+
         # all parameter names in all models
         estimator_param_names = list(set(param_names))
 
         retval = totobj / len(scenario_numbers)  # -1??
-        if initialize_parmest_model and not hasattr(self, 'ef_instance'):
+        if initialize_parmest_model and not hasattr(self, "ef_instance"):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
@@ -808,9 +811,7 @@ class Estimator(object):
                 attempts = 0
                 unique_samples = 0  # check for duplicates in each sample
                 duplicate = False  # check for duplicates between samples
-                while (unique_samples <= self.num_params) and (
-                    not duplicate
-                ):
+                while (unique_samples <= self.num_params) and (not duplicate):
                     sample = np.random.choice(
                         scenario_numbers, samplesize, replace=replacement
                     )
@@ -960,14 +961,14 @@ class Estimator(object):
         bootstrap_param = list()
         for idx, sample in local_list:
             objval, paramvals = self._Q_opt(bootlist=list(sample))
-            paramvals['samples'] = sample
+            paramvals["samples"] = sample
             bootstrap_param.append(paramvals)
 
         global_bootstrap_param = task_mgr.allgather_global_data(bootstrap_param)
         bootstrap_param = pd.DataFrame(global_bootstrap_param)
 
         if not return_samples:
-            del bootstrap_param['samples']
+            del bootstrap_param["samples"]
 
         return bootstrap_param
 
@@ -1021,14 +1022,14 @@ class Estimator(object):
         for idx, sample in local_list:
             objval, paramvals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.exp_list))) - set(sample))
-            paramvals['lNo'] = np.sort(lNo_s)
+            paramvals["lNo"] = np.sort(lNo_s)
             lNo_params.append(paramvals)
 
         global_bootstrap_param = task_mgr.allgather_global_data(lNo_params)
         lNo_params = pd.DataFrame(global_bootstrap_param)
 
         if not return_samples:
-            del lNo_params['lNo']
+            del lNo_params["lNo"]
 
         return lNo_params
 
@@ -1085,7 +1086,7 @@ class Estimator(object):
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(bootstrap_samples, int)
-        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert distribution in ["Rect", "MVN", "KDE"]
         assert isinstance(alphas, list)
         assert isinstance(seed, (type(None), int))
 
@@ -1167,7 +1168,7 @@ class Estimator(object):
 
             assert len(list(model_names)) == len(model_param_list)
 
-            all_params = theta_values.to_dict('records')
+            all_params = theta_values.to_dict("records")
 
         if all_params:
             task_mgr = utils.ParallelTaskManager(len(all_params))
@@ -1195,7 +1196,7 @@ class Estimator(object):
                 all_obj.append(list(paramvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(model_names) + ['obj']
+        dfcols = list(model_names) + ["obj"]
         obj_at_params = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_params
 
@@ -1244,7 +1245,7 @@ class Estimator(object):
         for a in alphas:
             chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
-            LR[a] = LR['obj'] < thresholds[a]
+            LR[a] = LR["obj"] < thresholds[a]
 
         thresholds = pd.Series(thresholds)
 
@@ -1294,7 +1295,7 @@ class Estimator(object):
             )
 
         assert isinstance(theta_values, pd.DataFrame)
-        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert distribution in ["Rect", "MVN", "KDE"]
         assert isinstance(alphas, list)
         assert isinstance(
             test_theta_values, (type(None), dict, pd.Series, pd.DataFrame)
@@ -1309,7 +1310,7 @@ class Estimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-            if distribution == 'Rect':
+            if distribution == "Rect":
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = (theta_values > lb).all(axis=1) & (
                     theta_values < ub
@@ -1321,7 +1322,7 @@ class Estimator(object):
                         test_theta_values < ub
                     ).all(axis=1)
 
-            elif distribution == 'MVN':
+            elif distribution == "MVN":
                 dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
@@ -1332,7 +1333,7 @@ class Estimator(object):
                     Z = dist.pdf(test_theta_values)
                     test_result[a] = Z >= score
 
-            elif distribution == 'KDE':
+            elif distribution == "KDE":
                 dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
@@ -1354,7 +1355,7 @@ class Estimator(object):
 ################################
 
 
-@deprecated(version='6.7.2')
+@deprecated(version="6.7.2")
 def group_data(data, groupby_column_name, use_mean=None):
     """
     Group data by scenario
@@ -1435,7 +1436,7 @@ def _deprecated_experiment_instance_creation_callback(
     """
     assert cb_data is not None
     outer_cb_data = cb_data
-    scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
+    scen_num_str = re.compile(r"(\d+)$").search(scenario_name).group(1)
     scen_num = int(scen_num_str)
     basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
 
@@ -1502,7 +1503,7 @@ def _deprecated_experiment_instance_creation_callback(
         """
     if hasattr(instance, "_mpisppy_node_list"):
         raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
-    
+
     # get any theta names that are in this model
     nonant_list = [
         instance.find_component(vstr) for vstr in outer_cb_data["theta_names"]
@@ -1604,7 +1605,7 @@ class _DeprecatedEstimator(object):
         ), "The scenarios in data must be a dictionary, DataFrame or filename"
 
         if len(theta_names) == 0:
-            self.theta_names = ['parmest_dummy_var']
+            self.theta_names = ["parmest_dummy_var"]
         else:
             self.theta_names = theta_names
 
@@ -1622,7 +1623,7 @@ class _DeprecatedEstimator(object):
         Return list of fitted model parameter names
         """
         # if fitted model parameter names differ from theta_names created when Estimator object is created
-        if hasattr(self, 'theta_names_updated'):
+        if hasattr(self, "theta_names_updated"):
             return self.theta_names_updated
 
         else:
@@ -1637,7 +1638,7 @@ class _DeprecatedEstimator(object):
         model = self.model_function(data)
 
         if (len(self.theta_names) == 1) and (
-            self.theta_names[0] == 'parmest_dummy_var'
+            self.theta_names[0] == "parmest_dummy_var"
         ):
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
 
@@ -1688,7 +1689,7 @@ class _DeprecatedEstimator(object):
                     var_validate.unfix()
                     self.theta_names[i] = repr(var_cuid)
                 except:
-                    logger.warning(theta + ' is not a variable')
+                    logger.warning(theta + " is not a variable")
 
         self.parmest_model = model
 
@@ -1701,12 +1702,12 @@ class _DeprecatedEstimator(object):
             pass
         elif isinstance(exp_data, str):
             try:
-                with open(exp_data, 'r') as infile:
+                with open(exp_data, "r") as infile:
                     exp_data = json.load(infile)
             except:
-                raise RuntimeError(f'Could not read {exp_data} as json')
+                raise RuntimeError(f"Could not read {exp_data} as json")
         else:
-            raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
+            raise RuntimeError(f"Unexpected data format for cb_data={cb_data}")
         model = self._create_parmest_model(exp_data)
 
         return model
@@ -1770,7 +1771,7 @@ class _DeprecatedEstimator(object):
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
-                solver = SolverFactory('ipopt')
+                solver = SolverFactory("ipopt")
                 if self.solver_options is not None:
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
@@ -1800,7 +1801,7 @@ class _DeprecatedEstimator(object):
 
             if self.diagnostic_mode:
                 print(
-                    '    Solver termination condition = ',
+                    "    Solver termination condition = ",
                     str(solve_result.solver.termination_condition),
                 )
 
@@ -1826,7 +1827,7 @@ class _DeprecatedEstimator(object):
                 # Assumption: Objective value is sum of squared errors
                 sse = objval
 
-                '''Calculate covariance assuming experimental observation errors are
+                """Calculate covariance assuming experimental observation errors are
                 independent and follow a Gaussian
                 distribution with constant variance.
 
@@ -1836,7 +1837,7 @@ class _DeprecatedEstimator(object):
                 This formula is also applicable if the objective is scaled by a constant;
                 the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
-                '''
+                """
                 cov = 2 * sse / (n - l) * inv_red_hes
                 cov = pd.DataFrame(
                     cov, index=thetavals.keys(), columns=thetavals.keys()
@@ -1910,7 +1911,7 @@ class _DeprecatedEstimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
-        optimizer = pyo.SolverFactory('ipopt')
+        optimizer = pyo.SolverFactory("ipopt")
 
         if len(thetavals) > 0:
             dummy_cb = {
@@ -1928,13 +1929,15 @@ class _DeprecatedEstimator(object):
 
         if self.diagnostic_mode:
             if len(thetavals) > 0:
-                print('    Compute objective at theta = ', str(thetavals))
+                print("    Compute objective at theta = ", str(thetavals))
             else:
-                print('    Compute objective at initial theta')
+                print("    Compute objective at initial theta")
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _deprecated_experiment_instance_creation_callback("FOO0", None, dummy_cb)
+        instance = _deprecated_experiment_instance_creation_callback(
+            "FOO0", None, dummy_cb
+        )
         try:  # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
             active_constraints = True
@@ -1951,7 +1954,9 @@ class _DeprecatedEstimator(object):
 
         for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
-            instance = _deprecated_experiment_instance_creation_callback(sname, None, dummy_cb)
+            instance = _deprecated_experiment_instance_creation_callback(
+                sname, None, dummy_cb
+            )
 
             if initialize_parmest_model:
                 # list to store fitted parameter names that will be unfixed
@@ -1977,14 +1982,14 @@ class _DeprecatedEstimator(object):
                             theta_init_vals.append(var_validate)
                         except:
                             logger.warning(
-                                'Unable to fix model parameter value for %s (not a Pyomo model Var)',
+                                "Unable to fix model parameter value for %s (not a Pyomo model Var)",
                                 (theta),
                             )
 
             if active_constraints:
                 if self.diagnostic_mode:
-                    print('      Experiment = ', snum)
-                    print('     First solve with special diagnostics wrapper')
+                    print("      Experiment = ", snum)
+                    print("     First solve with special diagnostics wrapper")
                     (status_obj, solved, iters, time, regu) = (
                         utils.ipopt_solve_with_stats(
                             instance, optimizer, max_iter=500, max_cpu_time=120
@@ -2002,7 +2007,7 @@ class _DeprecatedEstimator(object):
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
                     print(
-                        'standard solve solver termination condition=',
+                        "standard solve solver termination condition=",
                         str(results.solver.termination_condition),
                     )
 
@@ -2045,7 +2050,7 @@ class _DeprecatedEstimator(object):
             totobj += objval
 
         retval = totobj / len(scenario_numbers)  # -1??
-        if initialize_parmest_model and not hasattr(self, 'ef_instance'):
+        if initialize_parmest_model and not hasattr(self, "ef_instance"):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
@@ -2212,14 +2217,14 @@ class _DeprecatedEstimator(object):
         bootstrap_theta = list()
         for idx, sample in local_list:
             objval, thetavals = self._Q_opt(bootlist=list(sample))
-            thetavals['samples'] = sample
+            thetavals["samples"] = sample
             bootstrap_theta.append(thetavals)
 
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
         bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
-            del bootstrap_theta['samples']
+            del bootstrap_theta["samples"]
 
         return bootstrap_theta
 
@@ -2266,14 +2271,14 @@ class _DeprecatedEstimator(object):
         for idx, sample in local_list:
             objval, thetavals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.callback_data))) - set(sample))
-            thetavals['lNo'] = np.sort(lNo_s)
+            thetavals["lNo"] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
 
         global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
         lNo_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
-            del lNo_theta['lNo']
+            del lNo_theta["lNo"]
 
         return lNo_theta
 
@@ -2323,7 +2328,7 @@ class _DeprecatedEstimator(object):
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(bootstrap_samples, int)
-        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert distribution in ["Rect", "MVN", "KDE"]
         assert isinstance(alphas, list)
         assert isinstance(seed, (type(None), int))
 
@@ -2380,7 +2385,7 @@ class _DeprecatedEstimator(object):
             Objective value for each theta (infeasible solutions are
             omitted).
         """
-        if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
+        if len(self.theta_names) == 1 and self.theta_names[0] == "parmest_dummy_var":
             pass  # skip assertion if model has no fitted parameters
         else:
             # create a local instance of the pyomo model to access model variables and parameters
@@ -2435,7 +2440,7 @@ class _DeprecatedEstimator(object):
                 )
             assert len(list(theta_names)) == len(model_theta_list)
 
-            all_thetas = theta_values.to_dict('records')
+            all_thetas = theta_values.to_dict("records")
 
         if all_thetas:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
@@ -2463,7 +2468,7 @@ class _DeprecatedEstimator(object):
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(theta_names) + ['obj']
+        dfcols = list(theta_names) + ["obj"]
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
@@ -2505,7 +2510,7 @@ class _DeprecatedEstimator(object):
         for a in alphas:
             chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
-            LR[a] = LR['obj'] < thresholds[a]
+            LR[a] = LR["obj"] < thresholds[a]
 
         thresholds = pd.Series(thresholds)
 
@@ -2547,7 +2552,7 @@ class _DeprecatedEstimator(object):
             with True (inside) or False (outside) for each alpha
         """
         assert isinstance(theta_values, pd.DataFrame)
-        assert distribution in ['Rect', 'MVN', 'KDE']
+        assert distribution in ["Rect", "MVN", "KDE"]
         assert isinstance(alphas, list)
         assert isinstance(
             test_theta_values, (type(None), dict, pd.Series, pd.DataFrame)
@@ -2562,7 +2567,7 @@ class _DeprecatedEstimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-            if distribution == 'Rect':
+            if distribution == "Rect":
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = (theta_values > lb).all(axis=1) & (
                     theta_values < ub
@@ -2574,7 +2579,7 @@ class _DeprecatedEstimator(object):
                         test_theta_values < ub
                     ).all(axis=1)
 
-            elif distribution == 'MVN':
+            elif distribution == "MVN":
                 dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
@@ -2585,7 +2590,7 @@ class _DeprecatedEstimator(object):
                     Z = dist.pdf(test_theta_values)
                     test_result[a] = Z >= score
 
-            elif distribution == 'KDE':
+            elif distribution == "KDE":
                 dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)

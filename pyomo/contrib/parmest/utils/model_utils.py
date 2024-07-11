@@ -43,8 +43,10 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
     model = model.clone()
 
     if param_CUIDs is None:
-        param_CUIDs = [ComponentUID(param.name) for 
-                       param in model.component_data_objects(pyo.Param)]
+        param_CUIDs = [
+            ComponentUID(param.name)
+            for param in model.component_data_objects(pyo.Param)
+        ]
 
     # keep a list of the parameter names for creating the new model
     param_names = [str(param_CUID) for param_CUID in param_CUIDs]
@@ -80,7 +82,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             vals = param_object.extract_values()
             param_objects = []
             for param_obj in param_object:
-                indexed_param_name = param_object.name + '[' + str(param_obj) + ']'
+                indexed_param_name = param_object.name + "[" + str(param_obj) + "]"
                 param_cuid = ComponentUID(indexed_param_name)
                 param_objects.append(param_cuid.find_component_on(model))
                 indexed_param_names.append(indexed_param_name)
@@ -100,14 +102,10 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             comp_map[param_object] = new_var_object
             new_var_objects = []
             for var_obj in new_var_object:
-                var_cuid = ComponentUID(
-                    new_var_object.name + '[' + str(var_obj) + ']'
-                )
+                var_cuid = ComponentUID(new_var_object.name + "[" + str(var_obj) + "]")
                 new_var_objects.append(var_cuid.find_component_on(model))
 
-            for param_obj, new_var_obj in zip(
-                param_objects, new_var_objects
-            ):
+            for param_obj, new_var_obj in zip(param_objects, new_var_objects):
                 substitution_map[id(param_obj)] = new_var_obj
                 comp_map[param_obj] = new_var_obj
 
@@ -263,7 +261,7 @@ def convert_params_to_vars_deprecated(model, param_names=None, fix_vars=False):
             vals = theta_object.extract_values()
             param_theta_objects = []
             for theta_obj in theta_object:
-                indexed_param_name = theta_object.name + '[' + str(theta_obj) + ']'
+                indexed_param_name = theta_object.name + "[" + str(theta_obj) + "]"
                 theta_cuid = ComponentUID(indexed_param_name)
                 param_theta_objects.append(theta_cuid.find_component_on(model))
                 indexed_param_names.append(indexed_param_name)
@@ -284,7 +282,7 @@ def convert_params_to_vars_deprecated(model, param_names=None, fix_vars=False):
             var_theta_objects = []
             for theta_obj in theta_var_object:
                 theta_cuid = ComponentUID(
-                    theta_var_object.name + '[' + str(theta_obj) + ']'
+                    theta_var_object.name + "[" + str(theta_obj) + "]"
                 )
                 var_theta_objects.append(theta_cuid.find_component_on(model))
 
