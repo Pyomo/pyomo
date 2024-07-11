@@ -117,6 +117,7 @@ class LinearProgrammingDual(object):
         # This is a csc matrix, so we'll skipping transposing and just work off
         # of the folumns
         A = std_form.A
+        c = std_form.c.todense()
         dual_rows = range(A.shape[1])
         dual_cols = range(A.shape[0])
         dual.x = Var(dual_cols, domain=NonNegativeReals)
@@ -141,27 +142,18 @@ class LinearProgrammingDual(object):
                 primal_row = A.indices[j]
                 lhs += coef * dual.x[primal_row]
 
-                # coef = A[j, i]
-                # if not coef:
-                #     continue
-                # elif isclose_const(coef, 1.0):
-                #     lhs += dual.x[j]
-                # elif isclose_const(coef, -1.0):
-                #     lhs -= dual.x[j]
-                # else:
-                #     lhs += float(A[j, i]) * dual.x[j]
             if primal.domain is Reals:
-                dual.constraints[i] = lhs == std_form.c[0, i]
+                dual.constraints[i] = lhs == c[0, i]
             elif primal_sense is minimize:
                 if primal.domain is NonNegativeReals:
-                    dual.constraints[i] = lhs <= std_form.c[0, i]
+                    dual.constraints[i] = lhs <= c[0, i]
                 else:  # primal.domain is NonPositiveReals
-                    dual.constraints[i] = lhs >= std_form.c[0, i]
+                    dual.constraints[i] = lhs >= c[0, i]
             else:
                 if primal.domain is NonNegativeReals:
-                    dual.constraints[i] = lhs >= std_form.c[0, i]
+                    dual.constraints[i] = lhs >= c[0, i]
                 else: # primal.domain is NonPositiveReals
-                    dual.constraints[i] = lhs <= std_form.c[0, i]
+                    dual.constraints[i] = lhs <= c[0, i]
             trans_info.dual_constraint[primal] = dual.constraints[i]
             trans_info.primal_var[dual.constraints[i]] = primal
 

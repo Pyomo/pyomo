@@ -27,7 +27,10 @@ from pyomo.environ import (
     value,
     Var,
 )
-from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
+)
 from pyomo.opt import SolverFactory, WriterFactory
 
 
@@ -130,9 +133,9 @@ class TestLPDual(unittest.TestCase):
         self.assertIs(dy.ctype, Constraint)
         self.assertIs(dz.ctype, Constraint)
 
-        assertExpressionsEqual(self, dx.expr, -4.0 * alpha + beta <= 1.0)
-        assertExpressionsEqual(self, dy.expr, -2.0 * alpha + beta - lamb >= 2.0)
-        assertExpressionsEqual(self, dz.expr, -alpha - 1.0 * lamb + xi == -3.0)
+        assertExpressionsStructurallyEqual(self, dx.expr, -4.0 * alpha + beta <= 1.0)
+        assertExpressionsStructurallyEqual(self, dy.expr, -2.0 * alpha + beta - lamb >= 2.0)
+        assertExpressionsStructurallyEqual(self, dz.expr, -alpha - 1.0 * lamb + xi == -3.0)
 
         dual_obj = dual.obj
         self.assertIsInstance(dual_obj, Objective)
@@ -183,10 +186,10 @@ class TestLPDual(unittest.TestCase):
         self.assertIs(dlambda.ctype, Constraint)
         self.assertIs(dxi.ctype, Constraint)
 
-        assertExpressionsEqual(self, dalpha.expr, -4.0 * x - 2.0 * y - z <= -5.0)
-        assertExpressionsEqual(self, dbeta.expr, x + y >= 3.0)
-        assertExpressionsEqual(self, dlambda.expr, -y - z == -4.2)
-        assertExpressionsEqual(self, dxi.expr, z <= 42.0)
+        assertExpressionsStructurallyEqual(self, dalpha.expr, -4.0 * x - 2.0 * y - z <= -5.0)
+        assertExpressionsStructurallyEqual(self, dbeta.expr, x + y >= 3.0)
+        assertExpressionsStructurallyEqual(self, dlambda.expr, -y - z == -4.2)
+        assertExpressionsStructurallyEqual(self, dxi.expr, z <= 42.0)
 
         primal_obj = primal.obj
         self.assertIsInstance(primal_obj, Objective)
