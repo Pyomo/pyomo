@@ -12,6 +12,7 @@
 from pyomo.common.config import ConfigValue, document_kwargs_from_configdict
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.numeric_types import native_numeric_types
 
 from pyomo.opt import WriterFactory
 from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
@@ -78,27 +79,11 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
             return _ParameterizedLinearStandardFormCompiler_impl(config).write(model)
 
 
-class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_impl):
-    def _get_visitor(self, var_map, var_order, sorter):
-        wrt = self.config.wrt
-        if wrt is None:
-            wrt = []
-        return ParameterizedLinearRepnVisitor({}, var_map, var_order, sorter, wrt=wrt)
-
-    def _to_vector(self, data, N, vector_type):
-        # override this to not attempt conversion to float since that will fail
-        # on the Pyomo expressions
-        return np.array([v for v in data])
-
-    def _csc_matrix(self, data, index, index_ptr, nrows, ncols):
-        return _CSCMatrix(data, index, index_ptr, nrows, ncols)
-
-    def _csr_matrix(self, data, index, index_ptr, nrows, ncols):
-        return _CSRMatrix(data, index, index_ptr, nrows, ncols)
-
-
 class _SparseMatrixBase(object):
-    def __init__(self, data, indices, indptr, nrows, ncols):
+    def __init__(self, matrix_data, shape):
+        (data, indices, indptr) = matrix_data
+        (nrows, ncols) = shape
+
         self.data = np.array(data)
         self.indices = np.array(indices, dtype=int)
         self.indptr = np.array(indptr, dtype=int)
@@ -153,7 +138,7 @@ class _CSRMatrix(_SparseMatrixBase):
         # above.
         col_index_ptr = np.insert(col_index_ptr, 0, 0)
 
-        return _CSCMatrix(csc_data, row_index, col_index_ptr, *self.shape)
+        return _CSCMatrix((csc_data, row_index, col_index_ptr), self.shape)
 
     def todense(self):
         nrows = self.shape[0]
@@ -186,23 +171,62 @@ class _CSCMatrix(_SparseMatrixBase):
         return dense
 
     def sum_duplicates(self):
-        nnz = 0
         ncols = self.shape[1]
+        row_index = self.indices
+        col_index_ptr = self.indptr
+        data = self.data
+
+        num_non_zeros = 0
         col_end = 0
         for i in range(ncols):
             jj = col_end
-            col_end = self.row_index[i + 1]
+            col_end = col_index_ptr[i + 1]
             while jj < col_end:
-                j = self.index[jj]
-                x = self.data[jj]
+                j = row_index[jj]
+                x = data[jj]
                 jj += 1
-                while jj < col_end and self.index[jj] == j:
-                    x += self.data[jj]
+                while jj < col_end and row_index[jj] == j:
+                    x += data[jj]
                     jj += 1
-                self.row_index[nnz] = j
-                self.data[nnz] = x
-                nnz += 1
-            self.indptr[i + 1] = nnz
+                row_index[num_non_zeros] = j
+                data[num_non_zeros] = x
+                num_non_zeros += 1
+            col_index_ptr[i + 1] = num_non_zeros
 
     def eliminate_zeros(self):
-        raise NotImplementedError
+        ncols = self.shape[1]
+        row_index = self.indices
+        col_index_ptr = self.indptr
+        data = self.data
+
+        num_non_zeros = 0
+        col_end = 0
+        for i in range(ncols):
+            jj = col_end
+            col_end = col_index_ptr[i + 1]
+            while jj < col_end:
+                j = row_index[jj]
+                x = data[jj]
+                if x.__class__ not in native_numeric_types or x != 0:
+                    row_index[num_non_zeros] = j
+                    data[num_non_zeros] = x
+                    num_non_zeros += 1
+                jj += 1
+            col_index_ptr[i + 1] = num_non_zeros
+                    
+
+class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_impl):
+    _csc_matrix = _CSCMatrix
+    _csr_matrix = _CSRMatrix
+
+    def _get_visitor(self, subexpression_cache, var_map, var_order, sorter):
+        wrt = self.config.wrt
+        if wrt is None:
+            wrt = []
+        return ParameterizedLinearRepnVisitor(subexpression_cache, var_map,
+                                              var_order, sorter, wrt=wrt)
+
+    def _to_vector(self, data, N, vector_type):
+        # override this to not attempt conversion to float since that will fail
+        # on the Pyomo expressions
+        return np.array([v for v in data])

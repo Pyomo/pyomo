@@ -44,7 +44,7 @@ from pyomo.repn.plugins.parameterized_standard_form import (
 )
 class TestSparseMatrixRepresentations(unittest.TestCase):
     def test_csr_to_csc_only_data(self):
-        A = _CSRMatrix([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4], 4, 4)
+        A = _CSRMatrix(([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4]), [4, 4])
         thing = A.tocsc()
 
         self.assertTrue(np.all(thing.data == np.array([5, 8, 6, 3])))
@@ -57,7 +57,7 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         m.y = Var()
 
         A = _CSRMatrix(
-            [5, 8 * m.x, 3 * m.x * m.y**2, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4], 4, 4
+            ([5, 8 * m.x, 3 * m.x * m.y**2, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4]), [4, 4]
         )
         thing = A.tocsc()
 
@@ -71,7 +71,7 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(thing.indptr == np.array([0, 1, 3, 4, 4])))
 
     def test_csr_to_csc_empty_matrix(self):
-        A = _CSRMatrix([], [], [0], 0, 4)
+        A = _CSRMatrix(([], [], [0]), [0, 4])
         thing = A.tocsc()
 
         self.assertEqual(thing.data.size, 0)
@@ -80,13 +80,13 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(thing.indptr == np.zeros(5)))
 
     def test_todense(self):
-        A = _CSRMatrix([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4], 4, 4)
+        A = _CSRMatrix(([5, 8, 3, 6], [0, 1, 2, 1], [0, 1, 2, 3, 4]), [4, 4])
         dense = np.array([[5, 0, 0, 0], [0, 8, 0, 0], [0, 0, 3, 0], [0, 6, 0, 0]])
 
         self.assertTrue(np.all(A.todense() == dense))
         self.assertTrue(np.all(A.tocsc().todense() == dense))
 
-        A = _CSRMatrix([5, 6, 7, 2, 1, 1.5], [0, 1, 1, 2, 3, 1], [0, 2, 4, 5, 6], 4, 4)
+        A = _CSRMatrix(([5, 6, 7, 2, 1, 1.5], [0, 1, 1, 2, 3, 1], [0, 2, 4, 5, 6]), [4, 4])
         dense = np.array([[5, 6, 0, 0], [0, 7, 2, 0], [0, 0, 0, 1], [0, 1.5, 0, 0]])
         self.assertTrue(np.all(A.todense() == dense))
         self.assertTrue(np.all(A.tocsc().todense() == dense))
