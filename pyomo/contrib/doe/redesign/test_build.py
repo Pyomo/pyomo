@@ -1,15 +1,15 @@
 from experiment_class_example import *
 from pyomo.contrib.doe import *
-from pyomo.contrib.doe import *
-
-from simple_reaction_example import *
 
 import numpy as np
 import logging
 
+f = open('result.json')
+data_ex = json.load(f)
+data_ex['control_points'] = {float(k): v for k, v in data_ex['control_points'].items()}
+
 doe_obj = [0, 0, 0, 0,]
 obj = ['trace', 'det', 'det']
-file_name = ['trash1.json', 'trash2.json', 'trash3.json']
 
 for ind, fd in enumerate(['central', 'backward', 'forward']):
     experiment = FullReactorExperiment(data_ex, 10, 3)
@@ -32,50 +32,19 @@ for ind, fd in enumerate(['central', 'backward', 'forward']):
         _only_compute_fim_lower=True,
         logger_level=logging.INFO,
     )
-    doe_obj[ind].run_doe(results_file=file_name[ind])
-
-
-ind = 3
-
-doe_obj[ind] = DesignOfExperiments(
-        experiment, 
-        fd_formula='central',
-        step=1e-3,
-        objective_option=ObjectiveLib.det,
-        scale_constant_value=1,
-        scale_nominal_param_value=(True and (ind != 2)),
-        prior_FIM=None,
-        jac_initial=None,
-        fim_initial=None,
-        L_initial=None,
-        L_LB=1e-7,
-        solver=None,
-        tee=False,
-        args=None,
-        _Cholesky_option=True,
-        _only_compute_fim_lower=True,
-        logger_level=logging.INFO,
-    )
-doe_obj[ind].model.set_blocks = pyo.Set(initialize=[0, 1, 2])
-doe_obj[ind].model.block_instances = pyo.Block(doe_obj[ind].model.set_blocks)
-doe_obj[ind].create_doe_model(model=doe_obj[ind].model.block_instances[0])
-doe_obj[ind].create_doe_model(model=doe_obj[ind].model.block_instances[1])
-doe_obj[ind].create_doe_model(model=doe_obj[ind].model.block_instances[2])
-
-print('Multi-block build complete')
+    doe_obj[ind].run_doe()
 
 # add a prior information (scaled FIM with T=500 and T=300 experiments)
 # prior = np.asarray(
     # [
-        # [28.67892806, 5.41249739, -81.73674601, -24.02377324],
-        # [5.41249739, 26.40935036, -12.41816477, -139.23992532],
-        # [-81.73674601, -12.41816477, 240.46276004, 58.76422806],
-        # [-24.02377324, -139.23992532, 58.76422806, 767.25584508],
+        # [  1745.81343391   1599.21859987  -3512.47892155  -7589.26220445]
+        # [  1599.21859987   3525.63856364  -2900.94638673 -16465.46338508]
+        # [ -3512.47892155  -2900.94638673   7190.13048958  13849.96839993]
+        # [ -7589.26220445 -16465.46338508  13849.96839993  77674.03976715]]
     # ]
 # )
 
 prior = None
-
 design_ranges = {
     'CA[0]': [1, 5, 3], 
     'T[0]': [300, 700, 3],
@@ -87,7 +56,6 @@ doe_obj[0].compute_FIM(method='kaug')
 doe_obj[0].compute_FIM(method='sequential')
 
 print(doe_obj[0].kaug_FIM)
-
 
 # Optimal values
 print("Optimal values for determinant optimized experimental design:")
@@ -121,6 +89,7 @@ rescaled_FIM = rescale_FIM(FIM=FIM_vals_new_np, param_vals=param_vals)
 print("Results from using compute FIM (first old, then new)")
 print(doe_obj[0].kaug_FIM)
 print(doe_obj[0].seq_FIM)
+print(np.isclose(doe_obj[0].kaug_FIM, doe_obj[0].seq_FIM, 1e-2))
 print(np.log10(np.linalg.det(doe_obj[0].kaug_FIM)))
 print(np.log10(np.linalg.det(doe_obj[0].seq_FIM)))
 A = doe_obj[0].kaug_jac
