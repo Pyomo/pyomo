@@ -7,7 +7,7 @@ import logging
 import unittest
 
 from pyomo.common.collections import Bunch
-from pyomo.common.dependencies import numpy_available, scipy_available
+from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
 from pyomo.core.base import (
     ConcreteModel,
     Constraint,
@@ -15,11 +15,11 @@ from pyomo.core.base import (
     Param,
     Var,
 )
-from pyomo.core.expr import exp
+from pyomo.core.expr import exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.separation_problem_methods import construct_separation_problem
-from pyomo.contrib.pyros.uncertainty_sets import BoxSet
+from pyomo.contrib.pyros.uncertainty_sets import BoxSet, FactorModelSet
 from pyomo.contrib.pyros.util import (
     new_preprocess_model_data,
     ObjectiveType,
@@ -172,21 +172,93 @@ class TestConstructSeparationProblem(unittest.TestCase):
             ),
         )
 
-    def test_construct_separation_problem_uncertain_param_components(self):
+    def test_construct_separation_problem_uncertainty_components(self):
         """
         Test separation problem handles uncertain parameter variable
         components as expected.
         """
         model_data, config = build_simple_model_data(objective_focus="worst_case")
         separation_model = construct_separation_problem(model_data, config)
+        uncertainty_blk = separation_model.uncertainty
+        boxcon1, boxcon2 = uncertainty_blk.uncertainty_cons_list
+        paramvar1, paramvar2 = uncertainty_blk.uncertain_param_var_list
+
+        self.assertEqual(uncertainty_blk.auxiliary_var_list, [])
+        self.assertEqual(len(uncertainty_blk.uncertainty_cons_list), 2)
+        assertExpressionsEqual(
+            self,
+            boxcon1.expr,
+            RangedExpression((np.int64(0), paramvar1, np.int64(1)), False),
+        )
+        assertExpressionsEqual(
+            self,
+            boxcon2.expr,
+            RangedExpression((np.int64(0), paramvar2, np.int64(0)), False),
+        )
+        self.assertTrue(boxcon1.active)
+        self.assertTrue(boxcon2.active)
 
         # u, bounds [0, 1]
-        self.assertFalse(separation_model.uncertainty.uncertain_param_var_list[0].fixed)
-        # u2, bounds [0, 0]
-        separation_model.uncertainty.uncertain_param_var_list[1].pprint()
-        self.assertTrue(separation_model.uncertainty.uncertain_param_var_list[1].fixed)
-        for con in separation_model.uncertainty.uncertainty_cons_list:
-            self.assertTrue(con.active, f"Uncertainty set con {con.name!r} inactive.")
+        self.assertFalse(paramvar1.fixed)
+        # bounds [0, 0]; separation constructor should fix the Var
+        self.assertTrue(paramvar2.fixed)
+
+        self.assertEqual(paramvar1.bounds, (0, 1))
+        self.assertEqual(paramvar2.bounds, (0, 0))
+
+    def test_construct_separation_problem_uncertain_factor_param_components(self):
+        """
+        Test separation problem uncertainty components for uncertainty
+        set requiring auxiliary variables.
+        """
+        model_data, config = build_simple_model_data(objective_focus="worst_case")
+        config.uncertainty_set = FactorModelSet(
+            origin=[1, 0],
+            beta=1,
+            number_of_factors=3,
+            psi_mat=[[1, 2.5, 1], [0, 1, 0.5]],
+        )
+        separation_model = construct_separation_problem(model_data, config)
+        uncertainty_blk = separation_model.uncertainty
+        *matrix_product_cons, aux_sum_con = uncertainty_blk.uncertainty_cons_list
+        paramvar1, paramvar2 = uncertainty_blk.uncertain_param_var_list
+        auxvar1, auxvar2, auxvar3 = uncertainty_blk.auxiliary_var_list
+
+        self.assertEqual(len(matrix_product_cons), 2)
+        self.assertTrue(matrix_product_cons[0].active)
+        self.assertTrue(matrix_product_cons[1].active)
+        self.assertTrue(aux_sum_con.active)
+        assertExpressionsEqual(
+            self,
+            aux_sum_con.expr,
+            RangedExpression((-3, auxvar1 + auxvar2 + auxvar3, 3), False),
+        )
+        assertExpressionsEqual(
+            self,
+            matrix_product_cons[0].expr,
+            auxvar1 + 2.5 * auxvar2 + auxvar3 + 1 == paramvar1,
+        )
+        assertExpressionsEqual(
+            self,
+            matrix_product_cons[1].expr,
+            0.0 * auxvar1 + auxvar2 + 0.5 * auxvar3 == paramvar2,
+        )
+
+        # none of the vars should be fixed
+        self.assertFalse(paramvar1.fixed)
+        self.assertFalse(paramvar2.fixed)
+        self.assertFalse(auxvar1.fixed)
+        self.assertFalse(auxvar2.fixed)
+        self.assertFalse(auxvar3.fixed)
+
+        # factor set auxiliary variables
+        self.assertEqual(auxvar1.bounds, (-1, 1))
+        self.assertEqual(auxvar2.bounds, (-1, 1))
+        self.assertEqual(auxvar3.bounds, (-1, 1))
+
+        # factor set bounds are tighter
+        self.assertEqual(paramvar1.bounds, (-3.5, 5.5))
+        self.assertEqual(paramvar2.bounds, (-1.5, 1.5))
 
 
 if __name__ == "__main__":
