@@ -76,7 +76,7 @@ from pyomo.core.base import (
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
 from pyomo.opt.results import check_optimal_termination
-from pyomo.contrib.pyros.util import standardize_component_data
+from pyomo.contrib.pyros.util import copy_docstring, standardize_component_data
 
 
 valid_num_types = tuple(native_numeric_types)
@@ -653,6 +653,36 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         for (lb, ub), param_var in zip(parameter_bounds, uncertain_param_vars):
             param_var.setlb(lb)
             param_var.setub(ub)
+
+    def compute_auxiliary_param_vals(self, point, solver=None):
+        """
+        Compute auxiliary parameter values for a given point.
+
+        Parameters
+        ----------
+        point : (N,) array-like
+            Point of interest.
+        solver : Pyomo solver, optional
+            If needed, a Pyomo solver with which to compute the
+            auxiliary values.
+
+        Returns
+        -------
+        aux_space_pt : numpy.ndarray
+            Computed auxiliary parameter values.
+        aux_space_pt_feasible : bool
+            True if conclusion made that auxiliary values are
+            feasible, False otherwise.
+
+        Raises
+        ------
+        ValueError
+            If conclusion on feasibility of auxiliary values
+            cannot be made.
+        """
+        raise NotImplementedError(
+            f"Auxiliary parameter computation not supported for {type(self).__name__}."
+        )
 
 
 class UncertaintySetList(MutableSequence):
@@ -1232,6 +1262,35 @@ class CardinalitySet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
+    @copy_docstring(UncertaintySet.compute_auxiliary_param_vals)
+    def compute_auxiliary_param_vals(self, point, solver=None):
+        point_arr = np.array(point)
+
+        if np.allclose(point_arr, self.origin):
+            return np.zeros(self.dim), True
+
+        aux_space_pt = np.empty(self.dim)
+        is_zero_deviation_off_origin = np.logical_and(
+            self.positive_deviation == 0,
+            point_arr != self.origin,
+        )
+        if np.any(is_zero_deviation_off_origin):
+            return np.full(self.dim, np.nan), False
+
+        is_dev_nonzero = self.positive_deviation != 0
+        aux_space_pt[is_dev_nonzero] = (
+            point_arr[is_dev_nonzero] - self.origin[is_dev_nonzero]
+        ) / self.positive_deviation[is_dev_nonzero]
+        aux_space_pt[self.positive_deviation == 0] = 0
+
+        aux_space_pt_feasible = (
+            aux_space_pt.sum() <= self.gamma
+            and np.all(0 <= aux_space_pt)
+            and np.all(aux_space_pt <= 1)
+        )
+
+        return aux_space_pt, aux_space_pt_feasible
+
     def point_in_set(self, point):
         """
         Determine whether a given point lies in the cardinality set.
@@ -1246,32 +1305,8 @@ class CardinalitySet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        if len(point) != self.dim:
-            raise ValueError(
-                f"Point {point} must be of length {self.dim} to match the "
-                f"uncertainty set dimension, but got length {len(point)}."
-            )
-        point_arr = np.array(point)
-        aux_vals = np.empty(self.dim)
-
-        is_zero_deviation_off_origin = np.logical_and(
-            self.positive_deviation == 0,
-            point_arr != self.origin,
-        )
-        if np.any(is_zero_deviation_off_origin):
-            return False
-
-        is_dev_nonzero = self.positive_deviation != 0
-        aux_vals[is_dev_nonzero] = (
-            point_arr[is_dev_nonzero] - self.origin[is_dev_nonzero]
-        ) / self.positive_deviation[is_dev_nonzero]
-        aux_vals[self.positive_deviation == 0] = 0
-
-        return (
-            aux_vals.sum() <= self.gamma
-            and np.all(0 <= aux_vals)
-            and np.all(aux_vals <= 1)
-        )
+        _, aux_space_pt_feasible = self.compute_auxiliary_param_vals(point)
+        return aux_space_pt_feasible
 
 
 class PolyhedralSet(UncertaintySet):
@@ -2121,21 +2156,11 @@ class FactorModelSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
-    def point_in_set(self, point):
-        """
-        Determine whether a given point lies in the factor model set.
-
-        Parameters
-        ----------
-        point : (N,) array-like
-            Point (parameter value) of interest.
-
-        Returns
-        -------
-        : bool
-            True if the point lies in the set, False otherwise.
-        """
+    @copy_docstring(UncertaintySet.compute_auxiliary_param_vals)
+    def compute_auxiliary_param_vals(self, point, solver=None):
         point_arr = np.array(point)
+        if np.allclose(point_arr, self.origin):
+            return np.zeros(self.number_of_factors), True
 
         is_pinv_applicable = (
             self.dim > self.number_of_factors
@@ -2147,14 +2172,12 @@ class FactorModelSet(UncertaintySet):
             # auxiliary parameters
             inv_psi = np.linalg.pinv(self.psi_mat)
             aux_space_pt = inv_psi @ (point_arr - self.origin)
-
-            # account for (im)precision
             tol = 1e-8
-
-            return (
+            is_aux_pt_feasible = (
                 abs(aux_space_pt.sum()) <= self.beta * self.number_of_factors + tol
                 and np.all(np.abs(aux_space_pt) <= 1 + tol)
             )
+            return aux_space_pt, is_aux_pt_feasible
         else:
             # check existence of point in auxiliary variable
             # space using LPs
@@ -2172,15 +2195,32 @@ class FactorModelSet(UncertaintySet):
 
             # check termination
             if res.success and res.status == 0:
-                return True
+                return res.x, True
             elif res.status == 2:
-                return False
+                return res.x, False
             else:
                 raise ValueError(
-                    f"Could not conclude whether the point {point} "
-                    f"is in the factor model set {self}."
+                    f"Could not conclude whether a solution exists "
+                    "for the feasibility problem."
                     f" Linprog results:\n {res} "
                 )
+
+    def point_in_set(self, point):
+        """
+        Determine whether a given point lies in the factor model set.
+
+        Parameters
+        ----------
+        point : (N,) array-like
+            Point (parameter value) of interest.
+
+        Returns
+        -------
+        : bool
+            True if the point lies in the set, False otherwise.
+        """
+        aux_space_pt, is_aux_pt_feasible = self.compute_auxiliary_param_vals(point)
+        return is_aux_pt_feasible
 
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):

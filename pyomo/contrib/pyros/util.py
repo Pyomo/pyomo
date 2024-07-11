@@ -18,6 +18,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 import copy
 from enum import Enum, auto
+import functools
 import itertools as it
 import logging
 import math
@@ -3579,3 +3580,24 @@ class IterationLogRecord:
     def log_header_rule(log_func, fillchar="-", **log_func_kwargs):
         """Log header rule."""
         log_func(fillchar * IterationLogRecord._LINE_LENGTH, **log_func_kwargs)
+
+
+def copy_docstring(source_func):
+    """
+    Create a decorator which copies docstring of a callable
+    `source_func` to a target callable passed to the decorator.
+
+    Returns
+    -------
+    decorator_doc : callable
+        Decorator of interest.
+    """
+    def decorator_doc(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        wrapper.__doc__ = source_func.__doc__
+        return wrapper
+
+    return decorator_doc

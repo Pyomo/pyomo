@@ -82,6 +82,16 @@ def add_uncertainty_set_constraints(separation_model, config):
         uncertain_param_vars=param_var_list,
         global_solver=config.global_solver,
     )
+    if aux_vars:
+        aux_var_vals, aux_var_vals_feasible = (
+            config.uncertainty_set.compute_auxiliary_param_vals(
+                point=config.nominal_uncertain_param_vals,
+                solver=config.global_solver,
+            )
+        )
+        if aux_var_vals_feasible:
+            for auxvar, auxval in zip(aux_vars, aux_var_vals):
+                auxvar.set_value(auxval)
 
     # preprocess uncertain parameters which have been fixed by bounds
     # in order to simplify the separation problems
