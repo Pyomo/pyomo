@@ -14,9 +14,13 @@ Unit tests for the grcs API
 One class per function being tested, minimum one test per class
 '''
 
+import logging
+import math
+import time
+
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.collections import Bunch, ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.core.base.var import VarData
@@ -26,45 +30,11 @@ from pyomo.core.expr import (
     MonomialTermExpression,
     SumExpression,
 )
-from pyomo.contrib.pyros.util import (
-    add_decision_rule_variables,
-    add_decision_rule_constraints,
-    IterationLogRecord,
-    ObjectiveType,
-    pyrosTerminationCondition,
-    selective_clone,
-    turn_bounds_to_constraints,
-    transform_to_standard_form,
-    TimingData,
-)
-from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
-from pyomo.contrib.pyros.util import get_vars_from_component
-from pyomo.contrib.pyros.util import identify_objective_functions
-from pyomo.common.collections import Bunch
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
-import time
-import math
-from pyomo.contrib.pyros.util import time_code
-from pyomo.contrib.pyros.uncertainty_sets import (
-    UncertaintySet,
-    BoxSet,
-    CardinalitySet,
-    PolyhedralSet,
-    EllipsoidalSet,
-    AxisAlignedEllipsoidalSet,
-    IntersectionSet,
-    DiscreteScenarioSet,
-    Geometry,
-)
-from pyomo.contrib.pyros.master_problem_methods import (
-    solve_master,
-    minimize_dr_vars,
-)
-from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
-from pyomo.environ import maximize as pyo_max
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
+from pyomo.environ import maximize as pyo_max
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -93,7 +63,35 @@ from pyomo.environ import (
     maximize,
     minimize,
 )
-import logging
+
+from pyomo.contrib.pyros.master_problem_methods import (
+    solve_master,
+    minimize_dr_vars,
+)
+from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
+from pyomo.contrib.pyros.uncertainty_sets import (
+    UncertaintySet,
+    BoxSet,
+    AxisAlignedEllipsoidalSet,
+    IntersectionSet,
+    DiscreteScenarioSet,
+    Geometry,
+)
+from pyomo.contrib.pyros.util import (
+    add_decision_rule_variables,
+    add_decision_rule_constraints,
+    get_vars_from_component,
+    identify_objective_functions,
+    IterationLogRecord,
+    ObjectiveType,
+    pyrosTerminationCondition,
+    replace_uncertain_bounds_with_constraints,
+    selective_clone,
+    time_code,
+    TimingData,
+    turn_bounds_to_constraints,
+    transform_to_standard_form,
+)
 
 logger = logging.getLogger(__name__)
 
