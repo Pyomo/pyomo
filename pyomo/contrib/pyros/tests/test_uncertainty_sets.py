@@ -254,7 +254,7 @@ class TestBoxSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test box set constraints added correctly.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         box_set = BoxSet(bounds=[[1, 2], [3, 4]])
@@ -276,7 +276,7 @@ class TestBoxSet(unittest.TestCase):
 
     def test_set_as_constraint_dim_mismatch(self):
         """
-        Check exception raised if number of uncertain parameters
+        Check exception raised if number of uncertain param vars
         does not match the dimension.
         """
         m = ConcreteModel()
@@ -302,8 +302,7 @@ class TestBoxSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computation with global solver
-        is as expected.
+        Test parameter bounds computations give expected results.
         """
         box_set = BoxSet([[1, 2], [3, 4]])
         computed_bounds = box_set._compute_parameter_bounds(SolverFactory("baron"))
@@ -518,7 +517,7 @@ class TestBudgetSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computations are correct.
+        Test parameter bounds computations give expected results.
         """
         solver = SolverFactory("baron")
 
@@ -544,8 +543,7 @@ class TestBudgetSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test `set_as_constraint` raises Exception if Params
-        passed instead of Vars.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         m.v1 = Var(initialize=0)
@@ -744,9 +742,7 @@ class TestFactorModelSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_compute_parameter_bounds(self):
         """
-        If LP solver is available, test parameter bounds method
-        for factor model set is correct (check against
-        results from an LP solver).
+        Test parameter bounds computations give expected results.
         """
         solver = SolverFactory("baron")
 
@@ -798,7 +794,7 @@ class TestFactorModelSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test `set_as_constraint` works as expected.
+        Test method for setting up constraints works correctly.
         """
         fset = FactorModelSet(
             origin=[1, 2],
@@ -1149,8 +1145,7 @@ class TestIntersectionSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test constraint generation method works properly given
-        valid inputs.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         m.v1 = Var(initialize=0)
@@ -1274,8 +1269,7 @@ class TestIntersectionSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computation with global solver
-        is as expected.
+        Test parameter bounds computations give expected results.
         """
         i_set = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
@@ -1459,7 +1453,7 @@ class TestCardinalitySet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test cardinality set constraints added correctly.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5)
@@ -1546,8 +1540,7 @@ class TestCardinalitySet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computation with global solver
-        is as expected.
+        Test parameter bounds computations give expected results.
         """
         cset = CardinalitySet(
             origin=[-0.5, 1, 2],
@@ -1620,7 +1613,7 @@ class TestDiscreteScenarioSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test method for discrete set constraint generation.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         m.v1 = Var([0, 1], initialize=0)
@@ -1763,7 +1756,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test set constraints added correctly.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         m.v = Var([0, 1, 2])
@@ -1824,8 +1817,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computation with global solver
-        is as expected.
+        Test parameter bounds computations give expected results.
         """
         aeset = AxisAlignedEllipsoidalSet(
             center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
@@ -2022,7 +2014,7 @@ class TestEllipsoidalSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test ellipsoidal set constraints added correctly.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         eset = EllipsoidalSet(
@@ -2095,8 +2087,7 @@ class TestEllipsoidalSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computation with global solver
-        is as expected.
+        Test parameter bounds computations give expected results.
         """
         baron = SolverFactory("baron")
         eset = EllipsoidalSet(
@@ -2244,7 +2235,7 @@ class TestPolyhedralSet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test constraint generation method works as expected.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         pset = PolyhedralSet(
@@ -2310,8 +2301,7 @@ class TestPolyhedralSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
-        Test parameter bounds computation with global solver
-        is as expected.
+        Test parameter bounds computations give expected results.
         """
         pset = PolyhedralSet(
             lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
@@ -2403,7 +2393,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
 
     def test_set_as_constraint(self):
         """
-        Test set constraint generation method works as expected.
+        Test method for setting up constraints works correctly.
         """
         m = ConcreteModel()
         custom_set = CustomUncertaintySet(dim=2)
@@ -2417,6 +2407,9 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(len(uq.uncertain_param_vars), 2)
 
     def test_compute_parameter_bounds(self):
+        """
+        Test parameter bounds computations give expected results.
+        """
         baron = SolverFactory("baron")
         custom_set = CustomUncertaintySet(dim=2)
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
