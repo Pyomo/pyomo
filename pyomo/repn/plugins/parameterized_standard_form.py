@@ -213,7 +213,7 @@ class _CSCMatrix(_SparseMatrixBase):
                     num_non_zeros += 1
                 jj += 1
             col_index_ptr[i + 1] = num_non_zeros
-                    
+
 
 class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_impl):
     _csc_matrix = _CSCMatrix
@@ -223,8 +223,9 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
         wrt = self.config.wrt
         if wrt is None:
             wrt = []
-        return ParameterizedLinearRepnVisitor(subexpression_cache, var_map,
-                                              var_order, sorter, wrt=wrt)
+        return ParameterizedLinearRepnVisitor(
+            subexpression_cache, var_map, var_order, sorter, wrt=wrt
+        )
 
     def _to_vector(self, data, N, vector_type):
         # override this to not attempt conversion to float since that will fail

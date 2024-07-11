@@ -86,7 +86,9 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(A.todense() == dense))
         self.assertTrue(np.all(A.tocsc().todense() == dense))
 
-        A = _CSRMatrix(([5, 6, 7, 2, 1, 1.5], [0, 1, 1, 2, 3, 1], [0, 2, 4, 5, 6]), [4, 4])
+        A = _CSRMatrix(
+            ([5, 6, 7, 2, 1, 1.5], [0, 1, 1, 2, 3, 1], [0, 2, 4, 5, 6]), [4, 4]
+        )
         dense = np.array([[5, 6, 0, 0], [0, 7, 2, 0], [0, 0, 0, 1], [0, 1.5, 0, 0]])
         self.assertTrue(np.all(A.todense() == dense))
         self.assertTrue(np.all(A.tocsc().todense() == dense))

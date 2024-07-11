@@ -349,7 +349,7 @@ class _LinearStandardFormCompiler_impl(object):
         obj_index_ptr = [0]
         for obj in objectives:
             if hasattr(obj, 'template_expr'):
-                offset, linear_index, linear_data, _, _ = (
+                (offset, linear_index, linear_data, _, _) = (
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
                 N = len(linear_index)
@@ -398,7 +398,7 @@ class _LinearStandardFormCompiler_impl(object):
                 last_parent = con._component
 
             if hasattr(con, 'template_expr'):
-                offset, linear_index, linear_data, lb, ub = (
+                (offset, linear_index, linear_data, lb, ub) = (
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 N = len(linear_data)
