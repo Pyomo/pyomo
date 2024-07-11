@@ -380,11 +380,6 @@ def validate_array(
         )
 
 
-def column(matrix, i):
-    # Get column i of a given multi-dimensional list
-    return [row[i] for row in matrix]
-
-
 class Geometry(Enum):
     """
     Geometry classifications for PyROS uncertainty set objects.
