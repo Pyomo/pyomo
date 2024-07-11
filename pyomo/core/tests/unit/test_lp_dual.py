@@ -41,7 +41,6 @@ class TestLPDual(unittest.TestCase):
         and SolverFactory('gurobi').license_is_valid(),
         "Gurobi is not available",
     )
-
     def test_lp_dual_solve(self):
         m = ConcreteModel()
         m.x = Var(domain=NonNegativeReals)
@@ -134,8 +133,12 @@ class TestLPDual(unittest.TestCase):
         self.assertIs(dz.ctype, Constraint)
 
         assertExpressionsStructurallyEqual(self, dx.expr, -4.0 * alpha + beta <= 1.0)
-        assertExpressionsStructurallyEqual(self, dy.expr, -2.0 * alpha + beta - lamb >= 2.0)
-        assertExpressionsStructurallyEqual(self, dz.expr, -alpha - 1.0 * lamb + xi == -3.0)
+        assertExpressionsStructurallyEqual(
+            self, dy.expr, -2.0 * alpha + beta - lamb >= 2.0
+        )
+        assertExpressionsStructurallyEqual(
+            self, dz.expr, -alpha - 1.0 * lamb + xi == -3.0
+        )
 
         dual_obj = dual.obj
         self.assertIsInstance(dual_obj, Objective)
@@ -186,7 +189,9 @@ class TestLPDual(unittest.TestCase):
         self.assertIs(dlambda.ctype, Constraint)
         self.assertIs(dxi.ctype, Constraint)
 
-        assertExpressionsStructurallyEqual(self, dalpha.expr, -4.0 * x - 2.0 * y - z <= -5.0)
+        assertExpressionsStructurallyEqual(
+            self, dalpha.expr, -4.0 * x - 2.0 * y - z <= -5.0
+        )
         assertExpressionsStructurallyEqual(self, dbeta.expr, x + y >= 3.0)
         assertExpressionsStructurallyEqual(self, dlambda.expr, -y - z == -4.2)
         assertExpressionsStructurallyEqual(self, dxi.expr, z <= 42.0)
@@ -207,10 +212,64 @@ class TestLPDual(unittest.TestCase):
         m.z = Var(domain=Reals)
 
         m.obj = Objective(expr=m.x + 2 * m.y - 3 * m.outer[3] * m.z)
-        m.c1 = Constraint(expr=-4 * m.x - 2 * m.y - m.z <= -5*m.outer1)
-        m.c2 = Constraint(expr=m.x + m.outer[2]*m.y >= 3)
+        m.c1 = Constraint(expr=-4 * m.x - 2 * m.y - m.z <= -5 * m.outer1)
+        m.c2 = Constraint(expr=m.x + m.outer[2] * m.y >= 3)
         m.c3 = Constraint(expr=-m.y - m.z == -4.2)
         m.c4 = Constraint(expr=m.z <= 42)
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+
+        alpha = lp_dual.get_dual_var(dual, m.c1)
+        beta = lp_dual.get_dual_var(dual, m.c2)
+        lamb = lp_dual.get_dual_var(dual, m.c3)
+        mu = lp_dual.get_dual_var(dual, m.c4)
+
+        self.assertIs(lp_dual.get_primal_constraint(dual, alpha), m.c1)
+        self.assertIs(lp_dual.get_primal_constraint(dual, beta), m.c2)
+        self.assertIs(lp_dual.get_primal_constraint(dual, lamb), m.c3)
+        self.assertIs(lp_dual.get_primal_constraint(dual, mu), m.c4)
+
+        dx = lp_dual.get_dual_constraint(dual, m.x)
+        dy = lp_dual.get_dual_constraint(dual, m.y)
+        dz = lp_dual.get_dual_constraint(dual, m.z)
+
+        self.assertIs(lp_dual.get_primal_var(dual, dx), m.x)
+        self.assertIs(lp_dual.get_primal_var(dual, dy), m.y)
+        self.assertIs(lp_dual.get_primal_var(dual, dz), m.z)
+
+        self.assertIs(alpha.ctype, Var)
+        self.assertEqual(alpha.domain, NonPositiveReals)
+        self.assertEqual(alpha.ub, 0)
+        self.assertIsNone(alpha.lb)
+        self.assertIs(beta.ctype, Var)
+        self.assertEqual(beta.domain, NonNegativeReals)
+        self.assertEqual(beta.lb, 0)
+        self.assertIsNone(beta.ub)
+        self.assertIs(lamb.ctype, Var)
+        self.assertEqual(lamb.domain, Reals)
+        self.assertIsNone(lamb.ub)
+        self.assertIsNone(lamb.lb)
+        self.assertIs(mu.ctype, Var)
+        self.assertEqual(mu.domain, NonPositiveReals)
+        self.assertEqual(mu.ub, 0)
+        self.assertIsNone(mu.lb)
+
+        self.assertIs(dx.ctype, Constraint)
+        self.assertIs(dy.ctype, Constraint)
+        self.assertIs(dz.ctype, Constraint)
+
+        assertExpressionsStructurallyEqual(self, dx.expr, -4.0 * alpha + beta <= 1.0)
+        assertExpressionsStructurallyEqual(
+            self, dy.expr, -2.0 * alpha + m.outer[2] * beta - lamb >= 2.0
+        )
+        assertExpressionsStructurallyEqual(
+            self, dz.expr, -alpha - 1.0 * lamb + mu == -3.0 * m.outer[3]
+        )
+
+        dual_obj = dual.obj
+        self.assertIsInstance(dual_obj, Objective)
+        self.assertEqual(dual_obj.sense, maximize)
+        assertExpressionsEqual(
+            self, dual_obj.expr, -5 * m.outer1 * alpha + 3 * beta - 4.2 * lamb + 42 * mu
+        )
