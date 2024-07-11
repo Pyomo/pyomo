@@ -30,7 +30,6 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     UncertaintySet,
     UncertaintyQuantification,
     Geometry,
-    standardize_uncertain_param_vars,
     _setup_standard_uncertainty_set_constraint_block,
 )
 
