@@ -153,6 +153,9 @@ class SeparationSolveCallResults:
     violating_param_realization : list of float, optional
         Uncertain parameter realization for reported separation
         problem solution.
+    auxiliary_param_values : list of float, optional
+        Auxiliary parameter values corresponding to the
+        uncertain parameter realization `violating_param_realization`.
     variable_values : ComponentMap, optional
         Second-stage DOF and state variable values for reported
         separation problem solution.
@@ -178,6 +181,7 @@ class SeparationSolveCallResults:
     results_list
     scaled_violations
     violating_param_realizations
+    auxiliary_param_values
     variable_values
     found_violation
     time_out
@@ -191,6 +195,7 @@ class SeparationSolveCallResults:
         results_list=None,
         scaled_violations=None,
         violating_param_realization=None,
+        auxiliary_param_values=None,
         variable_values=None,
         found_violation=None,
         time_out=None,
@@ -202,6 +207,7 @@ class SeparationSolveCallResults:
         self.solved_globally = solved_globally
         self.scaled_violations = scaled_violations
         self.violating_param_realization = violating_param_realization
+        self.auxiliary_param_values = auxiliary_param_values
         self.variable_values = variable_values
         self.found_violation = found_violation
         self.time_out = time_out
@@ -366,6 +372,7 @@ class SeparationLoopResults:
     all_discrete_scenarios_exhausted
     found_violation
     violating_param_realization
+    auxiliary_param_values
     scaled_violations
     violating_separation_variable_values
     subsolver_error
@@ -412,6 +419,19 @@ class SeparationLoopResults:
             return self.solver_call_results[
                 self.worst_case_perf_con
             ].violating_param_realization
+        else:
+            return None
+
+    @property
+    def auxiliary_param_values(self):
+        """
+        None or list of float : Auxiliary parameter values for the
+        maximially violating separation problem solution.
+        """
+        if self.worst_case_perf_con is not None:
+            return self.solver_call_results[
+                self.worst_case_perf_con
+            ].auxiliary_param_values
         else:
             return None
 
@@ -529,6 +549,7 @@ class SeparationResults:
     solved_globally
     found_violation
     violating_param_realization
+    auxiliary_param_values
     scaled_violations
     violating_separation_variable_values
     robustness_certified
@@ -666,6 +687,14 @@ class SeparationResults:
         then None is returned.
         """
         return self.get_violating_attr("violating_param_realization")
+
+    @property
+    def auxiliary_param_values(self):
+        """
+        None or list of float: Auxiliary parameter values accompanying
+        `self.violating_param_realization`.
+        """
+        return self.get_violating_attr("auxiliary_param_values")
 
     @property
     def scaled_violations(self):

@@ -431,6 +431,9 @@ def ROSolver_iterative_solve(model_data, config):
         separation_data.points_added_to_master[(k + 1, 0)] = (
             separation_results.violating_param_realization
         )
+        separation_data.auxiliary_values_for_master_points[(k + 1, 0)] = (
+            separation_results.auxiliary_param_values
+        )
 
         config.progress_logger.debug("Points added to master:")
         config.progress_logger.debug(

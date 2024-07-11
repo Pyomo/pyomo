@@ -879,6 +879,13 @@ def initialize_separation(perf_con_to_maximize, separation_data, master_data, co
         for param_var, val in zip(param_vars, param_values):
             param_var.set_value(val)
 
+        aux_param_vars = sep_model.uncertainty.auxiliary_var_list
+        aux_param_values = separation_data.auxiliary_values_for_master_points[
+            worst_master_block_idx
+        ]
+        for aux_param_var, aux_val in zip(aux_param_vars, aux_param_values):
+            aux_param_var.set_value(val)
+
     # confirm the initial point is feasible for cases where
     # we expect it to be (i.e. non-discrete uncertainty sets).
     # otherwise, log the violated constraints
@@ -1032,6 +1039,10 @@ def solver_call_separation(
             ) = evaluate_performance_constraint_violations(
                 separation_data, config, perf_con_to_maximize, perf_cons_to_evaluate
             )
+            solve_call_results.auxiliary_param_values = [
+                auxvar.value
+                for auxvar in separation_model.uncertainty.auxiliary_var_list
+            ]
 
             separation_obj.deactivate()
 
@@ -1198,6 +1209,12 @@ class NewSeparationProblemData:
         self.iteration = 0
         self.config = config
         self.points_added_to_master = {(0, 0): config.nominal_uncertain_param_vals}
+        self.auxiliary_values_for_master_points = {(0, 0): [
+            # auxiliary variable values for nominal point have already
+            # been computed and loaded into separation model
+            aux_var.value
+            for aux_var in self.separation_model.uncertainty.auxiliary_var_list
+        ]}
         self.constraint_violations = []
         self.total_global_separation_solves = 0
         self.separation_problem_subsolver_statuses = []
