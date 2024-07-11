@@ -2490,22 +2490,6 @@ def log_model_statistics(model_data, config):
     info_log_func(f"      Performance inequalities : {num_performance_ineq_cons}")
 
 
-def selective_clone(block, first_stage_vars):
-    """
-    Clone everything in a base_model except for the first-stage variables
-    :param block: the block of the model to be clones
-    :param first_stage_vars: the variables which should not be cloned
-    :return:
-    """
-    memo = {'__block_scope__': {id(block): True, id(None): False}}
-    for v in first_stage_vars:
-        memo[id(v)] = v
-    new_block = copy.deepcopy(block, memo)
-    new_block._parent = None
-
-    return new_block
-
-
 def new_add_decision_rule_variables(model_data, config):
     """
     Add variables parameterizing the (polynomial)

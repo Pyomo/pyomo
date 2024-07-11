@@ -26,7 +26,6 @@ from pyomo.core.base import (
     Constraint,
 )
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
-from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr import value
 from pyomo.opt import (
     check_optimal_termination,
@@ -35,17 +34,15 @@ from pyomo.opt import (
 )
 from pyomo.repn.standard_repn import generate_standard_repn
 
-from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
+from pyomo.contrib.pyros.solve_data import MasterResult
 from pyomo.contrib.pyros.util import (
     call_solver,
     enforce_dr_degree,
     get_dr_expression,
-    get_main_elapsed_time,
     check_time_limit_reached,
     ObjectiveType,
     process_termination_condition_master_problem,
     pyrosTerminationCondition,
-    selective_clone,
     TIC_TOC_SOLVE_TIME_ATTR,
 )
 
