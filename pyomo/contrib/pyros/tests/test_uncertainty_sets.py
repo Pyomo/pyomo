@@ -28,6 +28,10 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     IntersectionSet,
     PolyhedralSet,
     UncertaintySet,
+    UncertaintyQuantification,
+    Geometry,
+    standardize_uncertain_param_vars,
+    _setup_standard_uncertainty_set_constraint_block,
 )
 
 import logging
@@ -2366,6 +2370,77 @@ class TestPolyhedralSet(unittest.TestCase):
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1, 1))
+
+
+class CustomUncertaintySet(UncertaintySet):
+    """
+    Test simple custom uncertainty set subclass.
+    """
+    def __init__(self, dim):
+        self._dim = dim
+
+    @property
+    def geometry(self):
+        self.geometry = Geometry.LINEAR
+
+    @property
+    def dim(self):
+        return self._dim
+
+    def set_as_constraint(self, uncertain_params=None, block=None):
+        blk, param_var_list, conlist, aux_vars = (
+            _setup_standard_uncertainty_set_constraint_block(
+                block=block,
+                uncertain_param_vars=uncertain_params,
+                dim=self.dim,
+                num_auxiliary_vars=None,
+            )
+        )
+        conlist.add(sum(param_var_list) <= 0)
+        for var in param_var_list:
+            conlist.add(-1 <= var)
+
+        return UncertaintyQuantification(
+            block=blk,
+            uncertainty_cons=list(conlist.values()),
+            uncertain_param_vars=param_var_list,
+            auxiliary_vars=aux_vars,
+        )
+
+    def point_in_set(self, point):
+        point_arr = np.array(point)
+        return point_arr.sum() <= 0 and np.all(-1 <= point_arr)
+
+    @property
+    def parameter_bounds(self):
+        return [(-1, 1)] * self.dim
+
+
+class TestCustomUncertaintySet(unittest.TestCase):
+    """
+    Test custom uncertainty set subclass.
+    """
+
+    def test_set_as_constraint(self):
+        """
+        Test set constraint generation method works as expected.
+        """
+        m = ConcreteModel()
+        custom_set = CustomUncertaintySet(dim=2)
+        uq = custom_set.set_as_constraint(uncertain_params=None, block=m)
+
+        con1, con2, con3 = uq.uncertainty_cons
+        var1, var2 = uq.uncertain_param_vars
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertIs(uq.block, m)
+        self.assertEqual(len(uq.uncertainty_cons), 3)
+        self.assertEqual(len(uq.uncertain_param_vars), 2)
+
+    def test_compute_parameter_bounds(self):
+        baron = SolverFactory("baron")
+        custom_set = CustomUncertaintySet(dim=2)
+        self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
+        self.assertEqual(custom_set._compute_parameter_bounds(baron), [(-1, 1)] * 2)
 
 
 if __name__ == "__main__":
