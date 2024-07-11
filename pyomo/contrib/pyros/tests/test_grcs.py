@@ -73,6 +73,7 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     UncertaintySet,
     BoxSet,
     AxisAlignedEllipsoidalSet,
+    FactorModelSet,
     IntersectionSet,
     DiscreteScenarioSet,
     Geometry,
@@ -937,6 +938,71 @@ class testTransformToStandardForm(unittest.TestCase):
             number_of_non_standard_form_inequalities,
             0,
             msg="All inequality constraints were not transformed to standard form.",
+        )
+
+
+class TestPyROSSolveFactorModelSet(unittest.TestCase):
+    """
+    Test PyROS successfully solves model with factor model uncertainty.
+    """
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_two_stg_mod_with_factor_model_set(self):
+        """
+        Test two-stage model with `FactorModelSet`
+        as the uncertainty set.
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        fset = FactorModelSet(
+            origin=[1.125, 1],
+            beta=1,
+            number_of_factors=1,
+            psi_mat=[[0.5], [0.5]],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=fset,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance.",
         )
 
 
