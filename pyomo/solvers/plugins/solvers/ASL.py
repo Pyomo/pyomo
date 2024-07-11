@@ -101,7 +101,8 @@ class ASL(SystemCallSolver):
                 timeout=5,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                universal_newlines=True,
+                text=True,
+                errors='ignore',
             )
             ver = _extract_version(results.stdout)
             if ver is None:
