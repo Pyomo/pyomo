@@ -16,7 +16,6 @@ Utility functions for the PyROS solver
 from collections import namedtuple
 from collections.abc import Iterable
 from contextlib import contextmanager
-import copy
 from enum import Enum, auto
 import functools
 import itertools as it
@@ -44,11 +43,7 @@ from pyomo.core.base import (
     Var,
     value,
 )
-from pyomo.core.expr.numeric_expr import (
-    NPV_MaxExpression,
-    NPV_MinExpression,
-    SumExpression,
-)
+from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr.numvalue import native_types
 from pyomo.core.expr.visitor import (
     identify_variables,
