@@ -1864,7 +1864,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
 
 class TestEllipsoidalSet(unittest.TestCase):
     """
-    Unit tests for the EllipsoidalSet
+    Tests for the EllipsoidalSet.
     """
 
     def test_normal_construction_and_update(self):
@@ -2395,7 +2395,7 @@ class CustomUncertaintySet(UncertaintySet):
 
 class TestCustomUncertaintySet(unittest.TestCase):
     """
-    Test custom uncertainty set subclass.
+    Test for a custom uncertainty set subclass.
     """
 
     def test_set_as_constraint(self):
