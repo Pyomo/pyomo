@@ -5,21 +5,17 @@ Tests for PyROS uncertainty set.
 import itertools as it
 import unittest
 
-from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy as sp, scipy_available
-from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
+from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
+from pyomo.common.collections import Bunch
 from pyomo.environ import SolverFactory
 from pyomo.core.base import (
     Block,
     ConcreteModel,
-    Constraint,
-    Objective,
     Param,
     Var,
-    value,
 )
 from pyomo.core.expr import RangedExpression
-from pyomo.core.expr.compare import assertExpressionsEqual, assertExpressionsStructurallyEqual
+from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
@@ -43,10 +39,8 @@ if not (numpy_available and scipy_available):
     raise unittest.SkipTest('PyROS unit tests require parameterized, numpy, and scipy')
 
 # === Config args for testing
-nlp_solver = 'ipopt'
 global_solver = 'baron'
 global_solver_args = dict()
-nlp_solver_args = dict()
 
 _baron = SolverFactory('baron')
 baron_available = _baron.available(exception_flag=False)
@@ -56,18 +50,6 @@ if baron_available:
 else:
     baron_license_is_valid = False
     baron_version = (0, 0, 0)
-
-_scip = SolverFactory('scip')
-scip_available = _scip.available(exception_flag=False)
-if scip_available:
-    scip_license_is_valid = _scip.license_is_valid()
-    scip_version = _scip.version()
-else:
-    scip_license_is_valid = False
-    scip_version = (0, 0, 0)
-
-_ipopt = SolverFactory("ipopt")
-ipopt_available = _ipopt.available(exception_flag=False)
 
 
 class TestBoxSet(unittest.TestCase):
