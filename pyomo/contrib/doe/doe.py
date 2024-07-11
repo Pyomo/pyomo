@@ -247,6 +247,10 @@ class DesignOfExperiments:
 
         # Add the objective function to the model
         self.create_objective_function(model=model)
+
+        # Track time required to build the DoE model
+        build_time = sp_timer.toc(msg=None)
+        self.logger.info("Succesfully built the DoE model.\nBuild time: %0.1f seconds" % build_time)
         
         # Solve the square problem first to initialize the fim and
         # sensitivity constraints
@@ -258,6 +262,11 @@ class DesignOfExperiments:
         
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(self.model, tee=self.tee)
+
+        # Track time to initialize the DoE model
+        initialization_time = sp_timer.toc(msg=None)
+        self.logger.info("Succesfully initialized the DoE model.\nInitialization time: %0.1f seconds" % initialization_time)
+
         model.dummy_obj.deactivate()
         
         # Reactivate objective and unfix experimental design decisions
@@ -281,19 +290,19 @@ class DesignOfExperiments:
         # Solve the full model, which has now been initialized with the square solve
         self.solver.solve(model, tee=self.tee)
 
-        # Finish timing
+        # Track time used to solve the DoE model
         solve_time = sp_timer.toc(msg=None)
-        # TODO: CHANGE THIS FOLLOWING LINE WITH THE UPDATED SOLUTION TIME BREAKDOWN
-        self.logger.info("Succesfully optimized experiment.\nElapsed time: %0.1f seconds" % solve_time)        
+
+        self.logger.info("Succesfully optimized experiment.\nSolve time: %0.1f seconds" % solve_time)
+        self.logger.info("Total time for build, initialization, and solve: %0.1f seconds" % (build_time + initialization_time + solve_time))        
         
-        # ToDo: Make this more complicated? --> Should results be an object? Or just a dict?
-        # Populate results object; Important info: FIM, Q, outputs, inputs, param values,
-        #                                          measurement error, prior FIM, <etc.>
+        # 
         fim_local = self.get_FIM()
         
         # Make sure stale results don't follow the DoE object instance
         self.results = {}
         
+        # Important quantities for optimal design
         self.results['FIM'] = fim_local
         self.results['Sensitivity Matrix'] = self.get_sensitivity_matrix()
         self.results['Experiment Design'] = self.get_experiment_input_values()
@@ -304,18 +313,25 @@ class DesignOfExperiments:
         self.results['Prior FIM'] = [list(row) for row in list(self.prior_FIM)]
         
         # Saving some stats on the FIM for convenience
+        self.results['Objective expression'] = str(self.objective_option).split('.')[-1]
         self.results['log10 A-opt'] = np.log10(np.trace(fim_local))
         self.results['log10 D-opt'] = np.log10(np.linalg.det(fim_local))
         self.results['log10 E-opt'] = np.log10(min(np.linalg.eig(fim_local)[0]))
         self.results['FIM Condition Number'] = np.linalg.cond(fim_local)
-        self.results['Wall-clock Time'] = solve_time
+
+        # Solve timing stats
+        self.results['Build Time'] = build_time
+        self.results['Initialization Time'] = initialization_time
+        self.results['Solve Time'] = solve_time
+        self.results['Wall-clock Time'] = build_time + initialization_time + solve_time
+
+        # Settings used to generate the optimal DoE
+        self.results['Finite Difference Scheme'] = str(self.fd_formula).split('.')[-1]
+        self.results['Finite Difference Step'] = self.step
+        self.results['Nominal Parameter Scaling'] = self.scale_nominal_param_value
         
-        # ToDo: Add ``useful`` fields to the results object?
-        #       objective type (i.e., det, trace, etc.)
-        #       Finite Difference Formula type
-        #       Finite Difference step size
-        #       If parameter scaling is used or not (self.scale_nominal_param_value)
-        #       
+        # ToDo: Add more useful fields to the results object?
+        # ToDo: Add MetaData from the user to the results object? Or leave to the user?
         
         # If the user specifies to save the file, do it here as a json
         if results_file is not None:
