@@ -22,7 +22,194 @@ from pyomo.environ import ComponentUID
 logger = logging.getLogger(__name__)
 
 
-def convert_params_to_vars(model, param_names=None, fix_vars=False):
+def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
+    """
+    Convert select Params to Vars
+
+    Parameters
+    ----------
+    model : Pyomo concrete model
+        Original model
+    param_CUIDs : list of CUIDs to convert, if None then all Params are converted
+    fix_vars : bool
+        Fix the new variables, default is False
+
+    Returns
+    -------
+    model : Pyomo concrete model
+        Model with select Params converted to Vars
+    """
+
+    model = model.clone()
+
+    if param_CUIDs is None:
+        param_CUIDs = [ComponentUID(param.name) for 
+                       param in model.component_data_objects(pyo.Param)]
+
+    # keep a list of the parameter names for creating the new model
+    param_names = [str(param_CUID) for param_CUID in param_CUIDs]
+
+    # Convert Params to Vars, unfix Vars, and create a substitution map
+    indexed_param_names = []
+    substitution_map = {}
+    comp_map = ComponentMap()
+    for param_CUID in param_CUIDs:
+
+        # Leverage the parser in ComponentUID to locate the component.
+        param_object = param_CUID.find_component_on(model)
+
+        # Param
+        if param_object.is_parameter_type():
+
+            # Delete Param, add Var
+            vals = param_object.extract_values()
+            model.del_component(param_object)
+            model.add_component(param_object.name, pyo.Var(initialize=vals[None]))
+
+            # Update substitution map
+            new_var_cuid = ComponentUID(param_object.name)
+            new_var_object = new_var_cuid.find_component_on(model)
+            substitution_map[id(param_object)] = new_var_object
+            comp_map[param_object] = new_var_object
+
+        # Indexed Param
+        elif isinstance(param_object, IndexedParam):
+
+            # Delete Param, add Var
+            # Before deleting the Param, create a list of the indexed param names
+            vals = param_object.extract_values()
+            param_objects = []
+            for param_obj in param_object:
+                indexed_param_name = param_object.name + '[' + str(param_obj) + ']'
+                param_cuid = ComponentUID(indexed_param_name)
+                param_objects.append(param_cuid.find_component_on(model))
+                indexed_param_names.append(indexed_param_name)
+
+            model.del_component(param_object)
+
+            index_name = param_object.index_set().name
+            index_cuid = ComponentUID(index_name)
+            index_object = index_cuid.find_component_on(model)
+            model.add_component(
+                param_object.name, pyo.Var(index_object, initialize=vals)
+            )
+
+            # Update substitution map (map each indexed param to indexed var)
+            new_var_cuid = ComponentUID(param_object.name)
+            new_var_object = new_var_cuid.find_component_on(model)
+            comp_map[param_object] = new_var_object
+            new_var_objects = []
+            for var_obj in new_var_object:
+                var_cuid = ComponentUID(
+                    new_var_object.name + '[' + str(var_obj) + ']'
+                )
+                new_var_objects.append(var_cuid.find_component_on(model))
+
+            for param_obj, new_var_obj in zip(
+                param_objects, new_var_objects
+            ):
+                substitution_map[id(param_obj)] = new_var_obj
+                comp_map[param_obj] = new_var_obj
+
+        # Var or Indexed Var
+        elif isinstance(param_object, IndexedVar) or param_object.is_variable_type():
+            new_var_object = param_object
+
+        else:
+            logger.warning("%s is not a Param or Var on the model", (str(param_object)))
+            return model
+
+        if fix_vars:
+            new_var_object.fix()
+        else:
+            new_var_object.unfix()
+
+    # If no substitutions are needed, return the model
+    if len(substitution_map) == 0:
+        return model
+
+    # Update the list of param_names if the parameters were indexed
+    if len(indexed_param_names) > 0:
+        param_names = indexed_param_names
+
+    # Convert Params to Vars in Expressions
+    for expr in model.component_data_objects(pyo.Expression):
+        if expr.active and any(
+            v.name in param_names for v in identify_mutable_parameters(expr)
+        ):
+            new_expr = replace_expressions(expr=expr, substitution_map=substitution_map)
+            model.del_component(expr)
+            model.add_component(expr.name, pyo.Expression(rule=new_expr))
+
+    # Convert Params to Vars in Constraint expressions
+    num_constraints = len(list(model.component_objects(pyo.Constraint, active=True)))
+    if num_constraints > 0:
+        model.constraints = pyo.ConstraintList()
+        for c in model.component_data_objects(pyo.Constraint):
+            if c.active and any(
+                v.name in param_names for v in identify_mutable_parameters(c.expr)
+            ):
+                if c.equality:
+                    model.constraints.add(
+                        replace_expressions(
+                            expr=c.lower, substitution_map=substitution_map
+                        )
+                        == replace_expressions(
+                            expr=c.body, substitution_map=substitution_map
+                        )
+                    )
+                elif c.lower is not None:
+                    model.constraints.add(
+                        replace_expressions(
+                            expr=c.lower, substitution_map=substitution_map
+                        )
+                        <= replace_expressions(
+                            expr=c.body, substitution_map=substitution_map
+                        )
+                    )
+                elif c.upper is not None:
+                    model.constraints.add(
+                        replace_expressions(
+                            expr=c.upper, substitution_map=substitution_map
+                        )
+                        >= replace_expressions(
+                            expr=c.body, substitution_map=substitution_map
+                        )
+                    )
+                else:
+                    raise ValueError(
+                        "Unable to parse constraint to convert params to vars."
+                    )
+                c.deactivate()
+
+    # Convert Params to Vars in Objective expressions
+    for obj in model.component_data_objects(pyo.Objective):
+        if obj.active and any(
+            v.name in param_names for v in identify_mutable_parameters(obj)
+        ):
+            expr = replace_expressions(expr=obj.expr, substitution_map=substitution_map)
+            model.del_component(obj)
+            model.add_component(obj.name, pyo.Objective(rule=expr, sense=obj.sense))
+
+    # Convert Params to Vars in Suffixes
+    for s in model.component_objects(pyo.Suffix):
+        current_keys = list(s.keys())
+        for c in current_keys:
+            if c in comp_map:
+                s[comp_map[c]] = s.pop(c)
+
+        assert len(current_keys) == len(s.keys())
+
+    # print('--- Updated Model ---')
+    # model.pprint()
+    # solver = pyo.SolverFactory('ipopt')
+    # solver.solve(model)
+
+    return model
+
+
+# deprecated version
+def convert_params_to_vars_deprecated(model, param_names=None, fix_vars=False):
     """
     Convert select Params to Vars
 

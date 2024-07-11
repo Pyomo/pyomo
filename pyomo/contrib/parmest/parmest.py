@@ -101,8 +101,7 @@ def _experiment_instance_creation_callback(
     -----------
     scenario_name: `str` Scenario name should end with a number
     node_names: `None` ( Not used here )
-    cb_data : dict with ["callback"], ["BootList"],
-              ["theta_names"], ["cb_data"], etc.
+    cb_data : dict with ["callback"], ["BootList"], ["cb_data"], etc.
               "cb_data" is passed through to user's callback function
                         that is the "callback" value.
               "BootList" is None or bootstrap experiment number list.
@@ -188,10 +187,8 @@ def _experiment_instance_creation_callback(
     if hasattr(instance, "_mpisppy_node_list"):
         raise RuntimeError(f"scenario for experiment {exp_num} has _mpisppy_node_list")
     
-    # get any theta names that are in this model
-    nonant_list = [
-        instance.find_component(vstr) for vstr in _expand_indexed_unknowns(instance)
-    ]
+    # get any parameters that are in this model
+    nonant_list = _expand_indexed_unknowns(instance)
 
     if use_mpisppy:
         instance._mpisppy_node_list = [
@@ -217,36 +214,36 @@ def _experiment_instance_creation_callback(
             )
         ]
 
-    if "ThetaVals" in outer_cb_data:
-        thetavals = outer_cb_data["ThetaVals"]
+    if "ParamVals" in outer_cb_data:
+        paramvals = outer_cb_data["ParamVals"]
 
-        # dlw august 2018: see mea code for more general theta
-        for name, val in thetavals.items():
-            theta_cuid = ComponentUID(name)
-            theta_object = theta_cuid.find_component_on(instance)
+        # dlw august 2018: see mea code for more general parameter
+        for name, val in paramvals.items():
+            param_cuid = ComponentUID(name)
+            param_object = param_cuid.find_component_on(instance)
             if val is not None:
-                # print("Fixing",vstr,"at",str(thetavals[vstr]))
-                theta_object.fix(val)
+                # print("Fixing",vstr,"at",str(paramvals[vstr]))
+                param_object.fix(val)
             else:
                 # print("Freeing",vstr)
-                theta_object.unfix()
+                param_object.unfix()
 
     return instance
 
 def _expand_indexed_unknowns(model_temp):
     """
-    Expand indexed variables to get full list of thetas
+    Expand indexed variables to get full list of parameters
     """
 
-    model_theta_list = []
+    model_param_list = []
     for c in model_temp.unknown_parameters.keys():
         if c.is_indexed():
             for _, ci in c.items():
-                model_theta_list.append(ci.name)
+                model_param_list.append(ci)
         else:
-            model_theta_list.append(c.name)
+            model_param_list.append(c)
 
-    return model_theta_list
+    return model_param_list
     
 def SSE(model):
     """
@@ -326,7 +323,7 @@ class Estimator(object):
             assert isinstance(params, Suffix)
 
             # keep track of number of parameters for sampling
-            param_list.extend(_expand_indexed_unknowns(model))
+            param_list.extend([c.name for c in _expand_indexed_unknowns(model)])
 
         # save the number of parameters for sampling
         self.num_params = len(list(set(param_list)))
@@ -425,9 +422,9 @@ class Estimator(object):
                 rule=TotalCost_rule, sense=pyo.minimize
             )
 
-        # Convert theta Params to Vars, and unfix theta Vars
-        theta_names = [k.name for k, v in model.unknown_parameters.items()]
-        parmest_model = utils.convert_params_to_vars(model, theta_names, fix_vars=False)
+        # Convert Params to Vars, and unfix Vars
+        param_CUIDs = [v for k, v in model.unknown_parameters.items()]
+        parmest_model = utils.convert_params_to_vars(model, param_CUIDs, fix_vars=False)
 
         return parmest_model
 
@@ -437,7 +434,7 @@ class Estimator(object):
 
     def _Q_opt(
         self,
-        ThetaVals=None,
+        ParamVals=None,
         solver="ef_ipopt",
         return_values=[],
         bootlist=None,
@@ -445,7 +442,7 @@ class Estimator(object):
         cov_n=None,
     ):
         """
-        Set up all thetas as first stage Vars, return resulting theta
+        Set up all parameters as first stage Vars, return resulting parameter
         values as well as the objective function value.
 
         """
@@ -462,8 +459,8 @@ class Estimator(object):
         # tree_model.CallbackModule = None
         outer_cb_data = dict()
         outer_cb_data["callback"] = self._instance_creation_callback
-        if ThetaVals is not None:
-            outer_cb_data["ThetaVals"] = ThetaVals
+        if ParamVals is not None:
+            outer_cb_data["ParamVals"] = ParamVals
         if bootlist is not None:
             outer_cb_data["BootList"] = bootlist
         outer_cb_data["cb_data"] = None  # None is OK
@@ -527,13 +524,13 @@ class Estimator(object):
                     str(solve_result.solver.termination_condition),
                 )
 
-            # assume all first stage are thetas...
-            thetavals = {}
+            # assume all first stage are parameters
+            paramvals = {}
             for ndname, Var, solval in ef_nonants(ef):
                 # process the name
                 # the scenarios are blocks, so strip the scenario name
                 vname = Var.name[Var.name.find(".") + 1 :]
-                thetavals[vname] = solval
+                paramvals[vname] = solval
 
             objval = pyo.value(ef.EF_Obj)
 
@@ -544,7 +541,7 @@ class Estimator(object):
                 n = cov_n
 
                 # Extract number of fitted parameters
-                l = len(thetavals)
+                l = len(paramvals)
 
                 # Assumption: Objective value is sum of squared errors
                 sse = objval
@@ -562,10 +559,10 @@ class Estimator(object):
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
                 cov = pd.DataFrame(
-                    cov, index=thetavals.keys(), columns=thetavals.keys()
+                    cov, index=paramvals.keys(), columns=paramvals.keys()
                 )
 
-            thetavals = pd.Series(thetavals)
+            paramvals = pd.Series(paramvals)
 
             if len(return_values) > 0:
                 var_values = []
@@ -596,26 +593,26 @@ class Estimator(object):
                         var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
                 if calc_cov:
-                    return objval, thetavals, var_values, cov
+                    return objval, paramvals, var_values, cov
                 else:
-                    return objval, thetavals, var_values
+                    return objval, paramvals, var_values
 
             if calc_cov:
-                return objval, thetavals, cov
+                return objval, paramvals, cov
             else:
-                return objval, thetavals
+                return objval, paramvals
 
         else:
             raise RuntimeError("Unknown solver in Q_Opt=" + solver)
 
-    def _Q_at_theta(self, thetavals, initialize_parmest_model=False):
+    def _Q_at_param(self, paramvals, initialize_parmest_model=False):
         """
-        Return the objective function value with fixed theta values.
+        Return the objective function value with fixed parameter values.
 
         Parameters
         ----------
-        thetavals: dict
-            A dictionary of theta values.
+        paramvals: dict
+            A dictionary of parameter values.
 
         initialize_parmest_model: boolean
             If True: Solve square problem instance, build extensive form of the model for
@@ -625,8 +622,8 @@ class Estimator(object):
         -------
         objectiveval: float
             The objective function value.
-        thetavals: dict
-            A dictionary of all values for theta that were input.
+        paramvals: dict
+            A dictionary of all values for parameter that were input.
         solvertermination: Pyomo TerminationCondition
             Tries to return the "worst" solver status across the scenarios.
             pyo.TerminationCondition.optimal is the best and
@@ -635,10 +632,10 @@ class Estimator(object):
 
         optimizer = pyo.SolverFactory('ipopt')
 
-        if len(thetavals) > 0:
+        if len(paramvals) > 0:
             dummy_cb = {
                 "callback": self._instance_creation_callback,
-                "ThetaVals": thetavals,
+                "ParamVals": paramvals,
                 "cb_data": None,
             }
         else:
@@ -648,10 +645,10 @@ class Estimator(object):
             }
 
         if self.diagnostic_mode:
-            if len(thetavals) > 0:
-                print('    Compute objective at theta = ', str(thetavals))
+            if len(paramvals) > 0:
+                print('    Compute objective at parameter = ', str(paramvals))
             else:
-                print('    Compute objective at initial theta')
+                print('    Compute objective at initial parameters')
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
@@ -670,40 +667,35 @@ class Estimator(object):
             # create dictionary to store pyomo model instances (scenarios)
             scen_dict = dict()
 
-        # keep track of theta names as we enumerate models
-        theta_names = []
+        # keep track of parameter names as we enumerate models
+        param_names = []
         for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
-            model_theta_names = _expand_indexed_unknowns(instance)
-            theta_names.extend(model_theta_names)
+            model_param_list = _expand_indexed_unknowns(instance)
+            param_names.extend([c.name for c in model_param_list])
 
             if initialize_parmest_model:
                 # list to store fitted parameter names that will be unfixed
                 # after initialization
-                theta_init_vals = []
-                # use appropriate theta_names member
-                theta_ref = model_theta_names
+                param_init_vals = []
 
-                for i, theta in enumerate(theta_ref):
-                    # Use parser in ComponentUID to locate the component
-                    var_cuid = ComponentUID(theta)
-                    var_validate = var_cuid.find_component_on(instance)
+                for var_validate in model_param_list:
                     if var_validate is None:
                         logger.warning(
-                            "theta_name %s was not found on the model", (theta)
+                            "param %s was not found on the model", (var_validate.name)
                         )
                     else:
                         try:
-                            if len(thetavals) == 0:
+                            if len(paramvals) == 0:
                                 var_validate.fix()
                             else:
-                                var_validate.fix(thetavals[theta])
-                            theta_init_vals.append(var_validate)
+                                var_validate.fix(paramvals[var_validate.name])
+                            param_init_vals.append(var_validate)
                         except:
                             logger.warning(
                                 'Unable to fix model parameter value for %s (not a Pyomo model Var)',
-                                (theta),
+                                (var_validate.name),
                             )
 
             if active_constraints:
@@ -755,22 +747,22 @@ class Estimator(object):
                             )
                 if initialize_parmest_model:
                     # unfix parameters after initialization
-                    for theta in theta_init_vals:
-                        theta.unfix()
+                    for param in param_init_vals:
+                        param.unfix()
                     scen_dict[sname] = instance
             else:
                 if initialize_parmest_model:
                     # unfix parameters after initialization
-                    for theta in theta_init_vals:
-                        theta.unfix()
+                    for param in param_init_vals:
+                        param.unfix()
                     scen_dict[sname] = instance
 
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
         
-        # all theta names in all models
-        estimator_theta_names = list(set(theta_names))
+        # all parameter names in all models
+        estimator_param_names = list(set(param_names))
 
         retval = totobj / len(scenario_numbers)  # -1??
         if initialize_parmest_model and not hasattr(self, 'ef_instance'):
@@ -782,12 +774,12 @@ class Estimator(object):
             if use_mpisppy:
                 EF_instance = sputils._create_EF_from_scen_dict(
                     scen_dict,
-                    EF_name="_Q_at_theta",
+                    EF_name="_Q_at_param",
                     # suppress_warnings=True
                 )
             else:
                 EF_instance = local_ef._create_EF_from_scen_dict(
-                    scen_dict, EF_name="_Q_at_theta", nonant_for_fixed_vars=True
+                    scen_dict, EF_name="_Q_at_param", nonant_for_fixed_vars=True
                 )
 
             self.ef_instance = EF_instance
@@ -795,12 +787,12 @@ class Estimator(object):
             # creation using theta_est()
             self.model_initialized = True
 
-            # return initialized theta values
-            if len(thetavals) == 0:
-                for i, theta in enumerate(estimator_theta_names):
-                    thetavals[theta] = theta_init_vals[i]()
+            # return initialized parameter values
+            if len(paramvals) == 0:
+                for i, param in enumerate(estimator_param_names):
+                    paramvals[param] = param_init_vals[i]()
 
-        return retval, thetavals, WorstStatus
+        return retval, paramvals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
         samplelist = list()
@@ -831,7 +823,7 @@ class Estimator(object):
                     if attempts > num_samples:  # arbitrary timeout limit
                         raise RuntimeError(
                             """Internal error: timeout constructing
-                                           a sample, the dim of theta may be too
+                                           a sample, the parameter dimension may be too
                                            close to the samplesize"""
                         )
 
@@ -965,19 +957,19 @@ class Estimator(object):
         task_mgr = utils.ParallelTaskManager(bootstrap_samples)
         local_list = task_mgr.global_to_local_data(global_list)
 
-        bootstrap_theta = list()
+        bootstrap_param = list()
         for idx, sample in local_list:
-            objval, thetavals = self._Q_opt(bootlist=list(sample))
-            thetavals['samples'] = sample
-            bootstrap_theta.append(thetavals)
+            objval, paramvals = self._Q_opt(bootlist=list(sample))
+            paramvals['samples'] = sample
+            bootstrap_param.append(paramvals)
 
-        global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
-        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
+        global_bootstrap_param = task_mgr.allgather_global_data(bootstrap_param)
+        bootstrap_param = pd.DataFrame(global_bootstrap_param)
 
         if not return_samples:
-            del bootstrap_theta['samples']
+            del bootstrap_param['samples']
 
-        return bootstrap_theta
+        return bootstrap_param
 
     def theta_est_leaveNout(
         self, lNo, lNo_samples=None, seed=None, return_samples=False
@@ -1025,20 +1017,20 @@ class Estimator(object):
         task_mgr = utils.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)
 
-        lNo_theta = list()
+        lNo_params = list()
         for idx, sample in local_list:
-            objval, thetavals = self._Q_opt(bootlist=list(sample))
+            objval, paramvals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.exp_list))) - set(sample))
-            thetavals['lNo'] = np.sort(lNo_s)
-            lNo_theta.append(thetavals)
+            paramvals['lNo'] = np.sort(lNo_s)
+            lNo_params.append(paramvals)
 
-        global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
-        lNo_theta = pd.DataFrame(global_bootstrap_theta)
+        global_bootstrap_param = task_mgr.allgather_global_data(lNo_params)
+        lNo_params = pd.DataFrame(global_bootstrap_param)
 
         if not return_samples:
-            del lNo_theta['lNo']
+            del lNo_params['lNo']
 
-        return lNo_theta
+        return lNo_params
 
     def leaveNout_bootstrap_test(
         self, lNo, lNo_samples, bootstrap_samples, distribution, alphas, seed=None
@@ -1105,15 +1097,15 @@ class Estimator(object):
         results = []
         for idx, sample in global_list:
 
-            obj, theta = self.theta_est()
+            obj, params = self.theta_est()
 
-            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
+            bootstrap_param = self.theta_est_bootstrap(bootstrap_samples)
 
             training, test = self.confidence_region_test(
-                bootstrap_theta,
+                bootstrap_param,
                 distribution=distribution,
                 alphas=alphas,
-                test_theta_values=theta,
+                test_theta_values=params,
             )
 
             results.append((sample, test, training))
@@ -1154,32 +1146,33 @@ class Estimator(object):
         else:
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
-            model_theta_list = _expand_indexed_unknowns(model_temp)
+            model_param_list = _expand_indexed_unknowns(model_temp)
+            model_name_list = [c.name for c in model_param_list]
 
         if theta_values is None:
-            all_thetas = {}  # dictionary to store fitted variables
-            # use appropriate theta names member
-            theta_names = model_theta_list
+            all_params = {}  # dictionary to store fitted variables
+            # use appropriate parameter names member
+            model_names = model_name_list
         else:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
-            theta_names = theta_values.columns
-            # # check if theta_names are in model
-            for theta in list(theta_names):
-                theta_temp = theta.replace("'", "")  # cleaning quotes from theta_names
-                assert theta_temp in [
-                    t.replace("'", "") for t in model_theta_list
-                ], "Theta name {} in 'theta_values' not in 'theta_names' {}".format(
-                    theta_temp, model_theta_list
+            model_names = theta_values.columns
+            # # check if model_names are in model
+            for param in list(model_names):
+                param_temp = param.replace("'", "")  # cleaning quotes from model_names
+                assert param_temp in [
+                    t.replace("'", "") for t in model_name_list
+                ], "Theta name {} in 'theta_values' not in parameter names {}".format(
+                    param_temp, model_name_list
                 )
 
-            assert len(list(theta_names)) == len(model_theta_list)
+            assert len(list(model_names)) == len(model_name_list)
 
-            all_thetas = theta_values.to_dict('records')
+            all_params = theta_values.to_dict('records')
 
-        if all_thetas:
-            task_mgr = utils.ParallelTaskManager(len(all_thetas))
-            local_thetas = task_mgr.global_to_local_data(all_thetas)
+        if all_params:
+            task_mgr = utils.ParallelTaskManager(len(all_params))
+            local_params = task_mgr.global_to_local_data(all_params)
         else:
             if initialize_parmest_model:
                 task_mgr = utils.ParallelTaskManager(
@@ -1187,25 +1180,25 @@ class Estimator(object):
                 )  # initialization performed using just 1 set of theta values
         # walk over the mesh, return objective function
         all_obj = list()
-        if len(all_thetas) > 0:
-            for Theta in local_thetas:
-                obj, thetvals, worststatus = self._Q_at_theta(
-                    Theta, initialize_parmest_model=initialize_parmest_model
+        if len(all_params) > 0:
+            for Param in local_params:
+                obj, thetvals, worststatus = self._Q_at_param(
+                    Param, initialize_parmest_model=initialize_parmest_model
                 )
                 if worststatus != pyo.TerminationCondition.infeasible:
-                    all_obj.append(list(Theta.values()) + [obj])
+                    all_obj.append(list(Param.values()) + [obj])
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
-            obj, thetvals, worststatus = self._Q_at_theta(
-                thetavals={}, initialize_parmest_model=initialize_parmest_model
+            obj, paramvals, worststatus = self._Q_at_param(
+                paramvals={}, initialize_parmest_model=initialize_parmest_model
             )
             if worststatus != pyo.TerminationCondition.infeasible:
-                all_obj.append(list(thetvals.values()) + [obj])
+                all_obj.append(list(paramvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(theta_names) + ['obj']
-        obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
-        return obj_at_theta
+        dfcols = list(model_names) + ['obj']
+        obj_at_params = pd.DataFrame(data=global_all_obj, columns=dfcols)
+        return obj_at_params
 
     def likelihood_ratio_test(
         self, obj_at_theta, obj_value, alphas, return_thresholds=False
@@ -1678,7 +1671,7 @@ class _DeprecatedEstimator(object):
             )
 
         # Convert theta Params to Vars, and unfix theta Vars
-        model = utils.convert_params_to_vars(model, self.theta_names)
+        model = utils.convert_params_to_vars_deprecated(model, self.theta_names)
 
         # Update theta names list to use CUID string representation
         for i, theta in enumerate(self.theta_names):
