@@ -25,24 +25,19 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
+import pyomo.environ as pyo
+from pyomo.common import DeveloperError
+from pyomo.common.timing import TicTocTimer
+from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 from pyomo.common.dependencies import numpy as np, numpy_available, pandas as pd, matplotlib as plt
 
-import pyomo.environ as pyo
-from pyomo.opt import SolverFactory
-import pickle
 from itertools import permutations, product
-import logging
 from enum import Enum
-from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-import collections.abc
-
-import inspect
-import json
 from pathlib import Path
 
-from pyomo.common import DeveloperError
+import logging
+import json
 
 
 class CalculationMode(Enum):
