@@ -15,6 +15,7 @@ and related objects.
 """
 
 from itertools import product
+import math
 import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -42,9 +43,10 @@ from pyomo.contrib.pyros.solve_data import (
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
-    are_param_vars_fixed_by_bounds,
     call_solver,
     check_time_limit_reached,
+    PARAM_IS_CERTAIN_ABS_TOL,
+    PARAM_IS_CERTAIN_REL_TOL,
 )
 
 
@@ -95,13 +97,14 @@ def add_uncertainty_set_constraints(separation_model, config):
 
     # preprocess uncertain parameters which have been fixed by bounds
     # in order to simplify the separation problems
-    param_var_certain_nomval_zip = zip(
-        param_var_list,
-        are_param_vars_fixed_by_bounds(param_var_list),
-        config.nominal_uncertain_param_vals,
-    )
-    for idx, (param_var, is_certain, nomval) in enumerate(param_var_certain_nomval_zip):
-        if is_certain:
+    for param_var, nomval in zip(param_var_list, config.nominal_uncertain_param_vals):
+        bounds_close = math.isclose(
+            a=param_var.lb,
+            b=param_var.ub,
+            rel_tol=PARAM_IS_CERTAIN_REL_TOL,
+            abs_tol=PARAM_IS_CERTAIN_ABS_TOL,
+        )
+        if bounds_close:
             param_var.fix(nomval)
 
 

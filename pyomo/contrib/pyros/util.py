@@ -2933,57 +2933,6 @@ def substitute_ssv_in_dr_constraints(model, constraint):
     ]
 
 
-def are_param_vars_fixed_by_bounds(param_vars):
-    """
-    Check whether uncertain parameter variables
-    are implicitly made certain by the calculated
-    uncertainty set coordinate value bounds.
-
-    Parameters
-    ----------
-    param_vars : Iterable of VarData
-        Variables representing the uncertain parameters.
-
-    Returns
-    -------
-    is_certain_list : list of bool
-        Same length as `param_vars`. Each entry is
-        True if the corresponding Var is implicitly
-        fixed by bounds, False otherwise.
-    """
-    is_certain_list = []
-    for param in param_vars:
-        bounds_close = math.isclose(
-            a=param.lb,
-            b=param.ub,
-            rel_tol=PARAM_IS_CERTAIN_REL_TOL,
-            abs_tol=PARAM_IS_CERTAIN_ABS_TOL,
-        )
-        is_certain_list.append(bounds_close)
-
-    return is_certain_list
-
-
-def is_certain_parameter(uncertain_param_index, config):
-    '''
-    If an uncertain parameter's inferred LB and UB are within a relative tolerance,
-    then the parameter is considered certain.
-    :param uncertain_param_index: index of the parameter in the config.uncertain_params list
-    :param config: solver config
-    :return: True if param is effectively "certain," else return False
-    '''
-    if config.uncertainty_set.parameter_bounds:
-        param_bounds = config.uncertainty_set.parameter_bounds[uncertain_param_index]
-        return math.isclose(
-            a=param_bounds[0],
-            b=param_bounds[1],
-            rel_tol=PARAM_IS_CERTAIN_REL_TOL,
-            abs_tol=PARAM_IS_CERTAIN_ABS_TOL,
-        )
-    else:
-        return False  # cannot be determined without bounds
-
-
 def selective_clone(block, first_stage_vars):
     """
     Clone everything in a base_model except for the first-stage variables
