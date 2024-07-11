@@ -27,6 +27,7 @@
 
 from pyomo.common.dependencies import numpy as np, numpy_available
 
+
 # Rescale FIM (a scaling function to help rescale FIM from parameter values)
 def rescale_FIM(FIM, param_vals):
     """
@@ -34,7 +35,7 @@ def rescale_FIM(FIM, param_vals):
     It is assumed the parameter vals align with the FIM
     dimensions such that (1, i) corresponds to the i-th
     column or row of the FIM.
-    
+
     Parameters
     ----------
     FIM: 2D numpy array to be scaled
@@ -42,12 +43,26 @@ def rescale_FIM(FIM, param_vals):
 
     """
     if isinstance(param_vals, list):
-        param_vals = np.array([param_vals, ])
+        param_vals = np.array(
+            [
+                param_vals,
+            ]
+        )
     elif isinstance(param_vals, np.ndarray):
-        if len(param_vals.shape) > 2 or ((len(param_vals.shape) == 2) and (param_vals.shape[0] != 1)):
-            raise ValueError('param_vals should be a vector of dimensions (1, n_params). The shape you provided is {}.'.format(param_vals.shape))
+        if len(param_vals.shape) > 2 or (
+            (len(param_vals.shape) == 2) and (param_vals.shape[0] != 1)
+        ):
+            raise ValueError(
+                "param_vals should be a vector of dimensions (1, n_params). The shape you provided is {}.".format(
+                    param_vals.shape
+                )
+            )
         if len(param_vals.shape) == 1:
-            param_vals = np.array([param_vals, ])
+            param_vals = np.array(
+                [
+                    param_vals,
+                ]
+            )
     scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM

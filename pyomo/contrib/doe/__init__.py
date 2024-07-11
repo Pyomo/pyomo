@@ -8,5 +8,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from .doe import DesignOfExperiments, CalculationMode, ObjectiveLib, ModelOptionLib, FiniteDifferenceStep
+from .doe import (
+    DesignOfExperiments,
+    CalculationMode,
+    ObjectiveLib,
+    ModelOptionLib,
+    FiniteDifferenceStep,
+)
 from .utils import rescale_FIM
