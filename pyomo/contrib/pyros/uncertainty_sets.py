@@ -64,6 +64,7 @@ from collections.abc import Iterable, MutableSequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
+from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (
     Block,
     ConstraintList,
@@ -121,20 +122,30 @@ def _setup_standard_uncertainty_set_constraint_block(
         block = Block(concrete=True)
 
     if uncertain_param_vars is None:
-        block.uncertain_param_indexed_var = Var(range(dim))
-        param_var_data_list = list(block.uncertain_param_indexed_var.values())
+        uncertain_param_indexed_var = Var(range(dim))
+        block.add_component(
+            unique_component_name(block, "uncertain_param_indexed_var"),
+            uncertain_param_indexed_var,
+        )
+        param_var_data_list = list(uncertain_param_indexed_var.values())
     else:
         # resolve arguments
         param_var_data_list = standardize_uncertain_param_vars(
             uncertain_param_vars,
             dim=dim,
         )
-    block.uncertainty_set_conlist = conlist = ConstraintList()
+    conlist = ConstraintList()
+    block.add_component(
+        unique_component_name(block, "uncertainty_set_conlist"), conlist
+    )
 
     auxiliary_var_list = []
     if num_auxiliary_vars is not None:
-        block.auxiliary_param_var = Var(range(num_auxiliary_vars))
-        auxiliary_var_list = list(block.auxiliary_param_var.values())
+        auxiliary_param_var = Var(range(num_auxiliary_vars))
+        block.add_component(
+            unique_component_name(block, "auxiliary_param_var"), auxiliary_param_var
+        )
+        auxiliary_var_list = list(auxiliary_param_var.values())
 
     return block, param_var_data_list, conlist, auxiliary_var_list
 
@@ -2917,7 +2928,10 @@ class IntersectionSet(UncertaintySet):
         all_cons, all_aux_vars = [], []
         for idx, unc_set in enumerate(intersection_set.all_sets):
             sub_block = Block()
-            block.add_component(f"sub_block_{idx}", sub_block)
+            block.add_component(
+                unique_component_name(block, f"sub_block_{idx}"),
+                sub_block,
+            )
             set_quantification = unc_set.set_as_constraint(
                 block=sub_block,
                 uncertain_params=param_var_data_list,
