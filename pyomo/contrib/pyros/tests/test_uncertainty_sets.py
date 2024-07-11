@@ -260,6 +260,8 @@ class TestBoxSet(unittest.TestCase):
         box_set = BoxSet(bounds=[[1, 2], [3, 4]])
         uq = box_set.set_as_constraint(uncertain_params=None, block=m)
 
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertIs(uq.block, m)
         con1, con2 = uq.uncertainty_cons
         var1, var2 = uq.uncertain_param_vars
 
@@ -550,27 +552,32 @@ class TestBudgetSet(unittest.TestCase):
         m.v2 = Var(initialize=0)
         buset = BudgetSet([[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 3])
 
-        _, uncertainty_cons, _, _ = buset.set_as_constraint(
-            uncertain_params=[m.v1, m.v2],
-        )
+        uq = buset.set_as_constraint(uncertain_params=[m.v1, m.v2], block=m)
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertIs(uq.block, m)
+        self.assertEqual(len(uq.uncertain_param_vars), 2)
+        self.assertIs(uq.uncertain_param_vars[0], m.v1)
+        self.assertIs(uq.uncertain_param_vars[1], m.v2)
+        self.assertEqual(len(uq.uncertainty_cons), 4)
+
         assertExpressionsEqual(
             self,
-            uncertainty_cons[0].expr,
+            uq.uncertainty_cons[0].expr,
             m.v1 + np.float64(0) * m.v2 <= np.int64(4),
         )
         assertExpressionsEqual(
             self,
-            uncertainty_cons[1].expr,
+            uq.uncertainty_cons[1].expr,
             m.v1 + m.v2 <= np.int64(6),
         )
         assertExpressionsEqual(
             self,
-            uncertainty_cons[2].expr,
+            uq.uncertainty_cons[2].expr,
             -np.float64(1.0) * m.v1 - np.float64(0) * m.v2 <= np.int64(-1),
         )
         assertExpressionsEqual(
             self,
-            uncertainty_cons[3].expr,
+            uq.uncertainty_cons[3].expr,
             -np.float64(0) * m.v1 + np.float64(-1.0) * m.v2 <= np.int64(-3),
         )
 
