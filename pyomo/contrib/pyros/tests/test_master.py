@@ -28,7 +28,6 @@ from pyomo.contrib.pyros.master_problem_methods import (
     new_construct_master_feasibility_problem,
     new_construct_dr_polishing_problem,
     NewMasterProblemData,
-    solve_master,
 )
 from pyomo.contrib.pyros.util import (
     new_preprocess_model_data,
@@ -434,7 +433,7 @@ class TestSolveMaster(unittest.TestCase):
         ))
         master_data = NewMasterProblemData(model_data, config)
         with time_code(master_data.timing, "main", is_main_timer=True):
-            master_soln = solve_master(master_data, config)
+            master_soln = master_data.solve_master()
             self.assertEqual(
                 master_soln.termination_condition,
                 TerminationCondition.optimal,
@@ -464,7 +463,7 @@ class TestSolveMaster(unittest.TestCase):
         master_data = NewMasterProblemData(model_data, config)
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
-            master_soln = solve_master(master_data, config)
+            master_soln = master_data.solve_master()
             self.assertEqual(
                 master_soln.termination_condition,
                 TerminationCondition.optimal,
@@ -506,7 +505,7 @@ class TestSolveMaster(unittest.TestCase):
         master_data.iteration = 1
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
-            master_soln = solve_master(master_data, config)
+            master_soln = master_data.solve_master()
             self.assertEqual(
                 master_soln.pyros_termination_condition,
                 pyrosTerminationCondition.time_out,
@@ -514,6 +513,53 @@ class TestSolveMaster(unittest.TestCase):
             self.assertEqual(
                 master_soln.master_subsolver_results,
                 (None, pyrosTerminationCondition.time_out),
+            )
+
+
+class TestPolishDRVars(unittest.TestCase):
+    """
+    Test DR polishing subroutine.
+    """
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_polish_dr_vars(self):
+        model_data, config = build_simple_model_data()
+        model_data.timing = TimingData()
+        baron = SolverFactory("baron")
+        config.update(dict(
+            local_solver=baron,
+            global_solver=baron,
+            backup_local_solvers=[],
+            backup_global_solvers=[],
+            tee=False,
+        ))
+        master_data = NewMasterProblemData(model_data, config)
+        add_scenario_block_to_master_problem(
+            master_data.master_model,
+            scenario_idx=[1, 0],
+            param_realization=[0.6],
+            from_block=master_data.master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        master_data.iteration = 1
+
+        master_data.timing = TimingData()
+        with time_code(master_data.timing, "main", is_main_timer=True):
+            master_soln = master_data.solve_master()
+            self.assertEqual(
+                master_soln.termination_condition,
+                TerminationCondition.optimal,
+            )
+
+            results, success = master_data.solve_dr_polishing()
+            self.assertEqual(
+                results.solver.termination_condition,
+                TerminationCondition.optimal,
+                msg="Minimize dr norm did not solve to optimality.",
+            )
+            self.assertTrue(
+                success, msg=f"DR polishing success {success}, expected True."
             )
 
 
