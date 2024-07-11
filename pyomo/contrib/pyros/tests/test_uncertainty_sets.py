@@ -1,5 +1,5 @@
 """
-Tests for PyROS uncertainty set.
+Tests for the PyROS UncertaintySet class and subclasses.
 """
 
 import itertools as it
