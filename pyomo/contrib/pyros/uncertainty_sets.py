@@ -73,7 +73,7 @@ from pyomo.core.base import (
     Var,
     VarData,
 )
-from pyomo.core.expr.numvalue import value, native_numeric_types
+from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
 from pyomo.opt.results import check_optimal_termination
 from pyomo.contrib.pyros.util import standardize_component_data
@@ -2656,21 +2656,15 @@ class EllipsoidalSet(UncertaintySet):
             )
         )
 
-        center_offset_exprs = [
-            param_var - ctrval
-            for param_var, ctrval in zip(param_var_data_list, self.center)
-        ]
-
-        left_product_exprs = [
-            dot_product(column, center_offset_exprs, index=range(self.dim))
-            for column in np.linalg.inv(self.shape_matrix).T
-        ]
-        final_lhs_expr = dot_product(
-            left_product_exprs,
-            center_offset_exprs,
-            index=range(self.dim),
-        )
-        uncertainty_conlist.add(final_lhs_expr <= self.scale)
+        inv_shape_mat = np.linalg.inv(self.shape_matrix)
+        with mutable_expression() as expr:
+            for (idx1, idx2), mat_entry in np.ndenumerate(inv_shape_mat):
+                expr += (
+                    mat_entry
+                    * (param_var_data_list[idx1] - self.center[idx1])
+                    * (param_var_data_list[idx2] - self.center[idx2])
+                )
+        uncertainty_conlist.add(expr <= self.scale)
 
         return UncertaintyQuantification(
             block=block,

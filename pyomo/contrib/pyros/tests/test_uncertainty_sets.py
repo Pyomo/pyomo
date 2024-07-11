@@ -1894,5 +1894,280 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[2].bounds, (1, 1))
 
 
+class TestEllipsoidalSet(unittest.TestCase):
+    """
+    Unit tests for the EllipsoidalSet
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test EllipsoidalSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        scale = 2
+        eset = EllipsoidalSet(center, shape_matrix, scale)
+        np.testing.assert_allclose(
+            center, eset.center, err_msg="EllipsoidalSet center not as expected"
+        )
+        np.testing.assert_allclose(
+            shape_matrix,
+            eset.shape_matrix,
+            err_msg="EllipsoidalSet shape matrix not as expected",
+        )
+        np.testing.assert_allclose(
+            scale, eset.scale, err_msg="EllipsoidalSet scale not as expected"
+        )
+
+        # check attributes update
+        new_center = [-1, -3]
+        new_shape_matrix = [[2, 1], [1, 3]]
+        new_scale = 1
+
+        eset.center = new_center
+        eset.shape_matrix = new_shape_matrix
+        eset.scale = new_scale
+
+        np.testing.assert_allclose(
+            new_center,
+            eset.center,
+            err_msg="EllipsoidalSet center update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_shape_matrix,
+            eset.shape_matrix,
+            err_msg="EllipsoidalSet shape matrix update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_scale, eset.scale, err_msg="EllipsoidalSet scale update not as expected"
+        )
+
+    def test_error_on_ellipsoidal_dim_change(self):
+        """
+        EllipsoidalSet dimension is considered immutable.
+        Test ValueError raised when center size is not equal
+        to set dimension.
+        """
+        shape_matrix = [[1, 0], [0, 1]]
+        scale = 2
+
+        eset = EllipsoidalSet([0, 0], shape_matrix, scale)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.center = [0, 0, 0]
+
+    def test_error_on_neg_scale(self):
+        """
+        Test ValueError raised if scale attribute set to negative
+        value.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        neg_scale = -1
+
+        exc_str = r".*must be a non-negative real \(provided.*-1\)"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(center, shape_matrix, neg_scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, shape_matrix, scale=2)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.scale = neg_scale
+
+    def test_error_on_shape_matrix_with_wrong_size(self):
+        """
+        Test error in event EllipsoidalSet shape matrix
+        is not in accordance with set dimension.
+        """
+        center = [0, 0]
+        invalid_shape_matrix = [[1, 0]]
+        scale = 1
+
+        exc_str = r".*must be a square matrix of size 2.*\(provided.*shape \(1, 2\)\)"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(center, invalid_shape_matrix, scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, [[1, 0], [0, 1]], scale)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.shape_matrix = invalid_shape_matrix
+
+    def test_error_on_invalid_shape_matrix(self):
+        """
+        Test exceptional cases of invalid square shape matrix
+        arguments
+        """
+        center = [0, 0]
+        scale = 3
+
+        # assert error on construction
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Shape matrix must be symmetric",
+            msg="Asymmetric shape matrix test failed",
+        ):
+            EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
+        with self.assertRaises(
+            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
+        ):
+            EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Non positive-definite.*",
+            msg="Indefinite shape matrix test failed",
+        ):
+            EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, [[1, 0], [0, 2]], scale)
+
+        # assert error on update
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Shape matrix must be symmetric",
+            msg="Asymmetric shape matrix test failed",
+        ):
+            eset.shape_matrix = [[1, 1], [0, 1]]
+        with self.assertRaises(
+            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
+        ):
+            eset.shape_matrix = [[0, 0], [0, 0]]
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Non positive-definite.*",
+            msg="Indefinite shape matrix test failed",
+        ):
+            eset.shape_matrix = [[1, 0], [0, -2]]
+
+    def test_set_as_constraint(self):
+        """
+        Test ellipsoidal set constraints added correctly.
+        """
+        m = ConcreteModel()
+        eset = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=2.5,
+        )
+        uq = eset.set_as_constraint(uncertain_params=None, block=m)
+
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertEqual(len(uq.uncertain_param_vars), 2)
+        self.assertEqual(len(uq.uncertainty_cons), 1)
+        self.assertIs(uq.block, m)
+
+        var1, var2 = uq.uncertain_param_vars
+
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[0].expr,
+            (
+                np.float64(4/3) * (var1 - np.float64(1.0)) * (var1 - np.float64(1.0))
+                + np.float64(-2/3) * (var1 - np.float64(1.0)) * (var2 - np.float64(1.5))
+                + np.float64(-2/3) * (var2 - np.float64(1.5)) * (var1 - np.float64(1.0))
+                + np.float64(4/3) * (var2 - np.float64(1.5)) * (var2 - np.float64(1.5))
+                <= 2.5
+            ),
+        )
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised if number of uncertain parameters
+        does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        eset = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=2.5,
+        )
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            eset.set_as_constraint(uncertain_params=[m.v1], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised if uncertain parameter variables
+        are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1], initialize=0, mutable=True)
+        eset = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=2.5,
+        )
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            eset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            eset.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    def test_point_in_set(self):
+        eset = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=2.5,
+        )
+        self.assertTrue(eset.point_in_set(eset.center))
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_compute_parameter_bounds(self):
+        """
+        Test parameter bounds computation with global solver
+        is as expected.
+        """
+        baron = SolverFactory("baron")
+        eset = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=0.25,
+        )
+        computed_bounds = eset._compute_parameter_bounds(baron)
+        np.testing.assert_allclose(computed_bounds, [[0.5, 1.5], [1.0, 2.0]])
+        np.testing.assert_allclose(computed_bounds, eset.parameter_bounds)
+
+        eset2 = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=2.25,
+        )
+        computed_bounds_2 = eset2._compute_parameter_bounds(baron)
+
+        # add absolute tolerance to account for (im)precision
+        # from matrix inversion and roundoff
+        np.testing.assert_allclose(computed_bounds_2, [[-0.5, 2.5], [0, 3]], atol=1e-8)
+        np.testing.assert_allclose(computed_bounds_2, eset2.parameter_bounds, atol=1e-8)
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var([0, 1], initialize=0)
+
+        eset = EllipsoidalSet(
+            center=[1, 1.5],
+            shape_matrix=[[1, 0.5], [0.5, 1]],
+            scale=0.25,
+        )
+        eset.add_bounds_on_uncertain_parameters(
+            config=Bunch(uncertainty_set=eset),
+            uncertain_param_vars=m.uncertain_param_vars,
+        )
+
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (0.5, 1.5))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 2))
+
+
 if __name__ == "__main__":
     unittest.main()
