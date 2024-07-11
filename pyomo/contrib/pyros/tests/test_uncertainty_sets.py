@@ -334,16 +334,12 @@ class TestBoxSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
-
         box_set = BoxSet(bounds=[(1, 2), (3, 4)])
-        config = Block()
-        config.uncertainty_set = box_set
 
-        box_set.add_bounds_on_uncertain_parameters(
-            config=config,
+        box_set._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (3, 4))
 
@@ -626,16 +622,13 @@ class TestBudgetSet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.v = Var([0, 1], initialize=0.5)
-
-        config = Bunch()
-        config.uncertainty_set = BudgetSet(
+        buset = BudgetSet(
             [[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 3]
         )
-        UncertaintySet.add_bounds_on_uncertain_parameters(
-            config=config,
+        buset._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.v,
         )
-
         self.assertEqual(m.v[0].bounds, (1, 3))
         self.assertEqual(m.v[1].bounds, (3, 5))
 
@@ -966,18 +959,17 @@ class TestFactorModelSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
-
         fset = FactorModelSet(
             origin=[0, 0],
             number_of_factors=3,
             psi_mat=[[1, -1, 1], [1, 0.1, 1]],
             beta=1 / 6,
         )
-        fset.add_bounds_on_uncertain_parameters(
-            config=Bunch(uncertainty_set=fset),
+
+        fset._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-2.5, 2.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1.4, 1.4))
 
@@ -1346,7 +1338,6 @@ class TestIntersectionSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
-
         iset = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
             # this is just an origin-centered square
@@ -1361,13 +1352,11 @@ class TestIntersectionSet(unittest.TestCase):
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
         )
-        config = Bunch(uncertainty_set=iset, global_solver=SolverFactory("baron"))
 
-        iset.add_bounds_on_uncertain_parameters(
-            config=config,
+        iset._add_bounds_on_uncertain_parameters(
+            global_solver=SolverFactory("baron"),
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-0.25, 0.25))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.25, 0.25))
 
@@ -1574,17 +1563,16 @@ class TestCardinalitySet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1, 2], initialize=0)
-
         cset = CardinalitySet(
             origin=[-0.5, 1, 2],
             positive_deviation=[2.5, 3, 0],
             gamma=1.5,
         )
-        cset.add_bounds_on_uncertain_parameters(
-            config=Bunch(uncertainty_set=cset),
+
+        cset._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-0.5, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 4))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (2, 2))
@@ -1687,13 +1675,12 @@ class TestDiscreteScenarioSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
-
         dset = DiscreteScenarioSet([(0, 0), (1.5, 0), (0, 1), (1, 1), (2, 0)])
-        dset.add_bounds_on_uncertain_parameters(
-            config=Bunch(uncertainty_set=dset),
+
+        dset._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (0, 1.0))
 
@@ -1869,11 +1856,10 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         aeset = AxisAlignedEllipsoidalSet(
             center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
         )
-        aeset.add_bounds_on_uncertain_parameters(
-            config=Bunch(uncertainty_set=aeset),
+        aeset._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-1.5, 1.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.5, 3.5))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (1, 1))
@@ -2139,17 +2125,15 @@ class TestEllipsoidalSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
-
         eset = EllipsoidalSet(
             center=[1, 1.5],
             shape_matrix=[[1, 0.5], [0.5, 1]],
             scale=0.25,
         )
-        eset.add_bounds_on_uncertain_parameters(
-            config=Bunch(uncertainty_set=eset),
+        eset._add_bounds_on_uncertain_parameters(
+            global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0.5, 1.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 2))
 
@@ -2358,13 +2342,12 @@ class TestPolyhedralSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
-
         pset = PolyhedralSet(
             lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
             rhs_vec=[2, -1, -1],
         )
-        pset.add_bounds_on_uncertain_parameters(
-            config=Bunch(uncertainty_set=pset, global_solver=SolverFactory("baron")),
+        pset._add_bounds_on_uncertain_parameters(
+            global_solver=SolverFactory("baron"),
             uncertain_param_vars=m.uncertain_param_vars,
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))

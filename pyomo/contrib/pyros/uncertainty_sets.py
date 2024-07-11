@@ -618,47 +618,37 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         return param_bounds
 
-    @staticmethod
-    def add_bounds_on_uncertain_parameters(config, uncertain_param_vars):
+    def _add_bounds_on_uncertain_parameters(
+            self,
+            uncertain_param_vars,
+            global_solver=None,
+            ):
         """
         Specify declared bounds for Vars representing the uncertain
         parameters constrained to an uncertainty set.
 
         Parameters
         ----------
-        model : ConcreteModel
-            Model containing the uncertain parameter variables.
-        config : ConfigDict
-            PyROS solver options. Should at least contain
-            the attribute `uncertainty_set`, through which the
-            uncertainty set from which bounds are taken is
-            retrieved.
-        uncertain_param_vars : None or list of VarData, optional
+        global_solver : None or Pyomo solver, optional
+            Optimizer capable of solving bounding problems to
+            global optimality. If the coordinate bounds for the
+            set can be retrieved through `self.parameter_bounds`,
+            then None can be passed.
+        uncertain_param_vars : Var, VarData, or list of Var/VarData
             Variables representing the uncertain parameter objects.
-            If None is passed, then this method will attempt to
-            retrieve ``list(model.util.uncertain_param_vars.values())``
-            and add bounds.
 
         Notes
         -----
         This method is invoked in advance of a PyROS separation
         subproblem.
-
-        TODO
-        ----
-        Modify default retrieval of `uncertain_param_vars`
-        once subproblem formulations have been updated.
         """
-        uncertainty_set = config.uncertainty_set
         uncertain_param_vars = standardize_uncertain_param_vars(
-            uncertain_param_vars, uncertainty_set.dim,
+            uncertain_param_vars, self.dim,
         )
 
-        parameter_bounds = uncertainty_set.parameter_bounds
+        parameter_bounds = self.parameter_bounds
         if not parameter_bounds:
-            parameter_bounds = uncertainty_set._compute_parameter_bounds(
-                solver=config.global_solver,
-            )
+            parameter_bounds = self._compute_parameter_bounds(global_solver)
 
         for (lb, ub), param_var in zip(parameter_bounds, uncertain_param_vars):
             param_var.setlb(lb)

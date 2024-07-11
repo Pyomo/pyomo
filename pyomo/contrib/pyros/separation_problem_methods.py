@@ -78,9 +78,9 @@ def add_uncertainty_set_constraints(separation_model, config):
     separation_model.uncertainty.auxiliary_var_list = aux_vars
     separation_model.uncertainty.uncertainty_cons_list = uncertainty_cons
 
-    config.uncertainty_set.add_bounds_on_uncertain_parameters(
-        config=config,
+    config.uncertainty_set._add_bounds_on_uncertain_parameters(
         uncertain_param_vars=param_var_list,
+        global_solver=config.global_solver,
     )
 
     # preprocess uncertain parameters which have been fixed by bounds
