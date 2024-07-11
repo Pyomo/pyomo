@@ -1605,5 +1605,113 @@ class TestCardinalitySet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[2].bounds, (2, 2))
 
 
+class TestDiscreteScenarioSet(unittest.TestCase):
+    """
+    Tests for the DiscreteScenarioSet.
+    """
+
+    def test_normal_discrete_set_construction_and_update(self):
+        """
+        Test DiscreteScenarioSet constructor and setter work normally
+        when scenarios are appropriate.
+        """
+        scenarios = [[0, 0, 0], [1, 2, 3]]
+
+        # normal construction should work
+        dset = DiscreteScenarioSet(scenarios)
+
+        # check scenarios added appropriately
+        np.testing.assert_allclose(
+            scenarios, dset.scenarios, err_msg="BoxSet bounds not as expected"
+        )
+
+        # check scenarios updated appropriately
+        new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
+        dset.scenarios = new_scenarios
+        np.testing.assert_allclose(
+            new_scenarios, dset.scenarios, err_msg="BoxSet bounds not as expected"
+        )
+
+    def test_error_on_discrete_set_dim_change(self):
+        """
+        Test ValueError raised when attempting to update
+        DiscreteScenarioSet dimension.
+        """
+        scenarios = [[1, 2], [3, 4]]
+        dset = DiscreteScenarioSet(scenarios)  # 2-dimensional set
+
+        exc_str = (
+            r".*must have 2 columns.* to match set dimension "
+            r"\(provided.*with 3 columns\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            dset.scenarios = [[1, 2, 3], [4, 5, 6]]
+
+    def test_set_as_constraint(self):
+        """
+        Test method for discrete set constraint generation.
+        """
+        m = ConcreteModel()
+        m.v1 = Var([0, 1], initialize=0)
+        dset = DiscreteScenarioSet([[1, 2], [3, 4]])
+        uq = dset.set_as_constraint(block=m, uncertain_params=m.v1)
+        self.assertEqual(uq.uncertain_param_vars, [m.v1[0], m.v1[1]])
+        self.assertEqual(uq.uncertainty_cons, [])
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertIs(uq.block, m)
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised if number of uncertain parameters
+        does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        dset = DiscreteScenarioSet([[1, 2], [3, 4]])
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            dset.set_as_constraint(uncertain_params=[m.v1], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised if uncertain parameter variables
+        are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1], initialize=0, mutable=True)
+        dset = DiscreteScenarioSet([[1, 2], [3, 4]])
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            dset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            dset.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    def test_point_in_set(self):
+        dset = DiscreteScenarioSet([(0, 0), (1.5, 0), (0, 1), (1, 1), (2, 0)])
+        self.assertTrue(dset.point_in_set([0, 0]))
+        self.assertTrue(dset.point_in_set([1.5, 0]))
+        self.assertTrue(dset.point_in_set([0, 1.0]))
+        self.assertTrue(dset.point_in_set([1, 1.0]))
+        self.assertTrue(dset.point_in_set([2, 0]))
+        self.assertFalse(dset.point_in_set([2, 2]))
+
+        # check precision: slight deviations from (0, 0)
+        self.assertTrue(dset.point_in_set([4.9e-9, 4.9e-9]))
+        self.assertFalse(dset.point_in_set([5.1e-9, 5.1e-9]))
+        self.assertFalse(dset.point_in_set([1e-7, 1e-7]))
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var([0, 1], initialize=0)
+
+        dset = DiscreteScenarioSet([(0, 0), (1.5, 0), (0, 1), (1, 1), (2, 0)])
+        dset.add_bounds_on_uncertain_parameters(
+            config=Bunch(uncertainty_set=dset),
+            uncertain_param_vars=m.uncertain_param_vars,
+        )
+
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (0, 2))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (0, 1.0))
+
+
 if __name__ == "__main__":
     unittest.main()

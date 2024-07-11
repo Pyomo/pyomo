@@ -2832,7 +2832,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
         return UncertaintyQuantification(
             block=block,
-            uncertainty_cons=uncertainty_conlist,
+            uncertainty_cons=list(uncertainty_conlist.values()),
             uncertain_param_vars=param_var_data_list,
             auxiliary_vars=aux_var_list,
         )
@@ -2853,13 +2853,9 @@ class DiscreteScenarioSet(UncertaintySet):
             True if the point lies in the set, False otherwise.
         """
         # Round all double precision to a tolerance
-        num_decimals = 8
-        rounded_scenarios = list(
-            list(round(num, num_decimals) for num in d) for d in self.scenarios
-        )
-        rounded_point = list(round(num, num_decimals) for num in point)
-
-        return any(rounded_point == rounded_d for rounded_d in rounded_scenarios)
+        rounded_scenarios = np.round(self.scenarios, decimals=8)
+        rounded_point = np.round(point, decimals=8)
+        return np.any(np.all(rounded_point == rounded_scenarios, axis=1))
 
 
 class IntersectionSet(UncertaintySet):
