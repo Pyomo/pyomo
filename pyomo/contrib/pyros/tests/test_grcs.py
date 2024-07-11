@@ -724,6 +724,67 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
+    @unittest.skipUnless(baron_license_is_valid, "BARON not available and licensed")
+    def test_pyros_backup_solvers(self):
+        m = ConcreteModel()
+        m.name = "s381"
+
+        class BadSolver:
+            def __init__(self, max_num_calls):
+                self.max_num_calls = max_num_calls
+                self.num_calls = 0
+
+            def available(self, exception_flag=True):
+                return True
+
+            def solve(self, *args, **kwargs):
+                if self.num_calls < self.max_num_calls:
+                    self.num_calls += 1
+                    return SolverFactory("baron").solve(*args, **kwargs)
+                res = SolverResults()
+                res.solver.termination_condition = TerminationCondition.maxIterations
+                res.solver.status = SolverStatus.warning
+                return res
+
+        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+
+        # === State Vars = [x13]
+        # === Decision Vars ===
+        m.decision_vars = [m.x1, m.x2, m.x3]
+
+        # === Uncertain Params ===
+        m.set_params = Set(initialize=list(range(4)))
+        m.p = Param(m.set_params, initialize=2, mutable=True)
+        m.uncertain_params = [m.p]
+
+        m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
+        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+
+        box_set = BoxSet(bounds=[(1.8, 2.2)])
+        pyros = SolverFactory("pyros")
+        results = pyros.solve(
+            model=m,
+            first_stage_variables=m.decision_vars,
+            second_stage_variables=[],
+            uncertain_params=[m.p[1]],
+            uncertainty_set=box_set,
+            # note: allow 4 calls to work normally
+            #       to permit successful solution of uncertainty
+            #       bounding problems
+            local_solver=BadSolver(4),
+            global_solver=BadSolver(4),
+            backup_local_solvers=[SolverFactory("baron")],
+            backup_global_solvers=[SolverFactory("baron")],
+            options={"objective_focus": ObjectiveType.nominal},
+            solve_master_globally=True,
+        )
+        self.assertTrue(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+        )
+
     @unittest.skipUnless(
         SolverFactory('baron').license_is_valid(),
         "Global NLP solver is not available and licensed.",
