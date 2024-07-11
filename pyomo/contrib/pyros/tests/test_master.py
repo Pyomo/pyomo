@@ -5,6 +5,7 @@ objects.
 
 
 import logging
+import time
 import unittest
 
 from pyomo.common.collections import Bunch
@@ -18,22 +19,33 @@ from pyomo.core.base import (
 )
 from pyomo.core.expr import exp
 from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.environ import SolverFactory
+from pyomo.opt import TerminationCondition
 
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_block_to_master_problem,
     construct_initial_master_problem,
     new_construct_master_feasibility_problem,
     new_construct_dr_polishing_problem,
+    NewMasterProblemData,
+    solve_master,
 )
 from pyomo.contrib.pyros.util import (
     new_preprocess_model_data,
     ObjectiveType,
+    time_code,
+    TimingData,
     VariablePartitioning,
+    pyrosTerminationCondition,
 )
 
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Packages numpy and scipy must both be available.")
+
+_baron = SolverFactory("baron")
+baron_available = _baron.available()
+baron_license_is_valid = _baron.license_is_valid()
 
 
 logger = logging.getLogger(__name__)
@@ -402,6 +414,107 @@ class TestDRPolishingProblem(unittest.TestCase):
         polishing_model = new_construct_dr_polishing_problem(master_data, config)
         self.assertFalse(polishing_model.epigraph_obj.active)
         self.assertTrue(polishing_model.polishing_obj.active)
+
+
+class TestSolveMaster(unittest.TestCase):
+    """
+    Test method for solving master problem
+    """
+    @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
+    def test_solve_master(self):
+        model_data, config = build_simple_model_data()
+        model_data.timing = TimingData()
+        baron = SolverFactory("baron")
+        config.update(dict(
+            local_solver=baron,
+            global_solver=baron,
+            backup_local_solvers=[],
+            backup_global_solvers=[],
+            tee=False,
+        ))
+        master_data = NewMasterProblemData(model_data, config)
+        with time_code(master_data.timing, "main", is_main_timer=True):
+            master_soln = solve_master(master_data, config)
+            self.assertEqual(
+                master_soln.termination_condition,
+                TerminationCondition.optimal,
+                msg=(
+                    "Could not solve simple master problem with solve_master "
+                    "function."
+                ),
+            )
+
+    @unittest.skipUnless(baron_available, "Global NLP solver is not available")
+    def test_solve_master_timeout_on_master(self):
+        """
+        Test method for solution of master problems times out
+        on feasibility problem.
+        """
+        model_data, config = build_simple_model_data()
+        model_data.timing = TimingData()
+        baron = SolverFactory("baron")
+        config.update(dict(
+            local_solver=baron,
+            global_solver=baron,
+            backup_local_solvers=[],
+            backup_global_solvers=[],
+            tee=False,
+            time_limit=1,
+        ))
+        master_data = NewMasterProblemData(model_data, config)
+        with time_code(master_data.timing, "main", is_main_timer=True):
+            time.sleep(1)
+            master_soln = solve_master(master_data, config)
+            self.assertEqual(
+                master_soln.termination_condition,
+                TerminationCondition.optimal,
+                msg=(
+                    "Could not solve simple master problem with solve_master "
+                    "function."
+                ),
+            )
+            self.assertEqual(
+                master_soln.master_subsolver_results,
+                (None, pyrosTerminationCondition.time_out),
+            )
+
+    @unittest.skipUnless(baron_available, "Global NLP solver is not available")
+    def test_solve_master_timeout_on_master_feasibility(self):
+        """
+        Test method for solution of master problems times out
+        on feasibility problem.
+        """
+        model_data, config = build_simple_model_data()
+        model_data.timing = TimingData()
+        baron = SolverFactory("baron")
+        config.update(dict(
+            local_solver=baron,
+            global_solver=baron,
+            backup_local_solvers=[],
+            backup_global_solvers=[],
+            tee=False,
+            time_limit=1,
+        ))
+        master_data = NewMasterProblemData(model_data, config)
+        add_scenario_block_to_master_problem(
+            master_data.master_model,
+            scenario_idx=[1, 0],
+            param_realization=[0.6],
+            from_block=master_data.master_model.scenarios[0, 0],
+            clone_first_stage_components=False,
+        )
+        master_data.iteration = 1
+        with time_code(master_data.timing, "main", is_main_timer=True):
+            time.sleep(1)
+            master_soln = solve_master(master_data, config)
+            self.assertEqual(
+                master_soln.pyros_termination_condition,
+                pyrosTerminationCondition.time_out,
+            )
+            self.assertEqual(
+                master_soln.master_subsolver_results,
+                (None, pyrosTerminationCondition.time_out),
+            )
 
 
 if __name__ == "__main__":
