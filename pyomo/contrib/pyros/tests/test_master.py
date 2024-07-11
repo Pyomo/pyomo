@@ -25,12 +25,12 @@ from pyomo.opt import TerminationCondition
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_block_to_master_problem,
     construct_initial_master_problem,
-    new_construct_master_feasibility_problem,
-    new_construct_dr_polishing_problem,
-    NewMasterProblemData,
+    construct_master_feasibility_problem,
+    construct_dr_polishing_problem,
+    MasterProblemData,
 )
 from pyomo.contrib.pyros.util import (
-    new_preprocess_model_data,
+    preprocess_model_data,
     ObjectiveType,
     time_code,
     TimingData,
@@ -80,7 +80,7 @@ def build_simple_model_data(objective_focus="worst_case"):
         state_variables=[],
     )
 
-    new_preprocess_model_data(model_data, config, user_var_partitioning)
+    preprocess_model_data(model_data, config, user_var_partitioning)
 
     return model_data, config
 
@@ -243,7 +243,7 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         Test construction of feasibility problem var map.
         """
         master_data, config = self.build_simple_master_data()
-        slack_model = new_construct_master_feasibility_problem(master_data, config)
+        slack_model = construct_master_feasibility_problem(master_data, config)
 
         self.assertTrue(master_data.feasibility_problem_varmap)
         for mvar, feasvar in master_data.feasibility_problem_varmap:
@@ -263,7 +263,7 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         Check master feasibility slack variables.
         """
         master_data, config = self.build_simple_master_data()
-        slack_model = new_construct_master_feasibility_problem(master_data, config)
+        slack_model = construct_master_feasibility_problem(master_data, config)
 
         slack_var_blk = slack_model._core_add_slack_variables
         scenario_10_blk = slack_model.scenarios[1, 0]
@@ -312,7 +312,7 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         Check master feasibility slack variables.
         """
         master_data, config = self.build_simple_master_data()
-        slack_model = new_construct_master_feasibility_problem(master_data, config)
+        slack_model = construct_master_feasibility_problem(master_data, config)
 
         self.assertFalse(slack_model.epigraph_obj.active)
         self.assertTrue(
@@ -348,7 +348,7 @@ class TestDRPolishingProblem(unittest.TestCase):
         of the DR polishing problem.
         """
         master_data, config = self.build_simple_master_data()
-        polishing_model = new_construct_dr_polishing_problem(master_data, config)
+        polishing_model = construct_dr_polishing_problem(master_data, config)
         eff_first_stage_vars = (
             polishing_model
             .scenarios[0, 0]
@@ -387,7 +387,7 @@ class TestDRPolishingProblem(unittest.TestCase):
         # DR order is 1, and x3 is second-stage.
         # to test fixing efficiency, fix the affine DR variable
         master_data.master_model.scenarios[0, 0].decision_rule_vars[0][1].fix()
-        polishing_model = new_construct_dr_polishing_problem(master_data, config)
+        polishing_model = construct_dr_polishing_problem(master_data, config)
 
         nom_polishing_block = polishing_model.scenarios[0, 0]
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
@@ -418,7 +418,7 @@ class TestDRPolishingProblem(unittest.TestCase):
         polishing model.
         """
         master_data, config = self.build_simple_master_data()
-        polishing_model = new_construct_dr_polishing_problem(master_data, config)
+        polishing_model = construct_dr_polishing_problem(master_data, config)
         self.assertFalse(polishing_model.epigraph_obj.active)
         self.assertTrue(polishing_model.polishing_obj.active)
 
@@ -439,7 +439,7 @@ class TestSolveMaster(unittest.TestCase):
             backup_global_solvers=[],
             tee=False,
         ))
-        master_data = NewMasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data, config)
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = master_data.solve_master()
             self.assertEqual(
@@ -468,7 +468,7 @@ class TestSolveMaster(unittest.TestCase):
             tee=False,
             time_limit=1,
         ))
-        master_data = NewMasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data, config)
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
             master_soln = master_data.solve_master()
@@ -502,7 +502,7 @@ class TestSolveMaster(unittest.TestCase):
             tee=False,
             time_limit=1,
         ))
-        master_data = NewMasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data, config)
         add_scenario_block_to_master_problem(
             master_data.master_model,
             scenario_idx=[1, 0],
@@ -542,7 +542,7 @@ class TestPolishDRVars(unittest.TestCase):
             backup_global_solvers=[],
             tee=False,
         ))
-        master_data = NewMasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data, config)
         add_scenario_block_to_master_problem(
             master_data.master_model,
             scenario_idx=[1, 0],

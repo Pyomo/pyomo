@@ -1196,7 +1196,7 @@ def discrete_solve(
     )
 
 
-class NewSeparationProblemData:
+class SeparationProblemData:
     """
     Container for objects related to the PyROS separation problem.
     """

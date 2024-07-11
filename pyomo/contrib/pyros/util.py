@@ -2331,7 +2331,7 @@ def perform_coefficient_matching(model_data, config):
     return False
 
 
-def new_preprocess_model_data(model_data, config, user_var_partitioning):
+def preprocess_model_data(model_data, config, user_var_partitioning):
     """
     Preprocess user inputs to modeling objects from which
     PyROS subproblems can be efficiently constructed.
@@ -2375,8 +2375,8 @@ def new_preprocess_model_data(model_data, config, user_var_partitioning):
 
     # DR components are added only per effective second-stage variable
     config.progress_logger.debug("Adding decision rule components...")
-    new_add_decision_rule_variables(model_data, config)
-    new_add_decision_rule_constraints(model_data, config)
+    add_decision_rule_variables(model_data, config)
+    add_decision_rule_constraints(model_data, config)
 
     # the epigraph and DR variables are also first-stage
     config.progress_logger.debug("Finalizing nonadjustable variables...")
@@ -2485,7 +2485,7 @@ def log_model_statistics(model_data, config):
     info_log_func(f"      Performance inequalities : {num_performance_ineq_cons}")
 
 
-def new_add_decision_rule_variables(model_data, config):
+def add_decision_rule_variables(model_data, config):
     """
     Add variables parameterizing the (polynomial)
     decision rules to the working model.
@@ -2545,7 +2545,7 @@ def new_add_decision_rule_variables(model_data, config):
         eff_ss_var_to_dr_var_map[eff_ss_var] = indexed_dr_var
 
 
-def new_add_decision_rule_constraints(model_data, config):
+def add_decision_rule_constraints(model_data, config):
     """
     Add decision rule equality constraints to the working model.
 

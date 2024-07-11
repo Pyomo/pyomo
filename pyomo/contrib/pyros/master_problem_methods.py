@@ -156,7 +156,7 @@ def add_scenario_block_to_master_problem(
             con.deactivate()
 
 
-def new_construct_master_feasibility_problem(master_data, config):
+def construct_master_feasibility_problem(master_data, config):
     """
     Construct slack variable minimization problem from the master
     model.
@@ -287,7 +287,7 @@ def solve_master_feasibility_problem(master_data, config):
     results : SolverResults
         Solver results.
     """
-    model = new_construct_master_feasibility_problem(master_data, config)
+    model = construct_master_feasibility_problem(master_data, config)
 
     active_obj = next(model.component_data_objects(Objective, active=True))
 
@@ -348,7 +348,7 @@ def solve_master_feasibility_problem(master_data, config):
     return results
 
 
-def new_construct_dr_polishing_problem(master_data, config):
+def construct_dr_polishing_problem(master_data, config):
     """
     Construct DR polishing problem from the master problem.
 
@@ -517,7 +517,7 @@ def minimize_dr_vars(master_data, config):
         False otherwise.
     """
     # create polishing NLP
-    polishing_model = new_construct_dr_polishing_problem(master_data, config)
+    polishing_model = construct_dr_polishing_problem(master_data, config)
 
     if config.solve_master_globally:
         solver = config.global_solver
@@ -904,7 +904,7 @@ def solve_master(master_data, config):
     )
 
 
-class NewMasterProblemData:
+class MasterProblemData:
     """
     Container for objects pertaining to the PyROS master problem.
     """

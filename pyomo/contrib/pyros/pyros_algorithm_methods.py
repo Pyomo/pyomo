@@ -145,8 +145,8 @@ def ROSolver_iterative_solve(model_data, config):
     -------
     ...
     """
-    master_data = mp_methods.NewMasterProblemData(model_data, config)
-    separation_data = sp_methods.NewSeparationProblemData(model_data, config)
+    master_data = mp_methods.MasterProblemData(model_data, config)
+    separation_data = sp_methods.SeparationProblemData(model_data, config)
 
     # === Nominal information
     nominal_data = Block()

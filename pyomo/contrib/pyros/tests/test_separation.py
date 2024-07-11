@@ -21,7 +21,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.contrib.pyros.separation_problem_methods import construct_separation_problem
 from pyomo.contrib.pyros.uncertainty_sets import BoxSet, FactorModelSet
 from pyomo.contrib.pyros.util import (
-    new_preprocess_model_data,
+    preprocess_model_data,
     ObjectiveType,
     VariablePartitioning,
 )
@@ -68,7 +68,7 @@ def build_simple_model_data(objective_focus="worst_case"):
         state_variables=[],
     )
 
-    new_preprocess_model_data(model_data, config, user_var_partitioning)
+    preprocess_model_data(model_data, config, user_var_partitioning)
 
     return model_data, config
 

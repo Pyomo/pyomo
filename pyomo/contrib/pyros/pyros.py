@@ -23,7 +23,7 @@ from pyomo.contrib.pyros.util import (
     ObjectiveType,
     validate_pyros_inputs,
     log_model_statistics,
-    new_preprocess_model_data,
+    preprocess_model_data,
     IterationLogRecord,
     setup_pyros_logger,
     TimingData,
@@ -371,7 +371,7 @@ class PyROS(object):
 
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
-            robust_infeasible = new_preprocess_model_data(
+            robust_infeasible = preprocess_model_data(
                 model_data,
                 config,
                 user_var_partitioning,

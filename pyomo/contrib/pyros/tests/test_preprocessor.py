@@ -48,12 +48,12 @@ from pyomo.contrib.pyros.util import (
     standardize_equality_constraints,
     standardize_active_objective,
     declare_objective_expressions,
-    new_add_decision_rule_constraints,
-    new_add_decision_rule_variables,
+    add_decision_rule_constraints,
+    add_decision_rule_variables,
     perform_coefficient_matching,
     setup_working_model,
     VariablePartitioning,
-    new_preprocess_model_data,
+    preprocess_model_data,
     log_model_statistics,
 )
 parameterized, param_available = attempt_import('parameterized')
@@ -1676,7 +1676,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         config = Bunch()
         config.decision_rule_order = 0
 
-        new_add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
 
         for indexed_dr_var in model_data.working_model.decision_rule_vars:
             self.assertEqual(
@@ -1728,7 +1728,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         config = Bunch()
         config.decision_rule_order = 1
 
-        new_add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
 
         for indexed_dr_var in model_data.working_model.decision_rule_vars:
             self.assertEqual(
@@ -1780,7 +1780,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         config = Bunch()
         config.decision_rule_order = 2
 
-        new_add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
 
         num_params = len(model_data.working_model.uncertain_params)
 
@@ -1882,8 +1882,8 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         config = Bunch()
         config.decision_rule_order = 0
 
-        new_add_decision_rule_variables(model_data, config)
-        new_add_decision_rule_constraints(model_data, config)
+        add_decision_rule_variables(model_data, config)
+        add_decision_rule_constraints(model_data, config)
 
         effective_second_stage_vars = (
             model_data.working_model.effective_var_partitioning.second_stage_variables
@@ -1936,8 +1936,8 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         config.decision_rule_order = 2
 
         # add DR variables and constraints
-        new_add_decision_rule_variables(model_data, config)
-        new_add_decision_rule_constraints(model_data, config)
+        add_decision_rule_variables(model_data, config)
+        add_decision_rule_constraints(model_data, config)
 
         dr_zip = zip(
             model_data.working_model.effective_var_partitioning.second_stage_variables,
@@ -2101,8 +2101,8 @@ class TestCoefficientMatching(unittest.TestCase):
         )
         config.progress_logger.setLevel(logging.DEBUG)
 
-        new_add_decision_rule_variables(model_data=model_data, config=config)
-        new_add_decision_rule_constraints(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_constraints(model_data=model_data, config=config)
 
         ep = model_data.working_model.effective_var_partitioning
         model_data.working_model.all_nonadjustable_variables = list(
@@ -2303,7 +2303,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=0,
             progress_logger=logger,
         )
-        new_preprocess_model_data(
+        preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
         ep = model_data.working_model.effective_var_partitioning
@@ -2366,7 +2366,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
-        new_preprocess_model_data(
+        preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
         ep = model_data.working_model.effective_var_partitioning
@@ -2436,7 +2436,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
-        new_preprocess_model_data(
+        preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
 
@@ -2608,7 +2608,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # static DR, problem should be robust infeasible
         # due to the coefficient matching constraints derived
         # from bounds on z5
-        robust_infeasible = new_preprocess_model_data(
+        robust_infeasible = preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
         self.assertIsInstance(robust_infeasible, bool)
@@ -2683,7 +2683,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
-        new_preprocess_model_data(
+        preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
 
@@ -2735,7 +2735,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=1,
             progress_logger=logger,
         )
-        new_preprocess_model_data(
+        preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
 
@@ -2787,7 +2787,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=2,
             progress_logger=logger,
         )
-        new_preprocess_model_data(
+        preprocess_model_data(
             model_data, config, user_var_partitioning,
         )
 
