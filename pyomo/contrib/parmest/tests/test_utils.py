@@ -46,12 +46,12 @@ class TestUtils(unittest.TestCase):
         exp = ReactorDesignExperiment(data, 0)
         instance = exp.get_labeled_model()
 
-        theta_names = ['k1', 'k2', 'k3']
+        param_CUIDs = [v for k, v in instance.unknown_parameters.items()]
         m_vars = parmest.utils.convert_params_to_vars(
-            instance, theta_names, fix_vars=True
+            instance, param_CUIDs, fix_vars=True
         )
 
-        for v in theta_names:
+        for v in [str(CUID) for CUID in param_CUIDs]:
             self.assertTrue(hasattr(m_vars, v))
             c = m_vars.find_component(v)
             self.assertIsInstance(c, pyo.Var)
