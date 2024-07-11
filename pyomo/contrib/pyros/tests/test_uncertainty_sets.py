@@ -6,10 +6,8 @@ import itertools as it
 import unittest
 
 from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
-from pyomo.common.collections import Bunch
 from pyomo.environ import SolverFactory
 from pyomo.core.base import (
-    Block,
     ConcreteModel,
     Param,
     Var,
