@@ -2169,5 +2169,222 @@ class TestEllipsoidalSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 2))
 
 
+class TestPolyhedralSet(unittest.TestCase):
+    """
+    Tests for the PolyhedralSet.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test PolyhedralSet constructor and attribute setters work
+        appropriately.
+        """
+        lhs_coefficients_mat = [[1, 2, 3], [4, 5, 6]]
+        rhs_vec = [1, 3]
+
+        pset = PolyhedralSet(lhs_coefficients_mat, rhs_vec)
+
+        # check attributes are as expected
+        np.testing.assert_allclose(lhs_coefficients_mat, pset.coefficients_mat)
+        np.testing.assert_allclose(rhs_vec, pset.rhs_vec)
+
+        # update the set
+        pset.coefficients_mat = [[1, 0, 1], [1, 1, 1.5]]
+        pset.rhs_vec = [3, 4]
+
+        # check updates work
+        np.testing.assert_allclose([[1, 0, 1], [1, 1, 1.5]], pset.coefficients_mat)
+        np.testing.assert_allclose([3, 4], pset.rhs_vec)
+
+    def test_error_on_polyhedral_set_dim_change(self):
+        """
+        PolyhedralSet dimension (number columns of 'coefficients_mat')
+        is considered immutable.
+        Test ValueError raised if attempt made to change dimension.
+        """
+        # construct valid set
+        pset = PolyhedralSet([[1, 2, 3], [4, 5, 6]], [1, 3])
+
+        exc_str = (
+            r".*must have 3 columns to match set dimension \(provided.*2 columns\)"
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.coefficients_mat = [[1, 2], [3, 4]]
+
+    def test_error_on_inconsistent_rows(self):
+        """
+        Number of rows of budget membership mat is immutable.
+        Similarly, size of rhs_vec is immutable.
+        Check ValueError raised in event of attempted change.
+        """
+        coeffs_mat_exc_str = (
+            r".*must have 2 rows to match shape of attribute 'rhs_vec' "
+            r"\(provided.*3 rows\)"
+        )
+        rhs_vec_exc_str = (
+            r".*must have 2 entries to match shape of attribute "
+            r"'coefficients_mat' \(provided.*3 entries\)"
+        )
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, rhs_vec_exc_str):
+            PolyhedralSet([[1, 2], [3, 4]], rhs_vec=[1, 3, 3])
+
+        # construct a valid polyhedral set
+        # (2 x 2 coefficients, 2-vector for RHS)
+        pset = PolyhedralSet([[1, 2], [3, 4]], rhs_vec=[1, 3])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, coeffs_mat_exc_str):
+            # 3 x 2 matrix row mismatch
+            pset.coefficients_mat = [[1, 2], [3, 4], [5, 6]]
+        with self.assertRaisesRegex(ValueError, rhs_vec_exc_str):
+            # 3-vector mismatches 2 rows
+            pset.rhs_vec = [1, 3, 2]
+
+    def test_error_on_empty_set(self):
+        """
+        Check ValueError raised if nonemptiness check performed
+        at construction returns a negative result.
+        """
+        exc_str = r"PolyhedralSet.*is empty.*"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            PolyhedralSet([[1], [-1]], rhs_vec=[1, -3])
+
+    def test_error_on_polyhedral_mat_all_zero_columns(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a column with all zeros.
+        """
+        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        rhs_vec = [1, 1, 2]
+
+        exc_str = r".*all entries zero in columns at indexes: 0, 1.*"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            PolyhedralSet(invalid_col_mat, rhs_vec)
+
+        # construct a valid budget set
+        pset = PolyhedralSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.coefficients_mat = invalid_col_mat
+
+    def test_set_as_constraint(self):
+        """
+        Test constraint generation method works as expected.
+        """
+        m = ConcreteModel()
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
+            rhs_vec=[2, -1, -1],
+        )
+        uq = pset.set_as_constraint(uncertain_params=None, block=m)
+
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertEqual(len(uq.uncertain_param_vars), 2)
+        self.assertEqual(len(uq.uncertainty_cons), 3)
+        self.assertIs(uq.block, m)
+
+        var1, var2 = uq.uncertain_param_vars
+
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[0].expr,
+            var1 + np.int64(0) * var2 <= np.int64(2),
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[1].expr,
+            np.int64(-1) * var1 + np.int64(1) * var2 <= np.int64(-1),
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[2].expr,
+            np.int64(-1) * var1 + np.int64(-1) * var2 <= np.int64(-1),
+        )
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised if number of uncertain parameters
+        does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
+            rhs_vec=[2, -1, -1],
+        )
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            pset.set_as_constraint(uncertain_params=[m.v1], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised if uncertain parameter variables
+        are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1], initialize=0, mutable=True)
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
+            rhs_vec=[2, -1, -1],
+        )
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            pset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            pset.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_compute_parameter_bounds(self):
+        """
+        Test parameter bounds computation with global solver
+        is as expected.
+        """
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
+            rhs_vec=[2, -1, -1],
+        )
+        self.assertEqual(pset.parameter_bounds, [])
+        computed_bounds = pset._compute_parameter_bounds(SolverFactory("baron"))
+        self.assertEqual(computed_bounds, [(1, 2), (-1, 1)])
+
+    def test_point_in_set(self):
+        """
+        Test point in set checks work as expected.
+        """
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
+            rhs_vec=[2, -1, -1],
+        )
+        self.assertTrue(pset.point_in_set([1, 0]))
+        self.assertTrue(pset.point_in_set([2, 1]))
+        self.assertTrue(pset.point_in_set([2, -1]))
+        self.assertFalse(pset.point_in_set([1, 1]))
+        self.assertFalse(pset.point_in_set([-1, 0]))
+        self.assertFalse(pset.point_in_set([0, 0]))
+
+    @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var([0, 1], initialize=0)
+
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
+            rhs_vec=[2, -1, -1],
+        )
+        pset.add_bounds_on_uncertain_parameters(
+            config=Bunch(uncertainty_set=pset, global_solver=SolverFactory("baron")),
+            uncertain_param_vars=m.uncertain_param_vars,
+        )
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (-1, 1))
+
+
 if __name__ == "__main__":
     unittest.main()
