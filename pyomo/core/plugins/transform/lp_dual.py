@@ -137,7 +137,7 @@ class LinearProgrammingDual(object):
         dual.constraints = Constraint(dual_rows)
         for i, primal in enumerate(std_form.columns):
             lhs = 0
-            for j in range(A.indptr[i], A.indptr[i+1]):
+            for j in range(A.indptr[i], A.indptr[i + 1]):
                 coef = A.data[j]
                 primal_row = A.indices[j]
                 lhs += coef * dual.x[primal_row]
@@ -152,13 +152,15 @@ class LinearProgrammingDual(object):
             else:
                 if primal.domain is NonNegativeReals:
                     dual.constraints[i] = lhs >= c[0, i]
-                else: # primal.domain is NonPositiveReals
+                else:  # primal.domain is NonPositiveReals
                     dual.constraints[i] = lhs <= c[0, i]
             trans_info.dual_constraint[primal] = dual.constraints[i]
             trans_info.primal_var[dual.constraints[i]] = primal
 
-        dual.obj = Objective( expr=sum(std_form.rhs[j] * dual.x[j] for j in
-                                       dual_cols), sense=-primal_sense )
+        dual.obj = Objective(
+            expr=sum(std_form.rhs[j] * dual.x[j] for j in dual_cols),
+            sense=-primal_sense,
+        )
 
         return dual
 
