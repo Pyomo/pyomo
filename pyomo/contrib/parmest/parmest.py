@@ -642,10 +642,7 @@ class Estimator(object):
                 "cb_data": None,
             }
         else:
-            dummy_cb = {
-                "callback": self._instance_creation_callback,
-                "cb_data": None,
-            }
+            dummy_cb = {"callback": self._instance_creation_callback, "cb_data": None}
 
         if self.diagnostic_mode:
             if len(paramvals) > 0:
