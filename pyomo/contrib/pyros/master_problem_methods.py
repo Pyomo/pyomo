@@ -574,31 +574,7 @@ def minimize_dr_vars(master_data, config):
                 mvar.set_value(value(pvar), skip_validation=True)
 
     config.progress_logger.debug(f" Optimized DR norm: {value(polishing_obj)}")
-    config.progress_logger.debug(" Polished master objective:")
-
-    # print breakdown of objective value of polished master solution
-    if config.objective_focus == ObjectiveType.worst_case:
-        eval_obj_blk_idx = max(
-            master_data.master_model.scenarios.keys(),
-            key=lambda idx: value(
-                master_data.master_model.scenarios[idx].second_stage_objective
-            ),
-        )
-    else:
-        eval_obj_blk_idx = (0, 0)
-
-    # debugging: summarize objective breakdown
-    eval_obj_blk = master_data.master_model.scenarios[eval_obj_blk_idx]
-    config.progress_logger.debug(
-        "  First-stage objective: " f"{value(eval_obj_blk.first_stage_objective)}"
-    )
-    config.progress_logger.debug(
-        "  Second-stage objective: " f"{value(eval_obj_blk.second_stage_objective)}"
-    )
-    polished_master_obj = value(
-        eval_obj_blk.first_stage_objective + eval_obj_blk.second_stage_objective
-    )
-    config.progress_logger.debug(f"  Objective: {polished_master_obj}")
+    log_master_solve_results(polishing_model, config, results, desc="polished")
 
     return results, True
 
@@ -684,7 +660,7 @@ def higher_order_decision_rule_efficiency(master_data, config):
     )
 
 
-def log_master_solve_results(master_model, config, results):
+def log_master_solve_results(master_model, config, results, desc="Optimized"):
     """
     Log master problem solve results.
     """
@@ -699,17 +675,15 @@ def log_master_solve_results(master_model, config, results):
         eval_obj_blk_idx = (0, 0)
 
     eval_obj_blk = master_model.scenarios[eval_obj_blk_idx]
-    config.progress_logger.debug(" Optimized master objective breakdown:")
+    config.progress_logger.debug(f" {desc.capitalize()} master objective breakdown:")
     config.progress_logger.debug(
         f"  First-stage objective: {value(eval_obj_blk.first_stage_objective)}"
     )
     config.progress_logger.debug(
         f"  Second-stage objective: {value(eval_obj_blk.second_stage_objective)}"
     )
-    master_obj = (
-        eval_obj_blk.first_stage_objective + eval_obj_blk.second_stage_objective
-    )
-    config.progress_logger.debug(f"  Objective: {value(master_obj)}")
+    master_obj = eval_obj_blk.full_objective
+    config.progress_logger.debug(f"  Overall Objective: {value(master_obj)}")
     config.progress_logger.debug(
         f" Termination condition: {results.solver.termination_condition}"
     )
