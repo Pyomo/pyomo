@@ -1221,6 +1221,7 @@ class CardinalitySet(UncertaintySet):
                 block=block,
                 uncertain_param_vars=uncertain_params,
                 dim=self.dim,
+                num_auxiliary_vars=self.dim,
             )
         )
 
@@ -1234,6 +1235,10 @@ class CardinalitySet(UncertaintySet):
             conlist.add(orig_val + pos_dev * auxvar == param_var)
 
         conlist.add(quicksum(aux_var_list) <= self.gamma)
+
+        for aux_var in aux_var_list:
+            aux_var.setlb(0)
+            aux_var.setub(1)
 
         return UncertaintyQuantification(
             block=block,
@@ -1256,17 +1261,32 @@ class CardinalitySet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        cassis = []
-        for i in range(self.dim):
-            if self.positive_deviation[i] > 0:
-                cassis.append((point[i] - self.origin[i]) / self.positive_deviation[i])
+        if len(point) != self.dim:
+            raise ValueError(
+                f"Point {point} must be of length {self.dim} to match the "
+                f"uncertainty set dimension, but got length {len(point)}."
+            )
+        point_arr = np.array(point)
+        aux_vals = np.empty(self.dim)
 
-        if sum(cassi for cassi in cassis) <= self.gamma and all(
-            cassi >= 0 and cassi <= 1 for cassi in cassis
-        ):
-            return True
-        else:
+        is_zero_deviation_off_origin = np.logical_and(
+            self.positive_deviation == 0,
+            point_arr != self.origin,
+        )
+        if np.any(is_zero_deviation_off_origin):
             return False
+
+        is_dev_nonzero = self.positive_deviation != 0
+        aux_vals[is_dev_nonzero] = (
+            point_arr[is_dev_nonzero] - self.origin[is_dev_nonzero]
+        ) / self.positive_deviation[is_dev_nonzero]
+        aux_vals[self.positive_deviation == 0] = 0
+
+        return (
+            aux_vals.sum() <= self.gamma
+            and np.all(0 <= aux_vals)
+            and np.all(aux_vals <= 1)
+        )
 
 
 class PolyhedralSet(UncertaintySet):
@@ -3045,7 +3065,7 @@ class IntersectionSet(UncertaintySet):
                 block=sub_block,
                 uncertain_params=param_var_data_list,
             )
-            all_cons.extend(set_quantification.uncertain_param_vars)
+            all_cons.extend(set_quantification.uncertainty_cons)
             all_aux_vars.extend(set_quantification.auxiliary_vars)
 
         return UncertaintyQuantification(

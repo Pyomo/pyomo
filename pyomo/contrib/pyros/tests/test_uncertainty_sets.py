@@ -997,5 +997,613 @@ class TestFactorModelSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1.4, 1.4))
 
 
+class TestIntersectionSet(unittest.TestCase):
+    """
+    Tests for the IntersectionSet.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test IntersectionSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+
+        iset = IntersectionSet(box_set=bset, axis_aligned_set=aset)
+        self.assertIn(
+            bset,
+            iset.all_sets,
+            msg=(
+                "IntersectionSet 'all_sets' attribute does not"
+                "contain expected BoxSet"
+            ),
+        )
+        self.assertIn(
+            aset,
+            iset.all_sets,
+            msg=(
+                "IntersectionSet 'all_sets' attribute does not"
+                "contain expected AxisAlignedEllipsoidalSet"
+            ),
+        )
+
+    def test_error_on_intersecting_wrong_dims(self):
+        """
+        Test ValueError raised if IntersectionSet sets
+        are not of same dimension.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+        wrong_aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+
+        exc_str = r".*of dimension 2, but attempting to add set of dimension 3"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            IntersectionSet(box_set=bset, axis_set=aset, wrong_set=wrong_aset)
+
+        # construct a valid intersection set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            iset.all_sets.append(wrong_aset)
+
+    def test_type_error_on_invalid_arg(self):
+        """
+        Test TypeError raised if an argument not of type
+        UncertaintySet is passed to the IntersectionSet
+        constructor or appended to 'all_sets'.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+
+        exc_str = (
+            r"Entry '1' of the argument `all_sets` is not An `UncertaintySet` "
+            r"object.*\(provided type 'int'\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(TypeError, exc_str):
+            IntersectionSet(box_set=bset, axis_set=aset, invalid_arg=1)
+
+        # construct a valid intersection set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+
+        # assert error on update
+        with self.assertRaisesRegex(TypeError, exc_str):
+            iset.all_sets.append(1)
+
+    def test_error_on_intersection_dim_change(self):
+        """
+        IntersectionSet dimension is considered immutable.
+        Test ValueError raised when attempting to set the
+        constituent sets to a different dimension.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+
+        # construct the set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+
+        exc_str = r"Attempting to set.*dimension 2 to a sequence.* of dimension 1"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # attempt to set to 1-dimensional sets
+            iset.all_sets = [BoxSet([[1, 1]]), AxisAlignedEllipsoidalSet([0], [1])]
+
+    def test_error_on_too_few_sets(self):
+        """
+        Check ValueError raised if too few sets are passed
+        to the intersection set.
+        """
+        exc_str = r"Attempting.*minimum required length 2.*iterable of length 1"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            IntersectionSet(bset=BoxSet([[1, 2]]))
+
+        # construct a valid intersection set
+        iset = IntersectionSet(
+            box_set=BoxSet([[1, 2]]), axis_set=AxisAlignedEllipsoidalSet([0], [1])
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # attempt to set to 1-dimensional sets
+            iset.all_sets = [BoxSet([[1, 1]])]
+
+    def test_intersection_uncertainty_set_list_behavior(self):
+        """
+        Test the 'all_sets' attribute of the IntersectionSet
+        class behaves like a regular Python list.
+        """
+        iset = IntersectionSet(
+            bset=BoxSet([[0, 2]]), aset=AxisAlignedEllipsoidalSet([0], [1])
+        )
+
+        # an UncertaintySetList of length 2.
+        # should behave like a list of length 2
+        all_sets = iset.all_sets
+
+        # test append
+        all_sets.append(BoxSet([[1, 2]]))
+        del all_sets[2:]
+
+        # test extend
+        all_sets.extend([BoxSet([[1, 2]]), EllipsoidalSet([0], [[1]], 2)])
+        del all_sets[2:]
+
+        # index in range. Allow slicing as well
+        # none of these should result in exception
+        all_sets[0]
+        all_sets[1]
+        all_sets[100:]
+        all_sets[0:2:20]
+        all_sets[0:2:1]
+        all_sets[-20:-1:2]
+
+        # index out of range
+        self.assertRaises(IndexError, lambda: all_sets[2])
+        self.assertRaises(IndexError, lambda: all_sets[-3])
+
+        # assert min length ValueError if attempting to clear
+        # list to length less than 2
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets[:] = all_sets[0]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[1]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[1:]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[:]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets.clear()
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets[0:] = []
+
+        # assignment out of range
+        with self.assertRaisesRegex(IndexError, r"assignment index out of range"):
+            all_sets[-3] = BoxSet([[1, 1.5]])
+        with self.assertRaisesRegex(IndexError, r"assignment index out of range"):
+            all_sets[2] = BoxSet([[1, 1.5]])
+
+        # assigning to slices should work fine
+        all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
+
+    def test_set_as_constraint(self):
+        """
+        Test constraint generation method works properly given
+        valid inputs.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        m.v2 = Var(initialize=0)
+
+        i_set = IntersectionSet(
+            set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
+            # this is just an origin-centered square
+            set2=FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=3,
+                beta=0.75,
+                psi_mat=[[1, 1, 0], [0, 1, 1]],
+            ),
+            # another origin-centered square
+            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            # ellipsoid. this is enclosed in all the other sets
+            set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
+        )
+
+        uq = i_set.set_as_constraint(uncertain_params=[m.v1, m.v2], block=m)
+
+        self.assertIs(uq.block, m)
+        self.assertEqual(uq.uncertain_param_vars, [m.v1, m.v2])
+        self.assertEqual(len(uq.auxiliary_vars), 5)
+        self.assertEqual(len(uq.uncertainty_cons), 9)
+
+        # box set constraints
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[0].expr,
+            RangedExpression((np.float64(-0.5), m.v1, np.float64(0.5)), False),
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[1].expr,
+            RangedExpression((np.float64(-0.5), m.v2, np.float64(0.5)), False),
+        )
+
+        # factor model constraints
+        aux_vars = uq.auxiliary_vars
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[2].expr,
+            aux_vars[0] + aux_vars[1] + 0 * aux_vars[2] == m.v1,
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[3].expr,
+            0 * aux_vars[0] + aux_vars[1] + aux_vars[2] == m.v2,
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[4].expr,
+            RangedExpression(
+                (-2.25, aux_vars[0] + aux_vars[1] + aux_vars[2], 2.25),
+                False,
+            ),
+        )
+        self.assertEqual(aux_vars[0].bounds, (-1, 1))
+        self.assertEqual(aux_vars[1].bounds, (-1, 1))
+        self.assertEqual(aux_vars[2].bounds, (-1, 1))
+
+        # cardinality set constraints
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[5].expr,
+            -0.5 + 2 * aux_vars[3] == m.v1,
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[6].expr,
+            -0.5 + 2 * aux_vars[4] == m.v2,
+        )
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[7].expr,
+            sum(aux_vars[3:5]) <= 2,
+        )
+        self.assertEqual(aux_vars[3].bounds, (0, 1))
+        self.assertEqual(uq.auxiliary_vars[4].bounds, (0, 1))
+
+        # axis-aligned ellipsoid constraint
+        assertExpressionsEqual(
+            self,
+            uq.uncertainty_cons[8].expr,
+            m.v1 ** 2 / np.float64(0.0625) + m.v2 ** 2 / np.float64(0.0625) <= 1
+        )
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised if number of uncertain parameters
+        does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        i_set = IntersectionSet(
+            set1=BoxSet(bounds=[[1, 2], [3, 4]]),
+            set2=AxisAlignedEllipsoidalSet([0, 1], [5, 5]),
+        )
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            i_set.set_as_constraint(uncertain_params=[m.v1], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised if uncertain parameter variables
+        are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1], initialize=0, mutable=True)
+        i_set = IntersectionSet(
+            set1=BoxSet(bounds=[[1, 2], [3, 4]]),
+            set2=AxisAlignedEllipsoidalSet([0, 1], [5, 5]),
+        )
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            i_set.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            i_set.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_compute_parameter_bounds(self):
+        """
+        Test parameter bounds computation with global solver
+        is as expected.
+        """
+        i_set = IntersectionSet(
+            set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
+            # this is just an origin-centered square
+            set2=FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=3,
+                beta=0.75,
+                psi_mat=[[1, 1, 0], [0, 1, 1]],
+            ),
+            # another origin-centered square
+            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            # ellipsoid. this is enclosed in all the other sets
+            set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
+        )
+
+        # ellipsoid is enclosed by everyone else, so
+        # that determines the bounds
+        computed_bounds = i_set._compute_parameter_bounds(SolverFactory("baron"))
+        np.testing.assert_allclose(computed_bounds, [[-0.25, 0.25], [-0.25, 0.25]])
+
+        # returns empty list
+        self.assertFalse(i_set.parameter_bounds)
+
+    def test_point_in_set(self):
+        """
+        Test point in set check for intersection set.
+        """
+        i_set = IntersectionSet(
+            set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
+            # this is just an origin-centered square
+            set2=FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=3,
+                beta=0.75,
+                psi_mat=[[1, 1, 0], [0, 1, 1]],
+            ),
+            # another origin-centered square
+            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            # ellipsoid. this is enclosed in all the other sets
+            set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
+        )
+
+        # ellipsoid points
+        self.assertTrue(i_set.point_in_set([0, 0]))
+        self.assertTrue(i_set.point_in_set([0, 0.25]))
+        self.assertTrue(i_set.point_in_set([0, -0.25]))
+        self.assertTrue(i_set.point_in_set([0.25, 0]))
+        self.assertTrue(i_set.point_in_set([-0.25, 0]))
+
+        # box vertex
+        self.assertFalse(i_set.point_in_set([0.5, 0.5]))
+        # cardinality set origin and vertex of the box
+        # are outside the ellipse
+        self.assertFalse(i_set.point_in_set([-0.5, -0.5]))
+
+    @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var([0, 1], initialize=0)
+
+        iset = IntersectionSet(
+            set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
+            # this is just an origin-centered square
+            set2=FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=3,
+                beta=0.75,
+                psi_mat=[[1, 1, 0], [0, 1, 1]],
+            ),
+            # another origin-centered square
+            set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
+            # ellipsoid. this is enclosed in all the other sets
+            set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
+        )
+        config = Bunch(uncertainty_set=iset, global_solver=SolverFactory("baron"))
+
+        iset.add_bounds_on_uncertain_parameters(
+            config=config,
+            uncertain_param_vars=m.uncertain_param_vars,
+        )
+
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (-0.25, 0.25))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.25, 0.25))
+
+
+class TestCardinalitySet(unittest.TestCase):
+    """
+    Tests for the CardinalitySet.
+    """
+
+    def test_normal_cardinality_construction_and_update(self):
+        """
+        Test CardinalitySet constructor and setter work normally
+        when bounds are appropriate.
+        """
+        # valid inputs
+        cset = CardinalitySet(origin=[0, 0], positive_deviation=[1, 3], gamma=2)
+
+        # check attributes are as expected
+        np.testing.assert_allclose(cset.origin, [0, 0])
+        np.testing.assert_allclose(cset.positive_deviation, [1, 3])
+        np.testing.assert_allclose(cset.gamma, 2)
+        self.assertEqual(cset.dim, 2)
+
+        # update the set
+        cset.origin = [1, 2]
+        cset.positive_deviation = [3, 0]
+        cset.gamma = 0.5
+
+        # check updates work
+        np.testing.assert_allclose(cset.origin, [1, 2])
+        np.testing.assert_allclose(cset.positive_deviation, [3, 0])
+        np.testing.assert_allclose(cset.gamma, 0.5)
+
+    def test_error_on_neg_positive_deviation(self):
+        """
+        Cardinality set positive deviation attribute should
+        contain nonnegative numerical entries.
+
+        Check ValueError raised if any negative entries provided.
+        """
+        origin = [0, 0]
+        positive_deviation = [1, -2]  # invalid
+        gamma = 2
+
+        exc_str = r"Entry -2 of attribute 'positive_deviation' is negative value"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset = CardinalitySet(origin, positive_deviation, gamma)
+
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin, [1, 1], gamma)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.positive_deviation = positive_deviation
+
+    def test_error_on_invalid_gamma(self):
+        """
+        Cardinality set gamma attribute should be a float-like
+        between 0 and the set dimension.
+
+        Check ValueError raised if gamma attribute is set
+        to an invalid value.
+        """
+        origin = [0, 0]
+        positive_deviation = [1, 1]
+        gamma = 3  # should be invalid
+
+        exc_str = (
+            r".*attribute 'gamma' must be a real number "
+            r"between 0 and dimension 2 \(provided value 3\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            CardinalitySet(origin, positive_deviation, gamma)
+
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin, positive_deviation, gamma=2)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.gamma = gamma
+
+    def test_error_on_cardinality_set_dim_change(self):
+        """
+        Dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        set dimension (i.e. number of entries of `origin`).
+        """
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.origin = [0, 0, 0]
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.positive_deviation = [1, 1, 1]
+
+    def test_set_as_constraint(self):
+        """
+        Test cardinality set constraints added correctly.
+        """
+        m = ConcreteModel()
+        cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5)
+        uq = cset.set_as_constraint(uncertain_params=None, block=m)
+
+        self.assertEqual(len(uq.uncertainty_cons), 4)
+        self.assertEqual(len(uq.auxiliary_vars), 3)
+        self.assertEqual(len(uq.uncertain_param_vars), 3)
+        self.assertIs(uq.block, m)
+
+        *hadamard_cons, gamma_con = uq.uncertainty_cons
+        var1, var2, var3 = uq.uncertain_param_vars
+        auxvar1, auxvar2, auxvar3 = uq.auxiliary_vars
+
+        assertExpressionsEqual(
+            self,
+            hadamard_cons[0].expr,
+            -0.5 + 2.5 * auxvar1 == var1,
+        )
+        assertExpressionsEqual(
+            self,
+            hadamard_cons[1].expr,
+            1.0 + 3.0 * auxvar2 == var2,
+        )
+        assertExpressionsEqual(
+            self,
+            hadamard_cons[2].expr,
+            2.0 + 0.0 * auxvar3 == var3,
+        )
+        assertExpressionsEqual(
+            self,
+            gamma_con.expr,
+            auxvar1 + auxvar2 + auxvar3 <= 1.5,
+        )
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised if number of uncertain parameters
+        does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5)
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            cset.set_as_constraint(uncertain_params=[m.v1], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised if uncertain parameter variables
+        are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1, 2], initialize=0, mutable=True)
+        cset = CardinalitySet([-0.5, 1, 2], [2.5, 3, 0], 1.5)
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            cset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            cset.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    def test_point_in_set(self):
+        cset = CardinalitySet(
+            origin=[-0.5, 1, 2],
+            positive_deviation=[2.5, 3, 0],
+            gamma=1.5,
+        )
+
+        self.assertTrue(cset.point_in_set(cset.origin))
+
+        # first param full deviation
+        self.assertTrue(cset.point_in_set([-0.5, 4, 2]))
+        # second param full deviation
+        self.assertTrue(cset.point_in_set([2, 1, 2]))
+        # one and a half deviations (max)
+        self.assertTrue(cset.point_in_set([2, 2.5, 2]))
+
+        # over one and a half deviations; out of set
+        self.assertFalse(cset.point_in_set([2.05, 2.5, 2]))
+        self.assertFalse(cset.point_in_set([2, 2.55, 2]))
+
+        # deviation in dimension that has been fixed
+        self.assertFalse(cset.point_in_set([-0.25, 4, 2.01]))
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_compute_parameter_bounds(self):
+        """
+        Test parameter bounds computation with global solver
+        is as expected.
+        """
+        cset = CardinalitySet(
+            origin=[-0.5, 1, 2],
+            positive_deviation=[2.5, 3, 0],
+            gamma=1.5,
+        )
+        computed_bounds = cset._compute_parameter_bounds(SolverFactory("baron"))
+        np.testing.assert_allclose(computed_bounds, [[-0.5, 2], [1, 4], [2, 2]])
+        np.testing.assert_allclose(computed_bounds, cset.parameter_bounds)
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var([0, 1, 2], initialize=0)
+
+        cset = CardinalitySet(
+            origin=[-0.5, 1, 2],
+            positive_deviation=[2.5, 3, 0],
+            gamma=1.5,
+        )
+        cset.add_bounds_on_uncertain_parameters(
+            config=Bunch(uncertainty_set=cset),
+            uncertain_param_vars=m.uncertain_param_vars,
+        )
+
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (-0.5, 2))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 4))
+        self.assertEqual(m.uncertain_param_vars[2].bounds, (2, 2))
+
+
 if __name__ == "__main__":
     unittest.main()
