@@ -429,8 +429,11 @@ global_solver = "baron"
 # === regression test for the solver
 @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
 class RegressionTest(unittest.TestCase):
-    def regression_test_constant_drs(self):
-        model = m = ConcreteModel()
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_regression_constant_drs(self):
+        m = ConcreteModel()
         m.name = "s381"
 
         m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
@@ -467,8 +470,11 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
-    def regression_test_affine_drs(self):
-        model = m = ConcreteModel()
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_regression_affine_drs(self):
+        m = ConcreteModel()
         m.name = "s381"
 
         m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
@@ -508,8 +514,11 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
-    def regression_test_quad_drs(self):
-        model = m = ConcreteModel()
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_regression_quadratic_drs(self):
+        m = ConcreteModel()
         m.name = "s381"
 
         m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
