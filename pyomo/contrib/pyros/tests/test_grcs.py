@@ -20,12 +20,8 @@ import time
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import Bunch, ComponentSet
+from pyomo.common.collections import Bunch
 from pyomo.core.base.set_types import NonNegativeIntegers
-from pyomo.core.expr import (
-    identify_mutable_parameters,
-    identify_variables,
-)
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as scipy_available
@@ -44,25 +40,19 @@ from pyomo.environ import (
     Block,
     ConcreteModel,
     Constraint,
-    Expression,
     Objective,
     Param,
     SolverFactory,
     Var,
-    cos,
     exp,
     log,
-    sin,
     sqrt,
     value,
     maximize,
     minimize,
 )
 
-from pyomo.contrib.pyros.master_problem_methods import (
-    minimize_dr_vars,
-)
-from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
+from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.uncertainty_sets import (
     BoxSet,
     AxisAlignedEllipsoidalSet,
@@ -71,13 +61,10 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     DiscreteScenarioSet,
 )
 from pyomo.contrib.pyros.util import (
-    identify_objective_functions,
     IterationLogRecord,
     ObjectiveType,
     pyrosTerminationCondition,
     selective_clone,
-    time_code,
-    TimingData,
 )
 
 logger = logging.getLogger(__name__)
@@ -1970,169 +1957,6 @@ class testModelMultipleObjectives(unittest.TestCase):
                 f"negative of value {max_obj_res.final_objective_value} "
                 "of equivalent maximization objective."
             ),
-        )
-
-
-class testModelIdentifyObjectives(unittest.TestCase):
-    """
-    This class contains tests for validating routines used to
-    determine the first-stage and second-stage portions of a
-    two-stage expression.
-    """
-
-    def test_identify_objectives(self):
-        """
-        Test first and second-stage objective identification
-        for a simple two-stage model.
-        """
-        # model
-        m = ConcreteModel()
-
-        # parameters
-        m.p = Param(range(4), initialize=1, mutable=True)
-        m.q = Param(initialize=1)
-
-        # variables
-        m.x = Var(range(4))
-        m.z = Var()
-        m.y = Var(initialize=2)
-
-        # objective
-        m.obj = Objective(
-            expr=(
-                (m.x[0] + m.y)
-                * (
-                    sum(m.x[idx] * m.p[idx] for idx in range(3))
-                    + m.q * m.z
-                    + m.x[0] * m.q
-                )
-                + sin(m.x[0] + m.q)
-                + cos(m.x[2] + m.z)
-            )
-        )
-
-        # util block for specifying DOF and uncertainty
-        m.util = Block()
-        m.util.first_stage_variables = list(m.x.values())
-        m.util.second_stage_variables = [m.z]
-        m.util.uncertain_params = [m.p[0], m.p[1]]
-
-        identify_objective_functions(m, m.obj)
-
-        fsv_set = ComponentSet(m.util.first_stage_variables)
-        uncertain_param_set = ComponentSet(m.util.uncertain_params)
-
-        # determine vars and uncertain params participating in
-        # objective
-        fsv_in_obj = ComponentSet(
-            var for var in identify_variables(m.obj) if var in fsv_set
-        )
-        ssv_in_obj = ComponentSet(
-            var for var in identify_variables(m.obj) if var not in fsv_set
-        )
-        uncertain_params_in_obj = ComponentSet(
-            param
-            for param in identify_mutable_parameters(m.obj)
-            if param in uncertain_param_set
-        )
-
-        # determine vars and uncertain params participating in
-        # first-stage objective
-        fsv_in_first_stg_cost = ComponentSet(
-            var for var in identify_variables(m.first_stage_objective) if var in fsv_set
-        )
-        ssv_in_first_stg_cost = ComponentSet(
-            var
-            for var in identify_variables(m.first_stage_objective)
-            if var not in fsv_set
-        )
-        uncertain_params_in_first_stg_cost = ComponentSet(
-            param
-            for param in identify_mutable_parameters(m.first_stage_objective)
-            if param in uncertain_param_set
-        )
-
-        # determine vars and uncertain params participating in
-        # second-stage objective
-        fsv_in_second_stg_cost = ComponentSet(
-            var
-            for var in identify_variables(m.second_stage_objective)
-            if var in fsv_set
-        )
-        ssv_in_second_stg_cost = ComponentSet(
-            var
-            for var in identify_variables(m.second_stage_objective)
-            if var not in fsv_set
-        )
-        uncertain_params_in_second_stg_cost = ComponentSet(
-            param
-            for param in identify_mutable_parameters(m.second_stage_objective)
-            if param in uncertain_param_set
-        )
-
-        # now perform checks
-        self.assertTrue(
-            fsv_in_first_stg_cost | fsv_in_second_stg_cost == fsv_in_obj,
-            f"{{var.name for var in fsv_in_first_stg_cost | fsv_in_second_stg_cost}} "
-            f"is not {{var.name for var in fsv_in_obj}}",
-        )
-        self.assertFalse(
-            ssv_in_first_stg_cost,
-            f"First-stage expression {str(m.first_stage_objective.expr)}"
-            f" consists of non first-stage variables "
-            f"{{var.name for var in fsv_in_second_stg_cost}}",
-        )
-        self.assertTrue(
-            ssv_in_second_stg_cost == ssv_in_obj,
-            f"{[var.name for var in ssv_in_second_stg_cost]} is not"
-            f"{{var.name for var in ssv_in_obj}}",
-        )
-        self.assertFalse(
-            uncertain_params_in_first_stg_cost,
-            f"First-stage expression {str(m.first_stage_objective.expr)}"
-            " consists of uncertain params"
-            f" {{p.name for p in uncertain_params_in_first_stg_cost}}",
-        )
-        self.assertTrue(
-            uncertain_params_in_second_stg_cost == uncertain_params_in_obj,
-            f"{{p.name for p in uncertain_params_in_second_stg_cost}} is not "
-            f"{{p.name for p in uncertain_params_in_obj}}",
-        )
-
-    def test_identify_objectives_var_expr(self):
-        """
-        Test first and second-stage objective identification
-        for an objective expression consisting only of a Var.
-        """
-        # model
-        m = ConcreteModel()
-
-        # parameters
-        m.p = Param(range(4), initialize=1, mutable=True)
-        m.q = Param(initialize=1)
-
-        # variables
-        m.x = Var(range(4))
-
-        # objective
-        m.obj = Objective(expr=m.x[1])
-
-        # util block for specifying DOF and uncertainty
-        m.util = Block()
-        m.util.first_stage_variables = list(m.x.values())
-        m.util.second_stage_variables = list()
-        m.util.uncertain_params = list()
-
-        identify_objective_functions(m, m.obj)
-        fsv_in_second_stg_obj = list(
-            v.name for v in identify_variables(m.second_stage_objective)
-        )
-
-        # perform checks
-        self.assertTrue(list(identify_variables(m.first_stage_objective)) == [m.x[1]])
-        self.assertFalse(
-            fsv_in_second_stg_obj,
-            "Second stage objective contains variable(s) " f"{fsv_in_second_stg_obj}",
         )
 
 
