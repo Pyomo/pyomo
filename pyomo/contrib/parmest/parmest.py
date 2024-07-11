@@ -1146,13 +1146,12 @@ class Estimator(object):
         else:
             # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(0)
-            model_param_list = _expand_indexed_unknowns(model_temp)
-            model_name_list = [c.name for c in model_param_list]
+            model_param_list = [c.name for c in _expand_indexed_unknowns(model_temp)]
 
         if theta_values is None:
             all_params = {}  # dictionary to store fitted variables
             # use appropriate parameter names member
-            model_names = model_name_list
+            model_names = model_param_list
         else:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
@@ -1161,12 +1160,12 @@ class Estimator(object):
             for param in list(model_names):
                 param_temp = param.replace("'", "")  # cleaning quotes from model_names
                 assert param_temp in [
-                    t.replace("'", "") for t in model_name_list
+                    t.replace("'", "") for t in model_param_list
                 ], "Theta name {} in 'theta_values' not in parameter names {}".format(
-                    param_temp, model_name_list
+                    param_temp, model_param_list
                 )
 
-            assert len(list(model_names)) == len(model_name_list)
+            assert len(list(model_names)) == len(model_param_list)
 
             all_params = theta_values.to_dict('records')
 
