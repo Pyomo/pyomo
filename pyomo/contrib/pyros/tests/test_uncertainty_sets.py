@@ -1713,5 +1713,186 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (0, 1.0))
 
 
+class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
+    """
+    Tests for the AxisAlignedEllipsoidalSet.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test AxisAlignedEllipsoidalSet constructor and setter
+        work normally when bounds are appropriate.
+        """
+        center = [0, 0]
+        half_lengths = [1, 3]
+        aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+        np.testing.assert_allclose(
+            center,
+            aset.center,
+            err_msg="AxisAlignedEllipsoidalSet center not as expected",
+        )
+        np.testing.assert_allclose(
+            half_lengths,
+            aset.half_lengths,
+            err_msg="AxisAlignedEllipsoidalSet half-lengths not as expected",
+        )
+
+        # check attributes update
+        new_center = [-1, -3]
+        new_half_lengths = [0, 1]
+        aset.center = new_center
+        aset.half_lengths = new_half_lengths
+
+        np.testing.assert_allclose(
+            new_center,
+            aset.center,
+            err_msg="AxisAlignedEllipsoidalSet center update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_half_lengths,
+            aset.half_lengths,
+            err_msg=("AxisAlignedEllipsoidalSet half lengths update not as expected"),
+        )
+
+    def test_error_on_axis_aligned_dim_change(self):
+        """
+        AxisAlignedEllipsoidalSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        box set dimension (i.e. number of rows of `bounds`).
+        """
+        center = [0, 0]
+        half_lengths = [1, 3]
+        aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.center = [0, 0, 1]
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.half_lengths = [0, 0, 1]
+
+    def test_error_on_negative_axis_aligned_half_lengths(self):
+        """
+        Test ValueError if half lengths for AxisAlignedEllipsoidalSet
+        contains a negative value.
+        """
+        center = [1, 1]
+        invalid_half_lengths = [1, -1]
+        exc_str = r"Entry -1 of.*'half_lengths' is negative.*"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            AxisAlignedEllipsoidalSet(center, invalid_half_lengths)
+
+        # construct a valid axis-aligned ellipsoidal set
+        aset = AxisAlignedEllipsoidalSet(center, [1, 0])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.half_lengths = invalid_half_lengths
+
+    def test_set_as_constraint(self):
+        """
+        Test set constraints added correctly.
+        """
+        m = ConcreteModel()
+        m.v = Var([0, 1, 2])
+        aeset = AxisAlignedEllipsoidalSet(
+            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
+        )
+        uq = aeset.set_as_constraint(uncertain_params=m.v, block=m)
+
+        self.assertEqual(len(uq.uncertainty_cons), 2)
+        self.assertEqual(len(uq.uncertain_param_vars), 3)
+        self.assertEqual(uq.auxiliary_vars, [])
+        self.assertIs(uq.block, m)
+
+        con1, con2 = uq.uncertainty_cons
+
+        assertExpressionsEqual(
+            self,
+            con1.expr,
+            m.v[2] == np.float64(1.0)
+        )
+        assertExpressionsEqual(
+            self,
+            con2.expr,
+            m.v[0] ** 2 / np.float64(2.25)
+            + (m.v[1] - np.float64(1.5)) ** 2 / np.float64(4)
+            <= 1
+        )
+
+    def test_set_as_constraint_dim_mismatch(self):
+        """
+        Check exception raised if number of uncertain parameters
+        does not match the dimension.
+        """
+        m = ConcreteModel()
+        m.v1 = Var(initialize=0)
+        aeset = AxisAlignedEllipsoidalSet(
+            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
+        )
+        with self.assertRaisesRegex(ValueError, ".*dimension"):
+            aeset.set_as_constraint(uncertain_params=[m.v1], block=m)
+
+    def test_set_as_constraint_type_mismatch(self):
+        """
+        Check exception raised if uncertain parameter variables
+        are of invalid type.
+        """
+        m = ConcreteModel()
+        m.p1 = Param([0, 1, 2], initialize=0, mutable=True)
+        aeset = AxisAlignedEllipsoidalSet(
+            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
+        )
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            aeset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
+
+        with self.assertRaisesRegex(TypeError, ".*valid component type"):
+            aeset.set_as_constraint(uncertain_params=m.p1, block=m)
+
+    @unittest.skipUnless(baron_available, "BARON is not available.")
+    def test_compute_parameter_bounds(self):
+        """
+        Test parameter bounds computation with global solver
+        is as expected.
+        """
+        aeset = AxisAlignedEllipsoidalSet(
+            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
+        )
+        computed_bounds = aeset._compute_parameter_bounds(SolverFactory("baron"))
+        np.testing.assert_allclose(computed_bounds, [[-1.5, 1.5], [-0.5, 3.5], [1, 1]])
+        np.testing.assert_allclose(computed_bounds, aeset.parameter_bounds)
+
+    def test_point_in_set(self):
+        aeset = AxisAlignedEllipsoidalSet(
+            center=[0, 0, 1], half_lengths=[1.5, 2, 0],
+        )
+
+        self.assertTrue(aeset.point_in_set([0, 0, 1]))
+        self.assertTrue(aeset.point_in_set([0, 2, 1]))
+        self.assertTrue(aeset.point_in_set([0, -2, 1]))
+        self.assertTrue(aeset.point_in_set([1.5, 0, 1]))
+        self.assertTrue(aeset.point_in_set([-1.5, 0, 1]))
+        self.assertFalse(aeset.point_in_set([0, 0, 1.05]))
+        self.assertFalse(aeset.point_in_set([1.505, 0, 1]))
+        self.assertFalse(aeset.point_in_set([0, 2.05, 1]))
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.uncertain_param_vars = Var([0, 1, 2], initialize=0)
+        aeset = AxisAlignedEllipsoidalSet(
+            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
+        )
+        aeset.add_bounds_on_uncertain_parameters(
+            config=Bunch(uncertainty_set=aeset),
+            uncertain_param_vars=m.uncertain_param_vars,
+        )
+
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (-1.5, 1.5))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.5, 3.5))
+        self.assertEqual(m.uncertain_param_vars[2].bounds, (1, 1))
+
+
 if __name__ == "__main__":
     unittest.main()
