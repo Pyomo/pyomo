@@ -34,7 +34,7 @@ from pyomo.opt import (
 )
 from pyomo.repn.standard_repn import generate_standard_repn
 
-from pyomo.contrib.pyros.solve_data import MasterResult
+from pyomo.contrib.pyros.solve_data import MasterResults
 from pyomo.contrib.pyros.util import (
     call_solver,
     enforce_dr_degree,
@@ -710,9 +710,10 @@ def log_master_solve_results(master_model, config, results, desc="Optimized"):
     )
 
 
-def solver_call_master(master_data, config, solve_data):
+def solver_call_master(master_data, config, master_soln):
     """
-    Invoke subsolver(s) on PyROS master problem.
+    Invoke subsolver(s) on PyROS master problem,
+    and update the MasterResults object accordingly.
 
     Parameters
     ----------
@@ -720,22 +721,11 @@ def solver_call_master(master_data, config, solve_data):
         Container for current master problem and related data.
     config : ConfigDict
         PyROS solver settings.
-    solver : solver type
-        Primary subordinate optimizer with which to solve
-        the master problem. This may be a local or global
-        NLP solver.
-    solve_data : MasterResult
+    master_soln : MasterResults
         Master problem results object. May be empty or contain
         master feasibility problem results.
-
-    Returns
-    -------
-    master_soln : MasterResult
-        Master problem results object, containing master
-        model and subsolver results.
     """
     master_model = master_data.master_model
-    master_soln = solve_data
     solver_term_cond_dict = {}
 
     if config.solve_master_globally:
@@ -812,7 +802,7 @@ def solver_call_master(master_data, config, solve_data):
             )
 
         if not try_backup:
-            return master_soln
+            return
 
     # all solvers have failed to return an acceptable status.
     # we will terminate PyROS with subsolver error status.
@@ -864,14 +854,12 @@ def solver_call_master(master_data, config, solve_data):
         f"{serialization_msg}"
     )
 
-    return master_soln
-
 
 def solve_master(master_data, config):
     """
     Solve the master problem
     """
-    master_soln = MasterResult()
+    master_soln = MasterResults()
 
     # no master feas problem for iteration 0
     if master_data.iteration > 0:
@@ -899,9 +887,11 @@ def solve_master(master_data, config):
             )
             return master_soln
 
-    return solver_call_master(
-        master_data=master_data, config=config, solve_data=master_soln
+    solver_call_master(
+        master_data=master_data, config=config, master_soln=master_soln
     )
+
+    return master_soln
 
 
 class MasterProblemData:
