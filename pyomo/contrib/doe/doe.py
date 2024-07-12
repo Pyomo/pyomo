@@ -2004,7 +2004,7 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
 
-        if not hasattr(model, "sensitivity_jacboian"):
+        if not hasattr(model, "sensitivity_jacobian"):
             raise RuntimeError(
                 "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
             )
