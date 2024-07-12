@@ -4,6 +4,7 @@ from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
 import itertools
 import json
+
 # ========================
 
 
@@ -59,12 +60,12 @@ class ReactorExperiment(object):
 
     def create_model(self):
         """
-            This is an example user model provided to DoE library.
-            It is a dynamic problem solved by Pyomo.DAE.
+        This is an example user model provided to DoE library.
+        It is a dynamic problem solved by Pyomo.DAE.
 
-            Return
-            ------
-            m: a Pyomo.DAE model
+        Return
+        ------
+        m: a Pyomo.DAE model
         """
 
         m = self.model = pyo.ConcreteModel()
@@ -151,19 +152,19 @@ class ReactorExperiment(object):
         m = self.model
 
         # Unpacking data before simulation
-        control_points = self.data['control_points']
+        control_points = self.data["control_points"]
 
-        m.CA[0].value = self.data['CA0']
-        m.CB[0].fix(self.data['CB0'])
-        m.t.update(self.data['t_range'])
+        m.CA[0].value = self.data["CA0"]
+        m.CB[0].fix(self.data["CB0"])
+        m.t.update(self.data["t_range"])
         m.t.update(control_points)
-        m.A1.fix(self.data['A1'])
-        m.A2.fix(self.data['A2'])
-        m.E1.fix(self.data['E1'])
-        m.E2.fix(self.data['E2'])
+        m.A1.fix(self.data["A1"])
+        m.A2.fix(self.data["A2"])
+        m.E1.fix(self.data["E1"])
+        m.E2.fix(self.data["E2"])
 
-        m.CA[0].setlb(self.data['CA_bounds'][0])
-        m.CA[0].setub(self.data['CA_bounds'][1])
+        m.CA[0].setlb(self.data["CA_bounds"][0])
+        m.CA[0].setub(self.data["CA_bounds"][1])
 
         m.t_control = control_points
 
@@ -176,8 +177,8 @@ class ReactorExperiment(object):
         for t in m.t:
             if t in control_points:
                 cv = control_points[t]
-            m.T[t].setlb(self.data['T_bounds'][0])
-            m.T[t].setub(self.data['T_bounds'][1])
+            m.T[t].setlb(self.data["T_bounds"][0])
+            m.T[t].setub(self.data["T_bounds"][1])
             m.T[t] = cv
 
         @m.Constraint(m.t - control_points)
@@ -189,7 +190,6 @@ class ReactorExperiment(object):
             return m.T[t] == m.T[neighbour_t]
 
         # sim.initialize_model()
-
 
     def label_experiment_impl(self, index_sets_meas):
         """
@@ -207,13 +207,19 @@ class ReactorExperiment(object):
         m.experiment_outputs = pyo.Suffix(
             direction=pyo.Suffix.LOCAL,
         )
-        m.experiment_outputs.update((k, None) for k in expand_model_components(m, base_comp_meas, index_sets_meas))
-        
+        m.experiment_outputs.update(
+            (k, None)
+            for k in expand_model_components(m, base_comp_meas, index_sets_meas)
+        )
+
         # Adding no error for measurements currently
         m.measurement_error = pyo.Suffix(
             direction=pyo.Suffix.LOCAL,
         )
-        m.measurement_error.update((k, 1e-2) for k in expand_model_components(m, base_comp_meas, index_sets_meas))
+        m.measurement_error.update(
+            (k, 1e-2)
+            for k in expand_model_components(m, base_comp_meas, index_sets_meas)
+        )
 
         # Grab design variables
         base_comp_des = [m.CA, m.T]
@@ -221,8 +227,11 @@ class ReactorExperiment(object):
         m.experiment_inputs = pyo.Suffix(
             direction=pyo.Suffix.LOCAL,
         )
-        m.experiment_inputs.update((k, pyo.ComponentUID(k)) for k in expand_model_components(m, base_comp_des, index_sets_des))
-        
+        m.experiment_inputs.update(
+            (k, pyo.ComponentUID(k))
+            for k in expand_model_components(m, base_comp_des, index_sets_des)
+        )
+
         m.unknown_parameters = pyo.Suffix(
             direction=pyo.Suffix.LOCAL,
         )
@@ -246,4 +255,6 @@ class PartialReactorExperiment(ReactorExperiment):
 
         """
         m = self.model
-        return self.label_experiment_impl([[m.t_control], [[m.t.last()]], [[m.t.last()]]])
+        return self.label_experiment_impl(
+            [[m.t_control], [[m.t.last()]], [[m.t.last()]]]
+        )
