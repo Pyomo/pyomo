@@ -2744,10 +2744,10 @@ class TestPreprocessModelData(unittest.TestCase):
             f"""
             Model Statistics:
               Number of variables : 14
+                Epigraph variable : 1
                 First-stage variables : 2
                 Second-stage variables : 5 (2 adj.)
                 State variables : 2 (1 adj.)
-                Epigraph variable : 1
                 Decision rule variables : 4
               Number of uncertain parameters : 1
               Number of constraints : 23
@@ -2796,10 +2796,10 @@ class TestPreprocessModelData(unittest.TestCase):
             f"""
             Model Statistics:
               Number of variables : 16
+                Epigraph variable : 1
                 First-stage variables : 2
                 Second-stage variables : 5 (2 adj.)
                 State variables : 2 (1 adj.)
-                Epigraph variable : 1
                 Decision rule variables : 6
               Number of uncertain parameters : 1
               Number of constraints : 23

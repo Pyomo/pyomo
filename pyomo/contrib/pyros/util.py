@@ -2460,6 +2460,7 @@ def log_model_statistics(model_data, config):
     info_log_func("Model Statistics:")
 
     info_log_func(f"  Number of variables : {num_vars}")
+    info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
     info_log_func(f"    First-stage variables : {num_first_stage_vars}")
     info_log_func(
         f"    Second-stage variables : {num_second_stage_vars} "
@@ -2469,7 +2470,6 @@ def log_model_statistics(model_data, config):
         f"    State variables : {num_state_vars} "
         f"({num_eff_state_vars} adj.)"
     )
-    info_log_func(f"    Epigraph variable : {num_epigraph_vars}")
     info_log_func(f"    Decision rule variables : {num_dr_vars}")
 
     info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
