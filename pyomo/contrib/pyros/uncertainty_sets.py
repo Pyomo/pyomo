@@ -109,11 +109,8 @@ def standardize_uncertain_param_vars(obj, dim):
 
 
 def _setup_standard_uncertainty_set_constraint_block(
-        block,
-        uncertain_param_vars,
-        dim,
-        num_auxiliary_vars=None,
-        ):
+    block, uncertain_param_vars, dim, num_auxiliary_vars=None
+):
     """
     Set up block to prepare for declaration of uncertainty
     set constraints.
@@ -131,8 +128,7 @@ def _setup_standard_uncertainty_set_constraint_block(
     else:
         # resolve arguments
         param_var_data_list = standardize_uncertain_param_vars(
-            uncertain_param_vars,
-            dim=dim,
+            uncertain_param_vars, dim=dim
         )
     conlist = ConstraintList()
     block.add_component(
@@ -459,9 +455,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         model.param_vars = Var(range(self.dim))
 
         # add constraints
-        self.set_as_constraint(
-            uncertain_params=model.param_vars, block=model,
-        )
+        self.set_as_constraint(uncertain_params=model.param_vars, block=model)
 
         @model.Objective(range(self.dim))
         def param_var_objectives(self, idx):
@@ -612,10 +606,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             # solve should be successful
             for sense in (minimize, maximize):
                 obj.sense = sense
-                res = solver.solve(
-                    bounding_model,
-                    load_solutions=False,
-                )
+                res = solver.solve(bounding_model, load_solutions=False)
                 if check_optimal_termination(res):
                     bounding_model.solutions.load_from(res)
                 else:
@@ -637,10 +628,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         return param_bounds
 
     def _add_bounds_on_uncertain_parameters(
-            self,
-            uncertain_param_vars,
-            global_solver=None,
-            ):
+        self, uncertain_param_vars, global_solver=None
+    ):
         """
         Specify declared bounds for Vars representing the uncertain
         parameters constrained to an uncertainty set.
@@ -661,7 +650,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         subproblem.
         """
         uncertain_param_vars = standardize_uncertain_param_vars(
-            uncertain_param_vars, self.dim,
+            uncertain_param_vars, self.dim
         )
 
         parameter_bounds = self.parameter_bounds
@@ -1223,10 +1212,7 @@ class CardinalitySet(UncertaintySet):
         )
 
         cardinality_zip = zip(
-            self.origin,
-            self.positive_deviation,
-            aux_var_list,
-            param_var_data_list,
+            self.origin, self.positive_deviation, aux_var_list, param_var_data_list
         )
         for orig_val, pos_dev, auxvar, param_var in cardinality_zip:
             conlist.add(orig_val + pos_dev * auxvar == param_var)
@@ -1253,8 +1239,7 @@ class CardinalitySet(UncertaintySet):
 
         aux_space_pt = np.empty(self.dim)
         is_zero_deviation_off_origin = np.logical_and(
-            self.positive_deviation == 0,
-            point_arr != self.origin,
+            self.positive_deviation == 0, point_arr != self.origin
         )
         if np.any(is_zero_deviation_off_origin):
             return np.full(self.dim, np.nan), False
@@ -1496,9 +1481,7 @@ class PolyhedralSet(UncertaintySet):
     def set_as_constraint(self, uncertain_params=None, block=None):
         block, param_var_data_list, conlist, aux_var_list = (
             _setup_standard_uncertainty_set_constraint_block(
-                block=block,
-                uncertain_param_vars=uncertain_params,
-                dim=self.dim,
+                block=block, uncertain_param_vars=uncertain_params, dim=self.dim
             )
         )
 
@@ -2104,9 +2087,10 @@ class FactorModelSet(UncertaintySet):
             pinv_psi = np.linalg.pinv(self.psi_mat)
             aux_space_pt = pinv_psi @ (point_arr - self.origin)
             tol = 1e-8
-            is_aux_pt_feasible = (
-                abs(aux_space_pt.sum()) <= self.beta * self.number_of_factors + tol
-                and np.all(np.abs(aux_space_pt) <= 1 + tol)
+            is_aux_pt_feasible = abs(
+                aux_space_pt.sum()
+            ) <= self.beta * self.number_of_factors + tol and np.all(
+                np.abs(aux_space_pt) <= 1 + tol
             )
             return aux_space_pt, is_aux_pt_feasible
         else:
@@ -2899,7 +2883,7 @@ class IntersectionSet(UncertaintySet):
         for set1, set2 in zip((Q1, Q2), (Q2, Q1)):
             if isinstance(set1, DiscreteScenarioSet):
                 return DiscreteScenarioSet(
-                    scenarios=[pt for pt in set1.scenarios if set1.point_in_set(pt)],
+                    scenarios=[pt for pt in set1.scenarios if set1.point_in_set(pt)]
                 )
 
         # === This case is if both sets are continuous
@@ -2919,20 +2903,17 @@ class IntersectionSet(UncertaintySet):
         intersection_set = functools.reduce(self.intersect, self.all_sets)
         if isinstance(intersection_set, DiscreteScenarioSet):
             return intersection_set.set_as_constraint(
-                uncertain_params=uncertain_params,
-                block=block,
+                uncertain_params=uncertain_params, block=block
             )
 
         all_cons, all_aux_vars = [], []
         for idx, unc_set in enumerate(intersection_set.all_sets):
             sub_block = Block()
             block.add_component(
-                unique_component_name(block, f"sub_block_{idx}"),
-                sub_block,
+                unique_component_name(block, f"sub_block_{idx}"), sub_block
             )
             set_quantification = unc_set.set_as_constraint(
-                block=sub_block,
-                uncertain_params=param_var_data_list,
+                block=sub_block, uncertain_params=param_var_data_list
             )
             all_cons.extend(set_quantification.uncertainty_cons)
             all_aux_vars.extend(set_quantification.auxiliary_vars)
