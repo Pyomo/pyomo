@@ -157,7 +157,9 @@ class DesignOfExperiments:
         """
         # Check if the Experiment object has callable ``get_labeled_model`` function
         if not hasattr(experiment, "get_labeled_model"):
-            raise ValueError("The experiment object must have a ``get_labeled_model`` function")
+            raise ValueError(
+                "The experiment object must have a ``get_labeled_model`` function"
+            )
 
         # Set the experiment object from the user
         self.experiment = experiment
@@ -235,9 +237,14 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [Path, str, ]:
-                raise ValueError("``results_file`` must be either a Path object or a string.")
-        
+            if type(results_file) not in [
+                Path,
+                str,
+            ]:
+                raise ValueError(
+                    "``results_file`` must be either a Path object or a string."
+                )
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -963,9 +970,11 @@ class DesignOfExperiments:
         self.n_experiment_outputs = len(model.base_model.experiment_outputs)
 
         if self.n_measurement_error != self.n_experiment_outputs:
-            raise ValueError("Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
-            self.n_experiment_outputs, self.n_measurement_error
-        ))
+            raise ValueError(
+                "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
+                    self.n_experiment_outputs, self.n_measurement_error
+                )
+            )
 
         self.logger.info("Experiment output and measurement error lengths match.")
 
@@ -1310,18 +1319,25 @@ class DesignOfExperiments:
         model: model for suffix checking, Default: None, (self.model)
         """
         if FIM.shape != (self.n_parameters, self.n_parameters):
-            raise ValueError("Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
-            self.n_parameters, self.n_parameters, FIM.shape[0], FIM.shape[1]
-        ))
+            raise ValueError(
+                "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+                    self.n_parameters, self.n_parameters, FIM.shape[0], FIM.shape[1]
+                )
+            )
 
         self.logger.info("FIM provided matches expected dimensions from model.")
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
         if jac.shape != (self.n_experiment_outputs, self.n_parameters):
-            raise ValueError("Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
-            self.n_experiment_outputs, self.n_parameters, jac.shape[0], jac.shape[1]
-        ))
+            raise ValueError(
+                "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
+                    self.n_experiment_outputs,
+                    self.n_parameters,
+                    jac.shape[0],
+                    jac.shape[1],
+                )
+            )
 
         self.logger.info("Jacobian provided matches expected dimensions from model.")
 
@@ -1347,7 +1363,9 @@ class DesignOfExperiments:
             )
 
         if not hasattr(model, "fim"):
-            raise RuntimeError("``fim`` is not defined on the model provided. Please build the model first.")
+            raise RuntimeError(
+                "``fim`` is not defined on the model provided. Please build the model first."
+            )
 
         self.check_model_FIM(model, FIM)
 
@@ -1555,14 +1573,18 @@ class DesignOfExperiments:
         """
         if results is None:
             if not hasattr(self, "fim_factorial_results"):
-                raise RuntimeError("Results must be provided or the compute_FIM_full_factorial function must be run.")
+                raise RuntimeError(
+                    "Results must be provided or the compute_FIM_full_factorial function must be run."
+                )
             results = self.fim_factorial_results
             full_design_variable_names = [
                 k.name for k, v in self.factorial_model.experiment_inputs.items()
             ]
         else:
             if full_design_variable_names is None:
-                raise ValueError("If results object is provided, you must include all the design variable names.")
+                raise ValueError(
+                    "If results object is provided, you must include all the design variable names."
+                )
 
         des_names = full_design_variable_names
 
@@ -1570,7 +1592,7 @@ class DesignOfExperiments:
         # ToDo: Put in a default value function?????
         if sensitivity_design_variables is None:
             raise ValueError("``sensitivity_design_variables`` must be included.")
-        
+
         if fixed_design_variables is None:
             raise ValueError("``fixed_design_variables`` must be included.")
 
@@ -1580,12 +1602,16 @@ class DesignOfExperiments:
             check_des_vars *= k in ([k2 for k2, v2 in results.items()])
         check_sens_vars = True
         for k in sensitivity_design_variables:
-            check_sens_vars *= (k in [k2 for k2, v2 in results.items()])
+            check_sens_vars *= k in [k2 for k2, v2 in results.items()]
 
         if not check_des_vars:
-            raise ValueError("Fixed design variables do not all appear in the results object keys.")
+            raise ValueError(
+                "Fixed design variables do not all appear in the results object keys."
+            )
         if not check_sens_vars:
-            raise ValueError("Sensitivity design variables do not all appear in the results object keys.")
+            raise ValueError(
+                "Sensitivity design variables do not all appear in the results object keys."
+            )
 
         # ToDo: Make it possible to plot pair-wise sensitivities for all variables
         #       e.g. a curve like low-dimensional posterior distributions
@@ -1939,7 +1965,9 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "fim"):
-            raise RuntimeError("Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`")
+            raise RuntimeError(
+                "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+            )
 
         fim_vals = [
             pyo.value(model.fim[i, j])
@@ -1977,7 +2005,9 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "sensitivity_jacboian"):
-            raise RuntimeError("Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`")
+            raise RuntimeError(
+                "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+            )
 
         Q_vals = [
             pyo.value(model.sensitivity_jacobian[i, j])
@@ -2011,7 +2041,9 @@ class DesignOfExperiments:
 
         if not hasattr(model, "experiment_inputs"):
             if not hasattr(model, "scenario_blocks"):
-                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
 
             d_vals = [
                 pyo.value(k)
@@ -2043,7 +2075,9 @@ class DesignOfExperiments:
 
         if not hasattr(model, "unknown_parameters"):
             if not hasattr(model, "scenario_blocks"):
-                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
 
             theta_vals = [
                 pyo.value(k)
@@ -2075,7 +2109,9 @@ class DesignOfExperiments:
 
         if not hasattr(model, "experiment_outputs"):
             if not hasattr(model, "scenario_blocks"):
-                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
 
             y_hat_vals = [
                 pyo.value(k)
@@ -2109,7 +2145,9 @@ class DesignOfExperiments:
 
         if not hasattr(model, "measurement_error"):
             if not hasattr(model, "scenario_blocks"):
-                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
 
             sigma_vals = [
                 pyo.value(k)

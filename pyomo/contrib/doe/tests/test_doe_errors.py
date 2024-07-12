@@ -24,6 +24,7 @@ f = open(file_path)
 data_ex = json.load(f)
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
+
 class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_get_labeled_model(self):
@@ -34,7 +35,8 @@ class TestReactorExampleErrors(unittest.TestCase):
         experiment = BadExperiment()
 
         with self.assertRaisesRegex(
-            ValueError, "The experiment object must have a ``get_labeled_model`` function"
+            ValueError,
+            "The experiment object must have a ``get_labeled_model`` function",
         ):
             doe_obj = DesignOfExperiments(
                 experiment,
@@ -54,7 +56,7 @@ class TestReactorExampleErrors(unittest.TestCase):
                 _Cholesky_option=True,
                 _only_compute_fim_lower=True,
             )
-    
+
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
@@ -77,16 +79,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Experiment model does not have suffix " + '"experiment_outputs".'
+            RuntimeError,
+            "Experiment model does not have suffix " + '"experiment_outputs".',
         ):
             doe_obj.create_doe_model()
-    
+
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_measurement_error(self):
         fd_method = "central"
@@ -109,16 +112,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Experiment model does not have suffix " + '"measurement_error".'
+            RuntimeError,
+            "Experiment model does not have suffix " + '"measurement_error".',
         ):
             doe_obj.create_doe_model()
-    
+
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_experiment_inputs(self):
         fd_method = "central"
@@ -141,16 +145,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Experiment model does not have suffix " + '"experiment_inputs".'
+            RuntimeError,
+            "Experiment model does not have suffix " + '"experiment_inputs".',
         ):
             doe_obj.create_doe_model()
-    
+
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_unknown_parameters(self):
         fd_method = "central"
@@ -173,16 +178,16 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Experiment model does not have suffix " + '"unknown_parameters".'
+            RuntimeError,
+            "Experiment model does not have suffix " + '"unknown_parameters".',
         ):
             doe_obj.create_doe_model()
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_bad_prior_size(self):
@@ -208,17 +213,19 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            ValueError, "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
-            4, 4, prior_FIM.shape[0], prior_FIM.shape[1])
+            ValueError,
+            "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+                4, 4, prior_FIM.shape[0], prior_FIM.shape[1]
+            ),
         ):
             doe_obj.create_doe_model()
-    
+
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_bad_jacobian_init_size(self):
         fd_method = "central"
@@ -243,17 +250,18 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            ValueError, "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
-            27, 4, jac_init.shape[0], jac_init.shape[1])
+            ValueError,
+            "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
+                27, 4, jac_init.shape[0], jac_init.shape[1]
+            ),
         ):
             doe_obj.create_doe_model()
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_unbuilt_update_FIM(self):
@@ -279,17 +287,17 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "``fim`` is not defined on the model provided. Please build the model first."
+            RuntimeError,
+            "``fim`` is not defined on the model provided. Please build the model first.",
         ):
             doe_obj.update_FIM_prior(FIM=FIM_update)
-    
-    
+
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_results_file_name(self):
         fd_method = "central"
@@ -312,7 +320,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -321,13 +329,14 @@ class TestReactorExampleErrors(unittest.TestCase):
             ValueError, "``results_file`` must be either a Path object or a string."
         ):
             doe_obj.run_doe(results_file=int(15))
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_measurement_and_output_length_match(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 5  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            5  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -345,17 +354,19 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            ValueError, "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
-            27, 1
-        )):
+            ValueError,
+            "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
+                27, 1
+            ),
+        ):
             doe_obj.create_doe_model()
-    
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -390,7 +401,8 @@ class TestReactorExampleErrors(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(
-            ValueError, "Design ranges keys must be a subset of experimental design names."
+            ValueError,
+            "Design ranges keys must be a subset of experimental design names.",
         ):
             doe_obj.compute_FIM_full_factorial(
                 design_ranges=design_ranges, method="sequential"
@@ -425,10 +437,10 @@ class TestReactorExampleErrors(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Results must be provided or the compute_FIM_full_factorial function must be run."
+            RuntimeError,
+            "Results must be provided or the compute_FIM_full_factorial function must be run.",
         ):
             doe_obj.draw_factorial_figure()
-    
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
@@ -468,10 +480,11 @@ class TestReactorExampleErrors(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ValueError, "If results object is provided, you must include all the design variable names."
+            ValueError,
+            "If results object is provided, you must include all the design variable names.",
         ):
             doe_obj.draw_factorial_figure(results=doe_obj.fim_factorial_results)
-    
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -513,7 +526,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             ValueError, "``sensitivity_design_variables`` must be included."
         ):
             doe_obj.draw_factorial_figure()
-    
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
@@ -556,7 +568,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             ValueError, "``fixed_design_variables`` must be included."
         ):
             doe_obj.draw_factorial_figure(sensitivity_design_variables={"dummy": "var"})
-    
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
@@ -596,10 +607,14 @@ class TestReactorExampleErrors(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ValueError, "Fixed design variables do not all appear in the results object keys."
+            ValueError,
+            "Fixed design variables do not all appear in the results object keys.",
         ):
-            doe_obj.draw_factorial_figure(sensitivity_design_variables={"CA[0]": 1}, fixed_design_variables={"bad": "entry"})
-    
+            doe_obj.draw_factorial_figure(
+                sensitivity_design_variables={"CA[0]": 1},
+                fixed_design_variables={"bad": "entry"},
+            )
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -638,16 +653,21 @@ class TestReactorExampleErrors(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-            ValueError, "Sensitivity design variables do not all appear in the results object keys."
+            ValueError,
+            "Sensitivity design variables do not all appear in the results object keys.",
         ):
-            doe_obj.draw_factorial_figure(sensitivity_design_variables={"bad": "entry"}, fixed_design_variables={"CA[0]": 1})
-    
+            doe_obj.draw_factorial_figure(
+                sensitivity_design_variables={"bad": "entry"},
+                fixed_design_variables={"CA[0]": 1},
+            )
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_FIM_without_FIM(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -665,22 +685,24 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+            RuntimeError,
+            "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`",
         ):
             doe_obj.get_FIM()
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_sens_mat_without_model(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -698,22 +720,24 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+            RuntimeError,
+            "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`",
         ):
             doe_obj.get_sensitivity_matrix()
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_exp_inputs_without_model(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -731,22 +755,24 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            RuntimeError,
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
         ):
             doe_obj.get_experiment_input_values()
 
-    
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_exp_outputs_without_model(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -764,22 +790,24 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            RuntimeError,
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
         ):
             doe_obj.get_experiment_output_values()
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_unknown_params_without_model(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -797,22 +825,24 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            RuntimeError,
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
         ):
             doe_obj.get_unknown_parameter_values()
-    
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_meas_error_without_model(self):
         fd_method = "central"
         obj_used = "trace"
-        flag_val = 0  # Value for faulty model build mode - 5: Mismatch error and output length
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -830,16 +860,16 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_LB=1e-7,
             solver=None,
             tee=False,
-            args={'flag': flag_val},
+            args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
 
         with self.assertRaisesRegex(
-            RuntimeError, "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            RuntimeError,
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
         ):
             doe_obj.get_measurement_error_values()
-
 
 
 if __name__ == "__main__":
