@@ -1336,7 +1336,7 @@ class PolyhedralSet(UncertaintySet):
             c=np.zeros(self.coefficients_mat.shape[1]),
             A_ub=self.coefficients_mat,
             b_ub=self.rhs_vec,
-            method="simplex",
+            method="highs",
             bounds=(None, None),
         )
 
@@ -1344,7 +1344,7 @@ class PolyhedralSet(UncertaintySet):
         if res.status == 1 or res.status == 4:
             raise ValueError(
                 "Could not verify nonemptiness of the "
-                "polyhedral set (`scipy.optimize.linprog(method=simplex)` "
+                "polyhedral set (`scipy.optimize.linprog(method='highs')` "
                 f" status {res.status}) "
             )
         elif res.status == 2:
@@ -2105,7 +2105,7 @@ class FactorModelSet(UncertaintySet):
                 ),
                 b_ub=np.full(2, self.beta * self.number_of_factors),
                 bounds=(-1, 1),
-                method="simplex",
+                method="highs",
             )
 
             # check termination
