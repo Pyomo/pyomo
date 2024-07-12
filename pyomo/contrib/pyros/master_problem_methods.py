@@ -68,8 +68,8 @@ def construct_initial_master_problem(model_data, config):
         Contains a single scenario block fully cloned from
         the working model.
     """
-    master_model = m = ConcreteModel()
-    m.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
+    master_model = ConcreteModel()
+    master_model.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
     add_scenario_block_to_master_problem(
         master_model=master_model,
         scenario_idx=(0, 0),
