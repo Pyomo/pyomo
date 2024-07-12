@@ -954,7 +954,7 @@ class DesignOfExperiments:
         model.base_model = self.experiment.get_labeled_model(**self.args).clone()
 
         # Check the model that labels are correct
-        self.check_model_labels(model=model)
+        self.check_model_labels(model=model.base_model)
 
         # Gather lengths of label structures for later use in the model build process
         self.n_parameters = len(model.base_model.unknown_parameters)

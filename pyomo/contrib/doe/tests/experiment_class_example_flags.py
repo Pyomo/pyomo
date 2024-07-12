@@ -205,7 +205,6 @@ class ReactorExperiment(object):
 
         if flag != 1:
             # Grab measurement labels
-            print("Made experimental outputs!")
             m.experiment_outputs = pyo.Suffix(
                 direction=pyo.Suffix.LOCAL,
             )
