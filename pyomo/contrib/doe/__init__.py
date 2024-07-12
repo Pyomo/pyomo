@@ -15,4 +15,5 @@ from .doe import (
     ModelOptionLib,
     FiniteDifferenceStep,
 )
+from .tests import experiment_class_example, experiment_class_example_flags
 from .utils import rescale_FIM
