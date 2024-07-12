@@ -2095,16 +2095,14 @@ class FactorModelSet(UncertaintySet):
         if np.allclose(point_arr, self.origin):
             return np.zeros(self.number_of_factors), True
 
-        is_pinv_applicable = (
-            self.dim > self.number_of_factors
+        is_psi_full_column_rank = (
+            self.dim >= self.number_of_factors
             and np.linalg.matrix_rank(self.psi_mat) == self.number_of_factors
         )
-        if is_pinv_applicable:
-            # full-rank skinny matrix.
-            # pseudoinverse uniquely determines the values of the
-            # auxiliary parameters
-            inv_psi = np.linalg.pinv(self.psi_mat)
-            aux_space_pt = inv_psi @ (point_arr - self.origin)
+        if is_psi_full_column_rank:
+            # pseudoinverse uniquely determines the auxiliary values
+            pinv_psi = np.linalg.pinv(self.psi_mat)
+            aux_space_pt = pinv_psi @ (point_arr - self.origin)
             tol = 1e-8
             is_aux_pt_feasible = (
                 abs(aux_space_pt.sum()) <= self.beta * self.number_of_factors + tol
@@ -2112,8 +2110,8 @@ class FactorModelSet(UncertaintySet):
             )
             return aux_space_pt, is_aux_pt_feasible
         else:
-            # check existence of point in auxiliary variable
-            # space using LPs
+            # there may be multiple feasible values or no feasible
+            # values. check with LP
             res = sp.optimize.linprog(
                 c=np.zeros(self.number_of_factors),
                 A_eq=self.psi_mat,
@@ -2152,7 +2150,7 @@ class FactorModelSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        aux_space_pt, is_aux_pt_feasible = self.compute_auxiliary_param_vals(point)
+        _, is_aux_pt_feasible = self.compute_auxiliary_param_vals(point)
         return is_aux_pt_feasible
 
 
