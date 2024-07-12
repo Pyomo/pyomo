@@ -83,6 +83,11 @@ sigma_inv_new_np = np.zeros((27, 27))
 for i in range(27):
     sigma_inv_new_np[i, i] = sigma_inv_new[i]
 
+# Check cholesky factorization
+print("Cholesky Checking")
+print(L_vals_new_np @ L_vals_new_np.T)
+print(FIM_vals_new_np)
+
 rescaled_FIM = rescale_FIM(FIM=FIM_vals_new_np, param_vals=param_vals)
 
 # Comparing values from compute FIM
