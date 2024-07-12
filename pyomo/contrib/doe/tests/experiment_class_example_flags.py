@@ -33,6 +33,11 @@ def expand_model_components(m, base_components, index_sets):
                 yield val[j]
 
 
+class BadExperiment(object):
+    def __init__(self):
+        self.model = None
+
+
 class Experiment(object):
     def __init__(self):
         self.model = None
@@ -213,9 +218,12 @@ class ReactorExperiment(object):
         if flag != 2:
             # Adding no error for measurements currently
             m.measurement_error = pyo.Suffix(
-                direction=pyo.Suffix.LOCAL,
-            )
-            m.measurement_error.update((k, 1e-2) for k in expand_model_components(m, base_comp_meas, index_sets_meas))
+                    direction=pyo.Suffix.LOCAL,
+                )
+            if flag == 5:
+                m.measurement_error.update((m.CA[0], 1e-2) for k in range(1))
+            else:
+                m.measurement_error.update((k, 1e-2) for k in expand_model_components(m, base_comp_meas, index_sets_meas))
 
         if flag != 3:
             # Grab design variables

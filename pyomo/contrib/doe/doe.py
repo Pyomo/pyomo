@@ -155,10 +155,9 @@ class DesignOfExperiments:
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
-        # Assert that the Experiment object has callable ``get_labeled_model`` function
-        assert callable(
-            getattr(experiment, "get_labeled_model")
-        ), "The experiment object must have a ``get_labeled_model`` function"
+        # Check if the Experiment object has callable ``get_labeled_model`` function
+        if not hasattr(experiment, "get_labeled_model"):
+            raise ValueError("The experiment object must have a ``get_labeled_model`` function")
 
         # Set the experiment object from the user
         self.experiment = experiment
@@ -234,6 +233,11 @@ class DesignOfExperiments:
                       default: None --> don't save
 
         """
+        # Check results file name
+        if results_file is not None:
+            if type(results_file) not in [Path, str, ]:
+                raise ValueError("``results_file`` must be either a Path object or a string.")
+        
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -357,10 +361,6 @@ class DesignOfExperiments:
 
         # If the user specifies to save the file, do it here as a json
         if results_file is not None:
-            assert type(results_file) in [
-                Path,
-                str,
-            ], "`results_file` must be either a Path object or a string."
             with open(results_file, "w") as file:
                 json.dump(self.results, file)
 
@@ -962,11 +962,10 @@ class DesignOfExperiments:
         self.n_experiment_inputs = len(model.base_model.experiment_inputs)
         self.n_experiment_outputs = len(model.base_model.experiment_outputs)
 
-        assert (
-            self.n_measurement_error == self.n_experiment_outputs
-        ), "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
+        if self.n_measurement_error != self.n_experiment_outputs:
+            raise ValueError("Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
             self.n_experiment_outputs, self.n_measurement_error
-        )
+        ))
 
         self.logger.info("Experiment output and measurement error lengths match.")
 
@@ -1310,23 +1309,19 @@ class DesignOfExperiments:
         ----------
         model: model for suffix checking, Default: None, (self.model)
         """
-        assert FIM.shape == (
-            self.n_parameters,
-            self.n_parameters,
-        ), "Shape of FIM provided should be n_parameters x n_parameters, or {}, FIM provided has shape: {}".format(
-            (self.n_parameters, self.n_parameters), FIM.shape
-        )
+        if FIM.shape != (self.n_parameters, self.n_parameters):
+            raise ValueError("Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+            self.n_parameters, self.n_parameters, FIM.shape[0], FIM.shape[1]
+        ))
 
         self.logger.info("FIM provided matches expected dimensions from model.")
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
-        assert jac.shape == (
-            self.n_experiment_outputs,
-            self.n_parameters,
-        ), "Shape of Jacobian provided should be n_experiment_outputs x n_parameters, or {}, Jacobian provided has shape: {}".format(
-            (self.n_experiment_outputs, self.n_parameters), jac.shape
-        )
+        if jac.shape != (self.n_experiment_outputs, self.n_parameters):
+            raise ValueError("Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
+            self.n_experiment_outputs, self.n_parameters, jac.shape[0], jac.shape[1]
+        ))
 
         self.logger.info("Jacobian provided matches expected dimensions from model.")
 
@@ -1351,9 +1346,8 @@ class DesignOfExperiments:
                 "FIM input for update_FIM_prior must be a 2D, square numpy array."
             )
 
-        assert hasattr(
-            model, "fim"
-        ), "``fim`` is not defined on the model provided. Please build the model first."
+        if not hasattr(model, "fim"):
+            raise RuntimeError("``fim`` is not defined on the model provided. Please build the model first.")
 
         self.check_model_FIM(model, FIM)
 
@@ -1560,47 +1554,38 @@ class DesignOfExperiments:
 
         """
         if results is None:
-            assert hasattr(
-                self, "fim_factorial_results"
-            ), "Results must be provided or the compute_FIM_full_factorial function must be run."
+            if not hasattr(self, "fim_factorial_results"):
+                raise RuntimeError("Results must be provided or the compute_FIM_full_factorial function must be run.")
             results = self.fim_factorial_results
             full_design_variable_names = [
                 k.name for k, v in self.factorial_model.experiment_inputs.items()
             ]
         else:
-            assert (
-                full_design_variable_names is not None
-            ), "If results object is provided, you must include all the design variable names."
+            if full_design_variable_names is None:
+                raise ValueError("If results object is provided, you must include all the design variable names.")
 
         des_names = full_design_variable_names
 
         # Inputs must exist for the function to do anything
         # ToDo: Put in a default value function?????
-        assert (
-            sensitivity_design_variables is not None
-        ), "``sensitivity_design_variables`` must be included."
-        assert (
-            fixed_design_variables is not None
-        ), "``sensitivity_design_variables`` must be included."
+        if sensitivity_design_variables is None:
+            raise ValueError("``sensitivity_design_variables`` must be included.")
+        
+        if fixed_design_variables is None:
+            raise ValueError("``fixed_design_variables`` must be included.")
 
         # Check that the provided design variables are within the results object
         check_des_vars = True
         for k, v in fixed_design_variables.items():
-            check_des_vars *= k in [k for k, v in results.items()]
+            check_des_vars *= k in ([k2 for k2, v2 in results.items()])
         check_sens_vars = True
         for k in sensitivity_design_variables:
-            check_sens_vars *= k in [k for k, v in results.items()]
+            check_sens_vars *= (k in [k2 for k2, v2 in results.items()])
 
-        assert (
-            check_des_vars
-        ), "Fixed design variables {} do not all appear in the results object keys {}.".format(
-            fixed_design_variables.keys(), results.keys()
-        )
-        assert (
-            check_sens_vars
-        ), "Sensitivity design variables {} do not all appear in the results object keys {}.".format(
-            sensitivity_design_variables.keys(), results.keys()
-        )
+        if not check_des_vars:
+            raise ValueError("Fixed design variables do not all appear in the results object keys.")
+        if not check_sens_vars:
+            raise ValueError("Sensitivity design variables do not all appear in the results object keys.")
 
         # ToDo: Make it possible to plot pair-wise sensitivities for all variables
         #       e.g. a curve like low-dimensional posterior distributions
@@ -1953,9 +1938,8 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
 
-        assert hasattr(
-            model, "fim"
-        ), "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+        if not hasattr(model, "fim"):
+            raise RuntimeError("Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`")
 
         fim_vals = [
             pyo.value(model.fim[i, j])
@@ -1992,9 +1976,8 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
 
-        assert hasattr(
-            model, "sensitivity_jacobian"
-        ), "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+        if not hasattr(model, "sensitivity_jacboian"):
+            raise RuntimeError("Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`")
 
         Q_vals = [
             pyo.value(model.sensitivity_jacobian[i, j])
@@ -2027,9 +2010,8 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "experiment_inputs"):
-            assert hasattr(
-                model, "scenario_blocks"
-            ), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
 
             d_vals = [
                 pyo.value(k)
@@ -2060,9 +2042,8 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "unknown_parameters"):
-            assert hasattr(
-                model, "scenario_blocks"
-            ), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
 
             theta_vals = [
                 pyo.value(k)
@@ -2093,9 +2074,8 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "experiment_outputs"):
-            assert hasattr(
-                model, "scenario_blocks"
-            ), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
 
             y_hat_vals = [
                 pyo.value(k)
@@ -2128,9 +2108,8 @@ class DesignOfExperiments:
             model = self.model
 
         if not hasattr(model, "measurement_error"):
-            assert hasattr(
-                model, "scenario_blocks"
-            ), "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError("Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`")
 
             sigma_vals = [
                 pyo.value(k)
