@@ -391,14 +391,15 @@ class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
             del linear[vid]
 
         quadratic = ans.quadratic
-        quad_zeros = []
-        for vid_pair, coef in ans.quadratic.items():
-            if not is_zero(coef):
-                ans.quadratic[vid_pair] = mult * coef
-            else:
-                quad_zeros.append(vid_pair)
-        for vid_pair in quad_zeros:
-            del quadratic[vid_pair]
+        if quadratic is not None:
+            quad_zeros = []
+            for vid_pair, coef in ans.quadratic.items():
+                if not is_zero(coef):
+                    ans.quadratic[vid_pair] = mult * coef
+                else:
+                    quad_zeros.append(vid_pair)
+            for vid_pair in quad_zeros:
+                del quadratic[vid_pair]
 
         if ans.nonlinear is not None:
             ans.nonlinear *= mult
