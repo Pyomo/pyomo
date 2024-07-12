@@ -303,7 +303,7 @@ class DesignOfExperiments:
 
         # Solve the full model, which has now been initialized with the square solve
         res = self.solver.solve(model, tee=self.tee)
-        
+
         # Track time used to solve the DoE model
         solve_time = sp_timer.toc(msg=None)
 
@@ -320,9 +320,9 @@ class DesignOfExperiments:
 
         # Make sure stale results don't follow the DoE object instance
         self.results = {}
-        
-        self.results['Solver Status'] = res.solver.status
-        self.results['Termination Condition'] = res.solver.termination_condition
+
+        self.results["Solver Status"] = res.solver.status
+        self.results["Termination Condition"] = res.solver.termination_condition
 
         # Important quantities for optimal design
         self.results["FIM"] = fim_local
@@ -400,7 +400,7 @@ class DesignOfExperiments:
             model = self.compute_FIM_model
 
         self.check_model_labels(model=model)
-        
+
         # Set length values for the model features
         self.n_parameters = len(model.unknown_parameters)
         self.n_measurement_error = len(model.measurement_error)
@@ -448,7 +448,7 @@ class DesignOfExperiments:
             model = self.compute_FIM_model
 
         # Create suffix to keep track of parameter scenarios
-        if hasattr(model, 'parameter_scenarios'):
+        if hasattr(model, "parameter_scenarios"):
             model.del_component(model.parameter_scenarios)
         model.parameter_scenarios = pyo.Suffix(
             direction=pyo.Suffix.LOCAL,

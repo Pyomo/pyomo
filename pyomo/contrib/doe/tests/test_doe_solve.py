@@ -15,11 +15,14 @@ from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 
-f = open('result.json')
+f = open("result.json")
 data_ex = json.load(f)
-data_ex['control_points'] = {float(k): v for k, v in data_ex['control_points'].items()}
+data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
-def get_FIM_Q_L(doe_obj=None,):
+
+def get_FIM_Q_L(
+    doe_obj=None,
+):
     """
     Helper function to retreive results to compare.
 
@@ -29,14 +32,30 @@ def get_FIM_Q_L(doe_obj=None,):
     n_param = doe_obj.n_parameters
     n_y = doe_obj.n_experiment_outputs
 
-    FIM_vals = [pyo.value(model.fim[i, j]) for i in model.parameter_names for j in model.parameter_names]
-    if hasattr(model, 'L'):
-        L_vals = [pyo.value(model.L[i, j]) for i in model.parameter_names for j in model.parameter_names]
+    FIM_vals = [
+        pyo.value(model.fim[i, j])
+        for i in model.parameter_names
+        for j in model.parameter_names
+    ]
+    if hasattr(model, "L"):
+        L_vals = [
+            pyo.value(model.L[i, j])
+            for i in model.parameter_names
+            for j in model.parameter_names
+        ]
     else:
         L_vals = [[0] * n_param] * n_param
-    Q_vals = [pyo.value(model.sensitivity_jacobian[i, j]) for i in model.output_names for j in model.parameter_names]
-    sigma_inv = [1 / v for k,v in model.scenario_blocks[0].measurement_error.items()]
-    param_vals = np.array([[v for k, v in model.scenario_blocks[0].unknown_parameters.items()], ])
+    Q_vals = [
+        pyo.value(model.sensitivity_jacobian[i, j])
+        for i in model.output_names
+        for j in model.parameter_names
+    ]
+    sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
+    param_vals = np.array(
+        [
+            [v for k, v in model.scenario_blocks[0].unknown_parameters.items()],
+        ]
+    )
 
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
 
@@ -56,18 +75,17 @@ def get_FIM_Q_L(doe_obj=None,):
     return FIM_vals_np, Q_vals_np, L_vals_np, sigma_inv_np
 
 
-
 class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
         obj_used = "trace"
-        
+
         experiment = FullReactorExperiment(data_ex, 10, 3)
-        
+
         doe_obj = DesignOfExperiments(
-            experiment, 
+            experiment,
             fd_formula=fd_method,
             step=1e-3,
             objective_option=obj_used,
@@ -84,33 +102,32 @@ class TestReactorExampleSolving(unittest.TestCase):
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
-        
+
         doe_obj.run_doe()
-        
+
         # Assert model solves
-        assert (doe_obj.results['Solver Status'] == "ok")
+        assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj,)
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(
+            doe_obj=doe_obj,
+        )
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        assert (np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+        assert np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q))
 
-
-
-    
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_forward_solve(self):
         fd_method = "forward"
         obj_used = "trace"
-        
+
         experiment = FullReactorExperiment(data_ex, 10, 3)
-        
+
         doe_obj = DesignOfExperiments(
-            experiment, 
+            experiment,
             fd_formula=fd_method,
             step=1e-3,
             objective_option=obj_used,
@@ -127,29 +144,31 @@ class TestReactorExampleSolving(unittest.TestCase):
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
-        
+
         doe_obj.run_doe()
-        
-        assert (doe_obj.results['Solver Status'] == "ok")
+
+        assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj,)
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(
+            doe_obj=doe_obj,
+        )
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        assert (np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
-    
+        assert np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q))
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_backward_solve(self):
         fd_method = "backward"
         obj_used = "trace"
-        
+
         experiment = FullReactorExperiment(data_ex, 10, 3)
-        
+
         doe_obj = DesignOfExperiments(
-            experiment, 
+            experiment,
             fd_formula=fd_method,
             step=1e-3,
             objective_option=obj_used,
@@ -166,62 +185,64 @@ class TestReactorExampleSolving(unittest.TestCase):
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
-        
+
         doe_obj.run_doe()
-        
-        assert (doe_obj.results['Solver Status'] == "ok")
+
+        assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj,)
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(
+            doe_obj=doe_obj,
+        )
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        assert (np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
-    
+        assert np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q))
+
     # TODO: Fix determinant objective code, something is awry
     #       Should only be using Cholesky=True
     # @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     # @unittest.skipIf(not numpy_available, "Numpy is not available")
     # def test_reactor_obj_det_solve(self):
-        # fd_method = "central"
-        # obj_used = "det"
-        
-        # experiment = FullReactorExperiment(data_ex, 10, 3)
-        
-        # doe_obj = DesignOfExperiments(
-            # experiment, 
-            # fd_formula=fd_method,
-            # step=1e-3,
-            # objective_option=obj_used,
-            # scale_constant_value=1,
-            # scale_nominal_param_value=True,
-            # prior_FIM=None,
-            # jac_initial=None,
-            # fim_initial=None,
-            # L_initial=None,
-            # L_LB=1e-7,
-            # solver=None,
-            # tee=False,
-            # args=None,
-            # _Cholesky_option=False,
-            # _only_compute_fim_lower=False,
-        # )
-        
-        # doe_obj.run_doe()
-        
-        # assert (doe_obj.results['Solver Status'] == "ok")
-    
+    # fd_method = "central"
+    # obj_used = "det"
+
+    # experiment = FullReactorExperiment(data_ex, 10, 3)
+
+    # doe_obj = DesignOfExperiments(
+    # experiment,
+    # fd_formula=fd_method,
+    # step=1e-3,
+    # objective_option=obj_used,
+    # scale_constant_value=1,
+    # scale_nominal_param_value=True,
+    # prior_FIM=None,
+    # jac_initial=None,
+    # fim_initial=None,
+    # L_initial=None,
+    # L_LB=1e-7,
+    # solver=None,
+    # tee=False,
+    # args=None,
+    # _Cholesky_option=False,
+    # _only_compute_fim_lower=False,
+    # )
+
+    # doe_obj.run_doe()
+
+    # assert (doe_obj.results['Solver Status'] == "ok")
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_obj_cholesky_solve(self):
         fd_method = "central"
         obj_used = "det"
-        
+
         experiment = FullReactorExperiment(data_ex, 10, 3)
-        
+
         doe_obj = DesignOfExperiments(
-            experiment, 
+            experiment,
             fd_formula=fd_method,
             step=1e-3,
             objective_option=obj_used,
@@ -238,30 +259,32 @@ class TestReactorExampleSolving(unittest.TestCase):
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
-        
+
         doe_obj.run_doe()
-        
-        assert (doe_obj.results['Solver Status'] == "ok")
+
+        assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj,)
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(
+            doe_obj=doe_obj,
+        )
 
         # Since Cholesky is used, there is comparison for FIM and L.T @ L
-        assert (np.all(np.isclose(FIM, L @ L.T)))
+        assert np.all(np.isclose(FIM, L @ L.T))
 
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
-        assert (np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
-    
+        assert np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q))
+
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_compute_FIM_seq(self):
         fd_method = "central"
         obj_used = "det"
-        
+
         experiment = FullReactorExperiment(data_ex, 10, 3)
-        
+
         doe_obj = DesignOfExperiments(
-            experiment, 
+            experiment,
             fd_formula=fd_method,
             step=1e-3,
             objective_option=obj_used,
@@ -278,8 +301,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
-        
-        doe_obj.compute_FIM(method='sequential')
+
+        doe_obj.compute_FIM(method="sequential")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
@@ -287,11 +310,11 @@ class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_grid_search(self):
         fd_method = "central"
         obj_used = "det"
-        
+
         experiment = FullReactorExperiment(data_ex, 10, 3)
-        
+
         doe_obj = DesignOfExperiments(
-            experiment, 
+            experiment,
             fd_formula=fd_method,
             step=1e-3,
             objective_option=obj_used,
@@ -308,26 +331,29 @@ class TestReactorExampleSolving(unittest.TestCase):
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
-        
+
         design_ranges = {
-            'CA[0]': [1, 5, 3], 
-            'T[0]': [300, 700, 3],
+            "CA[0]": [1, 5, 3],
+            "T[0]": [300, 700, 3],
         }
-        
-        doe_obj.compute_FIM_full_factorial(design_ranges=design_ranges, method='sequential')
+
+        doe_obj.compute_FIM_full_factorial(
+            design_ranges=design_ranges, method="sequential"
+        )
 
         # Check to make sure the lengths of the inputs in results object are indeed correct
-        CA_vals = doe_obj.fim_factorial_results['CA[0]']
-        T_vals = doe_obj.fim_factorial_results['T[0]']
+        CA_vals = doe_obj.fim_factorial_results["CA[0]"]
+        T_vals = doe_obj.fim_factorial_results["T[0]"]
 
         # Assert length is correct
         assert (len(CA_vals) == 9) and (len(T_vals) == 9)
         assert (len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3)
 
         # Assert unique values are correct
-        assert (set(CA_vals).issuperset(set([1, 3, 5]))) and (set(T_vals).issuperset(set([300, 500, 700])))
-        
-    
+        assert (set(CA_vals).issuperset(set([1, 3, 5]))) and (
+            set(T_vals).issuperset(set([300, 500, 700]))
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
