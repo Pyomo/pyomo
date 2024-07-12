@@ -5,7 +5,7 @@ from pyomo.common.dependencies import (
     pandas_available,
 )
 
-from experiment_class_example import *
+from pyomo.contrib.doe.tests.experiment_class_example import *
 from pyomo.contrib.doe import *
 
 
@@ -13,9 +13,14 @@ import pyomo.common.unittest as unittest
 
 from pyomo.opt import SolverFactory
 
+from pathlib import Path
+
 ipopt_available = SolverFactory("ipopt").available()
 
-f = open("result.json")
+DATA_DIR = Path(__file__).parent
+file_path = DATA_DIR / "result.json"
+
+f = open(file_path)
 data_ex = json.load(f)
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
