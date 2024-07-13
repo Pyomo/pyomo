@@ -1592,16 +1592,12 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         dset = DiscreteScenarioSet(scenarios)
 
         # check scenarios added appropriately
-        np.testing.assert_allclose(
-            scenarios, dset.scenarios, err_msg="BoxSet bounds not as expected"
-        )
+        np.testing.assert_allclose(scenarios, dset.scenarios)
 
         # check scenarios updated appropriately
         new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
         dset.scenarios = new_scenarios
-        np.testing.assert_allclose(
-            new_scenarios, dset.scenarios, err_msg="BoxSet bounds not as expected"
-        )
+        np.testing.assert_allclose(new_scenarios, dset.scenarios)
 
     def test_error_on_discrete_set_dim_change(self):
         """
