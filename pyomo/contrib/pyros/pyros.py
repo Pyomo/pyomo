@@ -386,9 +386,7 @@ class PyROS(object):
             # === Solve and load solution into model
             return_soln = ROSolveResults()
             if not robust_infeasible:
-                pyros_soln, final_iter_separation_solns = ROSolver_iterative_solve(
-                    model_data, config
-                )
+                pyros_soln = ROSolver_iterative_solve(model_data, config)
                 IterationLogRecord.log_header_rule(config.progress_logger.info)
 
                 termination_acceptable = (
@@ -401,7 +399,7 @@ class PyROS(object):
                 if termination_acceptable:
                     load_final_solution(
                         model_data=model_data,
-                        master_soln=pyros_soln.master_soln,
+                        master_soln=pyros_soln.master_results,
                         config=config,
                         original_user_var_partitioning=user_var_partitioning,
                     )
@@ -409,7 +407,7 @@ class PyROS(object):
                 # get the most recent master objective, if available
                 return_soln.final_objective_value = None
                 master_epigraph_obj_value = value(
-                    pyros_soln.master_soln.master_model.epigraph_obj,
+                    pyros_soln.master_results.master_model.epigraph_obj,
                     exception=False,
                 )
                 if master_epigraph_obj_value is not None:
@@ -424,9 +422,7 @@ class PyROS(object):
                 return_soln.pyros_termination_condition = (
                     pyros_soln.pyros_termination_condition
                 )
-                return_soln.iterations = pyros_soln.total_iters + 1
-
-                del pyros_soln.working_model
+                return_soln.iterations = pyros_soln.iterations
             else:
                 return_soln.final_objective_value = None
                 return_soln.pyros_termination_condition = (

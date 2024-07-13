@@ -1215,9 +1215,6 @@ class SeparationProblemData:
             aux_var.value
             for aux_var in self.separation_model.uncertainty.auxiliary_var_list
         ]}
-        self.constraint_violations = []
-        self.total_global_separation_solves = 0
-        self.separation_problem_subsolver_statuses = []
 
         if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
             self.idxs_of_master_scenarios = [

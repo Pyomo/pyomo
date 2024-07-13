@@ -802,6 +802,10 @@ def solver_call_master(master_data, config, master_soln):
             )
 
         if not try_backup:
+            if infeasible:
+                master_soln.pyrosTerminationCondition = (
+                    pyrosTerminationCondition.robust_infeasible
+                )
             return
 
     # all solvers have failed to return an acceptable status.
