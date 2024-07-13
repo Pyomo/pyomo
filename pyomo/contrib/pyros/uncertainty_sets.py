@@ -2554,6 +2554,15 @@ class EllipsoidalSet(UncertaintySet):
         ]
         return parameter_bounds
 
+    @copy_docstring(UncertaintySet.point_in_set)
+    def point_in_set(self, point):
+        off_center = point - self.center
+        normalized_pt_radius = np.sqrt(
+            off_center @ np.linalg.inv(self.shape_matrix) @ off_center
+        )
+        normalized_boundary_radius = np.sqrt(self.scale)
+        return normalized_pt_radius <= normalized_boundary_radius + 1e-8
+
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
         block, param_var_data_list, uncertainty_conlist, aux_var_list = (

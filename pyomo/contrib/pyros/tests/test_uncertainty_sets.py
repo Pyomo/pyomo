@@ -2085,7 +2085,27 @@ class TestEllipsoidalSet(unittest.TestCase):
             shape_matrix=[[1, 0.5], [0.5, 1]],
             scale=2.5,
         )
+        sqrt_mat = np.linalg.cholesky(eset.shape_matrix)
+        sqrt_scale = eset.scale ** 0.5
+        center = eset.center
         self.assertTrue(eset.point_in_set(eset.center))
+
+        # some boundary points
+        self.assertTrue(eset.point_in_set(center + sqrt_mat @ [0, sqrt_scale]))
+        self.assertTrue(eset.point_in_set(center + sqrt_mat @ [sqrt_scale, 0]))
+        self.assertTrue(eset.point_in_set(center + sqrt_mat @ [0, -sqrt_scale]))
+        self.assertTrue(eset.point_in_set(center + sqrt_mat @ [-sqrt_scale, 0]))
+
+        self.assertFalse(eset.point_in_set(center + sqrt_mat @ [0, sqrt_scale * 2]))
+        self.assertFalse(eset.point_in_set(center + sqrt_mat @ [sqrt_scale * 2, 0]))
+        self.assertFalse(eset.point_in_set(center + sqrt_mat @ [0, -sqrt_scale * 2]))
+        self.assertFalse(eset.point_in_set(center + sqrt_mat @ [-sqrt_scale * 2, 0]))
+
+        # test singleton
+        eset.scale = 0
+        self.assertTrue(eset.point_in_set(eset.center))
+        self.assertTrue(eset.point_in_set(eset.center + [5e-9, 0]))
+        self.assertFalse(eset.point_in_set(eset.center + [1e-4, 1e-4]))
 
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
@@ -2109,8 +2129,8 @@ class TestEllipsoidalSet(unittest.TestCase):
         )
         computed_bounds_2 = eset2._compute_parameter_bounds(baron)
 
-        # add absolute tolerance to account for (im)precision
-        # from matrix inversion and roundoff
+        # add absolute tolerance to account from
+        # matrix inversion and roundoff errors
         np.testing.assert_allclose(computed_bounds_2, [[-0.5, 2.5], [0, 3]], atol=1e-8)
         np.testing.assert_allclose(computed_bounds_2, eset2.parameter_bounds, atol=1e-8)
 
