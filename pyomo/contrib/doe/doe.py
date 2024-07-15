@@ -114,7 +114,7 @@ class DesignOfExperiments:
             ``det`` (for determinant, or D-optimality) and ``trace`` (for trace or
             A-optimality)
         scale_constant_value:
-            Constant scaling for the sensitivty matrix. Every element will be multiplied by this
+            Constant scaling for the sensitivity matrix. Every element will be multiplied by this
             scaling factor.
             default: 1
         scale_nominal_param_value:
