@@ -27,7 +27,7 @@ data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].i
 
 def get_FIM_Q_L(doe_obj=None):
     """
-    Helper function to retreive results to compare.
+    Helper function to retrieve results to compare.
 
     """
     model = doe_obj.model

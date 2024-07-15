@@ -104,7 +104,7 @@ class DesignOfExperiments:
             should have a ``get_labeled_model`` where a model is returned with the following
             labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
         fd_formula:
-            Finite difference formula for computing the sensitivy matrix. Must be one of
+            Finite difference formula for computing the sensitivity matrix. Must be one of
             [``central``, ``forward``, ``backward``], default: ``central``
         step:
             Relative step size for the finite difference formula.
@@ -120,7 +120,7 @@ class DesignOfExperiments:
         scale_nominal_param_value:
             Boolean for whether or not to scale the sensitivity matrix by the nominal parameter
             values. Every column of the sensitivity matrix will be divided by the respective
-            nominal paramter value.
+            nominal parameter value.
             default: False
         prior_FIM:
             2D numpy array representing information from prior experiments. If no value is given,
@@ -262,7 +262,7 @@ class DesignOfExperiments:
         # Track time required to build the DoE model
         build_time = sp_timer.toc(msg=None)
         self.logger.info(
-            "Succesfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
+            "Successfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
         )
 
         # Solve the square problem first to initialize the fim and
@@ -279,7 +279,7 @@ class DesignOfExperiments:
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
         self.logger.info(
-            "Succesfully initialized the DoE model.\nInitialization time: %0.1f seconds"
+            "Successfully initialized the DoE model.\nInitialization time: %0.1f seconds"
             % initialization_time
         )
 
@@ -316,7 +316,7 @@ class DesignOfExperiments:
         solve_time = sp_timer.toc(msg=None)
 
         self.logger.info(
-            "Succesfully optimized experiment.\nSolve time: %0.1f seconds" % solve_time
+            "Successfully optimized experiment.\nSolve time: %0.1f seconds" % solve_time
         )
         self.logger.info(
             "Total time for build, initialization, and solve: %0.1f seconds"
@@ -371,13 +371,13 @@ class DesignOfExperiments:
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
         raise NotImplementedError(
-            "Multipled experiment optimization not yet supported."
+            "Multiple experiment optimization not yet supported."
         )
 
     # Perform multi-experiment doe (simultaneous, optimal approach)
     def run_multi_doe_simultaneous(self, N_exp=1):
         raise NotImplementedError(
-            "Multipled experiment optimization not yet supported."
+            "Multiple experiment optimization not yet supported."
         )
 
     # Compute FIM for the DoE object
@@ -1154,7 +1154,7 @@ class DesignOfExperiments:
             Calculate Cholesky L matrix using algebraic constraints
             """
             # If the row is greater than or equal to the column, we are in the
-            # lower traingle region of the L and FIM matrices.
+            # lower triangle region of the L and FIM matrices.
             # This region is where our equations are well-defined.
             if list(model.parameter_names).index(c) >= list(
                 model.parameter_names
@@ -1363,7 +1363,7 @@ class DesignOfExperiments:
 
     # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
-    def udpate_unknown_parameter_values(self, model=None, param_vals=None):
+    def update_unknown_parameter_values(self, model=None, param_vals=None):
         return
 
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
@@ -1391,7 +1391,7 @@ class DesignOfExperiments:
         self.factorial_model = self.experiment.get_labeled_model(**self.args).clone()
         model = self.factorial_model
 
-        # Permute the inputs to be aligned with the experiment input indicies
+        # Permute the inputs to be aligned with the experiment input indices
         design_ranges_enum = {k: np.linspace(*v) for k, v in design_ranges.items()}
         design_map = {
             ind: (k[0].name, k[0])
