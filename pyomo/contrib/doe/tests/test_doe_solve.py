@@ -25,9 +25,7 @@ data_ex = json.load(f)
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 
-def get_FIM_Q_L(
-    doe_obj=None,
-):
+def get_FIM_Q_L(doe_obj=None):
     """
     Helper function to retreive results to compare.
 
@@ -57,9 +55,7 @@ def get_FIM_Q_L(
     ]
     sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
     param_vals = np.array(
-        [
-            [v for k, v in model.scenario_blocks[0].unknown_parameters.items()],
-        ]
+        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
     )
 
     FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
@@ -114,9 +110,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(
-            doe_obj=doe_obj,
-        )
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
@@ -155,9 +149,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(
-            doe_obj=doe_obj,
-        )
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
@@ -196,9 +188,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(
-            doe_obj=doe_obj,
-        )
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
 
@@ -270,9 +260,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         assert doe_obj.results["Solver Status"] == "ok"
 
         # Assert that Q, F, and L are the same.
-        FIM, Q, L, sigma_inv = get_FIM_Q_L(
-            doe_obj=doe_obj,
-        )
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Cholesky is used, there is comparison for FIM and L.T @ L
         assert np.all(np.isclose(FIM, L @ L.T))
@@ -337,10 +325,7 @@ class TestReactorExampleSolving(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "CA[0]": [1, 5, 3],
-            "T[0]": [300, 700, 3],
-        }
+        design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"

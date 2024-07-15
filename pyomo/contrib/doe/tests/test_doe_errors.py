@@ -395,10 +395,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "not": [1, 5, 3],
-            "correct": [300, 700, 3],
-        }
+        design_ranges = {"not": [1, 5, 3], "correct": [300, 700, 3]}
 
         with self.assertRaisesRegex(
             ValueError,
@@ -470,10 +467,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "CA[0]": [1, 5, 2],
-            "T[0]": [300, 700, 2],
-        }
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -513,10 +507,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "CA[0]": [1, 5, 2],
-            "T[0]": [300, 700, 2],
-        }
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -555,10 +546,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "CA[0]": [1, 5, 2],
-            "T[0]": [300, 700, 2],
-        }
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -597,10 +585,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "CA[0]": [1, 5, 2],
-            "T[0]": [300, 700, 2],
-        }
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"
@@ -643,10 +628,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             _only_compute_fim_lower=True,
         )
 
-        design_ranges = {
-            "CA[0]": [1, 5, 2],
-            "T[0]": [300, 700, 2],
-        }
+        design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
         doe_obj.compute_FIM_full_factorial(
             design_ranges=design_ranges, method="sequential"

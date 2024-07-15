@@ -210,9 +210,7 @@ class ReactorExperiment(object):
 
         if flag != 1:
             # Grab measurement labels
-            m.experiment_outputs = pyo.Suffix(
-                direction=pyo.Suffix.LOCAL,
-            )
+            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
             m.experiment_outputs.update(
                 (k, None)
                 for k in expand_model_components(m, base_comp_meas, index_sets_meas)
@@ -220,9 +218,7 @@ class ReactorExperiment(object):
 
         if flag != 2:
             # Adding no error for measurements currently
-            m.measurement_error = pyo.Suffix(
-                direction=pyo.Suffix.LOCAL,
-            )
+            m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
             if flag == 5:
                 m.measurement_error.update((m.CA[0], 1e-2) for k in range(1))
             else:
@@ -235,18 +231,14 @@ class ReactorExperiment(object):
             # Grab design variables
             base_comp_des = [m.CA, m.T]
             index_sets_des = [[[m.t.first()]], [m.t_control]]
-            m.experiment_inputs = pyo.Suffix(
-                direction=pyo.Suffix.LOCAL,
-            )
+            m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
             m.experiment_inputs.update(
                 (k, pyo.ComponentUID(k))
                 for k in expand_model_components(m, base_comp_des, index_sets_des)
             )
 
         if flag != 4:
-            m.unknown_parameters = pyo.Suffix(
-                direction=pyo.Suffix.LOCAL,
-            )
+            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
             m.unknown_parameters.update(
                 (k, pyo.value(k)) for k in [m.A1, m.A2, m.E1, m.E2]
             )

@@ -43,11 +43,7 @@ def rescale_FIM(FIM, param_vals):
 
     """
     if isinstance(param_vals, list):
-        param_vals = np.array(
-            [
-                param_vals,
-            ]
-        )
+        param_vals = np.array([param_vals])
     elif isinstance(param_vals, np.ndarray):
         if len(param_vals.shape) > 2 or (
             (len(param_vals.shape) == 2) and (param_vals.shape[0] != 1)
@@ -58,11 +54,7 @@ def rescale_FIM(FIM, param_vals):
                 )
             )
         if len(param_vals.shape) == 1:
-            param_vals = np.array(
-                [
-                    param_vals,
-                ]
-            )
+            param_vals = np.array([param_vals])
     scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM

@@ -237,10 +237,7 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [
-                Path,
-                str,
-            ]:
+            if type(results_file) not in [Path, str]:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
@@ -457,9 +454,7 @@ class DesignOfExperiments:
         # Create suffix to keep track of parameter scenarios
         if hasattr(model, "parameter_scenarios"):
             model.del_component(model.parameter_scenarios)
-        model.parameter_scenarios = pyo.Suffix(
-            direction=pyo.Suffix.LOCAL,
-        )
+        model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
         # Populate parameter scenarios, and scenario inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
@@ -752,9 +747,7 @@ class DesignOfExperiments:
                 return 0.1
 
         model.sensitivity_jacobian = pyo.Var(
-            model.output_names,
-            model.parameter_names,
-            initialize=initialize_jac,
+            model.output_names, model.parameter_names, initialize=initialize_jac
         )
 
         # Initialize the FIM
@@ -770,15 +763,11 @@ class DesignOfExperiments:
 
         if self.fim_initial is not None:
             model.fim = pyo.Var(
-                model.parameter_names,
-                model.parameter_names,
-                initialize=initialize_fim,
+                model.parameter_names, model.parameter_names, initialize=initialize_fim
             )
         else:
             model.fim = pyo.Var(
-                model.parameter_names,
-                model.parameter_names,
-                initialize=identity_matrix,
+                model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
 
         # To-Do: Look into this functionality.....
@@ -801,9 +790,7 @@ class DesignOfExperiments:
             # Initialize with L in L_initial
             if self.L_initial is not None:
                 model.L = pyo.Var(
-                    model.parameter_names,
-                    model.parameter_names,
-                    initialize=init_cho,
+                    model.parameter_names, model.parameter_names, initialize=init_cho
                 )
             # or initialize with the identity matrix
             else:
@@ -993,9 +980,7 @@ class DesignOfExperiments:
             self.jac_initial = np.eye(self.n_experiment_outputs, self.n_parameters)
 
         # Make a new Suffix to hold which scenarios are associated with parameters
-        model.parameter_scenarios = pyo.Suffix(
-            direction=pyo.Suffix.LOCAL,
-        )
+        model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
         # Populate parameter scenarios, and scenario inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
