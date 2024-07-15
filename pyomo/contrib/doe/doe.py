@@ -370,15 +370,11 @@ class DesignOfExperiments:
 
     # Perform multi-experiment doe (sequential, or ``greedy`` approach)
     def run_multi_doe_sequential(self, N_exp=1):
-        raise NotImplementedError(
-            "Multiple experiment optimization not yet supported."
-        )
+        raise NotImplementedError("Multiple experiment optimization not yet supported.")
 
     # Perform multi-experiment doe (simultaneous, optimal approach)
     def run_multi_doe_simultaneous(self, N_exp=1):
-        raise NotImplementedError(
-            "Multiple experiment optimization not yet supported."
-        )
+        raise NotImplementedError("Multiple experiment optimization not yet supported.")
 
     # Compute FIM for the DoE object
     def compute_FIM(self, model=None, method="sequential"):
