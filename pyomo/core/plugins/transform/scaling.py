@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core.base import Block, Var, Constraint, Objective, Suffix, value
 from pyomo.core.plugins.transform.hierarchy import Transformation
@@ -16,6 +17,8 @@ from pyomo.core.base import TransformationFactory
 from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.expr import replace_expressions
 from pyomo.util.components import rename_components
+
+logger = logging.getLogger("pyomo.core.plugins.transform.scaling")
 
 
 @TransformationFactory.register(
@@ -313,9 +316,14 @@ class ScaleModel(Transformation):
             original_v = original_model.find_component(original_v_path)
 
             for k in scaled_v:
-                if scaled_v[k].value is not None:
-                    # NOTE: if the variable is set to None in the scaled model,
-                    # we don't attempt to change its value in the original model
+                if scaled_v[k].value is None and original_v[k].value is not None:
+                    logger.warning(
+                        "Variable with value None in the scaled model is replacing"
+                        f" value of variable {original_v[k].name} in the original"
+                        f" model with None (was {original_v[k].value})."
+                    )
+                    original_v[k].set_value(None, skip_validation=True)
+                elif scaled_v[k].value is not None:
                     original_v[k].set_value(
                         value(scaled_v[k]) / component_scaling_factor_map[scaled_v[k]],
                         skip_validation=True,

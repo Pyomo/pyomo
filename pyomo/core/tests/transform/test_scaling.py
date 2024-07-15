@@ -703,9 +703,9 @@ class TestScaleModelTransformation(unittest.TestCase):
             scaled_model, m
         )
         self.assertAlmostEqual(m.x[1].value, 2.0, delta=1e-8)
-        # Note that because x[2] was None in the scaled model, its value is unchanged
-        # (and has not been overridden and set to None).
-        self.assertEqual(m.x[2].value, 1.0)
+        # Note that value of x[2] in original model *has* been overriddeen to None.
+        # In this case, a warning has been raised.
+        self.assertIs(m.x[2].value, None)
 
 
 if __name__ == "__main__":
