@@ -78,11 +78,6 @@ class ReactorExperiment(object):
         # Model parameters
         m.R = pyo.Param(mutable=False, initialize=8.314)
 
-        # m.A1 = pyo.Param(mutable=True)
-        # m.E1 = pyo.Param(mutable=True)
-        # m.A2 = pyo.Param(mutable=True)
-        # m.E2 = pyo.Param(mutable=True)
-
         # Define model variables
         ########################
         # time
