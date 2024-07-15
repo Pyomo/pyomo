@@ -83,6 +83,7 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
 
 
 class TestReactorExampleBuild(unittest.TestCase):
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_central_check_fd_eqns(self):
         fd_method = "central"
@@ -138,6 +139,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
             assert np.isclose(param_val, param_val_from_step)
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
@@ -195,6 +197,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 assert np.isclose(other_param_val, v)
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
@@ -252,6 +255,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 assert np.isclose(other_param_val, v)
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_central_design_fixing(self):
         fd_method = "central"
@@ -302,6 +306,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
         assert not hasattr(model, con_name_base + str(len(design_vars)))
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_backward_design_fixing(self):
         fd_method = "backward"
@@ -352,6 +357,7 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
         assert not hasattr(model, con_name_base + str(len(design_vars)))
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_forward_design_fixing(self):
         fd_method = "forward"
