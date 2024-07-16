@@ -434,19 +434,26 @@ class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
                     for vidpair, coef in quadratic_zeros:
                         del ans.quadratic[vidpair]
             elif not mult:
-                # the multiplier has cleared out the entire expression.  Check
-                # if this is suppressing a NaN because we can't clear everything
-                # out if it is
-                if ans.constant != ans.constant or any(
-                    c != c for c in ans.linear.values()
-                ):
+                # the multiplier has cleared out the entire expression.
+                # check if this is suppressing a NaN because we can't
+                # clear everything out if it is
+                has_nan_coefficient = (
+                    ans.constant != ans.constant
+                    or any(lcoeff != lcoeff for lcoeff in ans.linear.values())
+                    or (
+                        ans.quadratic is not None
+                        and any(qcoeff != qcoeff for qcoeff in ans.quadratic.values())
+                    )
+                )
+                if has_nan_coefficient:
                     # There's a nan in here, so we distribute the 0
                     self._factor_multiplier_into_quadratic_terms(ans, mult)
                     return ans
                 return self.Result()
             else:
                 # mult not in {0, 1}: factor it into the constant,
-                # linear coefficients, and nonlinear term
+                # linear coefficients, quadratic coefficients,
+                # and nonlinear term
                 self._factor_multiplier_into_quadratic_terms(ans, mult)
             return ans
 
