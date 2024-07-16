@@ -79,6 +79,9 @@ class TestKestrel(unittest.TestCase):
         doc = pyomo.neos.doc
         dockeys = set(doc.keys())
 
+        # Octeract interface is disabled, see #3321
+        amplsolvers.pop('octeract')
+
         self.assertEqual(amplsolvers, dockeys)
 
         # gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
