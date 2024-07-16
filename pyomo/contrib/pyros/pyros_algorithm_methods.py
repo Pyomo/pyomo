@@ -210,7 +210,7 @@ def ROSolver_iterative_solve(model_data, config):
             and k != 0
         )
         if polish_master_solution:
-            master_data.solve_dr_polishing()
+            _, polishing_successful = master_data.solve_dr_polishing()
 
         # track variable values
         current_iter_var_data = get_variable_value_data(
