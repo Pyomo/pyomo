@@ -13,6 +13,8 @@
 Methods for execution of the main PyROS cutting set algorithm.
 """
 
+from collections import namedtuple
+
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.collections import ComponentMap
 from pyomo.core.base import value
@@ -74,8 +76,6 @@ def get_variable_value_data(working_blk, dr_var_to_monomial_map):
     """
     Get variable value data.
     """
-    from collections import namedtuple
-
     VariableValueData = namedtuple(
         "VariableValueData",
         ("first_stage_variables", "second_stage_variables", "decision_rule_monomials"),
