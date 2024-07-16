@@ -80,7 +80,7 @@ class TestKestrel(unittest.TestCase):
         dockeys = set(doc.keys())
 
         # Octeract interface is disabled, see #3321
-        amplsolvers.pop('octeract')
+        amplsolvers.remove('octeract')
 
         self.assertEqual(amplsolvers, dockeys)
 
