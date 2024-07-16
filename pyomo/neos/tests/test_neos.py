@@ -149,8 +149,11 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
-    def test_octeract(self):
-        self._run('octeract')
+    # [16 Jul 24] Octeract is erroring.  We will disable the interface
+    # (and testing) until we have time to resolve #3321
+    #
+    # def test_octeract(self):
+    #     self._run('octeract')
 
     def test_ooqp(self):
         if self.sense == pyo.maximize:
