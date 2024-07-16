@@ -236,9 +236,8 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         arg1.linear = {}
     elif not is_equal_to(arg2.constant, 1):
         c = arg2.constant
-        _linear = arg1.linear
-        for vid, coef in _linear.items():
-            _linear[vid] = c * coef
+        for vid, coef in arg1.linear.items():
+            arg1.linear[vid] = c * coef
     if not is_zero(arg1.constant):
         _merge_dict(arg1.linear, arg1.constant, arg2.linear)
 
@@ -258,33 +257,35 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
         ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
         return _GENERAL, ans
 
-    # We are multiplying (A + Bx + Cx^2 + D(x)) * (A + Bx + Cx^2 + Dx))
+    # multiplying (A1 + B1x + C1x^2 + D1(x)) * (A2 + B2x + C2x^2 + D2x))
     _, x1 = arg1
     _, x2 = arg2
     ans.multiplier = x1.multiplier * x2.multiplier
     x1.multiplier = x2.multiplier = 1
-    # x1.const * x2.const [AA]
+
+    # constant term [A1A2]
     # TODO: what if either constant is NaN?
     if is_zero(x1.constant) or is_zero(x2.constant):
         ans.constant = 0
     else:
         ans.constant = x1.constant * x2.constant
+
     # linear & quadratic terms
     if not is_zero(x2.constant):
-        # [BA], [CA]
-        c = x2.constant
-        if is_equal_to(c, 1):
+        # [B1A2], [C1A2]
+        x2_c = x2.constant
+        if is_equal_to(x2_c, 1):
             ans.linear = dict(x1.linear)
             if x1.quadratic:
                 ans.quadratic = dict(x1.quadratic)
         else:
-            ans.linear = {vid: c * coef for vid, coef in x1.linear.items()}
+            ans.linear = {vid: x2_c * coef for vid, coef in x1.linear.items()}
             if x1.quadratic:
-                ans.quadratic = {k: c * coef for k, coef in x1.quadratic.items()}
+                ans.quadratic = {k: x2_c * coef for k, coef in x1.quadratic.items()}
     if not is_zero(x1.constant):
-        # [AB]
+        # [A1B2]
         _merge_dict(ans.linear, x1.constant, x2.linear)
-        # [AC]
+        # [A1C2]
         if x2.quadratic:
             if ans.quadratic:
                 _merge_dict(ans.quadratic, x1.constant, x2.quadratic)
@@ -293,14 +294,16 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
             else:
                 c = x1.constant
                 ans.quadratic = {k: c * coef for k, coef in x2.quadratic.items()}
-    # [BB]
+    # [B1B2]
     if x1.linear and x2.linear:
         quad = _mul_linear_linear(visitor.var_order.__getitem__, x1.linear, x2.linear)
         if ans.quadratic:
             _merge_dict(ans.quadratic, 1, quad)
         else:
             ans.quadratic = quad
-    # [DA] + [DB] + [DC] + [DD]
+
+    # nonlinear portion
+    # [D1A2] + [D1B2] + [D1C2] + [D1D2]
     ans.nonlinear = 0
     if x1.nonlinear is not None:
         ans.nonlinear += x1.nonlinear * x2.to_expression(visitor)
