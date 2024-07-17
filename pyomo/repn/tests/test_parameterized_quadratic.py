@@ -1222,6 +1222,38 @@ class TestParameterizedQuadratic(unittest.TestCase):
             + (m.y**4 + 0.8 + 5 * m.y * m.z * (-1) + (m.y + 2)) * m.x,
         )
 
+    def test_ternary_product_linear(self):
+        m = build_test_model()
+        expr = (1 + 2 * m.x) * (3 + 4 * m.y) * (5 + 6 * m.z)
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.y])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.z): m.z})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.z): 1})
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, 5 * (3 + 4 * m.y))
+        self.assertEqual(len(repn.linear), 2)
+        assertExpressionsEqual(self, repn.linear[id(m.x)], (3 + 4 * m.y) * 10)
+        assertExpressionsEqual(self, repn.linear[id(m.z)], (3 + 4 * m.y) * 6)
+        self.assertEqual(len(repn.quadratic), 1)
+        assertExpressionsEqual(
+            self, repn.quadratic[id(m.x), id(m.z)], (3 + 4 * m.y) * 12
+        )
+        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(
+            self,
+            repn.to_expression(visitor),
+            (
+                (3 + 4 * m.y) * 12 * (m.x * m.z)
+                + (3 + 4 * m.y) * 10 * m.x
+                + (3 + 4 * m.y) * 6 * m.z
+                + 5 * (3 + 4 * m.y)
+            ),
+        )
+
     def test_repr_parameterized_quadratic_repn(self):
         m = build_test_model()
         expr = 2 + m.x + m.x**2 + log(m.x)
