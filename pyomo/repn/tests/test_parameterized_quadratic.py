@@ -978,6 +978,11 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertIsNone(repn.quadratic)
         assertExpressionsEqual(self, repn.nonlinear, 2 * log(m.x) + 2 * log(m.x))
+        assertExpressionsEqual(
+            self,
+            repn.to_expression(visitor),
+            2 * log(m.x) + 2 * log(m.x) + 2 + 2 * (m.y + m.y ** 2)
+        )
 
     def test_negation_linear(self):
         m = build_test_model()
