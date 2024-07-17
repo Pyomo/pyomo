@@ -74,6 +74,9 @@ class ParameterizedQuadraticRepn(QuadraticRepn):
             f"nonlinear={self.nonlinear})"
         )
 
+    def __repr__(self):
+        return str(self)
+
     def walker_exitNode(self):
         if self.nonlinear is not None:
             return _GENERAL, self
