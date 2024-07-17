@@ -981,7 +981,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.to_expression(visitor),
-            2 * log(m.x) + 2 * log(m.x) + 2 + 2 * (m.y + m.y ** 2)
+            2 * log(m.x) + 2 * log(m.x) + 2 + 2 * (m.y + m.y**2),
         )
 
     def test_negation_linear(self):
