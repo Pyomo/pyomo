@@ -2908,7 +2908,6 @@ class TestSetArgs2(PyomoModel):
         with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
             self.instance = self.model.create_instance()
 
-
 class TestMisc(PyomoModel):
     def setUp(self):
         #
