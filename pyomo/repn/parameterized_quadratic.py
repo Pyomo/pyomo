@@ -281,16 +281,16 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     x1.constant = 0
     x1_lin = x1.linear
     x1.linear = {}
-    # [CB] + [CC] + [CD]
+    # [C1B2] + [C1C2] + [C1D2]
     if x1.quadratic:
         ans.nonlinear += x1.to_expression(visitor) * x2.to_expression(visitor)
         x1.quadratic = None
     x2.linear = {}
-    # [BC] + [BD]
+    # [B1C2] + [B1D2]
     if x1_lin and (x2.nonlinear is not None or x2.quadratic):
         x1.linear = x1_lin
         ans.nonlinear += x1.to_expression(visitor) * x2.to_expression(visitor)
-    # [AD]
+    # [A1D2]
     if not is_zero(x1_c) and x2.nonlinear is not None:
         # TODO: what if nonlinear contains nan?
         ans.nonlinear += x1_c * x2.nonlinear
