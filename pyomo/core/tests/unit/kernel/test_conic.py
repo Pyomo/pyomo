@@ -786,8 +786,8 @@ class Test_dual_power(_conic_tester_base, unittest.TestCase):
         x[1].value = None
 
 
-# these mosek 10 constraints are really anemic and can't be evaluated, pprinted,
-# checked for convexity, pickled, etc.
+# These mosek 10 constraints can't be evaluated, pprinted, checked for convexity,
+# pickled, etc., so I won't use the _conic_tester_base for them
 class Test_primal_geomean(unittest.TestCase):
     def test_as_domain(self):
         b = primal_geomean.as_domain(r=[2, 3], x=6)
