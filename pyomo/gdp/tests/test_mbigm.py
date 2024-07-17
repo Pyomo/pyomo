@@ -1019,10 +1019,13 @@ class EdgeCases(unittest.TestCase):
             out.getvalue().strip(),
         )
 
-        # We just fixed the infeasible by to False
+        # We just fixed the infeasible disjunct to False
         self.assertFalse(m.disjunction.disjuncts[0].active)
         self.assertTrue(m.disjunction.disjuncts[0].indicator_var.fixed)
         self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
+
+        # We didn't actually transform the infeasible disjunct
+        self.assertIsNone(m.disjunction.disjuncts[0].transformation_block)
 
         # the remaining constraints are transformed correctly.
         cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[1].constraint[1])
@@ -1030,28 +1033,20 @@ class EdgeCases(unittest.TestCase):
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            21 + m.x - m.y
-            <= 0 * m.disjunction.disjuncts[0].binary_indicator_var
-            + 12.0 * m.disjunction.disjuncts[2].binary_indicator_var,
+            21 + m.x - m.y <= 12.0 * m.disjunction.disjuncts[2].binary_indicator_var,
         )
 
         cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[2].constraint[1])
         self.assertEqual(len(cons), 2)
-        print(cons[0].expr)
-        print(cons[1].expr)
         assertExpressionsEqual(
             self,
             cons[0].expr,
-            0.0 * m.disjunction_disjuncts[0].binary_indicator_var
-            - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var
-            <= m.x - (m.y - 9),
+            -12.0 * m.disjunction_disjuncts[1].binary_indicator_var <= m.x - (m.y - 9),
         )
         assertExpressionsEqual(
             self,
             cons[1].expr,
-            m.x - (m.y - 9)
-            <= 0.0 * m.disjunction_disjuncts[0].binary_indicator_var
-            - 12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
+            m.x - (m.y - 9) <= -12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
         )
 
     @unittest.skipUnless(
