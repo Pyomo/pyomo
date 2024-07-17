@@ -176,11 +176,11 @@ model.S = Set(model.B, within=model.A)
 # Validation of set arrays can also be performed with the _validate_ option.
 # This is applied to all sets in the array:
 #
-def T_validate(model, value):
+def T_validate(model, value, index):
     return value in model.A
 
 
-model.T = Set(model.B, validate=M_validate)
+model.T = Set(model.B, validate=T_validate)
 
 
 ##

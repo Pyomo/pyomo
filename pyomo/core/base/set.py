@@ -506,6 +506,7 @@ class TuplizeValuesInitializer(InitializerBase):
 
 class _NotFound(object):
     "Internal type flag used to indicate if an object is not found in a set"
+
     pass
 
 
@@ -1409,7 +1410,19 @@ class FiniteSetData(_FiniteSetMixin, SetData):
 
             if self._validate is not None:
                 try:
-                    flag = self._validate(_block, _value)
+                    # differentiate between indexed and non-indexed sets
+                    if self._index is not None:
+                        # indexed set: the value and the index are given
+                        pass
+                        if type(_value) == tuple:
+                            # _value is a tuple: unpack it for the method arguments' tuple
+                            flag = self._validate(_block, (*_value, self._index))
+                        else:
+                            # _value is not a tuple: no need to unpack it for the method arguments' tuple
+                            flag = self._validate(_block, (_value, self._index))
+                    else:
+                        # non-indexed set: only the tentative member is given
+                        flag = self._validate(_block, _value)
                 except:
                     logger.error(
                         "Exception raised while validating element '%s' "

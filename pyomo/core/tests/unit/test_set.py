@@ -4319,7 +4319,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
 
-        def _validate(model, i, j):
+        def _validate_I(model, i, j):
             self.assertIs(model, m)
             if i + j < 2:
                 return True
@@ -4327,7 +4327,7 @@ class TestSet(unittest.TestCase):
                 return False
             raise RuntimeError("Bogus value")
 
-        m.I = Set(validate=_validate)
+        m.I = Set(validate=_validate_I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.I.add((0, 1)))
@@ -4347,7 +4347,10 @@ class TestSet(unittest.TestCase):
 
         # Note: one of these indices will trigger the exception in the
         # validot when it is called for the index.
-        m.J = Set([(0, 0), (2, 2)], validate=_validate)
+        def _validate_J(model, i, j, index):
+            return _validate_I(model, i, j)
+
+        m.J = Set([(0, 0), (2, 2)], validate=_validate_J)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.J[2, 2].add((0, 1)))
