@@ -1254,6 +1254,26 @@ class TestParameterizedQuadratic(unittest.TestCase):
             ),
         )
 
+    def test_noninteger_pow_linear(self):
+        m = build_test_model()
+        expr = (1 + 2 * m.x + 3 * m.y) ** 1.5
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.y, m.z])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertIsNone(repn.quadratic)
+        assertExpressionsEqual(self, repn.nonlinear, (1 + 3 * m.y + 2 * m.x) ** 1.5)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), (1 + 3 * m.y + 2 * m.x) ** 1.5
+        )
+
     def test_repr_parameterized_quadratic_repn(self):
         m = build_test_model()
         expr = 2 + m.x + m.x**2 + log(m.x)
