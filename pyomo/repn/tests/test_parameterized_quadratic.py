@@ -1318,10 +1318,10 @@ class TestParameterizedQuadratic(unittest.TestCase):
             self,
             repn.to_expression(visitor),
             (
-                4 * m.x ** 2
+                4 * m.x**2
                 + ((1 + 3 * m.y) * 2 + (1 + 3 * m.y) * 2) * m.x
                 + (1 + 3 * m.y) * (1 + 3 * m.y)
-            )
+            ),
         )
 
     def test_repr_parameterized_quadratic_repn(self):
