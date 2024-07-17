@@ -1095,7 +1095,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 1})
         self.assertIsNone(repn.nonlinear)
         assertExpressionsEqual(
-            self, repn.to_expression(visitor), SumExpression([m.x ** 2])
+            self, repn.to_expression(visitor), SumExpression([m.x**2])
         )
 
     def test_sum_bilinear_terms_commute_product(self):
