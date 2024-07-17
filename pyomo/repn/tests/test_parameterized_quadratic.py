@@ -1076,6 +1076,28 @@ class TestParameterizedQuadratic(unittest.TestCase):
             ),
         )
 
+    def test_expanded_monomial_square_term(self):
+        m = build_test_model()
+        expr = m.x * m.x * m.p
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, wrt=[m.z])
+        # ensure overcomplication issues with standard repn
+        # are not repeated by quadratic repn
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 1})
+        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), SumExpression([m.x ** 2])
+        )
+
     def test_sum_bilinear_terms_commute_product(self):
         m = build_test_model()
         expr = m.x * m.y + m.y * m.x
