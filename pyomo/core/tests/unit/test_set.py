@@ -4349,6 +4349,7 @@ class TestSet(unittest.TestCase):
         # validot when it is called for the index.
         def _validate_J(model, i, j, index):
             return _validate_I(model, i, j)
+
         m.J = Set([(0, 0), (2, 2)], validate=_validate_J)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
