@@ -185,36 +185,6 @@ class ParameterizedQuadraticRepn(QuadraticRepn):
                     self.nonlinear += nl
 
 
-class ParameterizedQuadraticBeforeChildDispatcher(
-    ParameterizedLinearBeforeChildDispatcher
-):
-    @staticmethod
-    def _before_linear(visitor, child):
-        return True, None
-
-    @staticmethod
-    def _before_var(visitor, child):
-        _id = id(child)
-        if _id not in visitor.var_map:
-            if child.fixed:
-                return False, (_CONSTANT, visitor.check_constant(child.value, child))
-            if child in visitor.wrt:
-                # pseudo-constant
-                # We aren't treating this Var as a Var for the purposes of this walker
-                return False, (_FIXED, child)
-            # This is a normal situation
-            ParameterizedLinearBeforeChildDispatcher._record_var(visitor, child)
-        ans = visitor.Result()
-        ans.linear[_id] = 1
-        return False, (ExprType.LINEAR, ans)
-
-    @staticmethod
-    def _before_param(visitor, child):
-        ans = visitor.Result()
-        ans.constant = child
-        return False, (_CONSTANT, ans)
-
-
 def is_zero(obj):
     """Return true if expression/constant is zero, False otherwise."""
     return obj.__class__ in native_numeric_types and not obj
