@@ -212,11 +212,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         _merge_dict(arg1.linear, arg1.constant, arg2.linear)
 
     # Finally, the constant and multipliers
-    # TODO: what if arg1.constant or arg2.constant is nan?
-    if is_zero(arg1.constant) or is_zero(arg2.constant):
-        arg1.constant = 0
-    else:
-        arg1.constant *= arg2.constant
+    arg1.constant *= arg2.constant
     arg1.multiplier *= arg2.multiplier
     return _QUADRATIC, arg1
 
@@ -234,14 +230,13 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     x1.multiplier = x2.multiplier = 1
 
     # constant term [A1A2]
-    # TODO: what if either constant is NaN?
-    if is_zero(x1.constant) or is_zero(x2.constant):
+    if not x1.constant and not x2.constant:
         ans.constant = 0
     else:
         ans.constant = x1.constant * x2.constant
 
     # linear & quadratic terms
-    if not is_zero(x2.constant):
+    if x2.constant:
         # [B1A2], [C1A2]
         x2_c = x2.constant
         if is_equal_to(x2_c, 1):
@@ -252,7 +247,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
             ans.linear = {vid: x2_c * coef for vid, coef in x1.linear.items()}
             if x1.quadratic:
                 ans.quadratic = {k: x2_c * coef for k, coef in x1.quadratic.items()}
-    if not is_zero(x1.constant):
+    if x1.constant:
         # [A1B2]
         _merge_dict(ans.linear, x1.constant, x2.linear)
         # [A1C2]
@@ -293,7 +288,8 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
         x1.linear = x1_lin
         ans.nonlinear += x1.to_expression(visitor) * x2.to_expression(visitor)
     # [AD]
-    if not is_zero(x1_c) and x2.nonlinear is not None:
+    if x1_c and x2.nonlinear is not None:
+        # TODO: what if nonlinear contains nan?
         ans.nonlinear += x1_c * x2.nonlinear
     return _GENERAL, ans
 
