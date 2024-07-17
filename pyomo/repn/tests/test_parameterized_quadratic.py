@@ -1274,6 +1274,56 @@ class TestParameterizedQuadratic(unittest.TestCase):
             self, repn.to_expression(visitor), (1 + 3 * m.y + 2 * m.x) ** 1.5
         )
 
+    def test_variable_pow_linear(self):
+        m = build_test_model()
+        expr = (1 + 2 * m.x + 3 * m.y) ** (m.y)
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.y, m.z])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(repn.linear, {})
+        self.assertIsNone(repn.quadratic)
+        assertExpressionsEqual(self, repn.nonlinear, (1 + 3 * m.y + 2 * m.x) ** m.y)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), (1 + 3 * m.y + 2 * m.x) ** m.y
+        )
+
+    def test_pow_integer_fixed_var(self):
+        m = build_test_model()
+        m.z.fix(2)
+        expr = (1 + 2 * m.x + 3 * m.y) ** (m.z)
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.y, m.z])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, (1 + 3 * m.y) * (1 + 3 * m.y))
+        self.assertEqual(len(repn.linear), 1)
+        assertExpressionsEqual(
+            self, repn.linear[id(m.x)], (1 + 3 * m.y) * 2 + (1 + 3 * m.y) * 2
+        )
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 4})
+        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(
+            self,
+            repn.to_expression(visitor),
+            (
+                4 * m.x ** 2
+                + ((1 + 3 * m.y) * 2 + (1 + 3 * m.y) * 2) * m.x
+                + (1 + 3 * m.y) * (1 + 3 * m.y)
+            )
+        )
+
     def test_repr_parameterized_quadratic_repn(self):
         m = build_test_model()
         expr = 2 + m.x + m.x**2 + log(m.x)
