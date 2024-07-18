@@ -37,9 +37,36 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
 
         return m
 
-    def check_pw_linear_log_x(self, m, points):
-        x1 = points[0][0]
-        x2 = points
+    def check_pw_linear_log_x(self, m, pwlf, x1, x2, x3):
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+
+        points = [(x1,), (x2,), (x3,)]
+        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
+        self.assertEqual(pwlf._points, points)
+        self.assertEqual(len(pwlf._linear_functions), 2)
+
+        assertExpressionsStructurallyEqual(
+            self,
+            pwlf._linear_functions[0](m.x),
+            ((log(x2) - log(x1))/(x2 - x1))*m.x +
+            (log(x2) - ((log(x2) - log(x1))/(x2 - x1))*x2),
+            places=7
+        )
+        assertExpressionsStructurallyEqual(
+            self,
+            pwlf._linear_functions[1](m.x),
+            ((log(x3) - log(x2))/(x3 - x2))*m.x +
+            (log(x3) - ((log(x3) - log(x2))/(x3 - x2))*x3),
+            places=7
+        )
+
+        self.assertEqual(len(pwlf._expressions), 1)
+        new_cons = n_to_pwl.get_transformed_component(m.cons)
+        self.assertTrue(new_cons.active)
+        self.assertIs(new_cons.body, pwlf._expressions[id(new_cons.body.expr)])
+        self.assertIsNone(new_cons.ub)
+        self.assertEqual(new_cons.lb, 0.35)
+        self.assertIs(n_to_pwl.get_src_component(new_cons), m.cons)
         
     def test_log_constraint_uniform_grid(self):
         m = self.make_model()
@@ -60,36 +87,8 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         pwlf = pwlf[0]
         
         points = [(1.0009,), (5.5,), (9.9991,)]
-        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
-        self.assertEqual(pwlf._points, points)
-        self.assertEqual(len(pwlf._linear_functions), 2)
-
-        x1 = 1.0009
-        x2 = 5.5
-        assertExpressionsStructurallyEqual(
-            self,
-            pwlf._linear_functions[0](m.x),
-            ((log(x2) - log(x1))/(x2 - x1))*m.x +
-            (log(x2) - ((log(x2) - log(x1))/(x2 - x1))*x2),
-            places=7
-        )
-        x1 = 5.5
-        x2 = 9.9991
-        assertExpressionsStructurallyEqual(
-            self,
-            pwlf._linear_functions[1](m.x),
-            ((log(x2) - log(x1))/(x2 - x1))*m.x +
-            (log(x2) - ((log(x2) - log(x1))/(x2 - x1))*x2),
-            places=7
-        )
-
-        self.assertEqual(len(pwlf._expressions), 1)
-        new_cons = n_to_pwl.get_transformed_component(m.cons)
-        self.assertTrue(new_cons.active)
-        self.assertIs(new_cons.body, pwlf._expressions[id(new_cons.body.expr)])
-        self.assertIsNone(new_cons.ub)
-        self.assertEqual(new_cons.lb, 0.35)
-        self.assertIs(n_to_pwl.get_src_component(new_cons), m.cons)
+        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
     def test_log_constraint_random_grid(self):
         m = self.make_model()
@@ -110,9 +109,34 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                                              descend_into=True))
         self.assertEqual(len(pwlf), 1)
         pwlf = pwlf[0]
+
+        x1 = 4.370861069626263
+        x2 = 7.587945476302646
+        x3 = 9.556428757689245
+        self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
         
+
+    def test_log_constraint_lmt_uniform_sample(self):
+        m = self.make_model()
+        
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=3,
+            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM,
+        )
+
+        # cons is transformed
+        self.assertFalse(m.cons.active)
+
+        pwlf = list(m.component_data_objects(PiecewiseLinearFunction,
+                                             descend_into=True))
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
         set_trace()
-        points = [(4.370861069626263,), (7.587945476302646,), (9.556428757689245,)]
-        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
-        self.assertEqual(pwlf._points, points)
-        self.assertEqual(len(pwlf._linear_functions), 2)
+
+        x1 = 4.370861069626263
+        x2 = 7.587945476302646
+        x3 = 9.556428757689245
+        self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
