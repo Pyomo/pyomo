@@ -259,7 +259,7 @@ def generate_sliced_components(
     Parameters
     ----------
 
-    b: _BlockData
+    b: BlockData
         Block whose components will be sliced
 
     index_stack: list
@@ -267,7 +267,7 @@ def generate_sliced_components(
         component, that have been sliced. This is necessary to return the
         sets that have been sliced.
 
-    slice_: IndexedComponent_slice or _BlockData
+    slice_: IndexedComponent_slice or BlockData
         Slice generated so far.  This function will yield extensions to
         this slice at the current level of the block hierarchy.
 
@@ -443,7 +443,7 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
     Parameters
     ----------
 
-    m: _BlockData
+    m: BlockData
         Block whose components (and their sub-components) will be
         partitioned
 
@@ -546,7 +546,7 @@ def flatten_dae_components(model, time, ctype, indices=None, active=None):
     Parameters
     ----------
 
-    model: _BlockData
+    model: BlockData
         Block whose components are partitioned
 
     time: Set

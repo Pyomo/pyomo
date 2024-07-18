@@ -493,9 +493,8 @@ class GurobiDirect(DirectSolver):
         if not con.active:
             return None
 
-        if is_fixed(con.body):
-            if self._skip_trivial_constraints:
-                return None
+        if self._skip_trivial_constraints and is_fixed(con.body):
+            return None
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
 

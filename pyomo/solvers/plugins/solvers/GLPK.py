@@ -19,6 +19,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.enums import maximize, minimize
 from pyomo.common.errors import ApplicationError
 from pyomo.opt import (
     SolverFactory,
@@ -28,7 +29,6 @@ from pyomo.opt import (
     SolverResults,
     TerminationCondition,
     SolutionStatus,
-    ProblemSense,
 )
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
@@ -308,10 +308,8 @@ class GLPKSHELL(SystemCallSolver):
             ):
                 raise ValueError
 
-            self.is_integer = 'mip' == ptype and True or False
-            prob.sense = (
-                'min' == psense and ProblemSense.minimize or ProblemSense.maximize
-            )
+            self.is_integer = 'mip' == ptype
+            prob.sense = minimize if 'min' == psense else maximize
             prob.number_of_constraints = prows
             prob.number_of_nonzeros = pnonz
             prob.number_of_variables = pcols

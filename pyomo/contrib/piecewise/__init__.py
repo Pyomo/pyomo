@@ -35,4 +35,9 @@ from pyomo.contrib.piecewise.transform.convex_combination import (
 )
 from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     NonlinearToPWL,
+from pyomo.contrib.piecewise.transform.nested_inner_repn import (
+    NestedInnerRepresentationGDPTransformation,
+)
+from pyomo.contrib.piecewise.transform.disaggregated_logarithmic import (
+    DisaggregatedLogarithmicMIPTransformation,
 )

@@ -33,7 +33,7 @@ from pyomo.environ import (
     cos,
     SolverFactory,
 )
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.contrib.trustregion.interface import TRFInterface
@@ -158,7 +158,7 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertIsInstance(k, ExternalFunctionExpression)
             self.assertIn(str(self.interface.model.x[0]), str(k))
             self.assertIn(str(self.interface.model.x[1]), str(k))
-            self.assertIsInstance(i, _GeneralVarData)
+            self.assertIsInstance(i, VarData)
             self.assertEqual(i, self.interface.data.ef_outputs[1])
         for i, k in self.interface.data.basis_expressions.items():
             self.assertEqual(k, 0)

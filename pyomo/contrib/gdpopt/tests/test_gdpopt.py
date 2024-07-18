@@ -22,8 +22,6 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
-from pyomo.contrib.appsi.base import Solver
-from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block,
     add_disjunct_list,

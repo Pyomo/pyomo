@@ -14,7 +14,7 @@ from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.modeling import unique_component_name
-
+from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.objective import Objective
@@ -132,11 +132,9 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     block.cons = Reference(constraints)
     var_set = ComponentSet(variables)
     input_vars = []
-    for con in constraints:
-        for var in identify_variables(con.expr, include_fixed=include_fixed):
-            if var not in var_set:
-                input_vars.append(var)
-                var_set.add(var)
+    for var in get_vars_from_components(block, Constraint, include_fixed=include_fixed):
+        if var not in var_set:
+            input_vars.append(var)
     block.input_vars = Reference(input_vars)
     add_local_external_functions(block)
     return block

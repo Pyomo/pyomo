@@ -62,7 +62,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         # referenced in constraints, so that one doesn't end up with a
         # zillion "unreferenced variables" warning messages. stored at
         # the object level to avoid additional method arguments.
-        # dictionary of id(_VarData)->_VarData.
+        # dictionary of id(VarData)->VarData.
         self._referenced_variable_ids = {}
 
         # Keven Hunter made a nice point about using %.16g in his attachment

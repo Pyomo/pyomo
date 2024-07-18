@@ -722,7 +722,7 @@ class NumericExpression(ExpressionBase, NumericValue):
     @deprecated(
         'The implicit recasting of a "not potentially variable" '
         'expression node to a potentially variable one is no '
-        'longer supported (this violates that immutability '
+        'longer supported (this violates the immutability '
         'promise for Pyomo5 expression trees).',
         version='6.4.3',
     )
@@ -1238,7 +1238,7 @@ class LinearExpression(SumExpression):
 
       - not potentially variable (e.g., native types, Params, or NPV expressions)
       - :py:class:`MonomialTermExpression`
-      - :py:class:`_VarData`
+      - :py:class:`VarData`
 
     Args:
         args (tuple): Children nodes
@@ -2288,8 +2288,11 @@ def _iadd_mutablenpvsum_mutable(a, b):
 def _iadd_mutablenpvsum_native(a, b):
     if not b:
         return a
-    a._args_.append(b)
-    a._nargs += 1
+    if a._args_ and a._args_[-1].__class__ in native_numeric_types:
+        a._args_[-1] += b
+    else:
+        a._args_.append(b)
+        a._nargs += 1
     return a
 
 
@@ -2301,9 +2304,7 @@ def _iadd_mutablenpvsum_npv(a, b):
 
 def _iadd_mutablenpvsum_param(a, b):
     if b.is_constant():
-        b = b.value
-        if not b:
-            return a
+        return _iadd_mutablesum_native(a, b.value)
     a._args_.append(b)
     a._nargs += 1
     return a
@@ -2384,8 +2385,11 @@ def _iadd_mutablelinear_mutable(a, b):
 def _iadd_mutablelinear_native(a, b):
     if not b:
         return a
-    a._args_.append(b)
-    a._nargs += 1
+    if a._args_ and a._args_[-1].__class__ in native_numeric_types:
+        a._args_[-1] += b
+    else:
+        a._args_.append(b)
+        a._nargs += 1
     return a
 
 
@@ -2397,9 +2401,7 @@ def _iadd_mutablelinear_npv(a, b):
 
 def _iadd_mutablelinear_param(a, b):
     if b.is_constant():
-        b = b.value
-        if not b:
-            return a
+        return _iadd_mutablesum_native(a, b.value)
     a._args_.append(b)
     a._nargs += 1
     return a
@@ -2483,8 +2485,11 @@ def _iadd_mutablesum_mutable(a, b):
 def _iadd_mutablesum_native(a, b):
     if not b:
         return a
-    a._args_.append(b)
-    a._nargs += 1
+    if a._args_ and a._args_[-1].__class__ in native_numeric_types:
+        a._args_[-1] += b
+    else:
+        a._args_.append(b)
+        a._nargs += 1
     return a
 
 
@@ -2496,9 +2501,7 @@ def _iadd_mutablesum_npv(a, b):
 
 def _iadd_mutablesum_param(a, b):
     if b.is_constant():
-        b = b.value
-        if not b:
-            return a
+        return _iadd_mutablesum_native(a, b.value)
     a._args_.append(b)
     a._nargs += 1
     return a

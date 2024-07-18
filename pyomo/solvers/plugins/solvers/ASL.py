@@ -23,6 +23,7 @@ from pyomo.opt.base.solvers import _extract_version, SolverFactory
 from pyomo.opt.solver import SystemCallSolver
 from pyomo.core.kernel.block import IBlock
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
 from pyomo.core import TransformationFactory
 
 import logging
@@ -100,7 +101,8 @@ class ASL(SystemCallSolver):
                 timeout=5,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                universal_newlines=True,
+                text=True,
+                errors='ignore',
             )
             ver = _extract_version(results.stdout)
             if ver is None:
@@ -158,11 +160,9 @@ class ASL(SystemCallSolver):
         # Pyomo/Pyomo) with any user-specified external function
         # libraries
         #
-        if 'PYOMO_AMPLFUNC' in env:
-            if 'AMPLFUNC' in env:
-                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
-            else:
-                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
+        amplfunc = amplfunc_merge(env)
+        if amplfunc:
+            env['AMPLFUNC'] = amplfunc
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
