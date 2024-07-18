@@ -151,28 +151,7 @@ Pyomo.DoE Solver Interface
 
 
 .. autoclass:: pyomo.contrib.doe.doe.DesignOfExperiments
-    :members: __init__, stochastic_program, compute_FIM, run_grid_search
-
-.. Note::
-    ``stochastic_program()`` includes the following steps:
-        #.  Build two-stage stochastic programming optimization model where scenarios correspond to finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
-        #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
-        #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
-
-.. autoclass:: pyomo.contrib.doe.measurements.MeasurementVariables
-    :members: __init__, add_variables
-
-.. autoclass:: pyomo.contrib.doe.measurements.DesignVariables
-    :members: __init__, add_variables
-
-.. autoclass:: pyomo.contrib.doe.scenario.ScenarioGenerator
-    :special-members: __init__
-
-.. autoclass:: pyomo.contrib.doe.result.FisherResults
-    :members: __init__, result_analysis
-
-.. autoclass:: pyomo.contrib.doe.result.GridSearchResult
-    :special-members: __init__
+    :members: __init__, create_doe_model, compute_FIM, run_doe, compute_FIM_full_factorial
 
 
 Pyomo.DoE Usage Example
@@ -211,7 +190,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
+    >>> from pyomo.contrib.doe import DesignOfExperiments
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -219,26 +198,10 @@ Step 1: Define the Pyomo process model
 
 The process model for the reaction kinetics problem is shown below.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_kinetics.py 
-    :language: python 
-    :pyobject: create_model
-
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_kinetics.py 
-    :language: python 
-    :pyobject: disc_for_measure
-
-.. note::
-    The model requires at least two options: "block" and "global". Both options requires the pass of a created empty Pyomo model. 
-    With "global" option, only design variables and their time sets need to be defined; 
-    With "block" option, a full model needs to be defined. 
 
 
 Step 2: Define the inputs for Pyomo.DoE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
-    :language: python 
-    :start-at: # Control time set
-    :end-before: ### Compute
 
 
 Step 3: Compute the FIM of a square MBDoE problem
@@ -249,10 +212,6 @@ This method computes an MBDoE optimization problem with no degree of freedom.
 This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_finite``.
 ``direct_kaug`` mode requires the installation of the solver `k_aug <https://github.com/dthierry/k_aug>`_.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
-    :language: python 
-    :start-after: ### Compute the FIM
-    :end-before: # test result
 
 Step 4: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -266,14 +225,9 @@ It allows users to define any number of design decisions. Heatmaps can be drawn 
 The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method.
 Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_grid_search.py 
-    :language: python 
-    :pyobject: main
 
 Successful run of the above code shows the following figure:
 
-.. figure:: grid-1.png
-   :scale: 35 %
 
 A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around $C_{A0}=5.0$ M, $T=300.0$ K, while the least informative region is around $C_{A0}=1.0$ M, $T=700.0$ K.
 
@@ -284,8 +238,5 @@ Pyomo.DoE accomplishes gradient-based optimization with the ``stochastic_program
 
 This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_optimize_doe.py 
-    :language: python 
-    :pyobject: main 
 
 
