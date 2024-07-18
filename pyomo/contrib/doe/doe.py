@@ -510,7 +510,13 @@ class DesignOfExperiments:
                 continue
 
             # Simulate the model
-            self.solver.solve(model)
+            try:
+                res = self.solver.solve(model)
+                assert (res.solver.termination_condition == "optimal")
+            except:
+                raise RuntimeError(
+                    "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                )
 
             # Extract the measurement values for the scenario and append
             measurement_vals.append(
@@ -1014,7 +1020,8 @@ class DesignOfExperiments:
             comp.fix()
 
         try:
-            self.solver.solve(model.base_model, tee=self.tee)
+            res = self.solver.solve(model.base_model, tee=self.tee)
+            assert (res.solver.termination_condition == "optimal")
             self.logger.info("Model from experiment solved.")
         except:
             raise RuntimeError(
@@ -1479,7 +1486,10 @@ class DesignOfExperiments:
                 self.logger.warning("failed count:", failures)
 
                 self._computed_FIM = np.zeros(self.prior_FIM.shape)
-                iter_timer.tic(msg=None)
+
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
 
             FIM = self._computed_FIM
 
@@ -1494,9 +1504,9 @@ class DesignOfExperiments:
                     "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
                 )
 
-            # If the real value is less than or equal to zero, set the E_opt value to np.NaN
+            # If the real value is less than or equal to zero, set the E_opt value to nan
             if E_vals.real[E_ind] <= 0:
-                E_opt = np.NaN
+                E_opt = np.nan
             else:
                 E_opt = np.log10(E_vals.real[E_ind])
 

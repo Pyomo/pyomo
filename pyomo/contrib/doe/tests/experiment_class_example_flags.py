@@ -245,3 +245,16 @@ class FullReactorExperiment(ReactorExperiment):
         return self.label_experiment_impl(
             [[m.t_control], [m.t_control], [m.t_control]], flag=flag
         )
+
+class FullReactorExperimentBad(ReactorExperiment):
+    def label_experiment(self, flag=0):
+        m = self.model
+
+        self.label_experiment_impl(
+            [[m.t_control], [m.t_control], [m.t_control]], flag=flag
+        )
+
+        m.bad_con_1 = pyo.Constraint(expr=m.CA[0] >= 1.0)
+        m.bad_con_2 = pyo.Constraint(expr=m.CA[0] <= 0.0)
+
+        return m

@@ -6,6 +6,7 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.contrib.doe.tests.experiment_class_example import *
+from pyomo.contrib.doe.tests.experiment_class_example_flags import FullReactorExperimentBad
 from pyomo.contrib.doe import *
 from pyomo.contrib.doe.utils import *
 
@@ -15,6 +16,8 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 from pathlib import Path
+
+import logging
 
 ipopt_available = SolverFactory("ipopt").available()
 
@@ -466,6 +469,87 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         # Compare scaled and rescaled values
         assert np.all(np.isclose(FIM2, resc_FIM))
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_reactor_solve_bad_model(self):
+        fd_method = "central"
+        obj_used = "det"
+
+        experiment = FullReactorExperimentBad(data_ex, 10, 3)
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Model from experiment did not solve appropriately. Make sure the model is well-posed.",
+        ):
+            doe_obj.run_doe()
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not pandas_available, "pandas is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_reactor_grid_search_bad_model(self):
+        fd_method = "central"
+        obj_used = "det"
+
+        experiment = FullReactorExperimentBad(data_ex, 10, 3)
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+            logger_level=logging.ERROR,
+        )
+
+        design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
+
+        doe_obj.compute_FIM_full_factorial(
+            design_ranges=design_ranges, method="sequential"
+        )
+
+        # Check to make sure the lengths of the inputs in results object are indeed correct
+        CA_vals = doe_obj.fim_factorial_results["CA[0]"]
+        T_vals = doe_obj.fim_factorial_results["T[0]"]
+
+        # Assert length is correct
+        assert (len(CA_vals) == 9) and (len(T_vals) == 9)
+        assert (len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3)
+
+        # Assert unique values are correct
+        assert (set(CA_vals).issuperset(set([1, 3, 5]))) and (
+            set(T_vals).issuperset(set([300, 500, 700]))
+        )
 
 
 if __name__ == "__main__":
