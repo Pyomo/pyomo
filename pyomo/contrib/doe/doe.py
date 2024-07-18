@@ -1116,6 +1116,20 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
 
+        if self.objective_option not in [
+            ObjectiveLib.det,
+            ObjectiveLib.trace,
+            ObjectiveLib.zero,
+        ]:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
+
+        if not hasattr(model, "fim"):
+            raise RuntimeError(
+                "Model provided does not have variable `fim`. Please make sure the model is built properly before creating the objective."
+            )
+
         small_number = 1e-10
 
         # Make objective block for constraints connected to objective
@@ -1239,10 +1253,6 @@ class DesignOfExperiments:
         elif self.objective_option == ObjectiveLib.zero:
             # add dummy objective function
             model.objective = pyo.Objective(expr=0)
-        else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
 
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, model=None):
