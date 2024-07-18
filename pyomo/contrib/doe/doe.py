@@ -27,7 +27,6 @@
 
 import pyomo.environ as pyo
 from pyomo.opt import SolverStatus
-from pyomo.common import DeveloperError
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
@@ -415,7 +414,6 @@ class DesignOfExperiments:
         else:
             self.check_model_FIM(FIM=self.prior_FIM)
 
-        # ToDo: Decide where the FIM should be saved.
         if method == "sequential":
             self._sequential_FIM(model=model)
             self._computed_FIM = self.seq_FIM
@@ -471,8 +469,9 @@ class DesignOfExperiments:
             )
             model.scenarios = range(len(model.unknown_parameters) + 1)
         else:
-            # To-Do: add an error message for this as not being implemented yet
-            pass
+            raise AttributeError(
+                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            )
 
         # Fix design variables
         for comp, _ in model.experiment_inputs.items():
@@ -493,12 +492,6 @@ class DesignOfExperiments:
                 )  # Backward always negative perturbation; 0 at s = 0
             elif self.fd_formula == FiniteDifferenceStep.forward:
                 diff = self.step * (s != 0)  # Forward always positive; 0 at s = 0
-            else:
-                raise DeveloperError(
-                    "Finite difference option not recognized. Please contact the developers as you should not see this error."
-                )
-                diff = 0
-                pass
 
             # If we are doing forward/backward, no change for s=0
             skip_param_update = (
@@ -1012,7 +1005,7 @@ class DesignOfExperiments:
             )
             model.scenarios = range(len(model.base_model.unknown_parameters) + 1)
         else:
-            raise DeveloperError(
+            raise AttributeError(
                 "Finite difference option not recognized. Please contact the developers as you should not see this error."
             )
 
@@ -1247,8 +1240,7 @@ class DesignOfExperiments:
             # add dummy objective function
             model.objective = pyo.Objective(expr=0)
         else:
-            # something went wrong!
-            raise DeveloperError(
+            raise AttributeError(
                 "Objective option not recognized. Please contact the developers as you should not see this error."
             )
 
