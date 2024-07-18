@@ -482,8 +482,6 @@ class DesignOfExperiments:
         # In a loop.....
         # Calculate measurement values for each scenario
         for s in model.scenarios:
-            param = model.parameter_scenarios[s]
-
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
                 diff = self.step * (
@@ -502,8 +500,14 @@ class DesignOfExperiments:
                 diff = 0
                 pass
 
-            # Update parameter values for the given finite difference scenario
-            param.set_value(model.unknown_parameters[param] * (1 + diff))
+            # If we are doing forward/backward, no change for s=0
+            skip_param_update = (self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]) and (s == 0)
+            if not skip_param_update:
+                param = model.parameter_scenarios[s]
+                # Update parameter values for the given finite difference scenario
+                param.set_value(model.unknown_parameters[param] * (1 + diff))
+            else:
+                continue
 
             # Simulate the model
             self.solver.solve(model)
