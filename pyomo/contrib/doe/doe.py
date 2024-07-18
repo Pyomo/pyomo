@@ -878,7 +878,7 @@ class DesignOfExperiments:
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
 
-        model.priorFIM = pyo.Expression(
+        model.prior_FIM = pyo.Expression(
             model.parameter_names, model.parameter_names, rule=read_prior
         )
 
@@ -914,7 +914,7 @@ class DesignOfExperiments:
                         * m.sensitivity_jacobian[n, q]
                         for n in model.output_names
                     )
-                    + m.priorFIM[p, q]
+                    + m.prior_FIM[p, q]
                 )
 
         model.jacobian_constraint = pyo.Constraint(
@@ -976,11 +976,11 @@ class DesignOfExperiments:
 
         # Check that the user input FIM and Jacobian are the correct dimension
         if self.prior_FIM is not None:
-            self.check_model_FIM(self.prior_FIM)
+            self.check_model_FIM(FIM=self.prior_FIM)
         else:
             self.prior_FIM = np.zeros((self.n_parameters, self.n_parameters))
         if self.fim_initial is not None:
-            self.check_model_FIM(self.fim_initial)
+            self.check_model_FIM(FIM=self.fim_initial)
         else:
             self.fim_initial = np.eye(self.n_parameters) + self.prior_FIM
         if self.jac_initial is not None:
@@ -1301,7 +1301,7 @@ class DesignOfExperiments:
         self.logger.info("Model has expected labels.")
 
     # Check the FIM shape against what is expected from the model.
-    def check_model_FIM(self, FIM=None):
+    def check_model_FIM(self, model=None, FIM=None):
         """
         Checks if the specified matrix, FIM, matches the shape expected
         from the model. This method should only be called after the
@@ -1312,7 +1312,11 @@ class DesignOfExperiments:
         Parameters
         ----------
         model: model for suffix checking, Default: None, (self.model)
+        FIM: FIM value to check on the model
         """
+        if model is None:
+            model = self.model
+
         if FIM.shape != (self.n_parameters, self.n_parameters):
             raise ValueError(
                 "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
@@ -1362,7 +1366,7 @@ class DesignOfExperiments:
                 "``fim`` is not defined on the model provided. Please build the model first."
             )
 
-        self.check_model_FIM(model, FIM)
+        self.check_model_FIM(model=model, FIM=FIM)
 
         # Update FIM prior
         for ind1, p1 in enumerate(model.parameter_names):

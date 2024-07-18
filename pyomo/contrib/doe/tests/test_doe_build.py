@@ -41,7 +41,7 @@ def get_FIM_FIMPrior_Q_L(doe_obj=None):
         for j in model.parameter_names
     ]
     FIM_prior_vals = [
-        pyo.value(model.priorFIM[i, j])
+        pyo.value(model.prior_FIM[i, j])
         for i in model.parameter_names
         for j in model.parameter_names
     ]
@@ -452,6 +452,45 @@ class TestReactorExampleBuild(unittest.TestCase):
         assert np.array_equal(FIM_prior, FIM_prior_model)
         assert np.array_equal(L_initial, L)
         assert np.array_equal(JAC_initial, Q)
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_update_FIM(self):
+        fd_method = "forward"
+        obj_used = "trace"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        FIM_update = np.ones((4, 4)) * 10
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        doe_obj.create_doe_model()
+
+        doe_obj.update_FIM_prior(FIM=FIM_update)
+
+        # Grab values to ensure we set the correct piece
+        FIM, FIM_prior_model, Q, L, sigma = get_FIM_FIMPrior_Q_L(doe_obj)
+
+        # Make sure they match the inputs we gave
+        assert np.array_equal(FIM_update, FIM_prior_model)
 
 
 if __name__ == "__main__":
