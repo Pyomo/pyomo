@@ -815,6 +815,20 @@ def pyros_config():
     # === Advanced Options
     # ================================================
     CONFIG.declare(
+        "skip_pretriangularization",
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description=(
+                """
+                True to skip pretriangularization of the equality
+                constraints to determine nonadjustable variables
+                during preprocessing, False otherwise.
+                """
+            ),
+        ),
+    )
+    CONFIG.declare(
         "bypass_local_separation",
         ConfigValue(
             default=False,
