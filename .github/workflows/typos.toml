@@ -38,6 +38,8 @@ caf = "caf"
 WRONLY = "WRONLY"
 # Ignore the name Hax
 Hax = "Hax"
+# Ignore dout (short for dual output in SAS solvers)
+dout = "dout"
 # Big Sur
 Sur = "Sur"
 # contrib package named mis and the acronym whence the name comes
@@ -67,4 +69,6 @@ RO = "RO"
 EOF = "EOF"
 # Ignore lst as shorthand for list
 lst = "lst"
+# Abbreviation of gamma (used in stochpdegas1_automatic.py)
+gam = "gam"
 # AS NEEDED: Add More Words Below
