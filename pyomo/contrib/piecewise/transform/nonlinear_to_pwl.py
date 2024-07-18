@@ -12,10 +12,7 @@
 import enum
 import itertools
 
-from lineartree import LinearTreeRegressor
-import lineartree
 import logging
-import numpy as np
 
 from pyomo.environ import (
     TransformationFactory,
@@ -41,6 +38,8 @@ from pyomo.environ import (
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
+from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import numpy as np
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr import identify_variables
@@ -54,12 +53,11 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
 
-from sklearn.linear_model import LinearRegression
-import random
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
+lineartree, lineartree_available = attempt_import('lineartree')
+sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
 
 logger = logging.getLogger(__name__)
+
 
 class DomainPartitioningMethod(enum.IntEnum):
     RANDOM_GRID = 1
@@ -117,22 +115,15 @@ def get_points_lmt(points, bounds, func, seed):
     y_list = []
     for point in points:
         y_list.append(func(*point))
-    regr = LinearTreeRegressor(
-        LinearRegression(),
+    # ESJ: Do we really need the sklearn dependency to get LinearRegression??
+    regr = lineartree.LinearTreeRegressor(
+        sklearn_lm.LinearRegression(),
         criterion='mse',
         max_bins=120,
         min_samples_leaf=4,
         max_depth=5,
     )
-
-    # Using train_test_split is silly. TODO: remove this and just sample my own
-    # extra points if I want to estimate the error.
-    X_train, X_test, y_train, y_test = train_test_split(
-        x_list, y_list, test_size=0.2, random_state=seed
-    )
-    regr.fit(X_train, y_train)
-    y_pred = regr.predict(X_test)
-    error = mean_squared_error(y_test, y_pred)
+    regr.fit(x_list, y_list)
 
     leaves, splits, ths = parse_linear_tree_regressor(regr, bounds)
 
@@ -572,6 +563,7 @@ class NonlinearToPWL(Transformation):
         bounds = []
         for v in var_list:
             if None in v.bounds:
+                # ESJ TODO: Con is undefined--this is a bug!
                 raise ValueError(
                     "Cannot automatically approximate constraints with unbounded "
                     "variables. Var '%s' appearining in component '%s' is missing "

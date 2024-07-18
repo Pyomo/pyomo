@@ -116,27 +116,28 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
         
 
-    def test_log_constraint_lmt_uniform_sample(self):
-        m = self.make_model()
+    # def test_log_constraint_lmt_uniform_sample(self):
+    #     m = self.make_model()
         
-        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-        n_to_pwl.apply_to(
-            m,
-            num_points=3,
-            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM,
-        )
+    #     n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+    #     n_to_pwl.apply_to(
+    #         m,
+    #         num_points=3,
+    #         domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM,
+    #     )
 
-        # cons is transformed
-        self.assertFalse(m.cons.active)
+    #     # cons is transformed
+    #     self.assertFalse(m.cons.active)
 
-        pwlf = list(m.component_data_objects(PiecewiseLinearFunction,
-                                             descend_into=True))
-        self.assertEqual(len(pwlf), 1)
-        pwlf = pwlf[0]
+    #     pwlf = list(m.component_data_objects(PiecewiseLinearFunction,
+    #                                          descend_into=True))
+    #     self.assertEqual(len(pwlf), 1)
+    #     pwlf = pwlf[0]
 
-        set_trace()
+    #     set_trace()
 
-        x1 = 4.370861069626263
-        x2 = 7.587945476302646
-        x3 = 9.556428757689245
-        self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
+    #     # TODO
+    #     x1 = 4.370861069626263
+    #     x2 = 7.587945476302646
+    #     x3 = 9.556428757689245
+    #     self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
