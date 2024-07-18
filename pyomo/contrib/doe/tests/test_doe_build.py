@@ -492,6 +492,155 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Make sure they match the inputs we gave
         assert np.array_equal(FIM_update, FIM_prior_model)
 
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_get_experiment_inputs_without_blocks(self):
+        fd_method = "forward"
+        obj_used = "trace"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        FIM_update = np.ones((4, 4)) * 10
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        doe_obj.compute_FIM(method="sequential")
+
+        stuff = doe_obj.get_experiment_input_values(model=doe_obj.compute_FIM_model)
+
+        assert len(stuff) == len(
+            [k.name for k, v in doe_obj.compute_FIM_model.experiment_inputs.items()]
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_get_experiment_outputs_without_blocks(self):
+        fd_method = "forward"
+        obj_used = "trace"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        FIM_update = np.ones((4, 4)) * 10
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        doe_obj.compute_FIM(method="sequential")
+
+        stuff = doe_obj.get_experiment_output_values(model=doe_obj.compute_FIM_model)
+
+        assert len(stuff) == len(
+            [k.name for k, v in doe_obj.compute_FIM_model.experiment_outputs.items()]
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_get_measurement_error_without_blocks(self):
+        fd_method = "forward"
+        obj_used = "trace"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        FIM_update = np.ones((4, 4)) * 10
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        doe_obj.compute_FIM(method="sequential")
+
+        stuff = doe_obj.get_measurement_error_values(model=doe_obj.compute_FIM_model)
+
+        assert len(stuff) == len(
+            [k.name for k, v in doe_obj.compute_FIM_model.measurement_error.items()]
+        )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_get_unknown_parameters_without_blocks(self):
+        fd_method = "forward"
+        obj_used = "trace"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        FIM_update = np.ones((4, 4)) * 10
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        doe_obj.compute_FIM(method="sequential")
+
+        # Make sure the values can be retrieved
+        stuff = doe_obj.get_unknown_parameter_values(model=doe_obj.compute_FIM_model)
+
+        assert len(stuff) == len(
+            [k.name for k, v in doe_obj.compute_FIM_model.unknown_parameters.items()]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
