@@ -43,6 +43,7 @@ from pathlib import Path
 
 import logging
 import json
+import math
 
 
 class CalculationMode(Enum):
@@ -290,10 +291,9 @@ class DesignOfExperiments:
         model.objective.activate()
         model.obj_cons.activate()
 
-        # ToDo: add a ``get FIM from model`` function
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
-            # Get the FIM values --> ToDo: add this as a function
+            # Get the FIM values
             fim_vals = [
                 pyo.value(model.fim[i, j])
                 for i in model.parameter_names
@@ -307,6 +307,9 @@ class DesignOfExperiments:
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
+
+        if hasattr(model, "det"):
+            model.det.value = np.linalg.det(np.array(self.get_FIM()))
 
         # Solve the full model, which has now been initialized with the square solve
         res = self.solver.solve(model, tee=self.tee)
@@ -1211,13 +1214,15 @@ class DesignOfExperiments:
                     for y, element in enumerate(model.parameter_names):
                         if x_order[x] == y:
                             name_order.append(element)
-
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
-                * sum(
-                    model.fim[each, name_order[b]]
-                    for b, each in enumerate(model.parameter_names)
+                * math.prod(
+                    model.fim[
+                        model.parameter_names.at(val + 1),
+                        model.parameter_names.at(ind + 1),
+                    ]
+                    for ind, val in enumerate(list_p[d])
                 )
                 for d in range(len(list_p))
             )
@@ -1239,7 +1244,7 @@ class DesignOfExperiments:
             )
             model.obj_cons.det_rule = pyo.Constraint(rule=det_general)
             model.objective = pyo.Objective(
-                expr=pyo.log10(model.det), sense=pyo.maximize
+                expr=pyo.log10(model.det + 1e-6), sense=pyo.maximize
             )
 
         elif self.objective_option == ObjectiveLib.trace:

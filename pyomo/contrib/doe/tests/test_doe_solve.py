@@ -22,6 +22,7 @@ from pathlib import Path
 import logging
 
 ipopt_available = SolverFactory("ipopt").available()
+k_aug_available = SolverFactory('k_aug', solver_io='nl', validate=False)
 
 DATA_DIR = Path(__file__).parent
 file_path = DATA_DIR / "result.json"
@@ -203,36 +204,36 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     # TODO: Fix determinant objective code, something is awry
     #       Should only be using Cholesky=True
-    # @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    # @unittest.skipIf(not numpy_available, "Numpy is not available")
-    # def test_reactor_obj_det_solve(self):
-    # fd_method = "central"
-    # obj_used = "det"
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_reactor_obj_det_solve(self):
+        fd_method = "central"
+        obj_used = "det"
 
-    # experiment = FullReactorExperiment(data_ex, 10, 3)
+        experiment = FullReactorExperiment(data_ex, 10, 3)
 
-    # doe_obj = DesignOfExperiments(
-    # experiment,
-    # fd_formula=fd_method,
-    # step=1e-3,
-    # objective_option=obj_used,
-    # scale_constant_value=1,
-    # scale_nominal_param_value=True,
-    # prior_FIM=None,
-    # jac_initial=None,
-    # fim_initial=None,
-    # L_initial=None,
-    # L_LB=1e-7,
-    # solver=None,
-    # tee=False,
-    # args=None,
-    # _Cholesky_option=False,
-    # _only_compute_fim_lower=False,
-    # )
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=False,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=False,
+            _only_compute_fim_lower=False,
+        )
 
-    # doe_obj.run_doe()
+        doe_obj.run_doe()
 
-    # assert (doe_obj.results['Solver Status'] == "ok")
+        assert doe_obj.results['Solver Status'] == "ok"
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -331,6 +332,38 @@ class TestReactorExampleSolving(unittest.TestCase):
         )
 
         doe_obj.compute_FIM(method="sequential")
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(
+        not k_aug_available.available(False), "The 'k_aug' command is not available"
+    )
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_compute_FIM_kaug(self):
+        fd_method = "forward"
+        obj_used = "det"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        doe_obj.compute_FIM(method="kaug")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
