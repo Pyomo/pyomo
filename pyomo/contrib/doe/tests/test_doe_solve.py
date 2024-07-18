@@ -127,7 +127,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_forward_solve(self):
         fd_method = "forward"
-        obj_used = "trace"
+        obj_used = "zero"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
