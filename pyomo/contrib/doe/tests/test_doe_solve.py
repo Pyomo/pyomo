@@ -7,9 +7,10 @@ from pyomo.common.dependencies import (
 
 from pyomo.contrib.doe.tests.experiment_class_example import *
 from pyomo.contrib.doe import *
-
+from pyomo.contrib.doe.utils import *
 
 import pyomo.common.unittest as unittest
+import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 
@@ -343,6 +344,70 @@ class TestReactorExampleSolving(unittest.TestCase):
         assert (set(CA_vals).issuperset(set([1, 3, 5]))) and (
             set(T_vals).issuperset(set([300, 500, 700]))
         )
+
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_rescale_FIM(self):
+        fd_method = "central"
+        obj_used = "det"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        # With parameter scaling
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        # Without parameter scaling
+        doe_obj2 = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=False,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args=None,
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        # Run both problems
+        doe_obj.run_doe()
+        doe_obj2.run_doe()
+
+        # Extract FIM values
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
+        FIM2, Q2, L2, sigma_inv2 = get_FIM_Q_L(doe_obj=doe_obj2)
+
+        # Get rescaled FIM from the scaled version
+        param_vals = np.array([[v for k, v in doe_obj.model.scenario_blocks[0].unknown_parameters.items()], ])
+
+        resc_FIM = rescale_FIM(FIM, param_vals)
+
+        # Compare scaled and rescaled values
+        assert np.all(np.isclose(FIM2, resc_FIM))
 
 
 if __name__ == "__main__":
