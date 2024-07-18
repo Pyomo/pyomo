@@ -501,7 +501,10 @@ class DesignOfExperiments:
                 pass
 
             # If we are doing forward/backward, no change for s=0
-            skip_param_update = (self.fd_formula in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]) and (s == 0)
+            skip_param_update = (
+                self.fd_formula
+                in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]
+            ) and (s == 0)
             if not skip_param_update:
                 param = model.parameter_scenarios[s]
                 # Update parameter values for the given finite difference scenario
@@ -512,7 +515,7 @@ class DesignOfExperiments:
             # Simulate the model
             try:
                 res = self.solver.solve(model)
-                assert (res.solver.termination_condition == "optimal")
+                assert res.solver.termination_condition == "optimal"
             except:
                 raise RuntimeError(
                     "Model from experiment did not solve appropriately. Make sure the model is well-posed."
@@ -1021,7 +1024,7 @@ class DesignOfExperiments:
 
         try:
             res = self.solver.solve(model.base_model, tee=self.tee)
-            assert (res.solver.termination_condition == "optimal")
+            assert res.solver.termination_condition == "optimal"
             self.logger.info("Model from experiment solved.")
         except:
             raise RuntimeError(
@@ -1489,7 +1492,6 @@ class DesignOfExperiments:
 
                 iter_t = iter_timer.toc(msg=None)
                 time_set.append(iter_t)
-
 
             FIM = self._computed_FIM
 

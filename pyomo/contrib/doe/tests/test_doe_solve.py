@@ -6,7 +6,9 @@ from pyomo.common.dependencies import (
 )
 
 from pyomo.contrib.doe.tests.experiment_class_example import *
-from pyomo.contrib.doe.tests.experiment_class_example_flags import FullReactorExperimentBad
+from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+    FullReactorExperimentBad,
+)
 from pyomo.contrib.doe import *
 from pyomo.contrib.doe.utils import *
 
@@ -463,7 +465,16 @@ class TestReactorExampleSolving(unittest.TestCase):
         FIM2, Q2, L2, sigma_inv2 = get_FIM_Q_L(doe_obj=doe_obj2)
 
         # Get rescaled FIM from the scaled version
-        param_vals = np.array([[v for k, v in doe_obj.model.scenario_blocks[0].unknown_parameters.items()], ])
+        param_vals = np.array(
+            [
+                [
+                    v
+                    for k, v in doe_obj.model.scenario_blocks[
+                        0
+                    ].unknown_parameters.items()
+                ]
+            ]
+        )
 
         resc_FIM = rescale_FIM(FIM, param_vals)
 
@@ -498,8 +509,8 @@ class TestReactorExampleSolving(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(
-                RuntimeError,
-                "Model from experiment did not solve appropriately. Make sure the model is well-posed.",
+            RuntimeError,
+            "Model from experiment did not solve appropriately. Make sure the model is well-posed.",
         ):
             doe_obj.run_doe()
 
