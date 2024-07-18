@@ -1380,7 +1380,9 @@ class DesignOfExperiments:
     # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
-        return
+        raise NotImplementedError(
+            "Updating unknown parameter values not yet supported."
+        )
 
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(self, design_ranges=None, method="sequential"):

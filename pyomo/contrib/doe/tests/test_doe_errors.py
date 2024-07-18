@@ -956,6 +956,40 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.run_multi_doe_simultaneous(N_exp=1)
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
+    def test_update_unknown_parameter_values_not_implemented_seq(self):
+        fd_method = "central"
+        obj_used = "trace"
+        flag_val = (
+            0  # Value for faulty model build mode - 5: Mismatch error and output length
+        )
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        doe_obj = DesignOfExperiments(
+            experiment,
+            fd_formula=fd_method,
+            step=1e-3,
+            objective_option=obj_used,
+            scale_constant_value=1,
+            scale_nominal_param_value=True,
+            prior_FIM=None,
+            jac_initial=None,
+            fim_initial=None,
+            L_initial=None,
+            L_LB=1e-7,
+            solver=None,
+            tee=False,
+            args={"flag": flag_val},
+            _Cholesky_option=True,
+            _only_compute_fim_lower=True,
+        )
+
+        with self.assertRaisesRegex(
+            NotImplementedError, "Updating unknown parameter values not yet supported."
+        ):
+            doe_obj.update_unknown_parameter_values()
+
+    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_bad_FD_generate_scens(self):
         fd_method = "central"
         obj_used = "trace"
