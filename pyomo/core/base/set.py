@@ -1413,7 +1413,6 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                     # differentiate between indexed and non-indexed sets
                     if self._index is not None:
                         # indexed set: the value and the index are given
-                        pass
                         if type(_value) == tuple:
                             # _value is a tuple: unpack it for the method arguments' tuple
                             flag = self._validate(_block, (*_value, self._index))
