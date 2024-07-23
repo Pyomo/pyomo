@@ -12,17 +12,14 @@
 import logging
 import datetime
 import io
-from typing import List, Dict, Optional
+from typing import List, Optional
+
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import MarkImmutable
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.tee import TeeStream, capture_output
-from pyomo.common.log import LogStream
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.base import SymbolMap
 from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.sos import SOSConstraintData
@@ -37,7 +34,6 @@ from .persistent import PersistentSolverUtils
 from .solution import PersistentSolutionLoader
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
-import sys
 
 logger = logging.getLogger(__name__)
 

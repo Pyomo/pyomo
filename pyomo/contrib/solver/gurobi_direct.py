@@ -18,6 +18,7 @@ from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
+from pyomo.common.errors import MouseTrap
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -264,8 +265,8 @@ class GurobiDirect(SolverBase):
 
         ostreams = [io.StringIO()] + config.tee
 
+        orig_cwd = os.getcwd()
         try:
-            orig_cwd = os.getcwd()
             if config.working_dir:
                 os.chdir(config.working_dir)
             with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):

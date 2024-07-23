@@ -358,7 +358,6 @@ class PersistentSolverUtils(abc.ABC):
         old_cons = []
         old_sos = []
         new_sos = []
-        current_vars_dict = {}
         current_cons_dict = {}
         current_sos_dict = {}
         timer.start('vars')
@@ -431,7 +430,6 @@ class PersistentSolverUtils(abc.ABC):
         self.add_sos_constraints(new_sos)
         new_cons_set = set(new_cons)
         new_sos_set = set(new_sos)
-        new_vars_set = set(id(v) for v in new_vars)
         cons_to_remove_and_add = {}
         need_to_set_objective = False
         if config.update_constraints:

@@ -231,6 +231,7 @@ class Ipopt(SolverBase):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
+                    check=False,
                 )
                 version = results.stdout.splitlines()[0]
                 version = version.split(' ')[1].strip()
@@ -364,6 +365,7 @@ class Ipopt(SolverBase):
                         universal_newlines=True,
                         stdout=t.STDOUT,
                         stderr=t.STDERR,
+                        check=False,
                     )
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
@@ -426,16 +428,13 @@ class Ipopt(SolverBase):
 
         results.solver_name = self.name
         results.solver_version = self.version(config)
-        if (
-            config.load_solutions
-            and results.solution_status == SolutionStatus.noSolution
-        ):
-            raise RuntimeError(
-                'A feasible solution was not found, so no solution can be loaded.'
-                'Please set opt.config.load_solutions=False to bypass this error.'
-            )
 
         if config.load_solutions:
+            if results.solution_status == SolutionStatus.noSolution:
+                raise RuntimeError(
+                    'A feasible solution was not found, so no solution can be loaded.'
+                    'Please set opt.config.load_solutions=False to bypass this error.'
+                )
             results.solution_loader.load_vars()
             if (
                 hasattr(model, 'dual')

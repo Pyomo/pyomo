@@ -9,10 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections.abc import Iterable
 import logging
 import math
+import datetime
+import io
 from typing import List, Optional
+from collections.abc import Iterable
+
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
@@ -35,9 +38,7 @@ from pyomo.contrib.solver.config import PersistentBranchAndBoundConfig
 from pyomo.contrib.solver.persistent import PersistentSolverUtils
 from pyomo.contrib.solver.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
-import sys
-import datetime
-import io
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def _import_gurobipy():
         raise
     if gurobipy.GRB.VERSION_MAJOR < 7:
         Gurobi._available = Gurobi.Availability.BadVersion
-        raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
+        raise ImportError('The version 2 Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
 
@@ -689,9 +690,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._needs_updated = True
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
-        for con in cons:
-            conname = self._symbol_map.getSymbol(con, self._labeler)
-            level = con.level
+        for constraint in cons:
+            level = constraint.level
             if level == 1:
                 sos_type = gurobipy.GRB.SOS_TYPE1
             elif level == 2:
@@ -704,13 +704,13 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             gurobi_vars = []
             weights = []
 
-            for v, w in con.get_items():
+            for v, w in constraint.get_items():
                 v_id = id(v)
                 gurobi_vars.append(self._pyomo_var_to_solver_var_map[v_id])
                 weights.append(w)
 
             gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
-            self._pyomo_sos_to_solver_sos_map[con] = gurobipy_con
+            self._pyomo_sos_to_solver_sos_map[constraint] = gurobipy_con
         self._constraints_added_since_update.update(cons)
         self._needs_updated = True
 
@@ -1277,10 +1277,10 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         return self._solver_model.getParamInfo(param)
 
     def _intermediate_callback(self):
-        def f(gurobi_model, where):
+        def callback(where):
             self._callback_func(self._model, self, where)
 
-        return f
+        return callback
 
     def set_callback(self, func=None):
         """
@@ -1313,7 +1313,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 >>> from gurobipy import GRB # doctest:+SKIP
                 >>> import pyomo.environ as pe
                 >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
-                >>> from pyomo.contrib import appsi
+                >>> from pyomo.contrib.solver import gurobi
                 >>>
                 >>> m = pe.ConcreteModel()
                 >>> m.x = pe.Var(bounds=(0, 4))
@@ -1329,7 +1329,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 >>> _c = _add_cut(0)  # start with 2 cuts at the bounds of x
                 >>> _c = _add_cut(4)  # this is an arbitrary choice
                 >>>
-                >>> opt = appsi.solvers.Gurobi()
+                >>> opt = gurobi.Gurobi()
                 >>> opt.config.stream_solver = True
                 >>> opt.set_instance(m) # doctest:+SKIP
                 >>> opt.gurobi_options['PreCrush'] = 1
@@ -1413,30 +1413,30 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     def cbGet(self, what):
         return self._solver_model.cbGet(what)
 
-    def cbGetNodeRel(self, vars):
+    def cbGetNodeRel(self, variables):
         """
         Parameters
         ----------
         vars: Var or iterable of Var
         """
-        if not isinstance(vars, Iterable):
-            vars = [vars]
-        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
+        if not isinstance(variables, Iterable):
+            variables = [variables]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in variables]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
-        for i, v in enumerate(vars):
+        for i, v in enumerate(variables):
             v.set_value(var_values[i], skip_validation=True)
 
-    def cbGetSolution(self, vars):
+    def cbGetSolution(self, variables):
         """
         Parameters
         ----------
         vars: iterable of vars
         """
-        if not isinstance(vars, Iterable):
-            vars = [vars]
-        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
+        if not isinstance(variables, Iterable):
+            variables = [variables]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in variables]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
-        for i, v in enumerate(vars):
+        for i, v in enumerate(variables):
             v.set_value(var_values[i], skip_validation=True)
 
     def cbLazy(self, con):
@@ -1495,10 +1495,10 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 'Constraint does not have a lower or an upper bound {0} \n'.format(con)
             )
 
-    def cbSetSolution(self, vars, solution):
-        if not isinstance(vars, Iterable):
-            vars = [vars]
-        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
+    def cbSetSolution(self, variables, solution):
+        if not isinstance(variables, Iterable):
+            variables = [variables]
+        gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in variables]
         self._solver_model.cbSetSolution(gurobi_vars, solution)
 
     def cbUseSolution(self):
