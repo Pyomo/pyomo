@@ -155,8 +155,6 @@ class ReactorExperiment(object):
             neighbour_t = max(tc for tc in control_points if tc < t)
             return m.T[t] == m.T[neighbour_t]
 
-        # sim.initialize_model()
-
     def label_experiment(self):
         """
         Example for annotating (labeling) the model with a
