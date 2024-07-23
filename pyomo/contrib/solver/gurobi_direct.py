@@ -44,7 +44,7 @@ class GurobiConfig(BranchAndBoundConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super(GurobiConfig, self).__init__(
+        super().__init__(
             description=description,
             doc=doc,
             implicit=implicit,
@@ -159,10 +159,9 @@ class GurobiDirect(SolverBase):
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
             return self.Availability.NotFound
-        elif self._available == self.Availability.BadVersion:
+        if self._available == self.Availability.BadVersion:
             return self.Availability.BadVersion
-        else:
-            return self._check_license()
+        return self._check_license()
 
     def _check_license(self):
         avail = False
@@ -179,8 +178,7 @@ class GurobiDirect(SolverBase):
             if self._available is None:
                 self._available = GurobiDirect._check_full_license(m)
             return self._available
-        else:
-            return self.Availability.BadLicense
+        return self.Availability.BadLicense
 
     @classmethod
     def _check_full_license(cls, model=None):
