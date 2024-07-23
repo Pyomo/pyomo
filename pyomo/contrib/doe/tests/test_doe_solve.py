@@ -3,6 +3,7 @@ from pyomo.common.dependencies import (
     numpy_available,
     pandas as pd,
     pandas_available,
+    scipy_available
 )
 
 from pyomo.contrib.doe.tests.experiment_class_example import *
@@ -334,6 +335,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         doe_obj.compute_FIM(method="sequential")
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not scipy_available, "Scipy is not available")
     @unittest.skipIf(
         not k_aug_available.available(False), "The 'k_aug' command is not available"
     )
