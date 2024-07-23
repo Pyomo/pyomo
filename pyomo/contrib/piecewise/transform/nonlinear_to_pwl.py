@@ -33,7 +33,7 @@ from pyomo.environ import (
     Block,
     ExternalFunction,
     SortComponents,
-    LogicalConstraint
+    LogicalConstraint,
 )
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -45,10 +45,7 @@ from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr import identify_variables
 from pyomo.core.expr import SumExpression
 from pyomo.core.util import target_list
-from pyomo.contrib.piecewise import (
-    PiecewiseLinearExpression,
-    PiecewiseLinearFunction
-)
+from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFunction
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
@@ -65,10 +62,12 @@ class DomainPartitioningMethod(enum.IntEnum):
     LINEAR_MODEL_TREE_UNIFORM = 3
     LINEAR_MODEL_TREE_RANDOM = 4
 
+
 # This should be safe to use many times; declare it globally
 _quadratic_repn_visitor = QuadraticRepnVisitor(
     subexpression_cache={}, var_map={}, var_order={}, sorter=None
 )
+
 
 class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
     __slots__ = ('transformed_component', 'src_component')
@@ -76,12 +75,15 @@ class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
     def __init__(self):
         self.transformed_component = ComponentMap()
         self.src_component = ComponentMap()
+
+
 Block.register_private_data_initializer(_NonlinearToPWLTransformationData)
+
 
 def get_random_point_grid(bounds, n, func, seed=42):
     # Generate randomized grid of points
     linspaces = []
-    for (lb, ub) in bounds:
+    for lb, ub in bounds:
         np.random.seed(seed)
         linspaces.append(np.random.uniform(lb, ub, n))
     return list(itertools.product(*linspaces))
@@ -90,7 +92,7 @@ def get_random_point_grid(bounds, n, func, seed=42):
 def get_uniform_point_grid(bounds, n, func):
     # Generate non-randomized grid of points
     linspaces = []
-    for (lb, ub) in bounds:
+    for lb, ub in bounds:
         # Issues happen when exactly using the boundary
         nudge = (ub - lb) * 1e-4
         linspaces.append(
@@ -137,12 +139,14 @@ def get_points_lmt(points, bounds, func, seed):
     # here?
     return bound_point_list
 
+
 _partition_method_dispatcher = {
     DomainPartitioningMethod.RANDOM_GRID: get_random_point_grid,
     DomainPartitioningMethod.UNIFORM_GRID: get_uniform_point_grid,
     DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM: get_points_lmt_uniform_sample,
     DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM: get_points_lmt_random_sample,
 }
+
 
 def get_pwl_function_approximation(func, method, n, bounds):
     """
@@ -163,8 +167,10 @@ def get_pwl_function_approximation(func, method, n, bounds):
 
     # After getting the points, construct PWLF using the
     # function-and-list-of-points constructor
-    logger.debug(f"Constructing PWLF with {len(points)} points, each of which "
-                 f"are {dim}-dimensional")
+    logger.debug(
+        f"Constructing PWLF with {len(points)} points, each of which "
+        f"are {dim}-dimensional"
+    )
     return PiecewiseLinearFunction(points=points, function=func)
 
 
@@ -183,7 +189,7 @@ def generate_bound_points(leaves, bounds):
         for var_bound in leaf['bounds'].values():
             lower_corner_list.append(var_bound[0])
             upper_corner_list.append(var_bound[1])
-        
+
         # Duct tape to fix issues from unknown bugs
         for pt in [lower_corner_list, upper_corner_list]:
             for i in range(len(pt)):
@@ -228,12 +234,12 @@ def parse_linear_tree_regressor(linear_tree_regressor, bounds):
         if left_child_node in leaves:  # if left child is a leaf node
             node['left_leaves'].append(left_child_node)
         else:  # traverse its left node by calling function to find all the
-               # leaves from its left node
+            # leaves from its left node
             node['left_leaves'] = find_leaves(splits, leaves, splits[left_child_node])
         if right_child_node in leaves:  # if right child is a leaf node
             node['right_leaves'].append(right_child_node)
         else:  # traverse its right node by calling function to find all the
-               # leaves from its right node
+            # leaves from its right node
             node['right_leaves'] = find_leaves(splits, leaves, splits[right_child_node])
 
     # For each feature in each leaf, initialize lower and upper bounds to None
@@ -319,6 +325,7 @@ class NonlinearToPWL(Transformation):
     """
     Convert nonlinear constraints and objectives to piecewise-linear approximations.
     """
+
     CONFIG = ConfigDict('contrib.piecewise.nonlinear_to_pwl')
     CONFIG.declare(
         'targets',
@@ -422,6 +429,7 @@ class NonlinearToPWL(Transformation):
             points in order to partition the function domain.""",
         ),
     )
+
     def __init__(self):
         super(Transformation).__init__()
         self._handlers = {
@@ -454,7 +462,7 @@ class NonlinearToPWL(Transformation):
             self._transformation_blocks.clear()
             self._transformation_block_set.clear()
 
-    def _apply_to_impl( self, model, **kwds):
+    def _apply_to_impl(self, model, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
 
@@ -480,23 +488,19 @@ class NonlinearToPWL(Transformation):
         if parent in self._transformation_blocks:
             return self._transformation_blocks[parent]
 
-        nm = unique_component_name(
-            parent, '_pyomo_contrib_nonlinear_to_pwl'
-        )
+        nm = unique_component_name(parent, '_pyomo_contrib_nonlinear_to_pwl')
         self._transformation_blocks[parent] = transBlock = Block()
         parent.add_component(nm, transBlock)
         self._transformation_block_set.add(transBlock)
 
         transBlock._pwl_cons = Constraint(Any)
         return transBlock
-    
+
     def _transform_block_components(self, block, config):
         blocks = block.values() if block.is_indexed() else (block,)
         for b in blocks:
             for obj in b.component_objects(
-                active=True,
-                descend_into=False,
-                sort=SortComponents.deterministic
+                active=True, descend_into=False, sort=SortComponents.deterministic
             ):
                 if obj in self._transformation_block_set:
                     # This is a Block we created--we know we don't need to look
@@ -519,8 +523,8 @@ class NonlinearToPWL(Transformation):
         constraints = cons.values() if cons.is_indexed() else (cons,)
         for c in constraints:
             pw_approx = self._approximate_expression(
-                c.body, c, trans_block, config,
-                config.approximate_quadratic_constraints)
+                c.body, c, trans_block, config, config.approximate_quadratic_constraints
+            )
 
             if pw_approx is None:
                 # Didn't need approximated, nothing to do
@@ -531,7 +535,7 @@ class NonlinearToPWL(Transformation):
             new_cons = trans_block._pwl_cons[c.name, idx]
             trans_data_dict.src_component[new_cons] = c
             src_data_dict.transformed_component[c] = new_cons
-            
+
             # deactivate original
             c.deactivate()
 
@@ -542,8 +546,12 @@ class NonlinearToPWL(Transformation):
         src_data_dict = objective.parent_block().private_data()
         for obj in objectives:
             pw_approx = self._approximate_expression(
-                obj.expr, obj, trans_block, config,
-                config.approximate_quadratic_objectives)
+                obj.expr,
+                obj,
+                trans_block,
+                config,
+                config.approximate_quadratic_objectives,
+            )
 
             if pw_approx is None:
                 # Didn't need approximated, nothing to do
@@ -551,12 +559,11 @@ class NonlinearToPWL(Transformation):
 
             new_obj = Objective(expr=pw_approx, sense=obj.sense)
             trans_block.add_component(
-                unique_component_name(trans_block, obj.name),
-                new_obj
+                unique_component_name(trans_block, obj.name), new_obj
             )
             trans_data_dict.src_component[new_obj] = obj
             src_data_dict.transformed_component[obj] = new_obj
-            
+
             obj.deactivate()
 
     def _get_bounds_list(self, var_list, parent_component):
@@ -567,7 +574,8 @@ class NonlinearToPWL(Transformation):
                 raise ValueError(
                     "Cannot automatically approximate constraints with unbounded "
                     "variables. Var '%s' appearining in component '%s' is missing "
-                    "at least one bound" % (con.name, v.name))
+                    "at least one bound" % (con.name, v.name)
+                )
             else:
                 bounds.append(v.bounds)
         return bounds
@@ -584,15 +592,17 @@ class NonlinearToPWL(Transformation):
                     return False
         return True
 
-    def _approximate_expression(self, obj, parent_component, trans_block,
-                                config, approximate_quadratic):
+    def _approximate_expression(
+        self, obj, parent_component, trans_block, config, approximate_quadratic
+    ):
         if not self._needs_approximating(obj, approximate_quadratic):
             return
-        
+
         # Additively decompose obj and work on the pieces
         pwl_func = 0
-        for k, expr in enumerate(_additively_decompose_expr(obj) if
-                                 config.additively_decompose else (obj,)):
+        for k, expr in enumerate(
+            _additively_decompose_expr(obj) if config.additively_decompose else (obj,)
+        ):
             # First check is this is a good idea
             expr_vars = list(identify_variables(expr, include_fixed=False))
             orig_values = ComponentMap((v, v.value) for v in expr_vars)
@@ -603,7 +613,8 @@ class NonlinearToPWL(Transformation):
                     "Not approximating expression for component '%s' as "
                     "it exceeds the maximum dimension of %s. Try increasing "
                     "'max_dimension' or additively separating the expression."
-                    % (parent_component.name, config.max_dimension))
+                    % (parent_component.name, config.max_dimension)
+                )
                 pwl_func += expr
                 continue
             elif not self._needs_approximating(expr, approximate_quadratic):
@@ -616,13 +627,13 @@ class NonlinearToPWL(Transformation):
                 return value(expr)
 
             pwlf = get_pwl_function_approximation(
-                eval_expr, config.domain_partitioning_method,
+                eval_expr,
+                config.domain_partitioning_method,
                 config.num_points,
-                self._get_bounds_list(expr_vars, parent_component)
+                self._get_bounds_list(expr_vars, parent_component),
             )
             name = unique_component_name(
-                trans_block,
-                parent_component.getname(fully_qualified=False)
+                trans_block, parent_component.getname(fully_qualified=False)
             )
             trans_block.add_component(f"_pwle_{name}_{k}", pwlf)
             pwl_func += pwlf(*expr_vars)
@@ -640,7 +651,8 @@ class NonlinearToPWL(Transformation):
         else:
             raise ValueError(
                 "It does not appear that '%s' is a transformed Constraint "
-                "created by the 'nonlinear_to_pwl' transformation." % cons.name)
+                "created by the 'nonlinear_to_pwl' transformation." % cons.name
+            )
 
     def get_transformed_component(self, cons):
         data = cons.parent_block().private_data().transformed_component
@@ -649,4 +661,5 @@ class NonlinearToPWL(Transformation):
         else:
             raise ValueError(
                 "It does not appear that '%s' is a Constraint that was "
-                "transformed by the 'nonlinear_to_pwl' transformation." % cons.name)
+                "transformed by the 'nonlinear_to_pwl' transformation." % cons.name
+            )
