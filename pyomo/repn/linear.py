@@ -183,8 +183,6 @@ def to_expression(visitor, arg):
         return arg[1].to_expression(visitor)
 
 
-_exit_node_handlers = {}
-
 #
 # NEGATION handlers
 #
@@ -198,11 +196,6 @@ def _handle_negation_ANY(visitor, node, arg):
     arg[1].multiplier *= -1
     return arg
 
-
-_exit_node_handlers[NegationExpression] = {
-    None: _handle_negation_ANY,
-    (_CONSTANT,): _handle_negation_constant,
-}
 
 #
 # PRODUCT handlers
@@ -272,16 +265,6 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
-_exit_node_handlers[ProductExpression] = {
-    None: _handle_product_nonlinear,
-    (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
-    (_CONSTANT, _LINEAR): _handle_product_constant_ANY,
-    (_CONSTANT, _GENERAL): _handle_product_constant_ANY,
-    (_LINEAR, _CONSTANT): _handle_product_ANY_constant,
-    (_GENERAL, _CONSTANT): _handle_product_ANY_constant,
-}
-_exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
-
 #
 # DIVISION handlers
 #
@@ -301,13 +284,6 @@ def _handle_division_nonlinear(visitor, node, arg1, arg2):
     ans.nonlinear = to_expression(visitor, arg1) / to_expression(visitor, arg2)
     return _GENERAL, ans
 
-
-_exit_node_handlers[DivisionExpression] = {
-    None: _handle_division_nonlinear,
-    (_CONSTANT, _CONSTANT): _handle_division_constant_constant,
-    (_LINEAR, _CONSTANT): _handle_division_ANY_constant,
-    (_GENERAL, _CONSTANT): _handle_division_ANY_constant,
-}
 
 #
 # EXPONENTIATION handlers
@@ -345,13 +321,6 @@ def _handle_pow_nonlinear(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
-_exit_node_handlers[PowExpression] = {
-    None: _handle_pow_nonlinear,
-    (_CONSTANT, _CONSTANT): _handle_pow_constant_constant,
-    (_LINEAR, _CONSTANT): _handle_pow_ANY_constant,
-    (_GENERAL, _CONSTANT): _handle_pow_ANY_constant,
-}
-
 #
 # ABS and UNARY handlers
 #
@@ -371,12 +340,6 @@ def _handle_unary_nonlinear(visitor, node, arg):
     return _GENERAL, ans
 
 
-_exit_node_handlers[UnaryFunctionExpression] = {
-    None: _handle_unary_nonlinear,
-    (_CONSTANT,): _handle_unary_constant,
-}
-_exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
-
 #
 # NAMED EXPRESSION handlers
 #
@@ -394,11 +357,6 @@ def _handle_named_ANY(visitor, node, arg1):
     _type, arg1 = arg1
     return _type, arg1.duplicate()
 
-
-_exit_node_handlers[Expression] = {
-    None: _handle_named_ANY,
-    (_CONSTANT,): _handle_named_constant,
-}
 
 #
 # EXPR_IF handlers
@@ -430,11 +388,6 @@ def _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3):
     return _GENERAL, ans
 
 
-_exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if_nonlinear}
-for j in (_CONSTANT, _LINEAR, _GENERAL):
-    for k in (_CONSTANT, _LINEAR, _GENERAL):
-        _exit_node_handlers[Expr_ifExpression][_CONSTANT, j, k] = _handle_expr_if_const
-
 #
 # Relational expression handlers
 #
@@ -462,12 +415,6 @@ def _handle_equality_general(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
-_exit_node_handlers[EqualityExpression] = {
-    None: _handle_equality_general,
-    (_CONSTANT, _CONSTANT): _handle_equality_const,
-}
-
-
 def _handle_inequality_const(visitor, node, arg1, arg2):
     # It is exceptionally likely that if we get here, one of the
     # arguments is an InvalidNumber
@@ -488,12 +435,6 @@ def _handle_inequality_general(visitor, node, arg1, arg2):
         (to_expression(visitor, arg1), to_expression(visitor, arg2)), node.strict
     )
     return _GENERAL, ans
-
-
-_exit_node_handlers[InequalityExpression] = {
-    None: _handle_inequality_general,
-    (_CONSTANT, _CONSTANT): _handle_inequality_const,
-}
 
 
 def _handle_ranged_const(visitor, node, arg1, arg2, arg3):
@@ -523,10 +464,62 @@ def _handle_ranged_general(visitor, node, arg1, arg2, arg3):
     return _GENERAL, ans
 
 
-_exit_node_handlers[RangedExpression] = {
-    None: _handle_ranged_general,
-    (_CONSTANT, _CONSTANT, _CONSTANT): _handle_ranged_const,
-}
+def define_exit_node_handlers(_exit_node_handlers=None):
+    if _exit_node_handlers is None:
+        _exit_node_handlers = {}
+    _exit_node_handlers[NegationExpression] = {
+        None: _handle_negation_ANY,
+        (_CONSTANT,): _handle_negation_constant,
+    }
+    _exit_node_handlers[ProductExpression] = {
+        None: _handle_product_nonlinear,
+        (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
+        (_CONSTANT, _LINEAR): _handle_product_constant_ANY,
+        (_CONSTANT, _GENERAL): _handle_product_constant_ANY,
+        (_LINEAR, _CONSTANT): _handle_product_ANY_constant,
+        (_GENERAL, _CONSTANT): _handle_product_ANY_constant,
+    }
+    _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
+    _exit_node_handlers[DivisionExpression] = {
+        None: _handle_division_nonlinear,
+        (_CONSTANT, _CONSTANT): _handle_division_constant_constant,
+        (_LINEAR, _CONSTANT): _handle_division_ANY_constant,
+        (_GENERAL, _CONSTANT): _handle_division_ANY_constant,
+    }
+    _exit_node_handlers[PowExpression] = {
+        None: _handle_pow_nonlinear,
+        (_CONSTANT, _CONSTANT): _handle_pow_constant_constant,
+        (_LINEAR, _CONSTANT): _handle_pow_ANY_constant,
+        (_GENERAL, _CONSTANT): _handle_pow_ANY_constant,
+    }
+    _exit_node_handlers[UnaryFunctionExpression] = {
+        None: _handle_unary_nonlinear,
+        (_CONSTANT,): _handle_unary_constant,
+    }
+    _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
+    _exit_node_handlers[Expression] = {
+        None: _handle_named_ANY,
+        (_CONSTANT,): _handle_named_constant,
+    }
+    _exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if_nonlinear}
+    for j in (_CONSTANT, _LINEAR, _GENERAL):
+        for k in (_CONSTANT, _LINEAR, _GENERAL):
+            _exit_node_handlers[Expr_ifExpression][
+                _CONSTANT, j, k
+            ] = _handle_expr_if_const
+    _exit_node_handlers[EqualityExpression] = {
+        None: _handle_equality_general,
+        (_CONSTANT, _CONSTANT): _handle_equality_const,
+    }
+    _exit_node_handlers[InequalityExpression] = {
+        None: _handle_inequality_general,
+        (_CONSTANT, _CONSTANT): _handle_inequality_const,
+    }
+    _exit_node_handlers[RangedExpression] = {
+        None: _handle_ranged_general,
+        (_CONSTANT, _CONSTANT, _CONSTANT): _handle_ranged_const,
+    }
+    return _exit_node_handlers
 
 
 class LinearBeforeChildDispatcher(BeforeChildDispatcher):
@@ -728,9 +721,8 @@ def _initialize_exit_node_dispatcher(exit_handlers):
 
 class LinearRepnVisitor(StreamBasedExpressionVisitor):
     Result = LinearRepn
-    exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(_exit_node_handlers)
+        _initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     expand_nonlinear_products = False
     max_exponential_expansion = 1

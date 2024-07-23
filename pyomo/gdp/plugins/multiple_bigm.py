@@ -12,7 +12,7 @@
 import itertools
 import logging
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
@@ -310,9 +310,12 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         arg_Ms = self._config.bigM if self._config.bigM is not None else {}
 
+        # ESJ: I am relying on the fact that the ComponentSet is going to be
+        # ordered here, but using a set because I will remove infeasible
+        # Disjuncts from it if I encounter them calculating M's.
+        active_disjuncts = ComponentSet(disj for disj in obj.disjuncts if disj.active)
         # First handle the bound constraints if we are dealing with them
         # separately
-        active_disjuncts = [disj for disj in obj.disjuncts if disj.active]
         transformed_constraints = set()
         if self._config.reduce_bound_constraints:
             transformed_constraints = self._transform_bound_constraints(
@@ -585,7 +588,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         ):
             if disjunct is other_disjunct:
                 continue
-            if id(other_disjunct) in scratch_blocks:
+            elif id(other_disjunct) in scratch_blocks:
                 scratch = scratch_blocks[id(other_disjunct)]
             else:
                 scratch = scratch_blocks[id(other_disjunct)] = Block()
@@ -631,7 +634,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
                         lower_M = self._solve_disjunct_for_M(
-                            other_disjunct, scratch, unsuccessful_solve_msg
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            active_disjuncts,
                         )
                 if constraint.upper is not None and upper_M is None:
                     # last resort: calculate
@@ -639,7 +645,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
                         upper_M = self._solve_disjunct_for_M(
-                            other_disjunct, scratch, unsuccessful_solve_msg
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            active_disjuncts,
                         )
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
                 transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
@@ -651,9 +660,18 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return arg_Ms
 
     def _solve_disjunct_for_M(
-        self, other_disjunct, scratch_block, unsuccessful_solve_msg
+        self, other_disjunct, scratch_block, unsuccessful_solve_msg, active_disjuncts
     ):
+        if not other_disjunct.active:
+            # If a Disjunct is infeasible, we will discover that and deactivate
+            # it when we are calculating the M values. We remove that disjunct
+            # from active_disjuncts inside of the loop in
+            # _calculate_missing_M_values. So that means that we might have
+            # deactivated Disjuncts here that we should skip over.
+            return 0
+
         solver = self._config.solver
+
         results = solver.solve(other_disjunct, load_solutions=False)
         if results.solver.termination_condition is TerminationCondition.infeasible:
             # [2/18/24]: TODO: After the solver rewrite is complete, we will not
@@ -669,6 +687,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     "Disjunct '%s' is infeasible, deactivating." % other_disjunct.name
                 )
                 other_disjunct.deactivate()
+                active_disjuncts.remove(other_disjunct)
                 M = 0
             else:
                 # This is a solver that might report
