@@ -116,32 +116,14 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required inputs to the Pyomo.DoE solver are the following:
+The required inputs to the Pyomo.DoE solver is an Experiment object. The experiment object must have a get_labeled_model function which returns a pyomo model with four special labeled components as suffixes on the pyomo model. This is in line with the convention used in the new interface for the ParmEst contribute packed to Pyomo. The four suffix components are:
 
-* A function that creates the process model
-* Dictionary of parameters and their nominal value
-* A measurement object
-* A design variables object
-* A Numpy ``array`` containing the Prior FIM
-* Optimization solver
+* experiment_inputs - The experimental design decisions
+* experiment_outputs - The values measured during the experiment
+* measurement_error - The error associated with individual values measured during the experiment
+* unknown_parameters - Those parameters in the model that are estimated using the measured values during the experiment
 
-Below is a list of arguments that Pyomo.DoE expects the user to provide.
-
-parameter_dict : ``dictionary``
-    A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
-
-design_variables: ``DesignVariables``
-    A ``DesignVariables`` of design variables, provided by the DesignVariables class.
-    If this design var is independent of time (constant), set the time to [0]
-
-measurement_variables : ``MeasurementVariables``
-    A ``MeasurementVariables`` of the measurements, provided by the MeasurementVariables class.
-
-create_model : ``function``
-    A ``function`` returning a deterministic process model.
-
-prior_FIM : ``array``
-    An ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
+An example an Experiment object that builds and labels the model is shown below:
 
 Pyomo.DoE Solver Interface
 ---------------------------
