@@ -1549,9 +1549,9 @@ class DesignOfExperiments:
         sensitivity_design_variables=None,
         fixed_design_variables=None,
         full_design_variable_names=None,
-        title_text=None,
-        xlabel_text=None,
-        ylabel_text=None,
+        title_text="",
+        xlabel_text="",
+        ylabel_text="",
         figure_file_name=None,
         font_axes=16,
         font_tick=14,
@@ -1668,10 +1668,6 @@ class DesignOfExperiments:
         self.figure_sens_des_vars = sensitivity_design_variables
         self.figure_fixed_des_vars = fixed_design_variables
 
-        # ToDo: Add figure saving capabilities
-        if figure_file_name is not None:
-            self.logger.warning("File saving for drawing is not yet implemented.")
-
         # if one design variable name is given as DOF, draw 1D sensitivity curve
         if len(self.figure_sens_des_vars) == 1:
             self._curve1D(
@@ -1722,6 +1718,10 @@ class DesignOfExperiments:
         --------
         4 Figures of 1D sensitivity curves for each criteria
         """
+        if figure_file_name is not None:
+            show_fig = False
+        else:
+            show_fig = True
 
         # extract the range of the DOF design variable
         x_range = self.figure_result_data[self.figure_sens_des_vars[0]].values.tolist()
@@ -1754,7 +1754,12 @@ class DesignOfExperiments:
         ax.set_ylabel("$log_{10}$ Trace")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": A-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
 
         # Draw D-optimality
         fig = plt.pyplot.figure()
@@ -1770,7 +1775,12 @@ class DesignOfExperiments:
         ax.set_ylabel("$log_{10}$ Determinant")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": D-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+            )
 
         # Draw E-optimality
         fig = plt.pyplot.figure()
@@ -1786,7 +1796,12 @@ class DesignOfExperiments:
         ax.set_ylabel("$log_{10}$ Minimal eigenvalue")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": E-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+            )
 
         # Draw Modified E-optimality
         fig = plt.pyplot.figure()
@@ -1802,7 +1817,12 @@ class DesignOfExperiments:
         ax.set_ylabel("$log_{10}$ Condition number")
         ax.set_xlabel(xlabel_text)
         plt.pyplot.title(title_text + ": Modified E-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+            )
 
     def _heatmap(
         self,
@@ -1832,6 +1852,11 @@ class DesignOfExperiments:
         --------
         4 Figures of 2D heatmap for each criteria
         """
+        if figure_file_name is not None:
+            show_fig = False
+        else:
+            show_fig = True
+
         des_names = [k for k, v in self.figure_fixed_des_vars.items()]
         sens_ranges = {}
         for i in self.figure_sens_des_vars:
@@ -1892,7 +1917,12 @@ class DesignOfExperiments:
         ba = plt.pyplot.colorbar(im)
         ba.set_label("log10(trace(FIM))")
         plt.pyplot.title(title_text + ": A-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
 
         # D-optimality
         fig = plt.pyplot.figure()
@@ -1913,7 +1943,12 @@ class DesignOfExperiments:
         ba = plt.pyplot.colorbar(im)
         ba.set_label("log10(det(FIM))")
         plt.pyplot.title(title_text + ": D-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+            )
 
         # E-optimality
         fig = plt.pyplot.figure()
@@ -1934,7 +1969,12 @@ class DesignOfExperiments:
         ba = plt.pyplot.colorbar(im)
         ba.set_label("log10(minimal eig(FIM))")
         plt.pyplot.title(title_text + ": E-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+            )
 
         # Modified E-optimality
         fig = plt.pyplot.figure()
@@ -1955,7 +1995,12 @@ class DesignOfExperiments:
         ba = plt.pyplot.colorbar(im)
         ba.set_label("log10(cond(FIM))")
         plt.pyplot.title(title_text + ": Modified E-optimality")
-        plt.pyplot.show()
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+            )
 
     # Gets the FIM from an existing model
     def get_FIM(self, model=None):

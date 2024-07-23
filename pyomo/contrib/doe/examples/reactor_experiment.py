@@ -1,0 +1,204 @@
+# === Required imports ===
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
+
+# ========================
+
+
+class Experiment(object):
+    def __init__(self):
+        self.model = None
+
+    def get_labeled_model(self):
+        raise NotImplementedError(
+            "Derived experiment class failed to implement get_labeled_model"
+        )
+
+
+class ReactorExperiment(object):
+    def __init__(self, data, nfe, ncp):
+        self.data = data
+        self.nfe = nfe
+        self.ncp = ncp
+        self.model = None
+
+    def get_labeled_model(self):
+        if self.model is None:
+            self.create_model()
+            self.finalize_model()
+            self.label_experiment()
+        return self.model
+
+    def create_model(self):
+        """
+        This is an example user model provided to DoE library.
+        It is a dynamic problem solved by Pyomo.DAE.
+
+        Return
+        ------
+        m: a Pyomo.DAE model
+        """
+
+        m = self.model = pyo.ConcreteModel()
+
+        # Model parameters
+        m.R = pyo.Param(mutable=False, initialize=8.314)
+
+        # Define model variables
+        ########################
+        # time
+        m.t = ContinuousSet(bounds=[0, 1])
+
+        # Concentrations
+        m.CA = pyo.Var(m.t, within=pyo.NonNegativeReals)
+        m.CB = pyo.Var(m.t, within=pyo.NonNegativeReals)
+        m.CC = pyo.Var(m.t, within=pyo.NonNegativeReals)
+
+        # Temperature
+        m.T = pyo.Var(m.t, within=pyo.NonNegativeReals)
+
+        # Arrhenius rate law equations
+        m.A1 = pyo.Var(within=pyo.NonNegativeReals)
+        m.E1 = pyo.Var(within=pyo.NonNegativeReals)
+        m.A2 = pyo.Var(within=pyo.NonNegativeReals)
+        m.E2 = pyo.Var(within=pyo.NonNegativeReals)
+
+        # Differential variables (Conc.)
+        m.dCAdt = DerivativeVar(m.CA, wrt=m.t)
+        m.dCBdt = DerivativeVar(m.CB, wrt=m.t)
+
+        ########################
+        # End variable def.
+
+        # Equation def'n
+        ########################
+
+        # Expression for rate constants
+        @m.Expression(m.t)
+        def k1(m, t):
+            return m.A1 * pyo.exp(-m.E1 * 1000 / (m.R * m.T[t]))
+
+        @m.Expression(m.t)
+        def k2(m, t):
+            return m.A2 * pyo.exp(-m.E2 * 1000 / (m.R * m.T[t]))
+
+        # Concentration odes
+        @m.Constraint(m.t)
+        def CA_rxn_ode(m, t):
+            return m.dCAdt[t] == -m.k1[t] * m.CA[t]
+
+        @m.Constraint(m.t)
+        def CB_rxn_ode(m, t):
+            return m.dCBdt[t] == m.k1[t] * m.CA[t] - m.k2[t] * m.CB[t]
+
+        # algebraic balance for concentration of C
+        # Valid because the reaction system (A --> B --> C) is equimolar
+        @m.Constraint(m.t)
+        def CC_balance(m, t):
+            return m.CA[0] == m.CA[t] + m.CB[t] + m.CC[t]
+
+        ########################
+        # End equation def'n
+
+    def finalize_model(self):
+        """
+        Example finalize model function. There are two main tasks
+        here:
+            1. Extracting useful information for the model to align
+               with the experiment. (Here: CA0, t_final, t_control)
+            2. Discretizing the model subject to this information.
+
+        Arguments
+        ---------
+        m: Pyomo model
+        data: object containing vital experimental information
+        nfe: number of finite elements
+        ncp: number of collocation points for the finite elements
+        """
+        m = self.model
+
+        # Unpacking data before simulation
+        control_points = self.data["control_points"]
+
+        m.CA[0].value = self.data["CA0"]
+        m.CB[0].fix(self.data["CB0"])
+        m.t.update(self.data["t_range"])
+        m.t.update(control_points)
+        m.A1.fix(self.data["A1"])
+        m.A2.fix(self.data["A2"])
+        m.E1.fix(self.data["E1"])
+        m.E2.fix(self.data["E2"])
+
+        m.CA[0].setlb(self.data["CA_bounds"][0])
+        m.CA[0].setub(self.data["CA_bounds"][1])
+
+        m.t_control = control_points
+
+        # Discretizing the model
+        discr = pyo.TransformationFactory("dae.collocation")
+        discr.apply_to(m, nfe=self.nfe, ncp=self.ncp, wrt=m.t)
+
+        # Initializing Temperature in the model
+        cv = None
+        for t in m.t:
+            if t in control_points:
+                cv = control_points[t]
+            m.T[t].setlb(self.data["T_bounds"][0])
+            m.T[t].setub(self.data["T_bounds"][1])
+            m.T[t] = cv
+
+        @m.Constraint(m.t - control_points)
+        def T_control(m, t):
+            """
+            Piecewise constant Temperature between control points
+            """
+            neighbour_t = max(tc for tc in control_points if tc < t)
+            return m.T[t] == m.T[neighbour_t]
+
+        # sim.initialize_model()
+
+    def label_experiment(self):
+        """
+        Example for annotating (labeling) the model with a
+        full experiment.
+
+        Arguments
+        ---------
+
+        """
+        m = self.model
+
+        # Grab measurement labels
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        # Add CA to experiment outputs
+        m.experiment_outputs.update((m.CA[t], None) for t in m.t)
+        # Add CB to experiment outputs
+        m.experiment_outputs.update((m.CB[t], None) for t in m.t)
+        # Add CC to experiment outputs
+        m.experiment_outputs.update((m.CC[t], None) for t in m.t)
+
+        # Adding no error for measurements currently
+        m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        concentration_error = 1e-2  # Error in concentration measurement
+        # Add measurement error for CA
+        m.measurement_error.update((m.CA[t], concentration_error) for t in m.t)
+        # Add measurement error for CB
+        m.measurement_error.update((m.CB[t], concentration_error) for t in m.t)
+        # Add measurement error for CC
+        m.measurement_error.update((m.CC[t], concentration_error) for t in m.t)
+
+        # Grab design variables
+        m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        # Add experimental input label for initial concentration
+        m.experiment_inputs.update(
+            (m.CA[t], pyo.ComponentUID(m.CA[t])) for t in [m.t.first()]
+        )
+        # Add experimental input label for Temperature
+        m.experiment_inputs.update(
+            (m.T[t], pyo.ComponentUID(m.T[t])) for t in m.t_control
+        )
+
+        # Add unknown parameter labels
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        # Add labels to all unknown parameters with nominal value as the value
+        m.unknown_parameters.update((k, pyo.value(k)) for k in [m.A1, m.A2, m.E1, m.E2])
