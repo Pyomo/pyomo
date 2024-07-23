@@ -3,7 +3,7 @@ from pyomo.common.dependencies import (
     numpy_available,
     pandas as pd,
     pandas_available,
-    scipy_available
+    scipy_available,
 )
 
 from pyomo.contrib.doe.tests.experiment_class_example import *
