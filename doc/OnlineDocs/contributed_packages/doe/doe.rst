@@ -165,7 +165,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an Experiment object
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :language: python
-    :linenos: 8-23
+    :lines: 8-23
 
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -174,7 +174,7 @@ The process model for the reaction kinetics problem is shown below. We build the
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :language: python
-    :linenos: 32-101
+    :lines: 32-101
 
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -183,7 +183,7 @@ Here we add data to the model and finalize the discretization. This step is requ
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :language: python
-    :linenos: 103-156
+    :lines: 103-156
 
 Step 3: Label the important information for model on the DoE object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -192,7 +192,7 @@ We label the four important groups as defined before.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :language: python
-    :linenos: 158-202
+    :lines: 158-202
 
 Step 4: We give the experiment object a get_labeled_model function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -201,7 +201,7 @@ This function summarizes the previous 3 steps and is used by `Pyomo.DoE` to buil
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :language: python
-    :linenos: 25-30
+    :lines: 25-30
 
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -218,12 +218,12 @@ The following code executes the above problem description:
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_factorial_FIM.py
     :language: python
-    :linenos: 14-84
+    :lines: 14-84
 
 An example output of the code above, a design exploration for the initial concentration and temperature as experimental design variables with 9 values, produces the four figures summarized below:
 
 .. figure:: FIM_sensitivity.png
-   :scale: 35 %
+   :scale: 50 %
 
 A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around $C_{A0}=5.0$ M, $T=300.0$ K, while the least informative region is around $C_{A0}=1.0$ M, $T=700.0$ K.
 
@@ -234,7 +234,7 @@ This is an example of running an experimental design to determine an optimal exp
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
     :language: python
-    :linenos: 14-80
+    :lines: 14-80
 
 When run, the optimal design is an initial concentration of 5.0 mol/L and an initial temperature of 494 K with all other temperatures being 300 K. The corresponding log-10 determinant of the FIM is 13.75
 
