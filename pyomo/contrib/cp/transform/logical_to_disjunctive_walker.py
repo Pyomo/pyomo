@@ -51,14 +51,7 @@ def _dispatch_var(visitor, node):
 
 
 def _dispatch_param(visitor, node):
-    if int(value(node)) == value(node):
-        return False, node
-    else:
-        raise ValueError(
-            "Found non-integer valued Param '%s' in a logical "
-            "expression. This cannot be written to a disjunctive "
-            "form." % node.name
-        )
+    return False, node
 
 
 def _dispatch_expression(visitor, node):
