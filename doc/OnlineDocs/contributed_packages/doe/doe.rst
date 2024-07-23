@@ -116,7 +116,7 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required inputs to the Pyomo.DoE solver is an Experiment object. The experiment object must have a get_labeled_model function which returns a pyomo model with four special labeled components as suffixes on the pyomo model. This is in line with the convention used in the new interface in the contributed pacakge, `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_. The four suffix components are:
+The required inputs to the Pyomo.DoE solver is an Experiment object. The experiment object must have a get_labeled_model function which returns a pyomo model with four special labeled components as suffixes on the pyomo model. This is in line with the convention used in the new interface in the contributed package, `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_. The four suffix components are:
 
 * experiment_inputs - The experimental design decisions
 * experiment_outputs - The values measured during the experiment
