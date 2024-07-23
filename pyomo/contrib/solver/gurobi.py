@@ -998,9 +998,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 vars_to_load=vars_to_load, solution_number=solution_number
             )
 
-        gurobi_vars_to_load = [
-            var_map[pyomo_var_id] for pyomo_var_id in vars_to_load
-        ]
+        gurobi_vars_to_load = [var_map[pyomo_var_id] for pyomo_var_id in vars_to_load]
         vals = self._solver_model.getAttr("X", gurobi_vars_to_load)
 
         res = ComponentMap()
