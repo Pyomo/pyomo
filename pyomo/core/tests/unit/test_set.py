@@ -4543,9 +4543,11 @@ class TestSet(unittest.TestCase):
         m.I = Set(initialize=[1, 2, 3])
         m.J = Set(initialize=[4, 5, 6])
         m.K = Set(initialize=[(1, 4), (2, 6), (3, 5)], within=m.I * m.J)
+        m.L = Set(initialize=[1, 3], within=m.I)
         m.II = Set([1, 2, 3], initialize={1: [0], 2: [1, 2], 3: range(3)})
         m.JJ = Set([1, 2, 3], initialize={1: [0], 2: [1, 2], 3: range(3)})
         m.KK = Set([1, 2], initialize=[], dimen=lambda m, i: i)
+        m.LL = Set([2, 3], within=m.II, initialize={2: [1, 2], 3: [1]})
 
         output = StringIO()
         m.I.pprint(ostream=output)
@@ -4569,6 +4571,8 @@ JJ : Size=0, Index={1, 2, 3}, Ordered=Insertion
                     'I': [-1, 0],
                     'II': {1: [10, 11], 3: [30]},
                     'K': [-1, 4, -1, 6, 0, 5],
+                    'L': [-1],
+                    'LL': {3: [30]},
                 }
             }
         )
@@ -4576,6 +4580,7 @@ JJ : Size=0, Index={1, 2, 3}, Ordered=Insertion
         self.assertEqual(list(i.I), [-1, 0])
         self.assertEqual(list(i.J), [4, 5, 6])
         self.assertEqual(list(i.K), [(-1, 4), (-1, 6), (0, 5)])
+        self.assertEqual(list(i.L), [-1])
         self.assertEqual(list(i.II[1]), [10, 11])
         self.assertEqual(list(i.II[3]), [30])
         self.assertEqual(list(i.JJ[1]), [0])
@@ -4583,9 +4588,11 @@ JJ : Size=0, Index={1, 2, 3}, Ordered=Insertion
         self.assertEqual(list(i.JJ[3]), [0, 1, 2])
         self.assertEqual(list(i.KK[1]), [])
         self.assertEqual(list(i.KK[2]), [])
+        self.assertEqual(list(i.LL[3]), [30])
 
         # Implicitly-constructed set should fall back on initialize!
         self.assertEqual(list(i.II[2]), [1, 2])
+        self.assertEqual(list(i.LL[2]), [1, 2])
 
         # Additional tests for tuplize:
         i = m.create_instance(data={None: {'K': [(1, 4), (2, 6)], 'KK': [1, 4, 2, 6]}})
@@ -6388,3 +6395,209 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(len(vals), 1)
         self.assertIsInstance(vals[0], SetProduct_OrderedSet)
         self.assertIsNot(vals[0], cross)
+
+    def test_issue_3284(self):
+        # test creating (indexed and non-indexed) sets using the within argument
+        # using concrete model and initialization
+        problem = ConcreteModel()
+        # non-indexed sets not using the within argument
+        problem.A = Set(initialize=[1, 2, 3])
+        problem.B = Set(dimen=2, initialize=[(1, 2), (3, 4), (5, 6)])
+        # non-indexed sets using within argument
+        problem.subset_A = Set(within=problem.A, initialize=[2, 3])
+        problem.subset_B = Set(within=problem.B, dimen=2, initialize=[(1, 2), (5, 6)])
+        # indexed sets not using the within argument
+        problem.C = Set(problem.A, initialize={1: [-1, 3], 2: [4, 7], 3: [3, 8]})
+        problem.D = Set(
+            problem.B, initialize={(1, 2): [1, 5], (3, 4): [3], (5, 6): [6, 8, 9]}
+        )
+        # indexed sets using an indexed set for the within argument
+        problem.subset_C = Set(
+            problem.A, within=problem.C, initialize={1: [-1], 2: [4], 3: [3, 8]}
+        )
+        problem.subset_D = Set(
+            problem.B,
+            within=problem.D,
+            initialize={(1, 2): [1, 5], (3, 4): [], (5, 6): [6]},
+        )
+        # indexed sets using a non-indexed set for the within argument
+        problem.E = Set([0, 1], within=problem.A, initialize={0: [1, 2], 1: [3]})
+        problem.F = Set(
+            [(1, 2, 3), (4, 5, 6)],
+            within=problem.B,
+            initialize={(1, 2, 3): [(1, 2)], (4, 5, 6): [(3, 4)]},
+        )
+        # check them
+        self.assertEqual(list(problem.A), [1, 2, 3])
+        self.assertEqual(list(problem.B), [(1, 2), (3, 4), (5, 6)])
+        self.assertEqual(list(problem.subset_A), [2, 3])
+        self.assertEqual(list(problem.subset_B), [(1, 2), (5, 6)])
+        self.assertEqual(list(problem.C[1]), [-1, 3])
+        self.assertEqual(list(problem.C[2]), [4, 7])
+        self.assertEqual(list(problem.C[3]), [3, 8])
+        self.assertEqual(list(problem.D[(1, 2)]), [1, 5])
+        self.assertEqual(list(problem.D[(3, 4)]), [3])
+        self.assertEqual(list(problem.D[(5, 6)]), [6, 8, 9])
+        self.assertEqual(list(problem.subset_C[1]), [-1])
+        self.assertEqual(list(problem.subset_C[2]), [4])
+        self.assertEqual(list(problem.subset_C[3]), [3, 8])
+        self.assertEqual(list(problem.subset_D[(1, 2)]), [1, 5])
+        self.assertEqual(list(problem.subset_D[(3, 4)]), [])
+        self.assertEqual(list(problem.subset_D[(5, 6)]), [6])
+        self.assertEqual(list(problem.E[0]), [1, 2])
+        self.assertEqual(list(problem.E[1]), [3])
+        self.assertEqual(list(problem.F[(1, 2, 3)]), [(1, 2)])
+        self.assertEqual(list(problem.F[(4, 5, 6)]), [(3, 4)])
+
+        # try adding elements to test the domains (1 compatible, 1 incompatible)
+        # set subset_A
+        problem.subset_A.add(1)
+        error_message = (
+            "Cannot add value 4 to Set subset_A.\n\tThe value is not in the domain A"
+        )
+        with self.assertRaisesRegex(ValueError, error_message):
+            problem.subset_A.add(4)
+        # set subset_B
+        problem.subset_B.add((3, 4))
+        with self.assertRaisesRegex(ValueError, r".*Cannot add value \(7, 8\)"):
+            problem.subset_B.add((7, 8))
+        # set subset_C
+        problem.subset_C[2].add(7)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value 8 to Set"):
+            problem.subset_C[2].add(8)
+        # set subset_D
+        problem.subset_D[(5, 6)].add(9)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value 2 to Set"):
+            problem.subset_D[(3, 4)].add(2)
+        # set E
+        problem.E[1].add(2)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value 4 to Set"):
+            problem.E[1].add(4)
+        # set F
+        problem.F[(1, 2, 3)].add((3, 4))
+        with self.assertRaisesRegex(ValueError, r".*Cannot add value \(4, 3\)"):
+            problem.F[(4, 5, 6)].add((4, 3))
+        # check them
+        self.assertEqual(list(problem.A), [1, 2, 3])
+        self.assertEqual(list(problem.B), [(1, 2), (3, 4), (5, 6)])
+        self.assertEqual(list(problem.subset_A), [2, 3, 1])
+        self.assertEqual(list(problem.subset_B), [(1, 2), (5, 6), (3, 4)])
+        self.assertEqual(list(problem.C[1]), [-1, 3])
+        self.assertEqual(list(problem.C[2]), [4, 7])
+        self.assertEqual(list(problem.C[3]), [3, 8])
+        self.assertEqual(list(problem.D[(1, 2)]), [1, 5])
+        self.assertEqual(list(problem.D[(3, 4)]), [3])
+        self.assertEqual(list(problem.D[(5, 6)]), [6, 8, 9])
+        self.assertEqual(list(problem.subset_C[1]), [-1])
+        self.assertEqual(list(problem.subset_C[2]), [4, 7])
+        self.assertEqual(list(problem.subset_C[3]), [3, 8])
+        self.assertEqual(list(problem.subset_D[(1, 2)]), [1, 5])
+        self.assertEqual(list(problem.subset_D[(3, 4)]), [])
+        self.assertEqual(list(problem.subset_D[(5, 6)]), [6, 9])
+        self.assertEqual(list(problem.E[0]), [1, 2])
+        self.assertEqual(list(problem.E[1]), [3, 2])
+        self.assertEqual(list(problem.F[(1, 2, 3)]), [(1, 2), (3, 4)])
+        self.assertEqual(list(problem.F[(4, 5, 6)]), [(3, 4)])
+
+        # using abstract model and no initialization
+        model = AbstractModel()
+        # non-indexed sets not using the within argument
+        model.A = Set()
+        model.B = Set(dimen=2)
+        # non-indexed sets using within argument
+        model.subset_A = Set(within=model.A)
+        model.subset_B = Set(within=model.B, dimen=2)
+        # indexed sets not using the within argument
+        model.C = Set(model.A)
+        model.D = Set(model.B)
+        # indexed sets using an indexed set for the within argument
+        model.subset_C = Set(model.A, within=model.C)
+        model.subset_D = Set(model.B, within=model.D)
+        # indexed sets using a non-indexed set for the within argument
+        model.E_index = Set()
+        model.F_index = Set()
+        model.E = Set(model.E_index, within=model.A)
+        model.F = Set(model.F_index, within=model.B)
+        problem = model.create_instance(
+            data={
+                None: {
+                    'A': [3, 4, 5],
+                    'B': [(1, 2), (7, 8)],
+                    'subset_A': [3, 4],
+                    'subset_B': [(1, 2)],
+                    'C': {3: [3], 4: [4, 8], 5: [5, 6]},
+                    'D': {(1, 2): [2], (7, 8): [0, 1]},
+                    'subset_C': {3: [3], 4: [8], 5: []},
+                    'subset_D': {(1, 2): [], (7, 8): [0, 1]},
+                    'E_index': [0, 1],
+                    'F_index': [(1, 2, 3), (4, 5, 6)],
+                    'E': {0: [3, 4], 1: [5]},
+                    'F': {(1, 2, 3): [(1, 2)], (4, 5, 6): [(7, 8)]},
+                }
+            }
+        )
+
+        # check them
+        self.assertEqual(list(problem.A), [3, 4, 5])
+        self.assertEqual(list(problem.B), [(1, 2), (7, 8)])
+        self.assertEqual(list(problem.subset_A), [3, 4])
+        self.assertEqual(list(problem.subset_B), [(1, 2)])
+        self.assertEqual(list(problem.C[3]), [3])
+        self.assertEqual(list(problem.C[4]), [4, 8])
+        self.assertEqual(list(problem.C[5]), [5, 6])
+        self.assertEqual(list(problem.D[(1, 2)]), [2])
+        self.assertEqual(list(problem.D[(7, 8)]), [0, 1])
+        self.assertEqual(list(problem.subset_C[3]), [3])
+        self.assertEqual(list(problem.subset_C[4]), [8])
+        self.assertEqual(list(problem.subset_C[5]), [])
+        self.assertEqual(list(problem.subset_D[(1, 2)]), [])
+        self.assertEqual(list(problem.subset_D[(7, 8)]), [0, 1])
+        self.assertEqual(list(problem.E[0]), [3, 4])
+        self.assertEqual(list(problem.E[1]), [5])
+        self.assertEqual(list(problem.F[(1, 2, 3)]), [(1, 2)])
+        self.assertEqual(list(problem.F[(4, 5, 6)]), [(7, 8)])
+
+        # try adding elements to test the domains (1 compatible, 1 incompatible)
+        # set subset_A
+        problem.subset_A.add(5)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
+            problem.subset_A.add(6)
+        # set subset_B
+        problem.subset_B.add((7, 8))
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
+            problem.subset_B.add((3, 4))
+        # set subset_C
+        problem.subset_C[4].add(4)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
+            problem.subset_C[4].add(9)
+        # set subset_D
+        problem.subset_D[(1, 2)].add(2)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
+            problem.subset_D[(1, 2)].add(3)
+        # set E
+        problem.E[1].add(4)
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
+            problem.E[1].add(1)
+        # set F
+        problem.F[(1, 2, 3)].add((7, 8))
+        with self.assertRaisesRegex(ValueError, ".*Cannot add value "):
+            problem.F[(4, 5, 6)].add((4, 3))
+        # check them
+        self.assertEqual(list(problem.A), [3, 4, 5])
+        self.assertEqual(list(problem.B), [(1, 2), (7, 8)])
+        self.assertEqual(list(problem.subset_A), [3, 4, 5])
+        self.assertEqual(list(problem.subset_B), [(1, 2), (7, 8)])
+        self.assertEqual(list(problem.C[3]), [3])
+        self.assertEqual(list(problem.C[4]), [4, 8])
+        self.assertEqual(list(problem.C[5]), [5, 6])
+        self.assertEqual(list(problem.D[(1, 2)]), [2])
+        self.assertEqual(list(problem.D[(7, 8)]), [0, 1])
+        self.assertEqual(list(problem.subset_C[3]), [3])
+        self.assertEqual(list(problem.subset_C[4]), [8, 4])
+        self.assertEqual(list(problem.subset_C[5]), [])
+        self.assertEqual(list(problem.subset_D[(1, 2)]), [2])
+        self.assertEqual(list(problem.subset_D[(7, 8)]), [0, 1])
+        self.assertEqual(list(problem.E[0]), [3, 4])
+        self.assertEqual(list(problem.E[1]), [5, 4])
+        self.assertEqual(list(problem.F[(1, 2, 3)]), [(1, 2), (7, 8)])
+        self.assertEqual(list(problem.F[(4, 5, 6)]), [(7, 8)])
