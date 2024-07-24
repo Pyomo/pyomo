@@ -12,6 +12,8 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
+from pyomo.contrib.doe.experiment import Experiment
+
 import itertools
 import json
 
@@ -49,17 +51,7 @@ class BadExperiment(object):
         self.model = None
 
 
-class Experiment(object):
-    def __init__(self):
-        self.model = None
-
-    def get_labeled_model(self):
-        raise NotImplementedError(
-            "Derived experiment class failed to implement get_labeled_model"
-        )
-
-
-class ReactorExperiment(object):
+class ReactorExperiment(Experiment):
     def __init__(self, data, nfe, ncp):
         self.data = data
         self.nfe = nfe

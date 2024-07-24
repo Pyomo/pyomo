@@ -13,6 +13,8 @@ import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
 from pyomo.contrib.doe.experiment import Experiment
+
+
 # ========================
 class ReactorExperiment(Experiment):
     def __init__(self, data, nfe, ncp):
@@ -122,7 +124,7 @@ class ReactorExperiment(Experiment):
         # Set initial concentration values for the experiment
         m.CA[0].value = self.data["CA0"]
         m.CB[0].fix(self.data["CB0"])
-        
+
         # Update model time `t` with time range and control time points
         m.t.update(self.data["t_range"])
         m.t.update(control_points)

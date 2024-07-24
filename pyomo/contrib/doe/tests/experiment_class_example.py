@@ -12,6 +12,8 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
+from pyomo.contrib.doe.experiment import Experiment
+
 import itertools
 import json
 
@@ -44,17 +46,7 @@ def expand_model_components(m, base_components, index_sets):
                 yield val[j]
 
 
-class Experiment(object):
-    def __init__(self):
-        self.model = None
-
-    def get_labeled_model(self):
-        raise NotImplementedError(
-            "Derived experiment class failed to implement get_labeled_model"
-        )
-
-
-class ReactorExperiment(object):
+class ReactorExperiment(Experiment):
     def __init__(self, data, nfe, ncp):
         self.data = data
         self.nfe = nfe
@@ -239,19 +231,3 @@ class FullReactorExperiment(ReactorExperiment):
     def label_experiment(self):
         m = self.model
         return self.label_experiment_impl([[m.t_control], [m.t_control], [m.t_control]])
-
-
-class PartialReactorExperiment(ReactorExperiment):
-    def label_experiment(self):
-        """
-        Example for annotating (labeling) the model with a
-        "partial" experiment.
-
-        Arguments
-        ---------
-
-        """
-        m = self.model
-        return self.label_experiment_impl(
-            [[m.t_control], [[m.t.last()]], [[m.t.last()]]]
-        )
