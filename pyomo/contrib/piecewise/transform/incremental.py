@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
     PiecewiseLinearTransformationBase,
 )
@@ -17,26 +16,18 @@ from pyomo.contrib.piecewise.triangulations import Triangulation
 from pyomo.core import (
     Constraint,
     Binary,
-    NonNegativeIntegers,
-    Suffix,
     Var,
     RangeSet,
     Param,
 )
 from pyomo.core.base import TransformationFactory
-from pyomo.gdp import Disjunct, Disjunction
-from pyomo.common.errors import DeveloperError
-from pyomo.core.expr.visitor import SimpleExpressionVisitor
-from pyomo.core.expr.current import identify_components
-from math import ceil, log2
-import logging
 
 
 @TransformationFactory.register(
     "contrib.piecewise.incremental",
     doc="""
     The incremental MIP formulation of a piecewise-linear function, as described
-    by [1]. To work in the multivariate case, the underlying triangulation must 
+    by [1]. To work in the multivariate case, the underlying triangulation must
     satisfy these properties:
      (1) The simplices are ordered T_1, ..., T_N such that T_i has nonempty intersection
          with T_{i+1}. It doesn't have to be a whole face; just a vertex is enough.
@@ -98,8 +89,8 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
         num_simplices = len(simplices)
         transBlock.simplex_indices = RangeSet(0, num_simplices - 1)
         transBlock.simplex_indices_except_last = RangeSet(0, num_simplices - 2)
-        # Assumption: the simplices are really simplices and all have the same number of points,
-        # which is dimension + 1
+        # Assumption: the simplices are really simplices and all have the same number of
+        # points, which is dimension + 1
         transBlock.simplex_point_indices = RangeSet(0, dimension)
         transBlock.nonzero_simplex_point_indices = RangeSet(1, dimension)
         transBlock.last_simplex_point_index = Param(initialize=dimension)
@@ -141,8 +132,8 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
             transBlock.simplex_indices_except_last, domain=Binary
         )
 
-        # If the delta for the final point in simplex i is not one, y_i must be zero. That is,
-        # y_i is one for and only for simplices that are completely "used"
+        # If the delta for the final point in simplex i is not one, y_i must be zero.
+        # That is, y_i is one for and only for simplices that are completely "used"
         @transBlock.Constraint(transBlock.simplex_indices_except_last)
         def y_below_delta(m, i):
             return (
