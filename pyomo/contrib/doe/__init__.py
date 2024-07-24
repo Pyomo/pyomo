@@ -17,3 +17,4 @@ from .doe import (
 )
 from .tests import experiment_class_example, experiment_class_example_flags
 from .utils import rescale_FIM
+from .examples import reactor_experiment, reactor_example, reactor_compute_factorial_FIM
