@@ -515,7 +515,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         degree = repn.polynomial_degree()
         if (degree is None) or (degree > 2):
             raise DegreeError(
-                'GurobiAuto does not support expressions of degree {0}.'.format(degree)
+                f'GurobiAuto does not support expressions of degree {degree}.'
             )
 
         if len(repn.linear_vars) > 0:
@@ -624,7 +624,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 else:
                     raise ValueError(
                         "Constraint does not have a lower "
-                        "or an upper bound: {0} \n".format(con)
+                        f"or an upper bound: {con} \n"
                     )
                 for tmp in mutable_linear_coefficients:
                     tmp.con = gurobipy_con
@@ -660,7 +660,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 else:
                     raise ValueError(
                         "Constraint does not have a lower "
-                        "or an upper bound: {0} \n".format(con)
+                        f"or an upper bound: {con} \n"
                     )
                 if (
                     len(mutable_linear_coefficients) > 0
@@ -679,7 +679,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                     self._mutable_quadratic_helpers[con] = mutable_quadratic_constraint
             else:
                 raise ValueError(
-                    'Unrecognized Gurobi expression type: ' + str(gurobi_expr.__class__)
+                    f'Unrecognized Gurobi expression type: {str(gurobi_expr.__class__)}'
                 )
 
             self._pyomo_con_to_solver_con_map[con] = gurobipy_con
@@ -699,7 +699,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 sos_type = gurobipy.GRB.SOS_TYPE2
             else:
                 raise ValueError(
-                    "Solver does not support SOS level {0} constraints".format(level)
+                    f"Solver does not support SOS level {level} constraints"
                 )
 
             gurobi_vars = []
@@ -759,9 +759,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             var_id = id(var)
             if var_id not in self._pyomo_var_to_solver_var_map:
                 raise ValueError(
-                    'The Var provided to update_var needs to be added first: {0}'.format(
-                        var
-                    )
+                    f'The Var provided to update_var needs to be added first: {var}'
                 )
             self._mutable_bounds.pop((var_id, 'lb'), None)
             self._mutable_bounds.pop((var_id, 'ub'), None)
@@ -823,9 +821,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             elif obj.sense == maximize:
                 sense = gurobipy.GRB.MAXIMIZE
             else:
-                raise ValueError(
-                    'Objective sense is not recognized: {0}'.format(obj.sense)
-                )
+                raise ValueError(f'Objective sense is not recognized: {obj.sense}')
 
             (
                 gurobi_expr,
@@ -910,7 +906,8 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             and config.raise_exception_on_nonoptimal_result
         ):
             raise RuntimeError(
-                'Solver did not find the optimal solution. Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+                'Solver did not find the optimal solution.'
+                'Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
             )
 
         results.incumbent_objective = None
@@ -1140,9 +1137,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         """
         if attr in {'Sense', 'RHS', 'ConstrName'}:
             raise ValueError(
-                'Linear constraint attr {0} cannot be set with'.format(attr)
-                + ' the set_linear_constraint_attr method. Please use'
-                + ' the remove_constraint and add_constraint methods.'
+                f'Linear constraint attr {attr} cannot be set with'
+                ' the set_linear_constraint_attr method. Please use'
+                ' the remove_constraint and add_constraint methods.'
             )
         self._pyomo_con_to_solver_con_map[con].setAttr(attr, val)
         self._needs_updated = True
@@ -1169,15 +1166,15 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         """
         if attr in {'LB', 'UB', 'VType', 'VarName'}:
             raise ValueError(
-                'Var attr {0} cannot be set with'.format(attr)
-                + ' the set_var_attr method. Please use'
-                + ' the update_var method.'
+                f'Var attr {attr} cannot be set with'
+                ' the set_var_attr method. Please use'
+                ' the update_var method.'
             )
         if attr == 'Obj':
             raise ValueError(
                 'Var attr Obj cannot be set with'
-                + ' the set_var_attr method. Please use'
-                + ' the set_objective method.'
+                ' the set_var_attr method. Please use'
+                ' the set_objective method.'
             )
         self._pyomo_var_to_solver_var_map[id(var)].setAttr(attr, val)
         self._needs_updated = True
@@ -1336,7 +1333,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
                 >>>
                 >>> def my_callback(cb_m, cb_opt, cb_where):
                 ...     if cb_where == GRB.Callback.MIPSOL:
-                ...         cb_opt.cbGetSolution(vars=[m.x, m.y])
+                ...         cb_opt.cbGetSolution(variables=[m.x, m.y])
                 ...         if m.y.value < (m.x.value - 2)**2 - 1e-6:
                 ...             cb_opt.cbLazy(_add_cut(m.x.value))
                 ...
@@ -1377,14 +1374,10 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             if con.has_ub():
                 raise ValueError('Range constraints are not supported in cbCut.')
             if not is_fixed(con.lower):
-                raise ValueError(
-                    'Lower bound of constraint {0} is not constant.'.format(con)
-                )
+                raise ValueError(f'Lower bound of constraint {con} is not constant.')
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError(
-                    'Upper bound of constraint {0} is not constant.'.format(con)
-                )
+                raise ValueError(f'Upper bound of constraint {con} is not constant.')
 
         if con.equality:
             self._solver_model.cbCut(
@@ -1406,7 +1399,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             )
         else:
             raise ValueError(
-                'Constraint does not have a lower or an upper bound {0} \n'.format(con)
+                f'Constraint does not have a lower or an upper bound {con} \n'
             )
 
     def cbGet(self, what):
@@ -1462,14 +1455,10 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             if con.has_ub():
                 raise ValueError('Range constraints are not supported in cbLazy.')
             if not is_fixed(con.lower):
-                raise ValueError(
-                    'Lower bound of constraint {0} is not constant.'.format(con)
-                )
+                raise ValueError(f'Lower bound of constraint {con} is not constant.')
         if con.has_ub():
             if not is_fixed(con.upper):
-                raise ValueError(
-                    'Upper bound of constraint {0} is not constant.'.format(con)
-                )
+                raise ValueError(f'Upper bound of constraint {con} is not constant.')
 
         if con.equality:
             self._solver_model.cbLazy(
@@ -1491,7 +1480,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             )
         else:
             raise ValueError(
-                'Constraint does not have a lower or an upper bound {0} \n'.format(con)
+                f'Constraint does not have a lower or an upper bound {con} \n'
             )
 
     def cbSetSolution(self, variables, solution):

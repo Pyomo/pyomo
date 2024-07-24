@@ -118,7 +118,7 @@ class _VarAndNamedExprCollector(ExpressionValueVisitor):
             self.named_expressions[id(node)] = node
             return False, None
 
-        if type(node) is EXPR.ExternalFunctionExpression:
+        if isinstance(node, EXPR.ExternalFunctionExpression):
             self._external_functions[id(node)] = node
             return False, None
 

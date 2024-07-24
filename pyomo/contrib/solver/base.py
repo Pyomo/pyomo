@@ -29,6 +29,7 @@ from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.scripting.solve_config import default_config_block
 from pyomo.contrib.solver.config import SolverConfig, PersistentSolverConfig
 from pyomo.contrib.solver.util import get_objective
 from pyomo.contrib.solver.results import (
@@ -636,8 +637,6 @@ class LegacySolverWrapper:
         Preserves config backwards compatibility; allows new solver interfaces
         to be used in the pyomo solve call
         """
-        from pyomo.scripting.solve_config import default_config_block
-
         return default_config_block(self, init)[0]
 
     def set_options(self, options):
