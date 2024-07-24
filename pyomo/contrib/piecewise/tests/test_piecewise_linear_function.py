@@ -340,28 +340,6 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
         self.assertEqual(len(m.pw._simplices), 8)
         self.assertEqual(m.pw.triangulation, Triangulation.OrderedJ1)
 
-    @unittest.skipUnless(numpy_available, "numpy is not available")
-    def test_triangulation_override(self):
-        m = self.make_model()
-        m.pw = PiecewiseLinearFunction(
-            points=[
-                (0, 1),
-                (0, 4),
-                (0, 7),
-                (3, 1),
-                (3, 4),
-                (3, 7),
-                (4, 1),
-                (4, 4),
-                (4, 7),
-            ],
-            function=m.g,
-            triangulation=Triangulation.OrderedJ1,
-            override_triangulation=Triangulation.AssumeValid,
-        )
-        self.assertEqual(len(m.pw._simplices), 8)
-        self.assertEqual(m.pw.triangulation, Triangulation.AssumeValid)
-
     @unittest.skipUnless(scipy_available, "scipy is not available")
     def test_pw_linear_approx_tabular_data(self):
         m = self.make_model()

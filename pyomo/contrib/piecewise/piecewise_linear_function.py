@@ -24,7 +24,7 @@ from pyomo.contrib.piecewise.triangulations import (
     get_ordered_j1_triangulation,
     Triangulation,
 )
-from pyomo.core import Any, NonNegativeIntegers, value, Var
+from pyomo.core import Any, NonNegativeIntegers, value
 from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.expression import Expression
@@ -235,6 +235,19 @@ class PiecewiseLinearFunction(Block):
             expression for a linear function of the arguments.
         tabular_data: A dictionary mapping values of the nonlinear function
             to points in the domain
+        triangulation (optional): An enum value of type Triangulation specifying
+            how Pyomo should triangulate the function domain, or None. Behavior
+            depends on how this piecewise-linear function is constructed:
+            when constructed using methods (1) or (4) above, valid arguments
+            are the members of Triangulation except Unknown or AssumeValid,
+            and Pyomo will use that method to triangulate the domain and to tag
+            the resulting PWLF. If no argument or None is passed, the default
+            is Triangulation.Delaunay. When constructed using methods (2) or (3)
+            above, valid arguments are only Triangulation.Unknown and
+            Triangulation.AssumeValid. Pyomo will tag the constructed PWLF
+            as specified, trusting the user in the case of AssumeValid.
+            When no argument or None is passed, the default is
+            Triangulation.Unknown
     """
 
     _ComponentDataClass = PiecewiseLinearFunctionData
@@ -261,8 +274,7 @@ class PiecewiseLinearFunction(Block):
         _linear_functions = kwargs.pop('linear_functions', None)
         _tabular_data_arg = kwargs.pop('tabular_data', None)
         _tabular_data_rule_arg = kwargs.pop('tabular_data_rule', None)
-        _triangulation_rule_arg = kwargs.pop('triangulation', Triangulation.Delaunay)
-        _triangulation_override_rule_arg = kwargs.pop('override_triangulation', None)
+        _triangulation_rule_arg = kwargs.pop('triangulation', None)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -284,9 +296,6 @@ class PiecewiseLinearFunction(Block):
         self._triangulation_rule = Initializer(
             _triangulation_rule_arg, treat_sequences_as_mappings=False
         )
-        self._triangulation_override_rule = Initializer(
-            _triangulation_override_rule_arg, treat_sequences_as_mappings=False
-        )
 
     def _get_dimension_from_points(self, points):
         if len(points) < 1:
@@ -305,7 +314,13 @@ class PiecewiseLinearFunction(Block):
     def _construct_simplices_from_multivariate_points(
         self, obj, parent, points, dimension
     ):
-        tri = self._triangulation_rule(parent, obj._index)
+        if self._triangulation_rule is None:
+            tri = Triangulation.Delaunay
+        else:
+            tri = self._triangulation_rule(parent, obj._index)
+            if tri is None:
+                tri = Triangulation.Delaunay
+
         if tri == Triangulation.Delaunay:
             try:
                 triangulation = spatial.Delaunay(points)
@@ -321,7 +336,7 @@ class PiecewiseLinearFunction(Block):
             obj._triangulation = tri
         else:
             raise ValueError(
-                "Unrecognized triangulation specified for '%s': %s" % (obj, tri)
+                "Invalid or unrecognized triangulation specified for '%s': %s" % (obj, tri)
             )
 
         # Get the points for the triangulation because they might not all be
@@ -341,7 +356,7 @@ class PiecewiseLinearFunction(Block):
             # checking the determinant because matrix_rank will by default calculate a
             # tolerance based on the input to account for numerical errors in the
             # SVD computation.
-            if tri != Triangulation.Delaunay:
+            if tri in (Triangulation.J1, Triangulation.OrderedJ1):
                 # Note: do not sort vertices from OrderedJ1, or it will break.
                 # Non-ordered J1 is already sorted, though it doesn't matter.
                 # Also, we don't need to check for degeneracy with simplices we
@@ -363,6 +378,24 @@ class PiecewiseLinearFunction(Block):
             logger.info(
                 "The Delaunay triangulation dropped the point with index "
                 "%s from the triangulation." % pt[0]
+            )
+
+    # Call when constructing from simplices to allow use of AssumeValid and
+    # ensure the user is not making mistakes
+    def _check_and_set_triangulation_from_user(self, parent, obj):
+        if self._triangulation_rule is None:
+            tri = None
+        else:
+            tri = self._triangulation_rule(parent, obj._index)
+        if tri is None or tri == Triangulation.Unknown:
+            obj._triangulation = Triangulation.Unknown
+        elif tri == Triangulation.AssumeValid:
+            obj._triangulation = Triangulation.AssumeValid
+        else:
+            raise ValueError(
+                f"Invalid or unrecognized triangulation tag specified for {obj} when"
+                f" giving simplices: {tri}. Valid arguments when giving simplices are"
+                " Triangulation.Unknown and Triangulation.AssumeValid."
             )
 
     def _construct_one_dimensional_simplices_from_points(self, obj, points):
@@ -401,7 +434,7 @@ class PiecewiseLinearFunction(Block):
     ):
         # We can trust they are nicely ordered if we made them, otherwise anything goes.
         if segments_are_user_defined:
-            obj._triangulation = Triangulation.Unknown
+            self._check_and_set_triangulation_from_user(parent, obj)
         else:
             obj._triangulation = Triangulation.AssumeValid
 
@@ -439,9 +472,9 @@ class PiecewiseLinearFunction(Block):
             )
 
         # If we triangulated, then this tag was already set. If they provided it,
-        # then it should be unknown.
+        # then check their arguments and set.
         if simplices_are_user_defined:
-            obj._triangulation = Triangulation.Unknown
+            self._check_and_set_triangulation_from_user(parent, obj)
 
         # evaluate the function at each of the points and form the homogeneous
         # system of equations
@@ -494,7 +527,7 @@ class PiecewiseLinearFunction(Block):
         # have been called.
         obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
         obj._linear_functions = [f for f in self._linear_funcs_rule(parent, obj._index)]
-        obj._triangulation = Triangulation.Unknown
+        self._check_and_set_triangulation_from_user(parent, obj)
         return obj
 
     @_define_handler(_handlers, False, False, False, False, True)
@@ -543,17 +576,6 @@ class PiecewiseLinearFunction(Block):
         elif self._func is not None:
             nonlinear_function = self._func
 
-        # If the user asked for a specific triangulation but passed simplices,
-        # warn them that we're going to use the simplices and ignore the triangulation.
-        if self._simplices_rule is not None:
-            tri = self._triangulation_rule(parent, obj._index)
-            if tri not in (None, Triangulation.Delaunay):
-                logger.warn(
-                    f"Non-default triangulation request {tri} was ignored because the "
-                    "simplices were provided. If you meant to override the tag, use "
-                    "`override_triangulation` instead."
-                )
-
         handler = self._handlers.get(
             (
                 nonlinear_function is not None,
@@ -574,15 +596,6 @@ class PiecewiseLinearFunction(Block):
                 "mapping points to nonlinear function values."
             )
         obj = handler(self, obj, parent, nonlinear_function)
-
-        # If the user wanted to override the triangulation tag, do it after we
-        # are finished setting it ourselves.
-        if self._triangulation_override_rule is not None:
-            triangulation_override = self._triangulation_override_rule(
-                parent, obj._index
-            )
-            if triangulation_override is not None:
-                obj._triangulation = triangulation_override
 
         return obj
 

@@ -14,7 +14,6 @@ import pyomo.contrib.piecewise.tests.common_tests as ct
 from pyomo.contrib.piecewise.triangulations import Triangulation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.gdp import Disjunct, Disjunction
 from pyomo.environ import (
     Constraint,
     SolverFactory,
@@ -236,7 +235,7 @@ def make_log_x_model_ordered():
     m.pw_paraboloid = PiecewiseLinearFunction(
         simplices=simplices,
         linear_functions=[g1, g1, g2, g2],
-        override_triangulation=Triangulation.AssumeValid,
+        triangulation=Triangulation.AssumeValid,
     )
     m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
 
