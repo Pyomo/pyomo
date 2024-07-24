@@ -177,7 +177,7 @@ class _MutableBoundsConstraintMixin(object):
     # Define some of the IConstraint abstract methods
     #
 
-    def normalize_constraint(self):
+    def to_bounded_expression(self):
         return self.lower, self.body, self.upper
 
     @property

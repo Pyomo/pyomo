@@ -205,7 +205,7 @@ void process_fbbt_constraints(FBBTModel *model, PyomoExprTypes &expr_types,
   py::handle con_body;
 
   for (py::handle c : cons) {
-    lower_body_upper = c.attr("normalize_constraint")();
+    lower_body_upper = c.attr("to_bounded_expression")();
     con_lb = lower_body_upper[0];
     con_body = lower_body_upper[1];
     con_ub = lower_body_upper[2];
