@@ -1339,7 +1339,7 @@ class TestFBBT(FbbtTestBase, unittest.TestCase):
     def test_ranged_expression(self):
         # The python version of FBBT is slightly more flexible than
         # APPSI's cmodel (it allows - and correctly handles -
-        # RangedExpressions with variable lower / upper bounds.  If we
+        # RangedExpressions with variable lower / upper bounds).  If we
         # ever port that functionality into APPSI, then this test can be
         # moved into the base class.
         m = pyo.ConcreteModel()
