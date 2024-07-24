@@ -1,4 +1,19 @@
-# Generated using generate_ordered_3d_j1_triangulation_data.py
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+# This file was generated using generate_ordered_3d_j1_triangulation_data.py
+# Data format: Keys are a pair of simplices specified as the direction they are facing,
+# as a standard unit vector or negative of one, and a tag, 1 or 2, disambiguating which
+# of the two simplices considered is used. Values are a list of simplices given as
+# (sign_vector, permutation) pairs.
 hamiltonian_paths = {
     (((-1, 0, 0), 1), ((0, -1, 0), 1)): [
         ((-1, -1, -1), (1, 2, 3)),
