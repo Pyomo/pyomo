@@ -1,21 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 # === Required imports ===
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
+from pyomo.contrib.doe.experiment import Experiment
 # ========================
-
-
-class Experiment(object):
-    def __init__(self):
-        self.model = None
-
-    def get_labeled_model(self):
-        raise NotImplementedError(
-            "Derived experiment class failed to implement get_labeled_model"
-        )
-
-
-class ReactorExperiment(object):
+class ReactorExperiment(Experiment):
     def __init__(self, data, nfe, ncp):
         self.data = data
         self.nfe = nfe
@@ -120,15 +119,21 @@ class ReactorExperiment(object):
         # Unpacking data before simulation
         control_points = self.data["control_points"]
 
+        # Set initial concentration values for the experiment
         m.CA[0].value = self.data["CA0"]
         m.CB[0].fix(self.data["CB0"])
+        
+        # Update model time `t` with time range and control time points
         m.t.update(self.data["t_range"])
         m.t.update(control_points)
+
+        # Fix the unknown parameter values
         m.A1.fix(self.data["A1"])
         m.A2.fix(self.data["A2"])
         m.E1.fix(self.data["E1"])
         m.E2.fix(self.data["E2"])
 
+        # Add upper and lower bounds to the design variable, CA[0]
         m.CA[0].setlb(self.data["CA_bounds"][0])
         m.CA[0].setub(self.data["CA_bounds"][1])
 
@@ -147,10 +152,11 @@ class ReactorExperiment(object):
             m.T[t].setub(self.data["T_bounds"][1])
             m.T[t] = cv
 
+        # Make a constraint that holds temperature constant between control time points
         @m.Constraint(m.t - control_points)
         def T_control(m, t):
             """
-            Piecewise constant Temperature between control points
+            Piecewise constant temperature between control points
             """
             neighbour_t = max(tc for tc in control_points if tc < t)
             return m.T[t] == m.T[neighbour_t]
@@ -166,7 +172,7 @@ class ReactorExperiment(object):
         """
         m = self.model
 
-        # Grab measurement labels
+        # Set measurement labels
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         # Add CA to experiment outputs
         m.experiment_outputs.update((m.CA[t], None) for t in m.t)
@@ -175,7 +181,7 @@ class ReactorExperiment(object):
         # Add CC to experiment outputs
         m.experiment_outputs.update((m.CC[t], None) for t in m.t)
 
-        # Adding no error for measurements currently
+        # Adding error for measurement values (assuming no covariance and constant error for all measurements)
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         concentration_error = 1e-2  # Error in concentration measurement
         # Add measurement error for CA
@@ -185,7 +191,7 @@ class ReactorExperiment(object):
         # Add measurement error for CC
         m.measurement_error.update((m.CC[t], concentration_error) for t in m.t)
 
-        # Grab design variables
+        # Identify design variables (experiment inputs) for the model
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         # Add experimental input label for initial concentration
         m.experiment_inputs.update(
