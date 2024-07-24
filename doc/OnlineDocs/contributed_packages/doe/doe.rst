@@ -164,7 +164,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an Experiment object
     >>> import numpy as np
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 8-23
+    :lines: 19-24
 
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -172,7 +172,7 @@ Step 1: Define the Pyomo process model
 The process model for the reaction kinetics problem is shown below. We build the model in without any data or discretization.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 32-101
+    :lines: 33-102
 
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -180,7 +180,7 @@ Step 2: Finalize the Pyomo process model
 Here we add data to the model and finalize the discretization. This step is required before the model can be labeled.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 103-156
+    :lines: 104-157
 
 Step 3: Label the important information for model on the DoE object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -188,7 +188,7 @@ Step 3: Label the important information for model on the DoE object
 We label the four important groups as defined before.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 158-202
+    :lines: 159-203
 
 Step 4: We give the experiment object a get_labeled_model function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -196,7 +196,7 @@ Step 4: We give the experiment object a get_labeled_model function
 This function summarizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 25-30
+    :lines: 26-31
 
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -212,7 +212,7 @@ The function ``compute_FIM_full_factorial`` enumerates over the design space, ea
 The following code executes the above problem description:
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_factorial_FIM.py
-    :lines: 14-84
+    :lines: 24-95
 
 An example output of the code above, a design exploration for the initial concentration and temperature as experimental design variables with 9 values, produces the four figures summarized below:
 
@@ -227,7 +227,7 @@ Step 6: Performing an optimal experimental design
 This is an example of running an experimental design to determine an optimal experiment for the reactor example. We utilize the determinant as the objective.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
-    :lines: 14-80
+    :lines: 24-90
 
 When run, the optimal design is an initial concentration of 5.0 mol/L and an initial temperature of 494 K with all other temperatures being 300 K. The corresponding log-10 determinant of the FIM is 13.75
 
