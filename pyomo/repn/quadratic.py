@@ -157,17 +157,6 @@ class QuadraticRepn(object):
                 self.nonlinear += nl
 
 
-_exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
-
-#
-# NEGATION
-#
-_exit_node_handlers[NegationExpression][(_QUADRATIC,)] = linear._handle_negation_ANY
-
-
-#
-# PRODUCT
-#
 def _mul_linear_linear(varOrder, linear1, linear2):
     quadratic = {}
     for vid1, coef1 in linear1.items():
@@ -275,69 +264,73 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
-_exit_node_handlers[ProductExpression].update(
-    {
-        None: _handle_product_nonlinear,
-        (_CONSTANT, _QUADRATIC): linear._handle_product_constant_ANY,
-        (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
-        # Replace handler from the linear walker
-        (_LINEAR, _LINEAR): _handle_product_linear_linear,
-    }
-)
-
-#
-# DIVISION
-#
-_exit_node_handlers[DivisionExpression].update(
-    {(_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant}
-)
-
-
-#
-# EXPONENTIATION
-#
-_exit_node_handlers[PowExpression].update(
-    {(_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant}
-)
-
-#
-# ABS and UNARY handlers
-#
-# (no changes needed)
-
-#
-# NAMED EXPRESSION handlers
-#
-# (no changes needed)
-
-#
-# EXPR_IF handlers
-#
-# Note: it is easier to just recreate the entire data structure, rather
-# than update it
-_exit_node_handlers[Expr_ifExpression].update(
-    {
-        (_CONSTANT, i, _QUADRATIC): linear._handle_expr_if_const
-        for i in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
-    }
-)
-_exit_node_handlers[Expr_ifExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC, i): linear._handle_expr_if_const
-        for i in (_CONSTANT, _LINEAR, _GENERAL)
-    }
-)
-
-#
-# RELATIONAL handlers
-#
-# (no changes needed)
+def define_exit_node_handlers(_exit_node_handlers=None):
+    if _exit_node_handlers is None:
+        _exit_node_handlers = {}
+    linear.define_exit_node_handlers(_exit_node_handlers)
+    #
+    # NEGATION
+    #
+    _exit_node_handlers[NegationExpression][(_QUADRATIC,)] = linear._handle_negation_ANY
+    #
+    # PRODUCT
+    #
+    _exit_node_handlers[ProductExpression].update(
+        {
+            None: _handle_product_nonlinear,
+            (_CONSTANT, _QUADRATIC): linear._handle_product_constant_ANY,
+            (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
+            # Replace handler from the linear walker
+            (_LINEAR, _LINEAR): _handle_product_linear_linear,
+        }
+    )
+    #
+    # DIVISION
+    #
+    _exit_node_handlers[DivisionExpression].update(
+        {(_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant}
+    )
+    #
+    # EXPONENTIATION
+    #
+    _exit_node_handlers[PowExpression].update(
+        {(_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant}
+    )
+    #
+    # ABS and UNARY handlers
+    #
+    # (no changes needed)
+    #
+    # NAMED EXPRESSION handlers
+    #
+    # (no changes needed)
+    #
+    # EXPR_IF handlers
+    #
+    # Note: it is easier to just recreate the entire data structure, rather
+    # than update it
+    _exit_node_handlers[Expr_ifExpression].update(
+        {
+            (_CONSTANT, i, _QUADRATIC): linear._handle_expr_if_const
+            for i in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
+        }
+    )
+    _exit_node_handlers[Expr_ifExpression].update(
+        {
+            (_CONSTANT, _QUADRATIC, i): linear._handle_expr_if_const
+            for i in (_CONSTANT, _LINEAR, _GENERAL)
+        }
+    )
+    #
+    # RELATIONAL handlers
+    #
+    # (no changes needed)
+    return _exit_node_handlers
 
 
 class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     Result = QuadraticRepn
-    exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = linear.ExitNodeDispatcher(
-        linear._initialize_exit_node_dispatcher(_exit_node_handlers)
+        linear._initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
