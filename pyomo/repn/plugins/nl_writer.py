@@ -122,6 +122,119 @@ ScalingFactors = namedtuple(
 )
 
 
+def _create_strict_inequality_map(vars_):
+    vars_['strict_inequality_map'] = {
+        True: vars_['less_than'],
+        False: vars_['less_equal'],
+        (True, True): (vars_['less_than'], vars_['less_than']),
+        (True, False): (vars_['less_than'], vars_['less_equal']),
+        (False, True): (vars_['less_equal'], vars_['less_than']),
+        (False, False): (vars_['less_equal'], vars_['less_equal']),
+    }
+
+
+class text_nl_debug_template(object):
+    unary = {
+        'log': 'o43\t#log\n',
+        'log10': 'o42\t#log10\n',
+        'sin': 'o41\t#sin\n',
+        'cos': 'o46\t#cos\n',
+        'tan': 'o38\t#tan\n',
+        'sinh': 'o40\t#sinh\n',
+        'cosh': 'o45\t#cosh\n',
+        'tanh': 'o37\t#tanh\n',
+        'asin': 'o51\t#asin\n',
+        'acos': 'o53\t#acos\n',
+        'atan': 'o49\t#atan\n',
+        'exp': 'o44\t#exp\n',
+        'sqrt': 'o39\t#sqrt\n',
+        'asinh': 'o50\t#asinh\n',
+        'acosh': 'o52\t#acosh\n',
+        'atanh': 'o47\t#atanh\n',
+        'ceil': 'o14\t#ceil\n',
+        'floor': 'o13\t#floor\n',
+    }
+
+    binary_sum = 'o0\t#+\n'
+    product = 'o2\t#*\n'
+    division = 'o3\t# /\n'
+    pow = 'o5\t#^\n'
+    abs = 'o15\t# abs\n'
+    negation = 'o16\t#-\n'
+    nary_sum = 'o54\t# sumlist\n%d\t# (n)\n'
+    exprif = 'o35\t# if\n'
+    and_expr = 'o21\t# and\n'
+    less_than = 'o22\t# lt\n'
+    less_equal = 'o23\t# le\n'
+    equality = 'o24\t# eq\n'
+    external_fcn = 'f%d %d%s\n'
+    # NOTE: to support scaling and substitutions, we do NOT include the
+    # 'v' or the EOL here:
+    var = '%s'
+    const = 'n%r\n'
+    string = 'h%d:%s\n'
+    monomial = product + const + var.replace('%', '%%')
+    multiplier = product + const
+
+    _create_strict_inequality_map(vars())
+
+
+nl_operators = {
+    0: (2, operator.add),
+    2: (2, operator.mul),
+    3: (2, operator.truediv),
+    5: (2, operator.pow),
+    15: (1, operator.abs),
+    16: (1, operator.neg),
+    54: (None, lambda *x: sum(x)),
+    35: (3, lambda a, b, c: b if a else c),
+    21: (2, operator.and_),
+    22: (2, operator.lt),
+    23: (2, operator.le),
+    24: (2, operator.eq),
+    43: (1, math.log),
+    42: (1, math.log10),
+    41: (1, math.sin),
+    46: (1, math.cos),
+    38: (1, math.tan),
+    40: (1, math.sinh),
+    45: (1, math.cosh),
+    37: (1, math.tanh),
+    51: (1, math.asin),
+    53: (1, math.acos),
+    49: (1, math.atan),
+    44: (1, math.exp),
+    39: (1, math.sqrt),
+    50: (1, math.asinh),
+    52: (1, math.acosh),
+    47: (1, math.atanh),
+    14: (1, math.ceil),
+    13: (1, math.floor),
+}
+
+
+def _strip_template_comments(vars_, base_):
+    vars_['unary'] = {
+        k: v[: v.find('\t#')] + '\n' if v[-1] == '\n' else ''
+        for k, v in base_.unary.items()
+    }
+    for k, v in base_.__dict__.items():
+        if type(v) is str and '\t#' in v:
+            v_lines = v.split('\n')
+            for i, l in enumerate(v_lines):
+                comment_start = l.find('\t#')
+                if comment_start >= 0:
+                    v_lines[i] = l[:comment_start]
+            vars_[k] = '\n'.join(v_lines)
+
+
+# The "standard" text mode template is the debugging template with the
+# comments removed
+class text_nl_template(text_nl_debug_template):
+    _strip_template_comments(vars(), text_nl_debug_template)
+    _create_strict_inequality_map(vars())
+
+
 # TODO: make a proper base class
 class NLWriterInfo(object):
     """Return type for NLWriter.write()
@@ -539,10 +652,6 @@ class _NLWriter_impl(object):
         self.colstream = colstream
         self.config = config
         self.symbolic_solver_labels = config.symbolic_solver_labels
-        if self.symbolic_solver_labels:
-            self.template = text_nl_debug_template
-        else:
-            self.template = text_nl_template
         self.subexpression_cache = {}
         self.subexpression_order = None  # set to [] later
         self.external_functions = {}
@@ -551,7 +660,6 @@ class _NLWriter_impl(object):
         self.var_id_to_nl_map = {}
         self.sorter = FileDeterminism_to_SortComponents(config.file_determinism)
         self.visitor = AMPLRepnVisitor(
-            self.template,
             self.subexpression_cache,
             self.external_functions,
             self.var_map,
@@ -562,18 +670,15 @@ class _NLWriter_impl(object):
         )
         self.next_V_line_id = 0
         self.pause_gc = None
+        self.template = self.visitor.Result.template
 
     def __enter__(self):
-        assert AMPLRepn.ActiveVisitor is None
-        AMPLRepn.ActiveVisitor = self.visitor
         self.pause_gc = PauseGC()
         self.pause_gc.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
         self.pause_gc.__exit__(exc_type, exc_value, tb)
-        assert AMPLRepn.ActiveVisitor is self.visitor
-        AMPLRepn.ActiveVisitor = None
 
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
@@ -1111,7 +1216,7 @@ class _NLWriter_impl(object):
         # Update any eliminated variables to point to the (potentially
         # scaled) substituted variables
         for _id, expr_info in list(eliminated_vars.items()):
-            nl, args, _ = expr_info.compile_repn(visitor)
+            nl, args, _ = expr_info.compile_repn()
             for _i in args:
                 # It is possible that the eliminated variable could
                 # reference another variable that is no longer part of
@@ -1133,8 +1238,8 @@ class _NLWriter_impl(object):
                         val = 0
                     else:
                         val = lb if abs(lb) < abs(ub) else ub
-                    eliminated_vars[_i] = AMPLRepn(val, {}, None)
-                    nl_map[_i] = expr_info.compile_repn(visitor)[0]
+                    eliminated_vars[_i] = visitor.Result(val, {}, None)
+                    nl_map[_i] = expr_info.compile_repn()[0]
                     logger.warning(
                         "presolve identified an underdetermined independent "
                         "linear subsystem that was removed from the model.  "
@@ -1792,7 +1897,7 @@ class _NLWriter_impl(object):
                 a = x = None
                 b, _ = var_bounds[_id]
                 logger.debug("NL presolve: bounds fixed %s := %s", var_map[_id], b)
-                eliminated_vars[_id] = AMPLRepn(b, {}, None)
+                eliminated_vars[_id] = self.visitor.Result(b, {}, None)
                 nl_map[_id] = template.const % b
             elif one_var:
                 con_id, info = one_var.popitem()
@@ -1994,9 +2099,7 @@ class _NLWriter_impl(object):
             if arg in self.var_id_to_nl_map:
                 final_args.append(self.var_id_to_nl_map[arg])
             else:
-                _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
-                    self.visitor
-                )
+                _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn()
                 final_args.append(self._resolve_subexpression_args(_nl, _ids))
         return nl % tuple(final_args)
 
@@ -2070,7 +2173,7 @@ class NLFragment(object):
 class AMPLRepn(object):
     __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
-    ActiveVisitor = None
+    template = text_nl_template
 
     def __init__(self, const, linear, nonlinear):
         self.nl = None
@@ -2094,7 +2197,7 @@ class AMPLRepn(object):
         return str(self)
 
     def __eq__(self, other):
-        return other.__class__ is AMPLRepn and (
+        return isinstance(other.__class__, AMPLRepn) and (
             self.nl == other.nl
             and self.mult == other.mult
             and self.const == other.const
@@ -2120,8 +2223,8 @@ class AMPLRepn(object):
         ans.named_exprs = None if self.named_exprs is None else set(self.named_exprs)
         return ans
 
-    def compile_repn(self, visitor, prefix='', args=None, named_exprs=None):
-        template = visitor.template
+    def compile_repn(self, prefix='', args=None, named_exprs=None):
+        template = self.template
         if self.mult != 1:
             if self.mult == -1:
                 prefix += template.negation
@@ -2195,7 +2298,7 @@ class AMPLRepn(object):
         else:  # nterms == 0
             return prefix + (template.const % 0), args, named_exprs
 
-    def compile_nonlinear_fragment(self, visitor):
+    def compile_nonlinear_fragment(self):
         if not self.nonlinear:
             self.nonlinear = None
             return
@@ -2205,9 +2308,9 @@ class AMPLRepn(object):
         deque(map(args.extend, map(itemgetter(1), self.nonlinear)), maxlen=0)
 
         if nterms > 2:
-            self.nonlinear = (visitor.template.nary_sum % nterms) + nl_sum, args
+            self.nonlinear = (self.template.nary_sum % nterms) + nl_sum, args
         elif nterms == 2:
-            self.nonlinear = visitor.template.binary_sum + nl_sum, args
+            self.nonlinear = self.template.binary_sum + nl_sum, args
         else:  # nterms == 1:
             self.nonlinear = nl_sum, args
 
@@ -2249,9 +2352,7 @@ class AMPLRepn(object):
                     # it and append it (this both resolves the
                     # multiplier, and marks the named expression as
                     # having been used)
-                    other = other.compile_repn(
-                        self.ActiveVisitor, '', None, self.named_exprs
-                    )
+                    other = other.compile_repn('', None, self.named_exprs)
                     nl, nl_args, self.named_exprs = other
                     self.nonlinear.append((nl, nl_args))
                     return
@@ -2272,11 +2373,11 @@ class AMPLRepn(object):
                             linear[v] = c * mult
                 if other.nonlinear:
                     if other.nonlinear.__class__ is list:
-                        other.compile_nonlinear_fragment(self.ActiveVisitor)
+                        other.compile_nonlinear_fragment()
                     if mult == -1:
-                        prefix = self.ActiveVisitor.template.negation
+                        prefix = self.template.negation
                     else:
-                        prefix = self.ActiveVisitor.template.multiplier % mult
+                        prefix = self.template.multiplier % mult
                     self.nonlinear.append(
                         (prefix + other.nonlinear[0], other.nonlinear[1])
                     )
@@ -2316,132 +2417,9 @@ class AMPLRepn(object):
         return ans * self.mult
 
 
-def _create_strict_inequality_map(vars_):
-    vars_['strict_inequality_map'] = {
-        True: vars_['less_than'],
-        False: vars_['less_equal'],
-        (True, True): (vars_['less_than'], vars_['less_than']),
-        (True, False): (vars_['less_than'], vars_['less_equal']),
-        (False, True): (vars_['less_equal'], vars_['less_than']),
-        (False, False): (vars_['less_equal'], vars_['less_equal']),
-    }
-
-
-class text_nl_debug_template(object):
-    unary = {
-        'log': 'o43\t#log\n',
-        'log10': 'o42\t#log10\n',
-        'sin': 'o41\t#sin\n',
-        'cos': 'o46\t#cos\n',
-        'tan': 'o38\t#tan\n',
-        'sinh': 'o40\t#sinh\n',
-        'cosh': 'o45\t#cosh\n',
-        'tanh': 'o37\t#tanh\n',
-        'asin': 'o51\t#asin\n',
-        'acos': 'o53\t#acos\n',
-        'atan': 'o49\t#atan\n',
-        'exp': 'o44\t#exp\n',
-        'sqrt': 'o39\t#sqrt\n',
-        'asinh': 'o50\t#asinh\n',
-        'acosh': 'o52\t#acosh\n',
-        'atanh': 'o47\t#atanh\n',
-        'ceil': 'o14\t#ceil\n',
-        'floor': 'o13\t#floor\n',
-    }
-
-    binary_sum = 'o0\t#+\n'
-    product = 'o2\t#*\n'
-    division = 'o3\t# /\n'
-    pow = 'o5\t#^\n'
-    abs = 'o15\t# abs\n'
-    negation = 'o16\t#-\n'
-    nary_sum = 'o54\t# sumlist\n%d\t# (n)\n'
-    exprif = 'o35\t# if\n'
-    and_expr = 'o21\t# and\n'
-    less_than = 'o22\t# lt\n'
-    less_equal = 'o23\t# le\n'
-    equality = 'o24\t# eq\n'
-    external_fcn = 'f%d %d%s\n'
-    # NOTE: to support scaling and substitutions, we do NOT include the
-    # 'v' or the EOL here:
-    var = '%s'
-    const = 'n%r\n'
-    string = 'h%d:%s\n'
-    monomial = product + const + var.replace('%', '%%')
-    multiplier = product + const
-
-    _create_strict_inequality_map(vars())
-
-
-nl_operators = {
-    0: (2, operator.add),
-    2: (2, operator.mul),
-    3: (2, operator.truediv),
-    5: (2, operator.pow),
-    15: (1, operator.abs),
-    16: (1, operator.neg),
-    54: (None, lambda *x: sum(x)),
-    35: (3, lambda a, b, c: b if a else c),
-    21: (2, operator.and_),
-    22: (2, operator.lt),
-    23: (2, operator.le),
-    24: (2, operator.eq),
-    43: (1, math.log),
-    42: (1, math.log10),
-    41: (1, math.sin),
-    46: (1, math.cos),
-    38: (1, math.tan),
-    40: (1, math.sinh),
-    45: (1, math.cosh),
-    37: (1, math.tanh),
-    51: (1, math.asin),
-    53: (1, math.acos),
-    49: (1, math.atan),
-    44: (1, math.exp),
-    39: (1, math.sqrt),
-    50: (1, math.asinh),
-    52: (1, math.acosh),
-    47: (1, math.atanh),
-    14: (1, math.ceil),
-    13: (1, math.floor),
-}
-
-
-def _strip_template_comments(vars_, base_):
-    vars_['unary'] = {
-        k: v[: v.find('\t#')] + '\n' if v[-1] == '\n' else ''
-        for k, v in base_.unary.items()
-    }
-    for k, v in base_.__dict__.items():
-        if type(v) is str and '\t#' in v:
-            v_lines = v.split('\n')
-            for i, l in enumerate(v_lines):
-                comment_start = l.find('\t#')
-                if comment_start >= 0:
-                    v_lines[i] = l[:comment_start]
-            vars_[k] = '\n'.join(v_lines)
-
-
-# The "standard" text mode template is the debugging template with the
-# comments removed
-class text_nl_template(text_nl_debug_template):
-    _strip_template_comments(vars(), text_nl_debug_template)
-    _create_strict_inequality_map(vars())
-
-
-def node_result_to_amplrepn(data):
-    if data[0] is _GENERAL:
-        return data[1]
-    elif data[0] is _MONOMIAL:
-        _, v, c = data
-        if c:
-            return AMPLRepn(0, {v: c}, None)
-        else:
-            return AMPLRepn(0, None, None)
-    elif data[0] is _CONSTANT:
-        return AMPLRepn(data[1], None, None)
-    else:
-        raise DeveloperError("unknown result type")
+class DebugAMPLRepn(AMPLRepn):
+    __slots__ = ()
+    template = text_nl_debug_template
 
 
 def handle_negation_node(visitor, node, arg1):
@@ -2511,11 +2489,11 @@ def handle_product_node(visitor, node, arg1, arg2):
                     _prod = 0
                 return (_CONSTANT, _prod)
             return (_CONSTANT, mult * arg2[1])
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.product
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(
+        visitor.template.product
     )
-    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg2).compile_repn(*nonlin)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_division_node(visitor, node, arg1, arg2):
@@ -2540,11 +2518,11 @@ def handle_division_node(visitor, node, arg1, arg2):
             return _CONSTANT, apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and not arg1[1]:
         return _CONSTANT, 0
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.division
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(
+        visitor.template.division
     )
-    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg2).compile_repn(*nonlin)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_pow_node(visitor, node, arg1, arg2):
@@ -2558,25 +2536,25 @@ def handle_pow_node(visitor, node, arg1, arg2):
             return _CONSTANT, 1
         elif arg2[1] == 1:
             return arg1
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor, visitor.template.pow)
-    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(visitor.template.pow)
+    nonlin = visitor.node_result_to_amplrepn(arg2).compile_repn(*nonlin)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_abs_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
         return (_CONSTANT, abs(arg1[1]))
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(visitor, visitor.template.abs)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(visitor.template.abs)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
         return _CONSTANT, apply_node_operation(node, (arg1[1],))
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.unary[node.name]
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(
+        visitor.template.unary[node.name]
     )
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
@@ -2585,49 +2563,47 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
             return arg2
         else:
             return arg3
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.exprif
-    )
-    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
-    nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(visitor.template.exprif)
+    nonlin = visitor.node_result_to_amplrepn(arg2).compile_repn(*nonlin)
+    nonlin = visitor.node_result_to_amplrepn(arg3).compile_repn(*nonlin)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_equality_node(visitor, node, arg1, arg2):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
         return (_CONSTANT, arg1[1] == arg2[1])
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.equality
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(
+        visitor.template.equality
     )
-    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg2).compile_repn(*nonlin)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_inequality_node(visitor, node, arg1, arg2):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
         return (_CONSTANT, node._apply_operation((arg1[1], arg2[1])))
-    nonlin = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.strict_inequality_map[node.strict]
+    nonlin = visitor.node_result_to_amplrepn(arg1).compile_repn(
+        visitor.template.strict_inequality_map[node.strict]
     )
-    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg2).compile_repn(*nonlin)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
         return (_CONSTANT, node._apply_operation((arg1[1], arg2[1], arg3[1])))
     op = visitor.template.strict_inequality_map[node.strict]
-    nl, args, named = node_result_to_amplrepn(arg1).compile_repn(
-        visitor, visitor.template.and_expr + op[0]
+    nl, args, named = visitor.node_result_to_amplrepn(arg1).compile_repn(
+        visitor.template.and_expr + op[0]
     )
-    nl2, args2, named = node_result_to_amplrepn(arg2).compile_repn(
-        visitor, '', None, named
+    nl2, args2, named = visitor.node_result_to_amplrepn(arg2).compile_repn(
+        '', None, named
     )
     nl += nl2 + op[1] + nl2
     args.extend(args2)
     args.extend(args2)
-    nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, nl, args, named)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    nonlin = visitor.node_result_to_amplrepn(arg3).compile_repn(nl, args, named)
+    return (_GENERAL, visitor.Result(0, None, nonlin))
 
 
 def handle_named_expression_node(visitor, node, arg1):
@@ -2637,7 +2613,7 @@ def handle_named_expression_node(visitor, node, arg1):
     # to appear in the 'linear' portion of a constraint / objective
     # definition.  We will return this as a "var" template, but
     # wrapped in the nonlinear portion of the expression tree.
-    repn = node_result_to_amplrepn(arg1)
+    repn = visitor.node_result_to_amplrepn(arg1)
 
     # A local copy of the expression source list.  This will be updated
     # later if the same Expression node is encountered in another
@@ -2669,7 +2645,7 @@ def handle_named_expression_node(visitor, node, arg1):
     # original (linear + nonlinear) V line (which will not happen if
     # the V line is part of a larger linear operator).
     if repn.nonlinear.__class__ is list:
-        repn.compile_nonlinear_fragment(visitor)
+        repn.compile_nonlinear_fragment()
 
     if not visitor.use_named_exprs:
         return _GENERAL, repn.duplicate()
@@ -2693,7 +2669,7 @@ def handle_named_expression_node(visitor, node, arg1):
             # named subexpressions when appropriate.
             sub_node = NLFragment(repn, node)
             sub_id = id(sub_node)
-            sub_repn = AMPLRepn(0, None, None)
+            sub_repn = visitor.Result(0, None, None)
             sub_repn.nonlinear = repn.nonlinear
             sub_repn.nl = (visitor.template.var, (sub_id,))
             sub_repn.named_exprs = set(repn.named_exprs)
@@ -2801,11 +2777,11 @@ def handle_external_function_node(visitor, node, *args):
         arg_ids.append(_id)
         visitor.subexpression_cache[_id] = (
             arg,
-            AMPLRepn(
+            visitor.Result(
                 0,
                 None,
-                node_result_to_amplrepn(arg).compile_repn(
-                    visitor, named_exprs=named_exprs
+                visitor.node_result_to_amplrepn(arg).compile_repn(
+                    named_exprs=named_exprs
                 ),
             ),
             (None, None, True),
@@ -2814,7 +2790,7 @@ def handle_external_function_node(visitor, node, *args):
         named_exprs = None
     return (
         _GENERAL,
-        AMPLRepn(0, None, (nl + '%s' * len(arg_ids), arg_ids, named_exprs)),
+        visitor.Result(0, None, (nl + '%s' * len(arg_ids), arg_ids, named_exprs)),
     )
 
 
@@ -2875,7 +2851,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_string(visitor, child):
         visitor.encountered_string_arguments = True
-        ans = AMPLRepn(child, None, None)
+        ans = visitor.Result(child, None, None)
         ans.nl = (visitor.template.string % (len(child), child), ())
         return False, (_GENERAL, ans)
 
@@ -2996,7 +2972,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                     return True, None
 
         if linear:
-            return False, (_GENERAL, AMPLRepn(const, linear, None))
+            return False, (_GENERAL, visitor.Result(const, linear, None))
         else:
             return False, (_CONSTANT, const)
 
@@ -3021,7 +2997,6 @@ _before_child_handlers = AMPLBeforeChildDispatcher()
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
     def __init__(
         self,
-        template,
         subexpression_cache,
         external_functions,
         var_map,
@@ -3031,7 +3006,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         sorter,
     ):
         super().__init__()
-        self.template = template
         self.subexpression_cache = subexpression_cache
         self.external_functions = external_functions
         self.active_expression_source = None
@@ -3044,6 +3018,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
         self.sorter = sorter
+
+        if symbolic_solver_labels:
+            self.Result = DebugAMPLRepn
+        else:
+            self.Result = AMPLRepn
+        self.template = self.Result.template
 
     def check_constant(self, ans, obj):
         if ans.__class__ not in native_numeric_types:
@@ -3088,6 +3068,20 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             )
         self.fixed_vars[_id] = self.check_constant(child.value, child)
 
+    def node_result_to_amplrepn(self, data):
+        if data[0] is _GENERAL:
+            return data[1]
+        elif data[0] is _MONOMIAL:
+            _, v, c = data
+            if c:
+                return self.Result(0, {v: c}, None)
+            else:
+                return self.Result(0, None, None)
+        elif data[0] is _CONSTANT:
+            return self.Result(data[1], None, None)
+        else:
+            raise DeveloperError("unknown result type")
+
     def initializeWalker(self, expr):
         expr, src, src_idx, self.expression_scaling_factor = expr
         self.active_expression_source = (src_idx, id(src))
@@ -3103,14 +3097,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
         if node.__class__ in sum_like_expression_types:
-            data = AMPLRepn(0, {}, None)
+            data = self.Result(0, {}, None)
             data.nonlinear = []
             return node.args, data
         else:
             return node.args, []
 
     def exitNode(self, node, data):
-        if data.__class__ is AMPLRepn:
+        if data.__class__ is self.Result:
             # If the summation resulted in a constant, return the constant
             if data.linear or data.nonlinear or data.nl:
                 return (_GENERAL, data)
@@ -3122,7 +3116,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return _operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
-        ans = node_result_to_amplrepn(result)
+        ans = self.node_result_to_amplrepn(result)
 
         # Multiply the expression by the scaling factor provided by the caller
         ans.mult *= self.expression_scaling_factor
@@ -3161,7 +3155,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             ans.nl = None
 
         if ans.nonlinear.__class__ is list:
-            ans.compile_nonlinear_fragment(self)
+            ans.compile_nonlinear_fragment()
 
         if not ans.linear:
             ans.linear = {}

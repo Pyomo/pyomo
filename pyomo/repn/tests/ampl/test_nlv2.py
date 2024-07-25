@@ -64,7 +64,6 @@ class INFO(object):
         self.symbolic_solver_labels = symbolic
 
         self.visitor = nl_writer.AMPLRepnVisitor(
-            self.template,
             self.subexpression_cache,
             self.external_functions,
             self.var_map,
@@ -75,13 +74,10 @@ class INFO(object):
         )
 
     def __enter__(self):
-        assert nl_writer.AMPLRepn.ActiveVisitor is None
-        nl_writer.AMPLRepn.ActiveVisitor = self.visitor
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        assert nl_writer.AMPLRepn.ActiveVisitor is self.visitor
-        nl_writer.AMPLRepn.ActiveVisitor = None
+        pass
 
 
 class Test_AMPLRepnVisitor(unittest.TestCase):
