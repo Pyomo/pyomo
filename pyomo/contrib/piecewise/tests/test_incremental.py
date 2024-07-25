@@ -11,6 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.contrib.piecewise.tests.common_tests as ct
+from pyomo.contrib.piecewise.tests.models import make_log_x_model
 from pyomo.contrib.piecewise.triangulations import Triangulation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import assertExpressionsEqual
@@ -132,42 +133,59 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
         self.assertIsInstance(paraboloid_block.set_substitute, Constraint)
         self.assertEqual(len(paraboloid_block.set_substitute), 1)
 
+    ordered_simplices = [
+        [(0, 1), (3, 1), (3, 4)],
+        [(3, 4), (0, 1), (0, 4)],
+        [(0, 4), (0, 7), (3, 4)],
+        [(3, 4), (3, 7), (0, 7)],
+    ]
+
     # Test methods using the common_tests.py code.
     def test_transformation_do_not_descend(self):
         ct.check_transformation_do_not_descend(
-            self, 'contrib.piecewise.incremental', make_log_x_model_ordered()
+            self,
+            'contrib.piecewise.incremental',
+            make_log_x_model(simplices=self.ordered_simplices),
         )
 
     def test_transformation_PiecewiseLinearFunction_targets(self):
         ct.check_transformation_PiecewiseLinearFunction_targets(
-            self, 'contrib.piecewise.incremental', make_log_x_model_ordered()
+            self,
+            'contrib.piecewise.incremental',
+            make_log_x_model(simplices=self.ordered_simplices),
         )
 
     def test_descend_into_expressions(self):
         ct.check_descend_into_expressions(
-            self, 'contrib.piecewise.incremental', make_log_x_model_ordered()
+            self,
+            'contrib.piecewise.incremental',
+            make_log_x_model(simplices=self.ordered_simplices),
         )
 
     def test_descend_into_expressions_constraint_target(self):
         ct.check_descend_into_expressions_constraint_target(
-            self, 'contrib.piecewise.incremental', make_log_x_model_ordered()
+            self,
+            'contrib.piecewise.incremental',
+            make_log_x_model(simplices=self.ordered_simplices),
         )
 
     def test_descend_into_expressions_objective_target(self):
         ct.check_descend_into_expressions_objective_target(
-            self, 'contrib.piecewise.incremental', make_log_x_model_ordered()
+            self,
+            'contrib.piecewise.incremental',
+            make_log_x_model(simplices=self.ordered_simplices),
         )
 
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_log_model(self):
-        m = make_log_x_model_ordered()
+        m = make_log_x_model(simplices=self.ordered_simplices)
         TransformationFactory('contrib.piecewise.incremental').apply_to(m)
         TransformationFactory('gdp.bigm').apply_to(m)
         SolverFactory('gurobi').solve(m)
         ct.check_log_x_model_soln(self, m)
 
-    # Failed during development when j1 vertex ordering got broken
+    # Failed during development when ordered j1 vertex ordering got broken
     @unittest.skipUnless(SolverFactory('gurobi').available(), 'Gurobi is not available')
     @unittest.skipUnless(SolverFactory('gurobi').license_is_valid(), 'No license')
     def test_solve_product_model(self):
@@ -184,67 +202,3 @@ class TestTransformPiecewiseModelToIncrementalMIP(unittest.TestCase):
         TransformationFactory("contrib.piecewise.incremental").apply_to(m)
         SolverFactory('gurobi').solve(m)
         self.assertAlmostEqual(0.45, value(m.obj))
-
-
-# Make a version of the log_x model with the simplices properly ordered for the
-# incremental transform
-def make_log_x_model_ordered():
-    m = ConcreteModel()
-    m.x = Var(bounds=(1, 10))
-    m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)
-
-    # Here are the linear functions, for safe keeping.
-    def f1(x):
-        return (log(3) / 2) * x - log(3) / 2
-
-    m.f1 = f1
-
-    def f2(x):
-        return (log(2) / 3) * x + log(3 / 2)
-
-    m.f2 = f2
-
-    def f3(x):
-        return (log(5 / 3) / 4) * x + log(6 / ((5 / 3) ** (3 / 2)))
-
-    m.f3 = f3
-
-    m.log_expr = m.pw_log(m.x)
-    m.obj = Objective(expr=m.log_expr)
-
-    m.x1 = Var(bounds=(0, 3))
-    m.x2 = Var(bounds=(1, 7))
-
-    ## approximates paraboloid x1**2 + x2**2
-    def g1(x1, x2):
-        return 3 * x1 + 5 * x2 - 4
-
-    m.g1 = g1
-
-    def g2(x1, x2):
-        return 3 * x1 + 11 * x2 - 28
-
-    m.g2 = g2
-    # order for incremental transformation
-    simplices = [
-        [(0, 1), (3, 1), (3, 4)],
-        [(3, 4), (0, 1), (0, 4)],
-        [(0, 4), (0, 7), (3, 4)],
-        [(3, 4), (3, 7), (0, 7)],
-    ]
-    m.pw_paraboloid = PiecewiseLinearFunction(
-        simplices=simplices,
-        linear_functions=[g1, g1, g2, g2],
-        triangulation=Triangulation.AssumeValid,
-    )
-    m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
-
-    def c_rule(m, i):
-        if i == 0:
-            return m.x >= m.paraboloid_expr
-        else:
-            return (1, m.x1, 2)
-
-    m.indexed_c = Constraint([0, 1], rule=c_rule)
-
-    return m
