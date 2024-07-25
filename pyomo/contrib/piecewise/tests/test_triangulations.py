@@ -16,7 +16,7 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.triangulations import (
     get_unordered_j1_triangulation,
     get_ordered_j1_triangulation,
-    get_Gn_hamiltonian,
+    _get_Gn_hamiltonian,
     get_grid_hamiltonian,
 )
 from pyomo.common.dependencies import numpy as np, numpy_available
@@ -67,7 +67,7 @@ class TestTriangulations(unittest.TestCase):
         for idx, first_simplex in enumerate(ordered_triangulation):
             if idx != len(ordered_triangulation) - 1:
                 second_simplex = ordered_triangulation[idx + 1]
-                # test property (2) which also guarantees property (1)
+                # test property (2) which also guarantees property (1) (from Vielma 2010)
                 self.assertEqual(
                     first_simplex[-1],
                     second_simplex[0],
@@ -166,7 +166,7 @@ class TestTriangulations(unittest.TestCase):
         )
 
     def check_Gn_hamiltonian_path(self, n, start_permutation, target_symbol, last):
-        path = get_Gn_hamiltonian(n, start_permutation, target_symbol, last)
+        path = _get_Gn_hamiltonian(n, start_permutation, target_symbol, last)
         self.assertEqual(len(path), factorial(n))
         self.assertEqual(path[0], start_permutation)
         if last:

@@ -37,7 +37,7 @@ class Triangulation(Enum):
 def get_unordered_j1_triangulation(points, dimension):
     points_map, num_pts = _process_points_j1(points, dimension)
     simplices_list = _get_j1_triangulation(points_map, num_pts - 1, dimension)
-    return _FakeScipyTriangulation(
+    return _Triangulation(
         points=np.array(points),
         simplices=np.array(simplices_list),
         coplanar=np.array([]),
@@ -67,7 +67,7 @@ def get_ordered_j1_triangulation(points, dimension):
         simplices_list = _get_ordered_j1_triangulation_4d_and_above(
             points_map, num_pts - 1, dimension
         )
-    return _FakeScipyTriangulation(
+    return _Triangulation(
         points=np.array(points),
         simplices=np.array(simplices_list),
         coplanar=np.array([]),
@@ -80,7 +80,7 @@ def get_ordered_j1_triangulation(points, dimension):
 #   - simplices: list of M simplices as P x (n + 1) array of point _indices_
 #   - coplanar: list of N points omitted from triangulation as tuples of (point index,
 #     nearest simplex index, nearest vertex index), stacked into an N x 3 array
-class _FakeScipyTriangulation:
+class _Triangulation:
     def __init__(self, points, simplices, coplanar):
         self.points = points
         self.simplices = simplices
@@ -94,11 +94,13 @@ def _process_points_j1(points, dimension):
     num_pts = round(len(points) ** (1 / dimension))
     if not len(points) == num_pts**dimension:
         raise ValueError(
-            "'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis"
+            "'points' must have points forming an n-dimensional grid with straight grid"
+            " lines and the same odd number of points in each axis."
         )
     if not num_pts % 2 == 1:
         raise ValueError(
-            "'points' must have points forming an n-dimensional grid with straight grid lines and the same odd number of points in each axis"
+            "'points' must have points forming an n-dimensional grid with straight grid"
+            " lines and the same odd number of points in each axis."
         )
 
     # munge the points into an organized map from n-dimensional keys to original
@@ -224,7 +226,7 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
             if is_turnaround(x, y):
                 # finished; this case should always eventually be reached
                 add_bottom_left()
-                fix_vertices_incremental_order(simplices)
+                _fix_vertices_incremental_order(simplices)
                 return simplices
             else:
                 if square_parity_tlbr(x, y):
@@ -317,10 +319,13 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
 def _get_ordered_j1_triangulation_3d(points_map, num_pts):
     # To start, we need a hamiltonian path in the grid graph of *double* cubes
     # (2x2x2 cubes)
-    grid_hamiltonian = get_grid_hamiltonian(3, round(num_pts / 2))  # division is exact
+    grid_hamiltonian = _get_grid_hamiltonian(3, round(num_pts / 2))  # division is exact
 
     # We always start by going from [0, 0, 0] to [0, 0, 1], so we can safely
-    # start from the -x side
+    # start from the -x side.
+    # Data format: the first tuple is a basis vector or its negative, representing a
+    # face. The number afterwards is a 1 or 2 disambiguating which, of the two simplices
+    # on that face we consider, we are referring to.
     start_data = ((-1, 0, 0), 1)
 
     simplices = []
@@ -351,7 +356,7 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
 
         for simplex_data in current_cube_path:
             simplices.append(
-                get_one_j1_simplex(
+                _get_one_j1_simplex(
                     current_v_0, simplex_data[1], simplex_data[0], 3, points_map
                 )
             )
@@ -374,19 +379,19 @@ def _get_ordered_j1_triangulation_3d(points_map, num_pts):
 
     for simplex_data in current_cube_path:
         simplices.append(
-            get_one_j1_simplex(
+            _get_one_j1_simplex(
                 current_v_0, simplex_data[1], simplex_data[0], 3, points_map
             )
         )
 
-    fix_vertices_incremental_order(simplices)
+    _fix_vertices_incremental_order(simplices)
     return simplices
 
 
 def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
     # step one: get a hamiltonian path in the appropriate grid graph (low-coordinate
     # corners of the grid squares)
-    grid_hamiltonian = get_grid_hamiltonian(dim, num_pts)
+    grid_hamiltonian = _get_grid_hamiltonian(dim, num_pts)
 
     # step 1.5: get a starting simplex. Anything that is *not* adjacent to the
     # second square is fine. Since we always go from [0, ..., 0] to [0, ..., 1],
@@ -405,34 +410,34 @@ def _get_ordered_j1_triangulation_4d_and_above(points_map, num_pts, dim):
         j = [k + 1 for k in range(dim) if current_corner[k] != next_corner[k]][0]
         # border x_j value between this square and next
         c = max(current_corner[j - 1], next_corner[j - 1])
-        v_0, sign = get_nearest_odd_and_sign_vec(current_corner)
+        v_0, sign = _get_nearest_odd_and_sign_vec(current_corner)
         # According to Todd, what we need is to end with a permutation where rho(n) = j
         # if c is odd, and end with one where rho(1) = j if c is even. I think this
         # is right -- basically the sign from the sign vector sometimes cancels
         # out the sign from whether we are entering in the +c or -c direction.
         if c % 2 == 0:
-            perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, False)
+            perm_sequence = _get_Gn_hamiltonian(dim, start_perm, j, False)
             for pi in perm_sequence:
-                simplices.append(get_one_j1_simplex(v_0, pi, sign, dim, points_map))
+                simplices.append(_get_one_j1_simplex(v_0, pi, sign, dim, points_map))
         else:
-            perm_sequence = get_Gn_hamiltonian(dim, start_perm, j, True)
+            perm_sequence = _get_Gn_hamiltonian(dim, start_perm, j, True)
             for pi in perm_sequence:
-                simplices.append(get_one_j1_simplex(v_0, pi, sign, dim, points_map))
+                simplices.append(_get_one_j1_simplex(v_0, pi, sign, dim, points_map))
         # should be true regardless of odd or even
         start_perm = perm_sequence[-1]
 
     # step three: finish out the last square
     # Any final permutation is fine; we are going nowhere after this
-    v_0, sign = get_nearest_odd_and_sign_vec(grid_hamiltonian[-1])
-    for pi in get_Gn_hamiltonian(dim, start_perm, 1, False):
-        simplices.append(get_one_j1_simplex(v_0, pi, sign, dim, points_map))
+    v_0, sign = _get_nearest_odd_and_sign_vec(grid_hamiltonian[-1])
+    for pi in _get_Gn_hamiltonian(dim, start_perm, 1, False):
+        simplices.append(_get_one_j1_simplex(v_0, pi, sign, dim, points_map))
 
     # fix vertices and return
-    fix_vertices_incremental_order(simplices)
+    _fix_vertices_incremental_order(simplices)
     return simplices
 
 
-def get_one_j1_simplex(v_0, pi, sign, dim, points_map):
+def _get_one_j1_simplex(v_0, pi, sign, dim, points_map):
     simplex = []
     current = list(v_0)
     simplex.append(points_map[tuple(current)])
@@ -444,7 +449,7 @@ def get_one_j1_simplex(v_0, pi, sign, dim, points_map):
 
 # get the v_0 and sign vectors corresponding to a given square, identified by its
 # low-coordinate corner
-def get_nearest_odd_and_sign_vec(corner):
+def _get_nearest_odd_and_sign_vec(corner):
     v_0 = []
     sign = []
     for x in corner:
@@ -457,12 +462,12 @@ def get_nearest_odd_and_sign_vec(corner):
     return v_0, sign
 
 
-def get_grid_hamiltonian(dim, length):
+def _get_grid_hamiltonian(dim, length):
     if dim == 1:
         return [[n] for n in range(length)]
     else:
         ret = []
-        prev = get_grid_hamiltonian(dim - 1, length)
+        prev = _get_grid_hamiltonian(dim - 1, length)
         for n in range(length):
             # if n is even, add the previous hamiltonian with n in its new first
             # coordinate. If odd, do the same with the previous hamiltonian in reverse.
@@ -476,7 +481,7 @@ def get_grid_hamiltonian(dim, length):
 
 
 # Fix vertices (in place) when the simplices are right but vertices are not
-def fix_vertices_incremental_order(simplices):
+def _fix_vertices_incremental_order(simplices):
     last_vertex_index = len(simplices[0]) - 1
     for i, simplex in enumerate(simplices):
         # Choose vertices like this: first is always the same as last
@@ -496,7 +501,7 @@ def fix_vertices_incremental_order(simplices):
                 if simplex[n] in simplices[i + 1] and n != first:
                     last = n
                     break
-        if first == None or last == None:
+        if first is None or last is None:
             raise DeveloperError("Couldn't fix vertex ordering for incremental.")
 
         # reorder the simplex with the desired first and last
@@ -520,7 +525,7 @@ def fix_vertices_incremental_order(simplices):
 # starting permutation, such that a fixed target symbol is either the image
 # rho(1), or it is rho(n), depending on whether first or last is requested,
 # where rho is the final permutation.
-def get_Gn_hamiltonian(n, start_permutation, target_symbol, last, _cache={}):
+def _get_Gn_hamiltonian(n, start_permutation, target_symbol, last, _cache={}):
     if n < 4:
         raise ValueError("n must be at least 4 for this operation to be possible")
     if (n, start_permutation, target_symbol, last) in _cache:
@@ -529,7 +534,7 @@ def get_Gn_hamiltonian(n, start_permutation, target_symbol, last, _cache={}):
     if last:
         ret = [
             tuple(reversed(pi))
-            for pi in get_Gn_hamiltonian(
+            for pi in _get_Gn_hamiltonian(
                 n, tuple(reversed(start_permutation)), target_symbol, False
             )
         ]
@@ -544,19 +549,19 @@ def get_Gn_hamiltonian(n, start_permutation, target_symbol, last, _cache={}):
         ]  # pi^-1(j)
         ret = [
             tuple(start_permutation[pi[i] - 1] for i in range(n))
-            for pi in _get_Gn_hamiltonian(n, new_target_symbol)
+            for pi in _get_Gn_hamiltonian_impl(n, new_target_symbol)
         ]
         _cache[(n, start_permutation, target_symbol, last)] = ret
         return ret
     else:
-        ret = _get_Gn_hamiltonian(n, target_symbol)
+        ret = _get_Gn_hamiltonian_impl(n, target_symbol)
         _cache[(n, start_permutation, target_symbol, last)] = ret
         return ret
 
 
 # Assume the starting permutation is (1, ..., n) and the target symbol needs to
 # be in the first position of the last permutation
-def _get_Gn_hamiltonian(n, target_symbol):
+def _get_Gn_hamiltonian_impl(n, target_symbol):
     # base case: proof by picture from Todd 79, Figure 2
     # note: Figure 2 contains an error, careful!
     if n == 4:
@@ -675,7 +680,7 @@ def _get_Gn_hamiltonian(n, target_symbol):
             idx = n - 1
             facing = -1
             ret = []
-            for pi in _get_Gn_hamiltonian(n - 1, target_symbol):
+            for pi in _get_Gn_hamiltonian_impl(n - 1, target_symbol):
                 for _ in range(n):
                     l = list(pi)
                     l.insert(idx, n)
@@ -689,7 +694,7 @@ def _get_Gn_hamiltonian(n, target_symbol):
             idx = 0
             facing = 1
             ret = []
-            for pi in _get_Gn_hamiltonian(n - 1, n - 1):
+            for pi in _get_Gn_hamiltonian_impl(n - 1, n - 1):
                 for _ in range(n):
                     l = [x + 1 for x in pi]
                     l.insert(idx, 1)
