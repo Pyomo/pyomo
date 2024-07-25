@@ -13,13 +13,7 @@ from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base impo
     PiecewiseLinearTransformationBase,
 )
 from pyomo.contrib.piecewise.triangulations import Triangulation
-from pyomo.core import (
-    Constraint,
-    Binary,
-    Var,
-    RangeSet,
-    Param,
-)
+from pyomo.core import Constraint, Binary, Var, RangeSet, Param
 from pyomo.core.base import TransformationFactory
 
 

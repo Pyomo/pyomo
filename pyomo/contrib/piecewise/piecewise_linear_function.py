@@ -336,7 +336,8 @@ class PiecewiseLinearFunction(Block):
             obj._triangulation = tri
         else:
             raise ValueError(
-                "Invalid or unrecognized triangulation specified for '%s': %s" % (obj, tri)
+                "Invalid or unrecognized triangulation specified for '%s': %s"
+                % (obj, tri)
             )
 
         # Get the points for the triangulation because they might not all be
