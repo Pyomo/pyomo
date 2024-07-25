@@ -57,7 +57,7 @@ class IncrementalMIPTransformation(PiecewiseLinearTransformationBase):
                 "would likely lead to incorrect results! The built-in "
                 "Triangulation.OrderedJ1 triangulation has an appropriate ordering for "
                 "this transformation. If you know what you are doing, you can also "
-                "suppress this error by overriding the triangulation tag to be "
+                "suppress this error by setting the triangulation tag to "
                 "Triangulation.AssumeValid during PiecewiseLinearFunction construction."
             )
         # Get a new Block() in transformation_block.transformed_functions, which
