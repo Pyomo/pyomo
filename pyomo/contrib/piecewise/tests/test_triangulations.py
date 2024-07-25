@@ -17,7 +17,7 @@ from pyomo.contrib.piecewise.triangulations import (
     get_unordered_j1_triangulation,
     get_ordered_j1_triangulation,
     _get_Gn_hamiltonian,
-    get_grid_hamiltonian,
+    _get_grid_hamiltonian,
 )
 from pyomo.common.dependencies import numpy as np, numpy_available
 from math import factorial
@@ -203,7 +203,7 @@ class TestTriangulations(unittest.TestCase):
         self.check_Gn_hamiltonian_path(7, (1, 2, 3, 4, 5, 6, 7), 7, False)
 
     def check_grid_hamiltonian(self, dim, length):
-        path = get_grid_hamiltonian(dim, length)
+        path = _get_grid_hamiltonian(dim, length)
         self.assertEqual(len(path), length**dim)
         for x in itertools.product(range(length), repeat=dim):
             self.assertTrue(list(x) in path)
