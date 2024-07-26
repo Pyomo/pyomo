@@ -316,8 +316,8 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         # we support this by adding the Problem object to the args we pass to a user's
         # callback. To preserve backwards compatibility, we inspect the user's
         # callback to infer whether they want this argument. To preserve backwards
-        # if the user asked for variable-length *args, we only pass the Problem as
-        # an argument if their callback asks for exactly 13 arguments.
+        # compatibility if the user asked for variable-length *args, we do not pass
+        # the Problem object as an argument in this case.
         # A more maintainable solution may be to force users to accept **kwds if they
         # want "extra info." If we find ourselves continuing to augment this callback,
         # this may be worth considering. -RBP
