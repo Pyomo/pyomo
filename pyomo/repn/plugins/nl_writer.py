@@ -1998,4 +1998,3 @@ class _NLWriter_impl(object):
             ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
-
