@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['Model', 'ConcreteModel', 'AbstractModel', 'global_option']
 
 import logging
 import sys
@@ -20,7 +18,7 @@ import math
 from pyomo.common import timing
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.common.numeric_types import value
@@ -34,11 +32,10 @@ from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.block import ScalarBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 from pyomo.dataportal.DataPortal import DataPortal
 
-from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
+from pyomo.opt.results import Solution, SolverStatus, UndefinedData
 
 from contextlib import nullcontext
 from io import StringIO
@@ -789,7 +786,7 @@ arguments (which have been ignored):"""
             profile_memory = kwds.get('profile_memory', 0)
 
             if profile_memory >= 2 and pympler_available:
-                mem_used = pympler.muppy.get_size(muppy.get_objects())
+                mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
                 print("")
                 print(
                     "      Total memory = %d bytes prior to model "
@@ -798,7 +795,7 @@ arguments (which have been ignored):"""
 
                 if profile_memory >= 3:
                     gc.collect()
-                    mem_used = pympler.muppy.get_size(muppy.get_objects())
+                    mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
                     print(
                         "      Total memory = %d bytes prior to model "
                         "construction (after garbage collection)" % mem_used

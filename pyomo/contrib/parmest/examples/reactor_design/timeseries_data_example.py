@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -14,38 +14,64 @@ from os.path import join, abspath, dirname
 
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
-    reactor_design_model,
+    ReactorDesignExperiment,
 )
 
 
-def main():
-    # Parameter estimation using timeseries data
+class TimeSeriesReactorDesignExperiment(ReactorDesignExperiment):
 
-    # Vars to estimate
-    theta_names = ['k1', 'k2', 'k3']
+    def __init__(self, data, experiment_number):
+        self.data = data
+        self.experiment_number = experiment_number
+        data_i = data.loc[data['experiment'] == experiment_number, :]
+        self.data_i = data_i.reset_index()
+        self.model = None
+
+    def finalize_model(self):
+        m = self.model
+
+        # Experiment inputs values
+        m.sv = self.data_i['sv'].mean()
+        m.caf = self.data_i['caf'].mean()
+
+        # Experiment output values
+        m.ca = self.data_i['ca'][0]
+        m.cb = self.data_i['cb'][0]
+        m.cc = self.data_i['cc'][0]
+        m.cd = self.data_i['cd'][0]
+
+        return m
+
+
+def main():
+    # Parameter estimation using timeseries data, grouped by experiment number
 
     # Data, includes multiple sensors for ca and cc
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, 'reactor_data_timeseries.csv'))
     data = pd.read_csv(file_name)
 
-    # Group time series data into experiments, return the mean value for sv and caf
-    # Returns a list of dictionaries
-    data_ts = parmest.group_data(data, 'experiment', ['sv', 'caf'])
+    # Create an experiment list
+    exp_list = []
+    for i in data['experiment'].unique():
+        exp_list.append(TimeSeriesReactorDesignExperiment(data, i))
 
-    def SSE_timeseries(model, data):
+    def SSE_timeseries(model):
+
         expr = 0
-        for val in data['ca']:
-            expr = expr + ((float(val) - model.ca) ** 2) * (1 / len(data['ca']))
-        for val in data['cb']:
-            expr = expr + ((float(val) - model.cb) ** 2) * (1 / len(data['cb']))
-        for val in data['cc']:
-            expr = expr + ((float(val) - model.cc) ** 2) * (1 / len(data['cc']))
-        for val in data['cd']:
-            expr = expr + ((float(val) - model.cd) ** 2) * (1 / len(data['cd']))
+        for y, y_hat in model.experiment_outputs.items():
+            num_time_points = len(y_hat)
+            for i in range(num_time_points):
+                expr += ((y - y_hat[i]) ** 2) * (1 / num_time_points)
+
         return expr
 
-    pest = parmest.Estimator(reactor_design_model, data_ts, theta_names, SSE_timeseries)
+    # View one model & SSE
+    # exp0_model = exp_list[0].get_labeled_model()
+    # exp0_model.pprint()
+    # print(SSE_timeseries(exp0_model))
+
+    pest = parmest.Estimator(exp_list, obj_function=SSE_timeseries)
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)

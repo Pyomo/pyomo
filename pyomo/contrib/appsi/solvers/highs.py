@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 from typing import List, Dict, Optional
 from pyomo.common.collections import ComponentMap
@@ -9,10 +20,10 @@ from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.log import LogStream
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.sos import SOSConstraintData
+from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
@@ -165,11 +176,19 @@ class Highs(PersistentBase, PersistentSolver):
             return self.Availability.NotFound
 
     def version(self):
-        version = (
-            highspy.HIGHS_VERSION_MAJOR,
-            highspy.HIGHS_VERSION_MINOR,
-            highspy.HIGHS_VERSION_PATCH,
-        )
+        try:
+            version = (
+                highspy.HIGHS_VERSION_MAJOR,
+                highspy.HIGHS_VERSION_MINOR,
+                highspy.HIGHS_VERSION_PATCH,
+            )
+        except AttributeError:
+            # Older versions of Highs do not have the above attributes
+            # and the solver version can only be obtained by making
+            # an instance of the solver class.
+            tmp = highspy.Highs()
+            version = (tmp.versionMajor(), tmp.versionMinor(), tmp.versionPatch())
+
         return version
 
     @property
@@ -297,7 +316,7 @@ class Highs(PersistentBase, PersistentSolver):
 
         return lb, ub, vtype
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -324,7 +343,7 @@ class Highs(PersistentBase, PersistentSolver):
             len(vtypes), np.array(indices), np.array(vtypes)
         )
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         pass
 
     def _reinit(self):
@@ -365,7 +384,7 @@ class Highs(PersistentBase, PersistentSolver):
                 if self._objective is None:
                     self.set_objective(None)
 
-    def _add_constraints(self, cons: List[_GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -445,13 +464,13 @@ class Highs(PersistentBase, PersistentSolver):
             np.array(coef_values, dtype=np.double),
         )
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if cons:
             raise NotImplementedError(
                 'Highs interface does not support SOS constraints'
             )
 
-    def _remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -462,7 +481,7 @@ class Highs(PersistentBase, PersistentSolver):
             indices_to_remove.append(con_ndx)
             self._mutable_helpers.pop(con, None)
         self._solver_model.deleteRows(
-            len(indices_to_remove), np.array(indices_to_remove)
+            len(indices_to_remove), np.sort(np.array(indices_to_remove))
         )
         con_ndx = 0
         new_con_map = dict()
@@ -476,13 +495,13 @@ class Highs(PersistentBase, PersistentSolver):
             {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
         )
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if cons:
             raise NotImplementedError(
                 'Highs interface does not support SOS constraints'
             )
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -504,10 +523,10 @@ class Highs(PersistentBase, PersistentSolver):
         self._pyomo_var_to_solver_var_map.clear()
         self._pyomo_var_to_solver_var_map.update(new_var_map)
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         pass
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[VarData]):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -669,9 +688,11 @@ class Highs(PersistentBase, PersistentSolver):
                 self.load_vars()
             else:
                 raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loaded.'
-                    'Please set opt.config.load_solution=False and check '
-                    'results.termination_condition and '
+                    'A feasible solution was not found, so no solution can be loaded. '
+                    'If using the appsi.solvers.Highs interface, you can '
+                    'set opt.config.load_solution=False. If using the environ.SolverFactory '
+                    'interface, you can set opt.solve(model, load_solutions = False). '
+                    'Then you can check results.termination_condition and '
                     'results.best_feasible_objective before loading a solution.'
                 )
         timer.stop('load solution')

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from io import StringIO
+import logging
 from os.path import join, normpath
 import pickle
 
@@ -50,7 +51,25 @@ gurobi_available = (
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 
-class LinearModelDecisionTreeExample(unittest.TestCase):
+class CommonTests(unittest.TestCase):
+    def check_pretty_bound_constraints(self, cons, var, bounds, lb):
+        self.assertEqual(value(cons.upper), 0)
+        self.assertIsNone(cons.lower)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), len(bounds) + 1)
+        self.assertEqual(repn.constant, 0)
+        if lb:
+            check_linear_coef(self, repn, var, -1)
+            for disj, bnd in bounds.items():
+                check_linear_coef(self, repn, disj.binary_indicator_var, bnd)
+        else:
+            check_linear_coef(self, repn, var, 1)
+            for disj, bnd in bounds.items():
+                check_linear_coef(self, repn, disj.binary_indicator_var, -bnd)
+
+
+class LinearModelDecisionTreeExample(CommonTests):
     def make_model(self):
         m = ConcreteModel()
         m.x1 = Var(bounds=(-10, 10))
@@ -333,6 +352,43 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
 
+    def test_local_var_suffix_ignored(self):
+        m = self.make_model()
+        m.y = Var(bounds=(2, 5))
+        m.d1.another_thing = Constraint(expr=m.y == 3)
+        m.d1.LocalVars = Suffix(direction=Suffix.LOCAL)
+        m.d1.LocalVars[m.d1] = m.y
+
+        mbigm = TransformationFactory('gdp.mbigm')
+        mbigm.apply_to(
+            m, reduce_bound_constraints=True, only_mbigm_bound_constraints=True
+        )
+
+        cons = mbigm.get_transformed_constraints(m.d1.x1_bounds)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x1, {m.d1: 0.5, m.d2: 0.65, m.d3: 2}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x1, {m.d1: 2, m.d2: 3, m.d3: 10}, lb=False
+        )
+
+        cons = mbigm.get_transformed_constraints(m.d1.x2_bounds)
+        self.check_pretty_bound_constraints(
+            cons[0], m.x2, {m.d1: 0.75, m.d2: 3, m.d3: 0.55}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.x2, {m.d1: 3, m.d2: 10, m.d3: 1}, lb=False
+        )
+
+        cons = mbigm.get_transformed_constraints(m.d1.another_thing)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(
+            cons[0], m.y, {m.d1: 3, m.d2: 2, m.d3: 2}, lb=True
+        )
+        self.check_pretty_bound_constraints(
+            cons[1], m.y, {m.d1: 3, m.d2: 5, m.d3: 5}, lb=False
+        )
+
     def test_pickle_transformed_model(self):
         m = self.make_model()
         TransformationFactory('gdp.mbigm').apply_to(m, bigM=self.get_Ms(m))
@@ -380,22 +436,6 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.d2.binary_indicator_var, 1)
         check_linear_coef(self, repn, m.d3.binary_indicator_var, 1)
         check_obj_in_active_tree(self, xor)
-
-    def check_pretty_bound_constraints(self, cons, var, bounds, lb):
-        self.assertEqual(value(cons.upper), 0)
-        self.assertIsNone(cons.lower)
-        repn = generate_standard_repn(cons.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), len(bounds) + 1)
-        self.assertEqual(repn.constant, 0)
-        if lb:
-            check_linear_coef(self, repn, var, -1)
-            for disj, bnd in bounds.items():
-                check_linear_coef(self, repn, disj.binary_indicator_var, bnd)
-        else:
-            check_linear_coef(self, repn, var, 1)
-            for disj, bnd in bounds.items():
-                check_linear_coef(self, repn, disj.binary_indicator_var, -bnd)
 
     def test_bounds_constraints_correct(self):
         m = self.make_model()
@@ -877,6 +917,25 @@ class NestedDisjunctsInFlatGDP(unittest.TestCase):
         check_nested_disjuncts_in_flat_gdp(self, 'bigm')
 
 
+class IndexedDisjunctiveConstraints(CommonTests):
+    def test_empty_constraint_container_on_Disjunct(self):
+        m = ConcreteModel()
+        m.d = Disjunct()
+        m.e = Disjunct()
+        m.d.c = Constraint(['s', 'i', 'l', 'L', 'y'])
+        m.x = Var(bounds=(2, 3))
+        m.e.c = Constraint(expr=m.x == 2.7)
+        m.disjunction = Disjunction(expr=[m.d, m.e])
+
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m)
+
+        cons = mbm.get_transformed_constraints(m.e.c)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x, {m.d: 2, m.e: 2.7}, lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x, {m.d: 3, m.e: 2.7}, lb=False)
+
+
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
 class IndexedDisjunction(unittest.TestCase):
     def test_two_term_indexed_disjunction(self):
@@ -930,3 +989,113 @@ class IndexedDisjunction(unittest.TestCase):
         self.assertEqual(len(cons_again), 2)
         self.assertIs(cons_again[0], cons[0])
         self.assertIs(cons_again[1], cons[1])
+
+
+class EdgeCases(unittest.TestCase):
+    def make_infeasible_disjunct_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1, 12))
+        m.y = Var(bounds=(19, 22))
+        m.disjunction = Disjunction(
+            expr=[
+                [m.x >= 3 + m.y, m.y == 19.75],  # infeasible given bounds
+                [m.y >= 21 + m.x],  # unique solution
+                [m.x == m.y - 9],  # x in interval [10, 12]
+            ]
+        )
+        return m
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_calculate_Ms_infeasible_Disjunct(self):
+        m = self.make_infeasible_disjunct_model()
+        out = StringIO()
+        mbm = TransformationFactory('gdp.mbigm')
+        with LoggingIntercept(out, 'pyomo.gdp.mbigm', logging.DEBUG):
+            mbm.apply_to(m, reduce_bound_constraints=False)
+
+        # We mentioned the infeasibility at the DEBUG level
+        self.assertIn(
+            r"Disjunct 'disjunction_disjuncts[0]' is infeasible, deactivating",
+            out.getvalue().strip(),
+        )
+
+        # We just fixed the infeasible disjunct to False
+        self.assertFalse(m.disjunction.disjuncts[0].active)
+        self.assertTrue(m.disjunction.disjuncts[0].indicator_var.fixed)
+        self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
+
+        # We didn't actually transform the infeasible disjunct
+        self.assertIsNone(m.disjunction.disjuncts[0].transformation_block)
+
+        # the remaining constraints are transformed correctly.
+        cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[1].constraint[1])
+        self.assertEqual(len(cons), 1)
+        assertExpressionsEqual(
+            self,
+            cons[0].expr,
+            21 + m.x - m.y <= 12.0 * m.disjunction.disjuncts[2].binary_indicator_var,
+        )
+
+        cons = mbm.get_transformed_constraints(m.disjunction.disjuncts[2].constraint[1])
+        self.assertEqual(len(cons), 2)
+        assertExpressionsEqual(
+            self,
+            cons[0].expr,
+            -12.0 * m.disjunction_disjuncts[1].binary_indicator_var <= m.x - (m.y - 9),
+        )
+        assertExpressionsEqual(
+            self,
+            cons[1].expr,
+            m.x - (m.y - 9) <= -12.0 * m.disjunction_disjuncts[1].binary_indicator_var,
+        )
+
+    @unittest.skipUnless(
+        SolverFactory('ipopt').available(exception_flag=False), "Ipopt is not available"
+    )
+    def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
+        m = self.make_infeasible_disjunct_model()
+        with self.assertRaisesRegex(
+            GDP_Error,
+            r"Unsuccessful solve to calculate M value to "
+            r"relax constraint 'disjunction_disjuncts\[1\].constraint\[1\]' "
+            r"on Disjunct 'disjunction_disjuncts\[1\]' when "
+            r"Disjunct 'disjunction_disjuncts\[0\]' is selected.",
+        ):
+            TransformationFactory('gdp.mbigm').apply_to(
+                m, solver=SolverFactory('ipopt'), reduce_bound_constraints=False
+            )
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_politely_ignore_BigM_Suffix(self):
+        m = self.make_infeasible_disjunct_model()
+        m.disjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[1].BigM = Suffix(direction=Suffix.LOCAL)
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.mbigm', logging.DEBUG):
+            TransformationFactory('gdp.mbigm').apply_to(
+                m, reduce_bound_constraints=False
+            )
+        warnings = out.getvalue()
+        self.assertIn(
+            r"Found active 'BigM' Suffix on 'disjunction_disjuncts[1]'. "
+            r"The multiple bigM transformation does not currently "
+            r"support specifying M's with Suffixes and is ignoring "
+            r"this Suffix.",
+            warnings,
+        )
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_complain_for_unrecognized_Suffix(self):
+        m = self.make_infeasible_disjunct_model()
+        m.disjunction.disjuncts[0].deactivate()
+        m.disjunction.disjuncts[1].HiThere = Suffix(direction=Suffix.LOCAL)
+        out = StringIO()
+        with self.assertRaisesRegex(
+            GDP_Error,
+            r"Found active Suffix 'disjunction_disjuncts\[1\].HiThere' "
+            r"on Disjunct 'disjunction_disjuncts\[1\]'. The multiple bigM "
+            r"transformation does not support this Suffix.",
+        ):
+            TransformationFactory('gdp.mbigm').apply_to(
+                m, reduce_bound_constraints=False
+            )

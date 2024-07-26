@@ -1,10 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from typing import List
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.param import ParamData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.objective import ObjectiveData
+from pyomo.core.base.sos import SOSConstraintData
+from pyomo.core.base.block import BlockData
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.numvalue import value
 from pyomo.contrib.appsi.base import PersistentBase
@@ -66,7 +77,7 @@ class LPWriter(PersistentBase):
         if self._objective is None:
             self.set_objective(None)
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[VarData]):
         cmodel.process_pyomo_vars(
             self._expr_types,
             variables,
@@ -80,7 +91,7 @@ class LPWriter(PersistentBase):
             False,
         )
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         cparams = cmodel.create_params(len(params))
         for ndx, p in enumerate(params):
             cp = cparams[ndx]
@@ -88,36 +99,36 @@ class LPWriter(PersistentBase):
             cp.value = p.value
             self._pyomo_param_to_solver_param_map[id(p)] = cp
 
-    def _add_constraints(self, cons: List[_GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         cmodel.process_lp_constraints(cons, self)
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('LP writer does not yet support SOS constraints')
 
-    def _remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         for c in cons:
             cc = self._pyomo_con_to_solver_con_map.pop(c)
             self._writer.remove_constraint(cc)
             self._symbol_map.removeSymbol(c)
             del self._solver_con_to_pyomo_con_map[cc]
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError('LP writer does not yet support SOS constraints')
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[VarData]):
         for v in variables:
             cvar = self._pyomo_var_to_solver_var_map.pop(id(v))
             del self._solver_var_to_pyomo_var_map[cvar]
             self._symbol_map.removeSymbol(v)
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         for p in params:
             del self._pyomo_param_to_solver_param_map[id(p)]
             self._symbol_map.removeSymbol(p)
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[VarData]):
         cmodel.process_pyomo_vars(
             self._expr_types,
             variables,
@@ -136,7 +147,7 @@ class LPWriter(PersistentBase):
             cp = self._pyomo_param_to_solver_param_map[p_id]
             cp.value = p.value
 
-    def _set_objective(self, obj: _GeneralObjectiveData):
+    def _set_objective(self, obj: ObjectiveData):
         cobj = cmodel.process_lp_objective(
             self._expr_types,
             obj,
@@ -156,7 +167,7 @@ class LPWriter(PersistentBase):
         cobj.name = cname
         self._writer.objective = cobj
 
-    def write(self, model: _BlockData, filename: str, timer: HierarchicalTimer = None):
+    def write(self, model: BlockData, filename: str, timer: HierarchicalTimer = None):
         if timer is None:
             timer = HierarchicalTimer()
         if model is not self._model:

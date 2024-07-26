@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -29,7 +29,7 @@ from pyomo.environ import (
     maximize,
     minimize,
 )
-from pyomo.opt import SolverFactory, ProblemSense, TerminationCondition, SolverStatus
+from pyomo.opt import SolverFactory, TerminationCondition, SolverStatus
 from pyomo.solvers.plugins.solvers.CBCplugin import CBCSHELL
 
 cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=False)
@@ -62,7 +62,7 @@ class TestCBC(unittest.TestCase):
 
         results = self.opt.solve(self.model)
 
-        self.assertEqual(ProblemSense.minimize, results.problem.sense)
+        self.assertEqual(minimize, results.problem.sense)
         self.assertEqual(
             TerminationCondition.infeasible, results.solver.termination_condition
         )
@@ -81,7 +81,7 @@ class TestCBC(unittest.TestCase):
 
         results = self.opt.solve(self.model)
 
-        self.assertEqual(ProblemSense.maximize, results.problem.sense)
+        self.assertEqual(maximize, results.problem.sense)
         self.assertEqual(
             TerminationCondition.unbounded, results.solver.termination_condition
         )
@@ -99,7 +99,7 @@ class TestCBC(unittest.TestCase):
 
         self.assertEqual(0.0, results.problem.lower_bound)
         self.assertEqual(0.0, results.problem.upper_bound)
-        self.assertEqual(ProblemSense.minimize, results.problem.sense)
+        self.assertEqual(minimize, results.problem.sense)
         self.assertEqual(
             TerminationCondition.optimal, results.solver.termination_condition
         )
@@ -118,7 +118,7 @@ class TestCBC(unittest.TestCase):
 
         results = self.opt.solve(self.model)
 
-        self.assertEqual(ProblemSense.minimize, results.problem.sense)
+        self.assertEqual(minimize, results.problem.sense)
         self.assertEqual(
             TerminationCondition.infeasible, results.solver.termination_condition
         )
@@ -134,7 +134,7 @@ class TestCBC(unittest.TestCase):
 
         results = self.opt.solve(self.model)
 
-        self.assertEqual(ProblemSense.minimize, results.problem.sense)
+        self.assertEqual(minimize, results.problem.sense)
         self.assertEqual(
             TerminationCondition.unbounded, results.solver.termination_condition
         )
@@ -159,7 +159,7 @@ class TestCBC(unittest.TestCase):
         self.assertEqual(1.0, results.problem.upper_bound)
         self.assertEqual(results.problem.number_of_binary_variables, 2)
         self.assertEqual(results.problem.number_of_integer_variables, 4)
-        self.assertEqual(ProblemSense.maximize, results.problem.sense)
+        self.assertEqual(maximize, results.problem.sense)
         self.assertEqual(
             TerminationCondition.optimal, results.solver.termination_condition
         )

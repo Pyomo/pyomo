@@ -142,6 +142,7 @@ PyROS Solver Interface
 
     Otherwise, the solution returned is certified to only be robust feasible.
 
+
 PyROS Uncertainty Sets
 -----------------------------
 Uncertainty sets are represented by subclasses of
@@ -518,7 +519,7 @@ correspond to first-stage degrees of freedom.
 
   >>> # === Designate which variables correspond to first-stage
   >>> #     and second-stage degrees of freedom ===
-  >>> first_stage_variables =[
+  >>> first_stage_variables = [
   ...     m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
   ...     m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31,
   ... ]
@@ -539,7 +540,7 @@ correspond to first-stage degrees of freedom.
   ...     load_solution=False,
   ... )
   ==============================================================================
-  PyROS: The Pyomo Robust Optimization Solver.
+  PyROS: The Pyomo Robust Optimization Solver...
   ...
   ------------------------------------------------------------------------------
   Robust optimal solution identified.
@@ -656,6 +657,54 @@ In this example, we select affine decision rules by setting
 For this example, we notice a ~25% decrease in the final objective
 value when switching from a static decision rule (no second-stage recourse)
 to an affine decision rule.
+
+
+Specifying Arguments Indirectly Through ``options``
+"""""""""""""""""""""""""""""""""""""""""""""""""""
+Like other Pyomo solver interface methods,
+:meth:`~pyomo.contrib.pyros.PyROS.solve`
+provides support for specifying options indirectly by passing
+a keyword argument ``options``, whose value must be a :class:`dict`
+mapping names of arguments to :meth:`~pyomo.contrib.pyros.PyROS.solve`
+to their desired values.
+For example, the ``solve()`` statement in the
+:ref:`two-stage problem snippet <example-two-stg>`
+could have been equivalently written as:
+
+.. doctest::
+  :skipif: not (baron.available() and baron.license_is_valid())
+
+  >>> results_2 = pyros_solver.solve(
+  ...     model=m,
+  ...     first_stage_variables=first_stage_variables,
+  ...     second_stage_variables=second_stage_variables,
+  ...     uncertain_params=uncertain_parameters,
+  ...     uncertainty_set=box_uncertainty_set,
+  ...     local_solver=local_solver,
+  ...     global_solver=global_solver,
+  ...     options={
+  ...         "objective_focus": pyros.ObjectiveType.worst_case,
+  ...         "solve_master_globally": True,
+  ...         "decision_rule_order": 1,
+  ...     },
+  ... )
+  ==============================================================================
+  PyROS: The Pyomo Robust Optimization Solver...
+  ...
+  ------------------------------------------------------------------------------
+  Robust optimal solution identified.
+  ------------------------------------------------------------------------------
+  ...
+  ------------------------------------------------------------------------------
+  All done. Exiting PyROS.
+  ==============================================================================
+
+In the event an argument is passed directly
+by position or keyword, *and* indirectly through ``options``,
+an appropriate warning is issued,
+and the value passed directly takes precedence over the value
+passed through ``options``.
+
 
 The Price of Robustness
 """"""""""""""""""""""""
@@ -854,10 +903,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.2.9.
-          Pyomo version: 6.7.0
+   PyROS: The Pyomo Robust Optimization Solver, v1.2.11.
+          Pyomo version: 6.7.2
           Commit hash: unknown
-          Invoked at UTC 2023-12-16T00:00:00.000000
+          Invoked at UTC 2024-03-28T00:00:00.000000
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -877,6 +926,7 @@ Observe that the log contains the following information:
     keepfiles=False
     tee=False
     load_solution=True
+    symbolic_solver_labels=False
     objective_focus=<ObjectiveType.worst_case: 1>
     nominal_uncertain_param_vals=[0.13248000000000001, 4.97, 4.97, 1800]
     decision_rule_order=1

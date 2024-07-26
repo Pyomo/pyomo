@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ import logging
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import (
     DirectOrPersistentSolver,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
@@ -79,8 +79,8 @@ class DirectSolver(DirectOrPersistentSolver):
         #
         _model = None
         for arg in args:
-            if isinstance(arg, (_BlockData, IBlock)):
-                if isinstance(arg, _BlockData):
+            if isinstance(arg, (BlockData, IBlock)):
+                if isinstance(arg, BlockData):
                     if not arg.is_constructed():
                         raise RuntimeError(
                             "Attempting to solve model=%s with unconstructed "
@@ -89,7 +89,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
                 _model = arg
                 # import suffixes must be on the top-level model
-                if isinstance(arg, _BlockData):
+                if isinstance(arg, BlockData):
                     model_suffixes = list(
                         name for (name, comp) in active_import_suffix_generator(arg)
                     )

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,6 @@ from pyomo.contrib.cp.interval_var import (
     IntervalVarStartTime,
     IntervalVarEndTime,
 )
-from pyomo.core.base.component import Component
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.logical_expr import BooleanExpression
 

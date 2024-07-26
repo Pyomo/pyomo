@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -50,7 +50,7 @@ def get_residual(ui_data, c):
             values of the constraint body. This function uses the cached values
             and will not trigger recalculation. If variable values have changed,
             this may not yield accurate results.
-        c(_ConstraintData): a constraint or constraint data
+        c(ConstraintData): a constraint or constraint data
     Returns:
         (float) residual
     """
@@ -149,7 +149,7 @@ def degrees_of_freedom(blk):
     Return the degrees of freedom.
 
     Args:
-        blk (Block or _BlockData): Block to count degrees of freedom in
+        blk (Block or BlockData): Block to count degrees of freedom in
     Returns:
         (int): Number of degrees of freedom
     """

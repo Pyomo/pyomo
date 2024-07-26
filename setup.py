@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -253,6 +253,9 @@ setup_kwargs = dict(
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
+            'sphinx-toolbox>=2.16.0',
+            'sphinx-jinja2-compat>=0.1.1',
+            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
@@ -261,7 +264,9 @@ setup_kwargs = dict(
             'ipython',  # contrib.viewer
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
-            'matplotlib!=3.6.1',
+            # Note: minimum version from community_detection use of
+            # matplotlib.pyplot.get_cmap()
+            'matplotlib>=3.6.0,!=3.6.1',
             # network, incidence_analysis, community_detection
             # Note: networkx 3.2 is Python>-3.9, but there is a broken
             # 3.2 package on conda-forge that will get implicitly
@@ -303,6 +308,7 @@ setup_kwargs = dict(
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
         "pyomo.contrib.viewer": ["*.ui"],
+        "pyomo.contrib.simplification.ginac": ["src/*.cpp", "src/*.hpp"],
     },
     ext_modules=ext_modules,
     entry_points="""

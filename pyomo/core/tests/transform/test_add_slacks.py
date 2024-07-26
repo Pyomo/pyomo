@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -102,10 +102,7 @@ class TestAddSlacks(unittest.TestCase):
             self,
             cons.body,
             EXPR.LinearExpression(
-                [
-                    EXPR.MonomialTermExpression((1, m.x)),
-                    EXPR.MonomialTermExpression((-1, transBlock._slack_minus_rule1)),
-                ]
+                [m.x, EXPR.MonomialTermExpression((-1, transBlock._slack_minus_rule1))]
             ),
         )
 
@@ -118,14 +115,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(cons.lower, 0.1)
 
         assertExpressionsEqual(
-            self,
-            cons.body,
-            EXPR.LinearExpression(
-                [
-                    EXPR.MonomialTermExpression((1, m.x)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule3)),
-                ]
-            ),
+            self, cons.body, EXPR.LinearExpression([m.x, transBlock._slack_plus_rule3])
         )
 
     def test_ub_constraint_modified(self):
@@ -154,8 +144,8 @@ class TestAddSlacks(unittest.TestCase):
             cons.body,
             EXPR.LinearExpression(
                 [
-                    EXPR.MonomialTermExpression((1, m.y)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule2)),
+                    m.y,
+                    transBlock._slack_plus_rule2,
                     EXPR.MonomialTermExpression((-1, transBlock._slack_minus_rule2)),
                 ]
             ),
@@ -184,10 +174,10 @@ class TestAddSlacks(unittest.TestCase):
             obj.expr,
             EXPR.LinearExpression(
                 [
-                    EXPR.MonomialTermExpression((1, transBlock._slack_minus_rule1)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule2)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_minus_rule2)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule3)),
+                    transBlock._slack_minus_rule1,
+                    transBlock._slack_plus_rule2,
+                    transBlock._slack_minus_rule2,
+                    transBlock._slack_plus_rule3,
                 ]
             ),
         )
@@ -302,10 +292,7 @@ class TestAddSlacks(unittest.TestCase):
             self,
             obj.expr,
             EXPR.LinearExpression(
-                [
-                    EXPR.MonomialTermExpression((1, transBlock._slack_minus_rule1)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule3)),
-                ]
+                [transBlock._slack_minus_rule1, transBlock._slack_plus_rule3]
             ),
         )
 
@@ -343,7 +330,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertRaisesRegex(
             ValueError,
             "Expected Constraint or list of Constraints.\n\tReceived "
-            "<class 'pyomo.core.base.var._GeneralVarData'>",
+            "<class 'pyomo.core.base.var.VarData'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
             targets=m.indexedVar[1],
@@ -423,9 +410,9 @@ class TestAddSlacks(unittest.TestCase):
             c.body,
             EXPR.LinearExpression(
                 [
-                    EXPR.MonomialTermExpression((1, m.x)),
+                    m.x,
                     EXPR.MonomialTermExpression((-2, m.y)),
-                    EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule4)),
+                    transBlock._slack_plus_rule4,
                     EXPR.MonomialTermExpression((-1, transBlock._slack_minus_rule4)),
                 ]
             ),
@@ -518,15 +505,9 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
             obj.expr,
             EXPR.LinearExpression(
                 [
-                    EXPR.MonomialTermExpression(
-                        (1, transBlock.component("_slack_plus_rule1[1]"))
-                    ),
-                    EXPR.MonomialTermExpression(
-                        (1, transBlock.component("_slack_plus_rule1[2]"))
-                    ),
-                    EXPR.MonomialTermExpression(
-                        (1, transBlock.component("_slack_plus_rule1[3]"))
-                    ),
+                    transBlock.component("_slack_plus_rule1[1]"),
+                    transBlock.component("_slack_plus_rule1[2]"),
+                    transBlock.component("_slack_plus_rule1[3]"),
                 ]
             ),
         )
@@ -558,14 +539,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
             EXPR.LinearExpression(
                 [
                     EXPR.MonomialTermExpression((2, m.x[i])),
-                    EXPR.MonomialTermExpression(
-                        (
-                            1,
-                            m._core_add_slack_variables.component(
-                                "_slack_plus_rule1[%s]" % i
-                            ),
-                        )
-                    ),
+                    m._core_add_slack_variables.component("_slack_plus_rule1[%s]" % i),
                 ]
             ),
         )

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -174,15 +174,26 @@ class ToBaronVisitor(_ToStringVisitor):
                 return self.smap.getSymbol(var)
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
+    def _var_to_string(self, node):
+        if node.is_fixed():
+            return ftoa(node.value, True)
+        self.variables.add(id(node))
+        return self.smap.getSymbol(node)
+
     def _linear_to_string(self, node):
         values = [
             (
                 self._monomial_to_string(arg)
-                if (
-                    arg.__class__ is EXPR.MonomialTermExpression
-                    and not arg.arg(1).is_fixed()
+                if arg.__class__ is EXPR.MonomialTermExpression
+                else (
+                    ftoa(arg)
+                    if arg.__class__ in native_numeric_types
+                    else (
+                        self._var_to_string(arg)
+                        if arg.is_variable_type()
+                        else ftoa(value(arg), True)
+                    )
                 )
-                else ftoa(value(arg))
             )
             for arg in node.args
         ]

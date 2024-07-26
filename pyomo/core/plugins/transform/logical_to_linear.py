@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Transformation from BooleanVar and LogicalConstraint to Binary and
 Constraints."""
 
@@ -18,7 +29,7 @@ from pyomo.core import (
     BooleanVarList,
     SortComponents,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.boolean_var import _DeprecatedImplicitAssociatedBinaryVariable
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr import (
@@ -89,7 +100,7 @@ class LogicalToLinear(IsomorphicTransformation):
             # the GDP will be solved, and it would be wrong to assume that a GDP
             # will *necessarily* be solved as an algebraic model. The star
             # example of not doing so being GDPopt.)
-            if t.ctype is Block or isinstance(t, _BlockData):
+            if t.ctype is Block or isinstance(t, BlockData):
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():
@@ -274,7 +285,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
     """Convert CNF logical constraint to linear constraints.
 
     Expected expression node types: AndExpression, OrExpression, NotExpression,
-    AtLeastExpression, AtMostExpression, ExactlyExpression, _BooleanVarData
+    AtLeastExpression, AtMostExpression, ExactlyExpression, BooleanVarData
 
     """
 
@@ -361,7 +372,7 @@ class CnfToLinearVisitor(StreamBasedExpressionVisitor):
         if child.is_expression_type():
             return True, None
 
-        # Only thing left should be _BooleanVarData
+        # Only thing left should be BooleanVarData
         #
         # TODO: After the expr_multiple_dispatch is merged, this should
         # be switched to using as_numeric.

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -127,7 +127,7 @@ class TestTemplateExpressions(unittest.TestCase):
         # Note that structural expressions do not implement polynomial_degree
         with self.assertRaisesRegex(
             AttributeError,
-            "'_InsertionOrderSetData' object has " "no attribute 'polynomial_degree'",
+            "'InsertionOrderSetData' object has " "no attribute 'polynomial_degree'",
         ):
             e.polynomial_degree()
         self.assertEqual(str(e), "s[{I}]")
@@ -490,14 +490,14 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertEqual(
             str(resolve_template(template)),
             'x[1,1,10] + '
-            '(x[2,1,10] + x[2,1,20]) + '
-            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
-            '(x[1,2,10]) + '
-            '(x[2,2,10] + x[2,2,20]) + '
-            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
-            '(x[1,3,10]) + '
-            '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0',
+            'x[2,1,10] + x[2,1,20] + '
+            'x[3,1,10] + x[3,1,20] + x[3,1,30] + '
+            'x[1,2,10] + '
+            'x[2,2,10] + x[2,2,20] + '
+            'x[3,2,10] + x[3,2,20] + x[3,2,30] + '
+            'x[1,3,10] + '
+            'x[2,3,10] + x[2,3,20] + '
+            'x[3,3,10] + x[3,3,20] + x[3,3,30]  <=  0',
         )
 
     def test_multidim_nested_sum_rule(self):
@@ -566,14 +566,14 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertEqual(
             str(resolve_template(template)),
             'x[1,1,10] + '
-            '(x[2,1,10] + x[2,1,20]) + '
-            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
-            '(x[1,2,10]) + '
-            '(x[2,2,10] + x[2,2,20]) + '
-            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
-            '(x[1,3,10]) + '
-            '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0',
+            'x[2,1,10] + x[2,1,20] + '
+            'x[3,1,10] + x[3,1,20] + x[3,1,30] + '
+            'x[1,2,10] + '
+            'x[2,2,10] + x[2,2,20] + '
+            'x[3,2,10] + x[3,2,20] + x[3,2,30] + '
+            'x[1,3,10] + '
+            'x[2,3,10] + x[2,3,20] + '
+            'x[3,3,10] + x[3,3,20] + x[3,3,30]  <=  0',
         )
 
     def test_multidim_nested_getattr_sum_rule(self):
@@ -609,14 +609,14 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertEqual(
             str(resolve_template(template)),
             'x[1,1,10] + '
-            '(x[2,1,10] + x[2,1,20]) + '
-            '(x[3,1,10] + x[3,1,20] + x[3,1,30]) + '
-            '(x[1,2,10]) + '
-            '(x[2,2,10] + x[2,2,20]) + '
-            '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
-            '(x[1,3,10]) + '
-            '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0',
+            'x[2,1,10] + x[2,1,20] + '
+            'x[3,1,10] + x[3,1,20] + x[3,1,30] + '
+            'x[1,2,10] + '
+            'x[2,2,10] + x[2,2,20] + '
+            'x[3,2,10] + x[3,2,20] + x[3,2,30] + '
+            'x[1,3,10] + '
+            'x[2,3,10] + x[2,3,20] + '
+            'x[3,3,10] + x[3,3,20] + x[3,3,30]  <=  0',
         )
 
     def test_eval_getattr(self):

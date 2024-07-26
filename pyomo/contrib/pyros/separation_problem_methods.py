@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Functions for the construction and solving of the GRCS separation problem via ROsolver
 """
@@ -7,7 +18,6 @@ from pyomo.core.base.objective import Objective, maximize, value
 from pyomo.core.base import Var, Param
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
-from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver
 from pyomo.contrib.pyros.solve_data import (
     DiscreteSeparationSolveCallResults,
     SeparationSolveCallResults,
@@ -26,9 +36,11 @@ from pyomo.common.errors import ApplicationError
 from pyomo.contrib.pyros.util import ABS_CON_CHECK_FEAS_TOL
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.pyros.util import (
-    TIC_TOC_SOLVE_TIME_ATTR,
     adjust_solver_time_settings,
+    call_solver,
+    ObjectiveType,
     revert_solver_max_time_adjustment,
+    TIC_TOC_SOLVE_TIME_ATTR,
 )
 import os
 from copy import deepcopy
@@ -638,6 +650,7 @@ def perform_separation_loop(model_data, config, solve_globally):
                 solver_call_results=ComponentMap(),
                 solved_globally=solve_globally,
                 worst_case_perf_con=None,
+                all_discrete_scenarios_exhausted=True,
             )
 
         perf_con_to_maximize = sorted_priority_groups[
@@ -1058,6 +1071,7 @@ def solver_call_separation(
 
     separation_obj.activate()
 
+    solve_mode_adverb = "globally" if solve_globally else "locally"
     solve_call_results = SeparationSolveCallResults(
         solved_globally=solve_globally,
         time_out=False,
@@ -1065,7 +1079,6 @@ def solver_call_separation(
         found_violation=False,
         subsolver_error=False,
     )
-    timer = TicTocTimer()
     for idx, opt in enumerate(solvers):
         if idx > 0:
             config.progress_logger.warning(
@@ -1074,37 +1087,19 @@ def solver_call_separation(
                 f"separation of performance constraint {con_name_repr} "
                 f"in iteration {model_data.iteration}."
             )
-        orig_setting, custom_setting_present = adjust_solver_time_settings(
-            model_data.timing, opt, config
-        )
-        model_data.timing.start_timer(f"main.{solve_mode}_separation")
-        timer.tic(msg=None)
-        try:
-            results = opt.solve(
-                nlp_model,
-                tee=config.tee,
-                load_solutions=False,
-                symbolic_solver_labels=True,
-            )
-        except ApplicationError:
-            # account for possible external subsolver errors
-            # (such as segmentation faults, function evaluation
-            # errors, etc.)
-            adverb = "globally" if solve_globally else "locally"
-            config.progress_logger.error(
+        results = call_solver(
+            model=nlp_model,
+            solver=opt,
+            config=config,
+            timing_obj=model_data.timing,
+            timer_name=f"main.{solve_mode}_separation",
+            err_msg=(
                 f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
                 f"encountered exception attempting "
-                f"to {adverb} solve separation problem for constraint "
+                f"to {solve_mode_adverb} solve separation problem for constraint "
                 f"{con_name_repr} in iteration {model_data.iteration}."
-            )
-            raise
-        else:
-            setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
-            model_data.timing.stop_timer(f"main.{solve_mode}_separation")
-        finally:
-            revert_solver_max_time_adjustment(
-                opt, orig_setting, custom_setting_present, config
-            )
+            ),
+        )
 
         # record termination condition for this particular solver
         solver_status_dict[str(opt)] = results.solver.termination_condition

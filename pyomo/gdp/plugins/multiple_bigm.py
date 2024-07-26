@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,7 @@
 import itertools
 import logging
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
@@ -31,7 +31,6 @@ from pyomo.core import (
     NonNegativeIntegers,
     Objective,
     Param,
-    RangeSet,
     Set,
     SetOf,
     SortComponents,
@@ -59,6 +58,18 @@ from pyomo.repn import generate_standard_repn
 from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
+
+_trusted_solvers = {
+    'gurobi',
+    'cplex',
+    'cbc',
+    'glpk',
+    'scip',
+    'xpress',
+    'mosek',
+    'baron',
+    'highs',
+}
 
 
 @TransformationFactory.register(
@@ -201,9 +212,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def __init__(self):
         super().__init__(logger)
-        self.handlers[Suffix] = self._warn_for_active_suffix
         self._arg_list = {}
         self._set_up_expr_bound_visitor()
+        self.handlers[Suffix] = self._warn_for_active_suffix
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
@@ -299,9 +310,12 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         arg_Ms = self._config.bigM if self._config.bigM is not None else {}
 
+        # ESJ: I am relying on the fact that the ComponentSet is going to be
+        # ordered here, but using a set because I will remove infeasible
+        # Disjuncts from it if I encounter them calculating M's.
+        active_disjuncts = ComponentSet(disj for disj in obj.disjuncts if disj.active)
         # First handle the bound constraints if we are dealing with them
         # separately
-        active_disjuncts = [disj for disj in obj.disjuncts if disj.active]
         transformed_constraints = set()
         if self._config.reduce_bound_constraints:
             transformed_constraints = self._transform_bound_constraints(
@@ -325,8 +339,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for disjunct in active_disjuncts:
             or_expr += disjunct.indicator_var.get_associated_binary()
             self._transform_disjunct(disjunct, transBlock, active_disjuncts, Ms)
-        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
-        algebraic_constraint.add(index, (or_expr, rhs))
+        algebraic_constraint.add(index, or_expr == 1)
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(algebraic_constraint[index])
@@ -346,17 +359,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
 
-    def _warn_for_active_suffix(self, obj, disjunct, active_disjuncts, Ms):
-        raise GDP_Error(
-            "Found active Suffix '{0}' on Disjunct '{1}'. "
-            "The multiple bigM transformation does not currently "
-            "support Suffixes.".format(obj.name, disjunct.name)
-        )
-
     def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
-        constraintMap = relaxationBlock._constraintMap
+        constraint_map = relaxationBlock.private_data('pyomo.gdp')
         transBlock = relaxationBlock.parent_block()
 
         # Though rare, it is possible to get naming conflicts here
@@ -375,7 +381,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 continue
 
             if not self._config.only_mbigm_bound_constraints:
-                transformed = []
+                transformed = constraint_map.transformed_constraints[c]
                 if c.lower is not None:
                     rhs = sum(
                         Ms[c, disj][0] * disj.indicator_var.get_associated_binary()
@@ -394,8 +400,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
                     transformed.append(newConstraint[i, 'ub'])
                 for c_new in transformed:
-                    constraintMap['srcConstraints'][c_new] = [c]
-                constraintMap['transformedConstraints'][c] = transformed
+                    constraint_map.src_constraint[c_new] = [c]
             else:
                 lower = (None, None, None)
                 upper = (None, None, None)
@@ -424,11 +429,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     M,
                     disjunct.indicator_var.get_associated_binary(),
                     newConstraint,
-                    constraintMap,
+                    constraint_map,
                 )
 
-        # deactivate now that we have transformed
-        c.deactivate()
+            # deactivate now that we have transformed
+            c.deactivate()
 
     def _transform_bound_constraints(self, active_disjuncts, transBlock, Ms):
         # first we're just going to find all of them
@@ -493,6 +498,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 relaxationBlock = self._get_disjunct_transformation_block(
                     disj, transBlock
                 )
+                constraint_map = relaxationBlock.private_data('pyomo.gdp')
                 if len(lower_dict) > 0:
                     M = lower_dict.get(disj, None)
                     if M is None:
@@ -524,39 +530,24 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             idx = i + offset
             if len(lower_dict) > 0:
                 transformed.add((idx, 'lb'), v >= lower_rhs)
-                relaxationBlock._constraintMap['srcConstraints'][
-                    transformed[idx, 'lb']
-                ] = []
+                constraint_map.src_constraint[transformed[idx, 'lb']] = []
                 for c, disj in lower_bound_constraints_by_var[v]:
-                    relaxationBlock._constraintMap['srcConstraints'][
-                        transformed[idx, 'lb']
-                    ].append(c)
-                    disj.transformation_block._constraintMap['transformedConstraints'][
-                        c
-                    ] = [transformed[idx, 'lb']]
+                    constraint_map.src_constraint[transformed[idx, 'lb']].append(c)
+                    disj.transformation_block.private_data(
+                        'pyomo.gdp'
+                    ).transformed_constraints[c].append(transformed[idx, 'lb'])
             if len(upper_dict) > 0:
                 transformed.add((idx, 'ub'), v <= upper_rhs)
-                relaxationBlock._constraintMap['srcConstraints'][
-                    transformed[idx, 'ub']
-                ] = []
+                constraint_map.src_constraint[transformed[idx, 'ub']] = []
                 for c, disj in upper_bound_constraints_by_var[v]:
-                    relaxationBlock._constraintMap['srcConstraints'][
-                        transformed[idx, 'ub']
-                    ].append(c)
+                    constraint_map.src_constraint[transformed[idx, 'ub']].append(c)
                     # might already be here if it had an upper bound
-                    if (
-                        c
-                        in disj.transformation_block._constraintMap[
-                            'transformedConstraints'
-                        ]
-                    ):
-                        disj.transformation_block._constraintMap[
-                            'transformedConstraints'
-                        ][c].append(transformed[idx, 'ub'])
-                    else:
-                        disj.transformation_block._constraintMap[
-                            'transformedConstraints'
-                        ][c] = [transformed[idx, 'ub']]
+                    disj_constraint_map = disj.transformation_block.private_data(
+                        'pyomo.gdp'
+                    )
+                    disj_constraint_map.transformed_constraints[c].append(
+                        transformed[idx, 'ub']
+                    )
 
         return transformed_constraints
 
@@ -597,7 +588,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         ):
             if disjunct is other_disjunct:
                 continue
-            if id(other_disjunct) in scratch_blocks:
+            elif id(other_disjunct) in scratch_blocks:
                 scratch = scratch_blocks[id(other_disjunct)]
             else:
                 scratch = scratch_blocks[id(other_disjunct)] = Block()
@@ -631,40 +622,34 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     self.used_args[constraint, other_disjunct] = (lower_M, upper_M)
                 else:
                     (lower_M, upper_M) = (None, None)
+                unsuccessful_solve_msg = (
+                    "Unsuccessful solve to calculate M value to "
+                    "relax constraint '%s' on Disjunct '%s' when "
+                    "Disjunct '%s' is selected."
+                    % (constraint.name, disjunct.name, other_disjunct.name)
+                )
                 if constraint.lower is not None and lower_M is None:
                     # last resort: calculate
                     if lower_M is None:
                         scratch.obj.expr = constraint.body - constraint.lower
                         scratch.obj.sense = minimize
-                        results = self._config.solver.solve(other_disjunct)
-                        if (
-                            results.solver.termination_condition
-                            is not TerminationCondition.optimal
-                        ):
-                            raise GDP_Error(
-                                "Unsuccessful solve to calculate M value to "
-                                "relax constraint '%s' on Disjunct '%s' when "
-                                "Disjunct '%s' is selected."
-                                % (constraint.name, disjunct.name, other_disjunct.name)
-                            )
-                        lower_M = value(scratch.obj.expr)
+                        lower_M = self._solve_disjunct_for_M(
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            active_disjuncts,
+                        )
                 if constraint.upper is not None and upper_M is None:
                     # last resort: calculate
                     if upper_M is None:
                         scratch.obj.expr = constraint.body - constraint.upper
                         scratch.obj.sense = maximize
-                        results = self._config.solver.solve(other_disjunct)
-                        if (
-                            results.solver.termination_condition
-                            is not TerminationCondition.optimal
-                        ):
-                            raise GDP_Error(
-                                "Unsuccessful solve to calculate M value to "
-                                "relax constraint '%s' on Disjunct '%s' when "
-                                "Disjunct '%s' is selected."
-                                % (constraint.name, disjunct.name, other_disjunct.name)
-                            )
-                        upper_M = value(scratch.obj.expr)
+                        upper_M = self._solve_disjunct_for_M(
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            active_disjuncts,
+                        )
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
                 transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
 
@@ -673,6 +658,70 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             blk.parent_block().del_component(blk)
 
         return arg_Ms
+
+    def _solve_disjunct_for_M(
+        self, other_disjunct, scratch_block, unsuccessful_solve_msg, active_disjuncts
+    ):
+        if not other_disjunct.active:
+            # If a Disjunct is infeasible, we will discover that and deactivate
+            # it when we are calculating the M values. We remove that disjunct
+            # from active_disjuncts inside of the loop in
+            # _calculate_missing_M_values. So that means that we might have
+            # deactivated Disjuncts here that we should skip over.
+            return 0
+
+        solver = self._config.solver
+
+        results = solver.solve(other_disjunct, load_solutions=False)
+        if results.solver.termination_condition is TerminationCondition.infeasible:
+            # [2/18/24]: TODO: After the solver rewrite is complete, we will not
+            # need this check since we can actually determine from the
+            # termination condition whether or not the solver proved
+            # infeasibility or just terminated at local infeasiblity. For now,
+            # while this is not complete, it catches most of the solvers we
+            # trust, and, unless someone is so pathological as to *rename* an
+            # untrusted solver using a trusted solver name, it will never do the
+            # *wrong* thing.
+            if any(s in solver.name for s in _trusted_solvers):
+                logger.debug(
+                    "Disjunct '%s' is infeasible, deactivating." % other_disjunct.name
+                )
+                other_disjunct.deactivate()
+                active_disjuncts.remove(other_disjunct)
+                M = 0
+            else:
+                # This is a solver that might report
+                # 'infeasible' for local infeasibility, so we
+                # can't deactivate with confidence. To be
+                # conservative, we'll just complain about
+                # it. Post-solver-rewrite we will want to change
+                # this so that we check for 'proven_infeasible'
+                # and then we can abandon this hack
+                raise GDP_Error(unsuccessful_solve_msg)
+        elif results.solver.termination_condition is not TerminationCondition.optimal:
+            raise GDP_Error(unsuccessful_solve_msg)
+        else:
+            other_disjunct.solutions.load_from(results)
+            M = value(scratch_block.obj.expr)
+        return M
+
+    def _warn_for_active_suffix(self, suffix, disjunct, active_disjuncts, Ms):
+        if suffix.local_name == 'BigM':
+            logger.debug(
+                "Found active 'BigM' Suffix on '{0}'. "
+                "The multiple bigM transformation does not currently "
+                "support specifying M's with Suffixes and is ignoring "
+                "this Suffix.".format(disjunct.name)
+            )
+        elif suffix.local_name == 'LocalVars':
+            # This is fine, but this transformation doesn't need anything from it
+            pass
+        else:
+            raise GDP_Error(
+                "Found active Suffix '{0}' on Disjunct '{1}'. "
+                "The multiple bigM transformation does not "
+                "support this Suffix.".format(suffix.name, disjunct.name)
+            )
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.

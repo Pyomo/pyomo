@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,14 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import collections
-
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
 from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
-from pyomo.core.expr.numeric_expr import NumericExpression
-from pyomo.core.expr.relational_expr import RelationalExpression
 import pyomo.core.expr as EXPR
 from pyomo.core.base import (
     Binary,
@@ -27,9 +23,9 @@ from pyomo.core.base import (
     value,
 )
 import pyomo.core.base.boolean_var as BV
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.param import ScalarParam, _ParamData
-from pyomo.core.base.var import ScalarVar, _GeneralVarData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.param import ScalarParam, ParamData
+from pyomo.core.base.var import ScalarVar, VarData
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
 
 
@@ -209,15 +205,15 @@ _operator_dispatcher[EXPR.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
-_before_child_dispatcher[BV._GeneralBooleanVarData] = _dispatch_boolean_var
+_before_child_dispatcher[BV.BooleanVarData] = _dispatch_boolean_var
 _before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
-_before_child_dispatcher[_ParamData] = _dispatch_param
+_before_child_dispatcher[ParamData] = _dispatch_param
 _before_child_dispatcher[ScalarParam] = _dispatch_param
 # for the moment, these are all just so we can get good error messages when we
 # don't handle them:
 _before_child_dispatcher[ScalarVar] = _dispatch_var
-_before_child_dispatcher[_GeneralVarData] = _dispatch_var
-_before_child_dispatcher[_GeneralExpressionData] = _dispatch_expression
+_before_child_dispatcher[VarData] = _dispatch_var
+_before_child_dispatcher[ExpressionData] = _dispatch_expression
 _before_child_dispatcher[ScalarExpression] = _dispatch_expression
 
 

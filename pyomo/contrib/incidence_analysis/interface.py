@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ useful graph algorithms.
 
 import enum
 import textwrap
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
@@ -28,8 +28,8 @@ from pyomo.common.dependencies import (
     scipy as sp,
     plotly,
 )
-from pyomo.common.deprecation import deprecated
-from pyomo.contrib.incidence_analysis.config import IncidenceConfig
+from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.contrib.incidence_analysis.config import get_config_from_kwds
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.connected import get_independent_submatrices
 from pyomo.contrib.incidence_analysis.triangularize import (
@@ -47,7 +47,7 @@ from pyomo.contrib.incidence_analysis.incidence import get_incident_variables
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 pyomo_nlp, pyomo_nlp_available = attempt_import(
-    'pyomo.contrib.pynumero.interfaces.pyomo_nlp'
+    "pyomo.contrib.pynumero.interfaces.pyomo_nlp"
 )
 asl_available = pyomo_nlp_available & AmplInterface.available()
 
@@ -62,7 +62,7 @@ def _check_unindexed(complist):
 
 
 def get_incidence_graph(variables, constraints, **kwds):
-    config = IncidenceConfig(kwds)
+    config = get_config_from_kwds(**kwds)
     return get_bipartite_incidence_graph(variables, constraints, **config)
 
 
@@ -91,7 +91,9 @@ def get_bipartite_incidence_graph(variables, constraints, **kwds):
     ``networkx.Graph``
 
     """
-    config = IncidenceConfig(kwds)
+    # Note that this ConfigDict contains the visitor that we will re-use
+    # when constructing constraints.
+    config = get_config_from_kwds(**kwds)
     _check_unindexed(variables + constraints)
     N = len(variables)
     M = len(constraints)
@@ -134,36 +136,34 @@ def extract_bipartite_subgraph(graph, nodes0, nodes1):
         in the original graph.
 
     """
-    subgraph = nx.Graph()
-    sub_M = len(nodes0)
-    sub_N = len(nodes1)
-    subgraph.add_nodes_from(range(sub_M), bipartite=0)
-    subgraph.add_nodes_from(range(sub_M, sub_M + sub_N), bipartite=1)
-
+    subgraph = graph.subgraph(nodes0 + nodes1)
+    # TODO: Any error checking that nodes are valid bipartition?
+    for node in nodes0:
+        bipartite = graph.nodes[node]["bipartite"]
+        if bipartite != 0:
+            raise RuntimeError(
+                "Invalid bipartite sets. Node {node} in set 0 has"
+                " bipartite={bipartite}"
+            )
+    for node in nodes1:
+        bipartite = graph.nodes[node]["bipartite"]
+        if bipartite != 1:
+            raise RuntimeError(
+                "Invalid bipartite sets. Node {node} in set 1 has"
+                " bipartite={bipartite}"
+            )
     old_new_map = {}
     for i, node in enumerate(nodes0 + nodes1):
         if node in old_new_map:
             raise RuntimeError("Node %s provided more than once.")
         old_new_map[node] = i
-
-    for node1, node2 in graph.edges():
-        if node1 in old_new_map and node2 in old_new_map:
-            new_node_1 = old_new_map[node1]
-            new_node_2 = old_new_map[node2]
-            if (
-                subgraph.nodes[new_node_1]["bipartite"]
-                == subgraph.nodes[new_node_2]["bipartite"]
-            ):
-                raise RuntimeError(
-                    "Subgraph is not bipartite. Found an edge between nodes"
-                    " %s and %s (in the original graph)." % (node1, node2)
-                )
-            subgraph.add_edge(new_node_1, new_node_2)
-    return subgraph
+    relabeled_subgraph = nx.relabel_nodes(subgraph, old_new_map)
+    return relabeled_subgraph
 
 
 def _generate_variables_in_constraints(constraints, **kwds):
-    config = IncidenceConfig(kwds)
+    # Note: We construct a visitor here
+    config = get_config_from_kwds(**kwds)
     known_vars = ComponentSet()
     for con in constraints:
         for var in get_incident_variables(con.body, **config):
@@ -191,7 +191,7 @@ def get_structural_incidence_matrix(variables, constraints, **kwds):
         Entries are 1.0.
 
     """
-    config = IncidenceConfig(kwds)
+    config = get_config_from_kwds(**kwds)
     _check_unindexed(variables + constraints)
     N, M = len(variables), len(constraints)
     var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
@@ -266,7 +266,6 @@ class IncidenceGraphInterface(object):
         ``evaluate_jacobian_eq`` method instead of ``evaluate_jacobian``
         rather than checking constraint expression types.
 
-
     """
 
     def __init__(self, model=None, active=True, include_inequality=True, **kwds):
@@ -275,12 +274,12 @@ class IncidenceGraphInterface(object):
         # to cache the incidence graph for fast analysis later on.
         # WARNING: This cache will become invalid if the user alters their
         # model.
-        self._config = IncidenceConfig(kwds)
+        self._config = get_config_from_kwds(**kwds)
         if model is None:
             self._incidence_graph = None
             self._variables = None
             self._constraints = None
-        elif isinstance(model, _BlockData):
+        elif isinstance(model, BlockData):
             self._constraints = [
                 con
                 for con in model.component_data_objects(Constraint, active=active)
@@ -330,10 +329,26 @@ class IncidenceGraphInterface(object):
                 incidence_matrix = nlp.evaluate_jacobian_eq()
             nxb = nx.algorithms.bipartite
             self._incidence_graph = nxb.from_biadjacency_matrix(incidence_matrix)
+        elif isinstance(model, tuple):
+            # model is a tuple of (nx.Graph, list[pyo.Var], list[pyo.Constraint])
+            # We could potentially accept a tuple (variables, constraints).
+            # TODO: Disallow kwargs if this type of "model" is provided?
+            nx_graph, variables, constraints = model
+            self._variables = list(variables)
+            self._constraints = list(constraints)
+            self._var_index_map = ComponentMap(
+                (var, i) for i, var in enumerate(self._variables)
+            )
+            self._con_index_map = ComponentMap(
+                (con, i) for i, con in enumerate(self._constraints)
+            )
+            # For now, don't check any properties of this graph. We could check
+            # for a bipartition that matches the variable and constraint lists.
+            self._incidence_graph = nx_graph
         else:
             raise TypeError(
                 "Unsupported type for incidence graph. Expected PyomoNLP"
-                " or _BlockData but got %s." % type(model)
+                " or BlockData but got %s." % type(model)
             )
 
     @property
@@ -438,11 +453,29 @@ class IncidenceGraphInterface(object):
                 raise ValueError("Neither variables nor a model have been provided.")
             else:
                 variables = self.variables
+        elif self._incidence_graph is not None:
+            # If variables were provided and an incidence graph is cached,
+            # make sure the provided variables exist in the graph.
+            for var in variables:
+                if var not in self._var_index_map:
+                    raise KeyError(
+                        f"Variable {var} does not exist in the cached"
+                        " incidence graph."
+                    )
         if constraints is None:
             if self._incidence_graph is None:
                 raise ValueError("Neither constraints nor a model have been provided.")
             else:
                 constraints = self.constraints
+        elif self._incidence_graph is not None:
+            # If constraints were provided and an incidence graph is cached,
+            # make sure the provided constraints exist in the graph.
+            for con in constraints:
+                if con not in self._con_index_map:
+                    raise KeyError(
+                        f"Constraint {con} does not exist in the cached"
+                        " incidence graph."
+                    )
 
         _check_unindexed(variables + constraints)
         return variables, constraints
@@ -463,6 +496,25 @@ class IncidenceGraphInterface(object):
                 self._incidence_graph, constraint_nodes, variable_nodes
             )
             return subgraph
+
+    def subgraph(self, variables, constraints):
+        """Extract a subgraph defined by the provided variables and constraints
+
+        Underlying data structures are copied, and constraints are not reinspected
+        for incidence variables (the edges from this incidence graph are used).
+
+        Returns
+        -------
+        ``IncidenceGraphInterface``
+            A new incidence graph containing only the specified variables and
+            constraints, and the edges between pairs thereof.
+
+        """
+        nx_subgraph = self._extract_subgraph(variables, constraints)
+        subgraph = IncidenceGraphInterface(
+            (nx_subgraph, variables, constraints), **self._config
+        )
+        return subgraph
 
     @property
     def incidence_matrix(self):
@@ -820,7 +872,7 @@ class IncidenceGraphInterface(object):
         # Hopefully this does not get too confusing...
         return var_partition, con_partition
 
-    def remove_nodes(self, nodes, constraints=None):
+    def remove_nodes(self, variables=None, constraints=None):
         """Removes the specified variables and constraints (columns and
         rows) from the cached incidence matrix.
 
@@ -832,35 +884,76 @@ class IncidenceGraphInterface(object):
 
         Parameters
         ----------
-        nodes: list
-            VarData or ConData objects whose columns or rows will be
-            removed from the incidence matrix.
+        variables: list
+            VarData objects whose nodes will be removed from the incidence graph
         constraints: list
-            VarData or ConData objects whose columns or rows will be
-            removed from the incidence matrix.
+            ConData objects whose nodes will be removed from the incidence graph
+
+        .. note::
+
+           **Deprecation in Pyomo v6.7.2**
+
+           The pre-6.7.2 implementation of ``remove_nodes`` allowed variables and
+           constraints to remove to be specified in a single list. This made
+           error checking difficult, and indeed, if invalid components were
+           provided, we carried on silently instead of throwing an error or
+           warning. As part of a fix to raise an error if an invalid component
+           (one that is not part of the incidence graph) is provided, we now require
+           variables and constraints to be specified separately.
 
         """
         if constraints is None:
             constraints = []
+        if variables is None:
+            variables = []
         if self._incidence_graph is None:
             raise RuntimeError(
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
             )
-        to_exclude = ComponentSet(nodes)
-        to_exclude.update(constraints)
-        vars_to_include = [v for v in self.variables if v not in to_exclude]
-        cons_to_include = [c for c in self.constraints if c not in to_exclude]
+
+        vars_to_validate = []
+        cons_to_validate = []
+        depr_msg = (
+            "In IncidenceGraphInterface.remove_nodes, passing variables and"
+            " constraints in the same list is deprecated. Please separate your"
+            " variables and constraints and pass them in the order variables,"
+            " constraints."
+        )
+        if any(var in self._con_index_map for var in variables) or any(
+            con in self._var_index_map for con in constraints
+        ):
+            deprecation_warning(depr_msg, version="6.7.2")
+        # If we received variables/constraints in the same list, sort them.
+        # Any unrecognized objects will be caught by _validate_input.
+        for var in variables:
+            if var in self._con_index_map:
+                cons_to_validate.append(var)
+            else:
+                vars_to_validate.append(var)
+        for con in constraints:
+            if con in self._var_index_map:
+                vars_to_validate.append(con)
+            else:
+                cons_to_validate.append(con)
+
+        variables, constraints = self._validate_input(
+            vars_to_validate, cons_to_validate
+        )
+        v_exclude = ComponentSet(variables)
+        c_exclude = ComponentSet(constraints)
+        vars_to_include = [v for v in self.variables if v not in v_exclude]
+        cons_to_include = [c for c in self.constraints if c not in c_exclude]
         incidence_graph = self._extract_subgraph(vars_to_include, cons_to_include)
         # update attributes
         self._variables = vars_to_include
         self._constraints = cons_to_include
         self._incidence_graph = incidence_graph
         self._var_index_map = ComponentMap(
-            (var, i) for i, var in enumerate(self.variables)
+            (var, i) for i, var in enumerate(vars_to_include)
         )
         self._con_index_map = ComponentMap(
-            (con, i) for i, con in enumerate(self._constraints)
+            (con, i) for i, con in enumerate(cons_to_include)
         )
 
     def plot(self, variables=None, constraints=None, title=None, show=True):
@@ -886,9 +979,9 @@ class IncidenceGraphInterface(object):
         edge_trace = plotly.graph_objects.Scatter(
             x=edge_x,
             y=edge_y,
-            line=dict(width=0.5, color='#888'),
-            hoverinfo='none',
-            mode='lines',
+            line=dict(width=0.5, color="#888"),
+            hoverinfo="none",
+            mode="lines",
         )
 
         node_x = []
@@ -902,28 +995,28 @@ class IncidenceGraphInterface(object):
             if node < M:
                 # According to convention, we are a constraint node
                 c = constraints[node]
-                node_color.append('red')
-                body_text = '<br>'.join(
+                node_color.append("red")
+                body_text = "<br>".join(
                     textwrap.wrap(str(c.body), width=120, subsequent_indent="    ")
                 )
                 node_text.append(
-                    f'{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>'
-                    f'ub: {str(c.upper)}<br>active: {str(c.active)}'
+                    f"{str(c)}<br>lb: {str(c.lower)}<br>body: {body_text}<br>"
+                    f"ub: {str(c.upper)}<br>active: {str(c.active)}"
                 )
             else:
                 # According to convention, we are a variable node
                 v = variables[node - M]
-                node_color.append('blue')
+                node_color.append("blue")
                 node_text.append(
-                    f'{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>'
-                    f'value: {str(v.value)}<br>domain: {str(v.domain)}<br>'
-                    f'fixed: {str(v.is_fixed())}'
+                    f"{str(v)}<br>lb: {str(v.lb)}<br>ub: {str(v.ub)}<br>"
+                    f"value: {str(v.value)}<br>domain: {str(v.domain)}<br>"
+                    f"fixed: {str(v.is_fixed())}"
                 )
         node_trace = plotly.graph_objects.Scatter(
             x=node_x,
             y=node_y,
-            mode='markers',
-            hoverinfo='text',
+            mode="markers",
+            hoverinfo="text",
             text=node_text,
             marker=dict(color=node_color, size=10),
         )
@@ -932,3 +1025,32 @@ class IncidenceGraphInterface(object):
             fig.update_layout(title=dict(text=title))
         if show:
             fig.show()
+
+    def add_edge(self, variable, constraint):
+        """Adds an edge between variable and constraint in the incidence graph
+
+        Parameters
+        ----------
+        variable: VarData
+            A variable in the graph
+        constraint: ConstraintData
+            A constraint in the graph
+        """
+        if self._incidence_graph is None:
+            raise RuntimeError(
+                "Attempting to add edge in an incidence graph from cached "
+                "incidence graph,\nbut no incidence graph has been cached."
+            )
+
+        if variable not in self._var_index_map:
+            raise RuntimeError("%s is not a variable in the incidence graph" % variable)
+
+        if constraint not in self._con_index_map:
+            raise RuntimeError(
+                "%s is not a constraint in the incidence graph" % constraint
+            )
+
+        var_id = self._var_index_map[variable] + len(self._con_index_map)
+        con_id = self._con_index_map[constraint]
+
+        self._incidence_graph.add_edge(var_id, con_id)

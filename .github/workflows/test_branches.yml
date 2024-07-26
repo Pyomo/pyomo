@@ -40,12 +40,27 @@ jobs:
         python-version: '3.10'
     - name: Black Formatting Check
       run: |
-        pip install black
+        # Note v24.4.1 fails due to a bug in the parser
+        pip install 'black!=24.4.1'
         black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
     - name: Spell Check
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
+    - name: URL Checker
+      uses: urlstechie/urlchecker-action@0.0.34
+      with:
+        # A comma-separated list of file types to cover in the URL checks
+        file_types: .md,.rst,.py
+        # Choose whether to include file with no URLs in the prints.
+        print_all: false
+        # More verbose summary at the end of a run
+        verbose: true
+        # How many times to retry a failed request (defaults to 1)
+        retry_count: 3
+        # Exclude Jenkins because it's behind a firewall; ignore RTD because
+        # a magically-generated string is triggering a failure
+        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
 
 
   build:
@@ -66,7 +81,7 @@ jobs:
           TARGET: linux
           PYENV: pip
 
-        - os: macos-latest
+        - os: macos-13
           python: '3.10'
           TARGET: osx
           PYENV: pip
@@ -75,7 +90,7 @@ jobs:
           python: 3.9
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk pytest-qt
+          PACKAGES: glpk pytest-qt filelock
 
         - os: ubuntu-latest
           python: '3.11'
@@ -86,13 +101,13 @@ jobs:
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.10'
           other: /mpi
           mpi: 3
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
           python: '3.10'
@@ -180,7 +195,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
-        for pkg in bash pkg-config unixodbc freetds glpk; do
+        for pkg in bash pkg-config unixodbc freetds glpk ginac; do
             brew list $pkg || brew install $pkg
         done
 
@@ -192,7 +207,8 @@ jobs:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils
+            install libopenblas-dev gfortran liblapack-dev glpk-utils \
+            libginac-dev
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -263,11 +279,12 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            python -m pip install --cache-dir cache/pip \
-                -i https://pypi.gurobi.com gurobipy==10.0.3 \
+            python -m pip install --cache-dir cache/pip gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
+            python -m pip install --cache-dir cache/pip maingopy \
+                || echo "WARNING: MAiNGO is not available"
             if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
@@ -333,6 +350,7 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
+        echo ""
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
@@ -501,7 +519,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $URL = "https://www.minlp.com/downloads/xecs/baron/current/"
+        $URL = "https://minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
@@ -631,7 +649,7 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
         # Note: if we are testing with openmpi, add '--oversubscribe'
-        mpirun -np ${{matrix.mpi}} pytest -v \
+        mpirun -np ${{matrix.mpi}} -oversubscribe pytest -v \
             --junit-xml=TEST-pyomo-mpi.xml \
             -m "mpi" -W ignore::Warning \
             pyomo `pwd`/pyomo-model-libraries
@@ -708,12 +726,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, windows-latest]
 
         include:
         - os: ubuntu-latest
           TARGET: linux
-        - os: macos-latest
+        - os: macos-13
           TARGET: osx
         - os: windows-latest
           TARGET: win

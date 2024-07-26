@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -25,7 +25,7 @@ from pyomo.core.base import (
     Var,
     SortComponents,
 )
-from pyomo.core.base.connector import _ConnectorData, ScalarConnector
+from pyomo.core.base.connector import ConnectorData, ScalarConnector
 
 
 @TransformationFactory.register(
@@ -69,7 +69,7 @@ class ExpandConnectors(Transformation):
         # The set of connectors found in the current constraint
         found = ComponentSet()
 
-        connector_types = set([ScalarConnector, _ConnectorData])
+        connector_types = set([ScalarConnector, ConnectorData])
         for constraint in instance.component_data_objects(
             Constraint, sort=SortComponents.deterministic
         ):

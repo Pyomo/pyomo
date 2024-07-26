@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 '''
 Methods for the execution of the grcs algorithm
 '''
@@ -15,8 +26,9 @@ from pyomo.contrib.pyros.util import (
 )
 from pyomo.contrib.pyros.util import get_main_elapsed_time, coefficient_matching
 from pyomo.core.base import value
+from pyomo.core.expr import MonomialTermExpression
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.core.base.var import _VarData as VarData
+from pyomo.core.base.var import VarData as VarData
 from itertools import chain
 from pyomo.common.dependencies import numpy as np
 
@@ -58,14 +70,17 @@ def get_dr_var_to_scaled_expr_map(
     ssv_dr_eq_zip = zip(second_stage_vars, decision_rule_eqns)
     for ssv_idx, (ssv, dr_eq) in enumerate(ssv_dr_eq_zip):
         for term in dr_eq.body.args:
-            is_ssv_term = (
-                isinstance(term.args[0], int)
-                and term.args[0] == -1
-                and isinstance(term.args[1], VarData)
-            )
-            if not is_ssv_term:
-                dr_var = term.args[1]
-                var_to_scaled_expr_map[dr_var] = term
+            if isinstance(term, MonomialTermExpression):
+                is_ssv_term = (
+                    isinstance(term.args[0], int)
+                    and term.args[0] == -1
+                    and isinstance(term.args[1], VarData)
+                )
+                if not is_ssv_term:
+                    dr_var = term.args[1]
+                    var_to_scaled_expr_map[dr_var] = term
+            elif isinstance(term, VarData):
+                var_to_scaled_expr_map[term] = MonomialTermExpression((1, term))
 
     return var_to_scaled_expr_map
 
@@ -794,7 +809,7 @@ def ROSolver_iterative_solve(model_data, config):
             len(scaled_violations) == len(separation_model.util.performance_constraints)
             and not separation_results.subsolver_error
             and not separation_results.time_out
-        )
+        ) or separation_results.all_discrete_scenarios_exhausted
 
         iter_log_record = IterationLogRecord(
             iteration=k,

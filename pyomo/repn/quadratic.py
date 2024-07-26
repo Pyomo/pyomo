@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -98,22 +98,15 @@ class QuadraticRepn(object):
                         e += coef * (var_map[x1] * var_map[x2])
             ans += e
         if self.linear:
-            if len(self.linear) == 1:
-                vid, coef = next(iter(self.linear.items()))
-                if coef == 1:
-                    ans += var_map[vid]
-                elif coef:
-                    ans += MonomialTermExpression((coef, var_map[vid]))
-                else:
-                    pass
-            else:
-                ans += LinearExpression(
-                    [
-                        MonomialTermExpression((coef, var_map[vid]))
-                        for vid, coef in self.linear.items()
-                        if coef
-                    ]
-                )
+            var_map = visitor.var_map
+            with mutable_expression() as e:
+                for vid, coef in self.linear.items():
+                    if coef:
+                        e += coef * var_map[vid]
+            if e.nargs() > 1:
+                ans += e
+            elif e.nargs() == 1:
+                ans += e.arg(0)
         if self.constant:
             ans += self.constant
         if self.multiplier != 1:
@@ -164,17 +157,6 @@ class QuadraticRepn(object):
                 self.nonlinear += nl
 
 
-_exit_node_handlers = copy.deepcopy(linear._exit_node_handlers)
-
-#
-# NEGATION
-#
-_exit_node_handlers[NegationExpression][(_QUADRATIC,)] = linear._handle_negation_ANY
-
-
-#
-# PRODUCT
-#
 def _mul_linear_linear(varOrder, linear1, linear2):
     quadratic = {}
     for vid1, coef1 in linear1.items():
@@ -282,126 +264,73 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
-_exit_node_handlers[ProductExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_product_constant_ANY,
-        (_LINEAR, _QUADRATIC): _handle_product_nonlinear,
-        (_QUADRATIC, _QUADRATIC): _handle_product_nonlinear,
-        (_GENERAL, _QUADRATIC): _handle_product_nonlinear,
-        (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
-        (_QUADRATIC, _LINEAR): _handle_product_nonlinear,
-        (_QUADRATIC, _GENERAL): _handle_product_nonlinear,
-        # Replace handler from the linear walker
-        (_LINEAR, _LINEAR): _handle_product_linear_linear,
-        (_GENERAL, _GENERAL): _handle_product_nonlinear,
-        (_GENERAL, _LINEAR): _handle_product_nonlinear,
-        (_LINEAR, _GENERAL): _handle_product_nonlinear,
-    }
-)
-
-#
-# DIVISION
-#
-_exit_node_handlers[DivisionExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_division_nonlinear,
-        (_LINEAR, _QUADRATIC): linear._handle_division_nonlinear,
-        (_QUADRATIC, _QUADRATIC): linear._handle_division_nonlinear,
-        (_GENERAL, _QUADRATIC): linear._handle_division_nonlinear,
-        (_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant,
-        (_QUADRATIC, _LINEAR): linear._handle_division_nonlinear,
-        (_QUADRATIC, _GENERAL): linear._handle_division_nonlinear,
-    }
-)
-
-
-#
-# EXPONENTIATION
-#
-_exit_node_handlers[PowExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_LINEAR, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_QUADRATIC, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_GENERAL, _QUADRATIC): linear._handle_pow_nonlinear,
-        (_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant,
-        (_QUADRATIC, _LINEAR): linear._handle_pow_nonlinear,
-        (_QUADRATIC, _GENERAL): linear._handle_pow_nonlinear,
-    }
-)
-
-#
-# ABS and UNARY handlers
-#
-_exit_node_handlers[AbsExpression][(_QUADRATIC,)] = linear._handle_unary_nonlinear
-_exit_node_handlers[UnaryFunctionExpression][
-    (_QUADRATIC,)
-] = linear._handle_unary_nonlinear
-
-#
-# NAMED EXPRESSION handlers
-#
-_exit_node_handlers[Expression][(_QUADRATIC,)] = linear._handle_named_ANY
-
-#
-# EXPR_IF handlers
-#
-# Note: it is easier to just recreate the entire data structure, rather
-# than update it
-_exit_node_handlers[Expr_ifExpression] = {
-    (i, j, k): linear._handle_expr_if_nonlinear
-    for i in (_LINEAR, _QUADRATIC, _GENERAL)
-    for j in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
-    for k in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
-}
-for j in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL):
-    for k in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL):
-        _exit_node_handlers[Expr_ifExpression][
-            _CONSTANT, j, k
-        ] = linear._handle_expr_if_const
-
-#
-# RELATIONAL handlers
-#
-_exit_node_handlers[EqualityExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_equality_general,
-        (_LINEAR, _QUADRATIC): linear._handle_equality_general,
-        (_QUADRATIC, _QUADRATIC): linear._handle_equality_general,
-        (_GENERAL, _QUADRATIC): linear._handle_equality_general,
-        (_QUADRATIC, _CONSTANT): linear._handle_equality_general,
-        (_QUADRATIC, _LINEAR): linear._handle_equality_general,
-        (_QUADRATIC, _GENERAL): linear._handle_equality_general,
-    }
-)
-_exit_node_handlers[InequalityExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_inequality_general,
-        (_LINEAR, _QUADRATIC): linear._handle_inequality_general,
-        (_QUADRATIC, _QUADRATIC): linear._handle_inequality_general,
-        (_GENERAL, _QUADRATIC): linear._handle_inequality_general,
-        (_QUADRATIC, _CONSTANT): linear._handle_inequality_general,
-        (_QUADRATIC, _LINEAR): linear._handle_inequality_general,
-        (_QUADRATIC, _GENERAL): linear._handle_inequality_general,
-    }
-)
-_exit_node_handlers[RangedExpression].update(
-    {
-        (_CONSTANT, _QUADRATIC): linear._handle_ranged_general,
-        (_LINEAR, _QUADRATIC): linear._handle_ranged_general,
-        (_QUADRATIC, _QUADRATIC): linear._handle_ranged_general,
-        (_GENERAL, _QUADRATIC): linear._handle_ranged_general,
-        (_QUADRATIC, _CONSTANT): linear._handle_ranged_general,
-        (_QUADRATIC, _LINEAR): linear._handle_ranged_general,
-        (_QUADRATIC, _GENERAL): linear._handle_ranged_general,
-    }
-)
+def define_exit_node_handlers(_exit_node_handlers=None):
+    if _exit_node_handlers is None:
+        _exit_node_handlers = {}
+    linear.define_exit_node_handlers(_exit_node_handlers)
+    #
+    # NEGATION
+    #
+    _exit_node_handlers[NegationExpression][(_QUADRATIC,)] = linear._handle_negation_ANY
+    #
+    # PRODUCT
+    #
+    _exit_node_handlers[ProductExpression].update(
+        {
+            None: _handle_product_nonlinear,
+            (_CONSTANT, _QUADRATIC): linear._handle_product_constant_ANY,
+            (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
+            # Replace handler from the linear walker
+            (_LINEAR, _LINEAR): _handle_product_linear_linear,
+        }
+    )
+    #
+    # DIVISION
+    #
+    _exit_node_handlers[DivisionExpression].update(
+        {(_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant}
+    )
+    #
+    # EXPONENTIATION
+    #
+    _exit_node_handlers[PowExpression].update(
+        {(_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant}
+    )
+    #
+    # ABS and UNARY handlers
+    #
+    # (no changes needed)
+    #
+    # NAMED EXPRESSION handlers
+    #
+    # (no changes needed)
+    #
+    # EXPR_IF handlers
+    #
+    # Note: it is easier to just recreate the entire data structure, rather
+    # than update it
+    _exit_node_handlers[Expr_ifExpression].update(
+        {
+            (_CONSTANT, i, _QUADRATIC): linear._handle_expr_if_const
+            for i in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
+        }
+    )
+    _exit_node_handlers[Expr_ifExpression].update(
+        {
+            (_CONSTANT, _QUADRATIC, i): linear._handle_expr_if_const
+            for i in (_CONSTANT, _LINEAR, _GENERAL)
+        }
+    )
+    #
+    # RELATIONAL handlers
+    #
+    # (no changes needed)
+    return _exit_node_handlers
 
 
 class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     Result = QuadraticRepn
-    exit_node_handlers = _exit_node_handlers
     exit_node_dispatcher = linear.ExitNodeDispatcher(
-        linear._initialize_exit_node_dispatcher(_exit_node_handlers)
+        linear._initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2

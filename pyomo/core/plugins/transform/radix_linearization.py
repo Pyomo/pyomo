@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -21,7 +21,7 @@ from pyomo.core.base import (
     Block,
     RangeSet,
 )
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 
 import logging
 
@@ -268,8 +268,8 @@ class RadixLinearization(Transformation):
                     self._collect_bilinear(e, bilin, quad)
                 # No need to check denominator, as this is poly_degree==2
                 return
-            if not isinstance(expr._numerator[0], _VarData) or not isinstance(
-                expr._numerator[1], _VarData
+            if not isinstance(expr._numerator[0], VarData) or not isinstance(
+                expr._numerator[1], VarData
             ):
                 raise RuntimeError("Cannot yet handle complex subexpressions")
             if expr._numerator[0] is expr._numerator[1]:
@@ -280,7 +280,7 @@ class RadixLinearization(Transformation):
         if type(expr) is PowExpression and value(expr._args[1]) == 2:
             # Note: directly testing the value of the exponent above is
             # safe: we have already verified that this expression is
-            # polynominal, so the exponent must be constant.
+            # polynomial, so the exponent must be constant.
             tmp = ProductExpression()
             tmp._numerator = [expr._args[0], expr._args[0]]
             tmp._denominator = []

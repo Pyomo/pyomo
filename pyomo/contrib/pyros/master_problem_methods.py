@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """
 Functions for handling the construction and solving of the GRCS master problem via ROSolver
 """
@@ -16,6 +27,7 @@ from pyomo.opt import SolverResults
 from pyomo.core.expr import value
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
 from pyomo.contrib.pyros.util import (
+    call_solver,
     selective_clone,
     ObjectiveType,
     pyrosTerminationCondition,
@@ -228,31 +240,18 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         solver = config.local_solver
 
-    timer = TicTocTimer()
-    orig_setting, custom_setting_present = adjust_solver_time_settings(
-        model_data.timing, solver, config
-    )
-    model_data.timing.start_timer("main.master_feasibility")
-    timer.tic(msg=None)
-    try:
-        results = solver.solve(model, tee=config.tee, load_solutions=False)
-    except ApplicationError:
-        # account for possible external subsolver errors
-        # (such as segmentation faults, function evaluation
-        # errors, etc.)
-        config.progress_logger.error(
+    results = call_solver(
+        model=model,
+        solver=solver,
+        config=config,
+        timing_obj=model_data.timing,
+        timer_name="main.master_feasibility",
+        err_msg=(
             f"Optimizer {repr(solver)} encountered exception "
             "attempting to solve master feasibility problem in iteration "
             f"{model_data.iteration}."
-        )
-        raise
-    else:
-        setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
-        model_data.timing.stop_timer("main.master_feasibility")
-    finally:
-        revert_solver_max_time_adjustment(
-            solver, orig_setting, custom_setting_present, config
-        )
+        ),
+    )
 
     feasible_terminations = {
         tc.optimal,
@@ -387,10 +386,17 @@ def construct_dr_polishing_problem(model_data, config):
         all_ub_cons.append(polishing_absolute_value_ub_cons)
 
         # get monomials; ensure second-stage variable term excluded
+        #
+        # the dr_eq is a linear sum where the first term is the
+        # second-stage variable: the remainder of the terms will be
+        # either MonomialTermExpressions or bare VarData
         dr_expr_terms = dr_eq.body.args[:-1]
 
         for dr_eq_term in dr_expr_terms:
-            dr_var_in_term = dr_eq_term.args[-1]
+            if dr_eq_term.is_expression_type():
+                dr_var_in_term = dr_eq_term.args[-1]
+            else:
+                dr_var_in_term = dr_eq_term
             dr_var_in_term_idx = dr_var_in_term.index()
 
             # get corresponding polishing variable
@@ -464,28 +470,18 @@ def minimize_dr_vars(model_data, config):
     config.progress_logger.debug(f" Initial DR norm: {value(polishing_obj)}")
 
     # === Solve the polishing model
-    timer = TicTocTimer()
-    orig_setting, custom_setting_present = adjust_solver_time_settings(
-        model_data.timing, solver, config
-    )
-    model_data.timing.start_timer("main.dr_polishing")
-    timer.tic(msg=None)
-    try:
-        results = solver.solve(polishing_model, tee=config.tee, load_solutions=False)
-    except ApplicationError:
-        config.progress_logger.error(
+    results = call_solver(
+        model=polishing_model,
+        solver=solver,
+        config=config,
+        timing_obj=model_data.timing,
+        timer_name="main.dr_polishing",
+        err_msg=(
             f"Optimizer {repr(solver)} encountered an exception "
             "attempting to solve decision rule polishing problem "
             f"in iteration {model_data.iteration}"
-        )
-        raise
-    else:
-        setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
-        model_data.timing.stop_timer("main.dr_polishing")
-    finally:
-        revert_solver_max_time_adjustment(
-            solver, orig_setting, custom_setting_present, config
-        )
+        ),
+    )
 
     # interested in the time and termination status for debugging
     # purposes
@@ -708,7 +704,6 @@ def solver_call_master(model_data, config, solver, solve_data):
     solve_mode = "global" if config.solve_master_globally else "local"
     config.progress_logger.debug("Solving master problem")
 
-    timer = TicTocTimer()
     for idx, opt in enumerate(solvers):
         if idx > 0:
             config.progress_logger.warning(
@@ -716,35 +711,18 @@ def solver_call_master(model_data, config, solver, solve_data):
                 f"(solver {idx + 1} of {len(solvers)}) for "
                 f"master problem of iteration {model_data.iteration}."
             )
-        orig_setting, custom_setting_present = adjust_solver_time_settings(
-            model_data.timing, opt, config
-        )
-        model_data.timing.start_timer("main.master")
-        timer.tic(msg=None)
-        try:
-            results = opt.solve(
-                nlp_model,
-                tee=config.tee,
-                load_solutions=False,
-                symbolic_solver_labels=True,
-            )
-        except ApplicationError:
-            # account for possible external subsolver errors
-            # (such as segmentation faults, function evaluation
-            # errors, etc.)
-            config.progress_logger.error(
+        results = call_solver(
+            model=nlp_model,
+            solver=opt,
+            config=config,
+            timing_obj=model_data.timing,
+            timer_name="main.master",
+            err_msg=(
                 f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
                 "encountered exception attempting to "
                 f"solve master problem in iteration {model_data.iteration}"
-            )
-            raise
-        else:
-            setattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR, timer.toc(msg=None))
-            model_data.timing.stop_timer("main.master")
-        finally:
-            revert_solver_max_time_adjustment(
-                solver, orig_setting, custom_setting_present, config
-            )
+            ),
+        )
 
         optimal_termination = check_optimal_termination(results)
         infeasible = results.solver.termination_condition == tc.infeasible

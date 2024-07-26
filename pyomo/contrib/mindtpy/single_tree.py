@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,12 +16,12 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution
-from pyomo.contrib.gdpopt.util import (
+from pyomo.contrib.mindtpy.util import (
+    get_integer_solution,
     copy_var_list_values,
-    get_main_elapsed_time,
-    time_code,
+    set_var_valid_value,
 )
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, value
 from pyomo.core.expr import identify_variables
@@ -35,17 +35,9 @@ class LazyOACallback_cplex(
     """Inherent class in CPLEX to call Lazy callback."""
 
     def copy_lazy_var_list_values(
-        self,
-        opt,
-        from_list,
-        to_list,
-        config,
-        skip_stale=False,
-        skip_fixed=True,
-        ignore_integrality=False,
+        self, opt, from_list, to_list, config, skip_stale=False, skip_fixed=True
     ):
         """This function copies variable values from one list to another.
-
         Rounds to Binary/Integer if necessary.
         Sets to zero for NonNegativeReals if necessary.
 
@@ -54,17 +46,15 @@ class LazyOACallback_cplex(
         opt : SolverFactory
             The cplex_persistent solver.
         from_list : list
-            The variables that provides the values to copy from.
+            The variable list that provides the values to copy from.
         to_list : list
-            The variables that need to set value.
+            The variable list that needs to set value.
         config : ConfigBlock
             The specific configurations for MindtPy.
         skip_stale : bool, optional
             Whether to skip the stale variables, by default False.
         skip_fixed : bool, optional
             Whether to skip the fixed variables, by default True.
-        ignore_integrality : bool, optional
-            Whether to ignore the integrality of integer variables, by default False.
         """
         for v_from, v_to in zip(from_list, to_list):
             if skip_stale and v_from.stale:
@@ -72,43 +62,13 @@ class LazyOACallback_cplex(
             if skip_fixed and v_to.is_fixed():
                 continue  # Skip fixed variables.
             v_val = self.get_values(opt._pyomo_var_to_solver_var_map[v_from])
-            try:
-                # We don't want to trigger the reset of the global stale
-                # indicator, so we will set this variable to be "stale",
-                # knowing that set_value will switch it back to "not
-                # stale"
-                v_to.stale = True
-                # NOTE: PEP 2180 changes the var behavior so that domain
-                # / bounds violations no longer generate exceptions (and
-                # instead log warnings).  This means that the following
-                # will always succeed and the ValueError should never be
-                # raised.
-                v_to.set_value(v_val, skip_validation=True)
-            except ValueError as e:
-                # Snap the value to the bounds
-                config.logger.error(e)
-                if (
-                    v_to.has_lb()
-                    and v_val < v_to.lb
-                    and v_to.lb - v_val <= config.variable_tolerance
-                ):
-                    v_to.set_value(v_to.lb, skip_validation=True)
-                elif (
-                    v_to.has_ub()
-                    and v_val > v_to.ub
-                    and v_val - v_to.ub <= config.variable_tolerance
-                ):
-                    v_to.set_value(v_to.ub, skip_validation=True)
-                # ... or the nearest integer
-                elif v_to.is_integer():
-                    rounded_val = int(round(v_val))
-                    if (
-                        ignore_integrality
-                        or abs(v_val - rounded_val) <= config.integer_tolerance
-                    ) and rounded_val in v_to.domain:
-                        v_to.set_value(rounded_val, skip_validation=True)
-                else:
-                    raise
+            set_var_valid_value(
+                v_to,
+                v_val,
+                config.integer_tolerance,
+                config.zero_tolerance,
+                ignore_integrality=False,
+            )
 
     def add_lazy_oa_cuts(
         self,
@@ -309,12 +269,11 @@ class LazyOACallback_cplex(
                 try:
                     mc_eqn = mc(constr.body)
                 except MCPP_Error as e:
+                    config.logger.error(e, exc_info=True)
                     config.logger.debug(
-                        'Skipping constraint %s due to MCPP error %s'
-                        % (constr.name, str(e))
+                        'Skipping constraint %s due to MCPP error' % (constr.name)
                     )
                     continue  # skip to the next constraint
-                # TODO: check if the value of ccSlope and cvSlope is not Nan or inf. If so, we skip this.
                 ccSlope = mc_eqn.subcc()
                 cvSlope = mc_eqn.subcv()
                 ccStart = mc_eqn.concave()
@@ -705,10 +664,11 @@ class LazyOACallback_cplex(
         main_mip = self.main_mip
         mindtpy_solver = self.mindtpy_solver
 
+        # The lazy constraint callback may be invoked during MIP start processing. In that case get_solution_source returns mip_start_solution.
         # Reference: https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.SolutionSource-class.htm
         # Another solution source is user_solution = 118, but it will not be encountered in LazyConstraintCallback.
-        config.logger.debug(
-            "Solution source: %s (111 node_solution, 117 heuristic_solution, 119 mipstart_solution)".format(
+        config.logger.info(
+            "Solution source: {} (111 node_solution, 117 heuristic_solution, 119 mipstart_solution)".format(
                 self.get_solution_source()
             )
         )
@@ -717,6 +677,7 @@ class LazyOACallback_cplex(
         # Lazy constraints separated when processing a MIP start will be discarded after that MIP start has been processed.
         # This means that the callback may have to separate the same constraint again for the next MIP start or for a solution that is found later in the solution process.
         # https://www.ibm.com/docs/en/icos/22.1.1?topic=SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.LazyConstraintCallback-class.htm
+        # For the MINLP3_simple example, all the solutions are obtained from mip_start (solution source). Therefore, it will not go to a branch and bound process.Cause an error output.
         if (
             self.get_solution_source()
             != cplex.callbacks.SolutionSource.mipstart_solution
@@ -727,6 +688,7 @@ class LazyOACallback_cplex(
             mindtpy_solver.mip_start_lazy_oa_cuts = []
 
         if mindtpy_solver.should_terminate:
+            # TODO: check the performance difference if we don't use self.abort() and let cplex terminate by itself.
             self.abort()
             return
         self.handle_lazy_main_feasible_solution(main_mip, mindtpy_solver, config, opt)
@@ -744,9 +706,9 @@ class LazyOACallback_cplex(
                         mindtpy_solver.mip, None, mindtpy_solver, config, opt
                     )
                 except ValueError as e:
+                    config.logger.error(e, exc_info=True)
                     config.logger.error(
-                        str(e)
-                        + "\nUsually this error is caused by the MIP start solution causing a math domain error. "
+                        "Usually this error is caused by the MIP start solution causing a math domain error. "
                         "We will skip it."
                     )
                     return
@@ -782,6 +744,7 @@ class LazyOACallback_cplex(
                 )
             )
             mindtpy_solver.results.solver.termination_condition = tc.optimal
+            # TODO: check the performance difference if we don't use self.abort() and let cplex terminate by itself.
             self.abort()
             return
 
@@ -810,6 +773,9 @@ class LazyOACallback_cplex(
             mindtpy_solver.integer_list.append(mindtpy_solver.curr_int_sol)
 
         # solve subproblem
+        # Call the NLP pre-solve callback
+        with time_code(mindtpy_solver.timing, 'Call before subproblem solve'):
+            config.call_before_subproblem_solve(mindtpy_solver.fixed_nlp)
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_solver.solve_subproblem()
         # add oa cuts
@@ -909,19 +875,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
             if mindtpy_solver.dual_bound != mindtpy_solver.dual_bound_progress[0]:
                 mindtpy_solver.add_regularization()
 
-        if (
-            abs(mindtpy_solver.primal_bound - mindtpy_solver.dual_bound)
-            <= config.absolute_bound_tolerance
-        ):
-            config.logger.info(
-                'MindtPy exiting on bound convergence. '
-                '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                    mindtpy_solver.primal_bound,
-                    mindtpy_solver.dual_bound,
-                    config.absolute_bound_tolerance,
-                )
-            )
-            mindtpy_solver.results.solver.termination_condition = tc.optimal
+        if mindtpy_solver.bounds_converged() or mindtpy_solver.reached_time_limit():
             cb_opt._solver_model.terminate()
             return
 
@@ -952,15 +906,34 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, mindtpy_solver, config):
                     )
                 return
             elif config.strategy == 'OA':
+                # Refer to the official document of GUROBI.
+                # Your callback should be prepared to cut off solutions that violate any of your lazy constraints, including those that have already been added. Node solutions will usually respect previously added lazy constraints, but not always.
+                # https://www.gurobi.com/documentation/current/refman/cs_cb_addlazy.html
+                # If this happens, MindtPy will look for the index of corresponding cuts, instead of solving the fixed-NLP again.
+                begin_index, end_index = mindtpy_solver.integer_solution_to_cuts_index[
+                    mindtpy_solver.curr_int_sol
+                ]
+                for ind in range(begin_index, end_index + 1):
+                    cb_opt.cbLazy(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts[ind])
                 return
         else:
             mindtpy_solver.integer_list.append(mindtpy_solver.curr_int_sol)
+            if config.strategy == 'OA':
+                cut_ind = len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts)
 
         # solve subproblem
+        # Call the NLP pre-solve callback
+        with time_code(mindtpy_solver.timing, 'Call before subproblem solve'):
+            config.call_before_subproblem_solve(mindtpy_solver.fixed_nlp)
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = mindtpy_solver.solve_subproblem()
 
         mindtpy_solver.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, cb_opt)
+        if config.strategy == 'OA':
+            # store the cut index corresponding to current integer solution.
+            mindtpy_solver.integer_solution_to_cuts_index[
+                mindtpy_solver.curr_int_sol
+            ] = [cut_ind + 1, len(mindtpy_solver.mip.MindtPy_utils.cuts.oa_cuts)]
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, mindtpy_solver, config):

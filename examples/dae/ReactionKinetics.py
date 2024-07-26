@@ -2,7 +2,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -304,7 +304,10 @@ def regression_model():
 
     # Model & data from:
     #
-    # http://www.doiserbia.nb.rs/img/doi/0367-598X/2014/0367-598X1300037A.pdf
+    # https://doiserbia.nb.rs/img/doi/0367-598X/2014/0367-598X1300037A.pdf
+    # Almagrbi, A. M., Hatami, T., Glišić, S., & Orlović, A. (2014).
+    # Determination of kinetic parameters for complex transesterification
+    # reaction by standard optimisation methods.
     #
     model = ConcreteModel()
 

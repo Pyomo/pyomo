@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -100,6 +100,15 @@ class Test_calc_var(unittest.TestCase):
             ValueError, "Constraint 'lt' must be an equality constraint"
         ):
             calculate_variable_from_constraint(m.x, m.lt)
+
+        m.indexed = Constraint([1, 2], rule=lambda m, i: m.x <= i)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"calculate_variable_from_constraint\(\): constraint must be a scalar "
+            r"constraint or a single ConstraintData.  Received IndexedConstraint "
+            r'\("indexed"\)',
+        ):
+            calculate_variable_from_constraint(m.x, m.indexed)
 
     def test_linear(self):
         m = ConcreteModel()

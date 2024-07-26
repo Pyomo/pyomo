@@ -77,7 +77,7 @@ NumPy compatible functions:
   * `numpy.arccos() <https://numpy.org/doc/stable/reference/generated/numpy.arccos.html>`_
   * `numpy.sinh() <https://numpy.org/doc/stable/reference/generated/numpy.sinh.html>`_
   * `numpy.cosh() <https://numpy.org/doc/stable/reference/generated/numpy.cosh.html>`_
-  * `numpy.abs() <https://numpy.org/doc/stable/reference/generated/numpy.abs.html>`_
+  * `numpy.abs() <https://numpy.org/doc/stable/reference/generated/numpy.absolute.html>`_
   * `numpy.tanh() <https://numpy.org/doc/stable/reference/generated/numpy.tanh.html>`_
   * `numpy.arccosh() <https://numpy.org/doc/stable/reference/generated/numpy.arccosh.html>`_
   * `numpy.arcsinh() <https://numpy.org/doc/stable/reference/generated/numpy.arcsinh.html>`_

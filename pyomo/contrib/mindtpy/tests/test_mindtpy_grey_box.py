@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,7 +18,14 @@ from pyomo.common.dependencies import numpy_available, scipy_available
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 
 model_list = [SimpleMINLP(grey_box=True)]
-required_solvers = ('cyipopt', 'glpk')
+
+if SolverFactory('appsi_highs').available(exception_flag=False) and SolverFactory(
+    'appsi_highs'
+).version() >= (1, 7, 0):
+    required_solvers = ('cyipopt', 'appsi_highs')
+else:
+    required_solvers = ('cyipopt', 'glpk')
+
 if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:

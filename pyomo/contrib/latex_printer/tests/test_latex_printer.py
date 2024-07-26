@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2023
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,13 +10,15 @@
 #  ___________________________________________________________________________
 
 import io
-import pyomo.common.unittest as unittest
-from pyomo.contrib.latex_printer import latex_printer
-import pyomo.environ as pyo
 from textwrap import dedent
+
+import pyomo.common.unittest as unittest
+import pyomo.core.tests.examples.pmedian_concrete as pmedian_concrete
+import pyomo.environ as pyo
+
+from pyomo.contrib.latex_printer import latex_printer
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections.component_map import ComponentMap
-
 from pyomo.environ import (
     Reals,
     PositiveReals,
@@ -785,6 +787,50 @@ class TestLatexPrinter(unittest.TestCase):
         )
 
         self.assertEqual('\n' + pstr + '\n', bstr)
+
+    def test_latexPrinter_pmedian_verbose(self):
+        m = pmedian_concrete.create_model()
+        self.assertEqual(
+            latex_printer(m).strip(),
+            r"""
+\begin{align} 
+    & \min 
+    & & \sum_{ i \in Locations  } \sum_{ j \in Customers  } cost_{i,j} serve\_customer\_from\_location_{i,j} & \label{obj:M1_obj} \\ 
+    & \text{s.t.} 
+    & & \sum_{ i \in Locations  } serve\_customer\_from\_location_{i,j} = 1 &  \qquad \forall j \in Customers \label{con:M1_single_x} \\ 
+    &&& serve\_customer\_from\_location_{i,j} \leq select\_location_{i} &  \qquad \forall i,j \in Locations \times Customers \label{con:M1_bound_y} \\ 
+    &&& \sum_{ i \in Locations  } select\_location_{i} = P & \label{con:M1_num_facilities} \\ 
+    & \text{w.b.} 
+    & & 0.0 \leq serve\_customer\_from\_location \leq 1.0 & \qquad \in \mathds{R} \label{con:M1_serve_customer_from_location_bound} \\ 
+    &&& select\_location & \qquad \in \left\{ 0 , 1 \right \} \label{con:M1_select_location_bound} 
+\end{align}
+            """.strip(),
+        )
+
+    def test_latexPrinter_pmedian_concise(self):
+        m = pmedian_concrete.create_model()
+        lcm = ComponentMap()
+        lcm[m.Locations] = ['L', ['n']]
+        lcm[m.Customers] = ['C', ['m']]
+        lcm[m.cost] = 'd'
+        lcm[m.serve_customer_from_location] = 'x'
+        lcm[m.select_location] = 'y'
+        self.assertEqual(
+            latex_printer(m, latex_component_map=lcm).strip(),
+            r"""
+\begin{align} 
+    & \min 
+    & & \sum_{ n \in L  } \sum_{ m \in C  } d_{n,m} x_{n,m} & \label{obj:M1_obj} \\ 
+    & \text{s.t.} 
+    & & \sum_{ n \in L  } x_{n,m} = 1 &  \qquad \forall m \in C \label{con:M1_single_x} \\ 
+    &&& x_{n,m} \leq y_{n} &  \qquad \forall n,m \in L \times C \label{con:M1_bound_y} \\ 
+    &&& \sum_{ n \in L  } y_{n} = P & \label{con:M1_num_facilities} \\ 
+    & \text{w.b.} 
+    & & 0.0 \leq x \leq 1.0 & \qquad \in \mathds{R} \label{con:M1_x_bound} \\ 
+    &&& y & \qquad \in \left\{ 0 , 1 \right \} \label{con:M1_y_bound} 
+\end{align}
+            """.strip(),
+        )
 
 
 if __name__ == '__main__':

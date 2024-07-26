@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,6 +15,7 @@ import pyomo.environ as pyo
 from pyomo.core.expr import replace_expressions, identify_mutable_parameters
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.param import IndexedParam
+from pyomo.common.collections import ComponentMap
 
 from pyomo.environ import ComponentUID
 
@@ -49,6 +50,7 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
 
     # Convert Params to Vars, unfix Vars, and create a substitution map
     substitution_map = {}
+    comp_map = ComponentMap()
     for i, param_name in enumerate(param_names):
         # Leverage the parser in ComponentUID to locate the component.
         theta_cuid = ComponentUID(param_name)
@@ -65,6 +67,7 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
             theta_var_cuid = ComponentUID(theta_object.name)
             theta_var_object = theta_var_cuid.find_component_on(model)
             substitution_map[id(theta_object)] = theta_var_object
+            comp_map[theta_object] = theta_var_object
 
         # Indexed Param
         elif isinstance(theta_object, IndexedParam):
@@ -90,6 +93,7 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
             # Update substitution map (map each indexed param to indexed var)
             theta_var_cuid = ComponentUID(theta_object.name)
             theta_var_object = theta_var_cuid.find_component_on(model)
+            comp_map[theta_object] = theta_var_object
             var_theta_objects = []
             for theta_obj in theta_var_object:
                 theta_cuid = ComponentUID(
@@ -101,6 +105,7 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
                 param_theta_objects, var_theta_objects
             ):
                 substitution_map[id(param_theta_obj)] = var_theta_obj
+                comp_map[param_theta_obj] = var_theta_obj
 
         # Var or Indexed Var
         elif isinstance(theta_object, IndexedVar) or theta_object.is_variable_type():
@@ -181,6 +186,15 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
             expr = replace_expressions(expr=obj.expr, substitution_map=substitution_map)
             model.del_component(obj)
             model.add_component(obj.name, pyo.Objective(rule=expr, sense=obj.sense))
+
+    # Convert Params to Vars in Suffixes
+    for s in model.component_objects(pyo.Suffix):
+        current_keys = list(s.keys())
+        for c in current_keys:
+            if c in comp_map:
+                s[comp_map[c]] = s.pop(c)
+
+        assert len(current_keys) == len(s.keys())
 
     # print('--- Updated Model ---')
     # model.pprint()

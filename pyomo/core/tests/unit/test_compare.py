@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -165,17 +165,11 @@ class TestConvertToPrefixNotation(unittest.TestCase):
             0,
             (EqualityExpression, 2),
             (LinearExpression, 2),
-            (MonomialTermExpression, 2),
-            1,
             m.y,
-            (MonomialTermExpression, 2),
-            1,
             m.x,
             0,
             (EqualityExpression, 2),
             (LinearExpression, 2),
-            (MonomialTermExpression, 2),
-            1,
             m.y,
             (MonomialTermExpression, 2),
             -1,

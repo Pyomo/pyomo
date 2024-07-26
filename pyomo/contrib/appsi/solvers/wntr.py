@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.appsi.base import (
     PersistentBase,
     PersistentSolver,
@@ -28,10 +39,10 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.numvalue import native_numeric_types
 from typing import Dict, Optional, List
-from pyomo.core.base.block import _BlockData
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.block import BlockData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.param import ParamData
+from pyomo.core.base.constraint import ConstraintData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.dependencies import attempt_import
@@ -158,14 +169,16 @@ class Wntr(PersistentBase, PersistentSolver):
                 timer.stop('load solution')
             else:
                 raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loaded.'
-                    'Please set opt.config.load_solution=False and check '
-                    'results.termination_condition and '
+                    'A feasible solution was not found, so no solution can be loaded. '
+                    'If using the appsi.solvers.Wntr interface, you can '
+                    'set opt.config.load_solution=False. If using the environ.SolverFactory '
+                    'interface, you can set opt.solve(model, load_solutions = False). '
+                    'Then you can check results.termination_condition and '
                     'results.best_feasible_objective before loading a solution.'
                 )
         return results
 
-    def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
+    def solve(self, model: BlockData, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -226,7 +239,7 @@ class Wntr(PersistentBase, PersistentSolver):
 
         self.add_block(model)
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[VarData]):
         aml = wntr.sim.aml.aml
         for var in variables:
             varname = self._symbol_map.getSymbol(var, self._labeler)
@@ -257,7 +270,7 @@ class Wntr(PersistentBase, PersistentSolver):
                 )
             self._needs_updated = True
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         aml = wntr.sim.aml.aml
         for p in params:
             pname = self._symbol_map.getSymbol(p, self._labeler)
@@ -265,7 +278,7 @@ class Wntr(PersistentBase, PersistentSolver):
             setattr(self._solver_model, pname, wntr_p)
             self._pyomo_param_to_solver_param_map[id(p)] = wntr_p
 
-    def _add_constraints(self, cons: List[_GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         aml = wntr.sim.aml.aml
         for con in cons:
             if not con.equality:
@@ -281,7 +294,7 @@ class Wntr(PersistentBase, PersistentSolver):
             self._pyomo_con_to_solver_con_map[con] = wntr_con
             self._needs_updated = True
 
-    def _remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         for con in cons:
             solver_con = self._pyomo_con_to_solver_con_map[con]
             delattr(self._solver_model, solver_con.name)
@@ -289,7 +302,7 @@ class Wntr(PersistentBase, PersistentSolver):
             del self._pyomo_con_to_solver_con_map[con]
             self._needs_updated = True
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[VarData]):
         for var in variables:
             v_id = id(var)
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
@@ -301,7 +314,7 @@ class Wntr(PersistentBase, PersistentSolver):
                 del self._solver_model._wntr_fixed_var_cons[v_id]
             self._needs_updated = True
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         for p in params:
             p_id = id(p)
             solver_param = self._pyomo_param_to_solver_param_map[p_id]
@@ -309,7 +322,7 @@ class Wntr(PersistentBase, PersistentSolver):
             self._symbol_map.removeSymbol(p)
             del self._pyomo_param_to_solver_param_map[p_id]
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[VarData]):
         aml = wntr.sim.aml.aml
         for var in variables:
             v_id = id(var)

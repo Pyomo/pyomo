@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -30,9 +30,26 @@ from pyomo.contrib.cp.interval_var import (
     IntervalVarData,
     IndexedIntervalVar,
 )
+from pyomo.contrib.cp.sequence_var import (
+    SequenceVar,
+    ScalarSequenceVar,
+    SequenceVarData,
+)
+from pyomo.contrib.cp.scheduling_expr.scheduling_logic import (
+    AlternativeExpression,
+    SpanExpression,
+    SynchronizeExpression,
+)
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
     AtExpression,
+)
+from pyomo.contrib.cp.scheduling_expr.sequence_expressions import (
+    NoOverlapExpression,
+    FirstInSequenceExpression,
+    LastInSequenceExpression,
+    BeforeInSequenceExpression,
+    PredecessorToExpression,
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn,
@@ -60,16 +77,17 @@ from pyomo.core.base import (
 )
 from pyomo.core.base.boolean_var import (
     ScalarBooleanVar,
-    _GeneralBooleanVarData,
+    BooleanVarData,
     IndexedBooleanVar,
 )
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.param import IndexedParam, ScalarParam
-from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.param import IndexedParam, ScalarParam, ParamData
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
 from pyomo.core.base import Set, RangeSet
 from pyomo.core.base.set import SetProduct
+from pyomo.repn.util import ExitNodeDispatcher
 from pyomo.opt import WriterFactory, SolverFactory, TerminationCondition, SolverResults
 
 ### FIXME: Remove the following as soon as non-active components no
@@ -449,6 +467,7 @@ def _create_docplex_interval_var(visitor, interval_var):
     nm = interval_var.name if visitor.symbolic_solver_labels else None
     cpx_interval_var = cp.interval_var(name=nm)
     visitor.var_map[id(interval_var)] = cpx_interval_var
+    visitor.pyomo_to_docplex[interval_var] = cpx_interval_var
 
     # Figure out if it exists
     if interval_var.is_present.fixed and not interval_var.is_present.value:
@@ -491,6 +510,19 @@ def _create_docplex_interval_var(visitor, interval_var):
     return cpx_interval_var
 
 
+def _create_docplex_sequence_var(visitor, sequence_var):
+    nm = sequence_var.name if visitor.symbolic_solver_labels else None
+
+    cpx_seq_var = cp.sequence_var(
+        name=nm,
+        vars=[
+            _get_docplex_interval_var(visitor, v) for v in sequence_var.interval_vars
+        ],
+    )
+    visitor.var_map[id(sequence_var)] = cpx_seq_var
+    return cpx_seq_var
+
+
 def _get_docplex_interval_var(visitor, interval_var):
     # We might already have the interval_var and just need to retrieve it
     if id(interval_var) in visitor.var_map:
@@ -499,6 +531,25 @@ def _get_docplex_interval_var(visitor, interval_var):
         cpx_interval_var = _create_docplex_interval_var(visitor, interval_var)
         visitor.cpx.add(cpx_interval_var)
     return cpx_interval_var
+
+
+def _get_docplex_sequence_var(visitor, sequence_var):
+    if id(sequence_var) in visitor.var_map:
+        cpx_seq_var = visitor.var_map[id(sequence_var)]
+    else:
+        cpx_seq_var = _create_docplex_sequence_var(visitor, sequence_var)
+        visitor.cpx.add(cpx_seq_var)
+    return cpx_seq_var
+
+
+def _before_sequence_var(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        cpx_seq_var = _get_docplex_sequence_var(visitor, child)
+        visitor.var_map[_id] = cpx_seq_var
+        visitor.pyomo_to_docplex[child] = cpx_seq_var
+
+    return False, (_GENERAL, visitor.var_map[_id])
 
 
 def _before_interval_var(visitor, child):
@@ -564,22 +615,22 @@ def _before_interval_var_presence(visitor, child):
 
 
 def _handle_step_at_node(visitor, node):
-    return cp.step_at(node._time, node._height)
+    return False, (_GENERAL, cp.step_at(node._time, node._height))
 
 
 def _handle_step_at_start_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
-    return cp.step_at_start(cpx_var, node._height)
+    return False, (_GENERAL, cp.step_at_start(cpx_var, node._height))
 
 
 def _handle_step_at_end_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
-    return cp.step_at_end(cpx_var, node._height)
+    return False, (_GENERAL, cp.step_at_end(cpx_var, node._height))
 
 
 def _handle_pulse_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._interval_var)
-    return cp.pulse(cpx_var, node._height)
+    return False, (_GENERAL, cp.pulse(cpx_var, node._height))
 
 
 def _handle_negated_step_function_node(visitor, node):
@@ -590,9 +641,9 @@ def _handle_cumulative_function(visitor, node):
     expr = 0
     for arg in node.args:
         if arg.__class__ is NegatedStepFunction:
-            expr -= _handle_negated_step_function_node(visitor, arg)
+            expr -= _handle_negated_step_function_node(visitor, arg)[1][1]
         else:
-            expr += _step_function_handles[arg.__class__](visitor, arg)
+            expr += _step_function_handles[arg.__class__](visitor, arg)[1][1]
 
     return False, (_GENERAL, expr)
 
@@ -658,7 +709,7 @@ def _handle_monomial_expr(visitor, node, arg1, arg2):
     # simplifications (necessary in part for the unit tests)
     if arg2[1].__class__ in EXPR.native_types:
         return _GENERAL, arg1[1] * arg2[1]
-    elif arg1[1] == 1:
+    elif arg1[1].__class__ in EXPR.native_types and arg1[1] == 1:
         return arg2
     return (_GENERAL, cp.times(_get_int_valued_expr(arg1), _get_int_valued_expr(arg2)))
 
@@ -805,6 +856,14 @@ def _handle_at_least_node(visitor, node, *args):
     )
 
 
+def _handle_all_diff_node(visitor, node, *args):
+    return (_GENERAL, cp.all_diff(_get_int_valued_expr(arg) for arg in args))
+
+
+def _handle_count_if_node(visitor, node, *args):
+    return (_GENERAL, cp.count((_get_bool_valued_expr(arg) for arg in args), 1))
+
+
 ## CallExpression handllers
 
 
@@ -902,46 +961,91 @@ def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
     )
 
 
+def _handle_no_overlap_expression_node(visitor, node, seq_var):
+    return _GENERAL, cp.no_overlap(seq_var[1])
+
+
+def _handle_first_in_sequence_expression_node(visitor, node, interval_var, seq_var):
+    return _GENERAL, cp.first(seq_var[1], interval_var[1])
+
+
+def _handle_last_in_sequence_expression_node(visitor, node, interval_var, seq_var):
+    return _GENERAL, cp.last(seq_var[1], interval_var[1])
+
+
+def _handle_before_in_sequence_expression_node(
+    visitor, node, before_var, after_var, seq_var
+):
+    return _GENERAL, cp.before(seq_var[1], before_var[1], after_var[1])
+
+
+def _handle_predecessor_to_expression_node(
+    visitor, node, before_var, after_var, seq_var
+):
+    return _GENERAL, cp.previous(seq_var[1], before_var[1], after_var[1])
+
+
+def _handle_span_expression_node(visitor, node, *args):
+    return _GENERAL, cp.span(args[0][1], [arg[1] for arg in args[1:]])
+
+
+def _handle_alternative_expression_node(visitor, node, *args):
+    return _GENERAL, cp.alternative(args[0][1], [arg[1] for arg in args[1:]])
+
+
+def _handle_synchronize_expression_node(visitor, node, *args):
+    return _GENERAL, cp.synchronize(args[0][1], [arg[1] for arg in args[1:]])
+
+
+_operator_handles = {
+    EXPR.GetItemExpression: _handle_getitem,
+    EXPR.GetAttrExpression: _handle_getattr,
+    EXPR.CallExpression: _handle_call,
+    EXPR.NegationExpression: _handle_negation_node,
+    EXPR.ProductExpression: _handle_product_node,
+    EXPR.DivisionExpression: _handle_division_node,
+    EXPR.PowExpression: _handle_pow_node,
+    EXPR.AbsExpression: _handle_abs_node,
+    EXPR.MonomialTermExpression: _handle_monomial_expr,
+    EXPR.SumExpression: _handle_sum_node,
+    EXPR.MinExpression: _handle_min_node,
+    EXPR.MaxExpression: _handle_max_node,
+    EXPR.NotExpression: _handle_not_node,
+    EXPR.EquivalenceExpression: _handle_equivalence_node,
+    EXPR.ImplicationExpression: _handle_implication_node,
+    EXPR.AndExpression: _handle_and_node,
+    EXPR.OrExpression: _handle_or_node,
+    EXPR.XorExpression: _handle_xor_node,
+    EXPR.ExactlyExpression: _handle_exactly_node,
+    EXPR.AtMostExpression: _handle_at_most_node,
+    EXPR.AtLeastExpression: _handle_at_least_node,
+    EXPR.AllDifferentExpression: _handle_all_diff_node,
+    EXPR.CountIfExpression: _handle_count_if_node,
+    EXPR.EqualityExpression: _handle_equality_node,
+    EXPR.NotEqualExpression: _handle_not_equal_node,
+    EXPR.InequalityExpression: _handle_inequality_node,
+    EXPR.RangedExpression: _handle_ranged_inequality_node,
+    BeforeExpression: _handle_before_expression_node,
+    AtExpression: _handle_at_expression_node,
+    AlwaysIn: _handle_always_in_node,
+    ExpressionData: _handle_named_expression_node,
+    ScalarExpression: _handle_named_expression_node,
+    NoOverlapExpression: _handle_no_overlap_expression_node,
+    FirstInSequenceExpression: _handle_first_in_sequence_expression_node,
+    LastInSequenceExpression: _handle_last_in_sequence_expression_node,
+    BeforeInSequenceExpression: _handle_before_in_sequence_expression_node,
+    PredecessorToExpression: _handle_predecessor_to_expression_node,
+    SpanExpression: _handle_span_expression_node,
+    AlternativeExpression: _handle_alternative_expression_node,
+    SynchronizeExpression: _handle_synchronize_expression_node,
+}
+
+
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
-    _operator_handles = {
-        EXPR.GetItemExpression: _handle_getitem,
-        EXPR.Structural_GetItemExpression: _handle_getitem,
-        EXPR.Numeric_GetItemExpression: _handle_getitem,
-        EXPR.Boolean_GetItemExpression: _handle_getitem,
-        EXPR.GetAttrExpression: _handle_getattr,
-        EXPR.Structural_GetAttrExpression: _handle_getattr,
-        EXPR.Numeric_GetAttrExpression: _handle_getattr,
-        EXPR.Boolean_GetAttrExpression: _handle_getattr,
-        EXPR.CallExpression: _handle_call,
-        EXPR.NegationExpression: _handle_negation_node,
-        EXPR.ProductExpression: _handle_product_node,
-        EXPR.DivisionExpression: _handle_division_node,
-        EXPR.PowExpression: _handle_pow_node,
-        EXPR.AbsExpression: _handle_abs_node,
-        EXPR.MonomialTermExpression: _handle_monomial_expr,
-        EXPR.SumExpression: _handle_sum_node,
-        EXPR.LinearExpression: _handle_sum_node,
-        EXPR.MinExpression: _handle_min_node,
-        EXPR.MaxExpression: _handle_max_node,
-        EXPR.NotExpression: _handle_not_node,
-        EXPR.EquivalenceExpression: _handle_equivalence_node,
-        EXPR.ImplicationExpression: _handle_implication_node,
-        EXPR.AndExpression: _handle_and_node,
-        EXPR.OrExpression: _handle_or_node,
-        EXPR.XorExpression: _handle_xor_node,
-        EXPR.ExactlyExpression: _handle_exactly_node,
-        EXPR.AtMostExpression: _handle_at_most_node,
-        EXPR.AtLeastExpression: _handle_at_least_node,
-        EXPR.EqualityExpression: _handle_equality_node,
-        EXPR.NotEqualExpression: _handle_not_equal_node,
-        EXPR.InequalityExpression: _handle_inequality_node,
-        EXPR.RangedExpression: _handle_ranged_inequality_node,
-        BeforeExpression: _handle_before_expression_node,
-        AtExpression: _handle_at_expression_node,
-        AlwaysIn: _handle_always_in_node,
-        _GeneralExpressionData: _handle_named_expression_node,
-        ScalarExpression: _handle_named_expression_node,
-    }
+    exit_node_dispatcher = ExitNodeDispatcher(_operator_handles)
+    # NOTE: Because of indirection, we can encounter indexed Params and Vars in
+    # expressions
+
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
         IntervalVarEndTime: _before_interval_var_end_time,
@@ -950,16 +1054,19 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarIntervalVar: _before_interval_var,
         IntervalVarData: _before_interval_var,
         IndexedIntervalVar: _before_indexed_interval_var,
+        ScalarSequenceVar: _before_sequence_var,
+        SequenceVarData: _before_sequence_var,
         ScalarVar: _before_var,
-        _GeneralVarData: _before_var,
+        VarData: _before_var,
         IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
-        _GeneralBooleanVarData: _before_boolean_var,
+        BooleanVarData: _before_boolean_var,
         IndexedBooleanVar: _before_indexed_boolean_var,
-        _GeneralExpressionData: _before_named_expression,
+        ExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
-        IndexedParam: _before_indexed_param,  # Because of indirection
+        IndexedParam: _before_indexed_param,
         ScalarParam: _before_param,
+        ParamData: _before_param,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
@@ -993,7 +1100,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         return True, None
 
     def exitNode(self, node, data):
-        return self._operator_handles[node.__class__](self, node, *data)
+        return self.exit_node_dispatcher[node.__class__](self, node, *data)
 
     finalizeResult = None
 
@@ -1005,6 +1112,9 @@ def collect_valid_components(model, active=True, sort=None, valid=set(), targets
     unrecognized = {}
     components = {k: [] for k in targets}
     for obj in model.component_data_objects(active=True, descend_into=True, sort=sort):
+        # HACK around #3045
+        if not hasattr(obj, 'ctype'):
+            continue
         ctype = obj.ctype
         if ctype in components:
             components[ctype].append(obj)
@@ -1055,7 +1165,13 @@ class DocplexWriter(object):
                 RangeSet,
                 Port,
             },
-            targets={Objective, Constraint, LogicalConstraint, IntervalVar},
+            targets={
+                Objective,
+                Constraint,
+                LogicalConstraint,
+                IntervalVar,
+                SequenceVar,
+            },
         )
         if unknown:
             raise ValueError(
@@ -1284,6 +1400,10 @@ class CPOptimizerSolver(object):
                     )
                 else:
                     sol = sol.get_value()
+                if py_var.ctype is SequenceVar:
+                    # They don't actually have values--the IntervalVars will get
+                    # set.
+                    continue
                 if py_var.ctype is IntervalVar:
                     if len(sol) == 0:
                         # The interval_var is absent

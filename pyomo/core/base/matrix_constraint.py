@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,7 +19,7 @@ from pyomo.core.base.set_types import Any
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.base.component import ModelComponentFactory
-from pyomo.core.base.constraint import IndexedConstraint, _ConstraintData
+from pyomo.core.base.constraint import IndexedConstraint, ConstraintData
 from pyomo.repn.standard_repn import StandardRepn
 
 from collections.abc import Mapping
@@ -28,7 +28,7 @@ from collections.abc import Mapping
 logger = logging.getLogger('pyomo.core')
 
 
-class _MatrixConstraintData(_ConstraintData):
+class _MatrixConstraintData(ConstraintData):
     """
     This class defines the data for a single linear constraint
         derived from a canonical form Ax=b constraint.
@@ -104,7 +104,7 @@ class _MatrixConstraintData(_ConstraintData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _ConstraintData,
+        #   - ConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = component_ref
@@ -209,7 +209,7 @@ class _MatrixConstraintData(_ConstraintData):
         return self._index
 
     #
-    # Abstract Interface (_ConstraintData)
+    # Abstract Interface (ConstraintData)
     #
 
     @property

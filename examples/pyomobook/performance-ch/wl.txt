@@ -3,94 +3,102 @@ Building model
            0 seconds to construct Block ConcreteModel; 1 index total
            0 seconds to construct Set Any; 1 index total
            0 seconds to construct Param P; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
-           0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
         0.02 seconds to construct Var x; 40000 indices total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Var y; 200 indices total
-        0.13 seconds to construct Objective obj; 1 index total
+        0.14 seconds to construct Objective obj; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
         0.13 seconds to construct Constraint demand; 200 indices total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-           0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-        0.48 seconds to construct Constraint warehouse_active; 40000 indices total
+        0.50 seconds to construct Constraint warehouse_active; 40000 indices total
            0 seconds to construct Constraint num_warehouses; 1 index total
 Building model with LinearExpression
 ------------------------------------
            0 seconds to construct Block ConcreteModel; 1 index total
            0 seconds to construct Set Any; 1 index total
            0 seconds to construct Param P; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
-           0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
         0.02 seconds to construct Var x; 40000 indices total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Var y; 200 indices total
-        0.06 seconds to construct Objective obj; 1 index total
+        0.20 seconds to construct Objective obj; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
-        0.18 seconds to construct Constraint demand; 200 indices total
+        0.05 seconds to construct Constraint demand; 200 indices total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct SetOf OrderedSetOf
            0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-           0 seconds to construct Set SetProduct_OrderedSet; 1 index total
-        0.33 seconds to construct Constraint warehouse_active; 40000 indices total
+        0.34 seconds to construct Constraint warehouse_active; 40000 indices total
            0 seconds to construct Constraint num_warehouses; 1 index total
 [    0.00] start
-[+   0.79] Built model
-[+   2.56] Wrote LP file and solved
-[+  10.96] Finished parameter sweep
-         7372057 function calls (7368345 primitive calls) in 13.627 seconds
+[+   1.00] Built model
+[+   2.28] Wrote LP file and solved
+[+   9.06] Finished parameter sweep
+         7294708 function calls (7291012 primitive calls) in 10.989 seconds
 
    Ordered by: cumulative time
    List reduced from 673 to 15 due to restriction <15>
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-        1    0.001    0.001   13.627   13.627 /home/jdsiiro/Research/pyomo/examples/pyomobook/performance-ch/wl.py:132(solve_parametric)
-       30    0.002    0.000   13.551    0.452 /home/jdsiiro/Research/pyomo/pyomo/opt/base/solvers.py:530(solve)
-       30    0.001    0.000   10.383    0.346 /home/jdsiiro/Research/pyomo/pyomo/opt/solver/shellcmd.py:247(_apply_solver)
-       30    0.002    0.000   10.381    0.346 /home/jdsiiro/Research/pyomo/pyomo/opt/solver/shellcmd.py:310(_execute_command)
-       30    0.001    0.000   10.360    0.345 /projects/sems/install/rhel7-x86_64/pyomo/compiler/python/3.11.6/lib/python3.11/subprocess.py:506(run)
-       30    0.000    0.000   10.288    0.343 /projects/sems/install/rhel7-x86_64/pyomo/compiler/python/3.11.6/lib/python3.11/subprocess.py:1165(communicate)
-       60    0.000    0.000   10.287    0.171 /projects/sems/install/rhel7-x86_64/pyomo/compiler/python/3.11.6/lib/python3.11/subprocess.py:1259(wait)
-       60    0.001    0.000   10.287    0.171 /projects/sems/install/rhel7-x86_64/pyomo/compiler/python/3.11.6/lib/python3.11/subprocess.py:2014(_wait)
-       30    0.000    0.000   10.286    0.343 /projects/sems/install/rhel7-x86_64/pyomo/compiler/python/3.11.6/lib/python3.11/subprocess.py:2001(_try_wait)
-       30   10.286    0.343   10.286    0.343 {built-in method posix.waitpid}
-       30    0.000    0.000    2.123    0.071 /home/jdsiiro/Research/pyomo/pyomo/solvers/plugins/solvers/GUROBI.py:214(_presolve)
-       30    0.000    0.000    2.122    0.071 /home/jdsiiro/Research/pyomo/pyomo/opt/solver/shellcmd.py:215(_presolve)
-       30    0.000    0.000    2.114    0.070 /home/jdsiiro/Research/pyomo/pyomo/opt/base/solvers.py:687(_presolve)
-       30    0.000    0.000    2.114    0.070 /home/jdsiiro/Research/pyomo/pyomo/opt/base/solvers.py:756(_convert_problem)
-       30    0.001    0.000    2.114    0.070 /home/jdsiiro/Research/pyomo/pyomo/opt/base/convert.py:27(convert_problem)
+        1    0.001    0.001   10.989   10.989 pyomo/examples/pyomobook/performance-ch/wl.py:132(solve_parametric)
+       30    0.002    0.000   10.913    0.364 pyomo/pyomo/opt/base/solvers.py:530(solve)
+       30    0.001    0.000    7.816    0.261 pyomo/pyomo/opt/solver/shellcmd.py:247(_apply_solver)
+       30    0.002    0.000    7.814    0.260 pyomo/pyomo/opt/solver/shellcmd.py:310(_execute_command)
+       30    0.001    0.000    7.793    0.260 /lib/python3.11/subprocess.py:506(run)
+       30    0.000    0.000    7.609    0.254 /lib/python3.11/subprocess.py:1165(communicate)
+       60    0.000    0.000    7.608    0.127 /lib/python3.11/subprocess.py:1259(wait)
+       60    0.000    0.000    7.608    0.127 /lib/python3.11/subprocess.py:2014(_wait)
+       30    0.000    0.000    7.608    0.254 /lib/python3.11/subprocess.py:2001(_try_wait)
+       30    7.607    0.254    7.607    0.254 {built-in method posix.waitpid}
+       30    0.000    0.000    2.166    0.072 pyomo/pyomo/solvers/plugins/solvers/GUROBI.py:214(_presolve)
+       30    0.000    0.000    2.166    0.072 pyomo/pyomo/opt/solver/shellcmd.py:215(_presolve)
+       30    0.000    0.000    2.156    0.072 pyomo/pyomo/opt/base/solvers.py:687(_presolve)
+       30    0.000    0.000    2.156    0.072 pyomo/pyomo/opt/base/solvers.py:754(_convert_problem)
+       30    0.001    0.000    2.156    0.072 pyomo/pyomo/opt/base/convert.py:27(convert_problem)
 
 
 
-         7372057 function calls (7368345 primitive calls) in 13.627 seconds
+         7294708 function calls (7291012 primitive calls) in 10.989 seconds
 
    Ordered by: internal time
    List reduced from 673 to 15 due to restriction <15>
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-       30   10.286    0.343   10.286    0.343 {built-in method posix.waitpid}
-       30    0.325    0.011    2.078    0.069 /home/jdsiiro/Research/pyomo/pyomo/repn/plugins/lp_writer.py:250(write)
-    76560    0.278    0.000    0.668    0.000 /home/jdsiiro/Research/pyomo/pyomo/repn/plugins/lp_writer.py:576(write_expression)
-       30    0.248    0.008    0.508    0.017 /home/jdsiiro/Research/pyomo/pyomo/solvers/plugins/solvers/GUROBI.py:394(process_soln_file)
-    76560    0.221    0.000    0.395    0.000 /home/jdsiiro/Research/pyomo/pyomo/repn/linear.py:664(_before_linear)
-   301530    0.131    0.000    0.178    0.000 /home/jdsiiro/Research/pyomo/pyomo/core/expr/symbol_map.py:133(getSymbol)
-       30    0.119    0.004    0.192    0.006 /home/jdsiiro/Research/pyomo/pyomo/core/base/PyomoModel.py:461(select)
-    77190    0.117    0.000    0.161    0.000 /home/jdsiiro/Research/pyomo/pyomo/solvers/plugins/solvers/GUROBI.py:451(<listcomp>)
-       30    0.116    0.004    0.285    0.010 /home/jdsiiro/Research/pyomo/pyomo/core/base/PyomoModel.py:337(add_solution)
-    76530    0.080    0.000    0.106    0.000 /home/jdsiiro/Research/pyomo/pyomo/core/expr/symbol_map.py:63(addSymbol)
-   239550    0.079    0.000    0.079    0.000 /home/jdsiiro/Research/pyomo/pyomo/core/base/indexed_component.py:611(__getitem__)
-  1062450    0.078    0.000    0.078    0.000 {built-in method builtins.id}
-   163050    0.074    0.000    0.128    0.000 /home/jdsiiro/Research/pyomo/pyomo/core/base/var.py:1045(__getitem__)
-    76560    0.074    0.000    0.080    0.000 /home/jdsiiro/Research/pyomo/pyomo/repn/linear.py:834(finalizeResult)
-   153150    0.073    0.000    0.191    0.000 /home/jdsiiro/Research/pyomo/pyomo/core/base/block.py:1505(_component_data_itervalues)
+       30    7.607    0.254    7.607    0.254 {built-in method posix.waitpid}
+       30    0.328    0.011    2.101    0.070 pyomo/pyomo/repn/plugins/lp_writer.py:250(write)
+    76560    0.284    0.000    0.680    0.000 pyomo/pyomo/repn/plugins/lp_writer.py:576(write_expression)
+    76560    0.220    0.000    0.388    0.000 pyomo/pyomo/repn/linear.py:664(_before_linear)
+       30    0.209    0.007    0.438    0.015 pyomo/pyomo/solvers/plugins/solvers/GUROBI.py:394(process_soln_file)
+       30    0.175    0.006    0.175    0.006 {built-in method _posixsubprocess.fork_exec}
+   301530    0.134    0.000    0.181    0.000 pyomo/pyomo/core/expr/symbol_map.py:133(getSymbol)
+       30    0.109    0.004    0.178    0.006 pyomo/pyomo/core/base/PyomoModel.py:461(select)
+    77190    0.105    0.000    0.145    0.000 pyomo/pyomo/solvers/plugins/solvers/GUROBI.py:451(<listcomp>)
+       30    0.104    0.003    0.257    0.009 pyomo/pyomo/core/base/PyomoModel.py:337(add_solution)
+    76530    0.081    0.000    0.109    0.000 pyomo/pyomo/core/expr/symbol_map.py:63(addSymbol)
+  1062470    0.079    0.000    0.079    0.000 {built-in method builtins.id}
+    76560    0.073    0.000    0.079    0.000 pyomo/pyomo/repn/linear.py:834(finalizeResult)
+   239550    0.073    0.000    0.073    0.000 pyomo/pyomo/core/base/indexed_component.py:612(__getitem__)
+   153150    0.070    0.000    0.179    0.000 pyomo/pyomo/core/base/block.py:1463(_component_data_itervalues)
 
 
 
 [    0.00] Resetting the tic/toc delta timer
-[+   0.66] Finished parameter sweep with persistent interface
+[+   0.49] Finished parameter sweep with persistent interface

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,6 +10,22 @@
 #  ___________________________________________________________________________
 
 import pytest
+
+_implicit_markers = {'default'}
+_extended_implicit_markers = _implicit_markers.union({'solver'})
+
+
+def pytest_collection_modifyitems(items):
+    """
+    This method will mark any unmarked tests with the implicit marker ('default')
+
+    """
+    for item in items:
+        try:
+            next(item.iter_markers())
+        except StopIteration:
+            for marker in _implicit_markers:
+                item.add_marker(getattr(pytest.mark, marker))
 
 
 def pytest_runtest_setup(item):
@@ -32,13 +48,10 @@ def pytest_runtest_setup(item):
     the default mode; but if solver tests are also marked with an explicit
     category (e.g., "expensive"), we will skip them.
     """
-    marker = item.iter_markers()
     solvernames = [mark.args[0] for mark in item.iter_markers(name="solver")]
     solveroption = item.config.getoption("--solver")
     markeroption = item.config.getoption("-m")
-    implicit_markers = ['default']
-    extended_implicit_markers = implicit_markers + ['solver']
-    item_markers = set(mark.name for mark in marker)
+    item_markers = set(mark.name for mark in item.iter_markers())
     if solveroption:
         if solveroption not in solvernames:
             pytest.skip("SKIPPED: Test not marked {!r}".format(solveroption))
@@ -46,9 +59,9 @@ def pytest_runtest_setup(item):
     elif markeroption:
         return
     elif item_markers:
-        if not set(implicit_markers).issubset(
-            item_markers
-        ) and not item_markers.issubset(set(extended_implicit_markers)):
+        if not _implicit_markers.issubset(item_markers) and not item_markers.issubset(
+            _extended_implicit_markers
+        ):
             pytest.skip('SKIPPED: Only running default, solver, and unmarked tests.')
 
 

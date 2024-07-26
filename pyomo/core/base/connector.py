@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['Connector']
 
 import logging
 import sys
@@ -26,12 +24,11 @@ from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.transformation import TransformationFactory
 
 logger = logging.getLogger('pyomo.core')
 
 
-class _ConnectorData(ComponentData, NumericValue):
+class ConnectorData(ComponentData, NumericValue):
     """Holds the actual connector information"""
 
     __slots__ = ('vars', 'aggregators')
@@ -108,6 +105,11 @@ class _ConnectorData(ComponentData, NumericValue):
                     yield v
 
 
+class _ConnectorData(metaclass=RenamedClass):
+    __renamed__new_class__ = ConnectorData
+    __renamed__version__ = '6.7.2'
+
+
 @ModelComponentFactory.register(
     "A bundle of variables that can be manipulated together."
 )
@@ -160,7 +162,7 @@ class Connector(IndexedComponent):
     # IndexedComponent
     #
     def _getitem_when_not_present(self, idx):
-        _conval = self._data[idx] = _ConnectorData(component=self)
+        _conval = self._data[idx] = ConnectorData(component=self)
         return _conval
 
     def construct(self, data=None):
@@ -173,7 +175,7 @@ class Connector(IndexedComponent):
         timer = ConstructionTimer(self)
         self._constructed = True
         #
-        # Construct _ConnectorData objects for all index values
+        # Construct ConnectorData objects for all index values
         #
         if self.is_indexed():
             self._initialize_members(self._index_set)
@@ -261,9 +263,9 @@ class Connector(IndexedComponent):
         )
 
 
-class ScalarConnector(Connector, _ConnectorData):
+class ScalarConnector(Connector, ConnectorData):
     def __init__(self, *args, **kwd):
-        _ConnectorData.__init__(self, component=self)
+        ConnectorData.__init__(self, component=self)
         Connector.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 

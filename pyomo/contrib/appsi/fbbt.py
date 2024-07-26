@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.common.config import (
     ConfigDict,
@@ -7,12 +18,12 @@ from pyomo.common.config import (
 )
 from .cmodel import cmodel, cmodel_available
 from typing import List, Optional
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.sos import _SOSConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData, minimize, maximize
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.param import ParamData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.sos import SOSConstraintData
+from pyomo.core.base.objective import ObjectiveData, minimize, maximize
+from pyomo.core.base.block import BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
 from pyomo.common.errors import InfeasibleConstraintException
 
@@ -110,7 +121,7 @@ class IntervalTightener(PersistentBase):
         if self._objective is None:
             self.set_objective(None)
 
-    def _add_variables(self, variables: List[_GeneralVarData]):
+    def _add_variables(self, variables: List[VarData]):
         if self._symbolic_solver_labels:
             set_name = True
             symbol_map = self._symbol_map
@@ -132,7 +143,7 @@ class IntervalTightener(PersistentBase):
             False,
         )
 
-    def _add_params(self, params: List[_ParamData]):
+    def _add_params(self, params: List[ParamData]):
         cparams = cmodel.create_params(len(params))
         for ndx, p in enumerate(params):
             cp = cparams[ndx]
@@ -143,7 +154,7 @@ class IntervalTightener(PersistentBase):
                 cp = cparams[ndx]
                 cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
-    def _add_constraints(self, cons: List[_GeneralConstraintData]):
+    def _add_constraints(self, cons: List[ConstraintData]):
         cmodel.process_fbbt_constraints(
             self._cmodel,
             self._pyomo_expr_types,
@@ -158,13 +169,13 @@ class IntervalTightener(PersistentBase):
             for c, cc in self._con_map.items():
                 cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
 
-    def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError(
                 'IntervalTightener does not support SOS constraints'
             )
 
-    def _remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def _remove_constraints(self, cons: List[ConstraintData]):
         if self._symbolic_solver_labels:
             for c in cons:
                 self._symbol_map.removeSymbol(c)
@@ -173,13 +184,13 @@ class IntervalTightener(PersistentBase):
             self._cmodel.remove_constraint(cc)
             del self._rcon_map[cc]
 
-    def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
+    def _remove_sos_constraints(self, cons: List[SOSConstraintData]):
         if len(cons) != 0:
             raise NotImplementedError(
                 'IntervalTightener does not support SOS constraints'
             )
 
-    def _remove_variables(self, variables: List[_GeneralVarData]):
+    def _remove_variables(self, variables: List[VarData]):
         if self._symbolic_solver_labels:
             for v in variables:
                 self._symbol_map.removeSymbol(v)
@@ -187,14 +198,14 @@ class IntervalTightener(PersistentBase):
             cvar = self._var_map.pop(id(v))
             del self._rvar_map[cvar]
 
-    def _remove_params(self, params: List[_ParamData]):
+    def _remove_params(self, params: List[ParamData]):
         if self._symbolic_solver_labels:
             for p in params:
                 self._symbol_map.removeSymbol(p)
         for p in params:
             del self._param_map[id(p)]
 
-    def _update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[VarData]):
         cmodel.process_pyomo_vars(
             self._pyomo_expr_types,
             variables,
@@ -213,13 +224,13 @@ class IntervalTightener(PersistentBase):
             cp = self._param_map[p_id]
             cp.value = p.value
 
-    def set_objective(self, obj: _GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         if self._symbolic_solver_labels:
             if self._objective is not None:
                 self._symbol_map.removeSymbol(self._objective)
         super().set_objective(obj)
 
-    def _set_objective(self, obj: _GeneralObjectiveData):
+    def _set_objective(self, obj: ObjectiveData):
         if obj is None:
             ce = cmodel.Constant(0)
             sense = 0
@@ -264,7 +275,7 @@ class IntervalTightener(PersistentBase):
             c.deactivate()
 
     def perform_fbbt(
-        self, model: _BlockData, symbolic_solver_labels: Optional[bool] = None
+        self, model: BlockData, symbolic_solver_labels: Optional[bool] = None
     ):
         if model is not self._model:
             self.set_instance(model, symbolic_solver_labels=symbolic_solver_labels)
@@ -293,7 +304,7 @@ class IntervalTightener(PersistentBase):
             self._deactivate_satisfied_cons()
         return n_iter
 
-    def perform_fbbt_with_seed(self, model: _BlockData, seed_var: _GeneralVarData):
+    def perform_fbbt_with_seed(self, model: BlockData, seed_var: VarData):
         if model is not self._model:
             self.set_instance(model)
         else:

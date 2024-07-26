@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -729,7 +729,6 @@ class TestReference(unittest.TestCase):
 
         self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.y.index_set())
-        self.assertIs(m.y.index_set(), m.y_index)
         self.assertIs(m.r.index_set(), UnindexedComponent_ReferenceSet)
         self.assertEqual(len(m.r), 1)
         self.assertTrue(m.r.is_reference())
@@ -773,7 +772,7 @@ class TestReference(unittest.TestCase):
         m.r.pprint(ostream=buf)
         self.assertEqual(
             buf.getvalue(),
-            """r : Size=2, Index=x_index, ReferenceTo=x
+            """r : Size=2, Index={1, 2}, ReferenceTo=x
     Key : Lower : Value : Upper : Fixed : Stale : Domain
       1 :  None :     4 :  None : False : False :  Reals
       2 :  None :     8 :  None : False : False :  Reals
@@ -784,7 +783,7 @@ class TestReference(unittest.TestCase):
         m.s.pprint(ostream=buf)
         self.assertEqual(
             buf.getvalue(),
-            """s : Size=2, Index=x_index, ReferenceTo=x[:, ...]
+            """s : Size=2, Index={1, 2}, ReferenceTo=x[:, ...]
     Key : Lower : Value : Upper : Fixed : Stale : Domain
       1 :  None :     4 :  None : False : False :  Reals
       2 :  None :     8 :  None : False : False :  Reals
@@ -799,10 +798,10 @@ class TestReference(unittest.TestCase):
         m.r.pprint(ostream=buf)
         self.assertEqual(
             buf.getvalue(),
-            """r : Size=2, Index=x_index, ReferenceTo=x
+            """r : Size=2, Index={1, 2}, ReferenceTo=x
     Key : Object
-      1 : <class 'pyomo.core.base.var._GeneralVarData'>
-      2 : <class 'pyomo.core.base.var._GeneralVarData'>
+      1 : <class 'pyomo.core.base.var.VarData'>
+      2 : <class 'pyomo.core.base.var.VarData'>
 """,
         )
         m.s = Reference(m.x[:, ...], ctype=IndexedComponent)
@@ -810,10 +809,10 @@ class TestReference(unittest.TestCase):
         m.s.pprint(ostream=buf)
         self.assertEqual(
             buf.getvalue(),
-            """s : Size=2, Index=x_index, ReferenceTo=x[:, ...]
+            """s : Size=2, Index={1, 2}, ReferenceTo=x[:, ...]
     Key : Object
-      1 : <class 'pyomo.core.base.var._GeneralVarData'>
-      2 : <class 'pyomo.core.base.var._GeneralVarData'>
+      1 : <class 'pyomo.core.base.var.VarData'>
+      2 : <class 'pyomo.core.base.var.VarData'>
 """,
         )
 
@@ -1281,7 +1280,6 @@ class TestReference(unittest.TestCase):
             normalize_index.flatten = _old_flatten
 
     def test_pprint_nonfinite_sets(self):
-        self.maxDiff = None
         m = ConcreteModel()
         m.v = Var(NonNegativeIntegers, dense=False)
         m.ref = Reference(m.v)
@@ -1323,7 +1321,6 @@ class TestReference(unittest.TestCase):
 
     def test_pprint_nonfinite_sets_ctypeNone(self):
         # test issue #2039
-        self.maxDiff = None
         m = ConcreteModel()
         m.v = Var(NonNegativeIntegers, dense=False)
         m.ref = Reference(m.v, ctype=None)
@@ -1360,8 +1357,8 @@ class TestReference(unittest.TestCase):
 1 IndexedComponent Declarations
     ref : Size=2, Index=NonNegativeIntegers, ReferenceTo=v
         Key : Object
-          3 : <class 'pyomo.core.base.var._GeneralVarData'>
-          5 : <class 'pyomo.core.base.var._GeneralVarData'>
+          3 : <class 'pyomo.core.base.var.VarData'>
+          5 : <class 'pyomo.core.base.var.VarData'>
 
 2 Declarations: v ref
 """.strip(),
@@ -1380,7 +1377,7 @@ class TestReference(unittest.TestCase):
         self.assertEqual(
             buf.getvalue().strip(),
             """
-r : Size=4, Index=r_index, ReferenceTo=b[:].x[:]
+r : Size=4, Index=ReferenceSet(b[:].x[:]), ReferenceTo=b[:].x[:]
     Key    : Lower : Value : Upper : Fixed : Stale : Domain
     (1, 3) :     1 :  None :  None : False :  True :  Reals
     (1, 4) :     1 :  None :  None : False :  True :  Reals

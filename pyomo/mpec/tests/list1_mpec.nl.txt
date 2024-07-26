@@ -1,8 +1,3 @@
-1 Set Declarations
-    cc_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    2 : {1, 2}
-
 4 Var Declarations
     x1 : Size=1, Index=None
         Key  : Lower : Value : Upper : Fixed : Stale : Domain
@@ -18,7 +13,7 @@
         None :  None :  None :  None : False :  True :  Reals
 
 1 Block Declarations
-    cc : Size=2, Index=cc_index, Active=True
+    cc : Size=2, Index={1, 2}, Active=True
         Key : Arg0   : Arg1             : Active
           1 : y + x3 : x1 + 2*x2  ==  0 :   True
           2 : y + x3 : x1 + 2*x2  ==  2 :   True
@@ -37,4 +32,4 @@
 
             1 Declarations: c
 
-6 Declarations: y x1 x2 x3 cc_index cc
+5 Declarations: y x1 x2 x3 cc

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,10 +17,10 @@ from pyomo.core.beta.list_objects import (
     XObjectiveList,
     XExpressionList,
 )
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.objective import ObjectiveData
+from pyomo.core.base.expression import ExpressionData
 
 
 class _TestComponentListBase(object):
@@ -365,10 +365,10 @@ class _TestActiveComponentListBase(_TestComponentListBase):
 
 
 class TestVarList(_TestComponentListBase, unittest.TestCase):
-    # Note: the updated _GeneralVarData class only takes an optional
+    # Note: the updated VarData class only takes an optional
     # parent argument (you no longer pass the domain in)
     _ctype = XVarList
-    _cdatatype = lambda self, arg: _GeneralVarData()
+    _cdatatype = lambda self, arg: VarData()
 
     def setUp(self):
         _TestComponentListBase.setUp(self)
@@ -377,7 +377,7 @@ class TestVarList(_TestComponentListBase, unittest.TestCase):
 
 class TestExpressionList(_TestComponentListBase, unittest.TestCase):
     _ctype = XExpressionList
-    _cdatatype = _GeneralExpressionData
+    _cdatatype = ExpressionData
 
     def setUp(self):
         _TestComponentListBase.setUp(self)
@@ -392,7 +392,7 @@ class TestExpressionList(_TestComponentListBase, unittest.TestCase):
 
 class TestConstraintList(_TestActiveComponentListBase, unittest.TestCase):
     _ctype = XConstraintList
-    _cdatatype = _GeneralConstraintData
+    _cdatatype = ConstraintData
 
     def setUp(self):
         _TestComponentListBase.setUp(self)
@@ -401,7 +401,7 @@ class TestConstraintList(_TestActiveComponentListBase, unittest.TestCase):
 
 class TestObjectiveList(_TestActiveComponentListBase, unittest.TestCase):
     _ctype = XObjectiveList
-    _cdatatype = _GeneralObjectiveData
+    _cdatatype = ObjectiveData
 
     def setUp(self):
         _TestComponentListBase.setUp(self)

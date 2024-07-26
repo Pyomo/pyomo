@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -29,8 +29,11 @@ from pyomo.environ import (
     SolverFactory,
     exp,
     minimize,
+    Suffix,
+    ComponentUID,
 )
 from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.contrib.parmest.experiment import Experiment
 
 
 def generate_model(data):
@@ -266,6 +269,35 @@ def generate_model(data):
     disc = TransformationFactory("dae.collocation")
     disc.apply_to(m, nfe=20, ncp=4)
     return m
+
+
+class SemiBatchExperiment(Experiment):
+
+    def __init__(self, data):
+        self.data = data
+        self.model = None
+
+    def create_model(self):
+        self.model = generate_model(self.data)
+
+    def label_model(self):
+
+        m = self.model
+
+        m.unknown_parameters = Suffix(direction=Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, ComponentUID(k)) for k in [m.k1, m.k2, m.E1, m.E2]
+        )
+
+    def finalize_model(self):
+        pass
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        self.finalize_model()
+
+        return self.model
 
 
 def main():

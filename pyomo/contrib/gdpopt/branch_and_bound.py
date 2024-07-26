@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -230,12 +230,12 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 no_feasible_soln = float('inf')
                 self.LB = (
                     node_data.obj_lb
-                    if solve_data.objective_sense == minimize
+                    if self.objective_sense == minimize
                     else -no_feasible_soln
                 )
                 self.UB = (
                     no_feasible_soln
-                    if solve_data.objective_sense == minimize
+                    if self.objective_sense == minimize
                     else -node_data.obj_lb
                 )
                 config.logger.info(

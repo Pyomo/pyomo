@@ -1,3 +1,15 @@
+/**___________________________________________________________________________
+ *
+ * Pyomo: Python Optimization Modeling Objects
+ * Copyright (c) 2008-2024
+ * National Technology and Engineering Solutions of Sandia, LLC
+ * Under the terms of Contract DE-NA0003525 with National Technology and
+ * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+ * rights in this software.
+ * This software is distributed under the 3-clause BSD License.
+ * ___________________________________________________________________________
+**/
+
 #ifndef EXPRESSION_HEADER
 #define EXPRESSION_HEADER
 
@@ -668,10 +680,10 @@ public:
     expr_type_map[np_float32] = py_float;
     expr_type_map[np_float64] = py_float;
     expr_type_map[ScalarVar] = var;
-    expr_type_map[_GeneralVarData] = var;
+    expr_type_map[VarData] = var;
     expr_type_map[AutoLinkedBinaryVar] = var;
     expr_type_map[ScalarParam] = param;
-    expr_type_map[_ParamData] = param;
+    expr_type_map[ParamData] = param;
     expr_type_map[MonomialTermExpression] = product;
     expr_type_map[ProductExpression] = product;
     expr_type_map[NPV_ProductExpression] = product;
@@ -688,7 +700,7 @@ public:
     expr_type_map[UnaryFunctionExpression] = unary_func;
     expr_type_map[NPV_UnaryFunctionExpression] = unary_func;
     expr_type_map[LinearExpression] = linear;
-    expr_type_map[_GeneralExpressionData] = named_expr;
+    expr_type_map[ExpressionData] = named_expr;
     expr_type_map[ScalarExpression] = named_expr;
     expr_type_map[Integral] = named_expr;
     expr_type_map[ScalarIntegral] = named_expr;
@@ -716,12 +728,12 @@ public:
   py::type np_float64 = np.attr("float64");
   py::object ScalarParam =
       py::module_::import("pyomo.core.base.param").attr("ScalarParam");
-  py::object _ParamData =
-      py::module_::import("pyomo.core.base.param").attr("_ParamData");
+  py::object ParamData =
+      py::module_::import("pyomo.core.base.param").attr("ParamData");
   py::object ScalarVar =
       py::module_::import("pyomo.core.base.var").attr("ScalarVar");
-  py::object _GeneralVarData =
-      py::module_::import("pyomo.core.base.var").attr("_GeneralVarData");
+  py::object VarData =
+      py::module_::import("pyomo.core.base.var").attr("VarData");
   py::object AutoLinkedBinaryVar =
       py::module_::import("pyomo.gdp.disjunct").attr("AutoLinkedBinaryVar");
   py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");
@@ -753,8 +765,8 @@ public:
   py::object NumericConstant =
       py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
   py::object expr_module = py::module_::import("pyomo.core.base.expression");
-  py::object _GeneralExpressionData =
-      expr_module.attr("_GeneralExpressionData");
+  py::object ExpressionData =
+      expr_module.attr("ExpressionData");
   py::object ScalarExpression = expr_module.attr("ScalarExpression");
   py::object ScalarIntegral =
       py::module_::import("pyomo.dae.integral").attr("ScalarIntegral");

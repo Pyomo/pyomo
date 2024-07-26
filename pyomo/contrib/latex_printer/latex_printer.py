@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2023
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -34,8 +34,8 @@ from pyomo.core.expr import (
 
 from pyomo.core.expr.visitor import identify_components
 from pyomo.core.expr.base import ExpressionBase
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
+from pyomo.core.base.expression import ScalarExpression, ExpressionData
+from pyomo.core.base.objective import ScalarObjective, ObjectiveData
 import pyomo.core.kernel as kernel
 from pyomo.core.expr.template_expr import (
     GetItemExpression,
@@ -47,9 +47,9 @@ from pyomo.core.expr.template_expr import (
     resolve_template,
     templatize_rule,
 )
-from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
-from pyomo.core.base.param import _ParamData, ScalarParam, IndexedParam
-from pyomo.core.base.set import _SetData
+from pyomo.core.base.var import ScalarVar, VarData, IndexedVar
+from pyomo.core.base.param import ParamData, ScalarParam, IndexedParam
+from pyomo.core.base.set import SetData, SetOperator
 from pyomo.core.base.constraint import ScalarConstraint, IndexedConstraint
 from pyomo.common.collections.component_map import ComponentMap
 from pyomo.common.collections.component_set import ComponentSet
@@ -64,7 +64,7 @@ from pyomo.core.base.block import IndexedBlock
 from pyomo.core.base.external import _PythonCallbackFunctionID
 from pyomo.core.base.enums import SortComponents
 
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 
 from pyomo.repn.util import ExprType
 
@@ -77,6 +77,40 @@ _GENERAL = ExprType.GENERAL
 from pyomo.common.errors import InfeasibleConstraintException
 
 from pyomo.common.dependencies import numpy as np, numpy_available
+
+
+set_operator_map = {
+    '|': r' \cup ',
+    '&': r' \cap ',
+    '*': r' \times ',
+    '-': r' \setminus ',
+    '^': r' \triangle ',
+}
+
+latex_reals = r'\mathds{R}'
+latex_integers = r'\mathds{Z}'
+
+domainMap = {
+    'Reals': latex_reals,
+    'PositiveReals': latex_reals + '_{> 0}',
+    'NonPositiveReals': latex_reals + '_{\\leq 0}',
+    'NegativeReals': latex_reals + '_{< 0}',
+    'NonNegativeReals': latex_reals + '_{\\geq 0}',
+    'Integers': latex_integers,
+    'PositiveIntegers': latex_integers + '_{> 0}',
+    'NonPositiveIntegers': latex_integers + '_{\\leq 0}',
+    'NegativeIntegers': latex_integers + '_{< 0}',
+    'NonNegativeIntegers': latex_integers + '_{\\geq 0}',
+    'Boolean': '\\left\\{ \\text{True} , \\text{False} \\right \\}',
+    'Binary': '\\left\\{ 0 , 1 \\right \\}',
+    # 'Any': None,
+    # 'AnyWithNone': None,
+    'EmptySet': '\\varnothing',
+    'UnitInterval': latex_reals,
+    'PercentFraction': latex_reals,
+    # 'RealInterval' :        None    ,
+    # 'IntegerInterval' :     None    ,
+}
 
 
 def decoder(num, base):
@@ -275,14 +309,15 @@ def handle_functionID_node(visitor, node, *args):
 
 
 def handle_indexTemplate_node(visitor, node, *args):
-    if node._set in ComponentSet(visitor.setMap.keys()):
+    if node._set in visitor.setMap:
         # already detected set, do nothing
         pass
     else:
-        visitor.setMap[node._set] = 'SET%d' % (len(visitor.setMap.keys()) + 1)
+        visitor.setMap[node._set] = 'SET%d' % (len(visitor.setMap) + 1)
 
-    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
+    return '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (
         node._group,
+        node._id,
         visitor.setMap[node._set],
     )
 
@@ -304,8 +339,9 @@ def handle_numericGetItemExpression_node(visitor, node, *args):
 def handle_templateSumExpression_node(visitor, node, *args):
     pstr = ''
     for i in range(0, len(node._iters)):
-        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s__} ' % (
+        pstr += '\\sum_{__S_PLACEHOLDER_8675309_GROUP_%s_%s_%s__} ' % (
             node._iters[i][0]._group,
+            ','.join(str(it._id) for it in node._iters[i]),
             visitor.setMap[node._iters[i][0]._set],
         )
 
@@ -363,12 +399,12 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             EqualityExpression: handle_equality_node,
             InequalityExpression: handle_inequality_node,
             RangedExpression: handle_ranged_inequality_node,
-            _GeneralExpressionData: handle_named_expression_node,
+            ExpressionData: handle_named_expression_node,
             ScalarExpression: handle_named_expression_node,
             kernel.expression.expression: handle_named_expression_node,
             kernel.expression.noclone: handle_named_expression_node,
-            _GeneralObjectiveData: handle_named_expression_node,
-            _GeneralVarData: handle_var_node,
+            ObjectiveData: handle_named_expression_node,
+            VarData: handle_var_node,
             ScalarObjective: handle_named_expression_node,
             kernel.objective.objective: handle_named_expression_node,
             ExternalFunctionExpression: handle_external_function_node,
@@ -381,7 +417,7 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
             Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             TemplateSumExpression: handle_templateSumExpression_node,
             ScalarParam: handle_param_node,
-            _ParamData: handle_param_node,
+            ParamData: handle_param_node,
             IndexedParam: handle_param_node,
             NPV_Numeric_GetItemExpression: handle_numericGetItemExpression_node,
             IndexedBlock: handle_indexedBlock_node,
@@ -405,28 +441,6 @@ class _LatexVisitor(StreamBasedExpressionVisitor):
 
 
 def analyze_variable(vr):
-    domainMap = {
-        'Reals': '\\mathds{R}',
-        'PositiveReals': '\\mathds{R}_{> 0}',
-        'NonPositiveReals': '\\mathds{R}_{\\leq 0}',
-        'NegativeReals': '\\mathds{R}_{< 0}',
-        'NonNegativeReals': '\\mathds{R}_{\\geq 0}',
-        'Integers': '\\mathds{Z}',
-        'PositiveIntegers': '\\mathds{Z}_{> 0}',
-        'NonPositiveIntegers': '\\mathds{Z}_{\\leq 0}',
-        'NegativeIntegers': '\\mathds{Z}_{< 0}',
-        'NonNegativeIntegers': '\\mathds{Z}_{\\geq 0}',
-        'Boolean': '\\left\\{ \\text{True} , \\text{False} \\right \\}',
-        'Binary': '\\left\\{ 0 , 1 \\right \\}',
-        # 'Any': None,
-        # 'AnyWithNone': None,
-        'EmptySet': '\\varnothing',
-        'UnitInterval': '\\mathds{R}',
-        'PercentFraction': '\\mathds{R}',
-        # 'RealInterval' :        None    ,
-        # 'IntegerInterval' :     None    ,
-    }
-
     domainName = vr.domain.name
     varBounds = vr.bounds
     lowerBoundValue = varBounds[0]
@@ -573,7 +587,7 @@ def latex_printer(
 
     Parameters
     ----------
-    pyomo_component: _BlockData or Model or Objective or Constraint or Expression
+    pyomo_component: BlockData or Model or Objective or Constraint or Expression
         The Pyomo component to be printed
 
     latex_component_map: pyomo.common.collections.component_map.ComponentMap
@@ -616,15 +630,15 @@ def latex_printer(
 
     # Cody's backdoor because he got outvoted
     if latex_component_map is not None:
-        if 'use_short_descriptors' in list(latex_component_map.keys()):
+        if 'use_short_descriptors' in latex_component_map:
             if latex_component_map['use_short_descriptors'] == False:
                 use_short_descriptors = False
 
     if latex_component_map is None:
         latex_component_map = ComponentMap()
-        existing_components = ComponentSet([])
+        existing_components = ComponentSet()
     else:
-        existing_components = ComponentSet(list(latex_component_map.keys()))
+        existing_components = ComponentSet(latex_component_map)
 
     isSingle = False
 
@@ -660,7 +674,7 @@ def latex_printer(
         use_equation_environment = True
         isSingle = True
 
-    elif isinstance(pyomo_component, _BlockData):
+    elif isinstance(pyomo_component, BlockData):
         objectives = [
             obj
             for obj in pyomo_component.component_data_objects(
@@ -691,10 +705,8 @@ def latex_printer(
     if isSingle:
         temp_comp, temp_indexes = templatize_fcn(pyomo_component)
         variableList = []
-        for v in identify_components(
-            temp_comp, [ScalarVar, _GeneralVarData, IndexedVar]
-        ):
-            if isinstance(v, _GeneralVarData):
+        for v in identify_components(temp_comp, [ScalarVar, VarData, IndexedVar]):
+            if isinstance(v, VarData):
                 v_write = v.parent_component()
                 if v_write not in ComponentSet(variableList):
                     variableList.append(v_write)
@@ -703,10 +715,8 @@ def latex_printer(
                     variableList.append(v)
 
         parameterList = []
-        for p in identify_components(
-            temp_comp, [ScalarParam, _ParamData, IndexedParam]
-        ):
-            if isinstance(p, _ParamData):
+        for p in identify_components(temp_comp, [ScalarParam, ParamData, IndexedParam]):
+            if isinstance(p, ParamData):
                 p_write = p.parent_component()
                 if p_write not in ComponentSet(parameterList):
                     parameterList.append(p_write)
@@ -771,12 +781,12 @@ def latex_printer(
     for vr in variableList:
         vrIdx += 1
         if isinstance(vr, ScalarVar):
-            variableMap[vr] = 'x_' + str(vrIdx)
+            variableMap[vr] = 'x_' + str(vrIdx) + '_'
         elif isinstance(vr, IndexedVar):
-            variableMap[vr] = 'x_' + str(vrIdx)
+            variableMap[vr] = 'x_' + str(vrIdx) + '_'
             for sd in vr.index_set().data():
                 vrIdx += 1
-                variableMap[vr[sd]] = 'x_' + str(vrIdx)
+                variableMap[vr[sd]] = 'x_' + str(vrIdx) + '_'
         else:
             raise DeveloperError(
                 'Variable is not a variable.  Should not happen.  Contact developers'
@@ -788,12 +798,12 @@ def latex_printer(
     for vr in parameterList:
         pmIdx += 1
         if isinstance(vr, ScalarParam):
-            parameterMap[vr] = 'p_' + str(pmIdx)
+            parameterMap[vr] = 'p_' + str(pmIdx) + '_'
         elif isinstance(vr, IndexedParam):
-            parameterMap[vr] = 'p_' + str(pmIdx)
+            parameterMap[vr] = 'p_' + str(pmIdx) + '_'
             for sd in vr.index_set().data():
                 pmIdx += 1
-                parameterMap[vr[sd]] = 'p_' + str(pmIdx)
+                parameterMap[vr[sd]] = 'p_' + str(pmIdx) + '_'
         else:
             raise DeveloperError(
                 'Parameter is not a parameter.  Should not happen.  Contact developers'
@@ -904,24 +914,33 @@ def latex_printer(
                 # setMap = visitor.setMap
                 # Multiple constraints are generated using a set
                 if len(indices) > 0:
-                    if indices[0]._set in ComponentSet(visitor.setMap.keys()):
-                        # already detected set, do nothing
-                        pass
-                    else:
-                        visitor.setMap[indices[0]._set] = 'SET%d' % (
-                            len(visitor.setMap.keys()) + 1
+                    conLine += ' \\qquad \\forall'
+
+                    _bygroups = {}
+                    for idx in indices:
+                        _bygroups.setdefault(idx._group, []).append(idx)
+                    for _group, idxs in _bygroups.items():
+                        if idxs[0]._set in visitor.setMap:
+                            # already detected set, do nothing
+                            pass
+                        else:
+                            visitor.setMap[idxs[0]._set] = 'SET%d' % (
+                                len(visitor.setMap) + 1
+                            )
+
+                        idxTag = ','.join(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__'
+                            % (idx._group, idx._id, visitor.setMap[idx._set])
+                            for idx in idxs
                         )
 
-                    idxTag = '__I_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
-                        indices[0]._group,
-                        visitor.setMap[indices[0]._set],
-                    )
-                    setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s__' % (
-                        indices[0]._group,
-                        visitor.setMap[indices[0]._set],
-                    )
+                        setTag = '__S_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (
+                            indices[0]._group,
+                            ','.join(str(it._id) for it in idxs),
+                            visitor.setMap[indices[0]._set],
+                        )
 
-                    conLine += ' \\qquad \\forall %s \\in %s ' % (idxTag, setTag)
+                        conLine += ' %s \\in %s ' % (idxTag, setTag)
                 pstr += conLine
 
                 # Add labels as needed
@@ -1048,15 +1067,22 @@ def latex_printer(
     setMap = visitor.setMap
     setMap_inverse = {vl: ky for ky, vl in setMap.items()}
 
+    def generate_set_name(st, lcm):
+        if st in lcm:
+            return lcm[st][0]
+        if st.parent_block().component(st.name) is st:
+            return st.name.replace('_', r'\_')
+        if isinstance(st, SetOperator):
+            return set_operator_map[st._operator.strip()].join(
+                generate_set_name(s, lcm) for s in st.subsets(False)
+            )
+        else:
+            return str(st).replace('_', r'\_').replace('{', r'\{').replace('}', r'\}')
+
     # Handling the iterator indices
     defaultSetLatexNames = ComponentMap()
-    for ky, vl in setMap.items():
-        st = ky
-        defaultSetLatexNames[st] = st.name.replace('_', '\\_')
-        if st in ComponentSet(latex_component_map.keys()):
-            defaultSetLatexNames[st] = latex_component_map[st][
-                0
-            ]  # .replace('_', '\\_')
+    for ky in setMap:
+        defaultSetLatexNames[ky] = generate_set_name(ky, latex_component_map)
 
     latexLines = pstr.split('\n')
     for jj in range(0, len(latexLines)):
@@ -1070,8 +1096,8 @@ def latex_printer(
             for word in splitLatex:
                 if "PLACEHOLDER_8675309_GROUP_" in word:
                     ifo = word.split("PLACEHOLDER_8675309_GROUP_")[1]
-                    gpNum, stName = ifo.split('_')
-                    if gpNum not in groupMap.keys():
+                    gpNum, idNum, stName = ifo.split('_')
+                    if gpNum not in groupMap:
                         groupMap[gpNum] = [stName]
                     if stName not in ComponentSet(uniqueSets):
                         uniqueSets.append(stName)
@@ -1088,10 +1114,7 @@ def latex_printer(
                 ix = int(ky[3:]) - 1
                 setInfo[ky]['setObject'] = setMap_inverse[ky]  # setList[ix]
                 setInfo[ky]['setRegEx'] = (
-                    r'__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__' % (ky)
-                )
-                setInfo[ky]['sumSetRegEx'] = (
-                    r'sum_{__S_PLACEHOLDER_8675309_GROUP_([0-9*])_%s__}' % (ky)
+                    r'__S_PLACEHOLDER_8675309_GROUP_([0-9]+)_([0-9,]+)_%s__' % (ky,)
                 )
                 # setInfo[ky]['idxRegEx'] = r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_%s__'%(ky)
 
@@ -1116,27 +1139,41 @@ def latex_printer(
                     ed = stData[-1]
 
                     replacement = (
-                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ = %d }^{%d}'
+                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_\2_%s__ = %d }^{%d}'
                         % (ky, bgn, ed)
                     )
-                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
+                    ln = re.sub(
+                        'sum_{' + setInfo[ky]['setRegEx'] + '}', replacement, ln
+                    )
                 else:
                     # if the set is not continuous or the flag has not been set
-                    replacement = (
-                        r'sum_{ __I_PLACEHOLDER_8675309_GROUP_\1_%s__ \\in __S_PLACEHOLDER_8675309_GROUP_\1_%s__  }'
-                        % (ky, ky)
-                    )
-                    ln = re.sub(setInfo[ky]['sumSetRegEx'], replacement, ln)
+                    for _grp, _id in re.findall(
+                        'sum_{' + setInfo[ky]['setRegEx'] + '}', ln
+                    ):
+                        set_placeholder = '__S_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (
+                            _grp,
+                            _id,
+                            ky,
+                        )
+                        i_placeholder = ','.join(
+                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__' % (_grp, _, ky)
+                            for _ in _id.split(',')
+                        )
+                        replacement = r'sum_{ %s \in %s  }' % (
+                            i_placeholder,
+                            set_placeholder,
+                        )
+                        ln = ln.replace('sum_{' + set_placeholder + '}', replacement)
 
                 replacement = repr(defaultSetLatexNames[setInfo[ky]['setObject']])[1:-1]
                 ln = re.sub(setInfo[ky]['setRegEx'], replacement, ln)
 
             # groupNumbers = re.findall(r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET[0-9]*__',ln)
             setNumbers = re.findall(
-                r'__I_PLACEHOLDER_8675309_GROUP_[0-9*]_SET([0-9]*)__', ln
+                r'__I_PLACEHOLDER_8675309_GROUP_[0-9]+_[0-9]+_SET([0-9]+)__', ln
             )
-            groupSetPairs = re.findall(
-                r'__I_PLACEHOLDER_8675309_GROUP_([0-9*])_SET([0-9]*)__', ln
+            groupIdSetTuples = re.findall(
+                r'__I_PLACEHOLDER_8675309_GROUP_([0-9]+)_([0-9]+)_SET([0-9]+)__', ln
             )
 
             groupInfo = {}
@@ -1146,43 +1183,44 @@ def latex_printer(
                     'indices': [],
                 }
 
-            for gp in groupSetPairs:
-                if gp[0] not in groupInfo['SET' + gp[1]]['indices']:
-                    groupInfo['SET' + gp[1]]['indices'].append(gp[0])
+            for _gp, _id, _set in groupIdSetTuples:
+                if (_gp, _id) not in groupInfo['SET' + _set]['indices']:
+                    groupInfo['SET' + _set]['indices'].append((_gp, _id))
+
+            def get_index_names(st, lcm):
+                if st in lcm:
+                    return lcm[st][1]
+                elif isinstance(st, SetOperator):
+                    return sum(
+                        (get_index_names(s, lcm) for s in st.subsets(False)), start=[]
+                    )
+                elif st.dimen is not None:
+                    return [None] * st.dimen
+                else:
+                    return [Ellipsis]
 
             indexCounter = 0
             for ky, vl in groupInfo.items():
-                if vl['setObject'] in ComponentSet(latex_component_map.keys()):
-                    indexNames = latex_component_map[vl['setObject']][1]
-                    if len(indexNames) != 0:
-                        if len(indexNames) < len(vl['indices']):
-                            raise ValueError(
-                                'Insufficient number of indices provided to the overwrite dictionary for set %s'
-                                % (vl['setObject'].name)
-                            )
-                        for i in range(0, len(vl['indices'])):
-                            ln = ln.replace(
-                                '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                                % (vl['indices'][i], ky),
-                                indexNames[i],
-                            )
-                    else:
-                        for i in range(0, len(vl['indices'])):
-                            ln = ln.replace(
-                                '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                                % (vl['indices'][i], ky),
-                                alphabetStringGenerator(indexCounter),
-                            )
-                            indexCounter += 1
-                else:
-                    for i in range(0, len(vl['indices'])):
-                        ln = ln.replace(
-                            '__I_PLACEHOLDER_8675309_GROUP_%s_%s__'
-                            % (vl['indices'][i], ky),
-                            alphabetStringGenerator(indexCounter),
+                indexNames = get_index_names(vl['setObject'], latex_component_map)
+                nonNone = list(filter(None, indexNames))
+                if nonNone:
+                    if len(nonNone) < len(vl['indices']):
+                        raise ValueError(
+                            'Insufficient number of indices provided to the '
+                            'overwrite dictionary for set %s (expected %s, but got %s)'
+                            % (vl['setObject'].name, len(vl['indices']), indexNames)
                         )
+                else:
+                    indexNames = []
+                    for i in vl['indices']:
+                        indexNames.append(alphabetStringGenerator(indexCounter))
                         indexCounter += 1
-
+                for i in range(0, len(vl['indices'])):
+                    ln = ln.replace(
+                        '__I_PLACEHOLDER_8675309_GROUP_%s_%s_%s__'
+                        % (*vl['indices'][i], ky),
+                        indexNames[i],
+                    )
         latexLines[jj] = ln
 
     pstr = '\n'.join(latexLines)
@@ -1225,25 +1263,25 @@ def latex_printer(
             )
 
     for ky, vl in new_variableMap.items():
-        if ky not in ComponentSet(latex_component_map.keys()):
+        if ky not in latex_component_map:
             latex_component_map[ky] = vl
     for ky, vl in new_parameterMap.items():
-        if ky not in ComponentSet(latex_component_map.keys()):
+        if ky not in latex_component_map:
             latex_component_map[ky] = vl
 
     rep_dict = {}
-    for ky in ComponentSet(list(reversed(list(latex_component_map.keys())))):
-        if isinstance(ky, (pyo.Var, _GeneralVarData)):
+    for ky in reversed(list(latex_component_map)):
+        if isinstance(ky, (pyo.Var, VarData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')
             rep_dict[variableMap[ky]] = overwrite_value
-        elif isinstance(ky, (pyo.Param, _ParamData)):
+        elif isinstance(ky, (pyo.Param, ParamData)):
             overwrite_value = latex_component_map[ky]
             if ky not in existing_components:
                 overwrite_value = overwrite_value.replace('_', '\\_')
             rep_dict[parameterMap[ky]] = overwrite_value
-        elif isinstance(ky, _SetData):
+        elif isinstance(ky, SetData):
             # already handled
             pass
         elif isinstance(ky, (float, int)):

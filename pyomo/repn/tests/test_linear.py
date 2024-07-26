@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1436,6 +1436,22 @@ class TestLinear(unittest.TestCase):
         m.z = Var()
         m.y.fix(1)
 
+        expr = (m.x + 1) / m.p
+        cfg = VisitorConfig()
+        with LoggingIntercept() as LOG:
+            repn = LinearRepnVisitor(*cfg).walk_expression(expr)
+        self.assertEqual(
+            LOG.getvalue(),
+            "Exception encountered evaluating expression 'div(1, 0)'\n"
+            "\tmessage: division by zero\n"
+            "\texpression: (x + 1)/p\n",
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(str(repn.constant), 'InvalidNumber(nan)')
+        self.assertEqual(len(repn.linear), 1)
+        self.assertEqual(str(repn.linear[id(m.x)]), 'InvalidNumber(nan)')
+        self.assertEqual(repn.nonlinear, None)
+
         expr = m.y + m.x + m.z + ((3 * m.x) / m.p) / m.y
         cfg = VisitorConfig()
         with LoggingIntercept() as LOG:
@@ -1517,7 +1533,7 @@ class TestLinear(unittest.TestCase):
                 bcd.register_dispatcher(visitor, 5), (False, (linear._CONSTANT, 5))
             )
             self.assertEqual(len(bcd), 1)
-            self.assertIs(bcd[int], bcd._before_native)
+            self.assertIs(bcd[int], bcd._before_native_numeric)
             # complex type
             self.assertEqual(
                 bcd.register_dispatcher(visitor, 5j), (False, (linear._CONSTANT, 5j))
@@ -1589,7 +1605,7 @@ class TestLinear(unittest.TestCase):
         expr.constant = 0
         expr.linear[id(m.x)] = 0
         expr.linear[id(m.y)] = 0
-        assertExpressionsEqual(self, expr.to_expression(visitor), LinearExpression())
+        assertExpressionsEqual(self, expr.to_expression(visitor), 0)
 
     @unittest.skipUnless(numpy_available, "Test requires numpy")
     def test_nonnumeric(self):
@@ -1643,7 +1659,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, None)
+        self.assertIsNone(repn.nonlinear)
 
         m.p = Param(mutable=True, within=Any, initialize=None)
         e = m.p * m.x[0] + m.p * m.x[1] * m.x[2] + m.p * log(m.x[3])

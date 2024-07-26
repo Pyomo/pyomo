@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,6 +13,10 @@
 # DLW March 2020
 
 import pyomo.environ as pyo
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ScenarioSet(object):
@@ -119,6 +123,7 @@ class ScenarioCreator(object):
     """
 
     def __init__(self, pest, solvername):
+
         self.pest = pest
         self.solvername = solvername
 
@@ -133,23 +138,32 @@ class ScenarioCreator(object):
 
         assert isinstance(addtoSet, ScenarioSet)
 
-        scenario_numbers = list(range(len(self.pest.callback_data)))
+        if self.pest.pest_deprecated is not None:
+            scenario_numbers = list(range(len(self.pest.pest_deprecated.callback_data)))
+        else:
+            scenario_numbers = list(range(len(self.pest.exp_list)))
 
         prob = 1.0 / len(scenario_numbers)
         for exp_num in scenario_numbers:
             ##print("Experiment number=", exp_num)
-            model = self.pest._instance_creation_callback(
-                exp_num, self.pest.callback_data
-            )
+            if self.pest.pest_deprecated is not None:
+                model = self.pest.pest_deprecated._instance_creation_callback(
+                    exp_num, self.pest.pest_deprecated.callback_data
+                )
+            else:
+                model = self.pest._instance_creation_callback(exp_num)
             opt = pyo.SolverFactory(self.solvername)
             results = opt.solve(model)  # solves and updates model
             ## pyo.check_termination_optimal(results)
-            ThetaVals = dict()
-            for theta in self.pest.theta_names:
-                tvar = eval('model.' + theta)
-                tval = pyo.value(tvar)
-                ##print("    theta, tval=", tvar, tval)
-                ThetaVals[theta] = tval
+            if self.pest.pest_deprecated is not None:
+                ThetaVals = {
+                    theta: pyo.value(model.find_component(theta))
+                    for theta in self.pest.pest_deprecated.theta_names
+                }
+            else:
+                ThetaVals = {
+                    k.name: pyo.value(k) for k in model.unknown_parameters.keys()
+                }
             addtoSet.addone(ParmestScen("ExpScen" + str(exp_num), ThetaVals, prob))
 
     def ScenariosFromBootstrap(self, addtoSet, numtomake, seed=None):
@@ -162,5 +176,10 @@ class ScenarioCreator(object):
 
         assert isinstance(addtoSet, ScenarioSet)
 
-        bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
+        if self.pest.pest_deprecated is not None:
+            bootstrap_thetas = self.pest.pest_deprecated.theta_est_bootstrap(
+                numtomake, seed=seed
+            )
+        else:
+            bootstrap_thetas = self.pest.theta_est_bootstrap(numtomake, seed=seed)
         addtoSet.append_bootstrap(bootstrap_thetas)

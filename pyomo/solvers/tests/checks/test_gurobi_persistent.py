@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -382,7 +382,7 @@ class TestGurobiPersistent(unittest.TestCase):
 
         # add indexed constraint
         self.assertRaises(AttributeError, opt.add_column, m, m.y, -2, [m.ci], [1])
-        # add something not a _ConstraintData
+        # add something not a ConstraintData
         self.assertRaises(AttributeError, opt.add_column, m, m.y, -2, [m.x], [1])
 
         # constraint not on solver model

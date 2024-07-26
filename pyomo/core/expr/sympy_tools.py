@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,13 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import operator
-import sys
+from math import prod as _prod
 
+import pyomo.core.expr as EXPR
 from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import NondifferentiableError
-import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import value, native_types
 
 #
@@ -26,6 +26,25 @@ from pyomo.core.expr.numvalue import value, native_types
 _operatorMap = {}
 _pyomo_operator_map = {}
 _functionMap = {}
+
+
+def _nondifferentiable(x):
+    if type(x[1]) is tuple:
+        # sympy >= 1.3 returns tuples (var, order)
+        wrt = x[1][0]
+    else:
+        # early versions of sympy returned the bare var
+        wrt = x[1]
+    raise NondifferentiableError(
+        "The sub-expression '%s' is not differentiable with respect to %s" % (x[0], wrt)
+    )
+
+
+def _external_fcn(*x):
+    raise TypeError(
+        "Expressions containing external functions are not convertible to "
+        f"sympy expressions (found 'f{x}')"
+    )
 
 
 def _configure_sympy(sympy, available):
@@ -113,37 +132,6 @@ def _configure_sympy(sympy, available):
 sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
 
 
-if sys.version_info[:2] < (3, 8):
-
-    def _prod(args):
-        ans = 1
-        for arg in args:
-            ans *= arg
-        return ans
-
-else:
-    from math import prod as _prod
-
-
-def _nondifferentiable(x):
-    if type(x[1]) is tuple:
-        # sympy >= 1.3 returns tuples (var, order)
-        wrt = x[1][0]
-    else:
-        # early versions of sympy returned the bare var
-        wrt = x[1]
-    raise NondifferentiableError(
-        "The sub-expression '%s' is not differentiable with respect to %s" % (x[0], wrt)
-    )
-
-
-def _external_fcn(*x):
-    raise TypeError(
-        "Expressions containing external functions are not convertible to "
-        f"sympy expressions (found 'f{x}')"
-    )
-
-
 class PyomoSympyBimap(object):
     def __init__(self):
         self.pyomo2sympy = ComponentMap()
@@ -175,10 +163,11 @@ class PyomoSympyBimap(object):
 
 
 class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
-    def __init__(self, object_map):
+    def __init__(self, object_map, keep_mutable_parameters=False):
         sympy.Add  # this ensures _configure_sympy gets run
         super(Pyomo2SympyVisitor, self).__init__()
         self.object_map = object_map
+        self.keep_mutable_parameters = keep_mutable_parameters
 
     def initializeWalker(self, expr):
         return self.beforeChild(None, expr, None)
@@ -212,6 +201,8 @@ class Pyomo2SympyVisitor(EXPR.StreamBasedExpressionVisitor):
         #
         # Everything else is a constant...
         #
+        if self.keep_mutable_parameters and child.is_parameter_type() and child.mutable:
+            return False, self.object_map.getSympySymbol(child)
         return False, value(child)
 
 
@@ -245,13 +236,15 @@ class Sympy2PyomoVisitor(EXPR.StreamBasedExpressionVisitor):
         return True, None
 
 
-def sympyify_expression(expr):
+def sympyify_expression(expr, keep_mutable_parameters=False):
     """Convert a Pyomo expression to a Sympy expression"""
     #
     # Create the visitor and call it.
     #
     object_map = PyomoSympyBimap()
-    visitor = Pyomo2SympyVisitor(object_map)
+    visitor = Pyomo2SympyVisitor(
+        object_map, keep_mutable_parameters=keep_mutable_parameters
+    )
     return object_map, visitor.walk_expression(expr)
 
 

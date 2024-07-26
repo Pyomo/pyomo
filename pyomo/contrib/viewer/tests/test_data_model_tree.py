@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -42,12 +42,7 @@ import pyomo.environ as pyo
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 import pyomo.contrib.viewer.qt as myqt
 from pyomo.common.dependencies import DeferredImportError
-
-try:
-    _x = pyo.units.m
-    units_available = True
-except DeferredImportError:
-    units_available = False
+from pyomo.core.base.units_container import pint_available
 
 available = myqt.available
 
@@ -63,7 +58,7 @@ else:
             pass
 
 
-@unittest.skipIf(not available or not units_available, "PyQt or units not available")
+@unittest.skipIf(not available or not pint_available, "PyQt or units not available")
 class TestDataModel(unittest.TestCase):
     def setUp(self):
         # Borrowed this test model from the trust region tests

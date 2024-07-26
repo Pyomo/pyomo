@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,10 +17,10 @@ from pyomo.core.beta.dict_objects import (
     ObjectiveDict,
     ExpressionDict,
 )
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.objective import ObjectiveData
+from pyomo.core.base.expression import ExpressionData
 
 
 class _TestComponentDictBase(object):
@@ -348,10 +348,10 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
 
 
 class TestVarDict(_TestComponentDictBase, unittest.TestCase):
-    # Note: the updated _GeneralVarData class only takes an optional
+    # Note: the updated VarData class only takes an optional
     # parent argument (you no longer pass the domain in)
     _ctype = VarDict
-    _cdatatype = lambda self, arg: _GeneralVarData()
+    _cdatatype = lambda self, arg: VarData()
 
     def setUp(self):
         _TestComponentDictBase.setUp(self)
@@ -360,7 +360,7 @@ class TestVarDict(_TestComponentDictBase, unittest.TestCase):
 
 class TestExpressionDict(_TestComponentDictBase, unittest.TestCase):
     _ctype = ExpressionDict
-    _cdatatype = _GeneralExpressionData
+    _cdatatype = ExpressionData
 
     def setUp(self):
         _TestComponentDictBase.setUp(self)
@@ -375,7 +375,7 @@ class TestExpressionDict(_TestComponentDictBase, unittest.TestCase):
 
 class TestConstraintDict(_TestActiveComponentDictBase, unittest.TestCase):
     _ctype = ConstraintDict
-    _cdatatype = _GeneralConstraintData
+    _cdatatype = ConstraintData
 
     def setUp(self):
         _TestComponentDictBase.setUp(self)
@@ -384,7 +384,7 @@ class TestConstraintDict(_TestActiveComponentDictBase, unittest.TestCase):
 
 class TestObjectiveDict(_TestActiveComponentDictBase, unittest.TestCase):
     _ctype = ObjectiveDict
-    _cdatatype = _GeneralObjectiveData
+    _cdatatype = ObjectiveData
 
     def setUp(self):
         _TestComponentDictBase.setUp(self)

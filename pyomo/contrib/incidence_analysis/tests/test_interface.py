@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -634,17 +634,15 @@ class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
         nlp = PyomoNLP(model)
         igraph = IncidenceGraphInterface(nlp)
 
-        with self.assertRaises(RuntimeError) as exc:
+        with self.assertRaisesRegex(KeyError, "does not exist"):
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
-        self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(RuntimeError) as exc:
+        with self.assertRaisesRegex(KeyError, "does not exist"):
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
-        self.assertIn('must be unindexed', str(exc.exception))
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
@@ -885,17 +883,15 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
 
-        with self.assertRaises(RuntimeError) as exc:
+        with self.assertRaisesRegex(KeyError, "does not exist"):
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.maximum_matching(variables, constraints)
-        self.assertIn('must be unindexed', str(exc.exception))
 
-        with self.assertRaises(RuntimeError) as exc:
+        with self.assertRaisesRegex(KeyError, "does not exist"):
             variables = [model.P]
             constraints = [model.ideal_gas]
             igraph.block_triangularize(variables, constraints)
-        self.assertIn('must be unindexed', str(exc.exception))
 
     @unittest.skipUnless(scipy_available, "scipy is not available.")
     def test_remove(self):
@@ -923,7 +919,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # Say we know that these variables and constraints should
         # be matched...
         vars_to_remove = [model.F[0], model.F[2]]
-        cons_to_remove = (model.mbal[1], model.mbal[2])
+        cons_to_remove = [model.mbal[1], model.mbal[2]]
         igraph.remove_nodes(vars_to_remove, cons_to_remove)
         variable_set = ComponentSet(igraph.variables)
         self.assertNotIn(model.F[0], variable_set)
@@ -1309,7 +1305,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         # matrix.
         vars_to_remove = [m.flow_comp[1]]
         cons_to_remove = [m.flow_eqn[1]]
-        igraph.remove_nodes(vars_to_remove + cons_to_remove)
+        igraph.remove_nodes(vars_to_remove, cons_to_remove)
         var_dmp, con_dmp = igraph.dulmage_mendelsohn()
         var_con_set = ComponentSet(igraph.variables + igraph.constraints)
         underconstrained_set = ComponentSet(
@@ -1459,6 +1455,42 @@ class TestExceptions(unittest.TestCase):
         igraph = IncidenceGraphInterface()
         with self.assertRaisesRegex(RuntimeError, "no incidence matrix"):
             igraph.remove_nodes([m.v1])
+
+    def test_remove_bad_node(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq = pyo.Constraint(pyo.PositiveIntegers)
+        m.eq[1] = m.x[1] * m.x[2] == m.x[3]
+        m.eq[2] = m.x[1] + 2 * m.x[2] == 3 * m.x[3]
+        igraph = IncidenceGraphInterface(m)
+        with self.assertRaisesRegex(KeyError, "does not exist"):
+            # Suppose we think something like this should work. We should get
+            # an error, and not silently do nothing.
+            igraph.remove_nodes([m.x], [m.eq[1]])
+
+        with self.assertRaisesRegex(KeyError, "does not exist"):
+            igraph.remove_nodes(None, [m.eq])
+
+        with self.assertRaisesRegex(KeyError, "does not exist"):
+            igraph.remove_nodes([[m.x[1], m.x[2]], [m.eq[1]]])
+
+    def test_remove_varcon_samelist_deprecated(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3])
+        m.eq = pyo.Constraint(pyo.PositiveIntegers)
+        m.eq[1] = m.x[1] * m.x[2] == m.x[3]
+        m.eq[2] = m.x[1] + 2 * m.x[2] == 3 * m.x[3]
+
+        igraph = IncidenceGraphInterface(m)
+        # This raises a deprecation warning. When the deprecated functionality
+        # is removed, this will fail, and this test should be updated accordingly.
+        igraph.remove_nodes([m.eq[1], m.x[1]])
+        self.assertEqual(len(igraph.variables), 2)
+        self.assertEqual(len(igraph.constraints), 1)
+
+        igraph.remove_nodes([], [m.eq[2], m.x[2]])
+        self.assertEqual(len(igraph.variables), 1)
+        self.assertEqual(len(igraph.constraints), 0)
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
@@ -1653,11 +1685,11 @@ class TestGetIncidenceGraph(unittest.TestCase):
 
         sg_cons = [0, 2, 5]
         sg_vars = [i + len(constraints) for i in [2, 3]]
-        msg = "Subgraph is not bipartite"
+        msg = "Invalid bipartite sets."
         with self.assertRaisesRegex(RuntimeError, msg):
             subgraph = extract_bipartite_subgraph(graph, sg_cons, sg_vars)
 
-        sg_cons = [0, 2, 5]
+        sg_cons = [0, 2, 0]
         sg_vars = [i + len(constraints) for i in [2, 0, 3]]
         msg = "provided more than once"
         with self.assertRaisesRegex(RuntimeError, msg):
@@ -1745,7 +1777,7 @@ class TestInterface(unittest.TestCase):
         m.c2 = pyo.Constraint(expr=m.z >= m.x)
         m.y.fix()
         igraph = IncidenceGraphInterface(m, include_inequality=True, include_fixed=True)
-        igraph.plot(title='test plot', show=False)
+        igraph.plot(title="test plot", show=False)
 
     def test_zero_coeff(self):
         m = pyo.ConcreteModel()
@@ -1791,6 +1823,91 @@ class TestInterface(unittest.TestCase):
         self.assertIs(matching[m.eq2], m.x[2])
         self.assertIs(matching[m.eq3], m.x[3])
 
+    def test_add_edge(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3, 4])
+        m.eq1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[2] + m.x[4] == 1)
+        m.eq4 = pyo.Constraint(expr=m.x[1] + m.x[2] ** 2 == 5)
+
+        igraph = IncidenceGraphInterface(m, linear_only=False)
+        n_edges_original = igraph.n_edges
+
+        # Test edge is added between previously unconnected nodes
+        igraph.add_edge(m.x[1], m.eq3)
+        n_edges_new = igraph.n_edges
+        assert ComponentSet(igraph.get_adjacent_to(m.eq3)) == ComponentSet(m.x[:])
+        self.assertEqual(n_edges_original + 1, n_edges_new)
+
+        # Test no edge is added if there exists a previous edge between nodes
+        igraph.add_edge(m.x[2], m.eq3)
+        n_edges2 = igraph.n_edges
+        self.assertEqual(n_edges_new, n_edges2)
+
+    def test_add_edge_linear_igraph(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3, 4])
+        m.eq1 = pyo.Constraint(expr=m.x[1] + m.x[3] == 1)
+        m.eq2 = pyo.Constraint(expr=m.x[2] + pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[4] ** 2 + m.x[1] ** 3 + m.x[2] ** 2 == 1)
+
+        # Make sure error is raised when a variable is not in the igraph
+        igraph = IncidenceGraphInterface(m, linear_only=True)
+
+        msg = "is not a variable in the incidence graph"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            igraph.add_edge(m.x[4], m.eq2)
+
+    def test_var_elim(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3, 4])
+        m.eq1 = pyo.Constraint(expr=m.x[1] ** 2 + m.x[2] ** 2 + m.x[3] ** 2 == 1)
+        m.eq2 = pyo.Constraint(expr=pyo.sqrt(m.x[1]) + pyo.exp(m.x[3]) == 1)
+        m.eq3 = pyo.Constraint(expr=m.x[3] + m.x[2] + m.x[4] == 1)
+        m.eq4 = pyo.Constraint(expr=m.x[1] == 5 * m.x[2])
+
+        igraph = IncidenceGraphInterface(m)
+        # Eliminate x[1] using eq4
+        for adj_con in igraph.get_adjacent_to(m.x[1]):
+            for adj_var in igraph.get_adjacent_to(m.eq4):
+                igraph.add_edge(adj_var, adj_con)
+        igraph.remove_nodes([m.x[1]], [m.eq4])
+
+        assert ComponentSet(igraph.variables) == ComponentSet([m.x[2], m.x[3], m.x[4]])
+        assert ComponentSet(igraph.constraints) == ComponentSet([m.eq1, m.eq2, m.eq3])
+        self.assertEqual(7, igraph.n_edges)
+
+        assert m.x[2] in ComponentSet(igraph.get_adjacent_to(m.eq1))
+        assert m.x[2] in ComponentSet(igraph.get_adjacent_to(m.eq2))
+
+    def test_subgraph(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3, 4])
+        m.v = pyo.Var(m.I, bounds=(0, None))
+        m.eq1 = pyo.Constraint(expr=m.v[1] ** 2 + m.v[2] ** 2 == 1.0)
+        m.eq2 = pyo.Constraint(expr=m.v[1] + 2.0 == m.v[3])
+        m.ineq1 = pyo.Constraint(expr=m.v[2] - m.v[3] ** 0.5 + m.v[4] ** 2 <= 1.0)
+        m.ineq2 = pyo.Constraint(expr=m.v[2] * m.v[4] >= 1.0)
+        m.ineq3 = pyo.Constraint(expr=m.v[1] >= m.v[4] ** 4)
+        m.obj = pyo.Objective(expr=-m.v[1] - m.v[2] + m.v[3] ** 2 + m.v[4] ** 2)
+        igraph = IncidenceGraphInterface(m)
+        eq_igraph = igraph.subgraph(igraph.variables, [m.eq1, m.eq2])
+        for i in range(len(igraph.variables)):
+            self.assertIs(igraph.variables[i], eq_igraph.variables[i])
+        self.assertEqual(
+            ComponentSet(eq_igraph.constraints), ComponentSet([m.eq1, m.eq2])
+        )
+
+        subgraph = eq_igraph.subgraph([m.v[1], m.v[3]], [m.eq1, m.eq2])
+        self.assertEqual(
+            ComponentSet(subgraph.get_adjacent_to(m.eq2)),
+            ComponentSet([m.v[1], m.v[3]]),
+        )
+        self.assertEqual(
+            ComponentSet(subgraph.get_adjacent_to(m.eq1)), ComponentSet([m.v[1]])
+        )
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 class TestIndexedBlock(unittest.TestCase):
@@ -1803,7 +1920,7 @@ class TestIndexedBlock(unittest.TestCase):
         self.assertEqual(len(var_dmp.unmatched), 1)
         self.assertEqual(len(con_dmp.unmatched), 1)
 
-        msg = "Unsupported type.*_BlockData"
+        msg = "Unsupported type.*BlockData"
         with self.assertRaisesRegex(TypeError, msg):
             igraph = IncidenceGraphInterface(m.block)
 

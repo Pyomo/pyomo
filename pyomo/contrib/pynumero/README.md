@@ -71,3 +71,75 @@ Prerequisites
    - cmake
    - a C/C++ compiler
    - MA57 library or COIN-HSL Full
+
+Code organization
+=================
+
+PyNumero was initially designed around three core components: linear solver
+interfaces, an interface for function and derivative callbacks, and block
+vector and matrix classes. Since then, it has incorporated additional
+functionality in an ad-hoc manner. The original "core functionality" of
+PyNumero, as well as the solver interfaces accessible through
+`SolverFactory`, should be considered stable and will only change after
+appropriate deprecation warnings. Other functionality should be considered
+experimental and subject to change without warning.
+
+The following is a rough overview of PyNumero, by directory:
+
+`linalg`
+--------
+
+Python interfaces to linear solvers. This is core functionality.
+
+`interfaces`
+------------
+
+- Classes that define and implement an API for function and derivative callbacks
+required by nonlinear optimization solvers, e.g. `nlp.py` and `pyomo_nlp.py`
+- Various wrappers around these NLP classes to support "hybrid" implementations,
+e.g. `PyomoNLPWithGreyBoxBlocks`
+- The `ExternalGreyBoxBlock` Pyomo modeling component and
+`ExternalGreyBoxModel` API
+- The `ExternalPyomoModel` implementation of `ExternalGreyBoxModel`, which allows
+definition of an external grey box via an implicit function
+- The `CyIpoptNLP` class, which wraps an object implementing the NLP API in
+the interface required by CyIpopt
+
+Of the above, only `PyomoNLP` and the `NLP` base class should be considered core
+functionality.
+
+`src`
+-----
+
+C++ interfaces to ASL, MA27, and MA57. The ASL and MA27 interfaces are
+core functionality.
+
+`sparse`
+--------
+
+Block vector and block matrix classes, including MPI variations.
+These are core functionality.
+
+`algorithms`
+------------
+
+Originally intended to hold various useful algorithms implemented
+on NLP objects rather than Pyomo models. Any files added here should
+be considered experimental.
+
+`algorithms/solvers`
+--------------------
+
+Interfaces to Python solvers using the NLP API defined in `interfaces`.
+Only the solvers accessible through `SolverFactory`, e.g. `PyomoCyIpoptSolver`
+and `PyomoFsolveSolver`, should be considered core functionality.
+The supported way to access these solvers is via `SolverFactory`. *The locations
+of the underlying solver objects are subject to change without warning.*
+
+`examples`
+----------
+
+The examples demonstrated in `nlp_interface.py`, `nlp_interface_2.py1`,
+`feasibility.py`, `mumps_example.py`, `sensitivity.py`, `sqp.py`,
+`parallel_matvec.py`, and `parallel_vector_ops.py` are stable. All other
+examples should be considered experimental.

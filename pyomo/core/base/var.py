@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,12 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar', 'ScalarVar']
-
+from __future__ import annotations
 import logging
 import sys
 from pyomo.common.pyomo_typing import overload
 from weakref import ref as weakref_ref
+from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -29,7 +29,6 @@ from pyomo.core.expr.numvalue import (
     value,
     is_potentially_variable,
     native_numeric_types,
-    native_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -44,7 +43,6 @@ from pyomo.core.base.initializer import (
     DefaultInitializer,
     BoundInitializer,
 )
-from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals,
     Binary,
@@ -54,7 +52,6 @@ from pyomo.core.base.set import (
     integer_global_set_ids,
 )
 from pyomo.core.base.units_container import units
-from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
@@ -66,8 +63,7 @@ _known_global_real_domains = dict(
     + [(_, False) for _ in integer_global_set_ids]
 )
 _VARDATA_API = (
-    # including 'domain' runs afoul of logic in Block._add_implicit_sets()
-    # 'domain',
+    'domain',
     'bounds',
     'lower',
     'upper',
@@ -89,22 +85,140 @@ _VARDATA_API = (
     'value',
     'stale',
     'fixed',
+    ('__call__', "access property 'value' on"),
 )
 
 
-class _VarData(ComponentData, NumericValue):
-    """This class defines the abstract interface for a single variable.
+class VarData(ComponentData, NumericValue):
+    """This class defines the data for a single variable."""
 
-    Note that this "abstract" class is not intended to be directly
-    instantiated.
+    __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
+    __autoslot_mappers__ = {'_stale': StaleFlagManager.stale_mapper}
 
-    """
+    def __init__(self, component=None):
+        #
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - VarData
+        #   - ComponentData
+        #   - NumericValue
+        self._component = weakref_ref(component) if (component is not None) else None
+        self._index = NOTSET
+        self._value = None
+        #
+        # The type of the lower and upper bound attributes can either be
+        # atomic numeric types in Python, expressions, etc.  Basically,
+        # they can be anything that passes an "not
+        # is_potentially_variable" test.
+        #
+        self._lb = None
+        self._ub = None
+        self._domain = None
+        self._fixed = False
+        self._stale = 0  # True
 
-    __slots__ = ()
+    @classmethod
+    def copy(cls, src):
+        self = cls.__new__(cls)
+        self._component = src._component
+        self._value = src._value
+        self._lb = src._lb
+        self._ub = src._ub
+        self._domain = src._domain
+        self._fixed = src._fixed
+        self._stale = src._stale
+        self._index = src._index
+        return self
 
-    #
-    # Interface
-    #
+    def set_value(self, val, skip_validation=False):
+        """Set the current variable value.
+
+        Set the value of this variable.  The incoming value is converted
+        to a numeric value (i.e., expressions are evaluated).  If the
+        variable has units, the incoming value is converted to the
+        correct units before storing the value.  The final value is
+        checked against both the variable domain and bounds, and an
+        exception is raised if the value is not valid.  Domain and
+        bounds checking can be bypassed by setting the ``skip_validation``
+        argument to :const:`True`.
+
+        """
+        # Special case: setting a variable to None "clears" the variable.
+        if val is None:
+            self._value = None
+            self._stale = 0  # True
+            return
+        # TODO: generate a warning/error:
+        #
+        # Check if this Var has units: assigning dimensionless
+        # values to a variable with units should be an error
+        if val.__class__ in native_numeric_types:
+            pass
+        elif self.parent_component()._units is not None:
+            _src_magnitude = value(val)
+            # Note: value() could have just registered a new numeric type
+            if val.__class__ in native_numeric_types:
+                val = _src_magnitude
+            else:
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude,
+                    from_units=_src_units,
+                    to_units=self.parent_component()._units,
+                )
+        else:
+            val = value(val)
+
+        if not skip_validation:
+            if val not in self.domain:
+                logger.warning(
+                    "Setting Var '%s' to a value `%s` (%s) not in domain %s."
+                    % (self.name, val, type(val).__name__, self.domain),
+                    extra={'id': 'W1001'},
+                )
+            elif (self._lb is not None and val < value(self._lb)) or (
+                self._ub is not None and val > value(self._ub)
+            ):
+                logger.warning(
+                    "Setting Var '%s' to a numeric value `%s` "
+                    "outside the bounds %s." % (self.name, val, self.bounds),
+                    extra={'id': 'W1002'},
+                )
+
+        self._value = val
+        self._stale = StaleFlagManager.get_flag(self._stale)
+
+    @property
+    def value(self):
+        """Return (or set) the value for this variable."""
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        self.set_value(val)
+
+    def __call__(self, exception=True):
+        """Compute the value of this variable."""
+        return self._value
+
+    @property
+    def domain(self):
+        """Return (or set) the domain for this variable."""
+        return self._domain
+
+    @domain.setter
+    def domain(self, domain):
+        try:
+            self._domain = SetInitializer(domain)(
+                self.parent_block(), self.index(), self
+            )
+        except:
+            logger.error(
+                "%s is not a valid domain. Variable domains must be an "
+                "instance of a Pyomo Set or convertible to a Pyomo Set." % (domain,),
+                extra={'id': 'E2001'},
+            )
+            raise
 
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
@@ -141,313 +255,7 @@ class _VarData(ComponentData, NumericValue):
         +/-inf)
 
         """
-        return self.lb, self.ub
-
-    @bounds.setter
-    def bounds(self, val):
-        self.lower, self.upper = val
-
-    @property
-    def lb(self):
-        """Return (or set) the numeric value of the variable lower bound."""
-        lb = value(self.lower)
-        return None if lb == _ninf else lb
-
-    @lb.setter
-    def lb(self, val):
-        self.lower = val
-
-    @property
-    def ub(self):
-        """Return (or set) the numeric value of the variable upper bound."""
-        ub = value(self.upper)
-        return None if ub == _inf else ub
-
-    @ub.setter
-    def ub(self, val):
-        self.upper = val
-
-    def is_integer(self):
-        """Returns True when the domain is a contiguous integer range."""
-        _id = id(self.domain)
-        if _id in _known_global_real_domains:
-            return not _known_global_real_domains[_id]
-        _interval = self.domain.get_interval()
-        if _interval is None:
-            return False
-        # Note: it is not sufficient to just check the step: the
-        # starting / ending points must be integers (or not specified)
-        start, stop, step = _interval
-        return (
-            step == 1
-            and (start is None or int(start) == start)
-            and (stop is None or int(stop) == stop)
-        )
-
-    def is_binary(self):
-        """Returns True when the domain is restricted to Binary values."""
-        domain = self.domain
-        if domain is Binary:
-            return True
-        if id(domain) in _known_global_real_domains:
-            return False
-        return domain.get_interval() == (0, 1, 1)
-
-    def is_continuous(self):
-        """Returns True when the domain is a continuous real range"""
-        _id = id(self.domain)
-        if _id in _known_global_real_domains:
-            return _known_global_real_domains[_id]
-        _interval = self.domain.get_interval()
-        return _interval is not None and _interval[2] == 0
-
-    def is_fixed(self):
-        """Returns True if this variable is fixed, otherwise returns False."""
-        return self.fixed
-
-    def is_constant(self):
-        """Returns False because this is not a constant in an expression."""
-        return False
-
-    def is_variable_type(self):
-        """Returns True because this is a variable."""
-        return True
-
-    def is_potentially_variable(self):
-        """Returns True because this is a variable."""
-        return True
-
-    def _compute_polynomial_degree(self, result):
-        """
-        If the variable is fixed, it represents a constant
-        is a polynomial with degree 0. Otherwise, it has
-        degree 1. This method is used in expressions to
-        compute polynomial degree.
-        """
-        if self.fixed:
-            return 0
-        return 1
-
-    def clear(self):
-        self.value = None
-
-    def __call__(self, exception=True):
-        """Compute the value of this variable."""
-        return self.value
-
-    #
-    # Abstract Interface
-    #
-
-    def set_value(self, val, skip_validation=False):
-        """Set the current variable value."""
-        raise NotImplementedError
-
-    @property
-    def value(self):
-        """Return (or set) the value for this variable."""
-        raise NotImplementedError
-
-    @property
-    def domain(self):
-        """Return (or set) the domain for this variable."""
-        raise NotImplementedError
-
-    @property
-    def lower(self):
-        """Return (or set) an expression for the variable lower bound."""
-        raise NotImplementedError
-
-    @property
-    def upper(self):
-        """Return (or set) an expression for the variable upper bound."""
-        raise NotImplementedError
-
-    @property
-    def fixed(self):
-        """Return (or set) the fixed indicator for this variable.
-
-        Alias for :meth:`is_fixed` / :meth:`fix` / :meth:`unfix`.
-
-        """
-        raise NotImplementedError
-
-    @property
-    def stale(self):
-        """The stale status for this variable.
-
-        Variables are "stale" if their current value was not updated as
-        part of the most recent model update.  A "model update" can be
-        one of several things: a solver invocation, loading a previous
-        solution, or manually updating a non-stale :class:`Var` value.
-
-        Returns
-        -------
-        bool
-
-        Notes
-        -----
-        Fixed :class:`Var` objects will be stale after invoking a solver
-        (as their value was not updated by the solver).
-
-        Updating a stale :class:`Var` value will not cause other
-        variable values to be come stale.  However, updating the first
-        non-stale :class:`Var` value after a solve or solution load
-        *will* cause all other variables to be marked as stale
-
-        """
-        raise NotImplementedError
-
-    def fix(self, value=NOTSET, skip_validation=False):
-        """Fix the value of this variable (treat as nonvariable)
-
-        This sets the :attr:`fixed` indicator to True.  If ``value`` is
-        provided, the value (and the ``skip_validation`` flag) are first
-        passed to :meth:`set_value()`.
-
-        """
-        self.fixed = True
-        if value is not NOTSET:
-            self.set_value(value, skip_validation)
-
-    def unfix(self):
-        """Unfix this variable (treat as variable in solver interfaces)
-
-        This sets the :attr:`fixed` indicator to False.
-
-        """
-        self.fixed = False
-
-    def free(self):
-        """Alias for :meth:`unfix`"""
-        return self.unfix()
-
-
-class _GeneralVarData(_VarData):
-    """This class defines the data for a single variable."""
-
-    __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
-    __autoslot_mappers__ = {'_stale': StaleFlagManager.stale_mapper}
-
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _VarData
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) else None
-        self._index = NOTSET
-        self._value = None
-        #
-        # The type of the lower and upper bound attributes can either be
-        # atomic numeric types in Python, expressions, etc.  Basically,
-        # they can be anything that passes an "not
-        # is_potentially_variable" test.
-        #
-        self._lb = None
-        self._ub = None
-        self._domain = None
-        self._fixed = False
-        self._stale = 0  # True
-
-    @classmethod
-    def copy(cls, src):
-        self = cls.__new__(cls)
-        self._component = src._component
-        self._value = src._value
-        self._lb = src._lb
-        self._ub = src._ub
-        self._domain = src._domain
-        self._fixed = src._fixed
-        self._stale = src._stale
-        self._index = src._index
-        return self
-
-    #
-    # Abstract Interface
-    #
-
-    def set_value(self, val, skip_validation=False):
-        """Set the current variable value.
-
-        Set the value of this variable.  The incoming value is converted
-        to a numeric value (i.e., expressions are evaluated).  If the
-        variable has units, the incoming value is converted to the
-        correct units before storing the value.  The final value is
-        checked against both the variable domain and bounds, and an
-        exception is raised if the value is not valid.  Domain and
-        bounds checking can be bypassed by setting the ``skip_validation``
-        argument to :const:`True`.
-
-        """
-        # Special case: setting a variable to None "clears" the variable.
-        if val is None:
-            self._value = None
-            self._stale = 0  # True
-            return
-        # TODO: generate a warning/error:
-        #
-        # Check if this Var has units: assigning dimensionless
-        # values to a variable with units should be an error
-        if type(val) not in native_numeric_types:
-            if self.parent_component()._units is not None:
-                _src_magnitude = value(val)
-                _src_units = units.get_units(val)
-                val = units.convert_value(
-                    num_value=_src_magnitude,
-                    from_units=_src_units,
-                    to_units=self.parent_component()._units,
-                )
-            else:
-                val = value(val)
-
-        if not skip_validation:
-            if val not in self.domain:
-                logger.warning(
-                    "Setting Var '%s' to a value `%s` (%s) not in domain %s."
-                    % (self.name, val, type(val).__name__, self.domain),
-                    extra={'id': 'W1001'},
-                )
-            elif (self._lb is not None and val < value(self._lb)) or (
-                self._ub is not None and val > value(self._ub)
-            ):
-                logger.warning(
-                    "Setting Var '%s' to a numeric value `%s` "
-                    "outside the bounds %s." % (self.name, val, self.bounds),
-                    extra={'id': 'W1002'},
-                )
-
-        self._value = val
-        self._stale = StaleFlagManager.get_flag(self._stale)
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        self.set_value(val)
-
-    @property
-    def domain(self):
-        return self._domain
-
-    @domain.setter
-    def domain(self, domain):
-        try:
-            self._domain = SetInitializer(domain)(self.parent_block(), self.index())
-        except:
-            logger.error(
-                "%s is not a valid domain. Variable domains must be an "
-                "instance of a Pyomo Set or convertible to a Pyomo Set." % (domain,),
-                extra={'id': 'E2001'},
-            )
-            raise
-
-    @_VarData.bounds.getter
-    def bounds(self):
-        # Custom implementation of _VarData.bounds to avoid unnecessary
+        # Custom implementation of lb / ub to avoid unnecessary
         # expression generation and duplicate calls to domain.bounds()
         domain_lb, domain_ub = self.domain.bounds()
         # lb is the tighter of the domain and bounds
@@ -488,10 +296,14 @@ class _GeneralVarData(_VarData):
                 ub = min(ub, domain_ub)
         return lb, ub
 
-    @_VarData.lb.getter
+    @bounds.setter
+    def bounds(self, val):
+        self.lower, self.upper = val
+
+    @property
     def lb(self):
-        # Custom implementation of _VarData.lb to avoid unnecessary
-        # expression generation
+        """Return (or set) the numeric value of the variable lower bound."""
+        # Note: Implementation avoids unnecessary expression generation
         domain_lb, domain_ub = self.domain.bounds()
         # lb is the tighter of the domain and bounds
         lb = self._lb
@@ -513,10 +325,14 @@ class _GeneralVarData(_VarData):
                 lb = max(lb, domain_lb)
         return lb
 
-    @_VarData.ub.getter
+    @lb.setter
+    def lb(self, val):
+        self.lower = val
+
+    @property
     def ub(self):
-        # Custom implementation of _VarData.ub to avoid unnecessary
-        # expression generation
+        """Return (or set) the numeric value of the variable upper bound."""
+        # Note: implementation avoids unnecessary expression generation
         domain_lb, domain_ub = self.domain.bounds()
         # ub is the tighter of the domain and bounds
         ub = self._ub
@@ -537,6 +353,10 @@ class _GeneralVarData(_VarData):
             else:
                 ub = min(ub, domain_ub)
         return ub
+
+    @ub.setter
+    def ub(self, val):
+        self.upper = val
 
     @property
     def lower(self):
@@ -594,8 +414,37 @@ class _GeneralVarData(_VarData):
         # component if not scalar
         return self.parent_component()._units
 
+    def fix(self, value=NOTSET, skip_validation=False):
+        """Fix the value of this variable (treat as nonvariable)
+
+        This sets the :attr:`fixed` indicator to True.  If ``value`` is
+        provided, the value (and the ``skip_validation`` flag) are first
+        passed to :meth:`set_value()`.
+
+        """
+        self.fixed = True
+        if value is not NOTSET:
+            self.set_value(value, skip_validation)
+
+    def unfix(self):
+        """Unfix this variable (treat as variable in solver interfaces)
+
+        This sets the :attr:`fixed` indicator to False.
+
+        """
+        self.fixed = False
+
+    def free(self):
+        """Alias for :meth:`unfix`"""
+        return self.unfix()
+
     @property
     def fixed(self):
+        """Return (or set) the fixed indicator for this variable.
+
+        Alias for :meth:`is_fixed` / :meth:`fix` / :meth:`unfix`.
+
+        """
         return self._fixed
 
     @fixed.setter
@@ -604,6 +453,28 @@ class _GeneralVarData(_VarData):
 
     @property
     def stale(self):
+        """The stale status for this variable.
+
+        Variables are "stale" if their current value was not updated as
+        part of the most recent model update.  A "model update" can be
+        one of several things: a solver invocation, loading a previous
+        solution, or manually updating a non-stale :class:`Var` value.
+
+        Returns
+        -------
+        bool
+
+        Notes
+        -----
+        Fixed :class:`Var` objects will be stale after invoking a solver
+        (as their value was not updated by the solver).
+
+        Updating a stale :class:`Var` value will not cause other
+        variable values to be come stale.  However, updating the first
+        non-stale :class:`Var` value after a solve or solution load
+        *will* cause all other variables to be marked as stale
+
+        """
         return StaleFlagManager.is_stale(self._stale)
 
     @stale.setter
@@ -613,10 +484,69 @@ class _GeneralVarData(_VarData):
         else:
             self._stale = StaleFlagManager.get_flag(0)
 
-    # Note: override the base class definition to avoid a call through a
-    # property
+    def is_integer(self):
+        """Returns True when the domain is a contiguous integer range."""
+        _id = id(self.domain)
+        if _id in _known_global_real_domains:
+            return not _known_global_real_domains[_id]
+        _interval = self.domain.get_interval()
+        if _interval is None:
+            return False
+        # Note: it is not sufficient to just check the step: the
+        # starting / ending points must be integers (or not specified)
+        start, stop, step = _interval
+        return (
+            step == 1
+            and (start is None or int(start) == start)
+            and (stop is None or int(stop) == stop)
+        )
+
+    def is_binary(self):
+        """Returns True when the domain is restricted to Binary values."""
+        domain = self.domain
+        if domain is Binary:
+            return True
+        if id(domain) in _known_global_real_domains:
+            return False
+        return domain.get_interval() == (0, 1, 1)
+
+    def is_continuous(self):
+        """Returns True when the domain is a continuous real range"""
+        _id = id(self.domain)
+        if _id in _known_global_real_domains:
+            return _known_global_real_domains[_id]
+        _interval = self.domain.get_interval()
+        return _interval is not None and _interval[2] == 0
+
     def is_fixed(self):
+        """Returns True if this variable is fixed, otherwise returns False."""
         return self._fixed
+
+    def is_constant(self):
+        """Returns False because this is not a constant in an expression."""
+        return False
+
+    def is_variable_type(self):
+        """Returns True because this is a variable."""
+        return True
+
+    def is_potentially_variable(self):
+        """Returns True because this is a variable."""
+        return True
+
+    def clear(self):
+        self.value = None
+
+    def _compute_polynomial_degree(self, result):
+        """
+        If the variable is fixed, it represents a constant
+        is a polynomial with degree 0. Otherwise, it has
+        degree 1. This method is used in expressions to
+        compute polynomial degree.
+        """
+        if self._fixed:
+            return 0
+        return 1
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
@@ -638,6 +568,16 @@ class _GeneralVarData(_VarData):
             if _units is not None:
                 val = units.convert(val, to_units=_units)
         return val
+
+
+class _VarData(metaclass=RenamedClass):
+    __renamed__new_class__ = VarData
+    __renamed__version__ = '6.7.2'
+
+
+class _GeneralVarData(metaclass=RenamedClass):
+    __renamed__new_class__ = VarData
+    __renamed__version__ = '6.7.2'
 
 
 @ModelComponentFactory.register("Decision variables.")
@@ -665,7 +605,16 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         doc (str, optional): Text describing this component.
     """
 
-    _ComponentDataClass = _GeneralVarData
+    _ComponentDataClass = VarData
+
+    @overload
+    def __new__(cls: Type[Var], *args, **kwargs) -> Union[ScalarVar, IndexedVar]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarVar], *args, **kwargs) -> ScalarVar: ...
+
+    @overload
+    def __new__(cls: Type[IndexedVar], *args, **kwargs) -> IndexedVar: ...
 
     def __new__(cls, *args, **kwargs):
         if cls is not Var:
@@ -687,7 +636,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         dense=True,
         units=None,
         name=None,
-        doc=None
+        doc=None,
     ): ...
 
     def __init__(self, *args, **kwargs):
@@ -763,7 +712,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     def construct(self, data=None):
         """
-        Construct the _VarData objects for this variable
+        Construct the VarData objects for this variable
         """
         if self._constructed:
             return
@@ -772,6 +721,10 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug("Constructing Variable %s" % (self.name,))
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         # Note: define 'index' to avoid 'variable referenced before
         # assignment' in the error message generated in the 'except:'
@@ -818,7 +771,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # initializers that are constant, we can avoid
                 # re-calling (and re-validating) the inputs in certain
                 # cases.  To support this, we will create the first
-                # _VarData and then use it as a template to initialize
+                # VarData and then use it as a template to initialize
                 # (constant portions of) every VarData so as to not
                 # repeat all the domain/bounds validation.
                 try:
@@ -853,7 +806,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                         # We can directly set the attribute (not the
                         # property) because the SetInitializer ensures
                         # that the value is a proper Set.
-                        obj._domain = self._rule_domain(block, index)
+                        obj._domain = self._rule_domain(block, index, self)
                 if call_bounds_rule:
                     for index, obj in self._data.items():
                         obj.lower, obj.upper = self._rule_bounds(block, index)
@@ -890,7 +843,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         obj._index = index
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
-        obj._domain = self._rule_domain(parent, index)
+        obj._domain = self._rule_domain(parent, index, self)
         if self._rule_bounds is not None:
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
@@ -936,11 +889,11 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         )
 
 
-class ScalarVar(_GeneralVarData, Var):
+class ScalarVar(VarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
-        _GeneralVarData.__init__(self, component=self)
+        VarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
@@ -987,7 +940,7 @@ class IndexedVar(Var):
     def unfix(self):
         """Unfix all variables in this :class:`IndexedVar` (treat as variable)
 
-        This sets the :attr:`_VarData.fixed` indicator to False for
+        This sets the :attr:`VarData.fixed` indicator to False for
         every variable in this :class:`IndexedVar`.
 
         """
@@ -1012,17 +965,17 @@ class IndexedVar(Var):
         try:
             domain_rule = SetInitializer(domain)
             if domain_rule.constant():
-                domain = domain_rule(self.parent_block(), None)
+                domain = domain_rule(self.parent_block(), None, self)
                 for vardata in self.values():
                     vardata._domain = domain
             elif domain_rule.contains_indices():
                 parent = self.parent_block()
                 for index in domain_rule.indices():
-                    self[index]._domain = domain_rule(parent, index)
+                    self[index]._domain = domain_rule(parent, index, self)
             else:
                 parent = self.parent_block()
                 for index, vardata in self.items():
-                    vardata._domain = domain_rule(parent, index)
+                    vardata._domain = domain_rule(parent, index, self)
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
@@ -1041,7 +994,7 @@ class IndexedVar(Var):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args):
+    def __getitem__(self, args) -> VarData:
         try:
             return super().__getitem__(args)
         except RuntimeError:

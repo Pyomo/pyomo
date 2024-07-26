@@ -1,19 +1,16 @@
-10 Set Declarations
+7 Set Declarations
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {2, 3, 4}
     C : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     2 :    Any :    2 : {(1, 4), (9, 16)}
-    F : Size=3, Index=F_index, Ordered=Insertion
+    F : Size=3, Index={2, 3, 4}, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           2 :     1 :    Any :    3 : {1, 3, 5}
           3 :     1 :    Any :    3 : {2, 4, 6}
           4 :     1 :    Any :    3 : {3, 5, 7}
-    F_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {2, 3, 4}
-    J : Size=9, Index=J_index, Ordered=Insertion
+    J : Size=9, Index=B*B, Ordered=Insertion
         Key    : Dimen : Domain : Size : Members
         (2, 2) :     1 :    Any :    4 : {0, 1, 2, 3}
         (2, 3) :     1 :    Any :    6 : {0, 1, 2, 3, 4, 5}
@@ -24,21 +21,15 @@
         (4, 2) :     1 :    Any :    8 : {0, 1, 2, 3, 4, 5, 6, 7}
         (4, 3) :     1 :    Any :   12 : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
         (4, 4) :     1 :    Any :   16 : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
-    J_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    B*B :    9 : {(2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4), (4, 2), (4, 3), (4, 4)}
     P : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    5 : {1, 2, 3, 5, 7}
     Q : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    4 : {4, 6, 8, 9}
-    R : Size=2, Index=R_index, Ordered=Insertion
+    R : Size=2, Index={1, 2, 3}, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           1 :     1 :    Any :    1 : {1,}
           2 :     1 :    Any :    2 : {1, 2}
-    R_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
 
-10 Declarations: B C F_index F J_index J P Q R_index R
+7 Declarations: B C F J P Q R

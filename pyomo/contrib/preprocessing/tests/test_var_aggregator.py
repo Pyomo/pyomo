@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests the variable aggregation module."""
 
 import pyomo.common.unittest as unittest
@@ -8,12 +19,16 @@ from pyomo.contrib.preprocessing.plugins.var_aggregator import (
     max_if_not_None,
     min_if_not_None,
 )
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import (
+    Binary,
     ConcreteModel,
     Constraint,
     ConstraintList,
+    maximize,
     Objective,
     RangeSet,
+    Reals,
     SolverFactory,
     TransformationFactory,
     Var,
@@ -198,6 +213,36 @@ class TestVarAggregate(unittest.TestCase):
         self.assertEqual(z[1].value, 0)
         self.assertEqual(m.x.value, 0)
         self.assertEqual(m.y.value, 0)
+
+    def test_binary_inequality(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Binary)
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=m.x == m.y)
+        m.o = Objective(expr=0.5 * m.x + m.y, sense=maximize)
+        TransformationFactory('contrib.aggregate_vars').apply_to(m)
+        var_to_z = m._var_aggregator_info.var_to_z
+        z = var_to_z[m.x]
+        self.assertIs(var_to_z[m.y], z)
+        self.assertEqual(z.domain, Binary)
+        self.assertEqual(z.lb, 0)
+        self.assertEqual(z.ub, 1)
+        assertExpressionsEqual(self, m.o.expr, 0.5 * z + z)
+
+    def test_equality_different_domains(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Reals, bounds=(1, 2))
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=m.x == m.y)
+        m.o = Objective(expr=0.5 * m.x + m.y, sense=maximize)
+        TransformationFactory('contrib.aggregate_vars').apply_to(m)
+        var_to_z = m._var_aggregator_info.var_to_z
+        z = var_to_z[m.x]
+        self.assertIs(var_to_z[m.y], z)
+        self.assertEqual(z.lb, 1)
+        self.assertEqual(z.ub, 1)
+        self.assertEqual(z.domain, Binary)
+        assertExpressionsEqual(self, m.o.expr, 0.5 * z + z)
 
 
 if __name__ == '__main__':

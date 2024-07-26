@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -33,6 +33,8 @@ from pyomo.core.expr import (
     exactly,
     atleast,
     atmost,
+    all_different,
+    count_if,
     implies,
     lnot,
     xor,
@@ -99,7 +101,7 @@ from pyomo.core.expr.boolean_value import (
     BooleanValue,
     native_logical_values,
 )
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.base import minimize, maximize
 from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.base.expression import Expression

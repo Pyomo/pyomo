@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -50,6 +50,8 @@ _packages = [
     'pyomo.contrib.multistart',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.pynumero',
+    'pyomo.contrib.simplification',
+    'pyomo.contrib.solver',
     'pyomo.contrib.trustregion',
 ]
 
@@ -114,6 +116,8 @@ from pyomo.core import (
     exactly,
     atleast,
     atmost,
+    all_different,
+    count_if,
     implies,
     lnot,
     xor,

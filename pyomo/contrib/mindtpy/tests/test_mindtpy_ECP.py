@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 import pyomo.common.unittest as unittest
@@ -12,7 +23,13 @@ from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'glpk')
+if SolverFactory('appsi_highs').available(exception_flag=False) and SolverFactory(
+    'appsi_highs'
+).version() >= (1, 7, 0):
+    required_solvers = ('ipopt', 'appsi_highs')
+else:
+    required_solvers = ('ipopt', 'glpk')
+
 if all(SolverFactory(s).available(exception_flag=False) for s in required_solvers):
     subsolvers_available = True
 else:

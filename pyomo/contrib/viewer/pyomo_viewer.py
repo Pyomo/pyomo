@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -41,7 +41,7 @@ except NameError:
         model
     except NameError:
         model=None
-    ui, model = get_mainwindow(model=model, ask_close=False)
+    ui = get_mainwindow(model=model, ask_close=False)
 ui.setWindowTitle('Pyomo Model Viewer -- {}')"""
 
     _kernel_cmd_hide_ui = """try:

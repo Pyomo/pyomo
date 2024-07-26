@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -60,31 +60,33 @@ class ModelSelect(_ModelSelect, _ModelSelectUI):
         items = self.tableWidget.selectedItems()
         if len(items) == 0:
             return
-        self.ui_data.model = self.models[items[0].row()]
+        self.ui_data.model_var_name_in_main = self.models[items[0].row()][1]
+        self.ui_data.model = self.models[items[0].row()][0]
         self.close()
 
     def update_models(self):
         import __main__
 
-        s = __main__.__dict__
+        s = dir(__main__)
         keys = []
         for k in s:
-            if isinstance(s[k], pyo.Block):
+            if isinstance(getattr(__main__, k), pyo.Block):
                 keys.append(k)
         self.tableWidget.clearContents()
         self.tableWidget.setRowCount(len(keys))
         self.models = []
         for row, k in enumerate(sorted(keys)):
+            model = getattr(__main__, k)
             item = myqt.QTableWidgetItem()
             item.setText(k)
             self.tableWidget.setItem(row, 0, item)
             item = myqt.QTableWidgetItem()
             try:
-                item.setText(s[k].name)
+                item.setText(model.name)
             except:
                 item.setText("None")
             self.tableWidget.setItem(row, 1, item)
             item = myqt.QTableWidgetItem()
-            item.setText(str(type(s[k])))
+            item.setText(str(type(model)))
             self.tableWidget.setItem(row, 2, item)
-            self.models.append(s[k])
+            self.models.append((model, k))

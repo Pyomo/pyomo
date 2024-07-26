@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,7 +16,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.environ import Var, Constraint, value
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 from pyomo.common.modeling import unique_component_name
 
 """
@@ -109,12 +109,12 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
            An instance of a derived class (from ExternalInputOutputModel) that provides
            the methods to compute the outputs and the derivatives.
 
-        inputs : list of Pyomo variables (_VarData)
+        inputs : list of Pyomo variables (VarData)
            The Pyomo model needs to have variables to represent the inputs to the
            external model. This is the list of those input variables in the order
            that corresponds to the input_values vector provided in the set_inputs call.
 
-        outputs : list of Pyomo variables (_VarData)
+        outputs : list of Pyomo variables (VarData)
           The Pyomo model needs to have variables to represent the outputs from the
           external model. This is the list of those output variables in the order
           that corresponds to the numpy array returned from the evaluate_outputs call.
@@ -130,7 +130,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         # verify that the inputs and outputs were passed correctly
         self._inputs = [v for v in inputs]
         for v in self._inputs:
-            if not isinstance(v, _VarData):
+            if not isinstance(v, VarData):
                 raise RuntimeError(
                     'Argument inputs passed to PyomoExternalCyIpoptProblem must be'
                     ' a list of VarData objects. Note: if you have an indexed variable, pass'
@@ -139,7 +139,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
 
         self._outputs = [v for v in outputs]
         for v in self._outputs:
-            if not isinstance(v, _VarData):
+            if not isinstance(v, VarData):
                 raise RuntimeError(
                     'Argument outputs passed to PyomoExternalCyIpoptProblem must be'
                     ' a list of VarData objects. Note: if you have an indexed variable, pass'

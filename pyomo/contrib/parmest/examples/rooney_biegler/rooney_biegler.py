@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,6 +17,7 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 
 from pyomo.common.dependencies import pandas as pd
 import pyomo.environ as pyo
+from pyomo.contrib.parmest.experiment import Experiment
 
 
 def rooney_biegler_model(data):
@@ -24,6 +25,9 @@ def rooney_biegler_model(data):
 
     model.asymptote = pyo.Var(initialize=15)
     model.rate_constant = pyo.Var(initialize=0.5)
+
+    model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
+    model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
 
     def response_rule(m, h):
         expr = m.asymptote * (1 - pyo.exp(-m.rate_constant * h))
@@ -39,6 +43,47 @@ def rooney_biegler_model(data):
     model.SSE = pyo.Objective(rule=SSE_rule, sense=pyo.minimize)
 
     return model
+
+
+class RooneyBieglerExperiment(Experiment):
+
+    def __init__(self, data):
+        self.data = data
+        self.model = None
+
+    def create_model(self):
+        # rooney_biegler_model expects a dataframe
+        data_df = self.data.to_frame().transpose()
+        self.model = rooney_biegler_model(data_df)
+
+    def label_model(self):
+
+        m = self.model
+
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update(
+            [(m.hour, self.data['hour']), (m.y, self.data['y'])]
+        )
+
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update(
+            (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+        )
+
+    def finalize_model(self):
+
+        m = self.model
+
+        # Experiment output values
+        m.hour = self.data['hour']
+        m.y = self.data['y']
+
+    def get_labeled_model(self):
+        self.create_model()
+        self.label_model()
+        self.finalize_model()
+
+        return self.model
 
 
 def main():

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -667,9 +667,8 @@ class XpressDirect(DirectSolver):
         if not con.active:
             return None
 
-        if is_fixed(con.body):
-            if self._skip_trivial_constraints:
-                return None
+        if self._skip_trivial_constraints and is_fixed(con.body):
+            return None
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
@@ -1037,10 +1036,8 @@ class XpressDirect(DirectSolver):
             if xpress_con in self._range_constraints:
                 ## for xpress, the slack on a range constraint
                 ## is based on the upper bound
-                ## FIXME: This looks like a bug - there is no variable named
-                ## `con` - there is, however, `xpress_con` and `pyomo_con`
-                lb = con.lb
-                ub = con.ub
+                lb = xpress_con.lb
+                ub = xpress_con.ub
                 ub_s = val
                 expr_val = ub - ub_s
                 lb_s = lb - expr_val

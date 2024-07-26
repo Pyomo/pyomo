@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -170,6 +170,13 @@ model.R = Set(model.B, initialize=R_init)
 # elements of all sets in the array must be in this set:
 #
 model.S = Set(model.B, within=model.A)
+
+#
+# Validation of a set array can also be linked to another set array. If so, the
+# elements under each index must also be found under the corresponding index in
+# the validation set array:
+#
+model.X = Set(model.B, within=model.S)
 
 
 #

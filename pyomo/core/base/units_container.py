@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -119,7 +119,6 @@ from pyomo.core.expr.numvalue import (
     value,
     native_types,
     native_numeric_types,
-    pyomo_constant_types,
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
@@ -127,7 +126,6 @@ import pyomo.core.expr as EXPR
 
 pint_module, pint_available = attempt_import(
     'pint',
-    defer_check=True,
     error_message=(
         'The "pint" package failed to import. '
         'This package is necessary to use Pyomo units.'
@@ -902,7 +900,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         ctype = child.__class__
-        if ctype in native_types or ctype in pyomo_constant_types:
+        if ctype in native_types:
             return False, self._pint_dimensionless
 
         if child.is_expression_type():
@@ -917,7 +915,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
             return False, pint_unit
 
-        return True, None
+        return False, self._pint_dimensionless
 
     def exitNode(self, node, data):
         """Visitor callback when moving up the expression tree.

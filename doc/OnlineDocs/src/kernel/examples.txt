@@ -1,22 +1,7 @@
-6 Set Declarations
-    cd_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    s*q :    6 : {(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)}
-    cl_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
-    ol_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
+1 Set Declarations
     s : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {1, 2}
-    sd_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    2 : {1, 2}
-    vl_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
 
 1 RangeSet Declarations
     q : Dimen=1, Size=3, Bounds=(1, 3)
@@ -43,7 +28,7 @@
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :  None :  None :     9 : False :  True :  Reals
           2 :  None :  None :     9 : False :  True :  Reals
-    vl : Size=3, Index=vl_index
+    vl : Size=3, Index={1, 2, 3}
         Key : Lower : Value : Upper : Fixed : Stale : Domain
           1 :     1 :  None :  None : False :  True :  Reals
           2 :     2 :  None :  None : False :  True :  Reals
@@ -66,7 +51,7 @@
         Key : Active : Sense    : Expression
           1 :   True : minimize : - vd[1]
           2 :   True : minimize : - vd[2]
-    ol : Size=3, Index=ol_index, Active=True
+    ol : Size=3, Index={1, 2, 3}, Active=True
         Key : Active : Sense    : Expression
           1 :   True : minimize : - vl[1]
           2 :   True : minimize : - vl[2]
@@ -76,7 +61,7 @@
     c : Size=1, Index=None, Active=True
         Key  : Lower : Body          : Upper : Active
         None :  -Inf : vd[1] + vd[2] :   9.0 :   True
-    cd : Size=6, Index=cd_index, Active=True
+    cd : Size=6, Index=s*q, Active=True
         Key    : Lower : Body  : Upper : Active
         (1, 1) :   1.0 : vd[1] :   1.0 :   True
         (1, 2) :   2.0 : vd[1] :   2.0 :   True
@@ -84,14 +69,14 @@
         (2, 1) :   1.0 : vd[2] :   1.0 :   True
         (2, 2) :   2.0 : vd[2] :   2.0 :   True
         (2, 3) :   3.0 : vd[2] :   3.0 :   True
-    cl : Size=3, Index=cl_index, Active=True
+    cl : Size=3, Index={1, 2, 3}, Active=True
         Key : Lower : Body      : Upper : Active
           1 :  -5.0 : vl[1] - v :   5.0 :   True
           2 :  -5.0 : vl[2] - v :   5.0 :   True
           3 :  -5.0 : vl[3] - v :   5.0 :   True
 
 3 SOSConstraint Declarations
-       sd : 	Size=2 	Index= sd_index
+       sd : 	Size=2 	Index= OrderedScalarSet
     	1
     		Type=1
     		Weight : Variable
@@ -119,16 +104,8 @@
     b : Size=1, Index=None, Active=True
         0 Declarations: 
     pw : Size=1, Index=None, Active=True
-        2 Set Declarations
-            SOS2_constraint_index : Size=1, Index=None, Ordered=Insertion
-                Key  : Dimen : Domain : Size : Members
-                None :     1 :    Any :    3 : {1, 2, 3}
-            SOS2_y_index : Size=1, Index=None, Ordered=Insertion
-                Key  : Dimen : Domain : Size : Members
-                None :     1 :    Any :    4 : {0, 1, 2, 3}
-
         1 Var Declarations
-            SOS2_y : Size=4, Index=pw.SOS2_y_index
+            SOS2_y : Size=4, Index={0, 1, 2, 3}
                 Key : Lower : Value : Upper : Fixed : Stale : Domain
                   0 :     0 :  None :  None : False :  True : NonNegativeReals
                   1 :     0 :  None :  None : False :  True : NonNegativeReals
@@ -136,7 +113,7 @@
                   3 :     0 :  None :  None : False :  True : NonNegativeReals
 
         1 Constraint Declarations
-            SOS2_constraint : Size=3, Index=pw.SOS2_constraint_index, Active=True
+            SOS2_constraint : Size=3, Index={1, 2, 3}, Active=True
                 Key : Lower : Body                                                                  : Upper : Active
                   1 :   0.0 : v - (pw.SOS2_y[0] + 2*pw.SOS2_y[1] + 3*pw.SOS2_y[2] + 4*pw.SOS2_y[3]) :   0.0 :   True
                   2 :   0.0 :   f - (pw.SOS2_y[0] + 2*pw.SOS2_y[1] + pw.SOS2_y[2] + 2*pw.SOS2_y[3]) :   0.0 :   True
@@ -151,13 +128,13 @@
             		3 : pw.SOS2_y[2]
             		4 : pw.SOS2_y[3]
 
-        5 Declarations: SOS2_y_index SOS2_y SOS2_constraint_index SOS2_constraint SOS2_sosconstraint
+        3 Declarations: SOS2_y SOS2_constraint SOS2_sosconstraint
 
 1 Suffix Declarations
     dual : Direction=IMPORT, Datatype=FLOAT
         Key : Value
 
-27 Declarations: b s q p pd v vd vl_index vl c cd_index cd cl_index cl e ed o od ol_index ol sos1 sos2 sd_index sd dual f pw
+22 Declarations: b s q p pd v vd vl c cd cl e ed o od ol sos1 sos2 sd dual f pw
 <block>: block(active=True, ctype=IBlock)
   - b: block(active=True, ctype=IBlock)
   - p: parameter(active=True, value=0)
@@ -231,4 +208,4 @@
     - pw.c[2]: linear_constraint(active=True, expr=pw.v[0] + pw.v[1] + pw.v[2] + pw.v[3]  ==  1)
    - pw.s: sos(active=True, level=2, entries=['(pw.v[0],1)', '(pw.v[1],2)', '(pw.v[2],3)', '(pw.v[3],4)'])
 Memory: 1.9 KB
-Memory: 9.5 KB
+Memory: 9.7 KB

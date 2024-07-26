@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -223,7 +223,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(is_fixed(e), False)
         self.assertEqual(value(e), -15)
         self.assertEqual(str(e), "- (x + 2*x)")
-        self.assertEqual(e.to_string(verbose=True), "neg(sum(mon(1, x), mon(2, x)))")
+        self.assertEqual(e.to_string(verbose=True), "neg(sum(x, mon(2, x)))")
 
         # This can't occur through operator overloading, but could
         # through expression substitution
@@ -634,8 +634,7 @@ class TestExpressionAPI(unittest.TestCase):
         self.assertEqual(value(e), 1 + 4 + 5 + 2)
         self.assertEqual(str(e), "0*x[0] + x[1] + 2*x[2] + 5 + y - 3")
         self.assertEqual(
-            e.to_string(verbose=True),
-            "sum(mon(0, x[0]), mon(1, x[1]), mon(2, x[2]), 5, mon(1, y), -3)",
+            e.to_string(verbose=True), "sum(mon(0, x[0]), x[1], mon(2, x[2]), 5, y, -3)"
         )
 
         self.assertIs(type(e), LinearExpression)
@@ -701,7 +700,7 @@ class TestExpressionAPI(unittest.TestCase):
         )
         self.assertEqual(
             e.to_string(verbose=True),
-            "Expr_if( ( 5  <=  y ), then=( sum(mon(1, x[0]), 5) ), else=( pow(x[1], 2) ) )",
+            "Expr_if( ( 5  <=  y ), then=( sum(x[0], 5) ), else=( pow(x[1], 2) ) )",
         )
 
         m.y.fix()
@@ -972,9 +971,7 @@ class TestExpressionDuplicateAPI(unittest.TestCase):
         f = e.create_node_with_local_data((m.p, m.x))
         self.assertIsNot(f, e)
         self.assertIs(type(f), LinearExpression)
-        assertExpressionsStructurallyEqual(
-            self, f.args, [m.p, MonomialTermExpression((1, m.x))]
-        )
+        assertExpressionsStructurallyEqual(self, f.args, [m.p, m.x])
 
         f = e.create_node_with_local_data((m.p, m.x**2))
         self.assertIsNot(f, e)

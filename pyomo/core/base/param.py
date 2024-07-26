@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,13 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Param']
-
+from __future__ import annotations
 import sys
 import types
 import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
+from typing import Union, Type
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
@@ -118,7 +118,7 @@ class _ImplicitAny(_AnySet):
         pass
 
 
-class _ParamData(ComponentData, NumericValue):
+class ParamData(ComponentData, NumericValue):
     """
     This class defines the data for a mutable parameter.
 
@@ -164,16 +164,31 @@ class _ParamData(ComponentData, NumericValue):
         # required to be mutable.
         #
         _comp = self.parent_component()
-        if type(value) in native_types:
+        if value.__class__ in native_types:
             # TODO: warn/error: check if this Param has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         elif _comp._units is not None:
             _src_magnitude = expr_value(value)
-            _src_units = units.get_units(value)
-            value = units.convert_value(
-                num_value=_src_magnitude, from_units=_src_units, to_units=_comp._units
-            )
+            # Note: expr_value() could have just registered a new numeric type
+            if value.__class__ in native_types:
+                value = _src_magnitude
+            else:
+                _src_units = units.get_units(value)
+                value = units.convert_value(
+                    num_value=_src_magnitude,
+                    from_units=_src_units,
+                    to_units=_comp._units,
+                )
+        # FIXME: we should call value() here [to ensure types get
+        # registered], but doing so breaks non-numeric Params (which we
+        # allow).  The real fix will be to follow the precedent from
+        # GetItemExpression and have separate types based on which
+        # expression "system" the Param should participate in (numeric,
+        # logical, or structural).
+        #
+        # else:
+        #     value = expr_value(value)
 
         old_value, self._value = self._value, value
         try:
@@ -237,6 +252,11 @@ class _ParamData(ComponentData, NumericValue):
         return 0
 
 
+class _ParamData(metaclass=RenamedClass):
+    __renamed__new_class__ = ParamData
+    __renamed__version__ = '6.7.2'
+
+
 @ModelComponentFactory.register(
     "Parameter data that is used to define a model instance."
 )
@@ -270,13 +290,24 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     """
 
     DefaultMutable = False
-    _ComponentDataClass = _ParamData
+    _ComponentDataClass = ParamData
 
     class NoValue(object):
         """A dummy type that is pickle-safe that we can use as the default
         value for Params to indicate that no valid value is present."""
 
         pass
+
+    @overload
+    def __new__(
+        cls: Type[Param], *args, **kwds
+    ) -> Union[ScalarParam, IndexedParam]: ...
+
+    @overload
+    def __new__(cls: Type[ScalarParam], *args, **kwds) -> ScalarParam: ...
+
+    @overload
+    def __new__(cls: Type[IndexedParam], *args, **kwds) -> IndexedParam: ...
 
     def __new__(cls, *args, **kwds):
         if cls != Param:
@@ -330,7 +361,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         if _domain_rule is None:
             self.domain = _ImplicitAny(owner=self, name='Any')
         else:
-            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None)
+            self.domain = SetInitializer(_domain_rule)(self.parent_block(), None, self)
         # After IndexedComponent.__init__ so we can call is_indexed().
         self._rule = Initializer(
             _init,
@@ -497,14 +528,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # instead of incurring the penalty of checking.
                 for index, new_value in new_values.items():
                     if index not in self._data:
-                        self._data[index] = _ParamData(self)
+                        self._data[index] = ParamData(self)
                     self._data[index]._value = new_value
             else:
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data:  # empty
                     for index in self._index_set:
-                        p = self._data[index] = _ParamData(self)
+                        p = self._data[index] = ParamData(self)
                         p._value = new_values
                 elif len(self._data) == len(self._index_set):
                     for index in self._index_set:
@@ -512,7 +543,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 else:
                     for index in self._index_set:
                         if index not in self._data:
-                            self._data[index] = _ParamData(self)
+                            self._data[index] = ParamData(self)
                         self._data[index]._value = new_values
         else:
             #
@@ -575,9 +606,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # a default value, as long as *solving* a model without
             # reasonable values produces an informative error.
             if self._mutable:
-                # Note: _ParamData defaults to Param.NoValue
+                # Note: ParamData defaults to Param.NoValue
                 if self.is_indexed():
-                    ans = self._data[index] = _ParamData(self)
+                    ans = self._data[index] = ParamData(self)
                 else:
                     ans = self._data[index] = self
                 ans._index = index
@@ -672,8 +703,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return obj
         else:
             old_value, self._data[index] = self._data[index], value
-            # Because we do not have a _ParamData, we cannot rely on the
-            # validation that occurs in _ParamData.set_value()
+            # Because we do not have a ParamData, we cannot rely on the
+            # validation that occurs in ParamData.set_value()
             try:
                 self._validate_value(index, value)
                 return value
@@ -710,14 +741,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 self._index = UnindexedComponent_index
                 return self
             elif self._mutable:
-                obj = self._data[index] = _ParamData(self)
+                obj = self._data[index] = ParamData(self)
                 obj.set_value(value, index)
                 obj._index = index
                 return obj
             else:
                 self._data[index] = value
-                # Because we do not have a _ParamData, we cannot rely on the
-                # validation that occurs in _ParamData.set_value()
+                # Because we do not have a ParamData, we cannot rely on the
+                # validation that occurs in ParamData.set_value()
                 self._validate_value(index, value, _check_domain)
                 return value
         except:
@@ -782,6 +813,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                     f"Converting Param '{self.name}' to mutable."
                 )
                 self._mutable = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         try:
             #
@@ -871,9 +906,9 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         return (headers, self.sparse_iteritems(), ("Value",), dataGen)
 
 
-class ScalarParam(_ParamData, Param):
+class ScalarParam(ParamData, Param):
     def __init__(self, *args, **kwds):
-        _ParamData.__init__(self, component=self)
+        ParamData.__init__(self, component=self)
         Param.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
 
@@ -966,7 +1001,7 @@ class IndexedParam(Param):
     # between potentially variable GetItemExpression objects and
     # "constant" GetItemExpression objects.  That will need to wait for
     # the expression rework [JDS; Nov 22].
-    def __getitem__(self, args):
+    def __getitem__(self, args) -> ParamData:
         try:
             return super().__getitem__(args)
         except:

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -112,7 +112,7 @@ from pyomo.core.expr import Expr_if
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import expr_common
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import VarData
 
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
@@ -294,7 +294,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
 
 class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
     def create(self, val, domain):
-        tmp = _GeneralVarData()
+        tmp = VarData()
         tmp.domain = domain
         tmp.value = val
         return tmp
@@ -638,12 +638,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         m.b = Var()
         e = m.a + m.b
         #
-        self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((1, m.a)), MonomialTermExpression((1, m.b))]
-            ),
-        )
+        self.assertExpressionsEqual(e, LinearExpression([m.a, m.b]))
 
         self.assertRaises(KeyError, e.arg, 3)
 
@@ -654,14 +649,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = m.a + m.b
         e += 2 * m.a
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.a)),
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((2, m.a)),
-                ]
-            ),
+            e, LinearExpression([m.a, m.b, MonomialTermExpression((2, m.a))])
         )
 
     def test_constSum(self):
@@ -669,13 +657,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         m = AbstractModel()
         m.a = Var()
         #
-        self.assertExpressionsEqual(
-            m.a + 5, LinearExpression([MonomialTermExpression((1, m.a)), 5])
-        )
+        self.assertExpressionsEqual(m.a + 5, LinearExpression([m.a, 5]))
 
-        self.assertExpressionsEqual(
-            5 + m.a, LinearExpression([5, MonomialTermExpression((1, m.a))])
-        )
+        self.assertExpressionsEqual(5 + m.a, LinearExpression([5, m.a]))
 
     def test_nestedSum(self):
         #
@@ -696,12 +680,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = e1 + 5
-        self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((1, m.a)), MonomialTermExpression((1, m.b)), 5]
-            ),
-        )
+        self.assertExpressionsEqual(e, LinearExpression([m.a, m.b, 5]))
 
         #       +
         #      / \
@@ -710,12 +689,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = 5 + e1
-        self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((1, m.a)), MonomialTermExpression((1, m.b)), 5]
-            ),
-        )
+        self.assertExpressionsEqual(e, LinearExpression([m.a, m.b, 5]))
 
         #           +
         #          / \
@@ -724,16 +698,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = e1 + m.c
-        self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.a)),
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((1, m.c)),
-                ]
-            ),
-        )
+        self.assertExpressionsEqual(e, LinearExpression([m.a, m.b, m.c]))
 
         #       +
         #      / \
@@ -742,16 +707,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = m.c + e1
-        self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.a)),
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((1, m.c)),
-                ]
-            ),
-        )
+        self.assertExpressionsEqual(e, LinearExpression([m.a, m.b, m.c]))
 
         #            +
         #          /   \
@@ -762,17 +718,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e2 = m.c + m.d
         e = e1 + e2
         #
-        self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.a)),
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((1, m.c)),
-                    MonomialTermExpression((1, m.d)),
-                ]
-            ),
-        )
+        self.assertExpressionsEqual(e, LinearExpression([m.a, m.b, m.c, m.d]))
 
     def test_nestedSum2(self):
         #
@@ -798,22 +744,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
         self.assertExpressionsEqual(
             e,
-            SumExpression(
-                [
-                    ProductExpression(
-                        (
-                            2,
-                            LinearExpression(
-                                [
-                                    MonomialTermExpression((1, m.a)),
-                                    MonomialTermExpression((1, m.b)),
-                                ]
-                            ),
-                        )
-                    ),
-                    m.c,
-                ]
-            ),
+            SumExpression([ProductExpression((2, LinearExpression([m.a, m.b]))), m.c]),
         )
 
         #         *
@@ -834,20 +765,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
                 (
                     3,
                     SumExpression(
-                        [
-                            ProductExpression(
-                                (
-                                    2,
-                                    LinearExpression(
-                                        [
-                                            MonomialTermExpression((1, m.a)),
-                                            MonomialTermExpression((1, m.b)),
-                                        ]
-                                    ),
-                                )
-                            ),
-                            m.c,
-                        ]
+                        [ProductExpression((2, LinearExpression([m.a, m.b]))), m.c]
                     ),
                 )
             ),
@@ -891,10 +809,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 + m.b
         #
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((5, m.a)), MonomialTermExpression((1, m.b))]
-            ),
+            e, LinearExpression([MonomialTermExpression((5, m.a)), m.b])
         )
 
         #       +
@@ -905,10 +820,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = m.b + e1
         #
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((1, m.b)), MonomialTermExpression((5, m.a))]
-            ),
+            e, LinearExpression([m.b, MonomialTermExpression((5, m.a))])
         )
 
         #            +
@@ -920,14 +832,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e1 + e2
         #
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((1, m.c)),
-                    MonomialTermExpression((5, m.a)),
-                ]
-            ),
+            e, LinearExpression([m.b, m.c, MonomialTermExpression((5, m.a))])
         )
 
         #            +
@@ -939,14 +844,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e = e2 + e1
         #
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((1, m.c)),
-                    MonomialTermExpression((5, m.a)),
-                ]
-            ),
+            e, LinearExpression([m.b, m.c, MonomialTermExpression((5, m.a))])
         )
 
     def test_simpleDiff(self):
@@ -962,10 +860,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #  a   b
         e = m.a - m.b
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((1, m.a)), MonomialTermExpression((-1, m.b))]
-            ),
+            e, LinearExpression([m.a, MonomialTermExpression((-1, m.b))])
         )
 
     def test_constDiff(self):
@@ -978,9 +873,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #    -
         #   / \
         #  a   5
-        self.assertExpressionsEqual(
-            m.a - 5, LinearExpression([MonomialTermExpression((1, m.a)), -5])
-        )
+        self.assertExpressionsEqual(m.a - 5, LinearExpression([m.a, -5]))
 
         #    -
         #   / \
@@ -1002,10 +895,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #  a   p
         e = m.a - m.p
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [MonomialTermExpression((1, m.a)), NPV_NegationExpression((m.p,))]
-            ),
+            e, LinearExpression([m.a, NPV_NegationExpression((m.p,))])
         )
 
         #      -
@@ -1079,14 +969,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a - m.b
         e = e1 - 5
         self.assertExpressionsEqual(
-            e,
-            LinearExpression(
-                [
-                    MonomialTermExpression((1, m.a)),
-                    MonomialTermExpression((-1, m.b)),
-                    -5,
-                ]
-            ),
+            e, LinearExpression([m.a, MonomialTermExpression((-1, m.b)), -5])
         )
 
         #       -
@@ -1102,14 +985,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
                 [
                     5,
                     NegationExpression(
-                        (
-                            LinearExpression(
-                                [
-                                    MonomialTermExpression((1, m.a)),
-                                    MonomialTermExpression((-1, m.b)),
-                                ]
-                            ),
-                        )
+                        (LinearExpression([m.a, MonomialTermExpression((-1, m.b))]),)
                     ),
                 ]
             ),
@@ -1126,7 +1002,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
             e,
             LinearExpression(
                 [
-                    MonomialTermExpression((1, m.a)),
+                    m.a,
                     MonomialTermExpression((-1, m.b)),
                     MonomialTermExpression((-1, m.c)),
                 ]
@@ -1146,14 +1022,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
                 [
                     m.c,
                     NegationExpression(
-                        (
-                            LinearExpression(
-                                [
-                                    MonomialTermExpression((1, m.a)),
-                                    MonomialTermExpression((-1, m.b)),
-                                ]
-                            ),
-                        )
+                        (LinearExpression([m.a, MonomialTermExpression((-1, m.b))]),)
                     ),
                 ]
             ),
@@ -1171,21 +1040,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
             e,
             SumExpression(
                 [
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.a)),
-                            MonomialTermExpression((-1, m.b)),
-                        ]
-                    ),
+                    LinearExpression([m.a, MonomialTermExpression((-1, m.b))]),
                     NegationExpression(
-                        (
-                            LinearExpression(
-                                [
-                                    MonomialTermExpression((1, m.c)),
-                                    MonomialTermExpression((-1, m.d)),
-                                ]
-                            ),
-                        )
+                        (LinearExpression([m.c, MonomialTermExpression((-1, m.d))]),)
                     ),
                 ]
             ),
@@ -1382,10 +1239,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertExpressionsEqual(
             e,
             LinearExpression(
-                [
-                    MonomialTermExpression((1, m.b)),
-                    MonomialTermExpression((NPV_NegationExpression((m.p,)), m.a)),
-                ]
+                [m.b, MonomialTermExpression((NPV_NegationExpression((m.p,)), m.a))]
             ),
         )
 
@@ -1403,14 +1257,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
                 [
                     MonomialTermExpression((m.p, m.a)),
                     NegationExpression(
-                        (
-                            LinearExpression(
-                                [
-                                    MonomialTermExpression((1, m.b)),
-                                    MonomialTermExpression((-1, m.c)),
-                                ]
-                            ),
-                        )
+                        (LinearExpression([m.b, MonomialTermExpression((-1, m.c))]),)
                     ),
                 ]
             ),
@@ -1424,12 +1271,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a * m.p
         e2 = m.b - m.c
         e = e2 - e1
-        self.maxDiff = None
         self.assertExpressionsEqual(
             e,
             LinearExpression(
                 [
-                    MonomialTermExpression((1, m.b)),
+                    m.b,
                     MonomialTermExpression((-1, m.c)),
                     MonomialTermExpression((NPV_NegationExpression((m.p,)), m.a)),
                 ]
@@ -1599,22 +1445,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertExpressionsEqual(
             e,
             ProductExpression(
-                (
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.a)),
-                            MonomialTermExpression((1, m.b)),
-                            MonomialTermExpression((1, m.c)),
-                        ]
-                    ),
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.a)),
-                            MonomialTermExpression((1, m.b)),
-                            MonomialTermExpression((1, m.d)),
-                        ]
-                    ),
-                )
+                (LinearExpression([m.a, m.b, m.c]), LinearExpression([m.a, m.b, m.d]))
             ),
         )
         # Verify shared args...
@@ -1639,9 +1470,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e3 = e1 * m.d
         e = e2 * e3
         #
-        inner = LinearExpression(
-            [MonomialTermExpression((1, m.a)), MonomialTermExpression((1, m.b))]
-        )
+        inner = LinearExpression([m.a, m.b])
         self.assertExpressionsEqual(
             e,
             ProductExpression(
@@ -2035,10 +1864,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.p = Param(mutable=True)
 
         expr = 5 + model.a + model.a
-        self.assertEqual("sum(5, mon(1, a), mon(1, a))", str(expr))
+        self.assertEqual("sum(5, a, a)", str(expr))
 
         expr += 5
-        self.assertEqual("sum(5, mon(1, a), mon(1, a), 5)", str(expr))
+        self.assertEqual("sum(5, a, a, 5)", str(expr))
 
         expr = 2 + model.p
         self.assertEqual("sum(2, p)", str(expr))
@@ -2054,24 +1883,18 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
 
         expr = quicksum(i * model.a[i] for i in A)
         self.assertEqual(
-            "sum(mon(0, a[0]), mon(1, a[1]), mon(2, a[2]), mon(3, a[3]), "
-            "mon(4, a[4]))",
+            "sum(mon(0, a[0]), a[1], mon(2, a[2]), mon(3, a[3]), " "mon(4, a[4]))",
             str(expr),
         )
 
         expr = quicksum((i - 2) * model.a[i] for i in A)
         self.assertEqual(
-            "sum(mon(-2, a[0]), mon(-1, a[1]), mon(0, a[2]), mon(1, a[3]), "
-            "mon(2, a[4]))",
+            "sum(mon(-2, a[0]), mon(-1, a[1]), mon(0, a[2]), a[3], " "mon(2, a[4]))",
             str(expr),
         )
 
         expr = quicksum(model.a[i] for i in A)
-        self.assertEqual(
-            "sum(mon(1, a[0]), mon(1, a[1]), mon(1, a[2]), mon(1, a[3]), "
-            "mon(1, a[4]))",
-            str(expr),
-        )
+        self.assertEqual("sum(a[0], a[1], a[2], a[3], a[4])", str(expr))
 
         model.p[1].value = 0
         model.p[3].value = 3
@@ -2139,10 +1962,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         self.assertEqual("5  <=  a  <  10", str(expr))
 
         expr = 5 <= model.a + 5
-        self.assertEqual("5  <=  sum(mon(1, a), 5)", str(expr))
+        self.assertEqual("5  <=  sum(a, 5)", str(expr))
 
         expr = expr < 10
-        self.assertEqual("5  <=  sum(mon(1, a), 5)  <  10", str(expr))
+        self.assertEqual("5  <=  sum(a, 5)  <  10", str(expr))
 
     def test_equality(self):
         #
@@ -2167,10 +1990,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         self.assertEqual("a  ==  10", str(expr))
 
         expr = 5 == model.a + 5
-        self.assertEqual("sum(mon(1, a), 5)  ==  5", str(expr))
+        self.assertEqual("sum(a, 5)  ==  5", str(expr))
 
         expr = model.a + 5 == 5
-        self.assertEqual("sum(mon(1, a), 5)  ==  5", str(expr))
+        self.assertEqual("sum(a, 5)  ==  5", str(expr))
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -2207,7 +2030,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = abs(expr)
         self.assertEqual(
             "abs(neg(pow(2, div(2, prod(2, sum(1, neg(pow(div(prod(sum("
-            "mon(1, a), 1, -1), a), a), b)), 1))))))",
+            "a, 1, -1), a), a), b)), 1))))))",
             str(expr),
         )
 
@@ -3755,13 +3578,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertExpressionsEqual(
             e,
             LinearExpression(
-                [
-                    MonomialTermExpression((1, self.m.a[1])),
-                    MonomialTermExpression((1, self.m.a[2])),
-                    MonomialTermExpression((1, self.m.a[3])),
-                    MonomialTermExpression((1, self.m.a[4])),
-                    MonomialTermExpression((1, self.m.a[5])),
-                ]
+                [self.m.a[1], self.m.a[2], self.m.a[3], self.m.a[4], self.m.a[5]]
             ),
         )
 
@@ -3873,16 +3690,16 @@ class TestSummationExpression(unittest.TestCase):
             e,
             LinearExpression(
                 [
-                    MonomialTermExpression((1, self.m.a[1])),
-                    MonomialTermExpression((1, self.m.a[2])),
-                    MonomialTermExpression((1, self.m.a[3])),
-                    MonomialTermExpression((1, self.m.a[4])),
-                    MonomialTermExpression((1, self.m.a[5])),
-                    MonomialTermExpression((1, self.m.b[1])),
-                    MonomialTermExpression((1, self.m.b[2])),
-                    MonomialTermExpression((1, self.m.b[3])),
-                    MonomialTermExpression((1, self.m.b[4])),
-                    MonomialTermExpression((1, self.m.b[5])),
+                    self.m.a[1],
+                    self.m.a[2],
+                    self.m.a[3],
+                    self.m.a[4],
+                    self.m.a[5],
+                    self.m.b[1],
+                    self.m.b[2],
+                    self.m.b[3],
+                    self.m.b[4],
+                    self.m.b[5],
                 ]
             ),
         )
@@ -3913,13 +3730,7 @@ class TestSumExpression(unittest.TestCase):
         self.assertExpressionsEqual(
             e,
             LinearExpression(
-                [
-                    MonomialTermExpression((1, self.m.a[1])),
-                    MonomialTermExpression((1, self.m.a[2])),
-                    MonomialTermExpression((1, self.m.a[3])),
-                    MonomialTermExpression((1, self.m.a[4])),
-                    MonomialTermExpression((1, self.m.a[5])),
-                ]
+                [self.m.a[1], self.m.a[2], self.m.a[3], self.m.a[4], self.m.a[5]]
             ),
         )
 
@@ -3929,13 +3740,7 @@ class TestSumExpression(unittest.TestCase):
         self.assertExpressionsEqual(
             e,
             LinearExpression(
-                [
-                    MonomialTermExpression((1, self.m.a[1])),
-                    MonomialTermExpression((1, self.m.a[2])),
-                    MonomialTermExpression((1, self.m.a[3])),
-                    MonomialTermExpression((1, self.m.a[4])),
-                    MonomialTermExpression((1, self.m.a[5])),
-                ]
+                [self.m.a[1], self.m.a[2], self.m.a[3], self.m.a[4], self.m.a[5]]
             ),
         )
 
@@ -4157,15 +3962,15 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr2(), 15)
             self.assertNotEqual(id(expr1), id(expr2))
             self.assertNotEqual(id(expr1._args_), id(expr2._args_))
-            self.assertIs(expr1.arg(0).arg(1), expr2.arg(0).arg(1))
-            self.assertIs(expr1.arg(1).arg(1), expr2.arg(1).arg(1))
+            self.assertIs(expr1.arg(0), expr2.arg(0))
+            self.assertIs(expr1.arg(1), expr2.arg(1))
             expr1 += self.m.b
             self.assertEqual(expr1(), 25)
             self.assertEqual(expr2(), 15)
             self.assertNotEqual(id(expr1), id(expr2))
             self.assertNotEqual(id(expr1._args_), id(expr2._args_))
-            self.assertIs(expr1.arg(0).arg(1), expr2.arg(0).arg(1))
-            self.assertIs(expr1.arg(1).arg(1), expr2.arg(1).arg(1))
+            self.assertIs(expr1.arg(0), expr2.arg(0))
+            self.assertIs(expr1.arg(1), expr2.arg(1))
             #
             total = counter.count - start
             self.assertEqual(total, 1)
@@ -4342,9 +4147,9 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.arg(1).nargs(), 2)
             self.assertEqual(expr2.arg(1).nargs(), 2)
 
-            self.assertIs(expr1.arg(0).arg(0).arg(1), expr2.arg(0).arg(0).arg(1))
-            self.assertIs(expr1.arg(0).arg(1).arg(1), expr2.arg(0).arg(1).arg(1))
-            self.assertIs(expr1.arg(1).arg(0).arg(1), expr2.arg(1).arg(0).arg(1))
+            self.assertIs(expr1.arg(0).arg(0), expr2.arg(0).arg(0))
+            self.assertIs(expr1.arg(0).arg(1), expr2.arg(0).arg(1))
+            self.assertIs(expr1.arg(1).arg(0), expr2.arg(1).arg(0))
 
             expr1 *= self.m.b
             self.assertEqual(expr1(), 1500)
@@ -4383,8 +4188,8 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual(expr1.arg(1).nargs(), 2)
             self.assertEqual(expr2.arg(1).nargs(), 2)
 
-            self.assertIs(expr1.arg(0).arg(0).arg(1), expr2.arg(0).arg(0).arg(1))
-            self.assertIs(expr1.arg(0).arg(1).arg(1), expr2.arg(0).arg(1).arg(1))
+            self.assertIs(expr1.arg(0).arg(0), expr2.arg(0).arg(0))
+            self.assertIs(expr1.arg(0).arg(1), expr2.arg(0).arg(1))
 
             expr1 /= self.m.b
             self.assertAlmostEqual(expr1(), 0.15)
@@ -5215,18 +5020,7 @@ class TestLinearExpression(unittest.TestCase):
             e += m.v[0] + m.v[1]
             e = m.v[0] ** e
             self.assertExpressionsEqual(
-                e,
-                PowExpression(
-                    (
-                        m.v[0],
-                        LinearExpression(
-                            [
-                                MonomialTermExpression((1, m.v[0])),
-                                MonomialTermExpression((1, m.v[1])),
-                            ]
-                        ),
-                    )
-                ),
+                e, PowExpression((m.v[0], LinearExpression([m.v[0], m.v[1]])))
             )
 
 

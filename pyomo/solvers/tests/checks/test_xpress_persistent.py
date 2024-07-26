@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 from pyomo.core.expr.taylor_series import taylor_series_expansion
@@ -251,7 +262,7 @@ class TestXpressPersistent(unittest.TestCase):
 
         # add indexed constraint
         self.assertRaises(AttributeError, opt.add_column, m, m.y, -2, [m.ci], [1])
-        # add something not a _ConstraintData
+        # add something not a ConstraintData
         self.assertRaises(AttributeError, opt.add_column, m, m.y, -2, [m.x], [1])
 
         # constraint not on solver model

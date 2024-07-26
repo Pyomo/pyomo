@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,7 +20,7 @@ import os
 from pyomo.common.fileutils import Library
 from pyomo.core import value, Expression
 from pyomo.core.base.block import SubclassOf
-from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.base.expression import NamedExpressionData
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types
 from pyomo.core.expr.numeric_expr import (
     AbsExpression,
@@ -307,7 +307,9 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
             ans = self.mcpp.newConstant(node)
         elif not node.is_expression_type():
             ans = self.register_num(node)
-        elif type(node) in SubclassOf(Expression) or isinstance(node, _ExpressionData):
+        elif type(node) in SubclassOf(Expression) or isinstance(
+            node, NamedExpressionData
+        ):
             ans = data[0]
         else:
             raise RuntimeError("Unhandled expression type: %s" % (type(node)))

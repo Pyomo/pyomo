@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -263,7 +263,7 @@ def _update_var(v):
     # Note: This is not required it is handled by the _default method on
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
-    #       _VarData for a large number of new indices.
+    #       VarData for a large number of new indices.
     new_indices = set(v.index_set()) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
