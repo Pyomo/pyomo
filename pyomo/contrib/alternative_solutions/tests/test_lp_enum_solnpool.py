@@ -19,6 +19,7 @@ from pyomo.contrib.alternative_solutions import lp_enum_solnpool
 from pyomo.common.dependencies import attempt_import
 
 numpy, numpy_available = attempt_import("numpy")
+gurobipy, gurobi_available = attempt_import("gurobipy")
 
 #
 # TODO: Setup detailed tests here
@@ -34,4 +35,7 @@ def test_here():
         sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)
 
         # TODO - Confirm how solnpools deal with duplicate solutions
-        assert len(sols) == 7
+        if gurobi_available:
+            assert len(sols) == 7
+        else:
+            assert len(sols) == 0
