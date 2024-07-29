@@ -1257,88 +1257,87 @@ def get_effective_var_partitioning(model_data, config):
                     " the variable is fixed by domain/bounds"
                 )
 
-    if not config.skip_pretriangularization:
-        uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.uncertain_params)
 
-        # determine constraints that are potentially applicable for
-        # pretriangularization
-        certain_eq_cons = ComponentSet()
-        for wcon in working_model.component_data_objects(Constraint, active=True):
-            if not wcon.equality:
-                continue
-            uncertain_params_in_expr = (
-                ComponentSet(identify_mutable_parameters(wcon.expr))
-                & uncertain_params_set
-            )
-            if uncertain_params_in_expr:
-                continue
-            certain_eq_cons.add(wcon)
-
-        pretriangular_con_var_map = ComponentMap()
-        for num_passes in it.count(1):
-            config.progress_logger.debug(
-                f"Performing pass number {num_passes} over the certain constraints."
-            )
-            new_pretriangular_con_var_map = ComponentMap()
-            for ccon in certain_eq_cons:
-                vars_in_con = ComponentSet(identify_variables(ccon.body - ccon.upper))
-                adj_vars_in_con = vars_in_con - nonadjustable_var_set
-
-                # conditions for pretriangularization of constraint
-                # with no uncertain params:
-                # - only one nonadjustable variable in the constraint
-                # - the nonadjustable variable appears only linearly,
-                #   and the linear coefficient exceeds our specified
-                #   tolerance.
-                if len(adj_vars_in_con) == 1:
-                    adj_var_in_con = next(iter(adj_vars_in_con))
-                    ccon_expr_repn = generate_standard_repn(
-                        expr=ccon.body - ccon.upper,
-                        quadratic=False,
-                        compute_values=True,
-                    )
-                    adj_var_appears_linearly = (
-                        adj_var_in_con
-                        not in ComponentSet(ccon_expr_repn.nonlinear_vars)
-                        and adj_var_in_con in ComponentSet(ccon_expr_repn.linear_vars)
-                    )
-                    if adj_var_appears_linearly:
-                        # get coefficient by summation just in case
-                        # standard repn does not simplify completely
-                        var_linear_coeff = sum(
-                            lcoeff
-                            for lvar, lcoeff
-                            in zip(
-                                ccon_expr_repn.linear_vars, ccon_expr_repn.linear_coefs
-                            )
-                            if lvar is adj_var_in_con
-                        )
-                        if abs(var_linear_coeff) > PRETRIANGULAR_VAR_COEFF_TOL:
-                            new_pretriangular_con_var_map[ccon] = adj_var_in_con
-                            config.progress_logger.debug(
-                                f" The variable {adj_var_in_con.name!r} is "
-                                "made nonadjustable by the pretriangular constraint "
-                                f"{ccon.name!r}."
-                            )
-
-            nonadjustable_var_set.update(new_pretriangular_con_var_map.values())
-            pretriangular_con_var_map.update(new_pretriangular_con_var_map)
-            if not new_pretriangular_con_var_map:
-                config.progress_logger.debug(
-                    "No new pretriangular constraint/variable pairs found. "
-                    "Terminating pretriangularization loop."
-                )
-                break
-
-            for pcon in new_pretriangular_con_var_map:
-                certain_eq_cons.remove(pcon)
-
-        pretriangular_vars = ComponentSet(pretriangular_con_var_map.values())
-        config.progress_logger.debug(
-            f"Identified {len(pretriangular_con_var_map)} pretriangular "
-            f"constraints and {len(pretriangular_vars)} pretriangular variables "
-            f"in {num_passes} passes over the certain constraints."
+    # determine constraints that are potentially applicable for
+    # pretriangularization
+    certain_eq_cons = ComponentSet()
+    for wcon in working_model.component_data_objects(Constraint, active=True):
+        if not wcon.equality:
+            continue
+        uncertain_params_in_expr = (
+            ComponentSet(identify_mutable_parameters(wcon.expr))
+            & uncertain_params_set
         )
+        if uncertain_params_in_expr:
+            continue
+        certain_eq_cons.add(wcon)
+
+    pretriangular_con_var_map = ComponentMap()
+    for num_passes in it.count(1):
+        config.progress_logger.debug(
+            f"Performing pass number {num_passes} over the certain constraints."
+        )
+        new_pretriangular_con_var_map = ComponentMap()
+        for ccon in certain_eq_cons:
+            vars_in_con = ComponentSet(identify_variables(ccon.body - ccon.upper))
+            adj_vars_in_con = vars_in_con - nonadjustable_var_set
+
+            # conditions for pretriangularization of constraint
+            # with no uncertain params:
+            # - only one nonadjustable variable in the constraint
+            # - the nonadjustable variable appears only linearly,
+            #   and the linear coefficient exceeds our specified
+            #   tolerance.
+            if len(adj_vars_in_con) == 1:
+                adj_var_in_con = next(iter(adj_vars_in_con))
+                ccon_expr_repn = generate_standard_repn(
+                    expr=ccon.body - ccon.upper,
+                    quadratic=False,
+                    compute_values=True,
+                )
+                adj_var_appears_linearly = (
+                    adj_var_in_con
+                    not in ComponentSet(ccon_expr_repn.nonlinear_vars)
+                    and adj_var_in_con in ComponentSet(ccon_expr_repn.linear_vars)
+                )
+                if adj_var_appears_linearly:
+                    # get coefficient by summation just in case
+                    # standard repn does not simplify completely
+                    var_linear_coeff = sum(
+                        lcoeff
+                        for lvar, lcoeff
+                        in zip(
+                            ccon_expr_repn.linear_vars, ccon_expr_repn.linear_coefs
+                        )
+                        if lvar is adj_var_in_con
+                    )
+                    if abs(var_linear_coeff) > PRETRIANGULAR_VAR_COEFF_TOL:
+                        new_pretriangular_con_var_map[ccon] = adj_var_in_con
+                        config.progress_logger.debug(
+                            f" The variable {adj_var_in_con.name!r} is "
+                            "made nonadjustable by the pretriangular constraint "
+                            f"{ccon.name!r}."
+                        )
+
+        nonadjustable_var_set.update(new_pretriangular_con_var_map.values())
+        pretriangular_con_var_map.update(new_pretriangular_con_var_map)
+        if not new_pretriangular_con_var_map:
+            config.progress_logger.debug(
+                "No new pretriangular constraint/variable pairs found. "
+                "Terminating pretriangularization loop."
+            )
+            break
+
+        for pcon in new_pretriangular_con_var_map:
+            certain_eq_cons.remove(pcon)
+
+    pretriangular_vars = ComponentSet(pretriangular_con_var_map.values())
+    config.progress_logger.debug(
+        f"Identified {len(pretriangular_con_var_map)} pretriangular "
+        f"constraints and {len(pretriangular_vars)} pretriangular variables "
+        f"in {num_passes} passes over the certain constraints."
+    )
 
     effective_first_stage_vars = list(nonadjustable_var_set)
     effective_second_stage_vars = [
