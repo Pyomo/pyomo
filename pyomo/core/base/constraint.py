@@ -194,7 +194,7 @@ class ConstraintData(ActiveComponentData):
         Note
         ----
         As this method operates on the *current state* of the
-        expression, the any required expression manipulations (and by
+        expression, any required expression manipulations (and by
         extension, the result) can change after fixing / unfixing
         :py:class:`Var` objects.
 
@@ -203,7 +203,7 @@ class ConstraintData(ActiveComponentData):
 
         ValueError: Raised if the expression cannot be mapped to this
             form (i.e., :py:class:`RangedExpression` constraints with
-            variable lower of upper bounds.
+            variable lower or upper bounds.
 
         """
         expr = self._expr
