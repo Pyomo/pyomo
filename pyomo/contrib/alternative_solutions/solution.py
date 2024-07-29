@@ -36,7 +36,7 @@ class Solution:
         Get a dictionary of variable name-variable value pairs.
     get_fixed_variable_names(self):
         Get a list of fixed-variable names.
-    def get_objective_name_values(self):
+    get_objective_name_values(self):
         Get a dictionary of objective name-objective value pairs.
     """
 

@@ -72,8 +72,6 @@ def obbt_analysis(
             A Pyomo ComponentMap containing the bounds for each variable.
             {variable: (lower_bound, upper_bound)}. An exception is raised when
             the solver encountered an issue.
-        solutions
-            [Solution]
     """
     bounds, solns = obbt_analysis_bounds_and_solutions(
         model,

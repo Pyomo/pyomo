@@ -102,7 +102,7 @@ def enumerate_linear_solutions(
         "random",
         "norm",
     ], 'search mode must be "optimal", "random", or "norm".'
-    # TODO: Implement thethe random and norm objectives. I think it is sufficient
+    # TODO: Implement the random and norm objectives. I think it is sufficient
     # to only consider the cb.var_lower variables in the objective for these two
     # cases. The cb.var_upper variables are directly linked to these to diversity
     # in one implies diversity in the other. Diversity in the cb.basic_slack
@@ -236,8 +236,6 @@ def enumerate_linear_solutions(
 
         if debug:
             model.pprint()
-            # print("Writing test{}.lp".format(solution_number))
-            # cb.write("test{}.lp".format(solution_number))
         if use_appsi:
             results = opt.solve(model)
             condition = results.termination_condition
@@ -288,8 +286,13 @@ def enumerate_linear_solutions(
                 cb.basic_last_slack,
             ]
 
+            # Number of variables with non-zero values
             num_non_zero = 0
+            # This expression is used to ensure that at least one of the non-zero basic
+            # variables in the previous solution is selected.
             force_out_expr = -1
+            # This expression is used to ensure that at most (# non-zero basic variables)-1
+            # binary choice variables can be selected.
             non_zero_basic_expr = 1
             for idx in range(len(variable_groups)):
                 continuous_var, binary_var, constraint = variable_groups[idx]

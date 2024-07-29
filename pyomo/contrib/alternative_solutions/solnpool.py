@@ -55,6 +55,8 @@ def gurobi_generate_solutions(
             Solver option-value pairs to be passed to the Gurobi solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
+        quiet : boolean
+            Boolean indicating whether to suppress all output.
 
         Returns
         -------
@@ -64,7 +66,7 @@ def gurobi_generate_solutions(
     #
     # Setup gurobi
     #
-    if not gurobi_available:
+    if not gurobipy_available:
         return []
     opt = appsi.solvers.Gurobi()
     if not opt.available():  # pragma: no cover
