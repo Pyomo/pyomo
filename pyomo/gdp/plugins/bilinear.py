@@ -77,7 +77,7 @@ class Bilinear_Transformation(Transformation):
         for component in block.component_data_objects(
             Constraint, active=True, descend_into=False
         ):
-            lb, body, ub = component.normalize_constraint()
+            lb, body, ub = component.to_bounded_expression()
             expr = self._transformExpression(body, instance)
             instance.bilinear_data_.c_body[id(component)] = body
             component.set_value((lb, expr, ub))

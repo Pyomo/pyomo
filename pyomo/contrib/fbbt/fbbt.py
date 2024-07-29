@@ -1389,7 +1389,7 @@ def _fbbt_block(m, config):
     for c in m.component_data_objects(
         ctype=Constraint, active=True, descend_into=config.descend_into, sort=True
     ):
-        for v in identify_variables(c.body):
+        for v in identify_variables(c.expr):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
             if v.lb is None:
@@ -1576,14 +1576,14 @@ class BoundsManager(object):
         if comp.ctype == Constraint:
             if comp.is_indexed():
                 for c in comp.values():
-                    self._vars.update(identify_variables(c.body))
+                    self._vars.update(identify_variables(c.expr))
             else:
-                self._vars.update(identify_variables(comp.body))
+                self._vars.update(identify_variables(comp.expr))
         else:
             for c in comp.component_data_objects(
                 Constraint, descend_into=True, active=True, sort=True
             ):
-                self._vars.update(identify_variables(c.body))
+                self._vars.update(identify_variables(c.expr))
 
     def save_bounds(self):
         bnds = ComponentMap()

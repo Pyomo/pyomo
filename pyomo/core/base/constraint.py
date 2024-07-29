@@ -177,12 +177,35 @@ class ConstraintData(ActiveComponentData):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint."""
-        body = self.normalize_constraint()[1]
+        body = self.to_bounded_expression()[1]
         if body.__class__ not in native_numeric_types:
             body = value(self.body, exception=exception)
         return body
 
-    def normalize_constraint(self):
+    def to_bounded_expression(self):
+        """Convert this constraint to a tuple of 3 expressions (lb, body, ub)
+
+        This method "standardizes" the expression into a 3-tuple of
+        expressions: (`lower_bound`, `body`, `upper_bound`).  Upon
+        conversion, `lower_bound` and `upper_bound` are guaranteed to be
+        `None`, numeric constants, or fixed (not necessarily constant)
+        expressions.
+
+        Note
+        ----
+        As this method operates on the *current state* of the
+        expression, the any required expression manipulations (and by
+        extension, the result) can change after fixing / unfixing
+        :py:class:`Var` objects.
+
+        Raises
+        ------
+
+        ValueError: Raised if the expression cannot be mapped to this
+            form (i.e., :py:class:`RangedExpression` constraints with
+            variable lower of upper bounds.
+
+        """
         expr = self._expr
         if expr.__class__ is RangedExpression:
             lb, body, ub = ans = expr.args
@@ -220,8 +243,12 @@ class ConstraintData(ActiveComponentData):
     def body(self):
         """Access the body of a constraint expression."""
         try:
-            ans = self.normalize_constraint()[1]
+            ans = self.to_bounded_expression()[1]
         except ValueError:
+            # It is possible that the expression is not currently valid
+            # (i.e., a ranged expression with a non-fixed bound).  We
+            # will catch that exception here and - if this actually *is*
+            # a RangedExpression - return the body.
             if self._expr.__class__ is RangedExpression:
                 _, ans, _ = self._expr.args
             else:
@@ -232,14 +259,14 @@ class ConstraintData(ActiveComponentData):
             #
             # [JDS 6/2024: it would be nice to remove this behavior,
             # although possibly unnecessary, as people should use
-            # normalize_constraint() instead]
+            # to_bounded_expression() instead]
             return as_numeric(ans)
         return ans
 
     @property
     def lower(self):
         """Access the lower bound of a constraint expression."""
-        ans = self.normalize_constraint()[0]
+        ans = self.to_bounded_expression()[0]
         if ans.__class__ in native_types and ans is not None:
             # Historically, constraint.lower was guaranteed to return a type
             # derived from Pyomo NumericValue (or None).  Replicate that
@@ -253,7 +280,7 @@ class ConstraintData(ActiveComponentData):
     @property
     def upper(self):
         """Access the upper bound of a constraint expression."""
-        ans = self.normalize_constraint()[2]
+        ans = self.to_bounded_expression()[2]
         if ans.__class__ in native_types and ans is not None:
             # Historically, constraint.upper was guaranteed to return a type
             # derived from Pyomo NumericValue (or None).  Replicate that
@@ -267,7 +294,7 @@ class ConstraintData(ActiveComponentData):
     @property
     def lb(self):
         """Access the value of the lower bound of a constraint expression."""
-        bound = self.normalize_constraint()[0]
+        bound = self.to_bounded_expression()[0]
         if bound is None:
             return None
         if bound.__class__ not in native_numeric_types:
@@ -285,7 +312,7 @@ class ConstraintData(ActiveComponentData):
     @property
     def ub(self):
         """Access the value of the upper bound of a constraint expression."""
-        bound = self.normalize_constraint()[2]
+        bound = self.to_bounded_expression()[2]
         if bound is None:
             return None
         if bound.__class__ not in native_numeric_types:
@@ -350,8 +377,8 @@ class ConstraintData(ActiveComponentData):
             if getattr(expr, 'strict', False) in _strict_relational_exprs:
                 raise ValueError(
                     "Constraint '%s' encountered a strict "
-                    "inequality expression ('>' or '< '). All"
-                    " constraints must be formulated using "
+                    "inequality expression ('>' or '<').  All "
+                    "constraints must be formulated using "
                     "using '<=', '>=', or '=='." % (self.name,)
                 )
             self._expr = expr
@@ -875,7 +902,7 @@ class SimpleConstraint(metaclass=RenamedClass):
     {
         'add',
         'set_value',
-        'normalize_constraint',
+        'to_bounded_expression',
         'body',
         'lower',
         'upper',
