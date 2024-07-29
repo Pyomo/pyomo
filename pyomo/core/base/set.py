@@ -1386,29 +1386,30 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         self.update(val)
 
     def _initialize(self, val):
-        self.update(val)
+        try:
+            # We want to explicitly call the update() on *this class* to
+            # bypass potential double logging of the use of unordered
+            # data with ordered Sets
+            FiniteSetData.update(self, val)
+        except TypeError as e:
+            if 'not iterable' in str(e):
+                logger.error(
+                    "Initializer for Set %s returned non-iterable object "
+                    "of type %s."
+                    % (
+                        self.name,
+                        (val if val.__class__ is type else type(val).__name__),
+                    )
+                )
+            raise
 
     def update(self, values):
-        # _values was initialized above...
-        #
         # Special case: set operations that are not first attached
         # to the model must be constructed.
         if isinstance(values, SetOperator):
             values.construct()
-        try:
-            val_iter = iter(values)
-        except TypeError:
-            logger.error(
-                "Initializer for Set %s%s returned non-iterable object "
-                "of type %s."
-                % (
-                    self.name,
-                    ("[%s]" % (index,) if self.is_indexed() else ""),
-                    (values if values.__class__ is type else type(values).__name__),
-                )
-            )
-            raise
-
+        # It is important that val_iter is an actual iterator
+        val_iter = iter(values)
         if self._dimen is not None:
             if normalize_index.flatten:
                 val_iter = self._cb_normalized_dimen_verifier(self._dimen, val_iter)
@@ -1472,19 +1473,20 @@ class FiniteSetData(_FiniteSetMixin, SetData):
             yield value
 
     def _cb_normalized_dimen_verifier(self, dimen, val_iter):
-        # It is important that the iterator is an actual iterator
-        val_iter = iter(val_iter)
         for value in val_iter:
-            if value.__class__ is tuple:
-                if dimen == len(value):
-                    yield value[0] if dimen == 1 else value
+            if value.__class__ in native_types:
+                if dimen == 1:
+                    yield value
                     continue
-            elif dimen == 1 and value.__class__ in native_types:
-                yield value
-                continue
+                normalized_value = value
+            else:
+                normalized_value = normalize_index(value)
+                # Note: normalize_index() will never return a 1-tuple
+                if normalized_value.__class__ is tuple:
+                    if dimen == len(normalized_value):
+                        yield normalized_value[0] if dimen == 1 else normalized_value
+                        continue
 
-            # Note: normalize_index() will never return a 1-tuple
-            normalized_value = normalize_index(value)
             _d = len(normalized_value) if normalized_value.__class__ is tuple else 1
             if _d == dimen:
                 yield normalized_value
@@ -1833,7 +1835,7 @@ class InsertionOrderSetData(OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (self.name, type(val).__name__)
             )
-        super().update(val)
+        super()._initialize(val)
 
     def set_value(self, val):
         if type(val) in Set._UnorderedInitializers:
@@ -1901,8 +1903,12 @@ class SortedSetData(_SortedSetMixin, OrderedSetData):
 
     def _update_impl(self, values):
         for val in values:
+            # Note that we reset _ordered_values within the loop because
+            # of an old example where the initializer rule makes
+            # reference to values previously inserted into the Set
+            # (which triggered the creation of the _ordered_values)
+            self._ordered_values = None
             self._values[val] = None
-        self._ordered_values = None
 
     # Note: removing data does not affect the sorted flag
     # def remove(self, val):
@@ -1981,7 +1987,8 @@ class Set(IndexedComponent):
 
     within : initialiser(set), optional
         A set that defines the valid values that can be contained
-        in this set
+        in this set. If the latter is indexed, the former can be indexed or
+        non-indexed, in which case it applies to all indices.
     domain : initializer(set), optional
         A set that defines the valid values that can be contained
         in this set
@@ -2271,7 +2278,7 @@ class Set(IndexedComponent):
 
         domain = self._init_domain(_block, index, self)
         if domain is not None:
-            domain.construct()
+            domain.parent_component().construct()
         if _d is UnknownSetDimen and domain is not None and domain.dimen is not None:
             _d = domain.dimen
 
