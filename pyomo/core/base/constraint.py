@@ -200,7 +200,7 @@ class ConstraintData(ActiveComponentData):
 
         ValueError: Raised if the expression cannot be mapped to this
             form (i.e., :py:class:`RangedExpression` constraints with
-            variable lower of upper bounds.
+            variable lower or upper bounds.
 
         """
         expr = self._expr
