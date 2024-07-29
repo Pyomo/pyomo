@@ -1387,7 +1387,10 @@ class FiniteSetData(_FiniteSetMixin, SetData):
 
     def _initialize(self, val):
         try:
-            self.update(val)
+            # We want to explicitly call the update() on *this class* to
+            # bypass potential double logging of the use of unordered
+            # data with ordered Sets
+            FiniteSetData.update(self, val)
         except TypeError as e:
             if 'not iterable' in str(e):
                 logger.error(
