@@ -9,16 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# ______________________________________________________________________________
-#
-# Pyomo: Python Optimization Modeling Objects
-# Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-# Under the terms of Contract DE-NA0003525 with National Technology and
-# Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-# rights in this software.
-# This software is distributed under the 3-clause BSD License
-# ______________________________________________________________________________
 from pyomo.environ import (
     Param,
     Var,
@@ -36,6 +26,7 @@ from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.dependencies import numpy as np, scipy
 from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
@@ -44,8 +35,6 @@ import logging
 import os
 import io
 import shutil
-from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy, scipy_available
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
