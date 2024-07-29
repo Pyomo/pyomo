@@ -1897,8 +1897,12 @@ class SortedSetData(_SortedSetMixin, OrderedSetData):
 
     def _update_impl(self, values):
         for val in values:
+            # Note that we reset _ordered_values within the loop because
+            # of an old example where the initializer rule makes
+            # reference to values previously inserted into the Set
+            # (which triggered the creation of the _ordered_values)
+            self._ordered_values = None
             self._values[val] = None
-        self._ordered_values = None
 
     # Note: removing data does not affect the sorted flag
     # def remove(self, val):
