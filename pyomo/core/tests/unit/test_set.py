@@ -3811,12 +3811,21 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.data(), (4, 3, 2, 1))
         self.assertEqual(m.I.dimen, 1)
 
+    def test_initialize_with_noniterable(self):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
                 m = ConcreteModel()
                 m.I = Set(initialize=5)
             ref = "Initializer for Set I returned non-iterable object of type int."
+            self.assertIn(ref, output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
+                m = ConcreteModel()
+                m.I = Set([1,2], initialize=5)
+            ref = "Initializer for Set I[1] returned non-iterable object of type int."
             self.assertIn(ref, output.getvalue())
 
     def test_scalar_indexed_api(self):

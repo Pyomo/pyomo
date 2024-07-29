@@ -1386,29 +1386,27 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         self.update(val)
 
     def _initialize(self, val):
-        self.update(val)
+        try:
+            self.update(val)
+        except TypeError as e:
+            if 'not iterable' in str(e):
+                logger.error(
+                    "Initializer for Set %s returned non-iterable object "
+                    "of type %s."
+                    % (
+                        self.name,
+                        (val if val.__class__ is type else type(val).__name__),
+                    )
+                )
+            raise
 
     def update(self, values):
-        # _values was initialized above...
-        #
         # Special case: set operations that are not first attached
         # to the model must be constructed.
         if isinstance(values, SetOperator):
             values.construct()
-        try:
-            val_iter = iter(values)
-        except TypeError:
-            logger.error(
-                "Initializer for Set %s%s returned non-iterable object "
-                "of type %s."
-                % (
-                    self.name,
-                    ("[%s]" % (index,) if self.is_indexed() else ""),
-                    (values if values.__class__ is type else type(values).__name__),
-                )
-            )
-            raise
-
+        # It is important that val_iter is an actual iterator
+        val_iter = iter(values)
         if self._dimen is not None:
             if normalize_index.flatten:
                 val_iter = self._cb_normalized_dimen_verifier(self._dimen, val_iter)
@@ -1472,8 +1470,6 @@ class FiniteSetData(_FiniteSetMixin, SetData):
             yield value
 
     def _cb_normalized_dimen_verifier(self, dimen, val_iter):
-        # It is important that the iterator is an actual iterator
-        val_iter = iter(val_iter)
         for value in val_iter:
             if value.__class__ is tuple:
                 if dimen == len(value):
@@ -1833,7 +1829,7 @@ class InsertionOrderSetData(OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (self.name, type(val).__name__)
             )
-        super().update(val)
+        super()._initialize(val)
 
     def set_value(self, val):
         if type(val) in Set._UnorderedInitializers:
