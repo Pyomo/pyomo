@@ -1,15 +1,22 @@
-import pytest
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-try:
+from pyomo.common.dependencies import numpy as numpy, numpy_available
+
+if numpy_available:
     from numpy.testing import assert_array_almost_equal
-
-    numpy_available = True
-except:
-    numpy_available = False
 
 import pyomo.environ as pe
 import pyomo.opt
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from pyomo.contrib.alternative_solutions import shifted_lp
@@ -22,13 +29,13 @@ from pyomo.contrib.alternative_solutions import shifted_lp
 solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi"))
 if "glpk" in solvers:
     solver = ["glpk"]
-pytestmark = pytest.mark.parametrize("lp_solver", solvers)
+pytestmark = unittest.pytest.mark.parametrize("lp_solver", solvers)
 
 
 @unittest.pytest.mark.default
 class TestShiftedIP:
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_abs_objective(self, lp_solver):
         m = tc.get_indexed_pentagonal_pyramid_mip()
         m.x.domain = pe.Reals
@@ -41,7 +48,7 @@ class TestShiftedIP:
         new_results = opt.solve(new_model, tee=False)
         new_obj = pe.value(new_model.objective)
 
-        assert old_obj == pytest.approx(new_obj)
+        assert old_obj == unittest.pytest.approx(new_obj)
 
     def test_polyhedron(self, lp_solver):
         m = tc.get_3d_polyhedron_problem()
@@ -54,7 +61,7 @@ class TestShiftedIP:
         new_results = opt.solve(new_model, tee=False)
         new_obj = pe.value(new_model.objective)
 
-        assert old_obj == pytest.approx(new_obj)
+        assert old_obj == unittest.pytest.approx(new_obj)
 
 
 if __name__ == "__main__":

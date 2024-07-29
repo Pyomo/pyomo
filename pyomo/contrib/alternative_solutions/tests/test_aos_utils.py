@@ -1,11 +1,17 @@
-import pytest
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-try:
-    from numpy.linalg import norm
+from pyomo.common import unittest
 
-    numpy_available = True
-except:
-    numpy_available = False
+from pyomo.common.dependencies import numpy as numpy, numpy_available
 
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
@@ -144,11 +150,13 @@ class TestAOSUtilsUnit(unittest.TestCase):
         self.assertEqual(None, cons[1].upper)
         self.assertEqual(9, cons[1].lower)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_random_direction(self):
         """
         Ensure that _get_random_direction returns a normal vector.
         """
+        from numpy.linalg import norm
+
         vector = au._get_random_direction(10)
         self.assertAlmostEqual(1.0, norm(vector))
 

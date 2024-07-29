@@ -1,15 +1,23 @@
-import math
-import pytest
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-try:
+import math
+
+from pyomo.common.dependencies import numpy as numpy, numpy_available
+
+if numpy_available:
     from numpy.testing import assert_array_almost_equal
 
-    numpy_available = True
-except:
-    numpy_available = False
-
 import pyomo.environ as pe
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 
 import pyomo.opt
 from pyomo.contrib.alternative_solutions import (
@@ -19,7 +27,7 @@ from pyomo.contrib.alternative_solutions import (
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
 solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
-pytestmark = pytest.mark.parametrize("mip_solver", solvers)
+pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"}
 
@@ -27,7 +35,7 @@ timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"
 @unittest.pytest.mark.default
 class TestOBBTUnit:
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_analysis(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.
@@ -40,10 +48,10 @@ class TestOBBTUnit:
 
     def test_obbt_error1(self, mip_solver):
         m = tc.get_2d_diamond_problem()
-        with pytest.raises(AssertionError):
+        with unittest.pytest.raises(AssertionError):
             obbt_analysis_bounds_and_solutions(m, variables=[m.x], solver=mip_solver)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_some_vars(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.
@@ -57,7 +65,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_continuous(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.
@@ -69,7 +77,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_rel_objective(self, mip_solver):
         """
         Check that relative mip gap constraints are added for a mip with indexed vars and constraints
@@ -79,9 +87,9 @@ class TestOBBTUnit:
             m, rel_opt_gap=0.5, solver=mip_solver
         )
         assert len(solns) == 2 * len(all_bounds) + 1
-        assert m._obbt.optimality_tol_rel.lb == pytest.approx(2.5)
+        assert m._obbt.optimality_tol_rel.lb == unittest.pytest.approx(2.5)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_abs_objective(self, mip_solver):
         """
         Check that absolute mip gap constraints are added
@@ -91,9 +99,9 @@ class TestOBBTUnit:
             m, abs_opt_gap=1.99, solver=mip_solver
         )
         assert len(solns) == 2 * len(all_bounds) + 1
-        assert m._obbt.optimality_tol_abs.lb == pytest.approx(3.01)
+        assert m._obbt.optimality_tol_abs.lb == unittest.pytest.approx(3.01)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_warmstart(self, mip_solver):
         """
         Check that warmstarting works.
@@ -109,7 +117,7 @@ class TestOBBTUnit:
         for var, bounds in all_bounds.items():
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_mip(self, mip_solver):
         """
         Check that bound tightening only occurs for continuous variables
@@ -134,7 +142,7 @@ class TestOBBTUnit:
         assert bounds_tightened
         assert bounds_not_tightened
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_obbt_unbounded(self, mip_solver):
         """
         Check that the correct bounds are found for an unbounded problem.
@@ -151,7 +159,7 @@ class TestOBBTUnit:
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
         assert len(solns) == num
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_bound_tightening(self, mip_solver):
         """
         Check that the correct bounds are found for a discrete problem where
@@ -170,7 +178,7 @@ class TestOBBTUnit:
         more restrictive bounds are implied by the constraints.
         """
         m = tc.get_implied_bound_ip()
-        with pytest.raises(RuntimeError):
+        with unittest.pytest.raises(RuntimeError):
             obbt_analysis_bounds_and_solutions(
                 m, solver=mip_solver, solver_options={timelimit[mip_solver]: 0}
             )
@@ -198,7 +206,7 @@ class TestOBBTUnit:
         """
         m = tc.get_2d_diamond_problem()
         m.infeasible_constraint = pe.Constraint(expr=m.x >= 10)
-        with pytest.raises(Exception):
+        with unittest.pytest.raises(Exception):
             obbt_analysis_bounds_and_solutions(m, solver=mip_solver)
 
 

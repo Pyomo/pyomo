@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,13 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
+from pyomo.common.dependencies import numpy as numpy, numpy_available
+
+if numpy_available:
     import numpy.random
     from numpy.linalg import norm
-
-    numpy_available = True
-except:
-    numpy_available = False
 
 import pyomo.environ as pe
 from pyomo.common.modeling import unique_component_name
@@ -121,7 +119,6 @@ def _get_random_direction(num_dimensions):
     Get a unit vector of dimension num_dimensions by sampling from and
     normalizing a standard multivariate Gaussian distribution.
     """
-    global rng
     iterations = 1000
     min_norm = 1e-4
     idx = 0
@@ -195,6 +192,8 @@ def get_model_variables(
             Boolean indicating that integer variables should be included.
         include_fixed : boolean
             Boolean indicating that fixed variables should be included.
+        quiet : boolean
+            Boolean that is True if all output is suppressed.
 
         Returns
         -------

@@ -1,15 +1,23 @@
-import pytest
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-try:
+from pyomo.common.dependencies import numpy as numpy, numpy_available
+
+if numpy_available:
     from numpy.testing import assert_array_almost_equal
 
-    numpy_available = True
-except:
-    numpy_available = False
 from collections import Counter
 
 import pyomo.environ as pe
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 
 from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
@@ -31,7 +39,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         Maybe this should be an AOS utility since it may be a thing we will want to do often.
     """
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_ip_feasibility(self):
         """
         Enumerate all solutions for an ip: triangle_ip.
@@ -45,7 +53,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_ip_num_solutions(self):
         """
         Enumerate 8 solutions for an ip: triangle_ip.
@@ -60,7 +68,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_feasibility(self):
         """
         Enumerate all solutions for a mip: indexed_pentagonal_pyramid_mip.
@@ -74,7 +82,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_rel_feasibility(self):
         """
         Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
@@ -89,7 +97,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_rel_feasibility_options(self):
         """
         Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
@@ -106,7 +114,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_mip_abs_feasibility(self):
         """
         Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
@@ -121,7 +129,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def Xtest_mip_no_time(self):
         """
         Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.

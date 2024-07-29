@@ -1,14 +1,18 @@
-import pytest
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-try:
-    import numpy
-
-    numpy_available = True
-except:
-    numpy_available = False
+from pyomo.common.dependencies import numpy as numpy, numpy_available
 
 import pyomo.environ as pe
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 import pyomo.opt
 
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
@@ -20,7 +24,7 @@ from pyomo.contrib.alternative_solutions import lp_enum
 solvers = list(
     pyomo.opt.check_available_solvers("glpk", "gurobi")
 )  # , "appsi_gurobi"))
-pytestmark = pytest.mark.parametrize("mip_solver", solvers)
+pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"}
 
@@ -34,7 +38,7 @@ class TestLPEnum:
         more restrictive bounds are implied by the constraints.
         """
         m = tc.get_3d_polyhedron_problem()
-        with pytest.raises(Exception):
+        with unittest.pytest.raises(Exception):
             lp_enum.enumerate_linear_solutions(
                 m, solver=mip_solver, solver_options={timelimit[mip_solver]: 0}
             )
@@ -47,7 +51,7 @@ class TestLPEnum:
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
         for s in sols:
-            assert s.objective_value == pytest.approx(4)
+            assert s.objective_value == unittest.pytest.approx(4)
 
     def test_3d_polyhedron(self, mip_solver):
         m = tc.get_3d_polyhedron_problem()
@@ -57,9 +61,9 @@ class TestLPEnum:
         sols = lp_enum.enumerate_linear_solutions(m, solver=mip_solver)
         assert len(sols) == 2
         for s in sols:
-            assert s.objective_value == pytest.approx(
+            assert s.objective_value == unittest.pytest.approx(
                 9
-            ) or s.objective_value == pytest.approx(10)
+            ) or s.objective_value == unittest.pytest.approx(10)
 
     def test_2d_diamond_problem(self, mip_solver):
         m = tc.get_2d_diamond_problem()
@@ -67,10 +71,10 @@ class TestLPEnum:
         assert len(sols) == 2
         for s in sols:
             print(s)
-        assert sols[0].objective_value == pytest.approx(6.789473684210527)
-        assert sols[1].objective_value == pytest.approx(3.6923076923076916)
+        assert sols[0].objective_value == unittest.pytest.approx(6.789473684210527)
+        assert sols[1].objective_value == unittest.pytest.approx(3.6923076923076916)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_pentagonal_pyramid(self, mip_solver):
         n = tc.get_pentagonal_pyramid_mip()
         n.o.sense = pe.minimize
@@ -84,7 +88,7 @@ class TestLPEnum:
             print(s)
         assert len(sols) == 6
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_pentagon(self, mip_solver):
         n = tc.get_pentagonal_lp()
 

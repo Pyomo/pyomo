@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,12 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    from gurobipy import GRB
+from pyomo.common.dependencies import attempt_import
 
-    gurobi_available = True
-except:
-    gurobi_available = False
+gurobipy, gurobi_available = attempt_import("gurobipy")
 
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
@@ -43,6 +40,8 @@ class NoGoodCutGenerator:
         self.num_solutions = num_solutions
 
     def cut_generator_callback(self, cb_m, cb_opt, cb_where):
+        from gurobipy import GRB
+
         if cb_where == GRB.Callback.MIPSOL:
             cb_opt.cbGetSolution(vars=self.variables)
             print("***FOUND SOLUTION***")

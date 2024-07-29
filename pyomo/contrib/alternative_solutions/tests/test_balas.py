@@ -1,15 +1,23 @@
-import pytest
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-try:
-    from numpy.testing import assert_array_almost_equal
-
-    numpy_available = True
-except:
-    numpy_available = False
 from collections import Counter
 
+from pyomo.common.dependencies import numpy as numpy, numpy_available
+
+if numpy_available:
+    from numpy.testing import assert_array_almost_equal
+
 import pyomo.environ as pe
-import pyomo.common.unittest as unittest
+from pyomo.common import unittest
 import pyomo.opt
 
 from pyomo.contrib.alternative_solutions import enumerate_binary_solutions
@@ -17,7 +25,7 @@ import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
 
 solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
-pytestmark = pytest.mark.parametrize("mip_solver", solvers)
+pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 
 @unittest.pytest.mark.default
@@ -32,7 +40,7 @@ class TestBalasUnit:
         m = tc.get_triangle_ip()
         results = enumerate_binary_solutions(m, num_solutions=100, solver=mip_solver)
         assert len(results) == 1
-        assert results[0].objective_value == pytest.approx(5)
+        assert results[0].objective_value == unittest.pytest.approx(5)
 
     def Xtest_no_time(self, mip_solver):
         """
@@ -41,12 +49,12 @@ class TestBalasUnit:
         Check that something sensible happens when the solver times out.
         """
         m = tc.get_triangle_ip()
-        with pytest.raises(Exception):
+        with unittest.pytest.raises(Exception):
             results = enumerate_binary_solutions(
                 m, num_solutions=100, solver=mip_solver, solver_options={"TimeLimit": 0}
             )
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_knapsack_all(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -63,7 +71,7 @@ class TestBalasUnit:
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, m.num_ranked_solns)
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_knapsack_x0_x1(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -83,7 +91,7 @@ class TestBalasUnit:
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, [1, 1, 1, 1])
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_knapsack_optimal_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -98,7 +106,7 @@ class TestBalasUnit:
         )
         assert_array_almost_equal(objectives, m.ranked_solution_values[:3])
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_knapsack_hamming_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -115,7 +123,7 @@ class TestBalasUnit:
         )
         assert_array_almost_equal(objectives, [6, 3, 1])
 
-    @pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
     def test_knapsack_random_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
