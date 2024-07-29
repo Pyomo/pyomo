@@ -25,7 +25,7 @@ class Solution:
         A map between Pyomo variables and their values for a solution.
     fixed_vars : ComponentSet
         The set of Pyomo variables that are fixed in a solution.
-    objectives : ComponentMap
+    objective : ComponentMap
         A map between Pyomo objectives and their values for a solution.
 
     Methods
