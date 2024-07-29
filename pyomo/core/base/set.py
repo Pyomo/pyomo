@@ -1471,16 +1471,19 @@ class FiniteSetData(_FiniteSetMixin, SetData):
 
     def _cb_normalized_dimen_verifier(self, dimen, val_iter):
         for value in val_iter:
-            if value.__class__ is tuple:
-                if dimen == len(value):
-                    yield value[0] if dimen == 1 else value
+            if value.__class__ in native_types:
+                if dimen == 1:
+                    yield value
                     continue
-            elif dimen == 1 and value.__class__ in native_types:
-                yield value
-                continue
+                normalized_value = value
+            else:
+                normalized_value = normalize_index(value)
+                # Note: normalize_index() will never return a 1-tuple
+                if normalized_value.__class__ is tuple:
+                    if dimen == len(normalized_value):
+                        yield normalized_value[0] if dimen == 1 else normalized_value
+                        continue
 
-            # Note: normalize_index() will never return a 1-tuple
-            normalized_value = normalize_index(value)
             _d = len(normalized_value) if normalized_value.__class__ is tuple else 1
             if _d == dimen:
                 yield normalized_value

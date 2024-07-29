@@ -5256,6 +5256,21 @@ I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
         self.assertIs(m.K.index_set()._domain, Integers)
         self.assertEqual(m.K.index_set(), [0, 1, 2, 3, 4])
 
+    def test_normalize_index(self):
+        try:
+            _oldFlatten = normalize_index.flatten
+            normalize_index.flatten = True
+
+            m = ConcreteModel()
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(\(2, 3\),\) has dimension 2 and is not "
+                "valid for Set I which has dimen=1",
+            ):
+                m.I = Set(initialize=[1, ((2, 3),)])
+        finally:
+            normalize_index.flatten = _oldFlatten
+
     def test_no_normalize_index(self):
         try:
             _oldFlatten = normalize_index.flatten
