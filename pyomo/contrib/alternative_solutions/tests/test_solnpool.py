@@ -26,8 +26,7 @@ from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
 
-@unittest.skipUnless(gurobipy_available, "Gurobi MIP solver not available")
-# @unittest.pytest.mark.skipif(not gurobipy_available, reason="Gurobi MIP solver not available")
+@unittest.skipIf(not gurobipy_available, "Gurobi MIP solver not available")
 class TestSolnPoolUnit(unittest.TestCase):
     """
     Cases to cover:

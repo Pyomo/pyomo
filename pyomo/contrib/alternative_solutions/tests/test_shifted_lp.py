@@ -35,7 +35,7 @@ pytestmark = unittest.pytest.mark.parametrize("lp_solver", solvers)
 @unittest.pytest.mark.default
 class TestShiftedIP:
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_abs_objective(self, lp_solver):
         m = tc.get_indexed_pentagonal_pyramid_mip()
         m.x.domain = pe.Reals

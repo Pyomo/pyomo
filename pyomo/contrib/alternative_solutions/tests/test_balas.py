@@ -54,7 +54,7 @@ class TestBalasUnit:
                 m, num_solutions=100, solver=mip_solver, solver_options={"TimeLimit": 0}
             )
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_knapsack_all(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -71,7 +71,7 @@ class TestBalasUnit:
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, m.num_ranked_solns)
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_knapsack_x0_x1(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -91,7 +91,7 @@ class TestBalasUnit:
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, [1, 1, 1, 1])
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_knapsack_optimal_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -106,7 +106,7 @@ class TestBalasUnit:
         )
         assert_array_almost_equal(objectives, m.ranked_solution_values[:3])
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_knapsack_hamming_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack
@@ -123,7 +123,7 @@ class TestBalasUnit:
         )
         assert_array_almost_equal(objectives, [6, 3, 1])
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_knapsack_random_3(self, mip_solver):
         """
         Enumerate solutions for a binary problem: knapsack

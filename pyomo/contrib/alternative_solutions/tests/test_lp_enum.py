@@ -74,7 +74,7 @@ class TestLPEnum:
         assert sols[0].objective_value == unittest.pytest.approx(6.789473684210527)
         assert sols[1].objective_value == unittest.pytest.approx(3.6923076923076916)
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_pentagonal_pyramid(self, mip_solver):
         n = tc.get_pentagonal_pyramid_mip()
         n.o.sense = pe.minimize
@@ -88,7 +88,7 @@ class TestLPEnum:
             print(s)
         assert len(sols) == 6
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_pentagon(self, mip_solver):
         n = tc.get_pentagonal_lp()
 

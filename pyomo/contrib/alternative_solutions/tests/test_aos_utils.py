@@ -150,7 +150,7 @@ class TestAOSUtilsUnit(unittest.TestCase):
         self.assertEqual(None, cons[1].upper)
         self.assertEqual(9, cons[1].lower)
 
-    @unittest.pytest.mark.skipif(not numpy_available, reason="Numpy not installed")
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_random_direction(self):
         """
         Ensure that _get_random_direction returns a normal vector.
