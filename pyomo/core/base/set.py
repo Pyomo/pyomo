@@ -1984,7 +1984,8 @@ class Set(IndexedComponent):
 
     within : initialiser(set), optional
         A set that defines the valid values that can be contained
-        in this set
+        in this set. If the latter is indexed, the former can be indexed or
+        non-indexed, in which case it applies to all indices.
     domain : initializer(set), optional
         A set that defines the valid values that can be contained
         in this set
@@ -2274,7 +2275,7 @@ class Set(IndexedComponent):
 
         domain = self._init_domain(_block, index, self)
         if domain is not None:
-            domain.construct()
+            domain.parent_component().construct()
         if _d is UnknownSetDimen and domain is not None and domain.dimen is not None:
             _d = domain.dimen
 
