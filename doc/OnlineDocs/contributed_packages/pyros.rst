@@ -14,19 +14,17 @@ The developers gratefully acknowledge support from the U.S. Department of Energy
 Methodology Overview
 -----------------------------
 
-Below is an overview of the type of optimization models PyROS can accommodate.
+PyROS can accommodate optimization models with:
 
+* **continuous variables** only
+* **nonlinearities** (including **nonconvexities**) in both the
+  variables and uncertain parameters
+* **equality constraints** defining state variables,
+  including implicitly defined state variables that cannot be
+  eliminated from the model via reformulation
+* **first-stage degrees of freedom** and **second-stage degrees of freedom**
 
-* PyROS is suitable for optimization models of **continuous variables**
-  that may feature non-linearities (including **non-convexities**) in
-  both the variables and uncertain parameters.
-* PyROS can handle **equality constraints** defining state variables,
-  including implicit state variables that cannot be eliminated via
-  reformulation.
-* PyROS allows for **two-stage** optimization problems that may
-  feature both first-stage and second-stage degrees of freedom.
-
-PyROS is designed to operate on deterministic models of the general form
+Supported deterministic models can be written in the general form
 
 .. _deterministic-model:
 
@@ -39,20 +37,21 @@ PyROS is designed to operate on deterministic models of the general form
 
 where:
 
-* :math:`x \in \mathcal{X}` are the "design" variables
-  (i.e., first-stage degrees of freedom),
-  where :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}` is the feasible space defined by the model constraints
+* :math:`x \in \mathcal{X}` are the first-stage degrees of freedom,
+  (or "design" variables,)
+  of which the feasible space :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}`
+  is defined by the model constraints
   (including variable bounds specifications) referencing :math:`x` only.
-* :math:`z \in \mathbb{R}^{n_z}` are the "control" variables
-  (i.e., second-stage degrees of freedom)
+* :math:`z \in \mathbb{R}^{n_z}` are the second-stage degrees of freedom
+  (or "control" variables)
 * :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
 * :math:`q \in \mathbb{R}^{n_q}` is the vector of model parameters considered
   uncertain, and :math:`q^{\text{nom}}` is the vector of nominal values
-  associated with those.
-* :math:`f_1\left(x\right)` are the terms of the objective function that depend
+  associated with those
+* :math:`f_1\left(x\right)` is the summand of the objective function that depends
   only on design variables
-* :math:`f_2\left(x, z, y; q\right)` are the terms of the objective function
-  that depend on all variables and the uncertain parameters
+* :math:`f_2\left(x, z, y; q\right)` is the summand of the objective function
+  that depends on all variables and the uncertain parameters
 * :math:`g_i\left(x, z, y; q\right)` is the :math:`i^\text{th}`
   inequality constraint function in set :math:`\mathcal{I}`
   (see :ref:`Note <var-bounds-to-ineqs>`)
@@ -63,23 +62,13 @@ where:
 .. _var-bounds-to-ineqs:
 
 .. note::
-    PyROS accepts models in which bounds are directly imposed on
-    ``Var`` objects representing components of the variables :math:`z`
-    and :math:`y`. These models are cast to
-    :ref:`the form above <deterministic-model>`
-    by reformulating the bounds as inequality constraints.
+    PyROS accepts models in which there are:
 
-.. _unique-mapping:
-
-.. note::
-    A key requirement of PyROS is that each value of :math:`\left(x, z, q \right)`
-    maps to a unique value of :math:`y`, a property that is assumed to
-    be properly enforced by the system of equality constraints
-    :math:`\mathcal{J}`.
-    If the mapping is not unique, then the selection of 'state'
-    (i.e., not degree of freedom) variables :math:`y` is incorrect,
-    and one or more of the :math:`y` variables should be appropriately
-    redesignated to be part of either :math:`x` or :math:`z`.
+    1. Bounds declared on the ``Var`` objects representing
+       components of the variable vectors :math:`z` and :math:`y`.
+       These bounds are reformulated to inequality constraints.
+    2. Ranged inequality constraints. These are easily reformulated to
+       single inequality constraints.
 
 In order to cast the robust optimization counterpart of the
 :ref:`deterministic model <deterministic-model>`,
@@ -89,7 +78,8 @@ any realization in a compact uncertainty set
 the nominal value :math:`q^{\text{nom}}`.
 The set :math:`\mathcal{Q}` may be **either continuous or discrete**.
 
-Based on the above notation, the form of the robust counterpart addressed by PyROS is
+Based on the above notation,
+the form of the robust counterpart addressed by PyROS is
 
 .. math::
     \begin{array}{ccclll}
@@ -102,8 +92,25 @@ Based on the above notation, the form of the robust counterpart addressed by PyR
 
 PyROS solves problems of this form using the
 Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
+When using PyROS, please consider citing that paper.
 
-When using PyROS, please consider citing the above paper.
+.. _unique-mapping:
+
+.. note::
+    A key requirement of PyROS is that
+    for every
+    :math:`x \in \mathcal{X}`,
+    :math:`z \in \mathbb{R}^{n_z}`,
+    :math:`q \in \mathcal{Q}`,
+    there exists a unique :math:`y \in \mathbb{R}^{n_y}`
+    for which :math:`(x, z, y, q)`
+    satisfies the equality constraints
+    :math:`h_j(x, z, y, q) = 0\,\,\forall\, j \in \mathcal{J}`.
+    If this requirement is not met,
+    then the selection of 'state'
+    (i.e., not degree of freedom) variables :math:`y` is incorrect,
+    and one or more of the :math:`y` variables should be appropriately
+    redesignated to be part of either :math:`x` or :math:`z`.
 
 PyROS Required Inputs
 -----------------------------
