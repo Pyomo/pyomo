@@ -3824,7 +3824,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
                 m = ConcreteModel()
-                m.I = Set([1,2], initialize=5)
+                m.I = Set([1, 2], initialize=5)
             ref = "Initializer for Set I[1] returned non-iterable object of type int."
             self.assertIn(ref, output.getvalue())
 
