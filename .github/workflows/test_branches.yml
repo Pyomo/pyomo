@@ -519,7 +519,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $URL = "https://www.minlp.com/downloads/xecs/baron/current/"
+        $URL = "https://minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
@@ -855,9 +855,6 @@ jobs:
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
-        # downgrading after v0.7.0 broke tokenless upload
-        # see codecov/codecov-action#1487
-        version: v0.6.0
         fail_ci_if_error: true
 
     - name: Upload other coverage reports
@@ -870,7 +867,4 @@ jobs:
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
-        # downgrading after v0.7.0 broke tokenless upload
-        # see codecov/codecov-action#1487
-        version: v0.6.0
         fail_ci_if_error: true

@@ -2703,3 +2703,72 @@ J0 1	#con3
             r"\(fixed body value 5.0 outside bounds \[10, None\]\)\.",
         ):
             nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+
+    def test_nested_external_expressions(self):
+        # This tests nested external functions in a single expression
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.p = Param(initialize=1, mutable=True)
+        m.x = Var(bounds=(None, 3))
+        m.y = Var(bounds=(3, None))
+        m.z = Var(initialize=1)
+        m.o = Objective(expr=m.z**2 * m.hypot(m.z, m.hypot(m.x, m.y)) ** 2)
+        m.c = Constraint(expr=m.x == m.y)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=False
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 3 1 1 0 1	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 3 0	#nonlinear vars in constraints, objectives, both
+ 0 1 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3	#nonzeros in Jacobian, obj. gradient
+ 1 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+C0	#c
+n0
+O0 0	#o
+o2	#*
+o5	#^
+v0	#z
+n2
+o5	#^
+f0 2	#hypot
+v0	#z
+f0 2	#hypot
+v1	#x
+v2	#y
+n2
+x1	#initial guess
+0 1	#z
+r	#1 ranges (rhs's)
+4 0	#c
+b	#3 bounds (on variables)
+3	#z
+1 3	#x
+2 3	#y
+k2	#intermediate Jacobian column lengths
+0
+1
+J0 2	#c
+1 1
+2 -1
+G0 3	#o
+0 0
+1 0
+2 0
+""",
+                OUT.getvalue(),
+            )
+        )
