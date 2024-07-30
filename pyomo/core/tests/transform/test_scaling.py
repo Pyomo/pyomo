@@ -10,10 +10,12 @@
 #  ___________________________________________________________________________
 #
 
+import io
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.core.plugins.transform.scaling import ScaleModel
+from pyomo.common.log import LoggingIntercept
 
 
 class TestScaleModelTransformation(unittest.TestCase):
@@ -699,11 +701,15 @@ class TestScaleModelTransformation(unittest.TestCase):
         scaled_model = pyo.TransformationFactory("core.scale_model").create_using(m)
         scaled_model.scaled_x[1] = 20.0
         scaled_model.scaled_x[2] = None
-        pyo.TransformationFactory("core.scale_model").propagate_solution(
-            scaled_model, m
-        )
+
+        OUTPUT = io.StringIO()
+        with LoggingIntercept(OUTPUT, "pyomo.core.plugins.transform.scaling"):
+            pyo.TransformationFactory("core.scale_model").propagate_solution(
+                scaled_model, m
+            )
+        self.assertIn("replacing value of variable", OUTPUT.getvalue())
         self.assertAlmostEqual(m.x[1].value, 2.0, delta=1e-8)
-        # Note that value of x[2] in original model *has* been overriddeen to None.
+        # Note that value of x[2] in original model *has* been overridden to None.
         # In this case, a warning has been raised.
         self.assertIs(m.x[2].value, None)
 
