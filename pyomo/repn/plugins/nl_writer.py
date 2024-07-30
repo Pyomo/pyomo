@@ -1988,6 +1988,18 @@ class _NLWriter_impl(object):
             elif info[comp_type] != src:
                 info[comp_type] = 0
 
+    def _resolve_subexpression_args(self, nl, args):
+        final_args = []
+        for arg in args:
+            if arg in self.var_id_to_nl_map:
+                final_args.append(self.var_id_to_nl_map[arg])
+            else:
+                _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
+                    self.visitor
+                )
+                final_args.append(self._resolve_subexpression_args(_nl, _ids))
+        return nl % tuple(final_args)
+
     def _write_nl_expression(self, repn, include_const):
         # Note that repn.mult should always be 1 (the AMPLRepn was
         # compiled before this point).  Omitting the assertion for
@@ -2007,18 +2019,7 @@ class _NLWriter_impl(object):
                     nl % tuple(map(self.var_id_to_nl_map.__getitem__, args))
                 )
             except KeyError:
-                final_args = []
-                for arg in args:
-                    if arg in self.var_id_to_nl_map:
-                        final_args.append(self.var_id_to_nl_map[arg])
-                    else:
-                        _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
-                            self.visitor
-                        )
-                        final_args.append(
-                            _nl % tuple(map(self.var_id_to_nl_map.__getitem__, _ids))
-                        )
-                self.ostream.write(nl % tuple(final_args))
+                self.ostream.write(self._resolve_subexpression_args(nl, args))
 
         elif include_const:
             self.ostream.write(self.template.const % repn.const)
