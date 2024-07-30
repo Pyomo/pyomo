@@ -29,7 +29,7 @@ class ScaleModel(Transformation):
     Transformation to scale a model.
 
     This plugin performs variable, constraint, and objective scaling on
-    a model based on the scaling factors in the suffix 'scaling_parameter'
+    a model based on the scaling factors in the suffix 'scaling_factor'
     set for the variables, constraints, and/or objective. This is typically
     done to scale the problem for improved numerical properties.
 
@@ -37,6 +37,10 @@ class ScaleModel(Transformation):
         * :py:meth:`apply_to <pyomo.core.plugins.transform.scaling.ScaleModel.apply_to>`
         * :py:meth:`create_using <pyomo.core.plugins.transform.scaling.ScaleModel.create_using>`
         * :py:meth:`propagate_solution <pyomo.core.plugins.transform.scaling.ScaleModel.propagate_solution>`
+
+    By default, scaling components are renamed with the prefix ``scaled_``. To disable
+    this behavior and scale variables in-place (or keep the same names in a new model),
+    use the ``rename=False`` argument to ``apply_to`` or ``create_using``.
 
 
     Examples
@@ -69,8 +73,6 @@ class ScaleModel(Transformation):
         101000000.0
         >>> print(value(scaled_model.scaled_obj))
         101.0
-
-    .. todo:: Implement an option to change the variables names or not
 
     """
 
