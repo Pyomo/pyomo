@@ -14,7 +14,6 @@ import io
 import math
 import os
 
-from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
@@ -22,20 +21,27 @@ from pyomo.common.errors import MouseTrap
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.core.staleflag import StaleFlagManager
+from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import BranchAndBoundConfig
+from pyomo.contrib.solver.gurobi_utils import GurobiConfigMixin
+from pyomo.contrib.solver.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+    NoValidDualsError,
+    NoValidReducedCostsError,
+    NoValidSolutionError,
+)
 from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
 from pyomo.contrib.solver.solution import SolutionLoaderBase
 
-from pyomo.core.staleflag import StaleFlagManager
-
-from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
 
-class GurobiConfig(BranchAndBoundConfig):
+class GurobiConfig(BranchAndBoundConfig, GurobiConfigMixin):
     def __init__(
         self,
         description=None,
@@ -44,22 +50,15 @@ class GurobiConfig(BranchAndBoundConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        BranchAndBoundConfig.__init__(
+            self,
             description=description,
             doc=doc,
             implicit=implicit,
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.use_mipstart: bool = self.declare(
-            'use_mipstart',
-            ConfigValue(
-                default=False,
-                domain=bool,
-                description="If True, the current values of the integer variables "
-                "will be passed to Gurobi.",
-            ),
-        )
+        GurobiConfigMixin.__init__(self)
 
 
 class GurobiDirectSolutionLoader(SolutionLoaderBase):
@@ -81,10 +80,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def load_vars(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
         if self._grb_model.SolCount == 0:
-            raise RuntimeError(
-                'Solver does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
+            raise NoValidSolutionError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
         if vars_to_load:
@@ -97,10 +93,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def get_primals(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
         if self._grb_model.SolCount == 0:
-            raise RuntimeError(
-                'Solver does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
+            raise NoValidSolutionError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
         if vars_to_load:
@@ -110,10 +103,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
     def get_duals(self, cons_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
-            raise RuntimeError(
-                'Solver does not currently have valid duals. Please '
-                'check the termination condition.'
-            )
+            raise NoValidDualsError()
 
         def dedup(_iter):
             last = None
@@ -133,10 +123,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
-            raise RuntimeError(
-                'Solver does not currently have valid reduced costs. Please '
-                'check the termination condition.'
-            )
+            raise NoValidReducedCostsError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.getAttr('Rc').tolist())
         if vars_to_load:
@@ -354,11 +341,7 @@ class GurobiDirect(SolverBase):
             != TerminationCondition.convergenceCriteriaSatisfied
             and config.raise_exception_on_nonoptimal_result
         ):
-            raise RuntimeError(
-                'Solver did not find the optimal solution. Set '
-                'opt.config.raise_exception_on_nonoptimal_result=False '
-                'to bypass this error.'
-            )
+            raise NoOptimalSolutionError()
 
         if loader._pyo_obj:
             try:
@@ -386,12 +369,7 @@ class GurobiDirect(SolverBase):
             if grb_model.SolCount > 0:
                 results.solution_loader.load_vars()
             else:
-                raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loaded.'
-                    'Please set opt.config.load_solutions=False and check '
-                    'results.solution_status and '
-                    'results.incumbent_objective before loading a solution.'
-                )
+                raise NoFeasibleSolutionError()
         timer.stop('load solution')
 
         return results

@@ -21,6 +21,48 @@ from pyomo.opt.results.solver import (
 from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
 
 
+class NoFeasibleSolutionError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'A feasible solution was not found, so no solution can be loaded. '
+            'Please set opt.config.load_solutions=False and check '
+            'results.solution_status and '
+            'results.incumbent_objective before loading a solution.'
+        )
+
+
+class NoOptimalSolutionError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solver did not find the optimal solution. Set '
+            'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+        )
+
+
+class NoValidSolutionError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solution loader does not currently have a valid solution. Please '
+            'check results.termination_condition and/or results.solution_status.'
+        )
+
+
+class NoValidDualsError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solver does not currently have valid duals. Please '
+            'check the termination condition.'
+        )
+
+
+class NoValidReducedCostsError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solver does not currently have valid reduced costs. Please '
+            'check the termination condition.'
+        )
+
+
 def get_objective(block):
     """
     Get current active objective on a block. If there is more than one active,

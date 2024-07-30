@@ -22,7 +22,6 @@ from pyomo.common.errors import PyomoException
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.shutdown import python_is_shutting_down
-from pyomo.common.config import ConfigValue
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import VarData
@@ -35,6 +34,14 @@ from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.solver.base import PersistentSolverBase
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.config import PersistentBranchAndBoundConfig
+from pyomo.contrib.solver.gurobi_utils import GurobiConfigMixin
+from pyomo.contrib.solver.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+    NoValidDualsError,
+    NoValidReducedCostsError,
+    NoValidSolutionError,
+)
 from pyomo.contrib.solver.persistent import PersistentSolverUtils
 from pyomo.contrib.solver.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
@@ -62,7 +69,7 @@ class DegreeError(PyomoException):
     pass
 
 
-class GurobiConfig(PersistentBranchAndBoundConfig):
+class GurobiConfig(PersistentBranchAndBoundConfig, GurobiConfigMixin):
     def __init__(
         self,
         description=None,
@@ -71,21 +78,15 @@ class GurobiConfig(PersistentBranchAndBoundConfig):
         implicit_domain=None,
         visibility=0,
     ):
-        super().__init__(
+        PersistentBranchAndBoundConfig.__init__(
+            self,
             description=description,
             doc=doc,
             implicit=implicit,
             implicit_domain=implicit_domain,
             visibility=visibility,
         )
-        self.use_mipstart: bool = self.declare(
-            'use_mipstart',
-            ConfigValue(
-                default=False,
-                domain=bool,
-                description="If True, the values of the integer variables will be passed to Gurobi.",
-            ),
-        )
+        GurobiConfigMixin.__init__(self)
 
 
 class GurobiSolutionLoader(PersistentSolutionLoader):
@@ -905,10 +906,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             != TerminationCondition.convergenceCriteriaSatisfied
             and config.raise_exception_on_nonoptimal_result
         ):
-            raise RuntimeError(
-                'Solver did not find the optimal solution.'
-                'Set opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
-            )
+            raise NoOptimalSolutionError()
 
         results.incumbent_objective = None
         results.objective_bound = None
@@ -937,12 +935,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             if gprob.SolCount > 0:
                 self._load_vars()
             else:
-                raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loaded.'
-                    'Please set opt.config.load_solutions=False and check '
-                    'results.solution_status and '
-                    'results.incumbent_objective before loading a solution.'
-                )
+                raise NoFeasibleSolutionError()
         timer.stop('load solution')
 
         return results
@@ -981,10 +974,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._update_gurobi_model()  # this is needed to ensure that solutions cannot be loaded after the model has been changed
 
         if self._solver_model.SolCount == 0:
-            raise RuntimeError(
-                'Solver does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
+            raise NoValidSolutionError()
 
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
@@ -1013,10 +1003,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._update_gurobi_model()
 
         if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
-            raise RuntimeError(
-                'Solver does not currently have valid reduced costs. Please '
-                'check the termination condition.'
-            )
+            raise NoValidReducedCostsError()
 
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
@@ -1041,10 +1028,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._update_gurobi_model()
 
         if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
-            raise RuntimeError(
-                'Solver does not currently have valid duals. Please '
-                'check the termination condition.'
-            )
+            raise NoValidDualsError()
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
