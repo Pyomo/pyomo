@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections import defaultdict
 import enum
 import itertools
 
@@ -49,6 +50,7 @@ from pyomo.contrib.piecewise import PiecewiseLinearExpression, PiecewiseLinearFu
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
+from pyomo.repn.util import ExprType
 
 lineartree, lineartree_available = attempt_import('lineartree')
 sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
@@ -70,11 +72,12 @@ _quadratic_repn_visitor = QuadraticRepnVisitor(
 
 
 class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
-    __slots__ = ('transformed_component', 'src_component')
+    __slots__ = ('transformed_component', 'src_component', 'transformed_constraints')
 
     def __init__(self):
         self.transformed_component = ComponentMap()
         self.src_component = ComponentMap()
+        self.transformed_constraints = defaultdict(ComponentSet)
 
 
 Block.register_private_data_initializer(_NonlinearToPWLTransformationData)
@@ -585,26 +588,33 @@ class NonlinearToPWL(Transformation):
         if repn.nonlinear is None:
             if repn.quadratic is None:
                 # Linear constraint. Always skip.
-                return False
+                return ExprType.LINEAR, False
             else:
                 if not approximate_quadratic:
                     # Didn't need approximated, nothing to do
-                    return False
-        return True
+                    return ExprType.QUADRATIC, False
+                return ExprType.QUADRATIC, True
+        return ExprType.GENERAL, True
 
     def _approximate_expression(
-        self, obj, parent_component, trans_block, config, approximate_quadratic
+        self, expr, obj, trans_block, config, approximate_quadratic
     ):
-        if not self._needs_approximating(obj, approximate_quadratic):
+        expr_type, needs_approximating = self._needs_approximating(
+            expr,
+            approximate_quadratic
+        )
+        if not needs_approximating:
             return
 
-        # Additively decompose obj and work on the pieces
+        obj.model().private_data().transformed_constraints[expr_type].add(obj)
+
+        # Additively decompose expr and work on the pieces
         pwl_func = 0
-        for k, expr in enumerate(
-            _additively_decompose_expr(obj) if config.additively_decompose else (obj,)
+        for k, subexpr in enumerate(
+            _additively_decompose_expr(expr) if config.additively_decompose else (expr,)
         ):
             # First check is this is a good idea
-            expr_vars = list(identify_variables(expr, include_fixed=False))
+            expr_vars = list(identify_variables(subexpr, include_fixed=False))
             orig_values = ComponentMap((v, v.value) for v in expr_vars)
 
             dim = len(expr_vars)
@@ -613,27 +623,27 @@ class NonlinearToPWL(Transformation):
                     "Not approximating expression for component '%s' as "
                     "it exceeds the maximum dimension of %s. Try increasing "
                     "'max_dimension' or additively separating the expression."
-                    % (parent_component.name, config.max_dimension)
+                    % (obj.name, config.max_dimension)
                 )
-                pwl_func += expr
+                pwl_func += subexpr
                 continue
-            elif not self._needs_approximating(expr, approximate_quadratic):
-                pwl_func += expr
+            elif not self._needs_approximating(expr, approximate_quadratic)[1]:
+                pwl_func += subexpr
                 continue
 
             def eval_expr(*args):
                 for i, v in enumerate(expr_vars):
                     v.value = args[i]
-                return value(expr)
+                return value(subexpr)
 
             pwlf = get_pwl_function_approximation(
                 eval_expr,
                 config.domain_partitioning_method,
                 config.num_points,
-                self._get_bounds_list(expr_vars, parent_component),
+                self._get_bounds_list(expr_vars, obj),
             )
             name = unique_component_name(
-                trans_block, parent_component.getname(fully_qualified=False)
+                trans_block, obj.getname(fully_qualified=False)
             )
             trans_block.add_component(f"_pwle_{name}_{k}", pwlf)
             pwl_func += pwlf(*expr_vars)
@@ -663,3 +673,9 @@ class NonlinearToPWL(Transformation):
                 "It does not appear that '%s' is a Constraint that was "
                 "transformed by the 'nonlinear_to_pwl' transformation." % cons.name
             )
+
+    def get_transformed_nonlinear_constraints(self, model):
+        return model.private_data().transformed_constraints[ExprType.GENERAL]
+
+    def get_transformed_quadratic_constraints(self, model):
+        return model.private_data().transformed_constraints[ExprType.QUADRATIC]

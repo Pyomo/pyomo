@@ -61,6 +61,12 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(new_cons.lb, 0.35)
         self.assertIs(n_to_pwl.get_src_component(new_cons), m.cons)
 
+        quadratic = n_to_pwl.get_transformed_quadratic_constraints(m)
+        self.assertEqual(len(quadratic), 0)
+        nonlinear = n_to_pwl.get_transformed_nonlinear_constraints(m)
+        self.assertEqual(len(nonlinear), 1)
+        self.assertIn(m.cons, nonlinear)
+
     def test_log_constraint_uniform_grid(self):
         m = self.make_model()
 
