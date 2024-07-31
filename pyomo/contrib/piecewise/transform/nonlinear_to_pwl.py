@@ -72,8 +72,12 @@ _quadratic_repn_visitor = QuadraticRepnVisitor(
 
 
 class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
-    __slots__ = ('transformed_component', 'src_component', 'transformed_constraints',
-                 'transformed_objectives')
+    __slots__ = (
+        'transformed_component',
+        'src_component',
+        'transformed_constraints',
+        'transformed_objectives',
+    )
 
     def __init__(self):
         self.transformed_component = ComponentMap()
@@ -607,8 +611,7 @@ class NonlinearToPWL(Transformation):
         self, expr, obj, trans_block, config, approximate_quadratic
     ):
         expr_type, needs_approximating = self._needs_approximating(
-            expr,
-            approximate_quadratic
+            expr, approximate_quadratic
         )
         if not needs_approximating:
             return None, expr_type
@@ -690,7 +693,7 @@ class NonlinearToPWL(Transformation):
     def get_transformed_quadratic_constraints(self, model):
         """
         Given a model that has been transformed with contrib.piecewise.nonlinear_to_pwl,
-        return the list of quadratic Constraints that were approximated with 
+        return the list of quadratic Constraints that were approximated with
         PiecewiseLinearFunctions
         """
         return model.private_data().transformed_constraints[ExprType.QUADRATIC]
@@ -706,7 +709,7 @@ class NonlinearToPWL(Transformation):
     def get_transformed_quadratic_objectives(self, model):
         """
         Given a model that has been transformed with contrib.piecewise.nonlinear_to_pwl,
-        return the list of quadratic Constraints that were approximated with 
+        return the list of quadratic Constraints that were approximated with
         PiecewiseLinearFunctions
         """
         return model.private_data().transformed_objectives[ExprType.QUADRATIC]

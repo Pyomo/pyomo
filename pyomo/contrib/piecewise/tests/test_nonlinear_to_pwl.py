@@ -17,7 +17,12 @@ from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
 )
 from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
 from pyomo.environ import (
-    ConcreteModel, Var, Constraint, TransformationFactory, log, Objective
+    ConcreteModel,
+    Var,
+    Constraint,
+    TransformationFactory,
+    log,
+    Objective,
 )
 
 ## debug
@@ -120,7 +125,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
 
     def test_do_not_transform_quadratic_constraint(self):
         m = self.make_model()
-        m.quad = Constraint(expr=m.x ** 2 <= 9)
+        m.quad = Constraint(expr=m.x**2 <= 9)
         m.lin = Constraint(expr=m.x >= 2)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
@@ -128,7 +133,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
             m,
             num_points=3,
             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-            approximate_quadratic_constraints=False
+            approximate_quadratic_constraints=False,
         )
 
         # cons is transformed
@@ -151,14 +156,14 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
 
     def test_constraint_target(self):
         m = self.make_model()
-        m.quad = Constraint(expr=m.x ** 2 <= 9)
+        m.quad = Constraint(expr=m.x**2 <= 9)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
             m,
             num_points=3,
             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-            targets=[m.cons]
+            targets=[m.cons],
         )
 
         # cons is transformed
@@ -179,39 +184,38 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
 
     def test_crazy_target_error(self):
         m = self.make_model()
-        
+
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         with self.assertRaisesRegex(
-                ValueError,
-                "Target 'x' is not a Block, Constraint, or Objective. It "
-                "is of type '<class 'pyomo.core.base.var.ScalarVar'>' and cannot "
-                "be transformed."
+            ValueError,
+            "Target 'x' is not a Block, Constraint, or Objective. It "
+            "is of type '<class 'pyomo.core.base.var.ScalarVar'>' and cannot "
+            "be transformed.",
         ):
             n_to_pwl.apply_to(
                 m,
                 num_points=3,
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-                targets=[m.x]
+                targets=[m.x],
             )
 
     def test_cannot_approximate_constraints_with_unbounded_vars(self):
         m = ConcreteModel()
         m.x = Var()
-        m.quad = Constraint(expr=m.x ** 2 <= 9)
+        m.quad = Constraint(expr=m.x**2 <= 9)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         with self.assertRaisesRegex(
-                ValueError,
-                "Cannot automatically approximate constraints with unbounded " 
-                "variables. Var 'x' appearing in component 'quad' is missing " 
-                "at least one bound"
+            ValueError,
+            "Cannot automatically approximate constraints with unbounded "
+            "variables. Var 'x' appearing in component 'quad' is missing "
+            "at least one bound",
         ):
             n_to_pwl.apply_to(
                 m,
                 num_points=3,
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             )
-
 
     # def test_log_constraint_lmt_uniform_sample(self):
     #     m = self.make_model()
@@ -245,31 +249,26 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         m = ConcreteModel()
         m.x1 = Var(bounds=(0, 3))
         m.x2 = Var(bounds=(1, 7))
-        m.obj = Objective(expr=m.x1 ** 2 + m.x2 ** 2)
+        m.obj = Objective(expr=m.x1**2 + m.x2**2)
 
         return m
 
     def check_pw_linear_paraboloid(self, m, pwlf, x1, x2, y1, y2):
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-        points = [
-            (x1, y1),
-            (x1, y2),
-            (x2, y1),
-            (x2, y2),
-        ]
+        points = [(x1, y1), (x1, y2), (x2, y1), (x2, y2)]
         self.assertEqual(pwlf._points, points)
         self.assertEqual(pwlf._simplices, [(0, 1, 3), (0, 2, 3)])
         self.assertEqual(len(pwlf._linear_functions), 2)
 
         # just check that the linear functions make sense--they intersect the
         # paraboloid at the vertices of the simplices.
-        self.assertAlmostEqual(pwlf._linear_functions[0](x1, y1), x1 **2 + y1 ** 2)
-        self.assertAlmostEqual(pwlf._linear_functions[0](x1, y2), x1 **2 + y2 ** 2)
-        self.assertAlmostEqual(pwlf._linear_functions[0](x2, y2), x2 **2 + y2 ** 2)
+        self.assertAlmostEqual(pwlf._linear_functions[0](x1, y1), x1**2 + y1**2)
+        self.assertAlmostEqual(pwlf._linear_functions[0](x1, y2), x1**2 + y2**2)
+        self.assertAlmostEqual(pwlf._linear_functions[0](x2, y2), x2**2 + y2**2)
 
-        self.assertAlmostEqual(pwlf._linear_functions[1](x1, y1), x1 ** 2 + y1 ** 2)
-        self.assertAlmostEqual(pwlf._linear_functions[1](x2, y1), x2 ** 2 + y1 ** 2)
-        self.assertAlmostEqual(pwlf._linear_functions[1](x2, y2), x2 ** 2 + y2 ** 2)
+        self.assertAlmostEqual(pwlf._linear_functions[1](x1, y1), x1**2 + y1**2)
+        self.assertAlmostEqual(pwlf._linear_functions[1](x2, y1), x2**2 + y1**2)
+        self.assertAlmostEqual(pwlf._linear_functions[1](x2, y2), x2**2 + y2**2)
 
         self.assertEqual(len(pwlf._expressions), 1)
         new_obj = n_to_pwl.get_transformed_component(m.obj)
@@ -292,8 +291,9 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
-            m, num_points=2,
-            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID
+            m,
+            num_points=2,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
         )
 
         # check obj is transformed
@@ -315,16 +315,16 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
     def test_objective_target(self):
         m = self.make_paraboloid_model()
 
-        m.some_other_nonlinear_constraint = Constraint(expr=m.x1 ** 3 + m.x2 <= 6)
+        m.some_other_nonlinear_constraint = Constraint(expr=m.x1**3 + m.x2 <= 6)
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
-            m, num_points=2,
+            m,
+            num_points=2,
             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-            targets=[m.obj]
+            targets=[m.obj],
         )
 
-        
         # check obj is transformed
         self.assertFalse(m.obj.active)
 
@@ -349,11 +349,12 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
-            m, num_points=2,
+            m,
+            num_points=2,
             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-            approximate_quadratic_objectives=False
+            approximate_quadratic_objectives=False,
         )
-        
+
         # check obj is *not* transformed
         self.assertTrue(m.obj.active)
 
@@ -365,7 +366,7 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(quadratic), 0)
         nonlinear = n_to_pwl.get_transformed_nonlinear_objectives(m)
         self.assertEqual(len(nonlinear), 0)
-        
+
 
 # class TestNonlinearToPWLIntegration(unittest.TestCase):
 #     def test_Ali_example(self):
