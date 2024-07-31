@@ -408,7 +408,7 @@ def construct_dr_polishing_problem(master_data, config):
     polishing_model.epigraph_obj.deactivate()
 
     decision_rule_vars = nominal_polishing_block.decision_rule_vars
-    nominal_polishing_block.polishing_vars = polishing_vars = []
+    polishing_model.polishing_vars = polishing_vars = []
     for idx, indexed_dr_var in enumerate(decision_rule_vars):
         # declare auxiliary 'polishing' variables.
         # these are meant to represent the absolute values
@@ -443,11 +443,11 @@ def construct_dr_polishing_problem(master_data, config):
         polishing_absolute_value_ub_cons = Constraint(indexed_polishing_var.index_set())
 
         # add indexed constraints to polishing model
-        nominal_polishing_block.add_component(
+        polishing_model.add_component(
             unique_component_name(polishing_model, f"polishing_abs_val_lb_con_{idx}"),
             polishing_absolute_value_lb_cons,
         )
-        nominal_polishing_block.add_component(
+        polishing_model.add_component(
             unique_component_name(polishing_model, f"polishing_abs_val_ub_con_{idx}"),
             polishing_absolute_value_ub_cons,
         )
