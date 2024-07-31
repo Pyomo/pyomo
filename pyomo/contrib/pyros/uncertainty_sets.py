@@ -661,9 +661,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             param_var.setlb(lb)
             param_var.setub(ub)
 
-    def compute_auxiliary_param_vals(self, point, solver=None):
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
         """
-        Compute auxiliary parameter values for a given point.
+        Compute auxiliary uncertain parameter values for a given point.
+        The point need not be in the uncertainty set.
 
         Parameters
         ----------
@@ -676,16 +677,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Returns
         -------
         aux_space_pt : numpy.ndarray
-            Computed auxiliary parameter values.
-        aux_space_pt_feasible : bool
-            True if conclusion made that auxiliary values are
-            feasible, False otherwise.
-
-        Raises
-        ------
-        ValueError
-            If conclusion on feasibility of auxiliary values
-            cannot be made.
+            Computed auxiliary uncertain parameter values.
         """
         raise NotImplementedError(
             f"Auxiliary parameter computation not supported for {type(self).__name__}."
@@ -1230,33 +1222,18 @@ class CardinalitySet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
-    @copy_docstring(UncertaintySet.compute_auxiliary_param_vals)
-    def compute_auxiliary_param_vals(self, point, solver=None):
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
         point_arr = np.array(point)
 
-        if np.allclose(point_arr, self.origin):
-            return np.zeros(self.dim), True
-
-        aux_space_pt = np.empty(self.dim)
-        is_zero_deviation_off_origin = np.logical_and(
-            self.positive_deviation == 0, point_arr != self.origin
-        )
-        if np.any(is_zero_deviation_off_origin):
-            return np.full(self.dim, np.nan), False
-
         is_dev_nonzero = self.positive_deviation != 0
+        aux_space_pt = np.empty(self.dim)
         aux_space_pt[is_dev_nonzero] = (
             point_arr[is_dev_nonzero] - self.origin[is_dev_nonzero]
         ) / self.positive_deviation[is_dev_nonzero]
         aux_space_pt[self.positive_deviation == 0] = 0
 
-        aux_space_pt_feasible = (
-            aux_space_pt.sum() <= self.gamma
-            and np.all(0 <= aux_space_pt)
-            and np.all(aux_space_pt <= 1)
-        )
-
-        return aux_space_pt, aux_space_pt_feasible
+        return aux_space_pt
 
     def point_in_set(self, point):
         """
@@ -1272,8 +1249,13 @@ class CardinalitySet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        _, aux_space_pt_feasible = self.compute_auxiliary_param_vals(point)
-        return aux_space_pt_feasible
+        aux_space_pt = self.compute_auxiliary_uncertain_param_vals(point)
+        return (
+            np.all(point == self.origin + self.positive_deviation * aux_space_pt)
+            and aux_space_pt.sum() <= self.gamma
+            and np.all(0 <= aux_space_pt)
+            and np.all(aux_space_pt <= 1)
+        )
 
 
 class PolyhedralSet(UncertaintySet):
@@ -2075,28 +2057,19 @@ class FactorModelSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
-    @copy_docstring(UncertaintySet.compute_auxiliary_param_vals)
-    def compute_auxiliary_param_vals(self, point, solver=None):
+    @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
+    def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
         point_arr = np.array(point)
-        if np.allclose(point_arr, self.origin):
-            return np.zeros(self.number_of_factors), True
 
         psi_mat_rank = np.linalg.matrix_rank(self.psi_mat)
         is_psi_full_column_rank = psi_mat_rank == self.number_of_factors
         if is_psi_full_column_rank:
             # pseudoinverse uniquely determines the auxiliary values
-            pinv_psi = np.linalg.pinv(self.psi_mat)
-            aux_space_pt = pinv_psi @ (point_arr - self.origin)
-            tol = 1e-8
-            is_aux_pt_feasible = abs(
-                aux_space_pt.sum()
-            ) <= self.beta * self.number_of_factors + tol and np.all(
-                np.abs(aux_space_pt) <= 1 + tol
-            )
-            return aux_space_pt, is_aux_pt_feasible
+            return np.linalg.pinv(self.psi_mat) @ (point_arr - self.origin)
         else:
             # guard against possible changes to individual entries,
             # rows, or columns after `psi_mat` setter invoked
+            # that may render `psi_mat` rank deficient
             raise ValueError(
                 "Factor loading matrix `psi_mat` must be full column rank. "
                 f"(There are {self.number_of_factors} factors/columns, but"
@@ -2117,8 +2090,12 @@ class FactorModelSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
-        _, is_aux_pt_feasible = self.compute_auxiliary_param_vals(point)
-        return is_aux_pt_feasible
+        aux_space_pt = self.compute_auxiliary_uncertain_param_vals(point)
+        tol = 1e-8
+        return (
+            abs(aux_space_pt.sum()) <= self.beta * self.number_of_factors + tol
+            and np.all(np.abs(aux_space_pt) <= 1 + tol)
+        )
 
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
