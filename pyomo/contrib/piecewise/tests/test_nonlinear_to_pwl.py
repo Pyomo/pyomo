@@ -16,7 +16,9 @@ from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     DomainPartitioningMethod,
 )
 from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
-from pyomo.environ import ConcreteModel, Var, Constraint, TransformationFactory, log
+from pyomo.environ import (
+    ConcreteModel, Var, Constraint, TransformationFactory, log, Objective
+)
 
 ## debug
 from pytest import set_trace
@@ -116,6 +118,101 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         x3 = 9.556428757689245
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
+    def test_do_not_transform_quadratic_constraint(self):
+        m = self.make_model()
+        m.quad = Constraint(expr=m.x ** 2 <= 9)
+        m.lin = Constraint(expr=m.x >= 2)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=3,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            approximate_quadratic_constraints=False
+        )
+
+        # cons is transformed
+        self.assertFalse(m.cons.active)
+
+        pwlf = list(
+            m.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
+        points = [(1.0009,), (5.5,), (9.9991,)]
+        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
+
+        # quad is not
+        self.assertTrue(m.quad.active)
+        # neither is the linear one
+        self.assertTrue(m.lin.active)
+
+    def test_constraint_target(self):
+        m = self.make_model()
+        m.quad = Constraint(expr=m.x ** 2 <= 9)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=3,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            targets=[m.cons]
+        )
+
+        # cons is transformed
+        self.assertFalse(m.cons.active)
+
+        pwlf = list(
+            m.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
+        points = [(1.0009,), (5.5,), (9.9991,)]
+        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+        self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
+
+        # quad is not
+        self.assertTrue(m.quad.active)
+
+    def test_crazy_target_error(self):
+        m = self.make_model()
+        
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        with self.assertRaisesRegex(
+                ValueError,
+                "Target 'x' is not a Block, Constraint, or Objective. It "
+                "is of type '<class 'pyomo.core.base.var.ScalarVar'>' and cannot "
+                "be transformed."
+        ):
+            n_to_pwl.apply_to(
+                m,
+                num_points=3,
+                domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+                targets=[m.x]
+            )
+
+    def test_cannot_approximate_constraints_with_unbounded_vars(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.quad = Constraint(expr=m.x ** 2 <= 9)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        with self.assertRaisesRegex(
+                ValueError,
+                "Cannot automatically approximate constraints with unbounded " 
+                "variables. Var 'x' appearing in component 'quad' is missing " 
+                "at least one bound"
+        ):
+            n_to_pwl.apply_to(
+                m,
+                num_points=3,
+                domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            )
+
+
     # def test_log_constraint_lmt_uniform_sample(self):
     #     m = self.make_model()
 
@@ -143,63 +240,190 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
     #     self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
 
-class TestNonlinearToPWLIntegration(unittest.TestCase):
-    def test_Ali_example(self):
+class TestNonlinearToPWL_2D(unittest.TestCase):
+    def make_paraboloid_model(self):
         m = ConcreteModel()
-        m.flow_super_heated_vapor = Var()
-        m.flow_super_heated_vapor.fix(0.4586949988166174)
-        m.super_heated_vapor_temperature = Var(bounds=(31, 200), initialize=45)
-        m.evaporator_condensate_temperature = Var(
-            bounds=(29, 120.8291392028045), initialize=30
-        )
-        m.LMTD = Var(bounds=(0, 130.61608989795093), initialize=1)
-        m.evaporator_condensate_enthalpy = Var(
-            bounds=(-15836.847, -15510.210751855624), initialize=100
-        )
-        m.evaporator_condensate_vapor_enthalpy = Var(
-            bounds=(-13416.64, -13247.674383866839), initialize=100
-        )
-        m.heat_transfer_coef = Var(
-            bounds=(1.9936854577372858, 5.995319594088982), initialize=0.1
-        )
-        m.evaporator_brine_temperature = Var(
-            bounds=(27, 118.82913920280366), initialize=35
-        )
-        m.each_evaporator_area = Var()
+        m.x1 = Var(bounds=(0, 3))
+        m.x2 = Var(bounds=(1, 7))
+        m.obj = Objective(expr=m.x1 ** 2 + m.x2 ** 2)
 
-        m.c = Constraint(
-            expr=m.each_evaporator_area
-            == (
-                1.873
-                * m.flow_super_heated_vapor
-                * (
-                    m.super_heated_vapor_temperature
-                    - m.evaporator_condensate_temperature
-                )
-                / (100 * m.LMTD)
-                + m.flow_super_heated_vapor
-                * (
-                    m.evaporator_condensate_vapor_enthalpy
-                    - m.evaporator_condensate_enthalpy
-                )
-                / (
-                    m.heat_transfer_coef
-                    * (
-                        m.evaporator_condensate_temperature
-                        - m.evaporator_brine_temperature
-                    )
-                )
-            )
-        )
+        return m
+
+    def check_pw_linear_paraboloid(self, m, pwlf, x1, x2, y1, y2):
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        points = [
+            (x1, y1),
+            (x1, y2),
+            (x2, y1),
+            (x2, y2),
+        ]
+        self.assertEqual(pwlf._points, points)
+        self.assertEqual(pwlf._simplices, [(0, 1, 3), (0, 2, 3)])
+        self.assertEqual(len(pwlf._linear_functions), 2)
+
+        # just check that the linear functions make sense--they intersect the
+        # paraboloid at the vertices of the simplices.
+        self.assertAlmostEqual(pwlf._linear_functions[0](x1, y1), x1 **2 + y1 ** 2)
+        self.assertAlmostEqual(pwlf._linear_functions[0](x1, y2), x1 **2 + y2 ** 2)
+        self.assertAlmostEqual(pwlf._linear_functions[0](x2, y2), x2 **2 + y2 ** 2)
+
+        self.assertAlmostEqual(pwlf._linear_functions[1](x1, y1), x1 ** 2 + y1 ** 2)
+        self.assertAlmostEqual(pwlf._linear_functions[1](x2, y1), x2 ** 2 + y1 ** 2)
+        self.assertAlmostEqual(pwlf._linear_functions[1](x2, y2), x2 ** 2 + y2 ** 2)
+
+        self.assertEqual(len(pwlf._expressions), 1)
+        new_obj = n_to_pwl.get_transformed_component(m.obj)
+        self.assertTrue(new_obj.active)
+        self.assertIs(new_obj.expr, pwlf._expressions[id(new_obj.expr.expr)])
+        self.assertIs(n_to_pwl.get_src_component(new_obj), m.obj)
+
+        quadratic = n_to_pwl.get_transformed_quadratic_constraints(m)
+        self.assertEqual(len(quadratic), 0)
+        nonlinear = n_to_pwl.get_transformed_nonlinear_constraints(m)
+        self.assertEqual(len(nonlinear), 0)
+        quadratic = n_to_pwl.get_transformed_quadratic_objectives(m)
+        self.assertEqual(len(quadratic), 1)
+        self.assertIn(m.obj, quadratic)
+        nonlinear = n_to_pwl.get_transformed_nonlinear_objectives(m)
+        self.assertEqual(len(nonlinear), 0)
+
+    def test_paraboloid_objective_uniform_grid(self):
+        m = self.make_paraboloid_model()
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
-            m,
-            num_points=3,
-            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            m, num_points=2,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID
         )
 
-        m.pprint()
+        # check obj is transformed
+        self.assertFalse(m.obj.active)
 
-        from pyomo.environ import SolverFactory
-        SolverFactory('gurobi').solve(m, tee=True)
+        pwlf = list(
+            m.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
+        x1 = 0.00030000000000000003
+        x2 = 2.9997
+        y1 = 1.0006
+        y2 = 6.9994
+
+        self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
+
+    def test_objective_target(self):
+        m = self.make_paraboloid_model()
+
+        m.some_other_nonlinear_constraint = Constraint(expr=m.x1 ** 3 + m.x2 <= 6)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m, num_points=2,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            targets=[m.obj]
+        )
+
+        
+        # check obj is transformed
+        self.assertFalse(m.obj.active)
+
+        pwlf = list(
+            m.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
+        x1 = 0.00030000000000000003
+        x2 = 2.9997
+        y1 = 1.0006
+        y2 = 6.9994
+
+        self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
+
+        # and check that the constraint isn't transformed
+        self.assertTrue(m.some_other_nonlinear_constraint.active)
+
+    def test_do_not_transform_quadratic_objective(self):
+        m = self.make_paraboloid_model()
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m, num_points=2,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            approximate_quadratic_objectives=False
+        )
+        
+        # check obj is *not* transformed
+        self.assertTrue(m.obj.active)
+
+        quadratic = n_to_pwl.get_transformed_quadratic_constraints(m)
+        self.assertEqual(len(quadratic), 0)
+        nonlinear = n_to_pwl.get_transformed_nonlinear_constraints(m)
+        self.assertEqual(len(nonlinear), 0)
+        quadratic = n_to_pwl.get_transformed_quadratic_objectives(m)
+        self.assertEqual(len(quadratic), 0)
+        nonlinear = n_to_pwl.get_transformed_nonlinear_objectives(m)
+        self.assertEqual(len(nonlinear), 0)
+        
+
+# class TestNonlinearToPWLIntegration(unittest.TestCase):
+#     def test_Ali_example(self):
+#         m = ConcreteModel()
+#         m.flow_super_heated_vapor = Var()
+#         m.flow_super_heated_vapor.fix(0.4586949988166174)
+#         m.super_heated_vapor_temperature = Var(bounds=(31, 200), initialize=45)
+#         m.evaporator_condensate_temperature = Var(
+#             bounds=(29, 120.8291392028045), initialize=30
+#         )
+#         m.LMTD = Var(bounds=(0, 130.61608989795093), initialize=1)
+#         m.evaporator_condensate_enthalpy = Var(
+#             bounds=(-15836.847, -15510.210751855624), initialize=100
+#         )
+#         m.evaporator_condensate_vapor_enthalpy = Var(
+#             bounds=(-13416.64, -13247.674383866839), initialize=100
+#         )
+#         m.heat_transfer_coef = Var(
+#             bounds=(1.9936854577372858, 5.995319594088982), initialize=0.1
+#         )
+#         m.evaporator_brine_temperature = Var(
+#             bounds=(27, 118.82913920280366), initialize=35
+#         )
+#         m.each_evaporator_area = Var()
+
+#         m.c = Constraint(
+#             expr=m.each_evaporator_area
+#             == (
+#                 1.873
+#                 * m.flow_super_heated_vapor
+#                 * (
+#                     m.super_heated_vapor_temperature
+#                     - m.evaporator_condensate_temperature
+#                 )
+#                 / (100 * m.LMTD)
+#                 + m.flow_super_heated_vapor
+#                 * (
+#                     m.evaporator_condensate_vapor_enthalpy
+#                     - m.evaporator_condensate_enthalpy
+#                 )
+#                 / (
+#                     m.heat_transfer_coef
+#                     * (
+#                         m.evaporator_condensate_temperature
+#                         - m.evaporator_brine_temperature
+#                     )
+#                 )
+#             )
+#         )
+
+#         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+#         n_to_pwl.apply_to(
+#             m,
+#             num_points=3,
+#             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+#         )
+
+#         m.pprint()
+
+#         from pyomo.environ import SolverFactory
+#         SolverFactory('gurobi').solve(m, tee=True)
