@@ -215,14 +215,14 @@ class TestConstructSeparationProblem(unittest.TestCase):
         config.uncertainty_set = FactorModelSet(
             origin=[1, 0],
             beta=1,
-            number_of_factors=3,
-            psi_mat=[[1, 2.5, 1], [0, 1, 0.5]],
+            number_of_factors=2,
+            psi_mat=[[1, 2.5], [0, 1]],
         )
         separation_model = construct_separation_problem(model_data, config)
         uncertainty_blk = separation_model.uncertainty
         *matrix_product_cons, aux_sum_con = uncertainty_blk.uncertainty_cons_list
         paramvar1, paramvar2 = uncertainty_blk.uncertain_param_var_list
-        auxvar1, auxvar2, auxvar3 = uncertainty_blk.auxiliary_var_list
+        auxvar1, auxvar2 = uncertainty_blk.auxiliary_var_list
 
         self.assertEqual(len(matrix_product_cons), 2)
         self.assertTrue(matrix_product_cons[0].active)
@@ -231,17 +231,17 @@ class TestConstructSeparationProblem(unittest.TestCase):
         assertExpressionsEqual(
             self,
             aux_sum_con.expr,
-            RangedExpression((-3, auxvar1 + auxvar2 + auxvar3, 3), False),
+            RangedExpression((-2, auxvar1 + auxvar2, 2), False),
         )
         assertExpressionsEqual(
             self,
             matrix_product_cons[0].expr,
-            auxvar1 + 2.5 * auxvar2 + auxvar3 + 1 == paramvar1,
+            auxvar1 + 2.5 * auxvar2 + 1 == paramvar1,
         )
         assertExpressionsEqual(
             self,
             matrix_product_cons[1].expr,
-            0.0 * auxvar1 + auxvar2 + 0.5 * auxvar3 == paramvar2,
+            0.0 * auxvar1 + auxvar2 == paramvar2,
         )
 
         # none of the vars should be fixed
@@ -249,16 +249,14 @@ class TestConstructSeparationProblem(unittest.TestCase):
         self.assertFalse(paramvar2.fixed)
         self.assertFalse(auxvar1.fixed)
         self.assertFalse(auxvar2.fixed)
-        self.assertFalse(auxvar3.fixed)
 
         # factor set auxiliary variables
         self.assertEqual(auxvar1.bounds, (-1, 1))
         self.assertEqual(auxvar2.bounds, (-1, 1))
-        self.assertEqual(auxvar3.bounds, (-1, 1))
 
         # factor set bounds are tighter
-        self.assertEqual(paramvar1.bounds, (-3.5, 5.5))
-        self.assertEqual(paramvar2.bounds, (-1.5, 1.5))
+        self.assertEqual(paramvar1.bounds, (-2.5, 4.5))
+        self.assertEqual(paramvar2.bounds, (-1.0, 1.0))
 
 
 if __name__ == "__main__":

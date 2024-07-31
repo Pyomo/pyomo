@@ -1791,11 +1791,12 @@ class FactorModelSet(UncertaintySet):
         Uncertain parameter values around which deviations are
         restrained.
     number_of_factors : int
-        Natural number representing the dimensionality of the
+        Natural number representing the dimension of the
         space to which the set projects.
     psi_mat : (N, F) array_like
-        Matrix designating each uncertain parameter's contribution to
-        each factor.  Each row is associated with a separate uncertain
+        Matrix, of full column rank, designating each uncertain
+        parameter's contribution to each factor.
+        Each row is associated with a separate uncertain
         parameter.  Each column is associated with a separate factor.
         Number of columns `F` of `psi_mat` should be equal to
         `number_of_factors`.
@@ -1813,7 +1814,7 @@ class FactorModelSet(UncertaintySet):
     >>> fset = FactorModelSet(
     ...     origin=np.zeros(4),
     ...     number_of_factors=2,
-    ...     psi_mat=np.full(shape=(4, 2), fill_value=0.1),
+    ...     psi_mat=[[0, 0.1], [0, 0.1], [0.1, 0], [0.1, 0]],
     ...     beta=0.5,
     ... )
     >>> fset.origin
@@ -1821,10 +1822,10 @@ class FactorModelSet(UncertaintySet):
     >>> fset.number_of_factors
     2
     >>> fset.psi_mat
-    array([[0.1, 0.1],
-           [0.1, 0.1],
-           [0.1, 0.1],
-           [0.1, 0.1]])
+    array([[0. , 0.1],
+           [0. , 0.1],
+           [0.1, 0. ],
+           [0.1, 0. ]])
     >>> fset.beta
     0.5
     """
@@ -1876,13 +1877,15 @@ class FactorModelSet(UncertaintySet):
     @property
     def number_of_factors(self):
         """
-        int : Natural number representing the dimensionality `F`
+        int : Natural number representing the dimension `F`
         of the space to which the set projects.
 
-        This attribute is immutable, and may only be set at
-        object construction. Typically, the number of factors
-        is significantly less than the set dimension, but no
-        restriction to that end is imposed here.
+        This attribute is immutable, may only be set at
+        object construction, and must be equal to the number of
+        columns of the factor loading matrix ``self.psi_mat``.
+        Therefore, since we also require that ``self.psi_mat``
+        be full column rank, `number_of_factors`
+        must not exceed the set dimension.
         """
         return self._number_of_factors
 
@@ -1903,10 +1906,10 @@ class FactorModelSet(UncertaintySet):
     @property
     def psi_mat(self):
         """
-        (N, F) numpy.ndarray : Matrix designating each
-        uncertain parameter's contribution to each factor. Each row is
-        associated with a separate uncertain parameter. Each column with
-        a separate factor.
+        (N, F) numpy.ndarray : Factor loading matrix, i.e., a full
+        column rank matrix for which each entry indicates how strongly
+        the factor corresponding to the entry's column is related
+        to the uncertain parameter corresponding to the entry's row.
         """
         return self._psi_mat
 
@@ -1933,13 +1936,13 @@ class FactorModelSet(UncertaintySet):
                 f"(provided shape {psi_mat_arr.shape})"
             )
 
-        # check values acceptable
-        for column in psi_mat_arr.T:
-            if np.allclose(column, 0):
-                raise ValueError(
-                    "Each column of attribute 'psi_mat' should have at least "
-                    "one nonzero entry"
-                )
+        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
+        is_full_column_rank = psi_mat_rank == self.number_of_factors
+        if not is_full_column_rank:
+            raise ValueError(
+                "Attribute 'psi_mat' should be full column rank. "
+                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.)"
+            )
 
         self._psi_mat = psi_mat_arr
 
@@ -1954,7 +1957,7 @@ class FactorModelSet(UncertaintySet):
         that as many factors will be above 0 as there will be below 0
         (i.e., "zero-net-alpha" model). If ``beta = 1``,
         then the set is numerically equivalent to a `BoxSet` with bounds
-        ``[origin - psi @ np.ones(F), origin + psi @ np.ones(F)].T``.
+        ``[self.origin - psi @ np.ones(F), self.origin + psi @ np.ones(F)].T``.
         """
         return self._beta
 
@@ -2078,10 +2081,8 @@ class FactorModelSet(UncertaintySet):
         if np.allclose(point_arr, self.origin):
             return np.zeros(self.number_of_factors), True
 
-        is_psi_full_column_rank = (
-            self.dim >= self.number_of_factors
-            and np.linalg.matrix_rank(self.psi_mat) == self.number_of_factors
-        )
+        psi_mat_rank = np.linalg.matrix_rank(self.psi_mat)
+        is_psi_full_column_rank = psi_mat_rank == self.number_of_factors
         if is_psi_full_column_rank:
             # pseudoinverse uniquely determines the auxiliary values
             pinv_psi = np.linalg.pinv(self.psi_mat)
@@ -2094,31 +2095,13 @@ class FactorModelSet(UncertaintySet):
             )
             return aux_space_pt, is_aux_pt_feasible
         else:
-            # there may be multiple feasible values or no feasible
-            # values. check with LP
-            res = sp.optimize.linprog(
-                c=np.zeros(self.number_of_factors),
-                A_eq=self.psi_mat,
-                b_eq=point_arr - self.origin,
-                A_ub=np.vstack(
-                    [np.ones(self.number_of_factors), -np.ones(self.number_of_factors)]
-                ),
-                b_ub=np.full(2, self.beta * self.number_of_factors),
-                bounds=(-1, 1),
-                method="highs",
+            # guard against possible changes to individual entries,
+            # rows, or columns after `psi_mat` setter invoked
+            raise ValueError(
+                "Factor loading matrix `psi_mat` must be full column rank. "
+                f"(There are {self.number_of_factors} factors/columns, but"
+                f"the matrix is of rank {psi_mat_rank}.)"
             )
-
-            # check termination
-            if res.success and res.status == 0:
-                return res.x, True
-            elif res.status == 2:
-                return res.x, False
-            else:
-                raise ValueError(
-                    f"Could not conclude whether a solution exists "
-                    "for the feasibility problem."
-                    f" Linprog results:\n {res} "
-                )
 
     def point_in_set(self, point):
         """

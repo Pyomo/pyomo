@@ -5,7 +5,12 @@ Tests for the PyROS UncertaintySet class and subclasses.
 import itertools as it
 import unittest
 
-from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
+from pyomo.common.dependencies import (
+    attempt_import,
+    numpy as np,
+    numpy_available,
+    scipy_available,
+)
 from pyomo.environ import SolverFactory
 from pyomo.core.base import (
     ConcreteModel,
@@ -35,9 +40,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+parameterized, param_available = attempt_import('parameterized')
 
-if not (numpy_available and scipy_available):
-    raise unittest.SkipTest('PyROS unit tests require parameterized, numpy, and scipy')
+if not (numpy_available and scipy_available and param_available):
+    raise unittest.SkipTest(
+        'PyROS preprocessor unit tests require parameterized, numpy, and scipy'
+    )
+parameterized = parameterized.parameterized
 
 # === Config args for testing
 global_solver = 'baron'
@@ -706,10 +715,12 @@ class TestFactorModelSet(unittest.TestCase):
         """
         exc_str = r".*'number_of_factors' must be a positive int \(provided value -1\)"
         with self.assertRaisesRegex(ValueError, exc_str):
-            FactorModelSet(origin=[0], number_of_factors=-1, psi_mat=[[1, 1]], beta=0.1)
+            FactorModelSet(
+                origin=[0], number_of_factors=-1, psi_mat=[[1, 2], [1, 1]], beta=0.1
+            )
 
         fset = FactorModelSet(
-            origin=[0], number_of_factors=2, psi_mat=[[1, 1]], beta=0.1
+            origin=[0, 1], number_of_factors=2, psi_mat=[[1, 2], [1, 1]], beta=0.1
         )
 
         exc_str = r".*'number_of_factors' is immutable"
@@ -746,67 +757,86 @@ class TestFactorModelSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, big_exc_str):
             fset.beta = big_beta
 
+    def test_error_on_rank_deficient_psi_mat(self):
+        """
+        Test exception raised if factor loading matrix `psi_mat`
+        is rank-deficient.
+        """
+        with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 3\)"):
+            # more columns than rows
+            FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=3,
+                psi_mat=[[1, -1, 1], [1, 0.1, 1]],
+                beta=1 / 6,
+            )
+        with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 2\)"):
+            # linearly dependent columns
+            FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=2,
+                psi_mat=[[1, -1], [1, -1]],
+                beta=1 / 6,
+            )
+
     @unittest.skipUnless(baron_available, "BARON is not available")
-    def test_compute_parameter_bounds(self):
+    @parameterized.expand([
+        # map beta to expected parameter bounds
+        ["beta0", 0, [(-2.0, 2.0), (0.1, 1.9), (-5.0, 9.0), (-4.0, 10.0)]],
+        ["beta1ov6", 1/6, [(-2.5, 2.5), (-0.4, 2.4), (-8.0, 12.0), (-7.0, 13.0)]],
+        ["beta1ov3", 1/3, [(-3.0, 3.0), (-0.9, 2.9), (-11.0, 15.0), (-10.0, 16.0)]],
+        ["beta1ov2", 1/2, [(-3.0, 3.0), (-0.95, 2.95), (-11.5, 15.5), (-10.5, 16.5)]],
+        ["beta2ov3", 2/3, [(-3.0, 3.0), (-1.0, 3.0), (-12.0, 16.0), (-11.0, 17.0)]],
+        ["beta7ov9", 7/9, [(-3.0, 3.0), (-31/30, 91/30), (-37/3, 49/3), (-34/3, 52/3)]],
+        ["beta1", 1, [(-3.0, 3.0), (-1.1, 3.1), (-13.0, 17.0), (-12.0, 18.0)]],
+    ])
+    def test_compute_parameter_bounds(self, name, beta, expected_param_bounds):
         """
         Test parameter bounds computations give expected results.
         """
         solver = SolverFactory("baron")
 
-        # cases where prior parameter bounds
-        # approximations were probably too tight
-        fset1 = FactorModelSet(
-            origin=[0, 0],
+        fset = FactorModelSet(
+            origin=[0, 1, 2, 3],
             number_of_factors=3,
-            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
-            beta=1 / 6,
-        )
-        fset2 = FactorModelSet(
-            origin=[0], number_of_factors=3, psi_mat=[[1, 6, 8]], beta=1 / 2
-        )
-        fset3 = FactorModelSet(
-            origin=[1], number_of_factors=2, psi_mat=[[1, 2]], beta=1 / 4
-        )
-        fset4 = FactorModelSet(
-            origin=[1], number_of_factors=3, psi_mat=[[-1, -6, -8]], beta=1 / 2
-        )
-        fset5 = FactorModelSet(
-            origin=[0], number_of_factors=3, psi_mat=[[-1.5, 3, 4]], beta=7 / 9
+            psi_mat=[[1, -1, 1], [1, 0.1, 1], [-1, -6, -8], [1, 6, 8]],
+            beta=beta,
         )
 
-        # check against hand-calculated bounds
-        self.assertEqual(fset1.parameter_bounds, [(-2.5, 2.5), (-1.4, 1.4)])
-        self.assertEqual(fset2.parameter_bounds, [(-13.5, 13.5)])
-        self.assertEqual(fset3.parameter_bounds, [(-0.5, 2.5)])
-        self.assertEqual(fset4.parameter_bounds, [(-12.5, 14.5)])
-        self.assertEqual(fset5.parameter_bounds, [(-8.5, 8.5)])
+        param_bounds = fset.parameter_bounds
+        # won't be exactly equal,
+        np.testing.assert_allclose(
+            param_bounds,
+            expected_param_bounds,
+            atol=1e-13,
+        )
 
         # check parameter bounds matches LP results
         # exactly for each case
-        for fset in [fset1, fset2, fset3, fset4]:
-            param_bounds = fset.parameter_bounds
-            solver_param_bounds = fset._compute_parameter_bounds(solver)
-            np.testing.assert_allclose(
-                param_bounds,
-                solver_param_bounds,
-                err_msg=(
-                    "Parameter bounds not consistent with LP values for "
-                    "FactorModelSet with parameterization:\n"
-                    f"F={fset.number_of_factors},\n"
-                    f"beta={fset.beta},\n"
-                    f"psi_mat={fset.psi_mat},\n"
-                    f"origin={fset.origin}."
-                ),
-            )
+        solver_param_bounds = fset._compute_parameter_bounds(solver)
+        np.testing.assert_allclose(
+            solver_param_bounds,
+            param_bounds,
+            err_msg=(
+                "Parameter bounds not consistent with LP values for "
+                "FactorModelSet with parameterization:\n"
+                f"F={fset.number_of_factors},\n"
+                f"beta={fset.beta},\n"
+                f"psi_mat={fset.psi_mat},\n"
+                f"origin={fset.origin}."
+            ),
+            # account for solver tolerances and numerical errors
+            atol=1e-4,
+        )
 
     def test_set_as_constraint(self):
         """
         Test method for setting up constraints works correctly.
         """
         fset = FactorModelSet(
-            origin=[1, 2],
+            origin=[0, 1, 2, 3],
             number_of_factors=3,
-            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
+            psi_mat=[[1, -1, 1], [1, 0.1, 1], [-1, -6, -8], [1, 6, 8]],
             beta=1 / 6,
         )
         uq = fset.set_as_constraint(uncertain_params=None)
@@ -818,7 +848,7 @@ class TestFactorModelSet(unittest.TestCase):
 
         *factor_model_matrix_cons, betaf_abs_val_con = uq.uncertainty_cons
 
-        self.assertEqual(len(factor_model_matrix_cons), 2)
+        self.assertEqual(len(factor_model_matrix_cons), 4)
         assertExpressionsEqual(
             self,
             factor_model_matrix_cons[0].expr,
@@ -826,7 +856,6 @@ class TestFactorModelSet(unittest.TestCase):
                 uq.auxiliary_vars[0]
                 + (-1.0) * uq.auxiliary_vars[1]
                 + uq.auxiliary_vars[2]
-                + 1
                 == uq.uncertain_param_vars[0]
             ),
         )
@@ -837,8 +866,30 @@ class TestFactorModelSet(unittest.TestCase):
                 uq.auxiliary_vars[0]
                 + 0.1 * uq.auxiliary_vars[1]
                 + uq.auxiliary_vars[2]
-                + 2
+                + 1
                 == uq.uncertain_param_vars[1]
+            ),
+        )
+        assertExpressionsEqual(
+            self,
+            factor_model_matrix_cons[2].expr,
+            (
+                (-1.0) * uq.auxiliary_vars[0]
+                + (-6.0) * uq.auxiliary_vars[1]
+                + (-8.0) * uq.auxiliary_vars[2]
+                + 2
+                == uq.uncertain_param_vars[2]
+            ),
+        )
+        assertExpressionsEqual(
+            self,
+            factor_model_matrix_cons[3].expr,
+            (
+                (1.0) * uq.auxiliary_vars[0]
+                + (6.0) * uq.auxiliary_vars[1]
+                + (8.0) * uq.auxiliary_vars[2]
+                + 3
+                == uq.uncertain_param_vars[3]
             ),
         )
 
@@ -874,7 +925,7 @@ class TestFactorModelSet(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, ".*valid component type"):
             box_set.set_as_constraint(uncertain_params=m.p1, block=m)
 
-    def test_point_in_set_skinny_psi_matrix(self):
+    def test_point_in_set(self):
         """
         Test point in set check works if psi matrix is skinny.
         """
@@ -915,64 +966,24 @@ class TestFactorModelSet(unittest.TestCase):
         self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [1, -1, -1]))
         self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [-1, -1, -1]))
 
-    def test_point_in_set_nonskinny_psi_matrix(self):
-        """
-        Test point in set check works if psi matrix is not
-        skinny.
-        """
-        fset = FactorModelSet(
-            origin=[0, 0],
-            number_of_factors=3,
-            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
-            beta=1 / 6,
-        )
-
-        self.assertTrue(fset.point_in_set(fset.origin))
-
-        for aux_space_pt in it.permutations([1, 0.5, -1]):
-            fset_pt_from_crit = fset.origin + fset.psi_mat @ aux_space_pt
-            self.assertTrue(
-                fset.point_in_set(fset_pt_from_crit),
-                msg=(
-                    f"Point {fset_pt_from_crit} generated from critical point "
-                    f"{aux_space_pt} of the auxiliary variable space "
-                    "is not in the set."
-                ),
-            )
-
-            fset_pt_from_neg_crit = fset.origin - fset.psi_mat @ aux_space_pt
-            self.assertTrue(
-                fset.point_in_set(fset_pt_from_neg_crit),
-                msg=(
-                    f"Point {fset_pt_from_neg_crit} generated from critical point "
-                    f"{aux_space_pt} of the auxiliary variable space "
-                    "is not in the set."
-                ),
-            )
-
-        # some points transformed from hypercube vertices.
-        # no such point should be in this instance of the set
-        self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [1, 1, 1]))
-        self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [1, 1, -1]))
-        self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [1, -1, -1]))
-        self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [-1, -1, -1]))
-
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
-        m.uncertain_param_vars = Var([0, 1], initialize=0)
+        m.uncertain_param_vars = Var(range(4), initialize=0)
         fset = FactorModelSet(
-            origin=[0, 0],
+            origin=[0, 1, 2, 3],
             number_of_factors=3,
-            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
-            beta=1 / 6,
+            psi_mat=[[1, -1, 1], [1, 0.1, 1], [-1, -6, -8], [1, 6, 8]],
+            beta=1,
         )
 
         fset._add_bounds_on_uncertain_parameters(
             global_solver=None,
             uncertain_param_vars=m.uncertain_param_vars,
         )
-        self.assertEqual(m.uncertain_param_vars[0].bounds, (-2.5, 2.5))
-        self.assertEqual(m.uncertain_param_vars[1].bounds, (-1.4, 1.4))
+        self.assertEqual(m.uncertain_param_vars[0].bounds, (-3.0, 3.0))
+        self.assertEqual(m.uncertain_param_vars[1].bounds, (-1.1, 3.1))
+        self.assertEqual(m.uncertain_param_vars[2].bounds, (-13.0, 17.0))
+        self.assertEqual(m.uncertain_param_vars[3].bounds, (-12.0, 18.0))
 
 
 class TestIntersectionSet(unittest.TestCase):
@@ -1160,14 +1171,12 @@ class TestIntersectionSet(unittest.TestCase):
 
         i_set = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
-            # this is just an origin-centered square
             set2=FactorModelSet(
                 origin=[0, 0],
-                number_of_factors=3,
+                number_of_factors=2,
                 beta=0.75,
-                psi_mat=[[1, 1, 0], [0, 1, 1]],
+                psi_mat=[[1, 1], [1, 2]],
             ),
-            # another origin-centered square
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
@@ -1177,7 +1186,7 @@ class TestIntersectionSet(unittest.TestCase):
 
         self.assertIs(uq.block, m)
         self.assertEqual(uq.uncertain_param_vars, [m.v1, m.v2])
-        self.assertEqual(len(uq.auxiliary_vars), 5)
+        self.assertEqual(len(uq.auxiliary_vars), 4)
         self.assertEqual(len(uq.uncertainty_cons), 9)
 
         # box set constraints
@@ -1197,43 +1206,42 @@ class TestIntersectionSet(unittest.TestCase):
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[2].expr,
-            aux_vars[0] + aux_vars[1] + 0 * aux_vars[2] == m.v1,
+            aux_vars[0] + aux_vars[1] == m.v1,
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[3].expr,
-            0 * aux_vars[0] + aux_vars[1] + aux_vars[2] == m.v2,
+            aux_vars[0] + 2 * aux_vars[1] == m.v2,
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[4].expr,
             RangedExpression(
-                (-2.25, aux_vars[0] + aux_vars[1] + aux_vars[2], 2.25),
+                (-1.5, aux_vars[0] + aux_vars[1], 1.5),
                 False,
             ),
         )
         self.assertEqual(aux_vars[0].bounds, (-1, 1))
         self.assertEqual(aux_vars[1].bounds, (-1, 1))
-        self.assertEqual(aux_vars[2].bounds, (-1, 1))
 
         # cardinality set constraints
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[5].expr,
-            -0.5 + 2 * aux_vars[3] == m.v1,
+            -0.5 + 2 * aux_vars[2] == m.v1,
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[6].expr,
-            -0.5 + 2 * aux_vars[4] == m.v2,
+            -0.5 + 2 * aux_vars[3] == m.v2,
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[7].expr,
-            sum(aux_vars[3:5]) <= 2,
+            sum(aux_vars[2:4]) <= 2,
         )
-        self.assertEqual(aux_vars[3].bounds, (0, 1))
-        self.assertEqual(uq.auxiliary_vars[4].bounds, (0, 1))
+        self.assertEqual(aux_vars[2].bounds, (0, 1))
+        self.assertEqual(uq.auxiliary_vars[3].bounds, (0, 1))
 
         # axis-aligned ellipsoid constraint
         assertExpressionsEqual(
@@ -1280,12 +1288,11 @@ class TestIntersectionSet(unittest.TestCase):
         """
         i_set = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
-            # this is just an origin-centered square
             set2=FactorModelSet(
                 origin=[0, 0],
-                number_of_factors=3,
+                number_of_factors=2,
                 beta=0.75,
-                psi_mat=[[1, 1, 0], [0, 1, 1]],
+                psi_mat=[[1, 1], [1, 2]],
             ),
             # another origin-centered square
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
@@ -1310,11 +1317,10 @@ class TestIntersectionSet(unittest.TestCase):
             # this is just an origin-centered square
             set2=FactorModelSet(
                 origin=[0, 0],
-                number_of_factors=3,
+                number_of_factors=2,
                 beta=0.75,
-                psi_mat=[[1, 1, 0], [0, 1, 1]],
+                psi_mat=[[1, 1], [1, 2]],
             ),
-            # another origin-centered square
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
@@ -1339,14 +1345,12 @@ class TestIntersectionSet(unittest.TestCase):
         m.uncertain_param_vars = Var([0, 1], initialize=0)
         iset = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
-            # this is just an origin-centered square
             set2=FactorModelSet(
                 origin=[0, 0],
-                number_of_factors=3,
+                number_of_factors=2,
                 beta=0.75,
-                psi_mat=[[1, 1, 0], [0, 1, 1]],
+                psi_mat=[[1, 1], [1, 2]],
             ),
-            # another origin-centered square
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
             # ellipsoid. this is enclosed in all the other sets
             set4=AxisAlignedEllipsoidalSet([0, 0], [0.25, 0.25]),
@@ -1356,8 +1360,10 @@ class TestIntersectionSet(unittest.TestCase):
             global_solver=SolverFactory("baron"),
             uncertain_param_vars=m.uncertain_param_vars,
         )
-        self.assertEqual(m.uncertain_param_vars[0].bounds, (-0.25, 0.25))
-        self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.25, 0.25))
+
+        # account for imprecision
+        np.testing.assert_allclose(m.uncertain_param_vars[0].bounds, (-0.25, 0.25))
+        np.testing.assert_allclose(m.uncertain_param_vars[1].bounds, (-0.25, 0.25))
 
 
 class TestCardinalitySet(unittest.TestCase):
