@@ -72,12 +72,14 @@ _quadratic_repn_visitor = QuadraticRepnVisitor(
 
 
 class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
-    __slots__ = ('transformed_component', 'src_component', 'transformed_constraints')
+    __slots__ = ('transformed_component', 'src_component', 'transformed_constraints',
+                 'transformed_objectives')
 
     def __init__(self):
         self.transformed_component = ComponentMap()
         self.src_component = ComponentMap()
         self.transformed_constraints = defaultdict(ComponentSet)
+        self.transformed_objectives = defaultdict(ComponentSet)
 
 
 Block.register_private_data_initializer(_NonlinearToPWLTransformationData)
@@ -432,6 +434,10 @@ class NonlinearToPWL(Transformation):
             points in order to partition the function domain.""",
         ),
     )
+    # TODO: Minimum dimension to additively decompose--(Only decompose if the
+    # dimension exceeds this.)
+
+    # TODO: incorporate Bashar's linear tree changes.
 
     def __init__(self):
         super(Transformation).__init__()
@@ -484,7 +490,7 @@ class NonlinearToPWL(Transformation):
                 raise ValueError(
                     "Target '%s' is not a Block, Constraint, or Objective. It "
                     "is of type '%s' and cannot be transformed."
-                    % (target.name, type(t))
+                    % (target.name, type(target))
                 )
 
     def _get_transformation_block(self, parent):
@@ -525,13 +531,14 @@ class NonlinearToPWL(Transformation):
         src_data_dict = cons.parent_block().private_data()
         constraints = cons.values() if cons.is_indexed() else (cons,)
         for c in constraints:
-            pw_approx = self._approximate_expression(
+            pw_approx, expr_type = self._approximate_expression(
                 c.body, c, trans_block, config, config.approximate_quadratic_constraints
             )
 
             if pw_approx is None:
                 # Didn't need approximated, nothing to do
                 continue
+            c.model().private_data().transformed_constraints[expr_type].add(c)
 
             idx = len(trans_block._pwl_cons)
             trans_block._pwl_cons[c.name, idx] = (c.lower, pw_approx, c.upper)
@@ -548,7 +555,7 @@ class NonlinearToPWL(Transformation):
         objectives = objective.values() if objective.is_indexed() else (objective,)
         src_data_dict = objective.parent_block().private_data()
         for obj in objectives:
-            pw_approx = self._approximate_expression(
+            pw_approx, expr_type = self._approximate_expression(
                 obj.expr,
                 obj,
                 trans_block,
@@ -559,6 +566,7 @@ class NonlinearToPWL(Transformation):
             if pw_approx is None:
                 # Didn't need approximated, nothing to do
                 continue
+            obj.model().private_data().transformed_objectives[expr_type].add(obj)
 
             new_obj = Objective(expr=pw_approx, sense=obj.sense)
             trans_block.add_component(
@@ -569,15 +577,14 @@ class NonlinearToPWL(Transformation):
 
             obj.deactivate()
 
-    def _get_bounds_list(self, var_list, parent_component):
+    def _get_bounds_list(self, var_list, obj):
         bounds = []
         for v in var_list:
             if None in v.bounds:
-                # ESJ TODO: Con is undefined--this is a bug!
                 raise ValueError(
                     "Cannot automatically approximate constraints with unbounded "
-                    "variables. Var '%s' appearining in component '%s' is missing "
-                    "at least one bound" % (con.name, v.name)
+                    "variables. Var '%s' appearing in component '%s' is missing "
+                    "at least one bound" % (v.name, obj.name)
                 )
             else:
                 bounds.append(v.bounds)
@@ -604,16 +611,14 @@ class NonlinearToPWL(Transformation):
             approximate_quadratic
         )
         if not needs_approximating:
-            return
-
-        obj.model().private_data().transformed_constraints[expr_type].add(obj)
+            return None, expr_type
 
         # Additively decompose expr and work on the pieces
         pwl_func = 0
         for k, subexpr in enumerate(
             _additively_decompose_expr(expr) if config.additively_decompose else (expr,)
         ):
-            # First check is this is a good idea
+            # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
             orig_values = ComponentMap((v, v.value) for v in expr_vars)
 
@@ -652,7 +657,7 @@ class NonlinearToPWL(Transformation):
             for v, val in orig_values.items():
                 v.value = val
 
-        return pwl_func
+        return pwl_func, expr_type
 
     def get_src_component(self, cons):
         data = cons.parent_block().private_data().src_component
@@ -675,7 +680,33 @@ class NonlinearToPWL(Transformation):
             )
 
     def get_transformed_nonlinear_constraints(self, model):
+        """
+        Given a model that has been transformed with contrib.piecewise.nonlinear_to_pwl,
+        return the list of general (not quadratic) nonlinear Constraints that were
+        approximated with PiecewiseLinearFunctions
+        """
         return model.private_data().transformed_constraints[ExprType.GENERAL]
 
     def get_transformed_quadratic_constraints(self, model):
+        """
+        Given a model that has been transformed with contrib.piecewise.nonlinear_to_pwl,
+        return the list of quadratic Constraints that were approximated with 
+        PiecewiseLinearFunctions
+        """
         return model.private_data().transformed_constraints[ExprType.QUADRATIC]
+
+    def get_transformed_nonlinear_objectives(self, model):
+        """
+        Given a model that has been transformed with contrib.piecewise.nonlinear_to_pwl,
+        return the list of general (not quadratic) nonlinear Constraints that were
+        approximated with PiecewiseLinearFunctions
+        """
+        return model.private_data().transformed_objectives[ExprType.GENERAL]
+
+    def get_transformed_quadratic_objectives(self, model):
+        """
+        Given a model that has been transformed with contrib.piecewise.nonlinear_to_pwl,
+        return the list of quadratic Constraints that were approximated with 
+        PiecewiseLinearFunctions
+        """
+        return model.private_data().transformed_objectives[ExprType.QUADRATIC]
