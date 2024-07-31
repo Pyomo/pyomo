@@ -339,6 +339,10 @@ class TestBoxSet(unittest.TestCase):
                 msg=f"Point {point} should not be in uncertainty set {box_set}."
             )
 
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            box_set.point_in_set([1, 2, 3])
+
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
@@ -626,6 +630,10 @@ class TestBudgetSet(unittest.TestCase):
         self.assertFalse(buset.point_in_set([0, 0]))
         self.assertFalse(buset.point_in_set([0, 3]))
         self.assertFalse(buset.point_in_set([4, 2]))
+
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            buset.point_in_set([1, 2, 3, 4])
 
     def test_add_bounds_on_uncertain_parameters(self):
         """
@@ -965,6 +973,10 @@ class TestFactorModelSet(unittest.TestCase):
         self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [1, 1, -1]))
         self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [1, -1, -1]))
         self.assertFalse(fset.point_in_set(fset.origin + fset.psi_mat @ [-1, -1, -1]))
+
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            fset.point_in_set([1, 2, 3])
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
@@ -1365,6 +1377,10 @@ class TestIntersectionSet(unittest.TestCase):
         np.testing.assert_allclose(m.uncertain_param_vars[0].bounds, (-0.25, 0.25))
         np.testing.assert_allclose(m.uncertain_param_vars[1].bounds, (-0.25, 0.25))
 
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            iset.point_in_set([1, 2, 3])
+
 
 class TestCardinalitySet(unittest.TestCase):
     """
@@ -1550,6 +1566,10 @@ class TestCardinalitySet(unittest.TestCase):
         # deviation in dimension that has been fixed
         self.assertFalse(cset.point_in_set([-0.25, 4, 2.01]))
 
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            cset.point_in_set([1, 2, 3, 4])
+
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
@@ -1671,6 +1691,10 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         self.assertTrue(dset.point_in_set([4.9e-9, 4.9e-9]))
         self.assertFalse(dset.point_in_set([5.1e-9, 5.1e-9]))
         self.assertFalse(dset.point_in_set([1e-7, 1e-7]))
+
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            dset.point_in_set([1, 2, 3])
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
@@ -1848,6 +1872,10 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         self.assertFalse(aeset.point_in_set([0, 0, 1.05]))
         self.assertFalse(aeset.point_in_set([1.505, 0, 1]))
         self.assertFalse(aeset.point_in_set([0, 2.05, 1]))
+
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            aeset.point_in_set([1, 2, 3, 4])
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
@@ -2113,6 +2141,10 @@ class TestEllipsoidalSet(unittest.TestCase):
         self.assertTrue(eset.point_in_set(eset.center + [5e-9, 0]))
         self.assertFalse(eset.point_in_set(eset.center + [1e-4, 1e-4]))
 
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            eset.point_in_set([1, 2, 3, 4])
+
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_compute_parameter_bounds(self):
         """
@@ -2354,6 +2386,10 @@ class TestPolyhedralSet(unittest.TestCase):
         self.assertFalse(pset.point_in_set([1, 1]))
         self.assertFalse(pset.point_in_set([-1, 0]))
         self.assertFalse(pset.point_in_set([0, 0]))
+
+        # check what happens if dimensions are off
+        with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
+            pset.point_in_set([1, 2, 3, 4])
 
     @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
     def test_add_bounds_on_uncertain_parameters(self):

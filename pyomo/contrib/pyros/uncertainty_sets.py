@@ -321,7 +321,8 @@ def validate_dimensions(arr_name, arr, dim, display_value=False):
 
 
 def validate_array(
-    arr, arr_name, dim, valid_types, valid_type_desc=None, required_shape=None
+    arr, arr_name, dim, valid_types, valid_type_desc=None, required_shape=None,
+    required_shape_qual="",
 ):
     """
     Validate shape and entry types of an array-like object.
@@ -348,6 +349,9 @@ def validate_array(
         corresponding to the position of the entry
         or `None` (meaning no requirement for the length in the
         corresponding dimension).
+    required_shape_qual : str, optional
+        Clause/phrase expressing reason `arr` should be of shape
+        `required_shape`, e.g. "to match the set dimension".
     """
     np_arr = np.array(arr, dtype=object)
     validate_dimensions(arr_name, np_arr, dim, display_value=False)
@@ -371,9 +375,13 @@ def validate_array(
             if size is not None and size != np_arr.shape[idx]:
                 req_shape_str = generate_shape_str(required_shape, required_shape)
                 actual_shape_str = generate_shape_str(np_arr.shape, required_shape)
+                required_shape_qual = (
+                    # add a preceding space, if needed
+                    f" {required_shape_qual}" if required_shape_qual else ""
+                )
                 raise ValueError(
                     f"Attribute '{arr_name}' should be of shape "
-                    f"{req_shape_str}, but detected shape "
+                    f"{req_shape_str}{required_shape_qual}, but detected shape "
                     f"{actual_shape_str}"
                 )
 
@@ -566,13 +574,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         determine whether a user-specified nominal parameter realization
         lies in the uncertainty set.
         """
-
-        # === Ensure point is of correct dimensionality as the uncertain parameters
-        if len(point) != self.dim:
-            raise AttributeError(
-                f"Point has {len(point)} entries, but the dimension "
-                f"of the uncertainty set is {self.dim}."
-            )
+        validate_array(
+            arr=point,
+            arr_name="point",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="numeric type",
+            required_shape=[self.dim],
+            required_shape_qual="to match the set dimension"
+        )
 
         m = ConcreteModel()
         uncertainty_quantification = self.set_as_constraint(block=m)
@@ -1224,6 +1234,15 @@ class CardinalitySet(UncertaintySet):
 
     @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
     def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        validate_array(
+            arr=point,
+            arr_name="point",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="numeric type",
+            required_shape=[self.dim],
+            required_shape_qual="to match the set dimension"
+        )
         point_arr = np.array(point)
 
         is_dev_nonzero = self.positive_deviation != 0
@@ -2059,6 +2078,15 @@ class FactorModelSet(UncertaintySet):
 
     @copy_docstring(UncertaintySet.compute_auxiliary_uncertain_param_vals)
     def compute_auxiliary_uncertain_param_vals(self, point, solver=None):
+        validate_array(
+            arr=point,
+            arr_name="point",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="numeric type",
+            required_shape=[self.dim],
+            required_shape_qual="to match the set dimension"
+        )
         point_arr = np.array(point)
 
         psi_mat_rank = np.linalg.matrix_rank(self.psi_mat)
@@ -2516,6 +2544,15 @@ class EllipsoidalSet(UncertaintySet):
 
     @copy_docstring(UncertaintySet.point_in_set)
     def point_in_set(self, point):
+        validate_array(
+            arr=point,
+            arr_name="point",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="numeric type",
+            required_shape=[self.dim],
+            required_shape_qual="to match the set dimension"
+        )
         off_center = point - self.center
         normalized_pt_radius = np.sqrt(
             off_center @ np.linalg.inv(self.shape_matrix) @ off_center
@@ -2702,6 +2739,15 @@ class DiscreteScenarioSet(UncertaintySet):
         : bool
             True if the point lies in the set, False otherwise.
         """
+        validate_array(
+            arr=point,
+            arr_name="point",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="numeric type",
+            required_shape=[self.dim],
+            required_shape_qual="to match the set dimension"
+        )
         # Round all double precision to a tolerance
         rounded_scenarios = np.round(self.scenarios, decimals=8)
         rounded_point = np.round(point, decimals=8)
