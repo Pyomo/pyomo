@@ -136,7 +136,8 @@ def get_points_lmt(points, bounds, func, seed):
     )
     regr.fit(x_list, y_list)
 
-    leaves, splits, ths = parse_linear_tree_regressor(regr, bounds)
+    # ESJ TODO: we actually only needs leaves from here...
+    leaves, splits, thresholds = parse_linear_tree_regressor(regr, bounds)
 
     # This was originally part of the LMT_Model_component and used to calculate
     # avg_leaves for the output data. TODO: get this back
@@ -419,7 +420,7 @@ class NonlinearToPWL(Transformation):
             It is recommended to leave this False as long as no nonlinear constraint 
             involves more than about 5-6 variables. For constraints with higher-
             dimmensional nonlinear functions, additive decomposition will improve
-            the scalability of the approximation (since paritioning the domain is
+            the scalability of the approximation (since partitioning the domain is
             subject to the curse of dimensionality).""",
         ),
     )
@@ -433,9 +434,9 @@ class NonlinearToPWL(Transformation):
             Specifies the maximum dimension function the transformation should
             attempt to approximate. If a nonlinear function dimension exceeds
             'max_dimension' the transformation will log a warning and leave the
-            expression as-is. For functions with dimension significantly the default
-            (5), it is likely that this transformation will stall triangulating the 
-            points in order to partition the function domain.""",
+            expression as-is. For functions with dimension significantly above the
+            default (5), it is likely that this transformation will stall
+            triangulating the points in order to partition the function domain.""",
         ),
     )
     # TODO: Minimum dimension to additively decompose--(Only decompose if the
