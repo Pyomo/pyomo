@@ -177,6 +177,9 @@ class _MutableBoundsConstraintMixin(object):
     # Define some of the IConstraint abstract methods
     #
 
+    def to_bounded_expression(self):
+        return self.lower, self.body, self.upper
+
     @property
     def lower(self):
         """The expression for the lower bound of the constraint"""
