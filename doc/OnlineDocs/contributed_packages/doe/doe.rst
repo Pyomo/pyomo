@@ -219,7 +219,7 @@ An example output of the code above, a design exploration for the initial concen
 .. figure:: FIM_sensitivity.png
    :scale: 50 %
 
-A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around $C_{A0}=5.0$ M, $T=300.0$ K, while the least informative region is around $C_{A0}=1.0$ M, $T=700.0$ K.
+A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design space. Horizontal and vertical axes are the two experimental design variables, while the color of each grid shows the experimental information content. For A optimality (top left subfigure), the figure shows that the most informative region is around :math:`C_{A0}=5.0` M, :math:`T=300.0` K, while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=700.0` K.
 
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
