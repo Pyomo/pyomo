@@ -417,8 +417,8 @@ def construct_dr_polishing_problem(master_data, config):
         indexed_polishing_var = Var(
             list(indexed_dr_var.keys()), domain=NonNegativeReals
         )
-        nominal_polishing_block.add_component(
-            unique_component_name(nominal_polishing_block, f"dr_polishing_var_{idx}"),
+        polishing_model.add_component(
+            unique_component_name(polishing_model, f"dr_polishing_var_{idx}"),
             indexed_polishing_var,
         )
         polishing_vars.append(indexed_polishing_var)
@@ -435,8 +435,8 @@ def construct_dr_polishing_problem(master_data, config):
         polishing_vars,
         eff_ss_var_to_dr_expr_pairs,
     )
-    nominal_polishing_block.polishing_abs_val_lb_cons = all_lb_cons = []
-    nominal_polishing_block.polishing_abs_val_ub_cons = all_ub_cons = []
+    polishing_model.polishing_abs_val_lb_cons = all_lb_cons = []
+    polishing_model.polishing_abs_val_ub_cons = all_ub_cons = []
     for idx, (indexed_polishing_var, (ss_var, dr_expr)) in enumerate(dr_eq_var_zip):
         # set up absolute value constraint components
         polishing_absolute_value_lb_cons = Constraint(indexed_polishing_var.index_set())
