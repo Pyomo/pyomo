@@ -9,10 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-'''
-Unit tests for the grcs API
-One class per function being tested, minimum one test per class
-'''
+"""
+Tests for the PyROS solver.
+"""
 
 import logging
 import math
