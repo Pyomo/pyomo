@@ -501,7 +501,7 @@ def construct_dr_polishing_problem(master_data, config):
             # due to the PyROS DR order efficiency instituted
             # in the first few iterations.
             # these need not be polished
-            if dr_var_in_term.fixed:
+            if dr_var_in_term.fixed or not is_a_nonstatic_dr_term:
                 polishing_var.fix()
                 polishing_absolute_value_lb_cons[dr_var_in_term_idx].deactivate()
                 polishing_absolute_value_ub_cons[dr_var_in_term_idx].deactivate()

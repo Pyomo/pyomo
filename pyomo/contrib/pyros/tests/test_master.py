@@ -403,9 +403,9 @@ class TestDRPolishingProblem(unittest.TestCase):
 
         nom_polishing_block = polishing_model.scenarios[0, 0]
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
-        self.assertFalse(polishing_model.polishing_vars[0][0].fixed)
-        self.assertTrue(polishing_model.polishing_abs_val_lb_con_0[0].active)
-        self.assertTrue(polishing_model.polishing_abs_val_ub_con_0[0].active)
+        self.assertTrue(polishing_model.polishing_vars[0][0].fixed)
+        self.assertFalse(polishing_model.polishing_abs_val_lb_con_0[0].active)
+        self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[0].active)
 
         # polishing components for the affine DR term should be
         # fixed/deactivated since the DR variable was fixed
