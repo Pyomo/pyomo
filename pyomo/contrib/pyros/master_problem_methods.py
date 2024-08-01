@@ -443,7 +443,8 @@ def construct_dr_polishing_problem(master_data, config):
         all_ub_cons.append(polishing_absolute_value_ub_cons)
 
         for dr_monomial in dr_expr.args:
-            if dr_monomial.is_expression_type():
+            is_a_nonstatic_dr_term = dr_monomial.is_expression_type()
+            if is_a_nonstatic_dr_term:
                 # degree >= 1 monomial expression of form
                 # (product of uncertain params) * dr variable
                 dr_var_in_term = dr_monomial.args[-1]
@@ -469,11 +470,8 @@ def construct_dr_polishing_problem(master_data, config):
                 scenario_blk.decision_rule_eqns[idx].body.args[dr_var_in_term_idx]
                 for scenario_blk in master_model.scenarios.values()
             ]
-            all_copy_coeffs_zero = all(
+            all_copy_coeffs_zero = is_a_nonstatic_dr_term and all(
                 abs(value(prod(term.args[:-1]))) <= 1e-10
-                # if not expression type, then it's the static DR
-                # term, which is just a Var
-                if term.is_expression_type() else 1
                 for term in dr_term_copies
             )
             if all_copy_coeffs_zero:
