@@ -390,9 +390,8 @@ def construct_dr_polishing_problem(master_data, config):
 
     # deactivate original constraints that involved
     # only vars that have been fixed.
-    # we do this mostly to ensure the number of active
-    # equality constraints does not outnumber the number of
-    # unfixed Vars
+    # we do this mostly to ensure that the active equality constraints
+    # do not grossly outnumber the unfixed Vars
     fixed_dr_vars = [
         var
         for var in generate_all_decision_rule_var_data_objects(nominal_polishing_block)
@@ -410,10 +409,10 @@ def construct_dr_polishing_problem(master_data, config):
 
     polishing_model.polishing_vars = polishing_vars = []
     for idx, indexed_dr_var in enumerate(nominal_polishing_block.decision_rule_vars):
-        # declare auxiliary 'polishing' variables.
+        # auxiliary 'polishing' variables.
         # these are meant to represent the absolute values
-        # of the terms of DR polynomial; we need these for the
-        # L1-norm
+        # of the terms of DR polynomial;
+        # we need these for the L1-norm
         indexed_polishing_var = Var(
             list(indexed_dr_var.keys()), domain=NonNegativeReals
         )
@@ -498,8 +497,10 @@ def construct_dr_polishing_problem(master_data, config):
                 dr_monomial - polishing_var <= 0
             )
 
-            # some DR variables may be fixed in the earlier
-            # PyROS iterations for efficiency purposes
+            # some DR variables may be fixed,
+            # due to the PyROS DR order efficiency instituted
+            # in the first few iterations.
+            # these need not be polished
             if dr_var_in_term.fixed:
                 polishing_var.fix()
                 polishing_absolute_value_lb_cons[dr_var_in_term_idx].deactivate()
