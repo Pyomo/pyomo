@@ -452,7 +452,7 @@ def construct_dr_polishing_problem(master_data, config):
                 # the static term (intercept);
                 # we do not polish this term
                 # continue
-                dr_var_in_term = dr_monomial
+                continue
 
             # we want the DR variable and corresponding polishing
             # constraints to have the same index in the indexed

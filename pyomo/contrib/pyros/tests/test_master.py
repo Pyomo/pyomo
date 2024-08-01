@@ -391,17 +391,11 @@ class TestDRPolishingProblem(unittest.TestCase):
 
         nom_polishing_block = polishing_model.scenarios[0, 0]
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
-        self.assertEqual(
-            list(polishing_model.polishing_abs_val_lb_con_0.keys()), [0, 1]
-        )
-        self.assertEqual(
-            list(polishing_model.polishing_abs_val_ub_con_0.keys()), [0, 1]
-        )
+        self.assertEqual(list(polishing_model.polishing_abs_val_lb_con_0.keys()), [1])
+        self.assertEqual(list(polishing_model.polishing_abs_val_ub_con_0.keys()), [1])
 
         # static term unfixed; ensure polishing components active
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
-        self.assertTrue(polishing_model.polishing_abs_val_lb_con_0[0].active)
-        self.assertTrue(polishing_model.polishing_abs_val_ub_con_0[0].active)
 
         # polishing components for the affine DR term should be
         # fixed/deactivated since the DR variable was fixed
@@ -410,11 +404,7 @@ class TestDRPolishingProblem(unittest.TestCase):
         self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[1].active)
 
         # check initialization of infinity norm var
-        self.assertEqual(
-            polishing_model.infinity_norm_var.value,
-            # static term has higher abs value
-            abs(nom_polishing_block.decision_rule_vars[0][0].value),
-        )
+        self.assertEqual(polishing_model.infinity_norm_var.value, 0)
         assertExpressionsEqual(
             self,
             polishing_model.polishing_obj.expr,
