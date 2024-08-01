@@ -13,6 +13,7 @@ from pyomo.common.dependencies import numpy_available, scipy_available
 from pyomo.core.base import (
     ConcreteModel,
     Constraint,
+    minimize,
     Objective,
     Param,
     Var,
@@ -391,25 +392,33 @@ class TestDRPolishingProblem(unittest.TestCase):
 
         nom_polishing_block = polishing_model.scenarios[0, 0]
         self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
-        self.assertEqual(list(polishing_model.polishing_abs_val_lb_con_0.keys()), [1])
-        self.assertEqual(list(polishing_model.polishing_abs_val_ub_con_0.keys()), [1])
-
-        # static term unfixed; ensure polishing components active
-        self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
+        self.assertFalse(polishing_model.polishing_vars[0][0].fixed)
+        self.assertTrue(polishing_model.polishing_abs_val_lb_con_0[0].active)
+        self.assertTrue(polishing_model.polishing_abs_val_ub_con_0[0].active)
 
         # polishing components for the affine DR term should be
         # fixed/deactivated since the DR variable was fixed
         self.assertTrue(nom_polishing_block.decision_rule_vars[0][1].fixed)
+        self.assertTrue(polishing_model.polishing_vars[0][1].fixed)
         self.assertFalse(polishing_model.polishing_abs_val_lb_con_0[1].active)
         self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[1].active)
 
-        # check initialization of infinity norm var
-        self.assertEqual(polishing_model.infinity_norm_var.value, 0)
+        # check initialization of polishing vars
+        self.assertEqual(
+            polishing_model.polishing_vars[0][0].value,
+            abs(nom_polishing_block.decision_rule_vars[0][0].value),
+        )
+        self.assertEqual(
+            polishing_model.polishing_vars[0][1].value,
+            abs(nom_polishing_block.decision_rule_vars[0][1].value),
+        )
+
         assertExpressionsEqual(
             self,
             polishing_model.polishing_obj.expr,
-            polishing_model.infinity_norm_var,
+            polishing_model.polishing_vars[0][0] + polishing_model.polishing_vars[0][1],
         )
+        self.assertEqual(polishing_model.polishing_obj.sense, minimize)
 
     def test_construct_dr_polishing_problem_objectives(self):
         """

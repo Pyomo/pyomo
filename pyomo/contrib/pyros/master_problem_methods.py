@@ -408,10 +408,20 @@ def construct_dr_polishing_problem(master_data, config):
     # we will add the polishing objective later
     polishing_model.epigraph_obj.deactivate()
 
-    polishing_model.infinity_norm_var = infinity_norm_var = Var(
-        domain=NonNegativeReals,
-        initialize=0,
-    )
+    polishing_model.polishing_vars = polishing_vars = []
+    for idx, indexed_dr_var in enumerate(nominal_polishing_block.decision_rule_vars):
+        # declare auxiliary 'polishing' variables.
+        # these are meant to represent the absolute values
+        # of the terms of DR polynomial; we need these for the
+        # L1-norm
+        indexed_polishing_var = Var(
+            list(indexed_dr_var.keys()), domain=NonNegativeReals
+        )
+        polishing_model.add_component(
+            unique_component_name(polishing_model, f"dr_polishing_var_{idx}"),
+            indexed_polishing_var,
+        )
+        polishing_vars.append(indexed_polishing_var)
 
     # we need the DR expressions to set up the
     # absolute value constraints and initialize the
@@ -421,12 +431,16 @@ def construct_dr_polishing_problem(master_data, config):
         for ss_var in nominal_eff_var_partitioning.second_stage_variables
     ]
 
+    dr_eq_var_zip = zip(
+        polishing_vars,
+        eff_ss_var_to_dr_expr_pairs,
+    )
     polishing_model.polishing_abs_val_lb_cons = all_lb_cons = []
     polishing_model.polishing_abs_val_ub_cons = all_ub_cons = []
-    for idx, (ss_var, dr_expr) in enumerate(eff_ss_var_to_dr_expr_pairs):
+    for idx, (indexed_polishing_var, (ss_var, dr_expr)) in enumerate(dr_eq_var_zip):
         # set up absolute value constraint components
-        polishing_absolute_value_lb_cons = Constraint(NonNegativeReals)
-        polishing_absolute_value_ub_cons = Constraint(NonNegativeReals)
+        polishing_absolute_value_lb_cons = Constraint(indexed_polishing_var.index_set())
+        polishing_absolute_value_ub_cons = Constraint(indexed_polishing_var.index_set())
 
         # add indexed constraints to polishing model
         polishing_model.add_component(
@@ -438,7 +452,7 @@ def construct_dr_polishing_problem(master_data, config):
             polishing_absolute_value_ub_cons,
         )
 
-        # update list of absolute value cons
+        # update list of absolute value (i.e., polishing) cons
         all_lb_cons.append(polishing_absolute_value_lb_cons)
         all_ub_cons.append(polishing_absolute_value_ub_cons)
 
@@ -449,15 +463,14 @@ def construct_dr_polishing_problem(master_data, config):
                 # (product of uncertain params) * dr variable
                 dr_var_in_term = dr_monomial.args[-1]
             else:
-                # the static term (intercept);
-                # we do not polish this term
-                # continue
-                continue
+                # the static term (intercept)
+                dr_var_in_term = dr_monomial
 
             # we want the DR variable and corresponding polishing
             # constraints to have the same index in the indexed
             # components
             dr_var_in_term_idx = dr_var_in_term.index()
+            polishing_var = indexed_polishing_var[dr_var_in_term_idx]
 
             # Fix DR variable if:
             # (1) it has already been fixed from master due to
@@ -475,29 +488,30 @@ def construct_dr_polishing_problem(master_data, config):
                 for term in dr_term_copies
             )
             if all_copy_coeffs_zero:
-                dr_var_in_term.fix(0)
+                dr_var_in_term.fix()
 
             # add polishing constraints
             polishing_absolute_value_lb_cons[dr_var_in_term_idx] = (
-                -infinity_norm_var - dr_monomial <= 0
+                -polishing_var - dr_monomial <= 0
             )
             polishing_absolute_value_ub_cons[dr_var_in_term_idx] = (
-                dr_monomial - infinity_norm_var <= 0
+                dr_monomial - polishing_var <= 0
             )
 
             # some DR variables may be fixed in the earlier
             # PyROS iterations for efficiency purposes
             if dr_var_in_term.fixed:
+                polishing_var.fix()
                 polishing_absolute_value_lb_cons[dr_var_in_term_idx].deactivate()
                 polishing_absolute_value_ub_cons[dr_var_in_term_idx].deactivate()
-            else:
-                # ensure infinity norm var properly initialized
-                abs_monomial_val = abs(value(dr_monomial))
-                if abs_monomial_val > infinity_norm_var.value:
-                    infinity_norm_var.set_value(abs_monomial_val)
 
-    # finally, the infinity-norm objective
-    polishing_model.polishing_obj = Objective(expr=infinity_norm_var)
+            # ensure polishing var properly initialized
+            polishing_var.set_value(abs(value(dr_monomial)))
+
+    # L1-norm objective
+    polishing_model.polishing_obj = Objective(
+        expr=sum(sum(polishing_var.values()) for polishing_var in polishing_vars)
+    )
 
     return polishing_model
 
