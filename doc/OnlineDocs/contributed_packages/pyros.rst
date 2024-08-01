@@ -16,13 +16,14 @@ Methodology Overview
 
 PyROS can accommodate optimization models with:
 
-* **continuous variables** only
-* **nonlinearities** (including **nonconvexities**) in both the
+* **Continuous variables** only
+* **Nonlinearities** (including **nonconvexities**) in both the
   variables and uncertain parameters
-* **equality constraints** defining state variables,
+* **First-stage degrees of freedom** and **second-stage degrees of freedom**
+* **Equality constraints** defining state variables,
   including implicitly defined state variables that cannot be
   eliminated from the model via reformulation
-* **first-stage degrees of freedom** and **second-stage degrees of freedom**
+* **Inequality constraints** in the degree-of-freedom and/or state variables
 
 Supported deterministic models can be written in the general form
 
@@ -41,7 +42,7 @@ where:
   (or "design" variables,)
   of which the feasible space :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}`
   is defined by the model constraints
-  (including variable bounds specifications) referencing :math:`x` only.
+  (including variable bounds specifications) referencing :math:`x` only
 * :math:`z \in \mathbb{R}^{n_z}` are the second-stage degrees of freedom
   (or "control" variables)
 * :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
@@ -90,14 +91,16 @@ the form of the robust counterpart addressed by PyROS is
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall\,j \in \mathcal{J}
     \end{array}
 
-PyROS solves problems of this form using the
-Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
-When using PyROS, please consider citing that paper.
+PyROS accepts a deterministic model and accompanying uncertainty set
+and then,
+using the Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_,
+seeks a solution to the robust counterpart.
+When using PyROS, please consider citing [Isenberg_et_al]_.
 
 .. _unique-mapping:
 
 .. note::
-    A key requirement of PyROS is that
+    A key assumption of PyROS is that
     for every
     :math:`x \in \mathcal{X}`,
     :math:`z \in \mathbb{R}^{n_z}`,
@@ -106,7 +109,7 @@ When using PyROS, please consider citing that paper.
     for which :math:`(x, z, y, q)`
     satisfies the equality constraints
     :math:`h_j(x, z, y, q) = 0\,\,\forall\, j \in \mathcal{J}`.
-    If this requirement is not met,
+    If this assumption is not met,
     then the selection of 'state'
     (i.e., not degree of freedom) variables :math:`y` is incorrect,
     and one or more of the :math:`y` variables should be appropriately
