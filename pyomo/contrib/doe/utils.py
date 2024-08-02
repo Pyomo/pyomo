@@ -25,7 +25,12 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
+import pyomo.environ as pyo
+
 from pyomo.common.dependencies import numpy as np, numpy_available
+
+from pyomo.core.base.param import ParamData
+from pyomo.core.base.var import VarData
 
 
 # Rescale FIM (a scaling function to help rescale FIM from parameter values)
@@ -58,3 +63,34 @@ def rescale_FIM(FIM, param_vals):
     scaling_mat = (1 / param_vals).transpose().dot((1 / param_vals))
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM
+
+def get_parameters_from_suffix(suffix, fix_vars=False):
+    """
+    Finds the Params within the suffix provided. It will also check to see
+    if there are Vars in the suffix provided. ``fix_vars`` will indicate 
+    if we should fix all the Vars in the set or not.
+
+    Parameters
+    ----------
+    suffix: pyomo Suffix object, contains the components to be checked 
+            as keys
+    fix_vars: boolean, whether or not to fix the Vars, default = False
+
+    Returns
+    -------
+    param_list: list of Param
+    """
+    param_list = []
+
+    # FIX THE MODEL TREE ISSUE WHERE I GET base_model.<param> INSTEAD OF <param>
+    # Check keys if they are Param or Var. Fix the vars if ``fix_vars`` is True
+    for k, v in suffix.items():
+        if isinstance(k, ParamData):
+            param_list.append(k.name)
+        elif isinstance(k, VarData):
+            if fix_vars:
+                k.fix()
+        else:
+            pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
+    
+    return param_list

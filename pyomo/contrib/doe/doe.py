@@ -30,6 +30,10 @@ from pyomo.opt import SolverStatus
 from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
+from pyomo.contrib.parmest.utils.model_utils import convert_params_to_vars
+
+from pyomo.contrib.doe.utils import get_parameters_from_suffix
+
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -1012,7 +1016,17 @@ class DesignOfExperiments:
                 "Finite difference option not recognized. Please contact the developers as you should not see this error."
             )
 
-        # To-Do: Fix parameter values if they are not Params?
+        # Search for unknown parameters that are Params, or Vars. Params are updated to be fixed Vars 
+        unknown_parameter_Params = get_parameters_from_suffix(model.base_model.unknown_parameters, fix_vars=True)
+        print(unknown_parameter_Params)
+
+        # Change the unknown parameters that are Params to be Vars and fix them
+        if len(unknown_parameter_Params) > 0:
+            print("GOT HERE!!!!")
+            model.base_model = convert_params_to_vars(model.base_model, unknown_parameter_Params, fix_vars=True)
+
+        # Search for experiment inputs that are Params, or Vars. Params are updated to be unfixed vars
+        experiment_inputs_Params = get_parameters_from_suffix(model.base_model.experiment_inputs, fix_vars=False)
 
         # Run base model to get initialized model and check model function
         for comp, _ in model.base_model.experiment_inputs.items():
