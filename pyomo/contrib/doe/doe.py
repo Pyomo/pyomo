@@ -1019,9 +1019,9 @@ class DesignOfExperiments:
         # TODO: Allow Params for `unknown_parameters` and `experiment_inputs`
         #       May need to make a new converter Param to Var that allows non-string names/references to be passed
 
-        # # Search for unknown parameters that are Params, or Vars. Params are updated to be fixed Vars 
+        # # Search for unknown parameters that are Params, or Vars. Params are updated to be fixed Vars
         # unknown_parameter_Params = get_parameters_from_suffix(model.base_model.unknown_parameters, fix_vars=True)
-        
+
         # # # Remove ``base_model`` precursor name on parameters
         # # for ind, val in enumerate(unknown_parameter_Params):
         # #     base_model_ind = val.split(".").index("base_model")

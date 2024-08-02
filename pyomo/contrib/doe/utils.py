@@ -64,15 +64,16 @@ def rescale_FIM(FIM, param_vals):
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM
 
+
 def get_parameters_from_suffix(suffix, fix_vars=False):
     """
     Finds the Params within the suffix provided. It will also check to see
-    if there are Vars in the suffix provided. ``fix_vars`` will indicate 
+    if there are Vars in the suffix provided. ``fix_vars`` will indicate
     if we should fix all the Vars in the set or not.
 
     Parameters
     ----------
-    suffix: pyomo Suffix object, contains the components to be checked 
+    suffix: pyomo Suffix object, contains the components to be checked
             as keys
     fix_vars: boolean, whether or not to fix the Vars, default = False
 
@@ -92,5 +93,5 @@ def get_parameters_from_suffix(suffix, fix_vars=False):
                 k.fix()
         else:
             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
-    
+
     return param_list
