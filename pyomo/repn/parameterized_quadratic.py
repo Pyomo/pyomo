@@ -46,8 +46,8 @@ _QUADRATIC = ExprType.QUADRATIC
 
 def _merge_dict(dest_dict, mult, src_dict):
     """
-    Slightly different from `merge_dict` of
-    from the parameterized module.
+    Slightly different from `merge_dict`
+    in the `parameterized_linear` module.
     """
     if not is_equal_to(mult, 1):
         for vid, coef in src_dict.items():
