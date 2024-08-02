@@ -510,6 +510,9 @@ def construct_dr_polishing_problem(master_data, config):
             polishing_var.set_value(abs(value(dr_monomial)))
 
     # L1-norm objective
+    # TODO: if dropping nonstatic terms, ensure the
+    #       corresponding polishing variables are excluded
+    #       from this expression
     polishing_model.polishing_obj = Objective(
         expr=sum(sum(polishing_var.values()) for polishing_var in polishing_vars)
     )
