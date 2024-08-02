@@ -28,7 +28,6 @@ from pyomo.repn.linear import (
 )
 from pyomo.repn.parameterized_linear import (
     define_exit_node_handlers as _param_linear_def_exit_node_handlers,
-    ParameterizedLinearBeforeChildDispatcher,
     ParameterizedLinearRepnVisitor,
     to_expression,
     _handle_division_ANY_pseudo_constant,
@@ -297,9 +296,6 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
-_before_child_dispatcher = ParameterizedLinearBeforeChildDispatcher()
-
-
 def define_exit_node_handlers(exit_node_handlers=None):
     if exit_node_handlers is None:
         exit_node_handlers = {}
@@ -347,9 +343,6 @@ class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
     )
     max_exponential_expansion = 2
     expand_nonlinear_products = True
-
-    def beforeChild(self, node, child, child_idx):
-        return _before_child_dispatcher[child.__class__](self, child)
 
     def _factor_multiplier_into_quadratic_terms(self, ans, mult):
         linear = ans.linear
