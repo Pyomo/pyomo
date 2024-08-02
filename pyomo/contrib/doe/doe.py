@@ -1016,17 +1016,27 @@ class DesignOfExperiments:
                 "Finite difference option not recognized. Please contact the developers as you should not see this error."
             )
 
-        # Search for unknown parameters that are Params, or Vars. Params are updated to be fixed Vars 
-        unknown_parameter_Params = get_parameters_from_suffix(model.base_model.unknown_parameters, fix_vars=True)
-        print(unknown_parameter_Params)
+        # TODO: Allow Params for `unknown_parameters` and `experiment_inputs`
+        #       May need to make a new converter Param to Var that allows non-string names/references to be passed
 
-        # Change the unknown parameters that are Params to be Vars and fix them
-        if len(unknown_parameter_Params) > 0:
-            print("GOT HERE!!!!")
-            model.base_model = convert_params_to_vars(model.base_model, unknown_parameter_Params, fix_vars=True)
+        # # Search for unknown parameters that are Params, or Vars. Params are updated to be fixed Vars 
+        # unknown_parameter_Params = get_parameters_from_suffix(model.base_model.unknown_parameters, fix_vars=True)
+        
+        # # # Remove ``base_model`` precursor name on parameters
+        # # for ind, val in enumerate(unknown_parameter_Params):
+        # #     base_model_ind = val.split(".").index("base_model")
+        # #     unknown_parameter_Params[ind] = ".".join(val.split(".")[(base_model_ind + 1) :])
 
-        # Search for experiment inputs that are Params, or Vars. Params are updated to be unfixed vars
-        experiment_inputs_Params = get_parameters_from_suffix(model.base_model.experiment_inputs, fix_vars=False)
+        # print(unknown_parameter_Params)
+
+        # # Change the unknown parameters that are Params to be Vars and fix them
+        # if len(unknown_parameter_Params) > 0:
+        #     model.base_model = convert_params_to_vars(model.base_model, unknown_parameter_Params, fix_vars=True)
+
+        # model.base_model.unknown_parameters.pprint()
+
+        # # Search for experiment inputs that are Params, or Vars. Params are updated to be unfixed vars
+        # experiment_inputs_Params = get_parameters_from_suffix(model.base_model.experiment_inputs, fix_vars=False)
 
         # Run base model to get initialized model and check model function
         for comp, _ in model.base_model.experiment_inputs.items():
