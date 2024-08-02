@@ -43,6 +43,7 @@ from pyomo.repn.linear_template import LinearTemplateRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
+    TemplateVarRecorder,
     categorize_valid_components,
     initialize_var_map_from_column_order,
     ordered_active_constraints,
@@ -300,10 +301,10 @@ class _LinearStandardFormCompiler_impl(object):
 
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
-        var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        visitor = self._get_visitor({}, var_map, var_order, sorter)
-        template_visitor = LinearTemplateRepnVisitor({}, var_map, var_order, sorter)
+        var_recorder = TemplateVarRecorder(var_map, None, sorter)
+        visitor = self._get_visitor({}, var_recorder=var_recorder)
+        template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -353,13 +354,13 @@ class _LinearStandardFormCompiler_impl(object):
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
                 N = len(linear_index)
-                obj_index.append(map(var_order.__getitem__, linear_index))
+                obj_index.append(linear_index)
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
             else:
                 repn = visitor.walk_expression(obj.expr)
                 N = len(repn.linear)
-                obj_index.append(map(var_order.__getitem__, repn.linear))
+                obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
                 obj_data.append(repn.linear.values())
                 obj_offset.append(repn.constant)
 
@@ -402,7 +403,6 @@ class _LinearStandardFormCompiler_impl(object):
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 N = len(linear_data)
-                linear_index = map(var_order.__getitem__, linear_index)
             else:
                 # Note: lb and ub could be a number, expression, or None
                 lb, body, ub = con.to_bounded_expression()
@@ -420,7 +420,7 @@ class _LinearStandardFormCompiler_impl(object):
                 N = len(repn.linear)
                 # Pull out the constant: we will move it to the bounds
                 offset = repn.constant
-                linear_index = map(var_order.__getitem__, repn.linear)
+                linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
 
             if lb is None and ub is None:
@@ -480,7 +480,10 @@ class _LinearStandardFormCompiler_impl(object):
                         if ub is not None:
                             v.lb = lb - ub
                     var_map[id(v)] = v
-                    var_order[id(v)] = slack_col = len(var_order)
+                    if var_recorder.var_order is not None:
+                        var_recorder.var_order[id(v)] = slack_col = len(
+                            var_recorder.var_order
+                        )
                     linear_data = list(linear_data)
                     linear_data.append(1)
                     linear_index = list(linear_index)
@@ -513,7 +516,7 @@ class _LinearStandardFormCompiler_impl(object):
             timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
 
         # Get the variable list
-        var_order.update({_id: i for i, _id in enumerate(var_map)})
+        # var_order.update({_id: i for i, _id in enumerate(var_map)})
         columns = list(var_map.values())
         nCol = len(columns)
 

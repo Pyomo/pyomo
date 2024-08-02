@@ -36,6 +36,7 @@ from pyomo.core.base import (
     Block,
     Constraint,
     Expression,
+    NumericLabeler,
     Suffix,
     SortComponents,
 )
@@ -730,6 +731,107 @@ def ordered_active_constraints(model, config):
     _n = len(row_map)
     _row_getter = row_map.get
     return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
+
+
+class VarRecorder(object):
+    def __init__(self, var_map, sorter):
+        self.var_map = var_map
+        self.sorter = sorter
+
+    def add(self, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        try:
+            _iter = var.parent_component().values(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for v in _iter:
+            if not v.fixed:
+                vm[id(v)] = v
+
+
+class OrderedVarRecorder(object):
+    def __init__(self, var_map, var_order, sorter):
+        self.var_map = var_map
+        self.var_order = var_order
+        self.sorter = sorter
+
+    def add(self, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        vo = self.var_order
+        try:
+            _iter = var.parent_component().values(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for i, v in enumerate(_iter, start=len(vo)):
+            vid = id(v)
+            vo[vid] = i
+            if not v.fixed:
+                vm[vid] = v
+
+
+class TemplateVarRecorder(object):
+    def __init__(self, var_map, var_order, sorter):
+        self.var_map = var_map
+        self._var_order = var_order
+        self.sorter = sorter
+        self.env = {None: 0}
+        self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
+
+    @property
+    def var_order(self):
+        if self._var_order is None:
+            self._var_order = {vid: i for i, vid in enumerate(self.var_map)}
+        return self._var_order
+
+    def add(self, var):
+        # Note: the following is mostly a copy of
+        # LinearBeforeChildDispatcher.record_var, but with extra
+        # hanlding to update the env in the same loop
+        var_comp = var.parent_component()
+        # Double-check that the component has not already been processed
+        # (through an individual var data)
+        name = self.symbolmap.getSymbol(var_comp)
+        if name in self.env:
+            return
+
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        ve = self.env[name] = {}
+        vo = self._var_order
+        try:
+            _iter = var_comp.items(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        if vo is None:
+            for i, (idx, v) in enumerate(_iter, start=len(vm)):
+                vm[id(v)] = v
+                ve[idx] = i
+        else:
+            for i, (idx, v) in enumerate(_iter, start=len(vm)):
+                vid = id(v)
+                vm[vid] = v
+                ve[idx] = i
+                vo[vid] = i
 
 
 # Copied from cpxlp.py:

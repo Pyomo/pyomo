@@ -18,7 +18,6 @@ import pyomo.core.expr as expr
 import pyomo.repn.linear as linear
 import pyomo.repn.util as util
 
-from pyomo.core.base import NumericLabeler
 from pyomo.core.expr import ExpressionType
 from pyomo.repn.linear import LinearRepn
 
@@ -227,17 +226,16 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         # order in which we would see the variables)
         vm = visitor.var_map
         _iter = var_comp.items(visitor.sorter)
-        for idx, v in _iter:
+        for i, (idx, v) in enumerate(_iter, start=len(ve)):
             # if v.fixed:
             #    ve[idx] = (v.value,)
             #    continue
-            vid = id(v)
-            vm[vid] = v
-            ve[idx] = vid
+            vm[id(v)] = v
+            ve[idx] = 0 if v.fixed else i
 
     def _before_indexed_var(self, visitor, child):
         if child not in visitor.indexed_vars:
-            visitor.before_child_dispatcher.record_var(visitor, child)
+            visitor.var_recorder(child)
             visitor.indexed_vars.add(child)
         return False, (_VARIABLE, child)
 
@@ -307,15 +305,13 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
-    def __init__(
-        self, subexpression_cache, var_map, var_order, sorter, remove_fixed_vars=False
-    ):
-        super().__init__(subexpression_cache, var_map, var_order, sorter)
+    def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
+        super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
         self.expr_cache = {}
-        self.env = {}
-        self.symbolmap = expr.SymbolMap(NumericLabeler('x'))
+        self.env = var_recorder.env
+        self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
         self.remove_fixed_vars = remove_fixed_vars
 
