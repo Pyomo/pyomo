@@ -207,35 +207,10 @@ class LinearTemplateRepn(LinearRepn):
 
 
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
-    def record_var(self, visitor, var):
-        # Note: the following is mostly a copy of
-        # LinearBeforeChildDispatcher.record_var, but with extra
-        # hanlding to update the env in the same loop
-        var_comp = var.parent_component()
-        # Double-check that the component has not already been processed
-        # (through an individual var data)
-        name = visitor.symbolmap.getSymbol(var_comp)
-        if name in visitor.env:
-            return
-        ve = visitor.env[name] = {}
-
-        # We always add all indices to the var_map at once so that
-        # we can honor deterministic ordering of unordered sets
-        # (because the user could have iterated over an unordered
-        # set when constructing an expression, thereby altering the
-        # order in which we would see the variables)
-        vm = visitor.var_map
-        _iter = var_comp.items(visitor.sorter)
-        for i, (idx, v) in enumerate(_iter, start=len(ve)):
-            # if v.fixed:
-            #    ve[idx] = (v.value,)
-            #    continue
-            vm[id(v)] = v
-            ve[idx] = 0 if v.fixed else i
 
     def _before_indexed_var(self, visitor, child):
         if child not in visitor.indexed_vars:
-            visitor.var_recorder(child)
+            visitor.var_recorder.add(child)
             visitor.indexed_vars.add(child)
         return False, (_VARIABLE, child)
 
