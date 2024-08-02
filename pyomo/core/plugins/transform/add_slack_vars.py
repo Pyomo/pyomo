@@ -150,26 +150,29 @@ class AddSlackVariables(NonIsomorphicTransformation):
             if not cons.active:
                 continue
             cons_name = cons.getname(fully_qualified=True)
-            if cons.lower is not None:
+            lower = cons.lower
+            body = cons.body
+            upper = cons.upper
+            if lower is not None:
                 # we add positive slack variable to body:
                 # declare positive slack
                 varName = "_slack_plus_" + cons_name
                 posSlack = Var(within=NonNegativeReals)
                 xblock.add_component(varName, posSlack)
                 # add positive slack to body expression
-                cons._body += posSlack
+                body += posSlack
                 # penalize slack in objective
                 obj_expr += posSlack
-            if cons.upper is not None:
+            if upper is not None:
                 # we subtract a positive slack variable from the body:
                 # declare slack
                 varName = "_slack_minus_" + cons_name
                 negSlack = Var(within=NonNegativeReals)
                 xblock.add_component(varName, negSlack)
                 # add negative slack to body expression
-                cons._body -= negSlack
+                body -= negSlack
                 # add slack to objective
                 obj_expr += negSlack
-
+            cons.set_value((lower, body, upper))
         # make a new objective that minimizes sum of slack variables
         xblock._slack_objective = Objective(expr=obj_expr)
