@@ -52,6 +52,7 @@ from pyomo.network import Port
 from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import ExprType
 
+
 lineartree, lineartree_available = attempt_import('lineartree')
 sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
 
@@ -124,6 +125,7 @@ def get_points_lmt_uniform_sample(bounds, n, func, seed=42):
 def get_points_lmt(points, bounds, func, seed):
     x_list = np.array(points)
     y_list = []
+
     for point in points:
         y_list.append(func(*point))
     # ESJ: Do we really need the sklearn dependency to get LinearRegression??
@@ -132,7 +134,9 @@ def get_points_lmt(points, bounds, func, seed):
         criterion='mse',
         max_bins=120,
         min_samples_leaf=4,
-        max_depth=5,
+        max_depth=max(4, int(np.log2(len(points) / 4))),  # Want the tree to grow
+        # with increasing points
+        # but not get too large.
     )
     regr.fit(x_list, y_list)
 
@@ -439,6 +443,20 @@ class NonlinearToPWL(Transformation):
             triangulating the points in order to partition the function domain.""",
         ),
     )
+    CONFIG.declare(
+        'min_additive_decomposition_dimension',
+        ConfigValue(
+            default=1,
+            domain=PositiveInt,
+            description="The minimum dimension of functions that will be additively decomposed.",
+            doc="""
+            Specifies the minimum dimension of a function that the transformation should
+            attempt to additively decompose. If a nonlinear function dimension exceeds
+            'min_additive_decomposition_dimension' the transformation will additively decompose
+            If a the dimension of an expression is less than the "min_additive_decomposition_dimension"
+            then, it will not be additively decomposed""",
+        ),
+    )
     # TODO: Minimum dimension to additively decompose--(Only decompose if the
     # dimension exceeds this.)
 
@@ -634,11 +652,12 @@ class NonlinearToPWL(Transformation):
                     "'max_dimension' or additively separating the expression."
                     % (obj.name, config.max_dimension)
                 )
-                pwl_func += subexpr
+                pwl_func = pwl_func + subexpr
                 continue
-            elif not self._needs_approximating(expr, approximate_quadratic)[1]:
-                pwl_func += subexpr
+            elif not self._needs_approximating(subexpr, approximate_quadratic)[1]:
+                pwl_func = pwl_func + subexpr
                 continue
+            # else we approximate subexpr
 
             def eval_expr(*args):
                 for i, v in enumerate(expr_vars):
@@ -655,7 +674,11 @@ class NonlinearToPWL(Transformation):
                 trans_block, obj.getname(fully_qualified=False)
             )
             trans_block.add_component(f"_pwle_{name}_{k}", pwlf)
-            pwl_func += pwlf(*expr_vars)
+            # NOTE: We are *not* using += because it will hit the NamedExpression
+            # implementation of iadd and dereference the ExpressionData holding
+            # the PiecewiseLinearExpression that we later transform my remapping
+            # it to a Var...
+            pwl_func = pwl_func + pwlf(*expr_vars)
 
             # restore var values
             for v, val in orig_values.items():
