@@ -66,7 +66,7 @@ We can execute the ``enumerate_binary_solutions`` function to generate a list of
    >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="gurobi")
    >>> assert len(solns) == 1
 
-Each ``Solution`` object constains information about the objective and variables, and it includes various methods to access this information.  For example:
+Each ``Solution`` object contains information about the objective and variables, and it includes various methods to access this information.  For example:
 
 .. doctest::
    :skipif: not gurobi_available
