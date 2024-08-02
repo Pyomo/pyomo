@@ -67,17 +67,17 @@ def get_shifted_linear_model(model, block=None):
     networks, Computers & Chemical Engineering, Volume 24, Issues 2–7, 2000,
     page 712 for additional details.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model
-        block : Block
-            The Pyomo block that the new model should be added to.
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model
+    block : Block
+        The Pyomo block that the new model should be added to.
 
-        Returns
-        -------
-        block
-            The block that holds the reformulated model.
+    Returns
+    -------
+    block
+        The block that holds the reformulated model.
     """
 
     # Gather all variables and confirm the model is bounded

@@ -33,46 +33,46 @@ def enumerate_binary_solutions(
     Finds alternative optimal solutions for a binary problem using no-good
     cuts.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model
-        num_solutions : int
-            The maximum number of solutions to generate.
-        variables: 'all' or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. 'all' indicates
-            that all variables will be included. Alternatively, a collection of
-            _GenereralVarData variables can be provided.
-        rel_opt_gap : float or None
-            The relative optimality gap for the original objective for which
-            variable bounds will be found. None indicates that a relative gap
-            constraint will not be added to the model.
-        abs_opt_gap : float or None
-            The absolute optimality gap for the original objective for which
-            variable bounds will be found. None indicates that an absolute gap
-            constraint will not be added to the model.
-        search_mode : 'optimal', 'random', or 'hamming'
-            Indicates the mode that is used to generate alternative solutions.
-            The optimal mode finds the next best solution. The random mode
-            finds an alternative solution in the direction of a random ray. The
-            hamming mode iteratively finds solution that maximize the hamming
-            distance from previously discovered solutions.
-        solver : string
-            The solver to be used.
-        solver_options : dict
-            Solver option-value pairs to be passed to the solver.
-        tee : boolean
-            Boolean indicating that the solver output should be displayed.
-        quiet : boolean
-            Boolean indicating whether to suppress all output.
-        seed : int
-            Optional integer seed for the numpy random number generator
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model
+    num_solutions : int
+        The maximum number of solutions to generate.
+    variables: 'all' or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. 'all' indicates
+        that all variables will be included. Alternatively, a collection of
+        _GenereralVarData variables can be provided.
+    rel_opt_gap : float or None
+        The relative optimality gap for the original objective for which
+        variable bounds will be found. None indicates that a relative gap
+        constraint will not be added to the model.
+    abs_opt_gap : float or None
+        The absolute optimality gap for the original objective for which
+        variable bounds will be found. None indicates that an absolute gap
+        constraint will not be added to the model.
+    search_mode : 'optimal', 'random', or 'hamming'
+        Indicates the mode that is used to generate alternative solutions.
+        The optimal mode finds the next best solution. The random mode
+        finds an alternative solution in the direction of a random ray. The
+        hamming mode iteratively finds solution that maximize the hamming
+        distance from previously discovered solutions.
+    solver : string
+        The solver to be used.
+    solver_options : dict
+        Solver option-value pairs to be passed to the solver.
+    tee : boolean
+        Boolean indicating that the solver output should be displayed.
+    quiet : boolean
+        Boolean indicating whether to suppress all output.
+    seed : int
+        Optional integer seed for the numpy random number generator
 
-        Returns
-        -------
-        solutions
-            A list of Solution objects.
-            [Solution]
+    Returns
+    -------
+    solutions
+        A list of Solution objects.
+        [Solution]
     """
     if not quiet:  # pragma: no cover
         print("STARTING NO-GOOD CUT ANALYSIS")

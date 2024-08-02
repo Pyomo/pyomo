@@ -91,37 +91,37 @@ def enumerate_linear_solutions_soln_pool(
     Finds alternative optimal solutions for a (mixed-binary) linear program
     using Gurobi's solution pool feature.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model
-        num_solutions : int
-            The maximum number of solutions to generate.
-        variables: 'all' or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. 'all' indicates
-            that all variables will be included. Alternatively, a collection of
-            _GenereralVarData variables can be provided.
-        rel_opt_gap : float or None
-            The relative optimality gap for the original objective for which
-            variable bounds will be found. None indicates that a relative gap
-            constraint will not be added to the model.
-        abs_opt_gap : float or None
-            The absolute optimality gap for the original objective for which
-            variable bounds will be found. None indicates that an absolute gap
-            constraint will not be added to the model.
-        zero_threshold: float
-            The threshold for which a continuous variables' value is considered
-            to be equal to zero.
-        solver_options : dict
-            Solver option-value pairs to be passed to the solver.
-        tee : boolean
-            Boolean indicating that the solver output should be displayed.
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model
+    num_solutions : int
+        The maximum number of solutions to generate.
+    variables: 'all' or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. 'all' indicates
+        that all variables will be included. Alternatively, a collection of
+        _GenereralVarData variables can be provided.
+    rel_opt_gap : float or None
+        The relative optimality gap for the original objective for which
+        variable bounds will be found. None indicates that a relative gap
+        constraint will not be added to the model.
+    abs_opt_gap : float or None
+        The absolute optimality gap for the original objective for which
+        variable bounds will be found. None indicates that an absolute gap
+        constraint will not be added to the model.
+    zero_threshold: float
+        The threshold for which a continuous variables' value is considered
+        to be equal to zero.
+    solver_options : dict
+        Solver option-value pairs to be passed to the solver.
+    tee : boolean
+        Boolean indicating that the solver output should be displayed.
 
-        Returns
-        -------
-        solutions
-            A list of Solution objects.
-            [Solution]
+    Returns
+    -------
+    solutions
+        A list of Solution objects.
+        [Solution]
     """
     print("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
     #

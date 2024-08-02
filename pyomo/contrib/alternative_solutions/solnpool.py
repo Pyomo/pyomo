@@ -34,34 +34,34 @@ def gurobi_generate_solutions(
     built-in Solution Pool capability. See the Gurobi Solution Pool
     documentation for additional details.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model.
-        num_solutions : int
-            The maximum number of solutions to generate. This parameter maps to
-            the PoolSolutions parameter in Gurobi.
-        rel_opt_gap : non-negative float or None
-            The relative optimality gap for allowable alternative solutions.
-            None implies that there is no limit on the relative optimality gap
-            (i.e. that any feasible solution can be considered by Gurobi).
-            This parameter maps to the PoolGap parameter in Gurobi.
-        abs_opt_gap : non-negative float or None
-            The absolute optimality gap for allowable alternative solutions.
-            None implies that there is no limit on the absolute optimality gap
-            (i.e. that any feasible solution can be considered by Gurobi).
-            This parameter maps to the PoolGapAbs parameter in Gurobi.
-        solver_options : dict
-            Solver option-value pairs to be passed to the Gurobi solver.
-        tee : boolean
-            Boolean indicating that the solver output should be displayed.
-        quiet : boolean
-            Boolean indicating whether to suppress all output.
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model.
+    num_solutions : int
+        The maximum number of solutions to generate. This parameter maps to
+        the PoolSolutions parameter in Gurobi.
+    rel_opt_gap : non-negative float or None
+        The relative optimality gap for allowable alternative solutions.
+        None implies that there is no limit on the relative optimality gap
+        (i.e. that any feasible solution can be considered by Gurobi).
+        This parameter maps to the PoolGap parameter in Gurobi.
+    abs_opt_gap : non-negative float or None
+        The absolute optimality gap for allowable alternative solutions.
+        None implies that there is no limit on the absolute optimality gap
+        (i.e. that any feasible solution can be considered by Gurobi).
+        This parameter maps to the PoolGapAbs parameter in Gurobi.
+    solver_options : dict
+        Solver option-value pairs to be passed to the Gurobi solver.
+    tee : boolean
+        Boolean indicating that the solver output should be displayed.
+    quiet : boolean
+        Boolean indicating whether to suppress all output.
 
-        Returns
-        -------
-        solutions
-            A list of Solution objects.  [Solution]
+    Returns
+    -------
+    solutions
+        A list of Solution objects.  [Solution]
     """
     #
     # Setup gurobi
