@@ -405,7 +405,7 @@ class _LinearStandardFormCompiler_impl(object):
                 linear_index = map(var_order.__getitem__, linear_index)
             else:
                 # Note: lb and ub could be a number, expression, or None
-                lb, body, ub = con.normalize_constraint()
+                lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:
                     lb = value(lb)
                 if ub.__class__ not in native_types:

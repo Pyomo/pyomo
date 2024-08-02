@@ -556,10 +556,10 @@ class TemplateConstraintData(ConstraintData):
         self.__class__ = ConstraintData
         return self.set_value(expr)
 
-    def normalize_constraint(self):
+    def to_bounded_expression(self):
         tmp, self._expr = self._expr, self._expr[0]
         try:
-            return super().normalize_constraint()
+            return super().to_bounded_expression()
         finally:
             self._expr = tmp
 

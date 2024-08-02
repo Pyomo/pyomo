@@ -266,7 +266,6 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         raise NotImplementedError()
 
 
-
 def _handle_getitem(visitor, node, comp, *args):
     expr = comp[1][tuple(arg[1] for arg in args)]
     if comp[0] is _CONSTANT:
@@ -339,7 +338,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             expr, indices = template_info
             args = [smap.getSymbol(i) for i in indices]
             if expr.is_expression_type(ExpressionType.RELATIONAL):
-                lb, body, ub = obj.normalize_constraint()
+                lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
                     body = self.walk_expression(body).compile(
                         env, smap, self.expr_cache, args, False
