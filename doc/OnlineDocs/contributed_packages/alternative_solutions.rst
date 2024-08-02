@@ -7,7 +7,9 @@ to the user. However, there are many applications where a users needs
 more context than this result. For example,
 
 * alternative solutions can support an assessment of trade-offs between competing objectives;
+
 * if the optimization formulation may be inaccurate or untrustworthy, then comparisons amongst alternative solutions provides additional insights into the reliability of these model predictions; or
+
 * the user may have unexpressed objectives or constraints, which only are realized in later stages of model analysis.
 
 The *alternative-solutions library* provides a variety of functions that
@@ -19,23 +21,23 @@ of pyomo's solver interface because they return a custom solution object.
 
 The following functions are defined in the alternative-solutions library:
 
-* enumerate_binary_solutions
+* ``enumerate_binary_solutions``
 
     * Finds alternative optimal solutions for a binary problem using no-good cuts.
 
-* enumerate_linear_solutions
+* ``enumerate_linear_solutions``
 
     * Finds alternative optimal solutions a (mixed-integer) linear program.
 
-* enumerate_linear_solutions_soln_pool
+* ``enumerate_linear_solutions_soln_pool``
 
     * Finds alternative optimal solutions for a (mixed-binary) linear program using Gurobi's solution pool feature.
 
-* gurobi_generate_solutions
+* ``gurobi_generate_solutions``
 
     * Finds alternative optimal solutions for discrete variables using Gurobi's built-in Solution Pool capability.
 
-* obbt_analysis_bounds_and_solutions
+* ``obbt_analysis_bounds_and_solutions``
 
     * Calculates the bounds on each variable by solving a series of min and max optimization problems where each variable is used as the objective function. This can be applied to any class of problem supported by the selected solver.
 
@@ -70,15 +72,15 @@ Each ``Solution`` object constains information about the objective and variables
    :skipif: not gurobi_available
 
    >>> print(solns[0])
-{
-    "fixed_variables": [],
-    "objective": "o",
-    "objective_value": 5.0,
-    "solution": {
-        "x": 5,
-        "y": 0
-    }
-}
+   {
+       "fixed_variables": [],
+       "objective": "o",
+       "objective_value": 5.0,
+       "solution": {
+           "x": 5,
+           "y": 0
+       }
+   }
 
 
 Interface Documentation
@@ -96,5 +98,5 @@ Interface Documentation
 
 .. autofunction:: obbt_analysis_bounds_and_solutions
 
-.. autoclass: Solution
+.. autoclass:: Solution
 
