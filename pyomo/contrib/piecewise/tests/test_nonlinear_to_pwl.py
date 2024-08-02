@@ -15,7 +15,11 @@ from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     NonlinearToPWL,
     DomainPartitioningMethod,
 )
-from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual,
+    assertExpressionsStructurallyEqual,
+)
+from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.environ import (
     ConcreteModel,
     Var,
@@ -23,6 +27,8 @@ from pyomo.environ import (
     TransformationFactory,
     log,
     Objective,
+    Reals,
+    SolverFactory,
 )
 
 ## debug
@@ -368,7 +374,53 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(nonlinear), 0)
 
 
-# class TestNonlinearToPWLIntegration(unittest.TestCase):
+class TestNonlinearToPWLIntegration(unittest.TestCase):
+    def test_additively_decompose(self):
+        m = ConcreteModel()
+        m.x1 = Var(within=Reals, bounds=(0, 2), initialize=1.745)
+        m.x4 = Var(within=Reals, bounds=(0, 5), initialize=3.048)
+        m.x7 = Var(within=Reals, bounds=(0.9, 0.95), initialize=0.928)
+        m.obj = Objective(expr=-6.3 * m.x4 * m.x7 + 5.04 * m.x1)
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=4,
+            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM,
+            additively_decompose=True,
+        )
+
+        self.assertFalse(m.obj.active)
+        new_obj = n_to_pwl.get_transformed_component(m.obj)
+        self.assertIs(n_to_pwl.get_src_component(new_obj), m.obj)
+        self.assertTrue(new_obj.active)
+        # two terms
+        self.assertIsInstance(new_obj.expr, SumExpression)
+        self.assertEqual(len(new_obj.expr.args), 2)
+        first = new_obj.expr.args[0]
+        pwlf = first.expr.pw_linear_function
+        all_pwlf = list(
+            m.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(all_pwlf), 1)
+        # It is on the active tree.
+        self.assertIs(pwlf, all_pwlf[0])
+
+        second = new_obj.expr.args[1]
+        assertExpressionsEqual(self, second, 5.04 * m.x1)
+
+        objs = n_to_pwl.get_transformed_nonlinear_objectives(m)
+        self.assertEqual(len(objs), 0)
+        objs = n_to_pwl.get_transformed_quadratic_objectives(m)
+        self.assertEqual(len(objs), 1)
+        self.assertIn(m.obj, objs)
+        self.assertEqual(len(n_to_pwl.get_transformed_nonlinear_constraints(m)), 0)
+        self.assertEqual(len(n_to_pwl.get_transformed_quadratic_constraints(m)), 0)
+
+        TransformationFactory('contrib.piecewise.outer_repn_gdp').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m)
+        SolverFactory('gurobi').solve(m)
+
+
 #     def test_Ali_example(self):
 #         m = ConcreteModel()
 #         m.flow_super_heated_vapor = Var()
