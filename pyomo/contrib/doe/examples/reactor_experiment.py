@@ -59,15 +59,10 @@ class ReactorExperiment(Experiment):
         m.T = pyo.Var(m.t, within=pyo.NonNegativeReals)
 
         # Arrhenius rate law equations
-        # m.A1 = pyo.Var(within=pyo.NonNegativeReals)
-        # m.E1 = pyo.Var(within=pyo.NonNegativeReals)
-        # m.A2 = pyo.Var(within=pyo.NonNegativeReals)
-        # m.E2 = pyo.Var(within=pyo.NonNegativeReals)
-
-        m.A1 = pyo.Param(mutable=True)
-        m.E1 = pyo.Param(mutable=True)
-        m.A2 = pyo.Param(mutable=True)
-        m.E2 = pyo.Param(mutable=True)
+        m.A1 = pyo.Var(within=pyo.NonNegativeReals)
+        m.E1 = pyo.Var(within=pyo.NonNegativeReals)
+        m.A2 = pyo.Var(within=pyo.NonNegativeReals)
+        m.E2 = pyo.Var(within=pyo.NonNegativeReals)
 
         # Differential variables (Conc.)
         m.dCAdt = DerivativeVar(m.CA, wrt=m.t)
@@ -135,15 +130,10 @@ class ReactorExperiment(Experiment):
         m.t.update(control_points)
 
         # Fix the unknown parameter values
-        # m.A1.fix(self.data["A1"])
-        # m.A2.fix(self.data["A2"])
-        # m.E1.fix(self.data["E1"])
-        # m.E2.fix(self.data["E2"])
-
-        m.A1.set_value(self.data["A1"])
-        m.A2.set_value(self.data["A2"])
-        m.E1.set_value(self.data["E1"])
-        m.E2.set_value(self.data["E2"])
+        m.A1.fix(self.data["A1"])
+        m.A2.fix(self.data["A2"])
+        m.E1.fix(self.data["E1"])
+        m.E2.fix(self.data["E2"])
 
         # Add upper and lower bounds to the design variable, CA[0]
         m.CA[0].setlb(self.data["CA_bounds"][0])
