@@ -8,6 +8,9 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import logging
+from pathlib import Path
+
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -15,22 +18,19 @@ from pyomo.common.dependencies import (
     pandas_available,
     scipy_available,
 )
+import pyomo.common.unittest as unittest
 
+from pyomo.contrib.doe import *
 from pyomo.contrib.doe.tests.experiment_class_example import *
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     FullReactorExperimentBad,
 )
-from pyomo.contrib.doe import *
 from pyomo.contrib.doe.utils import *
 
-import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 
-from pathlib import Path
-
-import logging
 
 ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory('k_aug', solver_io='nl', validate=False)

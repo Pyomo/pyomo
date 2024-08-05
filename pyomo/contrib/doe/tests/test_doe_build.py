@@ -8,22 +8,20 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from pathlib import Path
+
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
     pandas as pd,
     pandas_available,
 )
-
-from pyomo.contrib.doe.tests.experiment_class_example import *
-from pyomo.contrib.doe import *
-
-
 import pyomo.common.unittest as unittest
 
-from pyomo.opt import SolverFactory
+from pyomo.contrib.doe import *
+from pyomo.contrib.doe.tests.experiment_class_example import *
 
-from pathlib import Path
+from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 
