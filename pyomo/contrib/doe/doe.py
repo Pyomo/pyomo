@@ -274,7 +274,7 @@ class DesignOfExperiments:
         # Deactivate objective expression and objective constraints (on a block), and fix design variables
         model.objective.deactivate()
         model.obj_cons.deactivate()
-        for comp, _ in model.scenario_blocks[0].experiment_inputs.items():
+        for comp in model.scenario_blocks[0].experiment_inputs:
             comp.fix()
 
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
@@ -290,7 +290,7 @@ class DesignOfExperiments:
         model.dummy_obj.deactivate()
 
         # Reactivate objective and unfix experimental design decisions
-        for comp, _ in model.scenario_blocks[0].experiment_inputs.items():
+        for comp in model.scenario_blocks[0].experiment_inputs:
             comp.unfix()
         model.objective.activate()
         model.obj_cons.activate()
@@ -481,7 +481,7 @@ class DesignOfExperiments:
             )
 
         # Fix design variables
-        for comp, _ in model.experiment_inputs.items():
+        for comp in model.experiment_inputs:
             comp.fix()
 
         measurement_vals = []
@@ -605,7 +605,7 @@ class DesignOfExperiments:
         # call k_aug get_dsdp function
         # Solve the square problem
         # Deactivate object and fix experimental design decisions to make square
-        for comp, _ in model.experiment_inputs.items():
+        for comp in model.experiment_inputs:
             comp.fix()
 
         self.solver.solve(model, tee=self.tee)
@@ -1039,7 +1039,7 @@ class DesignOfExperiments:
         # experiment_inputs_Params = get_parameters_from_suffix(model.base_model.experiment_inputs, fix_vars=False)
 
         # Run base model to get initialized model and check model function
-        for comp, _ in model.base_model.experiment_inputs.items():
+        for comp in model.base_model.experiment_inputs:
             comp.fix()
 
         try:
@@ -1051,7 +1051,7 @@ class DesignOfExperiments:
                 "Model from experiment did not solve appropriately. Make sure the model is well-posed."
             )
 
-        for comp, _ in model.base_model.experiment_inputs.items():
+        for comp in model.base_model.experiment_inputs:
             comp.unfix()
 
         # Generate blocks for finite difference scenarios
