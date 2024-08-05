@@ -113,16 +113,16 @@ def get_uniform_point_grid(bounds, n, func, config):
 
 
 def get_points_lmt_random_sample(bounds, n, func, config, seed=42):
-    points = get_random_point_grid(bounds, n, func, seed=seed)
+    points = get_random_point_grid(bounds, n, func, config, seed=seed)
     return get_points_lmt(points, bounds, func, config, seed)
 
 
 def get_points_lmt_uniform_sample(bounds, n, func, config, seed=42):
-    points = get_uniform_point_grid(bounds, n, func)
-    return get_points_lmt(points, bounds, func, seed, config)
+    points = get_uniform_point_grid(bounds, n, func, config)
+    return get_points_lmt(points, bounds, func, config, seed)
 
 
-def get_points_lmt(points, bounds, func, seed, config):
+def get_points_lmt(points, bounds, func, config, seed):
     x_list = np.array(points)
     y_list = []
 

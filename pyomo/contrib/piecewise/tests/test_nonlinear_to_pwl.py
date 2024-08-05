@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import attempt_import, scipy_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise import PiecewiseLinearFunction
 from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
@@ -31,9 +32,15 @@ from pyomo.environ import (
     SolverFactory,
 )
 
-## debug
-from pytest import set_trace
+gurobi_available = (
+    SolverFactory('gurobi').available(exception_flag=False)
+    and SolverFactory('gurobi').license_is_valid()
+)
+lineartree_available = attempt_import('lineartree')[1]
+sklearn_available = attempt_import('sklearn.linear_model')[1]
 
+## DEBUG
+from pytest import set_trace
 
 class TestNonlinearToPWL_1D(unittest.TestCase):
     def make_model(self):
@@ -374,8 +381,90 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(nonlinear), 0)
 
 
+@unittest.skipUnless(lineartree_available, "lineartree not available")
+@unittest.skipUnless(sklearn_available, "sklearn not available")
+class TestLinearTreeDomainPartitioning(unittest.TestCase):
+    def make_absolute_value_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-10, 10))
+        m.obj = Objective(expr=abs(m.x))
+
+        return m
+
+    def test_linear_model_tree_uniform(self):
+        m = self.make_absolute_value_model()
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=301, # sample a lot so we train a good tree
+            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM,
+            linear_tree_max_depth=1, # force parsimony
+        )
+
+        transformed_obj = n_to_pwl.get_transformed_component(m.obj)
+        pwlf = transformed_obj.expr.expr.pw_linear_function
+
+        self.assertEqual(len(pwlf._simplices), 2)
+        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
+        self.assertEqual(pwlf._points, [(-10,), (-0.08402,), (10,)])
+        self.assertEqual(len(pwlf._linear_functions), 2)
+        assertExpressionsEqual(
+            self,
+            pwlf._linear_functions[0](m.x),
+            - 1.0 * m.x
+        )
+        assertExpressionsStructurallyEqual(
+            self,
+            pwlf._linear_functions[1](m.x),
+            # pretty close to m.x, but we're a bit off because we don't have 0
+            # as a breakpoint.
+            0.9833360108369479*m.x + 0.16663989163052034,
+            places=7
+        )
+
+    def test_linear_model_tree_random(self):
+        m = self.make_absolute_value_model()
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=300, # sample a lot so we train a good tree
+            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM,
+            linear_tree_max_depth=1, # force parsimony
+        )
+
+        transformed_obj = n_to_pwl.get_transformed_component(m.obj)
+        pwlf = transformed_obj.expr.expr.pw_linear_function
+
+        self.assertEqual(len(pwlf._simplices), 2)
+        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
+        self.assertEqual(pwlf._points, [(-10,), (-0.03638,), (10,)])
+        self.assertEqual(len(pwlf._linear_functions), 2)
+        assertExpressionsEqual(
+            self,
+            pwlf._linear_functions[0](m.x),
+            - 1.0 * m.x
+        )
+        assertExpressionsStructurallyEqual(
+            self,
+            pwlf._linear_functions[1](m.x),
+            # pretty close to m.x, but we're a bit off because we don't have 0
+            # as a breakpoint.
+            0.9927503741388829*m.x + 0.07249625861117256,
+            places=7
+        )
+
+
 class TestNonlinearToPWLIntegration(unittest.TestCase):
-    def test_additively_decompose(self):
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
+    def test_transform_and_solve_additively_decomposes_model(self):
+        # A bit of an integration test to make sure that we build additively
+        # decomposed pw-linear approximations in such a way that they are
+        # transformed to MILP and solved correctly. (Largely because we have to
+        # be careful to make sure that we don't ever directly insert
+        # PiecewiseLinearExpression objects into expressions and are instead
+        # using the ExpressionData that points to them (and will eventually be
+        # replaced in transformation))
         m = ConcreteModel()
         m.x1 = Var(within=Reals, bounds=(0, 2), initialize=1.745)
         m.x4 = Var(within=Reals, bounds=(0, 5), initialize=3.048)
@@ -385,7 +474,7 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         n_to_pwl.apply_to(
             m,
             num_points=4,
-            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             additively_decompose=True,
         )
 
@@ -420,6 +509,8 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         SolverFactory('gurobi').solve(m)
 
+        # actually test the answer or something
+        self.assertTrue(False)
 
 #     def test_Ali_example(self):
 #         m = ConcreteModel()
