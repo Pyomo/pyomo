@@ -282,7 +282,7 @@ class DesignOfExperiments:
             comp.fix()
 
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
-        self.solver.solve(self.model, tee=self.tee)
+        self.solver.solve(model, tee=self.tee)
 
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
