@@ -12,7 +12,7 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar, Simulator
 
-from pyomo.contrib.doe.experiment import Experiment
+from pyomo.contrib.parmest.experiment import Experiment
 
 import itertools
 import json
