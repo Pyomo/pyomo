@@ -1069,10 +1069,6 @@ class DesignOfExperiments:
 
             param = model.parameter_scenarios[s]
 
-            # Grabbing the index of the parameter without the "base_model" precursor
-            base_model_ind = param.name.split(".").index("base_model")
-            param_loc = ".".join(param.name.split(".")[(base_model_ind + 1) :])
-
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
                 diff = self.step * (
@@ -1088,7 +1084,7 @@ class DesignOfExperiments:
                 pass
 
             # Update parameter values for the given finite difference scenario
-            pyo.ComponentUID(param_loc).find_component_on(b).set_value(
+            pyo.ComponentUID(param, context=model.base_model).find_component_on(b).set_value(
                 model.base_model.unknown_parameters[param] * (1 + diff)
             )
 
@@ -1106,11 +1102,7 @@ class DesignOfExperiments:
             def global_design_fixing(m, s):
                 if s == 0:
                     return pyo.Constraint.Skip
-                ref_design_var = model.scenario_blocks[0].experiment_inputs[d]
-                ref_design_var_loc = ".".join(ref_design_var.get_repr().split(".")[0:])
-                block_design_var = pyo.ComponentUID(
-                    ref_design_var_loc
-                ).find_component_on(model.scenario_blocks[s])
+                block_design_var = pyo.ComponentUID(d, context=model.scenario_blocks[0]).find_component_on(model.scenario_blocks[s])
                 return d == block_design_var
 
             setattr(
