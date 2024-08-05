@@ -201,9 +201,7 @@ class ReactorExperiment(Experiment):
         # )
         m.experiment_inputs[m.CA[m.t.first()]] = None
         # Add experimental input label for Temperature
-        m.experiment_inputs.update(
-            (m.T[t], None) for t in m.t_control
-        )
+        m.experiment_inputs.update((m.T[t], None) for t in m.t_control)
 
         # Add unknown parameter labels
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)

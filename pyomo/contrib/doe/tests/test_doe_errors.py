@@ -317,7 +317,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             scale_nominal_param_value=True,
             prior_FIM=None,
             jac_initial=None,
-            fim_initial=None,            
+            fim_initial=None,
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -350,7 +350,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -384,7 +383,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -420,7 +418,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -458,7 +455,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -492,7 +488,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -532,7 +527,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -571,7 +565,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -610,7 +603,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -653,7 +645,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -697,7 +688,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -732,7 +722,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -767,7 +756,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -802,7 +790,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -837,7 +824,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -872,7 +858,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -907,7 +892,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -941,7 +925,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -975,7 +958,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -1010,7 +992,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -1047,7 +1028,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -1083,7 +1063,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
@@ -1119,7 +1098,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,

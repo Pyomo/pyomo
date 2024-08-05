@@ -331,13 +331,25 @@ class DesignOfExperiments:
         self.results["FIM"] = fim_local
         self.results["Sensitivity Matrix"] = self.get_sensitivity_matrix()
         self.results["Experiment Design"] = self.get_experiment_input_values()
-        self.results["Experiment Design Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].experiment_inputs]
+        self.results["Experiment Design Names"] = [
+            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
+            for k in self.model.scenario_blocks[0].experiment_inputs
+        ]
         self.results["Experiment Outputs"] = self.get_experiment_output_values()
-        self.results["Experiment Output Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].experiment_outputs]
+        self.results["Experiment Output Names"] = [
+            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
+            for k in self.model.scenario_blocks[0].experiment_outputs
+        ]
         self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
-        self.results["Unknown Parameter Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].unknown_parameters]
+        self.results["Unknown Parameter Names"] = [
+            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
+            for k in self.model.scenario_blocks[0].unknown_parameters
+        ]
         self.results["Measurement Error"] = self.get_measurement_error_values()
-        self.results["Measurement Error Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].measurement_error]
+        self.results["Measurement Error Names"] = [
+            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
+            for k in self.model.scenario_blocks[0].measurement_error
+        ]
 
         self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
 
@@ -785,9 +797,7 @@ class DesignOfExperiments:
         # if cholesky, define L elements as variables
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
             model.L = pyo.Var(
-                model.parameter_names,
-                model.parameter_names,
-                initialize=identity_matrix,
+                model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
 
             # loop over parameter name
@@ -935,7 +945,9 @@ class DesignOfExperiments:
             model = self.model
 
         # Generate initial scenario to populate unknown parameter values
-        model.base_model = self.experiment.get_labeled_model(**self.get_labeled_model_args).clone()
+        model.base_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
 
         # Check the model that labels are correct
         self.check_model_labels(model=model.base_model)
@@ -1047,9 +1059,9 @@ class DesignOfExperiments:
                 pass
 
             # Update parameter values for the given finite difference scenario
-            pyo.ComponentUID(param, context=model.base_model).find_component_on(b).set_value(
-                model.base_model.unknown_parameters[param] * (1 + diff)
-            )
+            pyo.ComponentUID(param, context=model.base_model).find_component_on(
+                b
+            ).set_value(model.base_model.unknown_parameters[param] * (1 + diff))
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
@@ -1065,10 +1077,14 @@ class DesignOfExperiments:
             def global_design_fixing(m, s):
                 if s == 0:
                     return pyo.Constraint.Skip
-                block_design_var = pyo.ComponentUID(d, context=model.scenario_blocks[0]).find_component_on(model.scenario_blocks[s])
+                block_design_var = pyo.ComponentUID(
+                    d, context=model.scenario_blocks[0]
+                ).find_component_on(model.scenario_blocks[s])
                 return d == block_design_var
 
-            model.add_component(con_name, pyo.Constraint(model.scenarios, rule=global_design_fixing))
+            model.add_component(
+                con_name, pyo.Constraint(model.scenarios, rule=global_design_fixing)
+            )
 
         # Clean up the base model used to generate the scenarios
         model.del_component(model.base_model)
@@ -1386,7 +1402,9 @@ class DesignOfExperiments:
         self.logger.info("Beginning Full Factorial Design.")
 
         # Make new model for factorial design
-        self.factorial_model = self.experiment.get_labeled_model(**self.get_labeled_model_args).clone()
+        self.factorial_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
         model = self.factorial_model
 
         # Permute the inputs to be aligned with the experiment input indices
