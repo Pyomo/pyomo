@@ -42,7 +42,7 @@ def run_reactor_doe():
     step_size = 1e-3
 
     # Use the determinant objective with scaled sensitivity matrix
-    objective_option = "det"
+    objective_option = "determinant"
     scale_nominal_param_value = True
 
     # Create the DesignOfExperiments object
@@ -59,11 +59,10 @@ def run_reactor_doe():
         prior_FIM=None,
         jac_initial=None,
         fim_initial=None,
-        L_initial=None,
-        L_LB=1e-7,
+        L_diagonal_lower_bound=1e-7,
         solver=None,
         tee=False,
-        args=None,
+        get_labeled_model_args=None,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     )

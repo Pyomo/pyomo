@@ -342,9 +342,13 @@ class DesignOfExperiments:
         self.results["FIM"] = fim_local
         self.results["Sensitivity Matrix"] = self.get_sensitivity_matrix()
         self.results["Experiment Design"] = self.get_experiment_input_values()
+        self.results["Experiment Design Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].experiment_inputs]
         self.results["Experiment Outputs"] = self.get_experiment_output_values()
+        self.results["Experiment Output Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].experiment_outputs]
         self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
+        self.results["Unknown Parameter Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].unknown_parameters]
         self.results["Measurement Error"] = self.get_measurement_error_values()
+        self.results["Measurement Error Names"] = [str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0])) for k in self.model.scenario_blocks[0].measurement_error]
 
         self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
 
