@@ -33,7 +33,10 @@ from pyomo.contrib.piecewise.transform.reduced_inner_representation_gdp import (
 from pyomo.contrib.piecewise.transform.convex_combination import (
     ConvexCombinationTransformation,
 )
-from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import NonlinearToPWL
+from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
+    DomainPartitioningMethod,
+    NonlinearToPWL,
+)
 from pyomo.contrib.piecewise.transform.nested_inner_repn import (
     NestedInnerRepresentationGDPTransformation,
 )
