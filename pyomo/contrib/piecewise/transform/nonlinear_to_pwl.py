@@ -137,7 +137,7 @@ def get_points_lmt(points, bounds, func, config, seed):
         criterion='mse',
         max_bins=120,
         min_samples_leaf=4,
-        max_depth=max_depth
+        max_depth=max_depth,
     )
     regr.fit(x_list, y_list)
 
@@ -654,9 +654,10 @@ class NonlinearToPWL(Transformation):
         pwl_func = 0
         for k, subexpr in enumerate(
             _additively_decompose_expr(
-                expr,
-                config.min_dimension_to_additively_decompose)
-                if config.additively_decompose else (expr,)
+                expr, config.min_dimension_to_additively_decompose
+            )
+            if config.additively_decompose
+            else (expr,)
         ):
             # First check if this is a good idea
             expr_vars = list(identify_variables(subexpr, include_fixed=False))
@@ -683,9 +684,7 @@ class NonlinearToPWL(Transformation):
                 return value(subexpr)
 
             pwlf = _get_pwl_function_approximation(
-                eval_expr,
-                config,
-                self._get_bounds_list(expr_vars, obj),
+                eval_expr, config, self._get_bounds_list(expr_vars, obj)
             )
             name = unique_component_name(
                 trans_block, obj.getname(fully_qualified=False)

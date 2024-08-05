@@ -42,6 +42,7 @@ sklearn_available = attempt_import('sklearn.linear_model')[1]
 ## DEBUG
 from pytest import set_trace
 
+
 class TestNonlinearToPWL_1D(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
@@ -396,9 +397,9 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
             m,
-            num_points=301, # sample a lot so we train a good tree
+            num_points=301,  # sample a lot so we train a good tree
             domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM,
-            linear_tree_max_depth=1, # force parsimony
+            linear_tree_max_depth=1,  # force parsimony
         )
 
         transformed_obj = n_to_pwl.get_transformed_component(m.obj)
@@ -408,18 +409,14 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
         self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
         self.assertEqual(pwlf._points, [(-10,), (-0.08402,), (10,)])
         self.assertEqual(len(pwlf._linear_functions), 2)
-        assertExpressionsEqual(
-            self,
-            pwlf._linear_functions[0](m.x),
-            - 1.0 * m.x
-        )
+        assertExpressionsEqual(self, pwlf._linear_functions[0](m.x), -1.0 * m.x)
         assertExpressionsStructurallyEqual(
             self,
             pwlf._linear_functions[1](m.x),
             # pretty close to m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
-            0.9833360108369479*m.x + 0.16663989163052034,
-            places=7
+            0.9833360108369479 * m.x + 0.16663989163052034,
+            places=7,
         )
 
     def test_linear_model_tree_random(self):
@@ -427,9 +424,9 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
             m,
-            num_points=300, # sample a lot so we train a good tree
+            num_points=300,  # sample a lot so we train a good tree
             domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM,
-            linear_tree_max_depth=1, # force parsimony
+            linear_tree_max_depth=1,  # force parsimony
         )
 
         transformed_obj = n_to_pwl.get_transformed_component(m.obj)
@@ -439,18 +436,14 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
         self.assertEqual(pwlf._simplices, [(0, 1), (1, 2)])
         self.assertEqual(pwlf._points, [(-10,), (-0.03638,), (10,)])
         self.assertEqual(len(pwlf._linear_functions), 2)
-        assertExpressionsEqual(
-            self,
-            pwlf._linear_functions[0](m.x),
-            - 1.0 * m.x
-        )
+        assertExpressionsEqual(self, pwlf._linear_functions[0](m.x), -1.0 * m.x)
         assertExpressionsStructurallyEqual(
             self,
             pwlf._linear_functions[1](m.x),
             # pretty close to m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
-            0.9927503741388829*m.x + 0.07249625861117256,
-            places=7
+            0.9927503741388829 * m.x + 0.07249625861117256,
+            places=7,
         )
 
 
@@ -511,6 +504,7 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
 
         # actually test the answer or something
         self.assertTrue(False)
+
 
 #     def test_Ali_example(self):
 #         m = ConcreteModel()
