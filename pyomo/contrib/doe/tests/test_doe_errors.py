@@ -57,8 +57,7 @@ class TestReactorExampleErrors(unittest.TestCase):
                 prior_FIM=None,
                 jac_initial=None,
                 fim_initial=None,
-                L_initial=None,
-                L_LB=1e-7,
+                L_diagonal_lower_bound=1e-7,
                 solver=None,
                 tee=False,
                 args=None,
@@ -84,8 +83,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -117,8 +115,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -150,8 +147,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -183,8 +179,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -218,8 +213,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=prior_FIM,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -255,8 +249,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=jac_init,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -292,8 +285,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -326,9 +318,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             scale_nominal_param_value=True,
             prior_FIM=None,
             jac_initial=None,
-            fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            fim_initial=None,            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -360,8 +351,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -394,8 +385,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -416,7 +407,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_grid_search_des_range_inputs(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -430,8 +421,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -454,7 +445,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_premature_figure_drawing(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -468,8 +459,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -488,7 +479,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_no_des_var_names(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -502,8 +493,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -528,7 +519,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_no_sens_names(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -542,8 +533,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -567,7 +558,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_no_fixed_names(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -581,8 +572,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -606,7 +597,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_bad_fixed_names(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -620,8 +611,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -649,7 +640,7 @@ class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_bad_sens_names(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -663,8 +654,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -707,8 +698,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -742,8 +733,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -777,8 +768,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -812,8 +803,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -847,8 +838,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -882,8 +873,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -917,8 +908,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -951,8 +942,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -985,8 +976,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -1020,8 +1011,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -1057,8 +1048,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -1093,8 +1084,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -1129,8 +1120,8 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},
@@ -1165,8 +1156,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args={"flag": flag_val},

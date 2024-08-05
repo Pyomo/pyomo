@@ -113,8 +113,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -153,8 +153,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -192,8 +192,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -219,7 +219,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_obj_det_solve(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -233,8 +233,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -250,7 +250,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_obj_cholesky_solve(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -264,8 +264,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -290,7 +290,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_compute_FIM_seq_centr(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -304,8 +304,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -319,7 +319,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_compute_FIM_seq_forward(self):
         fd_method = "forward"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -333,8 +333,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -352,7 +352,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_compute_FIM_kaug(self):
         fd_method = "forward"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -366,8 +366,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -381,7 +381,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_compute_FIM_seq_backward(self):
         fd_method = "backward"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -395,8 +395,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -411,7 +411,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_grid_search(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -425,8 +425,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -457,7 +457,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_rescale_FIM(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
@@ -472,8 +472,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -492,8 +492,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -530,7 +530,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_solve_bad_model(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperimentBad(data_ex, 10, 3)
 
@@ -544,8 +544,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -564,7 +564,7 @@ class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_grid_search_bad_model(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperimentBad(data_ex, 10, 3)
 
@@ -578,8 +578,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,

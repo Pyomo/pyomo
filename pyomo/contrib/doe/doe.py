@@ -56,7 +56,7 @@ class CalculationMode(Enum):
 
 
 class ObjectiveLib(Enum):
-    det = "det"
+    determinant = "determinant"
     trace = "trace"
     zero = "zero"
 
@@ -79,13 +79,12 @@ class DesignOfExperiments:
         experiment,
         fd_formula="central",
         step=1e-3,
-        objective_option="det",
+        objective_option="determinant",
         scale_constant_value=1.0,
         scale_nominal_param_value=False,
         prior_FIM=None,
         jac_initial=None,
         fim_initial=None,
-        L_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=None,
         tee=False,
@@ -115,7 +114,7 @@ class DesignOfExperiments:
             default: 1e-3
         objective_option:
             String representation of the objective option. Current available options are:
-            ``det`` (for determinant, or D-optimality) and ``trace`` (for trace or
+            ``determinant`` (for determinant, or D-optimality) and ``trace`` (for trace or
             A-optimality)
         scale_constant_value:
             Constant scaling for the sensitivity matrix. Every element will be multiplied by this
@@ -135,8 +134,6 @@ class DesignOfExperiments:
             2D numpy array as the initial values for the sensitivity matrix.
         fim_initial:
             2D numpy array as the initial values for the FIM.
-        L_initial:
-            2D numpy array as the initial values for the Cholesky matrix.
         L_diagonal_lower_bound:
             Lower bound for the values of the lower triangular Cholesky factorization matrix.
             default: 1e-7
@@ -184,7 +181,6 @@ class DesignOfExperiments:
         # Set the initial values for the jacobian, fim, and L matrices
         self.jac_initial = jac_initial
         self.fim_initial = fim_initial
-        self.L_initial = L_initial
 
         # Set the lower bound on the Cholesky lower triangular matrix
         self.L_diagonal_lower_bound = L_diagonal_lower_bound
@@ -316,8 +312,8 @@ class DesignOfExperiments:
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
 
-        if hasattr(model, "det"):
-            model.det.value = np.linalg.det(np.array(self.get_FIM()))
+        if hasattr(model, "determinant"):
+            model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
 
         # Solve the full model, which has now been initialized with the square solve
         res = self.solver.solve(model, tee=self.tee)
@@ -712,7 +708,7 @@ class DesignOfExperiments:
         # The explicit formula is available for benchmarking purposes and is NOT recommended
         if (
             self.only_compute_fim_lower
-            and self.objective_option == ObjectiveLib.det
+            and self.objective_option == ObjectiveLib.determinant
             and not self.Cholesky_option
         ):
             raise ValueError(
@@ -794,33 +790,12 @@ class DesignOfExperiments:
 
         # To-Do: Look into this functionality.....
         # if cholesky, define L elements as variables
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
-
-            # move the L matrix initial point to a dictionary
-            if self.L_initial is not None:
-                dict_cho = {
-                    (bu, un): self.L_initial[i][j]
-                    for i, bu in enumerate(model.parameter_names)
-                    for j, un in enumerate(model.parameter_names)
-                }
-
-            # use the L dictionary to initialize L matrix
-            def init_cho(m, i, j):
-                return dict_cho[(i, j)]
-
-            # Define elements of Cholesky decomposition matrix as Pyomo variables and either
-            # Initialize with L in L_initial
-            if self.L_initial is not None:
-                model.L = pyo.Var(
-                    model.parameter_names, model.parameter_names, initialize=init_cho
-                )
-            # or initialize with the identity matrix
-            else:
-                model.L = pyo.Var(
-                    model.parameter_names,
-                    model.parameter_names,
-                    initialize=identity_matrix,
-                )
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+            model.L = pyo.Var(
+                model.parameter_names,
+                model.parameter_names,
+                initialize=identity_matrix,
+            )
 
             # loop over parameter name
             for i, c in enumerate(model.parameter_names):
@@ -1127,7 +1102,7 @@ class DesignOfExperiments:
             model = self.model
 
         if self.objective_option not in [
-            ObjectiveLib.det,
+            ObjectiveLib.determinant,
             ObjectiveLib.trace,
             ObjectiveLib.zero,
         ]:
@@ -1156,7 +1131,7 @@ class DesignOfExperiments:
         )
 
         ### Initialize the Cholesky decomposition matrix
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
 
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
@@ -1201,7 +1176,7 @@ class DesignOfExperiments:
             """
             return model.trace == sum(model.fim[j, j] for j in model.parameter_names)
 
-        def det_general(m):
+        def determinant_general(m):
             r"""Calculate determinant. Can be applied to FIM of any size.
             det(A) = \sum_{\sigma in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
@@ -1233,9 +1208,9 @@ class DesignOfExperiments:
                 )
                 for d in range(len(list_p))
             )
-            return model.det == det_perm
+            return model.determinant == det_perm
 
-        if self.Cholesky_option and self.objective_option == ObjectiveLib.det:
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
             model.obj_cons.cholesky_cons = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=cholesky_imp
             )
@@ -1244,14 +1219,14 @@ class DesignOfExperiments:
                 sense=pyo.maximize,
             )
 
-        elif self.objective_option == ObjectiveLib.det:
+        elif self.objective_option == ObjectiveLib.determinant:
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-            model.det = pyo.Var(
+            model.determinant = pyo.Var(
                 initialize=np.linalg.det(fim), bounds=(small_number, None)
             )
-            model.obj_cons.det_rule = pyo.Constraint(rule=det_general)
+            model.obj_cons.determinant_rule = pyo.Constraint(rule=determinant_general)
             model.objective = pyo.Objective(
-                expr=pyo.log10(model.det + 1e-6), sense=pyo.maximize
+                expr=pyo.log10(model.determinant + 1e-6), sense=pyo.maximize
             )
 
         elif self.objective_option == ObjectiveLib.trace:

@@ -111,8 +111,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -167,8 +166,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -225,8 +223,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -283,8 +280,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -334,8 +330,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -385,8 +380,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -422,16 +416,13 @@ class TestReactorExampleBuild(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_user_initialization(self):
         fd_method = "central"
-        obj_used = "det"
+        obj_used = "determinant"
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
         FIM_prior = np.ones((4, 4))
         FIM_initial = np.eye(4) + FIM_prior
         JAC_initial = np.ones((27, 4)) * 2
-        L_initial = np.tril(
-            np.ones((4, 4)) * 3
-        )  # Must input lower triangular to get equality
 
         doe_obj = DesignOfExperiments(
             experiment,
@@ -443,8 +434,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=FIM_prior,
             jac_initial=JAC_initial,
             fim_initial=FIM_initial,
-            L_initial=L_initial,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -460,7 +450,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Make sure they match the inputs we gave
         assert np.array_equal(FIM, FIM_initial)
         assert np.array_equal(FIM_prior, FIM_prior_model)
-        assert np.array_equal(L_initial, L)
         assert np.array_equal(JAC_initial, Q)
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -483,8 +472,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -520,8 +508,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -555,8 +542,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -590,8 +576,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -625,8 +610,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
@@ -661,8 +645,7 @@ class TestReactorExampleBuild(unittest.TestCase):
             prior_FIM=None,
             jac_initial=None,
             fim_initial=None,
-            L_initial=None,
-            L_LB=1e-7,
+            L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
             args=None,
