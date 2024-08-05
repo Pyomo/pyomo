@@ -16,6 +16,7 @@ from pyomo.contrib.piecewise.transform.nonlinear_to_pwl import (
     NonlinearToPWL,
     DomainPartitioningMethod,
 )
+from pyomo.core.base.expression import _ExpressionData
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -40,9 +41,6 @@ gurobi_available = (
 )
 lineartree_available = attempt_import('lineartree')[1]
 sklearn_available = attempt_import('sklearn.linear_model')[1]
-
-## DEBUG
-from pytest import set_trace
 
 
 class TestNonlinearToPWL_1D(unittest.TestCase):
@@ -232,6 +230,43 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                 num_points=3,
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             )
+
+    def test_error_for_non_separable_exceeding_max_dimension(self):
+        m = ConcreteModel()
+        m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
+        m.ick = Constraint(expr=m.x[0] ** (m.x[1] * m.x[2] * m.x[3] * m.x[4]) <= 8)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        with self.assertRaisesRegex(
+                ValueError,
+                "Not approximating expression for component 'ick' as "
+                "it exceeds the maximum dimension of 4. Try increasing "
+                "'max_dimension' or additively separating the expression."
+        ):
+            n_to_pwl.apply_to(
+                m,
+                num_points=3,
+                domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+                max_dimension=4
+            )
+
+    def test_do_not_additively_decompose_below_min_dimension(self):
+        m = ConcreteModel()
+        m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
+        m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3] <= 4)
+        
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=3,
+            additively_decompose=True,
+            min_dimension_to_additively_decompose=4,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+        )
+
+        transformed_c = n_to_pwl.get_transformed_component(m.c)
+        # This is only approximated by one pwlf:
+        self.assertIsInstance(transformed_c.body, _ExpressionData)
 
 
 class TestNonlinearToPWL_2D(unittest.TestCase):
@@ -548,64 +583,3 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         self.assertAlmostEqual(value(xm.x4), value(m.x4), places=3)
         self.assertAlmostEqual(value(xm.x7), value(m.x7), places=4)
         self.assertAlmostEqual(value(xm.x1), value(m.x1), places=7)
-
-
-#     def test_Ali_example(self):
-#         m = ConcreteModel()
-#         m.flow_super_heated_vapor = Var()
-#         m.flow_super_heated_vapor.fix(0.4586949988166174)
-#         m.super_heated_vapor_temperature = Var(bounds=(31, 200), initialize=45)
-#         m.evaporator_condensate_temperature = Var(
-#             bounds=(29, 120.8291392028045), initialize=30
-#         )
-#         m.LMTD = Var(bounds=(0, 130.61608989795093), initialize=1)
-#         m.evaporator_condensate_enthalpy = Var(
-#             bounds=(-15836.847, -15510.210751855624), initialize=100
-#         )
-#         m.evaporator_condensate_vapor_enthalpy = Var(
-#             bounds=(-13416.64, -13247.674383866839), initialize=100
-#         )
-#         m.heat_transfer_coef = Var(
-#             bounds=(1.9936854577372858, 5.995319594088982), initialize=0.1
-#         )
-#         m.evaporator_brine_temperature = Var(
-#             bounds=(27, 118.82913920280366), initialize=35
-#         )
-#         m.each_evaporator_area = Var()
-
-#         m.c = Constraint(
-#             expr=m.each_evaporator_area
-#             == (
-#                 1.873
-#                 * m.flow_super_heated_vapor
-#                 * (
-#                     m.super_heated_vapor_temperature
-#                     - m.evaporator_condensate_temperature
-#                 )
-#                 / (100 * m.LMTD)
-#                 + m.flow_super_heated_vapor
-#                 * (
-#                     m.evaporator_condensate_vapor_enthalpy
-#                     - m.evaporator_condensate_enthalpy
-#                 )
-#                 / (
-#                     m.heat_transfer_coef
-#                     * (
-#                         m.evaporator_condensate_temperature
-#                         - m.evaporator_brine_temperature
-#                     )
-#                 )
-#             )
-#         )
-
-#         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-#         n_to_pwl.apply_to(
-#             m,
-#             num_points=3,
-#             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-#         )
-
-#         m.pprint()
-
-#         from pyomo.environ import SolverFactory
-#         SolverFactory('gurobi').solve(m, tee=True)

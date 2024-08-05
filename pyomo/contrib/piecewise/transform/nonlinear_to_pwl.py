@@ -665,7 +665,7 @@ class NonlinearToPWL(Transformation):
 
             dim = len(expr_vars)
             if dim > config.max_dimension:
-                logger.warning(
+                raise ValueError(
                     "Not approximating expression for component '%s' as "
                     "it exceeds the maximum dimension of %s. Try increasing "
                     "'max_dimension' or additively separating the expression."
