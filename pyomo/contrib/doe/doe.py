@@ -88,7 +88,7 @@ class DesignOfExperiments:
         L_diagonal_lower_bound=1e-7,
         solver=None,
         tee=False,
-        args=None,
+        get_labeled_model_args=None,
         logger_level=logging.WARNING,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
@@ -142,7 +142,7 @@ class DesignOfExperiments:
             If not specified, default solver is set to IPOPT with MA57.
         tee:
             Solver option to be passed for verbose output.
-        args:
+        get_labeled_model_args:
             Additional arguments for the ``get_labeled_model`` function on the Experiment object.
         _Cholesky_option:
             Boolean value of whether or not to use the choleskyn factorization to compute the
@@ -198,10 +198,10 @@ class DesignOfExperiments:
 
         self.tee = tee
 
-        # Set args as an empty dict if no arguments are passed
-        if args is None:
-            args = {}
-        self.args = args
+        # Set get_labeled_model_args as an empty dict if no arguments are passed
+        if get_labeled_model_args is None:
+            get_labeled_model_args = {}
+        self.get_labeled_model_args = get_labeled_model_args
 
         # Revtrieve logger and set logging level
         self.logger = logging.getLogger(__name__)
@@ -401,7 +401,7 @@ class DesignOfExperiments:
         """
         if model is None:
             self.compute_FIM_model = self.experiment.get_labeled_model(
-                **self.args
+                **self.get_labeled_model_args
             ).clone()
             model = self.compute_FIM_model
         else:
@@ -453,7 +453,7 @@ class DesignOfExperiments:
         # Build a singular model instance
         if model is None:
             self.compute_FIM_model = self.experiment.get_labeled_model(
-                **self.args
+                **self.get_labeled_model_args
             ).clone()
             model = self.compute_FIM_model
 
@@ -599,7 +599,7 @@ class DesignOfExperiments:
         # compute_FIM_model needs to be the right version for function to work.
         if model is None:
             self.compute_FIM_model = self.experiment.get_labeled_model(
-                **self.args
+                **self.get_labeled_model_args
             ).clone()
             model = self.compute_FIM_model
 
@@ -942,7 +942,7 @@ class DesignOfExperiments:
             model = self.model
 
         # Generate initial scenario to populate unknown parameter values
-        model.base_model = self.experiment.get_labeled_model(**self.args).clone()
+        model.base_model = self.experiment.get_labeled_model(**self.get_labeled_model_args).clone()
 
         # Check the model that labels are correct
         self.check_model_labels(model=model.base_model)
@@ -1393,7 +1393,7 @@ class DesignOfExperiments:
         self.logger.info("Beginning Full Factorial Design.")
 
         # Make new model for factorial design
-        self.factorial_model = self.experiment.get_labeled_model(**self.args).clone()
+        self.factorial_model = self.experiment.get_labeled_model(**self.get_labeled_model_args).clone()
         model = self.factorial_model
 
         # Permute the inputs to be aligned with the experiment input indices

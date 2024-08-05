@@ -60,7 +60,7 @@ class TestReactorExampleErrors(unittest.TestCase):
                 L_diagonal_lower_bound=1e-7,
                 solver=None,
                 tee=False,
-                args=None,
+                get_labeled_model_args=None,
                 _Cholesky_option=True,
                 _only_compute_fim_lower=True,
             )
@@ -86,7 +86,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -118,7 +118,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -150,7 +150,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -182,7 +182,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -216,7 +216,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -252,7 +252,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -288,7 +288,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -322,7 +322,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -355,7 +355,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -389,7 +389,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -425,7 +425,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -463,7 +463,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -497,7 +497,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -537,7 +537,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -576,7 +576,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -615,7 +615,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -658,7 +658,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args=None,
+            get_labeled_model_args=None,
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -702,7 +702,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -737,7 +737,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -772,7 +772,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -807,7 +807,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -842,7 +842,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -877,7 +877,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -912,7 +912,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -946,7 +946,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -980,7 +980,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -1015,7 +1015,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -1052,7 +1052,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -1088,7 +1088,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -1124,7 +1124,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
@@ -1159,7 +1159,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             L_diagonal_lower_bound=1e-7,
             solver=None,
             tee=False,
-            args={"flag": flag_val},
+            get_labeled_model_args={"flag": flag_val},
             _Cholesky_option=True,
             _only_compute_fim_lower=True,
         )
