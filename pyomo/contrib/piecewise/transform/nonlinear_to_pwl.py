@@ -105,9 +105,7 @@ def _get_uniform_point_grid(bounds, n, func, config):
     for lb, ub in bounds:
         # Issues happen when exactly using the boundary
         nudge = (ub - lb) * 1e-4
-        linspaces.append(
-            np.linspace(lb + nudge, ub - nudge, n)
-        )
+        linspaces.append(np.linspace(lb + nudge, ub - nudge, n))
     return list(itertools.product(*linspaces))
 
 
