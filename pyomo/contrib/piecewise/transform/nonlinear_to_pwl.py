@@ -106,7 +106,6 @@ def _get_uniform_point_grid(bounds, n, func, config):
         # Issues happen when exactly using the boundary
         nudge = (ub - lb) * 1e-4
         linspaces.append(
-            # np.linspace(b[0], b[1], n)
             np.linspace(lb + nudge, ub - nudge, n)
         )
     return list(itertools.product(*linspaces))
@@ -141,17 +140,9 @@ def _get_points_lmt(points, bounds, func, config, seed):
     )
     regr.fit(x_list, y_list)
 
-    # ESJ TODO: we actually only needs leaves from here...
     leaves, splits, thresholds = _parse_linear_tree_regressor(regr, bounds)
 
-    # This was originally part of the LMT_Model_component and used to calculate
-    # avg_leaves for the output data. TODO: get this back
-    # self.total_leaves += len(leaves)
-
-    # bound_point_list = lmt.generate_bound(leaves)
     bound_point_list = _generate_bound_points(leaves, bounds)
-    # duct tape to fix possible issues from unknown bugs. TODO should this go
-    # here?
     return bound_point_list
 
 
@@ -203,7 +194,6 @@ def _generate_bound_points(leaves, bounds):
             lower_corner_list.append(var_bound[0])
             upper_corner_list.append(var_bound[1])
 
-        # Duct tape to fix issues from unknown bugs
         for pt in [lower_corner_list, upper_corner_list]:
             for i in range(len(pt)):
                 # clamp within bounds range
