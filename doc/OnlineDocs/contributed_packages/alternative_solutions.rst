@@ -60,16 +60,16 @@ Many of functions in the alternative-solutions library have similar options, so 
 We can execute the ``enumerate_binary_solutions`` function to generate a list of ``Solution`` objects that represent alternative optimal solutions:
 
 .. doctest::
-   :skipif: not gurobi_available
+   :skipif: not glpk_available
 
    >>> import pyomo.contrib.alternative_solutions as aos
-   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="gurobi")
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk")
    >>> assert len(solns) == 1
 
 Each ``Solution`` object contains information about the objective and variables, and it includes various methods to access this information.  For example:
 
 .. doctest::
-   :skipif: not gurobi_available
+   :skipif: not glpk_available
 
    >>> print(solns[0])
    {
