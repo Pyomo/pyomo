@@ -230,7 +230,7 @@ class ReactorExperiment(Experiment):
             index_sets_des = [[[m.t.first()]], [m.t_control]]
             m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
             m.experiment_inputs.update(
-                (k, pyo.ComponentUID(k))
+                (k, None)
                 for k in expand_model_components(m, base_comp_des, index_sets_des)
             )
 

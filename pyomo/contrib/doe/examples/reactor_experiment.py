@@ -196,12 +196,13 @@ class ReactorExperiment(Experiment):
         # Identify design variables (experiment inputs) for the model
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         # Add experimental input label for initial concentration
-        m.experiment_inputs.update(
-            (m.CA[t], pyo.ComponentUID(m.CA[t])) for t in [m.t.first()]
-        )
+        # m.experiment_inputs.update(
+        #     (m.CA[t], None) for t in [m.t.first()]
+        # )
+        m.experiment_inputs[m.CA[m.t.first()]] = None
         # Add experimental input label for Temperature
         m.experiment_inputs.update(
-            (m.T[t], pyo.ComponentUID(m.T[t])) for t in m.t_control
+            (m.T[t], None) for t in m.t_control
         )
 
         # Add unknown parameter labels
