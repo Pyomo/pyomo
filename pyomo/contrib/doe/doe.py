@@ -27,9 +27,11 @@
 
 from enum import Enum
 from itertools import permutations, product
+
 import json
 import logging
 import math
+
 from pathlib import Path
 
 from pyomo.common.dependencies import (
@@ -38,7 +40,7 @@ from pyomo.common.dependencies import (
     pandas as pd,
     matplotlib as plt,
 )
-
+from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -252,6 +254,8 @@ class DesignOfExperiments:
         # Model is none, set it to self.model
         if model is None:
             model = self.model
+        else:
+            model = unique_component_name(model, "design_of_experiments_block")
 
         # ToDo: potentially work with this for more complicated models
         # Create the full DoE model (build scenarios for F.D. scheme)
