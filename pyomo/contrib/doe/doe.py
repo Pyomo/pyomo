@@ -86,7 +86,7 @@ class DesignOfExperiments:
         jac_initial=None,
         fim_initial=None,
         L_initial=None,
-        L_LB=1e-7,
+        L_diagonal_lower_bound=1e-7,
         solver=None,
         tee=False,
         args=None,
@@ -137,7 +137,7 @@ class DesignOfExperiments:
             2D numpy array as the initial values for the FIM.
         L_initial:
             2D numpy array as the initial values for the Cholesky matrix.
-        L_LB:
+        L_diagonal_lower_bound:
             Lower bound for the values of the lower triangular Cholesky factorization matrix.
             default: 1e-7
         solver:
@@ -187,7 +187,7 @@ class DesignOfExperiments:
         self.L_initial = L_initial
 
         # Set the lower bound on the Cholesky lower triangular matrix
-        self.L_LB = L_LB
+        self.L_diagonal_lower_bound = L_diagonal_lower_bound
 
         # check if user-defined solver is given
         if solver:
@@ -829,9 +829,9 @@ class DesignOfExperiments:
                     if i < j:
                         model.L[c, d].fix(0.0)
                     # Give LB to the diagonal entries
-                    if self.L_LB:
+                    if self.L_diagonal_lower_bound:
                         if c == d:
-                            model.L[c, d].setlb(self.L_LB)
+                            model.L[c, d].setlb(self.L_diagonal_lower_bound)
 
         # jacobian rule
         def jacobian_rule(m, n, p):
