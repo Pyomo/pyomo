@@ -31,7 +31,7 @@ from pyomo.environ import (
     Reals,
     SolverFactory,
     TerminationCondition,
-    value
+    value,
 )
 
 gurobi_available = (
@@ -428,7 +428,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
         n_to_pwl.apply_to(
             m,
             num_points=100,  # sample a lot but not too many because this one is
-                             # more prone to overfitting
+            # more prone to overfitting
             domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM,
         )
 
@@ -443,11 +443,24 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
         # We end up with 8, which is just what happens, but it's not a terrible
         # approximation
         self.assertEqual(len(pwlf._simplices), 8)
-        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5),
-                                           (5, 6), (6, 7), (7, 8)])
-        self.assertEqual(pwlf._points, [(-10,), (-9.24119,), (-8.71428,), (-8.11135,),
-                                        (0.06048,), (0.70015,), (1.9285,), (2.15597,),
-                                        (10,)])
+        self.assertEqual(
+            pwlf._simplices,
+            [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)],
+        )
+        self.assertEqual(
+            pwlf._points,
+            [
+                (-10,),
+                (-9.24119,),
+                (-8.71428,),
+                (-8.11135,),
+                (0.06048,),
+                (0.70015,),
+                (1.9285,),
+                (2.15597,),
+                (10,),
+            ],
+        )
         self.assertEqual(len(pwlf._linear_functions), 8)
         for i in range(3):
             assertExpressionsEqual(self, pwlf._linear_functions[i](m.x), -1.0 * m.x)
@@ -456,7 +469,7 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             pwlf._linear_functions[3](m.x),
             # pretty close to - m.x, but we're a bit off because we don't have 0
             # as a breakpoint.
-            -0.9851979299618323*m.x + 0.12006477080409184,
+            -0.9851979299618323 * m.x + 0.12006477080409184,
             places=7,
         )
         for i in range(4, 8):
@@ -518,14 +531,16 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(xm)
         opt = SolverFactory('gurobi')
         results = opt.solve(xm)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
 
         # solve the original
         opt.options['NonConvex'] = 2
         results = opt.solve(m)
-        self.assertEqual(results.solver.termination_condition,
-                         TerminationCondition.optimal)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.optimal
+        )
 
         # Not a bad approximation:
         self.assertAlmostEqual(value(xm.obj), value(m.obj), places=2)
@@ -533,6 +548,7 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         self.assertAlmostEqual(value(xm.x4), value(m.x4), places=3)
         self.assertAlmostEqual(value(xm.x7), value(m.x7), places=4)
         self.assertAlmostEqual(value(xm.x1), value(m.x1), places=7)
+
 
 #     def test_Ali_example(self):
 #         m = ConcreteModel()
