@@ -1105,11 +1105,7 @@ class DesignOfExperiments:
                 block_design_var = pyo.ComponentUID(d, context=model.scenario_blocks[0]).find_component_on(model.scenario_blocks[s])
                 return d == block_design_var
 
-            setattr(
-                model,
-                con_name,
-                pyo.Constraint(model.scenarios, rule=global_design_fixing),
-            )
+            model.add_component(con_name, pyo.Constraint(model.scenarios, rule=global_design_fixing))
 
         # Clean up the base model used to generate the scenarios
         model.del_component(model.base_model)
