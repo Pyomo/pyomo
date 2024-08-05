@@ -255,7 +255,9 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
         else:
-            model = unique_component_name(model, "design_of_experiments_block")
+            doe_block = pyo.Block()
+            doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            model.add_component(doe_block_name, doe_block)
 
         # ToDo: potentially work with this for more complicated models
         # Create the full DoE model (build scenarios for F.D. scheme)
@@ -406,6 +408,11 @@ class DesignOfExperiments:
                 **self.args
             ).clone()
             model = self.compute_FIM_model
+        else:
+            doe_block = pyo.Block()
+            doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            model.add_component(doe_block_name, doe_block)
+            self.compute_FIM_model = model
 
         self.check_model_labels(model=model)
 
@@ -696,6 +703,10 @@ class DesignOfExperiments:
         """
         if model is None:
             model = self.model
+        else:
+            doe_block = pyo.Block()
+            doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            model.add_component(doe_block_name, doe_block)
 
         # Developer recommendation: use the Cholesky decomposition for D-optimality
         # The explicit formula is available for benchmarking purposes and is NOT recommended
