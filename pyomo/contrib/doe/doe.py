@@ -50,21 +50,10 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverStatus
 
 
-class CalculationMode(Enum):
-    sequential_finite = "sequential_finite"
-    direct_kaug = "direct_kaug"
-
-
 class ObjectiveLib(Enum):
     determinant = "determinant"
     trace = "trace"
     zero = "zero"
-
-
-class ModelOptionLib(Enum):
-    parmest = "parmest"
-    stage1 = "stage1"
-    stage2 = "stage2"
 
 
 class FiniteDifferenceStep(Enum):

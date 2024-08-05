@@ -10,9 +10,7 @@
 #  ___________________________________________________________________________
 from .doe import (
     DesignOfExperiments,
-    CalculationMode,
     ObjectiveLib,
-    ModelOptionLib,
     FiniteDifferenceStep,
 )
 from .tests import experiment_class_example, experiment_class_example_flags
