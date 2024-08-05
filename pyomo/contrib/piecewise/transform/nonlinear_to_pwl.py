@@ -413,8 +413,8 @@ class NonlinearToPWL(Transformation):
         ConfigValue(
             default=False,
             domain=bool,
-            description="Whether or not to additively decompose constraints and "
-            "approximate the summands separately.",
+            description="Whether or not to additively decompose constraint expressions "
+            "and approximate the summands separately.",
             doc="""
             If False, each nonlinear constraint expression will be approximated by
             exactly one piecewise-linear function. If True, constraints will be 
@@ -444,17 +444,19 @@ class NonlinearToPWL(Transformation):
         ),
     )
     CONFIG.declare(
-        'min_additive_decomposition_dimension',
+        'min_dimension_to_additively_decompose',
         ConfigValue(
             default=1,
             domain=PositiveInt,
-            description="The minimum dimension of functions that will be additively decomposed.",
+            description="The minimum dimension of functions that will be additively "
+            "decomposed.",
             doc="""
-            Specifies the minimum dimension of a function that the transformation should
-            attempt to additively decompose. If a nonlinear function dimension exceeds
-            'min_additive_decomposition_dimension' the transformation will additively decompose
-            If a the dimension of an expression is less than the "min_additive_decomposition_dimension"
-            then, it will not be additively decomposed""",
+            Specifies the minimum dimension of a function that the transformation
+            should attempt to additively decompose. If a nonlinear function dimension
+            exceeds 'min_dimension_to_additively_decompose' the transformation will
+            additively decompose. If a the dimension of an expression is less than
+            the 'min_dimension_to_additively_decompose' then it will not be additively
+            decomposed""",
         ),
     )
     # TODO: Minimum dimension to additively decompose--(Only decompose if the
