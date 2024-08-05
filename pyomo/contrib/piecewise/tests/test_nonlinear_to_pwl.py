@@ -30,6 +30,8 @@ from pyomo.environ import (
     Objective,
     Reals,
     SolverFactory,
+    TerminationCondition,
+    value
 )
 
 gurobi_available = (
@@ -231,32 +233,6 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             )
 
-    # def test_log_constraint_lmt_uniform_sample(self):
-    #     m = self.make_model()
-
-    #     n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-    #     n_to_pwl.apply_to(
-    #         m,
-    #         num_points=3,
-    #         domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_UNIFORM,
-    #     )
-
-    #     # cons is transformed
-    #     self.assertFalse(m.cons.active)
-
-    #     pwlf = list(m.component_data_objects(PiecewiseLinearFunction,
-    #                                          descend_into=True))
-    #     self.assertEqual(len(pwlf), 1)
-    #     pwlf = pwlf[0]
-
-    #     set_trace()
-
-    #     # TODO
-    #     x1 = 4.370861069626263
-    #     x2 = 7.587945476302646
-    #     x3 = 9.556428757689245
-    #     self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
-
 
 class TestNonlinearToPWL_2D(unittest.TestCase):
     def make_paraboloid_model(self):
@@ -446,6 +422,46 @@ class TestLinearTreeDomainPartitioning(unittest.TestCase):
             places=7,
         )
 
+    def test_linear_model_tree_random_auto_depth_tree(self):
+        m = self.make_absolute_value_model()
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=100,  # sample a lot but not too many because this one is
+                             # more prone to overfitting
+            domain_partitioning_method=DomainPartitioningMethod.LINEAR_MODEL_TREE_RANDOM,
+        )
+
+        transformed_obj = n_to_pwl.get_transformed_component(m.obj)
+        pwlf = transformed_obj.expr.expr.pw_linear_function
+
+        print(pwlf._simplices)
+        print(pwlf._points)
+        for f in pwlf._linear_functions:
+            print(f(m.x))
+
+        # We end up with 8, which is just what happens, but it's not a terrible
+        # approximation
+        self.assertEqual(len(pwlf._simplices), 8)
+        self.assertEqual(pwlf._simplices, [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5),
+                                           (5, 6), (6, 7), (7, 8)])
+        self.assertEqual(pwlf._points, [(-10,), (-9.24119,), (-8.71428,), (-8.11135,),
+                                        (0.06048,), (0.70015,), (1.9285,), (2.15597,),
+                                        (10,)])
+        self.assertEqual(len(pwlf._linear_functions), 8)
+        for i in range(3):
+            assertExpressionsEqual(self, pwlf._linear_functions[i](m.x), -1.0 * m.x)
+        assertExpressionsStructurallyEqual(
+            self,
+            pwlf._linear_functions[3](m.x),
+            # pretty close to - m.x, but we're a bit off because we don't have 0
+            # as a breakpoint.
+            -0.9851979299618323*m.x + 0.12006477080409184,
+            places=7,
+        )
+        for i in range(4, 8):
+            assertExpressionsEqual(self, pwlf._linear_functions[i](m.x), m.x)
+
 
 class TestNonlinearToPWLIntegration(unittest.TestCase):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
@@ -464,16 +480,16 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         m.x7 = Var(within=Reals, bounds=(0.9, 0.95), initialize=0.928)
         m.obj = Objective(expr=-6.3 * m.x4 * m.x7 + 5.04 * m.x1)
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
-        n_to_pwl.apply_to(
+        xm = n_to_pwl.create_using(
             m,
             num_points=4,
             domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             additively_decompose=True,
         )
 
-        self.assertFalse(m.obj.active)
-        new_obj = n_to_pwl.get_transformed_component(m.obj)
-        self.assertIs(n_to_pwl.get_src_component(new_obj), m.obj)
+        self.assertFalse(xm.obj.active)
+        new_obj = n_to_pwl.get_transformed_component(xm.obj)
+        self.assertIs(n_to_pwl.get_src_component(new_obj), xm.obj)
         self.assertTrue(new_obj.active)
         # two terms
         self.assertIsInstance(new_obj.expr, SumExpression)
@@ -481,30 +497,42 @@ class TestNonlinearToPWLIntegration(unittest.TestCase):
         first = new_obj.expr.args[0]
         pwlf = first.expr.pw_linear_function
         all_pwlf = list(
-            m.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+            xm.component_data_objects(PiecewiseLinearFunction, descend_into=True)
         )
         self.assertEqual(len(all_pwlf), 1)
         # It is on the active tree.
         self.assertIs(pwlf, all_pwlf[0])
 
         second = new_obj.expr.args[1]
-        assertExpressionsEqual(self, second, 5.04 * m.x1)
+        assertExpressionsEqual(self, second, 5.04 * xm.x1)
 
-        objs = n_to_pwl.get_transformed_nonlinear_objectives(m)
+        objs = n_to_pwl.get_transformed_nonlinear_objectives(xm)
         self.assertEqual(len(objs), 0)
-        objs = n_to_pwl.get_transformed_quadratic_objectives(m)
+        objs = n_to_pwl.get_transformed_quadratic_objectives(xm)
         self.assertEqual(len(objs), 1)
-        self.assertIn(m.obj, objs)
-        self.assertEqual(len(n_to_pwl.get_transformed_nonlinear_constraints(m)), 0)
-        self.assertEqual(len(n_to_pwl.get_transformed_quadratic_constraints(m)), 0)
+        self.assertIn(xm.obj, objs)
+        self.assertEqual(len(n_to_pwl.get_transformed_nonlinear_constraints(xm)), 0)
+        self.assertEqual(len(n_to_pwl.get_transformed_quadratic_constraints(xm)), 0)
 
-        TransformationFactory('contrib.piecewise.outer_repn_gdp').apply_to(m)
-        TransformationFactory('gdp.bigm').apply_to(m)
-        SolverFactory('gurobi').solve(m)
+        TransformationFactory('contrib.piecewise.outer_repn_gdp').apply_to(xm)
+        TransformationFactory('gdp.bigm').apply_to(xm)
+        opt = SolverFactory('gurobi')
+        results = opt.solve(xm)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
 
-        # actually test the answer or something
-        self.assertTrue(False)
+        # solve the original
+        opt.options['NonConvex'] = 2
+        results = opt.solve(m)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
 
+        # Not a bad approximation:
+        self.assertAlmostEqual(value(xm.obj), value(m.obj), places=2)
+
+        self.assertAlmostEqual(value(xm.x4), value(m.x4), places=3)
+        self.assertAlmostEqual(value(xm.x7), value(m.x7), places=4)
+        self.assertAlmostEqual(value(xm.x1), value(m.x1), places=7)
 
 #     def test_Ali_example(self):
 #         m = ConcreteModel()
