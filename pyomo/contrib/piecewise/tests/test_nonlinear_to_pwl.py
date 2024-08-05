@@ -238,23 +238,23 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         with self.assertRaisesRegex(
-                ValueError,
-                "Not approximating expression for component 'ick' as "
-                "it exceeds the maximum dimension of 4. Try increasing "
-                "'max_dimension' or additively separating the expression."
+            ValueError,
+            "Not approximating expression for component 'ick' as "
+            "it exceeds the maximum dimension of 4. Try increasing "
+            "'max_dimension' or additively separating the expression.",
         ):
             n_to_pwl.apply_to(
                 m,
                 num_points=3,
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
-                max_dimension=4
+                max_dimension=4,
             )
 
     def test_do_not_additively_decompose_below_min_dimension(self):
         m = ConcreteModel()
         m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
         m.c = Constraint(expr=m.x[0] * m.x[1] + m.x[3] <= 4)
-        
+
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         n_to_pwl.apply_to(
             m,
