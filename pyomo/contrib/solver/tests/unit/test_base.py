@@ -342,7 +342,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
         with self.assertRaises(ValueError):
             solver._map_config(solver_options={'max_iter': 4}, options={'max_iter': 6})
 
-        # Test that assignment to maps to set_vlaue:
+        # Test that assignment to maps to set_value:
         solver = _LegacyWrappedSolverBase()
         config = ConfigDict(implicit=True)
         config.declare(
