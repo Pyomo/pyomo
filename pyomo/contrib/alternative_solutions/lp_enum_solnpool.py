@@ -9,6 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from pyomo.common.dependencies import attempt_import
 
 gurobipy, gurobi_available = attempt_import("gurobipy")
@@ -45,7 +49,7 @@ class NoGoodCutGenerator:
 
         if cb_where == GRB.Callback.MIPSOL:
             cb_opt.cbGetSolution(vars=self.variables)
-            print("***FOUND SOLUTION***")
+            logger.info("***FOUND SOLUTION***")
 
             for var, index in self.model.var_map.items():
                 var.set_value(var.lb + self.model.var_lower[index].value)
@@ -124,7 +128,7 @@ def enumerate_linear_solutions_soln_pool(
         A list of Solution objects.
         [Solution]
     """
-    print("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
+    logger.info("STARTING LP ENUMERATION ANALYSIS USING GUROBI SOLUTION POOL")
     #
     # Setup gurobi
     #
@@ -145,7 +149,7 @@ def enumerate_linear_solutions_soln_pool(
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
 
-    print("Performing initial solve of model.")
+    logger.info("Performing initial solve of model.")
     results = opt.solve(model, tee=tee)
     status = results.solver.status
     condition = results.solver.termination_condition
@@ -160,10 +164,10 @@ def enumerate_linear_solutions_soln_pool(
 
     orig_objective = aos_utils.get_active_objective(model)
     orig_objective_value = pe.value(orig_objective)
-    print("Found optimal solution, value = {}.".format(orig_objective_value))
+    logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
 
     aos_block = aos_utils._add_aos_block(model, name="_lp_enum")
-    print("Added block {} to the model.".format(aos_block))
+    logger.info("Added block {} to the model.".format(aos_block))
     aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
@@ -232,6 +236,6 @@ def enumerate_linear_solutions_soln_pool(
     opt.solve(cb)
 
     aos_block.deactivate()
-    print("COMPLETED LP ENUMERATION ANALYSIS")
+    logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
     return cut_generator.solutions

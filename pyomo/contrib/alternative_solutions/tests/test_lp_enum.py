@@ -92,9 +92,7 @@ class TestLPEnum:
         n.x.domain = pe.Reals
         n.y.domain = pe.Reals
 
-        sols = lp_enum.enumerate_linear_solutions(
-            n, solver=mip_solver, quiet=True, debug=False, tee=False
-        )
+        sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver, tee=False)
         for s in sols:
             print(s)
         assert len(sols) == 6
@@ -103,9 +101,7 @@ class TestLPEnum:
     def test_pentagon(self, mip_solver):
         n = tc.get_pentagonal_lp()
 
-        sols = lp_enum.enumerate_linear_solutions(
-            n, solver=mip_solver, quiet=True, debug=False
-        )
+        sols = lp_enum.enumerate_linear_solutions(n, solver=mip_solver)
         for s in sols:
             print(s)
         assert len(sols) == 6

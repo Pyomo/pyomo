@@ -9,6 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import aos_utils
 from pyomo.contrib.alternative_solutions import Solution
@@ -26,7 +30,6 @@ def obbt_analysis(
     solver="gurobi",
     solver_options={},
     tee=False,
-    quiet=True,
 ):
     """
     Calculates the bounds on each variable by solving a series of min and max
@@ -63,8 +66,6 @@ def obbt_analysis(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    quiet : boolean
-        Boolean indicating whether to suppress all output.
 
     Returns
     -------
@@ -83,7 +84,6 @@ def obbt_analysis(
         solver=solver,
         solver_options=solver_options,
         tee=tee,
-        quiet=quiet,
     )
     return bounds
 
@@ -99,7 +99,6 @@ def obbt_analysis_bounds_and_solutions(
     solver="gurobi",
     solver_options={},
     tee=False,
-    quiet=True,
 ):
     """
     Calculates the bounds on each variable by solving a series of min and max
@@ -136,8 +135,6 @@ def obbt_analysis_bounds_and_solutions(
             Solver option-value pairs to be passed to the solver.
         tee : boolean
             Boolean indicating that the solver output should be displayed.
-        quiet : boolean
-            Boolean indicating whether to suppress all output.
 
         Returns
         -------
@@ -151,8 +148,7 @@ def obbt_analysis_bounds_and_solutions(
 
     # TODO - parallelization
 
-    if not quiet:  # pragma: no cover
-        print("STARTING OBBT ANALYSIS")
+    logger.info("STARTING OBBT ANALYSIS")
 
     if warmstart:
         assert (
@@ -169,10 +165,9 @@ def obbt_analysis_bounds_and_solutions(
             solutions[var] = []
 
     num_vars = len(variable_list)
-    if not quiet:  # pragma: no cover
-        print(
-            "Analyzing {} variables ({} total solves).".format(num_vars, 2 * num_vars)
-        )
+    logger.info(
+        "Analyzing {} variables ({} total solves).".format(num_vars, 2 * num_vars)
+    )
     orig_objective = aos_utils.get_active_objective(model)
 
     use_appsi = False
@@ -207,8 +202,7 @@ def obbt_analysis_bounds_and_solutions(
         optimal_tc = pe.TerminationCondition.optimal
         infeas_or_unbdd_tc = pe.TerminationCondition.infeasibleOrUnbounded
         unbdd_tc = pe.TerminationCondition.unbounded
-    if not quiet:  # pragma: no cover
-        print("Performing initial solve of model.")
+    logger.info("Performing initial solve of model.")
 
     if condition != optimal_tc:
         raise RuntimeError(
@@ -223,11 +217,9 @@ def obbt_analysis_bounds_and_solutions(
     if warmstart:
         _add_solution(solutions)
     orig_objective_value = pe.value(orig_objective)
-    if not quiet:  # pragma: no cover
-        print("Found optimal solution, value = {}.".format(orig_objective_value))
+    logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
     aos_block = aos_utils._add_aos_block(model, name="_obbt")
-    if not quiet:  # pragma: no cover
-        print("Added block {} to the model.".format(aos_block))
+    logger.info("Added block {} to the model.".format(aos_block))
     obj_constraints = aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
@@ -322,7 +314,7 @@ def obbt_analysis_bounds_and_solutions(
                 else:
                     variable_bounds[var][idx] = float("inf")
             else:  # pragma: no cover
-                print(
+                logger.warn(
                     (
                         "Unexpected condition for the variable {} {} problem."
                         "TerminationCondition = {}"
@@ -330,12 +322,11 @@ def obbt_analysis_bounds_and_solutions(
                 )
 
             var_value = variable_bounds[var][idx]
-            if not quiet:  # pragma: no cover
-                print(
-                    "Iteration {}/{}: {}_{} = {}".format(
-                        iteration, total_iterations, var.name, bound_dir, var_value
-                    )
+            logger.info(
+                "Iteration {}/{}: {}_{} = {}".format(
+                    iteration, total_iterations, var.name, bound_dir, var_value
                 )
+            )
 
             if idx == 1:
                 variable_bounds[var] = tuple(variable_bounds[var])
@@ -346,8 +337,7 @@ def obbt_analysis_bounds_and_solutions(
     aos_block.deactivate()
     orig_objective.activate()
 
-    if not quiet:  # pragma: no cover
-        print("COMPLETED OBBT ANALYSIS")
+    logger.info("COMPLETED OBBT ANALYSIS")
 
     return variable_bounds, solns
 

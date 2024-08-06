@@ -9,6 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import pyomo.environ as pe
 from pyomo.contrib.alternative_solutions import (
     aos_utils,
@@ -16,6 +20,7 @@ from pyomo.contrib.alternative_solutions import (
     solution,
     solnpool,
 )
+from pyomo.contrib.alternative_solutions.aos_utils import logcontext
 from pyomo.contrib import appsi
 
 
@@ -30,8 +35,6 @@ def enumerate_linear_solutions(
     solver="gurobi",
     solver_options={},
     tee=False,
-    quiet=True,
-    debug=False,
     seed=None,
 ):
     """
@@ -74,10 +77,6 @@ def enumerate_linear_solutions(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    quiet : boolean
-        Boolean indicating whether to suppress all output.
-    debug : boolean
-        Boolean indicating whether to include debugging output.
     seed : int
         Optional integer seed for the numpy random number generator
 
@@ -87,8 +86,7 @@ def enumerate_linear_solutions(
         A list of Solution objects.
         [Solution]
     """
-    if not quiet:  # pragma: no cover
-        print("STARTING LP ENUMERATION ANALYSIS")
+    logger.info("STARTING LP ENUMERATION ANALYSIS")
 
     # TODO: Make this a parameter?
     zero_threshold = 1e-5
@@ -120,9 +118,9 @@ def enumerate_linear_solutions(
     #         else:
     #             non_binary_variables.append(var.name)
     #     if len(non_binary_variables) > 0:
-    #         print(('Warning: The following non-binary variables were included'
+    #         logger.warn(('Warning: The following non-binary variables were included'
     #                'in the variable list and will be ignored:'))
-    #         print(", ".join(non_binary_variables))
+    #         logger.warn(", ".join(non_binary_variables))
     # all_variables = aos_utils.get_model_variables(model, None,
     #                                               include_fixed=True)
 
@@ -168,8 +166,7 @@ def enumerate_linear_solutions(
             #   solutions not at a vertex
             opt.options["Heuristics"] = 0.0
 
-    if not quiet:  # pragma: no cover
-        print("Performing initial solve of model.")
+    logger.info("Performing initial solve of model.")
 
     if use_appsi:
         results = opt.solve(model)
@@ -194,15 +191,13 @@ def enumerate_linear_solutions(
 
     orig_objective = aos_utils.get_active_objective(model)
     orig_objective_value = pe.value(orig_objective)
-    if not quiet:  # pragma: no cover
-        print("Found optimal solution, value = {}.".format(orig_objective_value))
+    logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
 
     aos_block = aos_utils._add_aos_block(model, name="_lp_enum")
     aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
-    if not quiet:  # pragma: no cover
-        print("Added block {} to the model.".format(aos_block))
+    logger.info("Added block {} to the model.".format(aos_block))
 
     canon_block = shifted_lp.get_shifted_linear_model(model)
     cb = canon_block
@@ -233,10 +228,9 @@ def enumerate_linear_solutions(
     solution_number = 1
     solutions = []
     while solution_number <= num_solutions:
-        if not quiet:  # pragma: no cover
-            print("Solving Iteration {}: ".format(solution_number), end="")
+        logger.info("Solving Iteration {}: ".format(solution_number), end="")
 
-        if debug:
+        with logcontext(logging.DEBUG):
             model.pprint()
         if use_appsi:
             results = opt.solve(model)
@@ -257,13 +251,13 @@ def enumerate_linear_solutions(
             solutions.append(sol)
             orig_objective_value = sol.objective[1]
 
-            if not quiet:  # pragma: no cover
-                print("Solved, objective = {}".format(orig_objective_value))
+            with logcontext(logging.INFO):
+                logger.info("Solved, objective = {}".format(orig_objective_value))
                 for var, index in cb.var_map.items():
-                    print(
+                    logger.info(
                         "{} = {}".format(var.name, var.lb + cb.var_lower[index].value)
                     )
-            if debug:
+            with logcontext(logging.DEBUG):
                 model.display()
 
             if hasattr(cb, "force_out"):
@@ -330,27 +324,23 @@ def enumerate_linear_solutions(
             condition == pe.TerminationCondition.infeasibleOrUnbounded
             or condition == pe.TerminationCondition.infeasible
         ):
-            if not quiet:  # pragma: no cover
-                print("Infeasible, all alternative solutions have been found.")
+            logger.info("Infeasible, all alternative solutions have been found.")
             break
         else:
-            if not quiet:  # pragma: no cover
-                status = results.solver.status
-                print(
-                    (
-                        "Unexpected solver condition. Stopping LP enumeration. "
-                        "SolverStatus = {}, TerminationCondition = {}"
-                    ).format(status.value, condition.value)
-                )
+            logger.info(
+                (
+                    "Unexpected solver condition. Stopping LP enumeration. "
+                    "SolverStatus = {}, TerminationCondition = {}"
+                ).format(results.solver.status.value, condition.value)
+            )
             break
-        if debug:
-            print("")
-            print("=" * 80)
-            print("")
+        with logcontext(logging.DEBUG):
+            logging.debug("")
+            logging.debug("=" * 80)
+            logging.debug("")
 
     model.del_component("aos_block")
 
-    if not quiet:  # pragma: no cover
-        print("COMPLETED LP ENUMERATION ANALYSIS")
+    logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
     return solutions

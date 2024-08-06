@@ -9,6 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from pyomo.common.dependencies import attempt_import
 
 gurobipy, gurobipy_available = attempt_import("gurobipy")
@@ -27,7 +31,6 @@ def gurobi_generate_solutions(
     abs_opt_gap=None,
     solver_options={},
     tee=False,
-    quiet=True,
 ):
     """
     Finds alternative optimal solutions for discrete variables using Gurobi's
@@ -55,8 +58,6 @@ def gurobi_generate_solutions(
         Solver option-value pairs to be passed to the Gurobi solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    quiet : boolean
-        Boolean indicating whether to suppress all output.
 
     Returns
     -------
@@ -89,13 +90,9 @@ def gurobi_generate_solutions(
     results = opt.solve(model)
     condition = results.termination_condition
     if not (condition == appsi.base.TerminationCondition.optimal):
-        if not quiet:
-            print(
-                ("Model cannot be solved, " "TerminationCondition = {}").format(
-                    condition.value
-                )
-            )
-        return []
+        raise pyomo.common.errors.ApplicationError(
+            "Model cannot be solved, " "TerminationCondition = {}"
+        ).format(condition.value)
     #
     # Collect solutions
     #

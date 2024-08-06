@@ -9,6 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 import pyomo.environ as pe
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.alternative_solutions import Solution
@@ -26,7 +30,6 @@ def enumerate_binary_solutions(
     solver="gurobi",
     solver_options={},
     tee=False,
-    quiet=True,
     seed=None,
 ):
     """
@@ -63,8 +66,6 @@ def enumerate_binary_solutions(
         Solver option-value pairs to be passed to the solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
-    quiet : boolean
-        Boolean indicating whether to suppress all output.
     seed : int
         Optional integer seed for the numpy random number generator
 
@@ -74,8 +75,7 @@ def enumerate_binary_solutions(
         A list of Solution objects.
         [Solution]
     """
-    if not quiet:  # pragma: no cover
-        print("STARTING NO-GOOD CUT ANALYSIS")
+    logger.info("STARTING NO-GOOD CUT ANALYSIS")
 
     assert search_mode in [
         "optimal",
@@ -100,14 +100,13 @@ def enumerate_binary_solutions(
             else:  # pragma: no cover
                 non_binary_variables.append(var.name)
         if len(non_binary_variables) > 0:
-            if not quiet:  # pragma: no cover
-                print(
-                    (
-                        "Warning: The following non-binary variables were included"
-                        "in the variable list and will be ignored:"
-                    )
+            logger.warn(
+                (
+                    "Warning: The following non-binary variables were included"
+                    "in the variable list and will be ignored:"
                 )
-                print(", ".join(non_binary_variables))
+            )
+            logger.warn(", ".join(non_binary_variables))
 
     orig_objective = aos_utils.get_active_objective(model)
 
@@ -146,8 +145,7 @@ def enumerate_binary_solutions(
     #
     # Initial solve of the model
     #
-    if not quiet:  # pragma: no cover
-        print("Performing initial solve of model.")
+    logger.info("Performing initial solve of model.")
     results = opt.solve(model, tee=tee, load_solutions=False)
     status = results.solver.status
     if not pe.check_optimal_termination(results):
@@ -162,8 +160,7 @@ def enumerate_binary_solutions(
 
     model.solutions.load_from(results)
     orig_objective_value = pe.value(orig_objective)
-    if not quiet:  # pragma: no cover
-        print("Found optimal solution, value = {}.".format(orig_objective_value))
+    logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
     solutions = [Solution(model, all_variables, objective=orig_objective)]
     #
     # Return just this solution if there are no binary variables
@@ -172,8 +169,7 @@ def enumerate_binary_solutions(
         return solutions
 
     aos_block = aos_utils._add_aos_block(model, name="_balas")
-    if not quiet:  # pragma: no cover
-        print("Added block {} to the model.".format(aos_block))
+    logger.info("Added block {} to the model.".format(aos_block))
     aos_block.no_good_cuts = pe.ConstraintList()
     aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
@@ -219,39 +215,33 @@ def enumerate_binary_solutions(
         if pe.check_optimal_termination(results):
             model.solutions.load_from(results)
             orig_obj_value = pe.value(orig_objective)
-            if not quiet:  # pragma: no cover
-                print(
-                    "Iteration {}: objective = {}".format(
-                        solution_number, orig_obj_value
-                    )
-                )
+            logger.info(
+                "Iteration {}: objective = {}".format(solution_number, orig_obj_value)
+            )
             solutions.append(Solution(model, all_variables, objective=orig_objective))
             solution_number += 1
         elif (
             condition == pe.TerminationCondition.infeasibleOrUnbounded
             or condition == pe.TerminationCondition.infeasible
         ):
-            if not quiet:  # pragma: no cover
-                print(
-                    "Iteration {}: Infeasible, no additional binary solutions.".format(
-                        solution_number
-                    )
+            logger.info(
+                "Iteration {}: Infeasible, no additional binary solutions.".format(
+                    solution_number
                 )
+            )
             break
         else:  # pragma: no cover
-            if not quiet:
-                print(
-                    (
-                        "Iteration {}: Unexpected condition, SolverStatus = {}, "
-                        "TerminationCondition = {}"
-                    ).format(solution_number, status.value, condition.value)
-                )
+            logger.info(
+                (
+                    "Iteration {}: Unexpected condition, SolverStatus = {}, "
+                    "TerminationCondition = {}"
+                ).format(solution_number, status.value, condition.value)
+            )
             break
 
     aos_block.deactivate()
     orig_objective.activate()
 
-    if not quiet:  # pragma: no cover
-        print("COMPLETED NO-GOOD CUT ANALYSIS")
+    logger.info("COMPLETED NO-GOOD CUT ANALYSIS")
 
     return solutions

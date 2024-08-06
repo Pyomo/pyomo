@@ -9,6 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+from contextlib import contextmanager
+
 from pyomo.common.dependencies import numpy as numpy, numpy_available
 
 if numpy_available:
@@ -19,6 +25,17 @@ import pyomo.environ as pe
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.collections import ComponentSet
 import pyomo.util.vars_from_expressions as vfe
+
+
+@contextmanager
+def logcontext(level):
+    logger = logging.getLogger()
+    current_level = logger.getEffectiveLevel()
+    logger.setLevel(level)
+    try:
+        yield
+    finally:
+        logger.setLevel(current_level)
 
 
 def get_active_objective(model):
@@ -157,7 +174,6 @@ def get_model_variables(
     include_binary=True,
     include_integer=True,
     include_fixed=False,
-    quiet=True,
 ):
     """
     Gathers and returns all variables or a subset of variables from a Pyomo
@@ -184,8 +200,6 @@ def get_model_variables(
             Boolean indicating that integer variables should be included.
         include_fixed : boolean
             Boolean indicating that fixed variables should be included.
-        quiet : boolean
-            Boolean that is True if all output is suppressed.
 
         Returns
         -------
@@ -271,11 +285,8 @@ def get_model_variables(
                     include_fixed,
                 )
             else:  # pragma: no cover
-                if not quiet:
-                    print(
-                        ("No variables added for unrecognized component {}.").format(
-                            comp
-                        )
-                    )
+                logger.info(
+                    ("No variables added for unrecognized component {}.").format(comp)
+                )
 
     return variable_set
