@@ -353,15 +353,20 @@ class LegacySolverWrapper:
             raise NotImplementedError('Still working on this')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
-        self.options = kwargs.pop('options', None)
+        _options = kwargs.pop('options', None)
         if 'solver_options' in kwargs:
-            if self.options is not None:
+            if _options is not None:
                 raise ValueError(
                     "Both 'options' and 'solver_options' were requested. "
                     "Please use one or the other, not both."
                 )
-            self.options = kwargs.pop('solver_options')
+            _options = kwargs.pop('solver_options')
+        if _options is not None:
+            kwargs['solver_options'] = _options
         super().__init__(**kwargs)
+        # Make the legacy 'options' attribute an alias of the new
+        # config.solver_options
+        self.options = self.config.solver_options
 
     #
     # Support "with" statements
