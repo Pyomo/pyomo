@@ -255,6 +255,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
             )
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_do_not_additively_decompose_below_min_dimension(self):
         m = ConcreteModel()
         m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
@@ -317,6 +318,7 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(nonlinear), 0)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_paraboloid_objective_uniform_grid(self):
         m = self.make_paraboloid_model()
 
@@ -344,6 +346,7 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_objective_target(self):
         m = self.make_paraboloid_model()
 
