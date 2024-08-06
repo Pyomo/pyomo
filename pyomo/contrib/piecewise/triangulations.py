@@ -14,7 +14,7 @@ from enum import Enum
 from pyomo.common.errors import DeveloperError
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
-    hamiltonian_paths as incremental_3d_simplex_pair_to_path,
+    get_hamiltonian_paths#as incremental_3d_simplex_pair_to_path,
 )
 
 
@@ -317,6 +317,7 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
 
 
 def _get_ordered_j1_triangulation_3d(points_map, num_pts):
+    incremental_3d_simplex_pair_to_path = get_hamiltonian_paths()
     # To start, we need a hamiltonian path in the grid graph of *double* cubes
     # (2x2x2 cubes)
     grid_hamiltonian = _get_grid_hamiltonian(3, round(num_pts / 2))  # division is exact
