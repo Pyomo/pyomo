@@ -14,6 +14,7 @@ from pyomo.common.dependencies import attempt_import
 gurobipy, gurobi_available = attempt_import("gurobipy")
 
 import pyomo.environ as pe
+import pyomo.common.errors
 from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, solution
 from pyomo.contrib import appsi
 
@@ -128,7 +129,7 @@ def enumerate_linear_solutions_soln_pool(
     # Setup gurobi
     #
     if not gurobi_available:
-        return []
+        raise pyomo.common.errors.ApplicationError(f"Solver (gurobi) not available")
 
     # For now keeping things simple
     # TODO: See if this can be relaxed, but for now just leave as all
@@ -139,6 +140,8 @@ def enumerate_linear_solutions_soln_pool(
     # TODO: Check if problem is continuous or mixed binary
 
     opt = pe.SolverFactory("gurobi")
+    if not opt.available():
+        raise ValueError(solver + " is not available")
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
 

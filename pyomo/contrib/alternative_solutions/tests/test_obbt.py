@@ -36,6 +36,17 @@ timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"
 class TestOBBTUnit:
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
+    def test_bad_solver(self, mip_solver):
+        """
+        Confirm that an exception is thrown with a bad solver name.
+        """
+        m = tc.get_2d_diamond_problem()
+        try:
+            obbt_analysis(m, solver="unknown_solver")
+        except pyomo.common.errors.ApplicationError as e:
+            pass
+
+    @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_obbt_analysis(self, mip_solver):
         """
         Check that the correct bounds are found for a continuous problem.

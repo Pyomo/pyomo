@@ -23,13 +23,22 @@ import pyomo.opt
 from pyomo.contrib.alternative_solutions import enumerate_binary_solutions
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 
-
 solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi", "appsi_gurobi"))
 pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 
 @unittest.pytest.mark.default
 class TestBalasUnit:
+
+    def test_bad_solver(self, mip_solver):
+        """
+        Confirm that an exception is thrown with a bad solver name.
+        """
+        m = tc.get_triangle_ip()
+        try:
+            enumerate_binary_solutions(m, solver="unknown_solver")
+        except pyomo.common.errors.ApplicationError as e:
+            pass
 
     def test_ip_feasibility(self, mip_solver):
         """

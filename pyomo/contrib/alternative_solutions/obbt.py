@@ -190,6 +190,8 @@ def obbt_analysis_bounds_and_solutions(
         use_appsi = True
     else:
         opt = pe.SolverFactory(solver)
+        if not opt.available():
+            raise ValueError(solver + " is not available")
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
         try:

@@ -115,6 +115,7 @@ def enumerate_binary_solutions(
     # Setup solver
     #
     opt = pe.SolverFactory(solver)
+    opt.available()
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
     #

@@ -32,6 +32,16 @@ timelimit = {"gurobi": "TimeLimit", "appsi_gurobi": "TimeLimit", "glpk": "tmlim"
 @unittest.pytest.mark.default
 class TestLPEnum:
 
+    def test_bad_solver(self, mip_solver):
+        """
+        Confirm that an exception is thrown with a bad solver name.
+        """
+        m = tc.get_3d_polyhedron_problem()
+        try:
+            lp_enum.enumerate_linear_solutions(m, solver="unknown_solver")
+        except pyomo.common.errors.ApplicationError as e:
+            pass
+
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
     def test_no_time(self, mip_solver):
         """

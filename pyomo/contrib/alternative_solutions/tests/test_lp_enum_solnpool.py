@@ -32,7 +32,10 @@ def test_here():
         n.x.domain = pe.Reals
         n.y.domain = pe.Reals
 
-        sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)
+        try:
+            sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)
+        except pyomo.common.errors.ApplicationError as e:
+            sols = []
 
         # TODO - Confirm how solnpools deal with duplicate solutions
         if gurobi_available:
