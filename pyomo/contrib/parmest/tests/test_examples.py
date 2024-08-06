@@ -44,6 +44,7 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         rooney_biegler_with_constraint.main()
 
+    @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import (
@@ -67,11 +68,12 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         likelihood_ratio_example.main()
 
 
-@unittest.skipIf(
-    not parmest.parmest_available,
+@unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
+@unittest.skipUnless(ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipUnless(
+    parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
 )
-@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 class TestReactionKineticsExamples(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -141,6 +143,7 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         reactor_design.main()
 
+    @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import (
             parameter_estimation_example,
