@@ -1150,17 +1150,17 @@ class _NLWriter_impl(object):
                     r_lines[idx] = "3"
                 else:
                     # _type = 4  # L == c == U
-                    r_lines[idx] = f"4 {lb - expr_info.const!r}"
+                    r_lines[idx] = f"4 {lb - expr_info.const!s}"
                     n_equality += 1
             elif lb is None:
                 # _type = 1  # c <= U
-                r_lines[idx] = f"1 {ub - expr_info.const!r}"
+                r_lines[idx] = f"1 {ub - expr_info.const!s}"
             elif ub is None:
                 # _type = 2  # L <= c
-                r_lines[idx] = f"2 {lb - expr_info.const!r}"
+                r_lines[idx] = f"2 {lb - expr_info.const!s}"
             else:
                 # _type = 0  # L <= c <= U
-                r_lines[idx] = f"0 {lb - expr_info.const!r} {ub - expr_info.const!r}"
+                r_lines[idx] = f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
                 n_ranges += 1
             expr_info.const = 0
             # FIXME: this is a HACK to be compatible with the NLv1
@@ -1375,7 +1375,7 @@ class _NLWriter_impl(object):
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
                 # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
+                    ''.join(f"{_id} {_vals[_id]!s}\n" for _id in sorted(_vals))
                 )
 
         #
@@ -1485,7 +1485,7 @@ class _NLWriter_impl(object):
                 ostream.write(f"d{len(data.con)}\n")
                 # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {data.con[_id]!r}\n" for _id in sorted(data.con))
+                    ''.join(f"{_id} {data.con[_id]!s}\n" for _id in sorted(data.con))
                 )
 
         #
@@ -1507,7 +1507,7 @@ class _NLWriter_impl(object):
         )
         ostream.write(
             ''.join(
-                f'{var_idx} {val!r}{col_comments[var_idx]}\n'
+                f'{var_idx} {val!s}{col_comments[var_idx]}\n'
                 for var_idx, val in _init_lines
             )
         )
@@ -1548,13 +1548,13 @@ class _NLWriter_impl(object):
                 if lb is None:  # unbounded
                     ostream.write(f"3{col_comments[var_idx]}\n")
                 else:  # ==
-                    ostream.write(f"4 {lb!r}{col_comments[var_idx]}\n")
+                    ostream.write(f"4 {lb!s}{col_comments[var_idx]}\n")
             elif lb is None:  # var <= ub
-                ostream.write(f"1 {ub!r}{col_comments[var_idx]}\n")
+                ostream.write(f"1 {ub!s}{col_comments[var_idx]}\n")
             elif ub is None:  # lb <= body
-                ostream.write(f"2 {lb!r}{col_comments[var_idx]}\n")
+                ostream.write(f"2 {lb!s}{col_comments[var_idx]}\n")
             else:  # lb <= body <= ub
-                ostream.write(f"0 {lb!r} {ub!r}{col_comments[var_idx]}\n")
+                ostream.write(f"0 {lb!s} {ub!s}{col_comments[var_idx]}\n")
 
         #
         # "k" lines (column offsets in Jacobian NNZ)
@@ -1589,7 +1589,7 @@ class _NLWriter_impl(object):
                     linear[_id] /= scaling_cache[_id]
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
             for _id in sorted(linear, key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -1605,7 +1605,7 @@ class _NLWriter_impl(object):
                     linear[_id] /= scaling_cache[_id]
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(linear, key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
 
         # Generate the return information
         eliminated_vars = [
@@ -1988,6 +1988,18 @@ class _NLWriter_impl(object):
             elif info[comp_type] != src:
                 info[comp_type] = 0
 
+    def _resolve_subexpression_args(self, nl, args):
+        final_args = []
+        for arg in args:
+            if arg in self.var_id_to_nl_map:
+                final_args.append(self.var_id_to_nl_map[arg])
+            else:
+                _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
+                    self.visitor
+                )
+                final_args.append(self._resolve_subexpression_args(_nl, _ids))
+        return nl % tuple(final_args)
+
     def _write_nl_expression(self, repn, include_const):
         # Note that repn.mult should always be 1 (the AMPLRepn was
         # compiled before this point).  Omitting the assertion for
@@ -2007,18 +2019,7 @@ class _NLWriter_impl(object):
                     nl % tuple(map(self.var_id_to_nl_map.__getitem__, args))
                 )
             except KeyError:
-                final_args = []
-                for arg in args:
-                    if arg in self.var_id_to_nl_map:
-                        final_args.append(self.var_id_to_nl_map[arg])
-                    else:
-                        _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
-                            self.visitor
-                        )
-                        final_args.append(
-                            _nl % tuple(map(self.var_id_to_nl_map.__getitem__, _ids))
-                        )
-                self.ostream.write(nl % tuple(final_args))
+                self.ostream.write(self._resolve_subexpression_args(nl, args))
 
         elif include_const:
             self.ostream.write(self.template.const % repn.const)
@@ -2041,7 +2042,7 @@ class _NLWriter_impl(object):
         #
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
-            ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+            ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
 
