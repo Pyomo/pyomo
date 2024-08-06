@@ -88,6 +88,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(nonlinear), 1)
         self.assertIn(m.cons, nonlinear)
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_log_constraint_uniform_grid(self):
         m = self.make_model()
 
@@ -111,6 +112,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         (x1, x2, x3) = 1.0009, 5.5, 9.9991
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_log_constraint_random_grid(self):
         m = self.make_model()
 
@@ -137,6 +139,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         x3 = 9.556428757689245
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_do_not_transform_quadratic_constraint(self):
         m = self.make_model()
         m.quad = Constraint(expr=m.x**2 <= 9)
@@ -168,6 +171,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         # neither is the linear one
         self.assertTrue(m.lin.active)
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_constraint_target(self):
         m = self.make_model()
         m.quad = Constraint(expr=m.x**2 <= 9)
@@ -250,6 +254,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                 max_dimension=4,
             )
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_do_not_additively_decompose_below_min_dimension(self):
         m = ConcreteModel()
         m.x = Var([0, 1, 2, 3, 4], bounds=(-4, 5))
@@ -311,6 +316,7 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         nonlinear = n_to_pwl.get_transformed_nonlinear_objectives(m)
         self.assertEqual(len(nonlinear), 0)
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_paraboloid_objective_uniform_grid(self):
         m = self.make_paraboloid_model()
 
@@ -337,6 +343,7 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
 
         self.check_pw_linear_paraboloid(m, pwlf, x1, x2, y1, y2)
 
+    @skipUnless(numpy_available, "Numpy is not available")
     def test_objective_target(self):
         m = self.make_paraboloid_model()
 
