@@ -256,9 +256,10 @@ def obbt_analysis_bounds_and_solutions(
                 variable_bounds[var] = [None, None]
 
             if hasattr(aos_block, "var_objective"):
-                aos_block.del_component("var_objective")
-
-            aos_block.var_objective = pe.Objective(expr=var, sense=sense)
+                aos_block.var_objective.expr = var
+                aos_block.var_objective.sense = sense
+            else:
+                aos_block.var_objective = pe.Objective(expr=var, sense=sense)
 
             if warmstart:
                 _update_values(var, bound_dir, solutions)
