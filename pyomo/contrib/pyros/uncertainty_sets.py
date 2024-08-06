@@ -1801,6 +1801,8 @@ class FactorModelSet(UncertaintySet):
         parameter.  Each column is associated with a separate factor.
         Number of columns `F` of `psi_mat` should be equal to
         `number_of_factors`.
+        Since `psi_mat` is expected to be full column rank,
+        we require `F <= N`.
     beta : numeric type
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
@@ -1911,6 +1913,8 @@ class FactorModelSet(UncertaintySet):
         column rank matrix for which each entry indicates how strongly
         the factor corresponding to the entry's column is related
         to the uncertain parameter corresponding to the entry's row.
+        Since `psi_mat` is expected to be full column rank,
+        we require `F <= N`.
         """
         return self._psi_mat
 
@@ -1942,7 +1946,9 @@ class FactorModelSet(UncertaintySet):
         if not is_full_column_rank:
             raise ValueError(
                 "Attribute 'psi_mat' should be full column rank. "
-                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.)"
+                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
+                "Ensure `psi_mat` does not have more columns than rows, "
+                "and the columns of `psi_mat` are linearly independent."
             )
 
         self._psi_mat = psi_mat_arr
@@ -2089,20 +2095,14 @@ class FactorModelSet(UncertaintySet):
         )
         point_arr = np.array(point)
 
-        psi_mat_rank = np.linalg.matrix_rank(self.psi_mat)
-        is_psi_full_column_rank = psi_mat_rank == self.number_of_factors
-        if is_psi_full_column_rank:
-            # pseudoinverse uniquely determines the auxiliary values
-            return np.linalg.pinv(self.psi_mat) @ (point_arr - self.origin)
-        else:
-            # guard against possible changes to individual entries,
-            # rows, or columns after `psi_mat` setter invoked
-            # that may render `psi_mat` rank deficient
-            raise ValueError(
-                "Factor loading matrix `psi_mat` must be full column rank. "
-                f"(There are {self.number_of_factors} factors/columns, but"
-                f"the matrix is of rank {psi_mat_rank}.)"
-            )
+        # protect against cases where
+        # `psi_mat` was recently modified entrywise
+        # to a matrix that is not full column rank
+        self.psi_mat = self.psi_mat
+
+        # since `psi_mat` is full column rank,
+        # the pseudoinverse uniquely determines the auxiliary values
+        return np.linalg.pinv(self.psi_mat) @ (point_arr - self.origin)
 
     def point_in_set(self, point):
         """
