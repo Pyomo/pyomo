@@ -258,16 +258,18 @@ def help_solvers():
                                 ver = ''
                         except (AttributeError, NameError):
                             pass
-                    elif isinstance(s, UnknownSolver):
+                    elif s == 'py':
+                        # py is a metasolver, but since we don't specify a subsolver
+                        # for this test, opt is actually an UnknownSolver, so we
+                        # can't try to get the _metasolver attribute from it.
+                        avail = '*'
+                    elif isinstance(s, pyomo.opt.solvers.UnknownSolver):
                         # We can get here if creating a registered
                         # solver failed (i.e., an exception was raised
                         # in __init__)
                         avail = ''
-                    elif s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
-                        # py is a metasolver, but since we don't specify a subsolver
-                        # for this test, opt is actually an UnknownSolver, so we
-                        # can't try to get the _metasolver attribute from it.
-                        # Also, default to False if the attribute isn't implemented
+                    elif getattr(opt, "_metasolver", False):
+                        # Note: default to False if the attribute isn't implemented
                         avail = '*'
                     else:
                         avail = ''
