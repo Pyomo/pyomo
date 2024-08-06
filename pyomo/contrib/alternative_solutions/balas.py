@@ -88,7 +88,9 @@ def enumerate_binary_solutions(
 
     all_variables = aos_utils.get_model_variables(model, include_fixed=True)
     if variables == None:
-        binary_variables = [var for var in all_variables if var.is_binary() and not var.is_fixed()]
+        binary_variables = [
+            var for var in all_variables if var.is_binary() and not var.is_fixed()
+        ]
     else:
         binary_variables = ComponentSet()
         non_binary_variables = []
