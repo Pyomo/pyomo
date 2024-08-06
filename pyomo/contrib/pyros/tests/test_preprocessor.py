@@ -61,7 +61,7 @@ from pyomo.contrib.pyros.util import (
     declare_objective_expressions,
     add_decision_rule_constraints,
     add_decision_rule_variables,
-    perform_coefficient_matching,
+    reformulate_state_var_independent_eq_cons,
     setup_working_model,
     VariablePartitioning,
     preprocess_model_data,
@@ -1991,14 +1991,15 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
             )
 
 
-class TestCoefficientMatching(unittest.TestCase):
+class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
     """
-    Unit tests for PyROS coefficient matching routine.
+    Unit tests for routine that reformulates
+    state variable-independent performance equality constraints.
     """
     def setup_test_model_data(self):
         """
-        Set up simple test model for coefficient matching
-        tests.
+        Set up simple test model for testing the reformulation
+        routine.
         """
         model_data = Bunch()
         model_data.working_model = working_model = ConcreteModel()
@@ -2025,6 +2026,7 @@ class TestCoefficientMatching(unittest.TestCase):
 
         working_model.effective_first_stage_equality_cons = []
         working_model.effective_performance_equality_cons = [m.eq_con, m.eq_con_2]
+        working_model.effective_performance_inequality_cons = [m.con]
 
         working_model.all_variables = [m.x1, m.x2]
         ep = working_model.effective_var_partitioning = Bunch()
@@ -2057,7 +2059,9 @@ class TestCoefficientMatching(unittest.TestCase):
             ep.first_stage_variables
         )
 
-        robust_infeasible = perform_coefficient_matching(model_data, config)
+        robust_infeasible = reformulate_state_var_independent_eq_cons(
+            model_data, config
+        )
 
         self.assertFalse(
             robust_infeasible,
@@ -2098,17 +2102,18 @@ class TestCoefficientMatching(unittest.TestCase):
             list(model_data.working_model.coefficient_matching_conlist.values()),
         )
 
-    def test_coefficient_matching_nonlinear(self):
+    def test_reformulate_nonlinear_state_var_independent_eq_con(self):
         """
-        Test coefficient matching raises exception in event
-        of encountering unsupported nonlinearities.
+        Test routine appropriately performs coefficient matching
+        of polynomial-like constraints,
+        and recasting of nonlinear constraints to opposing equalities.
         """
         model_data = self.setup_test_model_data()
 
         config = Bunch()
         config.decision_rule_order = 1
         config.progress_logger = logging.getLogger(
-            self.test_coefficient_matching_nonlinear.__name__
+            self.test_reformulate_nonlinear_state_var_independent_eq_con.__name__
         )
         config.progress_logger.setLevel(logging.DEBUG)
 
@@ -2121,6 +2126,7 @@ class TestCoefficientMatching(unittest.TestCase):
             + list(model_data.working_model.decision_rule_var_0.values())
         )
 
+        wm = model_data.working_model
         m = model_data.working_model.user_model
 
         # we want only one of the constraints to trigger the error
@@ -2128,7 +2134,9 @@ class TestCoefficientMatching(unittest.TestCase):
         m.eq_con_2.set_value(m.u * (m.x1 - 1) == 0)
 
         with LoggingIntercept(level=logging.DEBUG) as LOG:
-            robust_infeasible = perform_coefficient_matching(model_data, config)
+            robust_infeasible = reformulate_state_var_independent_eq_cons(
+                model_data, config
+            )
 
         err_msg = LOG.getvalue()
         self.assertRegex(
@@ -2148,18 +2156,55 @@ class TestCoefficientMatching(unittest.TestCase):
 
         # check constraint partitioning updated as expected
         self.assertEqual(
-            model_data.working_model.effective_performance_equality_cons,
-            [model_data.working_model.user_model.eq_con],
+            wm.effective_performance_equality_cons,
+            [],
         )
         self.assertEqual(
-            model_data.working_model.effective_first_stage_equality_cons,
-            [model_data.working_model.coefficient_matching_conlist[1]],
+            wm.effective_performance_inequality_cons,
+            [
+                m.con,
+                m.con_eq_con_lower_bound_con,
+                m.con_eq_con_upper_bound_con,
+            ],
+        )
+        self.assertEqual(
+            wm.effective_first_stage_equality_cons,
+            [wm.coefficient_matching_conlist[1]],
+        )
+
+        # verify expressions
+        assertExpressionsEqual(
+            self,
+            m.con_eq_con_lower_bound_con.expr,
+            -(
+                m.u**2 * (m.x2 - 1)
+                + m.u * (m.x1**3 + 0.5)
+                - ((5 * m.u * m.x1) * m.x2)
+                - (-m.u) * (m.x1 + 2)
+            ) <= 0.0,
         )
         assertExpressionsEqual(
             self,
-            model_data.working_model.coefficient_matching_conlist[1].expr,
+            m.con_eq_con_upper_bound_con.expr,
+            (
+                m.u**2 * (m.x2 - 1)
+                + m.u * (m.x1**3 + 0.5)
+                - ((5 * m.u * m.x1) * m.x2)
+                - (-m.u) * (m.x1 + 2)
+                <= 0.0
+            ),
+        )
+        assertExpressionsEqual(
+            self,
+            wm.coefficient_matching_conlist[1].expr,
             (-1) + m.x1 == 0,
         )
+
+        # ensure the reformulated equality constraint was deactivated,
+        # and the added inequalities were activated
+        self.assertFalse(m.eq_con.active)
+        self.assertTrue(m.con_eq_con_upper_bound_con.active)
+        self.assertTrue(m.con_eq_con_lower_bound_con.active)
 
     def test_coefficient_matching_robust_infeasible_proof(self):
         """
@@ -2189,7 +2234,9 @@ class TestCoefficientMatching(unittest.TestCase):
         )
 
         with LoggingIntercept(level=logging.INFO) as LOG:
-            robust_infeasible = perform_coefficient_matching(model_data, config)
+            robust_infeasible = reformulate_state_var_independent_eq_cons(
+                model_data, config
+            )
 
         self.assertTrue(
             robust_infeasible,
@@ -2486,6 +2533,10 @@ class TestPreprocessModelData(unittest.TestCase):
                     ublk.find_component("con_ineq3_upper_bound_con"),
                     ublk.ineq4,
                 ]
+                # eq1 gets reformulated to two inequality constraints
+                # since it is state variable independent and
+                # too nonlinear for coefficient matching
+                + ([ublk.con_eq1_lower_bound_con, ublk.con_eq1_upper_bound_con] if dr_order == 2 else [])
                 + ([working_model.epigraph_con] if obj_focus == "worst_case" else [])
             ),
         )
@@ -2493,7 +2544,7 @@ class TestPreprocessModelData(unittest.TestCase):
             ComponentSet(working_model.effective_performance_equality_cons),
             # eq1 doesn't get reformulated in coefficient matching
             # when DR order is 2 as the polynomial degree is too high
-            ComponentSet([ublk.eq4] + ([ublk.eq1] if dr_order == 2 else [])),
+            ComponentSet([ublk.eq4]),
         )
 
         # verify the constraints are active
@@ -2653,13 +2704,22 @@ class TestPreprocessModelData(unittest.TestCase):
                 working_model.decision_rule_vars[0][1] == 0,
             )
         if config.decision_rule_order == 2:
-            # check the constraint expressions of eq1 and eq4
-            self.assertTrue(m.eq1.active)
+            # eq1 should be deactivated and refomulated to 2 inequalities
+            self.assertFalse(m.eq1.active)
+            self.assertTrue(m.con_eq1_lower_bound_con.active)
+            self.assertTrue(m.con_eq1_upper_bound_con.active)
             assertExpressionsEqual(
                 self,
-                m.eq1.expr,
-                m.q * (m.z3 + m.x2) == 0,
+                m.con_eq1_lower_bound_con.expr,
+                -(m.q * (m.z3 + m.x2)) <= 0.0,
             )
+            assertExpressionsEqual(
+                self,
+                m.con_eq1_upper_bound_con.expr,
+                m.q * (m.z3 + m.x2) <= 0.0,
+            )
+
+            # check coefficient matching constraint expressions
             assertExpressionsEqual(
                 self,
                 working_model.coefficient_matching_conlist[1].expr,
@@ -2813,15 +2873,15 @@ class TestPreprocessModelData(unittest.TestCase):
                 State variables : 2 (1 adj.)
                 Decision rule variables : 6
               Number of uncertain parameters : 1
-              Number of constraints : 23
-                Equality constraints : 9
+              Number of constraints : 24
+                Equality constraints : 8
                   Coefficient matching constraints : 3
                   Other first-stage equations : 2
-                  Performance equations : 2
+                  Performance equations : 1
                   Decision rule equations : 2
-                Inequality constraints : 14
+                Inequality constraints : 16
                   First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
-                  Performance inequalities : {11 if obj_focus == 'nominal' else 12}
+                  Performance inequalities : {13 if obj_focus == 'nominal' else 14}
             """
         )
 

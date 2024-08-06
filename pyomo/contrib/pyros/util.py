@@ -2136,16 +2136,25 @@ def check_time_limit_reached(timing_data, config):
     )
 
 
-def perform_coefficient_matching(model_data, config):
+def reformulate_state_var_independent_eq_cons(model_data, config):
     """
-    Perform coefficient matching reformulation
-    of some performance equality constraints.
+    Reformulate performance equality constraints that are
+    independent of the state variables.
 
-    Every performance equality constraint that is independent
-    of the state variables can potentially be simplified to a
-    set of first-stage equality constraints.
+    The state variable-independent performance equality
+    constraints that can be rewritten as polynomials
+    in terms of the uncertain parameters
+    are reformulated to first-stage equalities
+    through matching of the polynomial coefficients.
+    Hence, this reformulation technique is referred to as
+    coefficient matching.
+    In some cases, matching of the coefficients may lead to
+    a certificate of robust infeasibility.
 
-    In some cases, robust infeasibility can be detected.
+    All other state variable-independent performance equality
+    constraints are recast to pairs of opposing performance inequality
+    constraints, as they would otherwise over-constrain the uncertain
+    parameters in the separation subproblems.
 
     Parameters
     ----------
@@ -2256,78 +2265,95 @@ def perform_coefficient_matching(model_data, config):
                     f"(decision_rule_order={config.decision_rule_order}). "
                     "We are unable to write a coefficent matching reformulation "
                     "of this constraint."
+                    "Recasting to two inequality constraints."
                 )
 
-                # nothing we can do to reformulate this constraint,
-                # so move on
-                continue
-
-            polynomial_repn_coeffs = (
-                [expr_repn.constant]
-                + list(expr_repn.linear_coefs)
-                + list(expr_repn.quadratic_coefs)
-            )
-            for coef_expr in polynomial_repn_coeffs:
-                simplified_coef_expr = generate_standard_repn(
-                    expr=coef_expr,
-                    compute_values=True,
-                ).to_expression()
-
-                # for robust satisfaction of the original equality
-                # constraint, all polynomial coefficients must be
-                # equal to zero. so for each coefficient,
-                # we either check for trivial robust
-                # feasibility/infeasibility, or add a constraint
-                # restricting the coefficient expression to value 0
-                if isinstance(simplified_coef_expr, tuple(native_types)):
-                    # coefficient is a constant;
-                    # check value to determine
-                    # trivial feasibility/infeasibility
-                    robust_infeasible = not math.isclose(
-                        a=simplified_coef_expr,
-                        b=0,
-                        rel_tol=COEFF_MATCH_REL_TOL,
-                        abs_tol=COEFF_MATCH_ABS_TOL,
+                # keeping this constraint as an equality is not appropriate,
+                # as it effectively constrains the uncertain parameters
+                # in the separation problems, since the effective DOF
+                # variables and DR variables are fixed.
+                # hence, we reformulate to inequalities
+                con_name = con.getname(
+                    relative_to=working_model.user_model,
+                    fully_qualified=True,
+                )
+                for bound_type in ["lower", "upper"]:
+                    std_con_expr = create_bound_constraint_expr(
+                        expr=con.body, bound=con.upper, bound_type=bound_type
                     )
-                    if robust_infeasible:
-                        config.progress_logger.info(
-                            "PyROS has determined that the model is "
-                            "robust infeasible. "
-                            "One reason for this is that "
-                            f"the equality constraint {con.name!r} "
-                            "cannot be satisfied against all realizations "
-                            "of uncertainty, "
-                            "given the current partitioning into "
-                            "first-stage, second-stage, and state variables. "
-                            "Consider editing this constraint to reference some "
-                            "(additional) second-stage and/or state variable(s)."
+                    new_con = Constraint(expr=std_con_expr)
+                    working_model.user_model.add_component(
+                        f"con_{con_name}_{bound_type}_bound_con",
+                        new_con,
+                    )
+                    working_model.effective_performance_inequality_cons.append(new_con)
+            else:
+                polynomial_repn_coeffs = (
+                    [expr_repn.constant]
+                    + list(expr_repn.linear_coefs)
+                    + list(expr_repn.quadratic_coefs)
+                )
+                for coef_expr in polynomial_repn_coeffs:
+                    simplified_coef_expr = generate_standard_repn(
+                        expr=coef_expr,
+                        compute_values=True,
+                    ).to_expression()
+
+                    # for robust satisfaction of the original equality
+                    # constraint, all polynomial coefficients must be
+                    # equal to zero. so for each coefficient,
+                    # we either check for trivial robust
+                    # feasibility/infeasibility, or add a constraint
+                    # restricting the coefficient expression to value 0
+                    if isinstance(simplified_coef_expr, tuple(native_types)):
+                        # coefficient is a constant;
+                        # check value to determine
+                        # trivial feasibility/infeasibility
+                        robust_infeasible = not math.isclose(
+                            a=simplified_coef_expr,
+                            b=0,
+                            rel_tol=COEFF_MATCH_REL_TOL,
+                            abs_tol=COEFF_MATCH_ABS_TOL,
+                        )
+                        if robust_infeasible:
+                            config.progress_logger.info(
+                                "PyROS has determined that the model is "
+                                "robust infeasible. "
+                                "One reason for this is that "
+                                f"the equality constraint {con.name!r} "
+                                "cannot be satisfied against all realizations "
+                                "of uncertainty, "
+                                "given the current partitioning into "
+                                "first-stage, second-stage, and state variables. "
+                                "Consider editing this constraint to reference some "
+                                "(additional) second-stage and/or state variable(s)."
+                            )
+
+                            # robust infeasibility found;
+                            # that is sufficient for termination of PyROS.
+                            return robust_infeasible
+
+                    else:
+                        # coefficient is dependent on model first-stage
+                        # and DR variables. add matching constraint
+                        coeff_matching_conlist.add(simplified_coef_expr == 0)
+
+                        # matching constraint depends on nonadjustable
+                        # variables only, so it is first-stage
+                        last_idx = coeff_matching_conlist.index_set().last()
+                        working_model.effective_first_stage_equality_cons.append(
+                            coeff_matching_conlist[last_idx]
                         )
 
-                        # robust infeasibility found;
-                        # that is sufficient for termination of PyROS.
-                        return robust_infeasible
-
-                else:
-                    # coefficient is dependent on model first-stage
-                    # and DR variables. add matching constraint
-                    coeff_matching_conlist.add(simplified_coef_expr == 0)
-
-                    # matching constraint depends on nonadjustable
-                    # variables only, so it is first-stage
-                    last_idx = coeff_matching_conlist.index_set().last()
-                    working_model.effective_first_stage_equality_cons.append(
-                        coeff_matching_conlist[last_idx]
-                    )
-
-                    config.progress_logger.debug(
-                        f"Derived from constraint {con.name!r} a coefficient "
-                        "matching constraint with expression: \n    "
-                        f"{coeff_matching_conlist[last_idx].expr}."
-                    )
+                        config.progress_logger.info(
+                            f"Derived from constraint {con.name!r} a coefficient "
+                            "matching constraint with expression: \n    "
+                            f"{coeff_matching_conlist[last_idx].expr}."
+                        )
 
             # constraint has been reformulated out of the model,
-            # i.e., coefficients have all been matched or found
-            #       to yield trivial satisfaction of the constraint
+            # either by coefficient matching
+            # or by casting to two inequalities
             con.deactivate()
             working_model.effective_performance_equality_cons.remove(con)
 
@@ -2399,8 +2425,13 @@ def preprocess_model_data(model_data, config, user_var_partitioning):
         + model_data.working_model.effective_var_partitioning.state_variables
     )
 
-    config.progress_logger.debug("Performing coefficient matching reformulation...")
-    robust_infeasible = perform_coefficient_matching(model_data, config)
+    config.progress_logger.debug(
+        "Reformulating state variable-independent performance equality constraints..."
+    )
+    robust_infeasible = reformulate_state_var_independent_eq_cons(
+        model_data,
+        config,
+    )
 
     return robust_infeasible
 
