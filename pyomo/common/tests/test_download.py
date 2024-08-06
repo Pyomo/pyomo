@@ -22,7 +22,7 @@ import pyomo.common.unittest as unittest
 import pyomo.common.envvar as envvar
 
 from pyomo.common import DeveloperError
-from pyomo.common.fileutils import this_file
+from pyomo.common.fileutils import this_file, Executable
 from pyomo.common.download import FileDownloader, distro_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
@@ -173,7 +173,8 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertTrue(v.replace('.', '').startswith(dist_ver))
 
             if (
-                subprocess.run(
+                Executable('lsb_release').available()
+                and subprocess.run(
                     ['lsb_release'],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
