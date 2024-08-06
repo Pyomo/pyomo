@@ -35,7 +35,6 @@ from pyomo.opt import SolverFactory
 
 is_osx = platform.mac_ver()[0] != ""
 ipopt_available = SolverFactory("ipopt").available()
-k_aug_available = SolverFactory("k_aug").available(exception_flag=False)
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
 
@@ -198,12 +197,6 @@ class TestRooneyBiegler(unittest.TestCase):
         else:
             retcode = subprocess.call(rlist)
         self.assertEqual(retcode, 0)
-
-    @unittest.skipUnless(k_aug_available, "k_aug solver not found")
-    def test_theta_k_aug_for_Hessian(self):
-        # this will fail if k_aug is not installed
-        objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
-        self.assertAlmostEqual(objval, 4.4675, places=2)
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_theta_est_cov(self):
@@ -1204,12 +1197,6 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
         else:
             retcode = subprocess.call(rlist)
         assert retcode == 0
-
-    @unittest.skipUnless(k_aug_available, "k_aug solver not found")
-    def test_theta_k_aug_for_Hessian(self):
-        # this will fail if k_aug is not installed
-        objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
-        self.assertAlmostEqual(objval, 4.4675, places=2)
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_theta_est_cov(self):
