@@ -81,7 +81,7 @@ def get_shifted_linear_model(model, block=None):
     """
 
     # Gather all variables and confirm the model is bounded
-    all_vars = aos_utils.get_model_variables(model, "all")
+    all_vars = aos_utils.get_model_variables(model)
     new_vars = {}
     all_vars_new = {}
     var_map = ComponentMap()

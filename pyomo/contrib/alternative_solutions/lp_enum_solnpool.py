@@ -80,7 +80,7 @@ class NoGoodCutGenerator:
 def enumerate_linear_solutions_soln_pool(
     model,
     num_solutions=10,
-    variables="all",
+    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
     zero_threshold=1e-5,
@@ -97,8 +97,8 @@ def enumerate_linear_solutions_soln_pool(
         A concrete Pyomo model
     num_solutions : int
         The maximum number of solutions to generate.
-    variables: 'all' or a collection of Pyomo _GeneralVarData variables
-        The variables for which bounds will be generated. 'all' indicates
+    variables: None or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
         _GenereralVarData variables can be provided.
     rel_opt_gap : float or None
@@ -132,9 +132,9 @@ def enumerate_linear_solutions_soln_pool(
 
     # For now keeping things simple
     # TODO: See if this can be relaxed, but for now just leave as all
-    assert variables == "all"
-    if variables == "all":
-        all_variables = aos_utils.get_model_variables(model, "all")
+    assert variables == None
+    if variables == None:
+        all_variables = aos_utils.get_model_variables(model)
 
     # TODO: Check if problem is continuous or mixed binary
 

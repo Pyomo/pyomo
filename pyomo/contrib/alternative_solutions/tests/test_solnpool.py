@@ -129,8 +129,8 @@ class TestSolnPoolUnit(unittest.TestCase):
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
-    @unittest.skipIf(not numpy_available, "Numpy not installed")
-    def Xtest_mip_no_time(self):
+    @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
+    def test_mip_no_time(self):
         """
         Enumerate solutions for a mip: indexed_pentagonal_pyramid_mip.
 

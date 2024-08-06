@@ -19,7 +19,7 @@ def enumerate_binary_solutions(
     model,
     *,
     num_solutions=10,
-    variables="all",
+    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
     search_mode="optimal",
@@ -39,8 +39,8 @@ def enumerate_binary_solutions(
         A concrete Pyomo model
     num_solutions : int
         The maximum number of solutions to generate.
-    variables: 'all' or a collection of Pyomo _GeneralVarData variables
-        The variables for which bounds will be generated. 'all' indicates
+    variables: None or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
         _GenereralVarData variables can be provided.
     rel_opt_gap : float or None
@@ -86,10 +86,9 @@ def enumerate_binary_solutions(
     if seed is not None:
         aos_utils._set_numpy_rng(seed)
 
-    if variables == "all":
-        binary_variables = aos_utils.get_model_variables(
-            model, "all", include_continuous=False, include_integer=False
-        )
+    all_variables = aos_utils.get_model_variables(model, include_fixed=True)
+    if variables == None:
+        binary_variables = [var for var in all_variables if var.is_binary() and not var.is_fixed()]
     else:
         binary_variables = ComponentSet()
         non_binary_variables = []
@@ -108,7 +107,6 @@ def enumerate_binary_solutions(
                 )
                 print(", ".join(non_binary_variables))
 
-    all_variables = aos_utils.get_model_variables(model, "all", include_fixed=True)
     orig_objective = aos_utils.get_active_objective(model)
 
     #
@@ -149,8 +147,8 @@ def enumerate_binary_solutions(
         print("Performing initial solve of model.")
     results = opt.solve(model, tee=tee, load_solutions=False)
     status = results.solver.status
-    condition = results.solver.termination_condition
     if not pe.check_optimal_termination(results):
+        condition = results.solver.termination_condition
         raise Exception(
             (
                 "No-good cut analysis cannot be applied, "
@@ -217,7 +215,6 @@ def enumerate_binary_solutions(
         condition = results.solver.termination_condition
         if pe.check_optimal_termination(results):
             model.solutions.load_from(results)
-            orig_obj_value = pe.value(orig_objective)
             orig_obj_value = pe.value(orig_objective)
             if not quiet:  # pragma: no cover
                 print(

@@ -23,7 +23,7 @@ def enumerate_linear_solutions(
     model,
     *,
     num_solutions=10,
-    variables="all",
+    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
     search_mode="optimal",
@@ -50,8 +50,8 @@ def enumerate_linear_solutions(
         A concrete Pyomo model
     num_solutions : int
         The maximum number of solutions to generate.
-    variables: 'all' or a collection of Pyomo _GeneralVarData variables
-        The variables for which bounds will be generated. 'all' indicates
+    variables: None or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
         _GenereralVarData variables can be provided.
     rel_opt_gap : float or None
@@ -90,12 +90,12 @@ def enumerate_linear_solutions(
     if not quiet:  # pragma: no cover
         print("STARTING LP ENUMERATION ANALYSIS")
 
-    # TODO: Make this a parameter
+    # TODO: Make this a parameter?
     zero_threshold = 1e-5
 
     # For now keeping things simple
     # TODO: See if this can be relaxed, but for now just leave as all
-    assert variables == "all"
+    assert variables == None
 
     assert search_mode in [
         "optimal",
@@ -109,8 +109,8 @@ def enumerate_linear_solutions(
     # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
 
-    if variables == "all":
-        all_variables = aos_utils.get_model_variables(model, "all")
+    if variables == None:
+        all_variables = aos_utils.get_model_variables(model)
     # else:
     #     binary_variables = ComponentSet()
     #     non_binary_variables = []
@@ -123,7 +123,7 @@ def enumerate_linear_solutions(
     #         print(('Warning: The following non-binary variables were included'
     #                'in the variable list and will be ignored:'))
     #         print(", ".join(non_binary_variables))
-    # all_variables = aos_utils.get_model_variables(model, 'all',
+    # all_variables = aos_utils.get_model_variables(model, None,
     #                                               include_fixed=True)
 
     # TODO: Relax this if possible - Should allow for the mixed-binary case

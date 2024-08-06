@@ -8,7 +8,7 @@ more context than this result. For example,
 
 * alternative solutions can support an assessment of trade-offs between competing objectives;
 
-* if the optimization formulation may be inaccurate or untrustworthy, then comparisons amongst alternative solutions provides additional insights into the reliability of these model predictions; or
+* if the optimization formulation may be inaccurate or untrustworthy, then comparisons amongst alternative solutions provide additional insights into the reliability of these model predictions; or
 
 * the user may have unexpressed objectives or constraints, which only are realized in later stages of model analysis.
 
@@ -27,7 +27,7 @@ The following functions are defined in the alternative-solutions library:
 
 * ``enumerate_linear_solutions``
 
-    * Finds alternative optimal solutions a (mixed-integer) linear program.
+    * Finds alternative optimal solutions for a (mixed-integer) linear program.
 
 * ``enumerate_linear_solutions_soln_pool``
 
@@ -45,7 +45,7 @@ The following functions are defined in the alternative-solutions library:
 Usage Example
 -------------
 
-Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple model whose feasible space is a isosceles right triangle. The optimal solutiosn fall along the hypotenuse, where :math:`x + y == 5`.  Alternative near-optimal feasible points have integer objective values ranging from 0 to 4.
+Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple model whose feasible space is an isosceles right triangle. The optimal solutiosn fall along the hypotenuse, where :math:`x + y == 5`.  Alternative near-optimal feasible points have integer objective values ranging from 0 to 4.
 
 .. doctest::
 

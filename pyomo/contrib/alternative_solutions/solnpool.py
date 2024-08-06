@@ -99,7 +99,7 @@ def gurobi_generate_solutions(
     # Collect solutions
     #
     solution_count = opt.get_model_attr("SolCount")
-    variables = aos_utils.get_model_variables(model, "all", include_fixed=True)
+    variables = aos_utils.get_model_variables(model, include_fixed=True)
     solutions = []
     for i in range(solution_count):
         #

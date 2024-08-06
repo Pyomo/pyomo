@@ -27,11 +27,7 @@ def get_active_objective(model):
     assume that there is exactly one active objective.
     """
 
-    active_objs = []
-    for o in model.component_data_objects(pe.Objective, active=True):
-        objs = o.values() if o.is_indexed() else (o,)
-        for obj in objs:
-            active_objs.append(obj)
+    active_objs = list(model.component_data_objects(pe.Objective, active=True))
     assert (
         len(active_objs) == 1
     ), "Model has {} active objective functions, exactly one is required.".format(
@@ -58,10 +54,10 @@ def _add_objective_constraint(
 
     assert (
         rel_opt_gap is None or rel_opt_gap >= 0.0
-    ), "rel_opt_gap must be None of >= 0.0"
+    ), "rel_opt_gap must be None or >= 0.0"
     assert (
         abs_opt_gap is None or abs_opt_gap >= 0.0
-    ), "abs_opt_gap must be None of >= 0.0"
+    ), "abs_opt_gap must be None or >= 0.0"
 
     objective_constraints = []
 
@@ -114,20 +110,16 @@ def _set_numpy_rng(seed):
     rng = numpy.random.default_rng(seed)
 
 
-def _get_random_direction(num_dimensions):
+def _get_random_direction(num_dimensions, iterations=1000, min_norm=1e-4):
     """
     Get a unit vector of dimension num_dimensions by sampling from and
     normalizing a standard multivariate Gaussian distribution.
     """
-    iterations = 1000
-    min_norm = 1e-4
-    idx = 0
-    while idx < iterations:
+    for idx in range(iterations):
         samples = rng.normal(size=num_dimensions)
         samples_norm = norm(samples)
         if samples_norm > min_norm:
             return samples / samples_norm
-        idx += 1  # pragma: no cover
     raise Exception(  # pragma: no cover
         (
             "Generated {} sequential Gaussian draws with a norm of "
@@ -160,7 +152,7 @@ def _filter_model_variables(
 
 def get_model_variables(
     model,
-    components="all",
+    components=None,
     include_continuous=True,
     include_binary=True,
     include_integer=True,
@@ -175,8 +167,8 @@ def get_model_variables(
         ----------
         model : ConcreteModel
             A concrete Pyomo model.
-        components: 'all' or a collection Pyomo components
-            The components from which variables should be collected. 'all'
+        components: None or a collection of Pyomo components
+            The components from which variables should be collected. None
             indicates that all variables will be included. Alternatively, a
             collection of Pyomo Blocks, Constraints, or Variables (indexed or
             non-indexed) from which variables will be gathered can be provided.
@@ -203,7 +195,7 @@ def get_model_variables(
 
     component_list = (pe.Objective, pe.Constraint)
     variable_set = ComponentSet()
-    if components == "all":
+    if components == None:
         var_generator = vfe.get_vars_from_components(
             model, component_list, include_fixed=include_fixed
         )

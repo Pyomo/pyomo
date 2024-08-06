@@ -18,7 +18,7 @@ from pyomo.contrib import appsi
 def obbt_analysis(
     model,
     *,
-    variables="all",
+    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
     refine_discrete_bounds=False,
@@ -38,8 +38,8 @@ def obbt_analysis(
     ----------
     model : ConcreteModel
         A concrete Pyomo model.
-    variables: 'all' or a collection of Pyomo _GeneralVarData variables
-        The variables for which bounds will be generated. 'all' indicates
+    variables: None or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. None indicates
         that all variables will be included. Alternatively, a collection of
         _GenereralVarData variables can be provided.
     rel_opt_gap : float or None
@@ -91,7 +91,7 @@ def obbt_analysis(
 def obbt_analysis_bounds_and_solutions(
     model,
     *,
-    variables="all",
+    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
     refine_discrete_bounds=False,
@@ -111,8 +111,8 @@ def obbt_analysis_bounds_and_solutions(
         ----------
         model : ConcreteModel
             A concrete Pyomo model.
-        variables: 'all' or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. 'all' indicates
+        variables: None or a collection of Pyomo _GeneralVarData variables
+            The variables for which bounds will be generated. None indicates
             that all variables will be included. Alternatively, a collection of
             _GenereralVarData variables can be provided.
         rel_opt_gap : float or None
@@ -156,10 +156,10 @@ def obbt_analysis_bounds_and_solutions(
 
     if warmstart:
         assert (
-            variables == "all"
+            variables == None
         ), "Cannot restrict variable list when warmstart is specified"
-    all_variables = aos_utils.get_model_variables(model, "all", include_fixed=False)
-    if variables == "all":
+    all_variables = aos_utils.get_model_variables(model, include_fixed=False)
+    if variables == None:
         variable_list = all_variables
     else:
         variable_list = list(variables)

@@ -42,7 +42,8 @@ class TestBalasUnit:
         assert len(results) == 1
         assert results[0].objective_value == unittest.pytest.approx(5)
 
-    def Xtest_no_time(self, mip_solver):
+    @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
+    def test_no_time(self, mip_solver):
         """
         Enumerate solutions for an ip: triangle_ip.
 
