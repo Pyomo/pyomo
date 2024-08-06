@@ -18,6 +18,7 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 
+
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -71,8 +72,7 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
 @unittest.skipUnless(ipopt_available, "The 'ipopt' solver is not available")
 @unittest.skipUnless(
-    parmest.parmest_available,
-    "Cannot test parmest: required dependencies are missing",
+    parmest.parmest_available, "Cannot test parmest: required dependencies are missing"
 )
 class TestReactionKineticsExamples(unittest.TestCase):
     @classmethod

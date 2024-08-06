@@ -571,9 +571,10 @@ class Ipopt(PersistentSolver):
     def has_linear_solver(self, linear_solver):
         import pyomo.core as AML
         from pyomo.common.tee import capture_output
+
         m = AML.ConcreteModel()
         m.x = AML.Var()
-        m.o = AML.Objective(expr=(m.x-2)**2)
+        m.o = AML.Objective(expr=(m.x - 2) ** 2)
         with capture_output() as OUT:
             solver = self.__class__()
             solver.config.stream_solver = True

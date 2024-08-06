@@ -22,12 +22,7 @@ import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
 import pyomo.dae as dae
 
-from pyomo.common.dependencies import (
-    numpy as np,
-    pandas as pd,
-    scipy,
-    matplotlib,
-)
+from pyomo.common.dependencies import numpy as np, pandas as pd, scipy, matplotlib
 from pyomo.common.fileutils import this_file_dir
 from pyomo.contrib.parmest.experiment import Experiment
 from pyomo.contrib.pynumero.asl import AmplInterface
@@ -37,6 +32,7 @@ is_osx = platform.mac_ver()[0] != ""
 ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
+
 
 @unittest.skipIf(
     not parmest.parmest_available,
