@@ -415,14 +415,13 @@ class TestDRPolishingProblem(unittest.TestCase):
         self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[1].active)
 
         # check initialization of polishing vars
-        # scaling factor (for normalization) is 1 / 3
         self.assertEqual(
             polishing_model.polishing_vars[0][0].value,
-            abs(nom_polishing_block.decision_rule_vars[0][0].value / 3),
+            abs(nom_polishing_block.decision_rule_vars[0][0].value),
         )
         self.assertEqual(
             polishing_model.polishing_vars[0][1].value,
-            abs(nom_polishing_block.decision_rule_vars[0][1].value / 3),
+            abs(nom_polishing_block.decision_rule_vars[0][1].value),
         )
 
         assertExpressionsEqual(

@@ -497,12 +497,11 @@ def construct_dr_polishing_problem(master_data, config):
                 dr_var_in_term.fix(0)
 
             # add polishing constraints
-            scale_factor = 1 / max(1, abs(value(ss_var)))
             polishing_absolute_value_lb_cons[dr_var_in_term_idx] = (
-                -polishing_var - scale_factor * dr_monomial <= 0
+                -polishing_var - dr_monomial <= 0
             )
             polishing_absolute_value_ub_cons[dr_var_in_term_idx] = (
-                scale_factor * dr_monomial - polishing_var <= 0
+                dr_monomial - polishing_var <= 0
             )
 
             # some DR variables may be fixed,
@@ -515,7 +514,7 @@ def construct_dr_polishing_problem(master_data, config):
                 polishing_absolute_value_ub_cons[dr_var_in_term_idx].deactivate()
 
             # ensure polishing var properly initialized
-            polishing_var.set_value(abs(value(scale_factor * dr_monomial)))
+            polishing_var.set_value(abs(value(dr_monomial)))
 
     # L1-norm objective
     # TODO: if dropping nonstatic terms, ensure the
