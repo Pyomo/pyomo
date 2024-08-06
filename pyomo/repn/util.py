@@ -67,6 +67,7 @@ int_float = {int, float}
 
 class ExprType(enum.IntEnum):
     CONSTANT = 0
+    FIXED = 5
     MONOMIAL = 10
     LINEAR = 20
     QUADRATIC = 30
@@ -378,18 +379,16 @@ class ExitNodeDispatcher(collections.defaultdict):
     `exitNode` callback
 
     This dispatcher implements a specialization of :py:`defaultdict`
-    that supports automatic type registration.  Any missing types will
-    return the :py:meth:`register_dispatcher` method, which (when called
-    as a callback) will interrogate the type, identify the appropriate
-    callback, add the callback to the dict, and return the result of
-    calling the callback.  As the callback is added to the dict, no type
-    will incur the overhead of `register_dispatcher` more than once.
+    that supports automatic type registration.  As the identified
+    callback is added to the dict, no type will incur the overhead of
+    `register_dispatcher` more than once.
 
     Note that in this case, the client is expected to register all
     non-NPV expression types.  The auto-registration is designed to only
     handle two cases:
     - Auto-detection of user-defined Named Expression types
     - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
+    - Automatic registration of derived expression types
 
     """
 

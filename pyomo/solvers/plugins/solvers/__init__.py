@@ -32,3 +32,4 @@ import pyomo.solvers.plugins.solvers.xpress_direct
 import pyomo.solvers.plugins.solvers.xpress_persistent
 import pyomo.solvers.plugins.solvers.scip_direct
 import pyomo.solvers.plugins.solvers.scip_persistent
+import pyomo.solvers.plugins.solvers.SAS
