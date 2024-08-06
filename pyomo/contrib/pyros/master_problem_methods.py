@@ -487,14 +487,22 @@ def construct_dr_polishing_problem(master_data, config):
                 for term in dr_term_copies
             )
             if all_copy_coeffs_zero:
-                dr_var_in_term.fix()
+                # increment static DR variable value
+                # to maintain feasibility of the initial point
+                # as much as possible
+                static_dr_var_in_expr = dr_expr.args[0]
+                static_dr_var_in_expr.set_value(
+                    value(static_dr_var_in_expr) + value(dr_monomial)
+                )
+                dr_var_in_term.fix(0)
 
             # add polishing constraints
+            scale_factor = 1 / max(1, abs(value(ss_var)))
             polishing_absolute_value_lb_cons[dr_var_in_term_idx] = (
-                -polishing_var - dr_monomial <= 0
+                -polishing_var - scale_factor * dr_monomial <= 0
             )
             polishing_absolute_value_ub_cons[dr_var_in_term_idx] = (
-                dr_monomial - polishing_var <= 0
+                scale_factor * dr_monomial - polishing_var <= 0
             )
 
             # some DR variables may be fixed,
@@ -507,7 +515,7 @@ def construct_dr_polishing_problem(master_data, config):
                 polishing_absolute_value_ub_cons[dr_var_in_term_idx].deactivate()
 
             # ensure polishing var properly initialized
-            polishing_var.set_value(abs(value(dr_monomial)))
+            polishing_var.set_value(abs(value(scale_factor * dr_monomial)))
 
     # L1-norm objective
     # TODO: if dropping nonstatic terms, ensure the
