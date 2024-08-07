@@ -93,10 +93,10 @@ An example that includes the modeling approach may be found below.
     Variables:
       x : Size=1, Index=None
           Key  : Lower : Value : Upper : Fixed : Stale : Domain
-          None :  -1.2 :   0.0 :     2 : False : False :  Reals
+          None :  -1.2 :     0 :     2 : False : False :  Reals
       y : Size=1, Index=None
           Key  : Lower : Value : Upper : Fixed : Stale : Domain
-          None :   -10 :   1.0 :    10 : False : False :  Reals
+          None :   -10 :     1 :    10 : False : False :  Reals
   <BLANKLINE>
     Objectives:
       objective : Size=1, Index=None, Active=True
@@ -106,7 +106,7 @@ An example that includes the modeling approach may be found below.
     Constraints:
       c : Size=1
           Key  : Lower : Body : Upper
-          None :   1.0 :  1.0 :   1.0
+          None :   1.0 :    1 :   1.0
 
 .. note:: 
 

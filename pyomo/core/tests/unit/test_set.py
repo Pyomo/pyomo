@@ -3763,8 +3763,8 @@ class TestSet(unittest.TestCase):
             m = ConcreteModel()
             m.I = Set(initialize={1, 3, 2, 4})
             ref = (
-                "Initializing ordered Set I with a "
-                "fundamentally unordered data source (type: set)."
+                'Initializing ordered Set I with a fundamentally '
+                'unordered data source (type: set).'
             )
             self.assertIn(ref, output.getvalue())
         self.assertEqual(m.I.sorted_data(), (1, 2, 3, 4))
@@ -3811,12 +3811,21 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.data(), (4, 3, 2, 1))
         self.assertEqual(m.I.dimen, 1)
 
+    def test_initialize_with_noniterable(self):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
                 m = ConcreteModel()
                 m.I = Set(initialize=5)
             ref = "Initializer for Set I returned non-iterable object of type int."
+            self.assertIn(ref, output.getvalue())
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
+                m = ConcreteModel()
+                m.I = Set([1, 2], initialize=5)
+            ref = "Initializer for Set I[1] returned non-iterable object of type int."
             self.assertIn(ref, output.getvalue())
 
     def test_scalar_indexed_api(self):
@@ -3877,12 +3886,13 @@ class TestSet(unittest.TestCase):
         m.I.add(4)
         _verify(m.I, [1, 3, 2, 4])
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.I.add(3)
-        self.assertEqual(
-            output.getvalue(), "Element 3 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
         _verify(m.I, [1, 3, 2, 4])
 
         m.I.remove(3)
@@ -3959,12 +3969,13 @@ class TestSet(unittest.TestCase):
         m.I.add(4)
         _verify(m.I, [1, 2, 3, 4])
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.I.add(3)
-        self.assertEqual(
-            output.getvalue(), "Element 3 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
         _verify(m.I, [1, 2, 3, 4])
 
         m.I.remove(3)
@@ -4052,12 +4063,13 @@ class TestSet(unittest.TestCase):
         m.I.add(4)
         _verify(m.I, [1, 2, 3, 4])
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.I.add(3)
-        self.assertEqual(
-            output.getvalue(), "Element 3 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
         _verify(m.I, [1, 2, 3, 4])
 
         m.I.remove(3)
@@ -4248,26 +4260,23 @@ class TestSet(unittest.TestCase):
         self.assertIn(1, m.I)
         self.assertIn(1.0, m.I)
 
+        N = len(m.I)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.I.add(1))
-        self.assertEqual(
-            output.getvalue(), "Element 1 already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.I.add((1,)))
-        self.assertEqual(
-            output.getvalue(), "Element (1,) already exists in Set I; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
 
         m.J = Set()
         # Note that pypy raises a different exception from cpython
-        err = (
-            r"Unable to insert '{}' into Set J:\n\tTypeError: "
-            r"((unhashable type: 'dict')|('dict' objects are unhashable))"
-        )
+        err = r"((unhashable type: 'dict')|('dict' objects are unhashable))"
         with self.assertRaisesRegex(TypeError, err):
             m.J.add({})
 
@@ -4275,9 +4284,9 @@ class TestSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.J.add(1))
-        self.assertEqual(
-            output.getvalue(), "Element 1 already exists in Set J; no action taken\n"
-        )
+        # In Pyomo <= 6.7.3 duplicate values logged a warning.
+        self.assertEqual(output.getvalue(), "")
+        self.assertEqual(N, len(m.I))
 
         def _l_tri(model, i, j):
             self.assertIs(model, m)
@@ -5256,6 +5265,21 @@ I : Size=2, Index={1, 2, 3, 4, 5}, Ordered=Insertion
         m.K = Set(Bindex)
         self.assertIs(m.K.index_set()._domain, Integers)
         self.assertEqual(m.K.index_set(), [0, 1, 2, 3, 4])
+
+    def test_normalize_index(self):
+        try:
+            _oldFlatten = normalize_index.flatten
+            normalize_index.flatten = True
+
+            m = ConcreteModel()
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(\(2, 3\),\) has dimension 2 and is not "
+                "valid for Set I which has dimen=1",
+            ):
+                m.I = Set(initialize=[1, ((2, 3),)])
+        finally:
+            normalize_index.flatten = _oldFlatten
 
     def test_no_normalize_index(self):
         try:
