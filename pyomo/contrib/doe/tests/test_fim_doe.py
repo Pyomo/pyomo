@@ -35,6 +35,9 @@ from pyomo.contrib.doe import (
     VariablesWithIndices,
 )
 from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_measure
+from pyomo.environ import SolverFactory
+
+ipopt_available = SolverFactory("ipopt").available()
 
 
 class TestMeasurementError(unittest.TestCase):
@@ -196,6 +199,7 @@ class TestDesignError(unittest.TestCase):
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not ipopt_available, "Numpy is not available")
 class TestPriorFIMError(unittest.TestCase):
     def test(self):
         # Control time set [h]
