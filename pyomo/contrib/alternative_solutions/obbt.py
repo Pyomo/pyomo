@@ -255,11 +255,11 @@ def obbt_analysis_bounds_and_solutions(
             if idx == 0:
                 variable_bounds[var] = [None, None]
 
+            # NOTE: Simply setting the expr/sense values works differently with the APPSI solver
             if hasattr(aos_block, "var_objective"):
-                aos_block.var_objective.expr = var
-                aos_block.var_objective.sense = sense
-            else:
-                aos_block.var_objective = pe.Objective(expr=var, sense=sense)
+                aos_block.del_component("var_objective")
+
+            aos_block.var_objective = pe.Objective(expr=var, sense=sense)
 
             if warmstart:
                 _update_values(var, bound_dir, solutions)

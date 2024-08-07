@@ -58,6 +58,9 @@ class TestOBBTUnit:
             assert_array_almost_equal(bounds, m.continuous_bounds[var])
 
     def test_obbt_error1(self, mip_solver):
+        """
+        ERROR: Cannot restrict variable list when warmstart is specified
+        """
         m = tc.get_2d_diamond_problem()
         with unittest.pytest.raises(AssertionError):
             obbt_analysis_bounds_and_solutions(m, variables=[m.x], solver=mip_solver)
