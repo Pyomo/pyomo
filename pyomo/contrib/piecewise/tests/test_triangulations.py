@@ -13,6 +13,9 @@
 import itertools
 from unittest import skipUnless
 import pyomo.common.unittest as unittest
+from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
+    get_hamiltonian_paths
+)
 from pyomo.contrib.piecewise.triangulations import (
     get_unordered_j1_triangulation,
     get_ordered_j1_triangulation,
@@ -220,3 +223,7 @@ class TestTriangulations(unittest.TestCase):
         self.check_grid_hamiltonian(2, 8)
         self.check_grid_hamiltonian(3, 5)
         self.check_grid_hamiltonian(4, 3)
+
+class TestHamiltonianPaths(unittest.TestCase):
+    def test_hamiltonian_paths(self):
+        paths = get_hamiltonian_paths()
