@@ -19,14 +19,14 @@ import json
 from pathlib import Path
 
 
-# Example to run a DOE on the reactor
+# Example to run a DoE on the reactor
 def run_reactor_doe():
     # Read in file
     DATA_DIR = Path(__file__).parent
     file_path = DATA_DIR / "result.json"
 
-    f = open(file_path)
-    data_ex = json.load(f)
+    with open(file_path) as f:
+        data_ex = json.load(f)
 
     # Put temperature control time points into correct format for reactor experiment
     data_ex["control_points"] = {
@@ -46,9 +46,9 @@ def run_reactor_doe():
     scale_nominal_param_value = True
 
     # Create the DesignOfExperiments object
-    # We will not be passing any prior information in this example
-    # and allow the experiment object and the DesignOfExperiments
-    # call of ``run_doe`` perform model initialization.
+    # We will not be passing any prior information in this example.
+    # We also will rely on the initialization routine within
+    # the DesignOfExperiments class.
     doe_obj = DesignOfExperiments(
         experiment,
         fd_formula=fd_formula,
