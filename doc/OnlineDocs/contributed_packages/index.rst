@@ -15,6 +15,7 @@ Contributed packages distributed with Pyomo:
 .. toctree::
    :maxdepth: 1
    
+   alternative_solutions.rst
    community.rst
    doe/doe.rst
    gdpopt.rst
