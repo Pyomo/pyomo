@@ -140,8 +140,11 @@ def enumerate_linear_solutions_soln_pool(
     assert variables == None
     if variables == None:
         all_variables = aos_utils.get_model_variables(model)
-
-    # TODO: Check if problem is continuous or mixed binary
+    for var in all_variables:
+        if var.is_binary():
+            raise pyomo.common.errors.ApplicationError(
+                f"The enumerate_linear_solutions_soln_pool() function cannot be used with models that contain binary variables"
+            )
 
     opt = pe.SolverFactory("gurobi")
     if not opt.available():
