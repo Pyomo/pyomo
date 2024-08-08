@@ -199,7 +199,7 @@ class TestDesignError(unittest.TestCase):
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-@unittest.skipIf(not ipopt_available, "Numpy is not available")
+@unittest.skipIf(not ipopt_available, "ipopt is not available")
 class TestPriorFIMError(unittest.TestCase):
     def test(self):
         # Control time set [h]
