@@ -1394,14 +1394,12 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.constant, 0)
         self.assertEqual(len(repn.linear), 1)
-        assertExpressionsEqual(
-            self, repn.linear[id(m.x)], m.y + m.z
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)], m.y + m.z)
         self.assertEqual(len(repn.quadratic), 1)
         assertExpressionsEqual(self, repn.quadratic[id(m.x), id(m.x)], m.y)
         self.assertIsNone(repn.nonlinear)
         assertExpressionsEqual(
-            self, repn.to_expression(visitor), m.y * m.x ** 2 + (m.y + m.z) * m.x,
+            self, repn.to_expression(visitor), m.y * m.x**2 + (m.y + m.z) * m.x
         )
 
     def test_product_linear_var_wrt_yz(self):
@@ -1424,14 +1422,12 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.constant, 0)
         self.assertEqual(len(repn.linear), 1)
-        assertExpressionsEqual(
-            self, repn.linear[id(m.x)], m.y + m.z
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)], m.y + m.z)
         self.assertEqual(len(repn.quadratic), 1)
         assertExpressionsEqual(self, repn.quadratic[id(m.x), id(m.x)], m.y)
         self.assertIsNone(repn.nonlinear)
         assertExpressionsEqual(
-            self, repn.to_expression(visitor), m.y * m.x ** 2 + (m.y + m.z) * m.x,
+            self, repn.to_expression(visitor), m.y * m.x**2 + (m.y + m.z) * m.x
         )
 
     def test_product_var_quadratic(self):

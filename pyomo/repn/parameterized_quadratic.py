@@ -197,10 +197,7 @@ def is_zero_product(e1, e2):
     Return True if e1 is zero and e2 is not known to be an indeterminate
     (e.g., NaN, inf), or vice versa, False otherwise.
     """
-    return (
-        (is_zero(e1) and e2 == e2)
-        or (e1 == e1 and is_zero(e2))
-    )
+    return (is_zero(e1) and e2 == e2) or (e1 == e1 and is_zero(e2))
 
 
 def is_equal_to(obj, val):
