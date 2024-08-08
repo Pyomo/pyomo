@@ -334,7 +334,6 @@ def obbt_analysis_bounds_and_solutions(
 
             iteration += 1
 
-    # TODO - Remove this block
     aos_block.deactivate()
     orig_objective.activate()
 
