@@ -20,7 +20,6 @@ from pyomo.contrib.alternative_solutions import (
     solution,
     solnpool,
 )
-from pyomo.contrib.alternative_solutions.aos_utils import logcontext
 from pyomo.contrib import appsi
 
 
@@ -230,7 +229,7 @@ def enumerate_linear_solutions(
     while solution_number <= num_solutions:
         logger.info("Solving Iteration {}: ".format(solution_number), end="")
 
-        with logcontext(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):
             model.pprint()
         if use_appsi:
             results = opt.solve(model)
@@ -251,13 +250,13 @@ def enumerate_linear_solutions(
             solutions.append(sol)
             orig_objective_value = sol.objective[1]
 
-            with logcontext(logging.INFO):
+            if logger.isEnabledFor(logging.INFO):
                 logger.info("Solved, objective = {}".format(orig_objective_value))
                 for var, index in cb.var_map.items():
                     logger.info(
                         "{} = {}".format(var.name, var.lb + cb.var_lower[index].value)
                     )
-            with logcontext(logging.DEBUG):
+            if logger.isEnabledFor(logging.DEBUG):
                 model.display()
 
             if hasattr(cb, "force_out"):
@@ -334,7 +333,7 @@ def enumerate_linear_solutions(
                 ).format(results.solver.status.value, condition.value)
             )
             break
-        with logcontext(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):
             logging.debug("")
             logging.debug("=" * 80)
             logging.debug("")

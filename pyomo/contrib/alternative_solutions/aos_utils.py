@@ -29,6 +29,17 @@ import pyomo.util.vars_from_expressions as vfe
 
 @contextmanager
 def logcontext(level):
+    """
+    This context manager is used to dynamically set the specified logging level
+    and then execute a block of code using that logging level.  When the context is
+    deleted, the logging level is reset to the original value.
+
+    Examples
+    --------
+    >>> with logcontext(logging.INFO):
+    >>>    logging.debug("This will not be printed")
+    >>>    logging.info("This will be printed")
+    """
     logger = logging.getLogger()
     current_level = logger.getEffectiveLevel()
     logger.setLevel(level)
