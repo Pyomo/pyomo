@@ -84,6 +84,7 @@ class TestIpoptInterface(unittest.TestCase):
             'CONFIG',
             'config',
             'available',
+            'has_linear_solver',
             'is_persistent',
             'solve',
             'version',

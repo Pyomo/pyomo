@@ -567,3 +567,24 @@ class Ipopt(PersistentSolver):
             return ComponentMap((k, v) for k, v in self._reduced_costs.items())
         else:
             return ComponentMap((v, self._reduced_costs[v]) for v in vars_to_load)
+
+    def has_linear_solver(self, linear_solver):
+        import pyomo.core as AML
+        from pyomo.common.tee import capture_output
+
+        m = AML.ConcreteModel()
+        m.x = AML.Var()
+        m.o = AML.Objective(expr=(m.x - 2) ** 2)
+        with capture_output() as OUT:
+            solver = self.__class__()
+            solver.config.stream_solver = True
+            solver.config.load_solution = False
+            solver.ipopt_options['linear_solver'] = linear_solver
+            try:
+                solver.solve(m)
+            except FileNotFoundError:
+                # The APPSI interface always tries to open the SOL file,
+                # and will generate a FileNotFoundError if ipopt didn't
+                # generate one
+                return False
+        return 'running with linear solver' in OUT.getvalue()

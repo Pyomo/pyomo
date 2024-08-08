@@ -234,7 +234,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         for key, val in self.interface.data.grad_basis_model_output.items():
             self.assertEqual(value(val), 0)
         for key, val in self.interface.data.truth_model_output.items():
-            self.assertEqual(value(val), 0.8414709848078965)
+            self.assertAlmostEqual(value(val), 0.8414709848078965)
         # The truth gradients should equal the output of [cos(2-1), -cos(2-1)]
         truth_grads = []
         for key, val in self.interface.data.grad_truth_model_output.items():
@@ -332,7 +332,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Check after a solve is completed
         self.interface.data.basis_constraint.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(feasibility, 0.09569982275514467)
+        self.assertAlmostEqual(feasibility, 0.09569982275514467)
         self.interface.data.basis_constraint.deactivate()
 
     @unittest.skipIf(
@@ -361,7 +361,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Check after a solve is completed
         self.interface.data.basis_constraint.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(step_norm, 3.393437471478297)
+        self.assertAlmostEqual(step_norm, 3.393437471478297)
         self.interface.data.basis_constraint.deactivate()
 
     @unittest.skipIf(

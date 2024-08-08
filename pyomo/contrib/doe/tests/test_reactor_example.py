@@ -35,6 +35,7 @@ from pyomo.contrib.doe.examples.reactor_kinetics import create_model, disc_for_m
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+k_aug_available = SolverFactory("k_aug").available(exception_flag=False)
 
 
 class Test_Reaction_Kinetics_Example(unittest.TestCase):
@@ -133,6 +134,7 @@ class Test_Reaction_Kinetics_Example(unittest.TestCase):
         # self.assertAlmostEqual(value(optimize_result.model.T[0.5]), 300, places=2)
         self.assertAlmostEqual(np.log10(optimize_result.trace), 3.340, places=2)
 
+    @unittest.skipIf(not k_aug_available, "The 'k_aug' solver is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     @unittest.skipIf(not pandas_available, "Pandas is not available")
