@@ -1371,3 +1371,97 @@ class TestParameterizedQuadratic(unittest.TestCase):
         )
         self.assertEqual(repr(repn), expected_repn_str)
         self.assertEqual(str(repn), expected_repn_str)
+
+    def test_product_var_linear_wrt_yz(self):
+        """
+        Test product of Var and quadratic expression.
+
+        Aimed at testing what happens when one multiplicand
+        of a product
+        has a constant term of 0, and the other has a
+        constant term that is an expression.
+        """
+        m = build_test_model()
+        expr = m.x * (m.y + m.x * m.y + m.z)
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.y, m.z])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, 0)
+        self.assertEqual(len(repn.linear), 1)
+        assertExpressionsEqual(
+            self, repn.linear[id(m.x)], m.y + m.z
+        )
+        self.assertEqual(len(repn.quadratic), 1)
+        assertExpressionsEqual(self, repn.quadratic[id(m.x), id(m.x)], m.y)
+        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), m.y * m.x ** 2 + (m.y + m.z) * m.x,
+        )
+
+    def test_product_linear_var_wrt_yz(self):
+        """
+        Test product of Var and quadratic expression.
+
+        Checks what happens when multiplicands of
+        `test_product_var_linear` are swapped/commuted.
+        """
+        m = build_test_model()
+        expr = (m.y + m.x * m.y + m.z) * m.x
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.y, m.z])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x})
+        self.assertEqual(cfg.var_order, {id(m.x): 0})
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, 0)
+        self.assertEqual(len(repn.linear), 1)
+        assertExpressionsEqual(
+            self, repn.linear[id(m.x)], m.y + m.z
+        )
+        self.assertEqual(len(repn.quadratic), 1)
+        assertExpressionsEqual(self, repn.quadratic[id(m.x), id(m.x)], m.y)
+        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(
+            self, repn.to_expression(visitor), m.y * m.x ** 2 + (m.y + m.z) * m.x,
+        )
+
+    def test_product_var_quadratic(self):
+        """
+        Test product of Var and quadratic expression.
+
+        Aimed at testing what happens when one multiplicand
+        of a product
+        has a constant term of 0, and the other has a
+        constant term that is an expression.
+        """
+        m = build_test_model()
+        expr = m.x * (m.y + m.x * m.y + m.z)
+
+        cfg = VisitorConfig()
+        visitor = ParameterizedQuadraticRepnVisitor(*cfg, [m.z])
+        repn = visitor.walk_expression(expr)
+
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
+        self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1})
+        self.assertEqual(repn.multiplier, 1)
+        assertExpressionsEqual(self, repn.constant, 0)
+        self.assertEqual(len(repn.linear), 1)
+        assertExpressionsEqual(self, repn.linear[id(m.x)], m.z)
+        self.assertEqual(len(repn.quadratic), 1)
+        self.assertEqual(repn.quadratic, {(id(m.x), id(m.y)): 1})
+        assertExpressionsEqual(self, repn.nonlinear, m.x * SumExpression([m.x * m.y]))
+        assertExpressionsEqual(
+            self,
+            repn.to_expression(visitor),
+            m.x * m.y + m.x * SumExpression([m.x * m.y]) + m.z * m.x,
+        )

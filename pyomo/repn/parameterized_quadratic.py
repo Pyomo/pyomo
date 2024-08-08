@@ -192,6 +192,17 @@ def is_zero(obj):
     return obj.__class__ in native_numeric_types and not obj
 
 
+def is_zero_product(e1, e2):
+    """
+    Return True if e1 is zero and e2 is not known to be an indeterminate
+    (e.g., NaN, inf), or vice versa, False otherwise.
+    """
+    return (
+        (is_zero(e1) and e2 == e2)
+        or (e1 == e1 and is_zero(e2))
+    )
+
+
 def is_equal_to(obj, val):
     return obj.__class__ in native_numeric_types and obj == val
 
@@ -211,10 +222,16 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         for vid, coef in arg1.linear.items():
             arg1.linear[vid] = c * coef
     if not is_zero(arg1.constant):
+        # TODO: what if a linear coefficient is indeterminate (nan/inf)?
+        #       might that also affect nonlinear product handler?
         _merge_dict(arg1.linear, arg1.constant, arg2.linear)
 
     # Finally, the constant and multipliers
-    arg1.constant *= arg2.constant
+    if is_zero_product(arg1.constant, arg2.constant):
+        arg1.constant = 0
+    else:
+        arg1.constant *= arg2.constant
+
     arg1.multiplier *= arg2.multiplier
     return _QUADRATIC, arg1
 
@@ -232,7 +249,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     x1.multiplier = x2.multiplier = 1
 
     # constant term [A1A2]
-    if is_zero(x1.constant) and is_zero(x2.constant):
+    if is_zero_product(x1.constant, x2.constant):
         ans.constant = 0
     else:
         ans.constant = x1.constant * x2.constant
