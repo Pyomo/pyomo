@@ -57,33 +57,13 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.util import valid_expr_ctypes_minlp
 
 
-def _import_SolverModel():
-    try:
-        from . import maingo_solvermodel
-    except ImportError:
-        raise
-    return maingo_solvermodel
-
-
-maingo_solvermodel, solvermodel_available = attempt_import(
-    "maingo_solvermodel", importer=_import_SolverModel
-)
-
-MaingoVar = namedtuple("MaingoVar", "type name lb ub init")
-
 logger = logging.getLogger(__name__)
-
-
-def _import_maingopy():
-    try:
-        import maingopy
-    except ImportError:
-        MAiNGO._available = MAiNGO.Availability.NotFound
-        raise
-    return maingopy
-
-
-maingopy, maingopy_available = attempt_import("maingopy", importer=_import_maingopy)
+MaingoVar = namedtuple("MaingoVar", "type name lb ub init")
+maingopy, maingopy_available = attempt_import("maingopy")
+# Note that importing maingo_solvermodel will trigger the import of
+# maingopy, so we defer that import using attempt_import (which will
+# always succeed, even if maingopy is not available)
+maingo_solvermodel = attempt_import("pyomo.contrib.appsi.solvers.maingo_solvermodel")[0]
 
 
 class MAiNGOConfig(MIPSolverConfig):
@@ -185,9 +165,11 @@ class MAiNGO(PersistentBase, PersistentSolver):
         self._last_results_object: Optional[MAiNGOResults] = None
 
     def available(self):
-        if not maingopy_available:
-            return self.Availability.NotFound
-        self._available = True
+        if self._available is None:
+            if maingopy_available:
+                MAiNGO._available = True
+            else:
+                MAiNGO._available = MAiNGO.Availability.NotFound
         return self._available
 
     def version(self):
