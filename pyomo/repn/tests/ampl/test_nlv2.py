@@ -53,10 +53,6 @@ _invalid_1j = r'InvalidNumber\((\([-+0-9.e]+\+)?1j\)?\)'
 
 class INFO(object):
     def __init__(self, symbolic=False):
-        if symbolic:
-            self.template = nl_writer.text_nl_debug_template
-        else:
-            self.template = nl_writer.text_nl_template
         self.subexpression_cache = {}
         self.external_functions = {}
         self.var_map = {}
@@ -64,7 +60,6 @@ class INFO(object):
         self.symbolic_solver_labels = symbolic
 
         self.visitor = nl_writer.AMPLRepnVisitor(
-            self.template,
             self.subexpression_cache,
             self.external_functions,
             self.var_map,
@@ -73,15 +68,13 @@ class INFO(object):
             True,
             None,
         )
+        self.template = self.visitor.template
 
     def __enter__(self):
-        assert nl_writer.AMPLRepn.ActiveVisitor is None
-        nl_writer.AMPLRepn.ActiveVisitor = self.visitor
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        assert nl_writer.AMPLRepn.ActiveVisitor is self.visitor
-        nl_writer.AMPLRepn.ActiveVisitor = None
+        pass
 
 
 class Test_AMPLRepnVisitor(unittest.TestCase):

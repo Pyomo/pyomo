@@ -17,7 +17,6 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.repn import generate_standard_repn
 from pyomo.util.subsystems import TemporarySubsystemManager
-from pyomo.repn.plugins.nl_writer import AMPLRepn
 from pyomo.contrib.incidence_analysis.config import (
     IncidenceMethod,
     get_config_from_kwds,
@@ -95,12 +94,7 @@ def _get_incident_via_ampl_repn(expr, linear_only, visitor):
                 yield _id
 
     var_map = visitor.var_map
-    orig_activevisitor = AMPLRepn.ActiveVisitor
-    AMPLRepn.ActiveVisitor = visitor
-    try:
-        repn = visitor.walk_expression((expr, None, 0, 1.0))
-    finally:
-        AMPLRepn.ActiveVisitor = orig_activevisitor
+    repn = visitor.walk_expression((expr, None, 0, 1.0))
 
     nonlinear_var_id_set = set()
     unique_nonlinear_var_ids = []
