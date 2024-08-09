@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import json
 from pathlib import Path
 
 from pyomo.common.dependencies import (
@@ -18,8 +19,10 @@ from pyomo.common.dependencies import (
 )
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import *
-from pyomo.contrib.doe.tests.experiment_class_example import *
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.tests.experiment_class_example import FullReactorExperiment
+
+import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 
