@@ -95,6 +95,26 @@ def get_FIM_Q_L(doe_obj=None):
     return FIM_vals_np, Q_vals_np, L_vals_np, sigma_inv_np
 
 
+def get_standard_args(experiment, fd_method, obj_used):
+    args = {}
+    args['experiment'] = experiment
+    args['fd_formula'] = fd_method
+    args['step'] = 1e-3
+    args['objective_option'] = obj_used
+    args['scale_constant_value'] = 1
+    args['scale_nominal_param_value'] = True
+    args['prior_FIM'] = None
+    args['jac_initial'] = None
+    args['fim_initial'] = None
+    args['L_diagonal_lower_bound'] = 1e-7
+    args['solver'] = None
+    args['tee'] = False
+    args['get_labeled_model_args'] = None
+    args['_Cholesky_option'] = True
+    args['_only_compute_fim_lower'] = True
+    return args
+
+
 class TestReactorExampleSolving(unittest.TestCase):
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")
@@ -104,23 +124,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
@@ -143,23 +149,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
@@ -181,23 +173,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
@@ -221,23 +199,14 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=False,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=False,
-            _only_compute_fim_lower=False,
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args['scale_nominal_param_value'] = (
+            False  # Vanilla determinant solve needs this
         )
+        DoE_args['_Cholesky_option'] = False
+        DoE_args['_only_compute_fim_lower'] = False
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
@@ -251,23 +220,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
@@ -290,23 +245,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.compute_FIM(method="sequential")
 
@@ -318,23 +259,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.compute_FIM(method="sequential")
 
@@ -350,23 +277,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.compute_FIM(method="kaug")
 
@@ -378,23 +291,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.compute_FIM(method="sequential")
 
@@ -407,23 +306,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
 
@@ -453,43 +338,15 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
         # With parameter scaling
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         # Without parameter scaling
-        doe_obj2 = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=False,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args2 = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args2['scale_nominal_param_value'] = False
 
+        doe_obj2 = DesignOfExperiments(**DoE_args2)
         # Run both problems
         doe_obj.run_doe()
         doe_obj2.run_doe()
@@ -523,23 +380,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperimentBad(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -556,24 +399,10 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         experiment = FullReactorExperimentBad(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-            logger_level=logging.ERROR,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args['logger_level'] = logging.ERROR
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 3], "T[0]": [300, 700, 3]}
 

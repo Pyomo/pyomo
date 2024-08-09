@@ -37,6 +37,26 @@ data_ex = json.load(f)
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 
+def get_standard_args(experiment, fd_method, obj_used, flag):
+    args = {}
+    args['experiment'] = experiment
+    args['fd_formula'] = fd_method
+    args['step'] = 1e-3
+    args['objective_option'] = obj_used
+    args['scale_constant_value'] = 1
+    args['scale_nominal_param_value'] = True
+    args['prior_FIM'] = None
+    args['jac_initial'] = None
+    args['fim_initial'] = None
+    args['L_diagonal_lower_bound'] = 1e-7
+    args['solver'] = None
+    args['tee'] = False
+    args['get_labeled_model_args'] = {"flag": flag}
+    args['_Cholesky_option'] = True
+    args['_only_compute_fim_lower'] = True
+    return args
+
+
 class TestReactorExampleErrors(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_get_labeled_model(self):
@@ -50,23 +70,9 @@ class TestReactorExampleErrors(unittest.TestCase):
             ValueError,
             "The experiment object must have a ``get_labeled_model`` function",
         ):
-            doe_obj = DesignOfExperiments(
-                experiment,
-                fd_formula=fd_method,
-                step=1e-3,
-                objective_option=obj_used,
-                scale_constant_value=1,
-                scale_nominal_param_value=True,
-                prior_FIM=None,
-                jac_initial=None,
-                fim_initial=None,
-                L_diagonal_lower_bound=1e-7,
-                solver=None,
-                tee=False,
-                get_labeled_model_args=None,
-                _Cholesky_option=True,
-                _only_compute_fim_lower=True,
-            )
+            DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+            doe_obj = DesignOfExperiments(**DoE_args)
 
     @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_experiment_outputs(self):
@@ -76,23 +82,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -108,23 +100,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -140,23 +118,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -172,23 +136,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -206,23 +156,10 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=prior_FIM,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args['prior_FIM'] = prior_FIM
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             ValueError,
@@ -242,23 +179,10 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=jac_init,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args['jac_initial'] = jac_init
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             ValueError,
@@ -278,23 +202,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -312,23 +222,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             ValueError,
@@ -344,23 +240,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             ValueError, "``results_file`` must be either a Path object or a string."
@@ -377,23 +259,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             ValueError,
@@ -412,23 +280,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"not": [1, 5, 3], "correct": [300, 700, 3]}
 
@@ -449,23 +303,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -482,23 +322,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
@@ -521,23 +347,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
@@ -559,23 +371,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
@@ -597,23 +395,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
@@ -639,23 +423,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args=None,
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag=0)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         design_ranges = {"CA[0]": [1, 5, 2], "T[0]": [300, 700, 2]}
 
@@ -682,23 +452,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -716,23 +472,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -750,23 +492,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -784,23 +512,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -818,23 +532,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -852,23 +552,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -886,23 +572,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             NotImplementedError, "Multiple experiment optimization not yet supported."
@@ -919,23 +591,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             NotImplementedError, "Multiple experiment optimization not yet supported."
@@ -952,23 +610,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             NotImplementedError, "Updating unknown parameter values not yet supported."
@@ -986,23 +630,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             AttributeError,
@@ -1022,23 +652,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             AttributeError,
@@ -1057,23 +673,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             AttributeError,
@@ -1092,23 +694,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             RuntimeError,
@@ -1127,23 +715,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
-        doe_obj = DesignOfExperiments(
-            experiment,
-            fd_formula=fd_method,
-            step=1e-3,
-            objective_option=obj_used,
-            scale_constant_value=1,
-            scale_nominal_param_value=True,
-            prior_FIM=None,
-            jac_initial=None,
-            fim_initial=None,
-            L_diagonal_lower_bound=1e-7,
-            solver=None,
-            tee=False,
-            get_labeled_model_args={"flag": flag_val},
-            _Cholesky_option=True,
-            _only_compute_fim_lower=True,
-        )
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
             ValueError,
