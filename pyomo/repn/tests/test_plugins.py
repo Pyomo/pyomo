@@ -20,7 +20,7 @@ import pyomo.environ
 class TestPlugins(unittest.TestCase):
     def test_active(self):
         with self.assertRaises(KeyError):
-            active_writer_version('nonexistant_writer')
+            active_writer_version('nonexistent_writer')
         ver = active_writer_version('lp')
         self.assertIs(
             WriterFactory.get_class('lp'), WriterFactory.get_class(f'lp_v{ver}')
