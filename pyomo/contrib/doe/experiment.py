@@ -8,5 +8,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from .doe import DesignOfExperiments, ObjectiveLib, FiniteDifferenceStep
-from .utils import rescale_FIM, get_parameters_from_suffix
+class Experiment(object):
+    def __init__(self):
+        self.model = None
+
+    def get_labeled_model(self):
+        raise NotImplementedError(
+            "Derived experiment class failed to implement get_labeled_model"
+        )
