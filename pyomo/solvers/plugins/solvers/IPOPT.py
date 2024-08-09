@@ -14,6 +14,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.errors import ApplicationError
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 
@@ -215,6 +216,9 @@ class IPOPT(SystemCallSolver):
         m = AML.ConcreteModel()
         m.x = AML.Var()
         m.o = AML.Objective(expr=(m.x - 2) ** 2)
-        with capture_output() as OUT:
-            self.solve(m, tee=True, options={'linear_solver': linear_solver})
+        try:
+            with capture_output() as OUT:
+                self.solve(m, tee=True, options={'linear_solver': linear_solver})
+        except ApplicationError:
+            return False
         return 'running with linear solver' in OUT.getvalue()
