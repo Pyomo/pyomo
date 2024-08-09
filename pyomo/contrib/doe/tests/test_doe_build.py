@@ -113,9 +113,9 @@ def get_standard_args(experiment, fd_method, obj_used):
     return args
 
 
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestReactorExampleBuild(unittest.TestCase):
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_central_check_fd_eqns(self):
         fd_method = "central"
         obj_used = "trace"
@@ -155,8 +155,6 @@ class TestReactorExampleBuild(unittest.TestCase):
 
             assert np.isclose(param_val, param_val_from_step)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
         obj_used = "trace"
@@ -198,8 +196,6 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 assert np.isclose(other_param_val, v)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -241,8 +237,6 @@ class TestReactorExampleBuild(unittest.TestCase):
                 other_param_val = pyo.value(k)
                 assert np.isclose(other_param_val, v)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_central_design_fixing(self):
         fd_method = "central"
         obj_used = "trace"
@@ -277,8 +271,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
         assert not hasattr(model, con_name_base + str(len(design_vars)))
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_backward_design_fixing(self):
         fd_method = "backward"
         obj_used = "trace"
@@ -313,8 +305,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
         assert not hasattr(model, con_name_base + str(len(design_vars)))
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_fd_forward_design_fixing(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -349,8 +339,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
         assert not hasattr(model, con_name_base + str(len(design_vars)))
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_user_initialization(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -378,8 +366,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         assert np.array_equal(FIM_prior, FIM_prior_model)
         assert np.array_equal(JAC_initial, Q)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_update_FIM(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -402,8 +388,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Make sure they match the inputs we gave
         assert np.array_equal(FIM_update, FIM_prior_model)
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_get_experiment_inputs_without_blocks(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -422,8 +406,6 @@ class TestReactorExampleBuild(unittest.TestCase):
             [k.name for k, v in doe_obj.compute_FIM_model.experiment_inputs.items()]
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_get_experiment_outputs_without_blocks(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -442,8 +424,6 @@ class TestReactorExampleBuild(unittest.TestCase):
             [k.name for k, v in doe_obj.compute_FIM_model.experiment_outputs.items()]
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_get_measurement_error_without_blocks(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -462,8 +442,6 @@ class TestReactorExampleBuild(unittest.TestCase):
             [k.name for k, v in doe_obj.compute_FIM_model.measurement_error.items()]
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_get_unknown_parameters_without_blocks(self):
         fd_method = "forward"
         obj_used = "trace"
@@ -483,8 +461,6 @@ class TestReactorExampleBuild(unittest.TestCase):
             [k.name for k, v in doe_obj.compute_FIM_model.unknown_parameters.items()]
         )
 
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_generate_blocks_without_model(self):
         fd_method = "forward"
         obj_used = "trace"
