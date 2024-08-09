@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import json
 import logging
 from pathlib import Path
 
@@ -20,12 +21,12 @@ from pyomo.common.dependencies import (
 )
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import *
-from pyomo.contrib.doe.tests.experiment_class_example import *
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.tests.experiment_class_example import FullReactorExperiment
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     FullReactorExperimentBad,
 )
-from pyomo.contrib.doe.utils import *
+from pyomo.contrib.doe.utils import rescale_FIM
 
 import pyomo.environ as pyo
 
