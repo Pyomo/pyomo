@@ -4361,7 +4361,7 @@ class TestSet(unittest.TestCase):
                 OUT.getvalue().replace('\n', ' '),
                 r"DEPRECATED: InsertionOrderSetData J1\[2,2\]: validate callback "
                 r"signature matched \(block, \*value\).  Please update the "
-                r"callback to match the signature \(block, value, \*index\)"
+                r"callback to match the signature \(block, value, \*index\)",
             )
         with LoggingIntercept() as OUT:
             with self.assertRaisesRegex(
@@ -4391,7 +4391,7 @@ class TestSet(unittest.TestCase):
                 OUT.getvalue().replace('\n', ' '),
                 r"DEPRECATED: InsertionOrderSetData J2\[2,2\]: validate callback "
                 r"signature matched \(block, \*value, \*index\).  Please update the "
-                r"callback to match the signature \(block, value, \*index\)"
+                r"callback to match the signature \(block, value, \*index\)",
             )
 
         with LoggingIntercept() as OUT:
@@ -4413,7 +4413,6 @@ class TestSet(unittest.TestCase):
             OUT.getvalue(),
             "Exception raised while validating element '(2, 2)' for Set J2[2,2]\n",
         )
-
 
         def _validate(model, v, ind1, ind2):
             self.assertIs(model, m)
