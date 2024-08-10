@@ -116,7 +116,7 @@ class TestConstructMasterProblem(unittest.TestCase):
         self.assertTrue(master_model.epigraph_obj.active)
         self.assertIs(
             master_model.epigraph_obj.expr,
-            master_model.scenarios[0, 0].epigraph_var,
+            master_model.scenarios[0, 0].first_stage.epigraph_var,
         )
 
         # check all the variables (including first-stage ones)
@@ -171,8 +171,8 @@ class TestConstructMasterProblem(unittest.TestCase):
         # should be cloned. we do this to avoid issues with the solver
         # interfaces (such as issues with manipulating symbol maps)
         nadj_ineq_con_zip = zip(
-            master_model.scenarios[0, 0].effective_first_stage_inequality_cons,
-            master_model.scenarios[0, 1].effective_first_stage_inequality_cons,
+            master_model.scenarios[0, 0].first_stage.inequality_cons.values(),
+            master_model.scenarios[0, 1].first_stage.inequality_cons.values(),
         )
         for ineq_con_00, ineq_con_01 in nadj_ineq_con_zip:
             self.assertIsNot(
@@ -199,8 +199,8 @@ class TestConstructMasterProblem(unittest.TestCase):
             )
 
         nadj_eq_con_zip = zip(
-            master_model.scenarios[0, 0].effective_first_stage_equality_cons,
-            master_model.scenarios[0, 1].effective_first_stage_equality_cons,
+            master_model.scenarios[0, 0].first_stage.equality_cons.values(),
+            master_model.scenarios[0, 1].first_stage.equality_cons.values(),
         )
         for eq_con_00, eq_con_01 in nadj_eq_con_zip:
             self.assertIsNot(
@@ -281,12 +281,12 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         scenario_10_blk = slack_model.scenarios[1, 0]
 
         # test a few of the constraints
-        slack_user_model_x3_lb_con = (
-            scenario_10_blk.user_model.var_x3_certain_lower_bound_con
-        )
+        slack_user_model_x3_lb_con = scenario_10_blk.second_stage.inequality_cons[
+            "var_x3_certain_lower_bound_con"
+        ]
         slack_user_model_x3_lb_con_var = slack_var_blk.find_component(
-            "'_slack_minus_scenarios[1,0].user_model."
-            "var_x3_certain_lower_bound_con'"
+            "'_slack_minus_scenarios[1,0].second_stage.inequality_cons["
+            "var_x3_certain_lower_bound_con]'"
         )
         assertExpressionsEqual(
             self,
@@ -295,12 +295,12 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         )
         self.assertEqual(slack_user_model_x3_lb_con_var.value, 0)
 
-        slack_user_model_x3_ub_con = (
-            scenario_10_blk.user_model.var_x3_certain_upper_bound_con
-        )
+        slack_user_model_x3_ub_con = scenario_10_blk.second_stage.inequality_cons[
+            "var_x3_certain_upper_bound_con"
+        ]
         slack_user_model_x3_ub_con_var = slack_var_blk.find_component(
-            "'_slack_minus_scenarios[1,0].user_model."
-            "var_x3_certain_upper_bound_con'"
+            "'_slack_minus_scenarios[1,0].second_stage.inequality_cons["
+            "var_x3_certain_upper_bound_con]'"
         )
         assertExpressionsEqual(
             self,
@@ -312,7 +312,8 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         # constraint 'con' is violated when u = 0.8;
         # check slack initialization
         slack_user_model_con_var = slack_var_blk.find_component(
-            "'_slack_minus_scenarios[1,0].user_model.con'"
+            "'_slack_minus_scenarios[1,0].second_stage.inequality_cons"
+            "[ineq_con_con_upper_bound_con]'"
         )
         self.assertEqual(
             slack_user_model_con_var.value,
@@ -378,17 +379,21 @@ class TestDRPolishingProblem(unittest.TestCase):
             )
 
         nom_polishing_block = polishing_model.scenarios[0, 0]
-        self.assertTrue(nom_polishing_block.epigraph_var.fixed)
-        self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
-        self.assertFalse(nom_polishing_block.decision_rule_vars[0][1].fixed)
+        self.assertTrue(nom_polishing_block.first_stage.epigraph_var.fixed)
+        self.assertFalse(nom_polishing_block.first_stage.decision_rule_vars[0][0].fixed)
+        self.assertFalse(nom_polishing_block.first_stage.decision_rule_vars[0][1].fixed)
 
         # ensure constraints in fixed vars were deactivated
         self.assertFalse(nom_polishing_block.user_model.eq_con.active)
 
         # these have either unfixed DR or adjustable variables,
         # so they should remain active
-        self.assertTrue(nom_polishing_block.user_model.con.active)
-        self.assertTrue(nom_polishing_block.decision_rule_eqns[0].active)
+        # self.assertTrue(nom_polishing_block.user_model.con.active)
+        self.assertTrue(
+            nom_polishing_block
+            .second_stage.inequality_cons["ineq_con_con_upper_bound_con"].active
+        )
+        self.assertTrue(nom_polishing_block.second_stage.decision_rule_eqns[0].active)
 
     def test_construct_dr_polishing_problem_polishing_components(self):
         """
@@ -398,18 +403,21 @@ class TestDRPolishingProblem(unittest.TestCase):
         master_data, config = self.build_simple_master_data()
         # DR order is 1, and x3 is second-stage.
         # to test fixing efficiency, fix the affine DR variable
-        master_data.master_model.scenarios[0, 0].decision_rule_vars[0][1].fix()
+        decision_rule_vars = (
+            master_data.master_model.scenarios[0, 0].first_stage.decision_rule_vars
+        )
+        decision_rule_vars[0][1].fix()
         polishing_model = construct_dr_polishing_problem(master_data, config)
-
         nom_polishing_block = polishing_model.scenarios[0, 0]
-        self.assertFalse(nom_polishing_block.decision_rule_vars[0][0].fixed)
+
+        self.assertFalse(decision_rule_vars[0][0].fixed)
         self.assertTrue(polishing_model.polishing_vars[0][0].fixed)
         self.assertFalse(polishing_model.polishing_abs_val_lb_con_0[0].active)
         self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[0].active)
 
         # polishing components for the affine DR term should be
         # fixed/deactivated since the DR variable was fixed
-        self.assertTrue(nom_polishing_block.decision_rule_vars[0][1].fixed)
+        self.assertTrue(decision_rule_vars[0][1].fixed)
         self.assertTrue(polishing_model.polishing_vars[0][1].fixed)
         self.assertFalse(polishing_model.polishing_abs_val_lb_con_0[1].active)
         self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[1].active)
@@ -417,11 +425,11 @@ class TestDRPolishingProblem(unittest.TestCase):
         # check initialization of polishing vars
         self.assertEqual(
             polishing_model.polishing_vars[0][0].value,
-            abs(nom_polishing_block.decision_rule_vars[0][0].value),
+            abs(nom_polishing_block.first_stage.decision_rule_vars[0][0].value),
         )
         self.assertEqual(
             polishing_model.polishing_vars[0][1].value,
-            abs(nom_polishing_block.decision_rule_vars[0][1].value),
+            abs(nom_polishing_block.first_stage.decision_rule_vars[0][1].value),
         )
 
         assertExpressionsEqual(

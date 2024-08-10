@@ -1197,7 +1197,7 @@ class RegressionTest(unittest.TestCase):
         """
         Test PyROS on a two-stage problem, discrete
         set type with a math domain error evaluating
-        performance constraint expressions in separation.
+        second-stage inequality constraint expressions in separation.
         """
         m = ConcreteModel()
         m.q = Param(initialize=1, mutable=True)
@@ -1214,7 +1214,7 @@ class RegressionTest(unittest.TestCase):
         with self.assertRaisesRegex(
             expected_exception=ArithmeticError,
             expected_regex=(
-                "Evaluation of performance constraint.*math domain error.*"
+                "Evaluation of second-stage inequality constraint.*math domain error.*"
             ),
             msg="ValueError arising from math domain error not raised",
         ):
@@ -1240,8 +1240,8 @@ class RegressionTest(unittest.TestCase):
     def test_pyros_no_perf_cons(self):
         """
         Ensure PyROS properly accommodates models with no
-        performance constraints (such as effectively deterministic
-        models).
+        second-stage inequality constraints
+        (such as effectively deterministic models).
         """
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
@@ -1711,7 +1711,7 @@ class RegressionTest(unittest.TestCase):
         pyros_log = LOG.getvalue()
         self.assertRegex(
             pyros_log,
-            r".*Equality constraint 'user_model\.eq_con'.*cannot be written.*",
+            r".*Equality constraint '.*eq_con.*'.*cannot be written.*",
         )
 
         # should still solve in spite of coefficient matching
@@ -2361,8 +2361,8 @@ class TestIterationLogRecord(unittest.TestCase):
         solver time limit was reached, or the user-provides subordinate
         optimizer(s) were unable to solve a separation subproblem
         to an acceptable level.
-        A '+' should be appended to the number of performance constraints
-        found to be violated.
+        A '+' should be appended to the number of second-stage
+        inequality constraints found to be violated.
         """
         # for some fields, we choose floats with more than four
         # four decimal points to ensure rounding also matches

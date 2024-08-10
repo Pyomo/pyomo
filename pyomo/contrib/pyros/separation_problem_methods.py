@@ -129,12 +129,10 @@ def construct_separation_problem(model_data, config):
     # fix/deactivate all nonadjustable components
     for var in separation_model.all_nonadjustable_variables:
         var.fix()
-    nonadjustable_cons = (
-        separation_model.effective_first_stage_inequality_cons
-        + separation_model.effective_first_stage_equality_cons
-    )
-    for nadjcon in nonadjustable_cons:
-        nadjcon.deactivate()
+    for fs_eqcon in separation_model.first_stage.equality_cons.values():
+        fs_eqcon.deactivate()
+    for fs_ineqcon in separation_model.first_stage.inequality_cons.values():
+        fs_ineqcon.deactivate()
 
     # add block for the uncertainty set quantification
     add_uncertainty_set_constraints(separation_model, config)
@@ -151,9 +149,9 @@ def construct_separation_problem(model_data, config):
     }
     uncertain_params_set = ComponentSet(uncertain_params)
     adjustable_cons = (
-        separation_model.effective_performance_inequality_cons
-        + separation_model.effective_performance_equality_cons
-        + separation_model.decision_rule_eqns
+        list(separation_model.second_stage.inequality_cons.values())
+        + list(separation_model.second_stage.equality_cons.values())
+        + list(separation_model.second_stage.decision_rule_eqns.values())
     )
     for adjcon in adjustable_cons:
         uncertain_params_in_con = ComponentSet(
@@ -164,26 +162,26 @@ def construct_separation_problem(model_data, config):
                 replace_expressions(adjcon.expr, substitution_map=param_id_to_var_map)
             )
 
-    # performance inequality constraint expressions
+    # second-stage inequality constraint expressions
     # become maximization objectives in the separation problems
-    separation_model.perf_ineq_con_to_obj_map = ComponentMap()
-    perf_ineq_cons = separation_model.effective_performance_inequality_cons
-    for idx, perf_con in enumerate(perf_ineq_cons):
-        perf_con.deactivate()
-        separation_obj = Objective(expr=perf_con.body - perf_con.upper, sense=maximize)
+    separation_model.second_stage_ineq_con_to_obj_map = ComponentMap()
+    ss_ineq_cons = separation_model.second_stage.inequality_cons.values()
+    for idx, ss_ineq_con in enumerate(ss_ineq_cons):
+        ss_ineq_con.deactivate()
+        separation_obj = Objective(expr=ss_ineq_con.body - ss_ineq_con.upper, sense=maximize)
         separation_model.add_component(
             f"separation_obj_{idx}",
             separation_obj,
         )
-        separation_model.perf_ineq_con_to_obj_map[perf_con] = separation_obj
+        separation_model.second_stage_ineq_con_to_obj_map[ss_ineq_con] = separation_obj
         separation_obj.deactivate()
 
     return separation_model
 
 
-def get_sep_objective_values(separation_data, config, perf_cons):
+def get_sep_objective_values(separation_data, config, ss_ineq_cons):
     """
-    Evaluate performance constraint functions at current
+    Evaluate second-stage inequality constraint functions at current
     separation solution.
 
     Parameters
@@ -192,35 +190,36 @@ def get_sep_objective_values(separation_data, config, perf_cons):
         Separation problem data.
     config : ConfigDict
         PyROS solver settings.
-    perf_cons : list of Constraint
-        Performance constraints to be evaluated.
+    ss_ineq_cons : list of Constraint
+        Second-stage inequality constraints to be evaluated.
 
     Returns
     -------
     violations : ComponentMap
-        Mapping from performance constraints to violation values.
+        Mapping from second-stage inequality constraints
+        to violation values.
     """
-    con_to_obj_map = separation_data.separation_model.perf_ineq_con_to_obj_map
+    con_to_obj_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     violations = ComponentMap()
 
     user_var_partitioning = separation_data.separation_model.user_var_partitioning
     first_stage_variables = user_var_partitioning.first_stage_variables
     second_stage_variables = user_var_partitioning.second_stage_variables
 
-    for perf_con in perf_cons:
-        obj = con_to_obj_map[perf_con]
+    for ss_ineq_con in ss_ineq_cons:
+        obj = con_to_obj_map[ss_ineq_con]
         try:
-            violations[perf_con] = value(obj.expr)
+            violations[ss_ineq_con] = value(obj.expr)
         except ValueError:
             for v in first_stage_variables:
                 config.progress_logger.info(v.name + " " + str(v.value))
             for v in second_stage_variables:
                 config.progress_logger.info(v.name + " " + str(v.value))
             raise ArithmeticError(
-                f"Evaluation of performance constraint {perf_con.name} "
+                f"Evaluation of second-stage inequality constraint {ss_ineq_con.name} "
                 f"(separation objective {obj.name}) "
                 "led to a math domain error. "
-                "Does the performance constraint expression "
+                "Does the constraint expression "
                 "contain log(x) or 1/x functions "
                 "or others with tricky domains?"
             )
@@ -228,41 +227,43 @@ def get_sep_objective_values(separation_data, config, perf_cons):
     return violations
 
 
-def get_argmax_sum_violations(solver_call_results_map, perf_cons_to_evaluate):
+def get_argmax_sum_violations(solver_call_results_map, ss_ineq_cons_to_evaluate):
     """
     Get key of entry of `solver_call_results_map` which contains
-    separation problem solution with maximal sum of performance
-    constraint violations over a specified sequence of performance
-    constraints.
+    separation problem solution with maximal sum of second-stage
+    inequality constraint violations over a specified sequence of
+    second-stage inequality constraints.
 
     Parameters
     ----------
     solver_call_results : ComponentMap
-        Mapping from performance constraints to corresponding
+        Mapping from second-stage inequality constraints to corresponding
         separation solver call results.
-    perf_cons_to_evaluate : list of Constraints
-        Performance constraints to consider for evaluating
+    ss_ineq_cons_to_evaluate : list of Constraints
+        Second-stage inequality constraints to consider for evaluating
         maximal sum.
 
     Returns
     -------
-    worst_perf_con : None or Constraint
-        Performance constraint corresponding to solver call
+    worst_ss_ineq_con : None or Constraint
+        Second-stage inequality constraint corresponding to solver call
         results object containing solution with maximal sum
-        of violations across all performance constraints.
+        of violations across all second-stage inequality constraints.
         If ``found_violation`` attribute of all value entries of
         `solver_call_results_map` is False, then `None` is
-        returned, as this means none of the performance constraints
+        returned, as this means
+        none of the second-stage inequality constraints
         were found to be violated.
     """
-    # get indices of performance constraints for which violation found
-    idx_to_perf_con_map = {
-        idx: perf_con for idx, perf_con in enumerate(solver_call_results_map)
+    # get indices of second-stage ineq constraints
+    # for which violation found
+    idx_to_ss_ineq_con_map = {
+        idx: ss_ineq_con for idx, ss_ineq_con in enumerate(solver_call_results_map)
     }
     idxs_of_violated_cons = [
         idx
-        for idx, perf_con in idx_to_perf_con_map.items()
-        if solver_call_results_map[perf_con].found_violation
+        for idx, ss_ineq_con in idx_to_ss_ineq_con_map.items()
+        if solver_call_results_map[ss_ineq_con].found_violation
     ]
 
     num_violated_cons = len(idxs_of_violated_cons)
@@ -272,7 +273,7 @@ def get_argmax_sum_violations(solver_call_results_map, perf_cons_to_evaluate):
 
     # assemble square matrix (2D array) of constraint violations.
     # matrix size: number of constraints for which violation was found
-    # each row corresponds to a performance constraint
+    # each row corresponds to a second-stage inequality constraint
     # each column corresponds to a separation problem solution
     violations_arr = np.zeros(shape=(num_violated_cons, num_violated_cons))
     idxs_product = product(
@@ -282,19 +283,19 @@ def get_argmax_sum_violations(solver_call_results_map, perf_cons_to_evaluate):
         violations_arr[row_idx, col_idx] = max(
             0,
             (
-                # violation of this row's performance constraint
+                # violation of this row's second-stage inequality con
                 # by this column's separation solution
                 # if separation problems were solved globally,
                 # then diagonal entries should be the largest in each row
                 solver_call_results_map[
-                    idx_to_perf_con_map[viol_param_idx]
-                ].scaled_violations[idx_to_perf_con_map[viol_con_idx]]
+                    idx_to_ss_ineq_con_map[viol_param_idx]
+                ].scaled_violations[idx_to_ss_ineq_con_map[viol_con_idx]]
             ),
         )
 
     worst_col_idx = np.argmax(np.sum(violations_arr, axis=0))
 
-    return idx_to_perf_con_map[idxs_of_violated_cons[worst_col_idx]]
+    return idx_to_ss_ineq_con_map[idxs_of_violated_cons[worst_col_idx]]
 
 
 def solve_separation_problem(separation_data, master_data, config):
@@ -356,33 +357,34 @@ def solve_separation_problem(separation_data, master_data, config):
 def evaluate_violations_by_nominal_master(
         separation_data,
         master_data,
-        performance_cons,
+        ss_ineq_cons,
         ):
     """
-    Evaluate violation of performance constraints by
+    Evaluate violation of second-stage inequality constraints by
     variables in nominal block of most recent master
     problem.
 
     Returns
     -------
-    nom_perf_con_violations : dict
-        Mapping from performance constraint names
+    nom_ss_ineq_con_violations : dict
+        Mapping from second-stage inequality constraint names
         to floats equal to violations by nominal master
         problem variables.
     """
-    nom_perf_con_violations = ComponentMap()
-    for perf_con in performance_cons:
+    nom_ss_ineq_con_violations = ComponentMap()
+    for ss_ineq_con in ss_ineq_cons:
         nom_violation = value(
-            master_data.master_model.scenarios[0, 0].find_component(perf_con)
+            master_data.master_model.scenarios[0, 0].find_component(ss_ineq_con)
         )
-        nom_perf_con_violations[perf_con] = nom_violation
+        nom_ss_ineq_con_violations[ss_ineq_con] = nom_violation
 
-    return nom_perf_con_violations
+    return nom_ss_ineq_con_violations
 
 
-def group_performance_constraints_by_priority(separation_data, config):
+def group_ss_ineq_constraints_by_priority(separation_data, config):
     """
-    Group model performance constraints by separation priority.
+    Group model second-stage inequality constraints
+    by separation priority.
 
     Parameters
     ----------
@@ -394,54 +396,55 @@ def group_performance_constraints_by_priority(separation_data, config):
     Returns
     -------
     dict
-        Mapping from an int to a list of performance constraints
+        Mapping from an int to a list of second-stage
+        inequality constraints
         (Constraint objects),
         for which the int is equal to the specified priority.
         Keys are sorted in descending order
         (i.e. highest priority first).
     """
-    all_perf_cons = (
-        separation_data.separation_model.effective_performance_inequality_cons
+    all_ss_ineq_cons = list(
+        separation_data.separation_model.second_stage.inequality_cons.values()
     )
     separation_priority_groups = dict()
     config_sep_priority_dict = config.separation_priority_order
-    for perf_con in all_perf_cons:
+    for ss_ineq_con in all_ss_ineq_cons:
         # by default, priority set to 0
-        priority = config_sep_priority_dict.get(perf_con.name, 0)
+        priority = config_sep_priority_dict.get(ss_ineq_con.name, 0)
         cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
-        cons_with_same_priority.append(perf_con)
+        cons_with_same_priority.append(ss_ineq_con)
 
     # sort separation priority groups
     return {
-        priority: perf_cons
-        for priority, perf_cons in sorted(
+        priority: ss_ineq_cons
+        for priority, ss_ineq_cons in sorted(
             separation_priority_groups.items(), reverse=True
         )
     }
 
 
 def get_worst_discrete_separation_solution(
-    performance_constraint,
+    ss_ineq_con,
     config,
-    perf_cons_to_evaluate,
+    ss_ineq_cons_to_evaluate,
     discrete_solve_results,
 ):
     """
     Determine separation solution (and therefore worst-case
     uncertain parameter realization) with maximum violation
-    of specified performance constraint.
+    of specified second-stage inequality constraint.
 
     Parameters
     ----------
-    performance_constraint : Constraint
-        Performance constraint of interest.
+    ss_ineq_con : Constraint
+        Second-stage inequality constraint of interest.
     separation_data : SeparationProblemData
         Separation problem data.
     config : ConfigDict
         User-specified PyROS solver settings.
-    perf_cons_to_evaluate : list of Constraint
-        Performance constraints for which to report violations
-        by separation solution.
+    ss_ineq_cons_to_evaluate : list of Constraint
+        Second-stage inequality constraints for which to report
+        violations by separation solution.
     discrete_solve_results : DiscreteSeparationSolveCallResults
         Separation problem solutions corresponding to the
         uncertain parameter scenarios listed in
@@ -450,42 +453,43 @@ def get_worst_discrete_separation_solution(
     Returns
     -------
     SeparationSolveCallResult
-        Solver call result for performance constraint of interest.
+        Solver call result for second-stage inequality constraint of interest.
     """
-    # violation of specified performance constraint by separation
+    # violation of specified second-stage inequality
+    # constraint by separation
     # problem solutions for all scenarios
-    violations_of_perf_con = [
-        solve_call_res.scaled_violations[performance_constraint]
+    violations_of_ss_ineq_con = [
+        solve_call_res.scaled_violations[ss_ineq_con]
         for solve_call_res in discrete_solve_results.solver_call_results.values()
     ]
 
     list_of_scenario_idxs = list(discrete_solve_results.solver_call_results.keys())
 
     # determine separation solution for which scaled violation of this
-    # performance constraint is the worst
+    # second-stage inequality constraint is the worst
     worst_case_res = discrete_solve_results.solver_call_results[
-        list_of_scenario_idxs[np.argmax(violations_of_perf_con)]
+        list_of_scenario_idxs[np.argmax(violations_of_ss_ineq_con)]
     ]
-    worst_case_violation = np.max(violations_of_perf_con)
+    worst_case_violation = np.max(violations_of_ss_ineq_con)
     assert worst_case_violation in worst_case_res.scaled_violations.values()
 
-    # evaluate violations for specified performance constraints
-    eval_perf_con_scaled_violations = ComponentMap(
-        (perf_con, worst_case_res.scaled_violations[perf_con])
-        for perf_con in perf_cons_to_evaluate
+    # evaluate violations for specified second-stage inequality constraints
+    eval_ss_ineq_con_scaled_violations = ComponentMap(
+        (ss_ineq_con, worst_case_res.scaled_violations[ss_ineq_con])
+        for ss_ineq_con in ss_ineq_cons_to_evaluate
     )
 
     # discrete separation solutions were obtained by optimizing
-    # just one performance constraint, as an efficiency.
+    # just one second-stage inequality constraint, as an efficiency.
     # if the constraint passed to this routine is the same as the
     # constraint used to obtain the solutions, then we bundle
     # the separation solve call results into a single list.
     # otherwise, we return an empty list, as we did not need to call
-    # subsolvers for the other performance constraints
-    is_optimized_performance_con = (
-        performance_constraint is discrete_solve_results.performance_constraint
+    # subsolvers for the other second-stage inequality constraints
+    is_optimized_ss_ineq_con = (
+        ss_ineq_con is discrete_solve_results.second_stage_ineq_con
     )
-    if is_optimized_performance_con:
+    if is_optimized_ss_ineq_con:
         results_list = [
             res
             for solve_call_results
@@ -498,7 +502,7 @@ def get_worst_discrete_separation_solution(
     return SeparationSolveCallResults(
         solved_globally=worst_case_res.solved_globally,
         results_list=results_list,
-        scaled_violations=eval_perf_con_scaled_violations,
+        scaled_violations=eval_ss_ineq_con_scaled_violations,
         violating_param_realization=worst_case_res.violating_param_realization,
         variable_values=worst_case_res.variable_values,
         found_violation=(worst_case_violation > config.robust_feasibility_tolerance),
@@ -510,9 +514,8 @@ def get_worst_discrete_separation_solution(
 
 def get_con_name_repr(separation_model, con, with_obj_name=True):
     """
-    Get string representation of performance constraint
-    and the objective to which it has
-    been mapped.
+    Get string representation of second-stage inequality constraint
+    and the objective to which it has been mapped.
 
     Parameters
     ----------
@@ -522,7 +525,7 @@ def get_con_name_repr(separation_model, con, with_obj_name=True):
         Constraint for which to get the representation.
     with_obj_name : bool, optional
         Include name of separation model objective to which
-        constraint is mapped. Applicable only to performance
+        constraint is mapped. Applicable only to second-stage inequality
         constraints of the separation problem.
 
     Returns
@@ -532,11 +535,11 @@ def get_con_name_repr(separation_model, con, with_obj_name=True):
     """
     qual_str = ""
     if with_obj_name:
-        objectives_map = separation_model.perf_ineq_con_to_obj_map
+        objectives_map = separation_model.second_stage_ineq_con_to_obj_map
         separation_obj = objectives_map[con]
         qual_str = f" (mapped to objective {separation_obj.name!r})"
 
-    return f"{con.name!r}{qual_str}"
+    return f"{con.index()!r}{qual_str}"
 
 
 def perform_separation_loop(separation_data, master_data, config, solve_globally):
@@ -559,24 +562,24 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
     pyros.solve_data.SeparationLoopResults
         Separation problem solve results.
     """
-    all_performance_constraints = (
-        separation_data.separation_model.effective_performance_inequality_cons
+    all_ss_ineq_constraints = list(
+        separation_data.separation_model.second_stage.inequality_cons.values()
     )
-    if not all_performance_constraints:
+    if not all_ss_ineq_constraints:
         # robustness certified: no separation problems to solve
         return SeparationLoopResults(
             solver_call_results=ComponentMap(),
             solved_globally=solve_globally,
-            worst_case_perf_con=None,
+            worst_case_ss_ineq_con=None,
         )
 
     # needed for normalizing separation solution constraint violations
-    separation_data.nom_perf_con_violations = evaluate_violations_by_nominal_master(
+    separation_data.nom_ss_ineq_con_violations = evaluate_violations_by_nominal_master(
         separation_data=separation_data,
         master_data=master_data,
-        performance_cons=all_performance_constraints,
+        ss_ineq_cons=all_ss_ineq_constraints,
     )
-    sorted_priority_groups = group_performance_constraints_by_priority(
+    sorted_priority_groups = group_ss_ineq_constraints_by_priority(
         separation_data, config
     )
     uncertainty_set_is_discrete = (
@@ -593,11 +596,11 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
             return SeparationLoopResults(
                 solver_call_results=ComponentMap(),
                 solved_globally=solve_globally,
-                worst_case_perf_con=None,
+                worst_case_ss_ineq_con=None,
                 all_discrete_scenarios_exhausted=True,
             )
 
-        perf_con_to_maximize = sorted_priority_groups[
+        ss_ineq_con_to_maximize = sorted_priority_groups[
             max(sorted_priority_groups.keys())
         ][0]
 
@@ -608,8 +611,8 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
             master_data=master_data,
             config=config,
             solve_globally=solve_globally,
-            perf_con_to_maximize=perf_con_to_maximize,
-            perf_cons_to_evaluate=all_performance_constraints,
+            ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+            ss_ineq_cons_to_evaluate=all_ss_ineq_constraints,
         )
 
         termination_not_ok = (
@@ -623,7 +626,7 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
                 in discrete_sep_results.solver_call_results.values()
                 for res in solve_call_results.results_list
             ]
-            single_solver_call_res[perf_con_to_maximize] = (
+            single_solver_call_res[ss_ineq_con_to_maximize] = (
                 # not the neatest assembly,
                 # but should maintain accuracy of total solve times
                 # and overall outcome
@@ -637,33 +640,34 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
             return SeparationLoopResults(
                 solver_call_results=single_solver_call_res,
                 solved_globally=solve_globally,
-                worst_case_perf_con=None,
+                worst_case_ss_ineq_con=None,
             )
 
     all_solve_call_results = ComponentMap()
     priority_groups_enum = enumerate(sorted_priority_groups.items())
-    for group_idx, (priority, perf_constraints) in priority_groups_enum:
+    for group_idx, (priority, ss_ineq_constraints) in priority_groups_enum:
         priority_group_solve_call_results = ComponentMap()
-        for idx, perf_con in enumerate(perf_constraints):
+        for idx, ss_ineq_con in enumerate(ss_ineq_constraints):
             # log progress of separation loop
             solve_adverb = "Globally" if solve_globally else "Locally"
             config.progress_logger.debug(
-                f"{solve_adverb} separating performance constraint "
-                f"{get_con_name_repr(separation_data.separation_model, perf_con)} "
+                f"{solve_adverb} separating second-stage inequality constraint "
+                f"{get_con_name_repr(separation_data.separation_model, ss_ineq_con)} "
                 f"(priority {priority}, priority group {group_idx + 1} of "
                 f"{len(sorted_priority_groups)}, "
-                f"constraint {idx + 1} of {len(perf_constraints)} "
+                f"constraint {idx + 1} of {len(ss_ineq_constraints)} "
                 "in priority group, "
                 f"{len(all_solve_call_results) + idx + 1} of "
-                f"{len(all_performance_constraints)} total)"
+                f"{len(all_ss_ineq_constraints)} total)"
             )
 
-            # solve separation problem for this performance constraint
+            # solve separation problem for
+            # this second-stage inequality constraint
             if uncertainty_set_is_discrete:
                 solve_call_results = get_worst_discrete_separation_solution(
-                    performance_constraint=perf_con,
+                    ss_ineq_con=ss_ineq_con,
                     config=config,
-                    perf_cons_to_evaluate=all_performance_constraints,
+                    ss_ineq_cons_to_evaluate=all_ss_ineq_constraints,
                     discrete_solve_results=discrete_sep_results,
                 )
             else:
@@ -672,11 +676,11 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
                     master_data=master_data,
                     config=config,
                     solve_globally=solve_globally,
-                    perf_con_to_maximize=perf_con,
-                    perf_cons_to_evaluate=all_performance_constraints,
+                    ss_ineq_con_to_maximize=ss_ineq_con,
+                    ss_ineq_cons_to_evaluate=all_ss_ineq_constraints,
                 )
 
-            priority_group_solve_call_results[perf_con] = solve_call_results
+            priority_group_solve_call_results[ss_ineq_con] = solve_call_results
 
             termination_not_ok = (
                 solve_call_results.time_out or solve_call_results.subsolver_error
@@ -686,21 +690,21 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
                 return SeparationLoopResults(
                     solver_call_results=all_solve_call_results,
                     solved_globally=solve_globally,
-                    worst_case_perf_con=None,
+                    worst_case_ss_ineq_con=None,
                 )
 
         all_solve_call_results.update(priority_group_solve_call_results)
 
         # there may be multiple separation problem solutions
-        # found to have violated a performance constraint.
+        # found to have violated a second-stage inequality constraint.
         # we choose just one for master problem of next iteration
-        worst_case_perf_con = get_argmax_sum_violations(
+        worst_case_ss_ineq_con = get_argmax_sum_violations(
             solver_call_results_map=all_solve_call_results,
-            perf_cons_to_evaluate=perf_constraints,
+            ss_ineq_cons_to_evaluate=ss_ineq_constraints,
         )
-        if worst_case_perf_con is not None:
+        if worst_case_ss_ineq_con is not None:
             # take note of chosen separation solution
-            worst_case_res = all_solve_call_results[worst_case_perf_con]
+            worst_case_res = all_solve_call_results[worst_case_ss_ineq_con]
             if uncertainty_set_is_discrete:
                 separation_data.idxs_of_master_scenarios.append(
                     worst_case_res.discrete_set_scenario_index
@@ -717,13 +721,13 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
             )
             config.progress_logger.debug(
                 "Worst-case constraint: "
-                f"{get_con_name_repr(separation_data.separation_model, worst_case_perf_con)} "
+                f"{get_con_name_repr(separation_data.separation_model, worst_case_ss_ineq_con)} "
                 "under realization "
                 f"{worst_case_res.violating_param_realization}."
             )
             config.progress_logger.debug(
                 f"Maximal scaled violation "
-                f"{worst_case_res.scaled_violations[worst_case_perf_con]} "
+                f"{worst_case_res.scaled_violations[worst_case_ss_ineq_con]} "
                 "from this constraint "
                 "exceeds the robust feasibility tolerance "
                 f"{config.robust_feasibility_tolerance}"
@@ -733,17 +737,19 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
             # exit loop
             break
         else:
-            config.progress_logger.debug("No violated performance constraints found.")
+            config.progress_logger.debug(
+                "No violated second-stage inequality constraints found."
+            )
 
     return SeparationLoopResults(
         solver_call_results=all_solve_call_results,
         solved_globally=solve_globally,
-        worst_case_perf_con=worst_case_perf_con,
+        worst_case_ss_ineq_con=worst_case_ss_ineq_con,
     )
 
 
-def evaluate_performance_constraint_violations(
-    separation_data, config, perf_con_to_maximize, perf_cons_to_evaluate
+def evaluate_ss_ineq_con_violations(
+    separation_data, config, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
 ):
     """
     Evaluate the inequality constraint function violations
@@ -759,8 +765,11 @@ def evaluate_performance_constraint_violations(
         Object containing the separation model.
     config : ConfigDict
         PyROS solver settings.
-    perf_cons_to_evaluate : list of Constraint
-        Performance constraints whose expressions are to
+    ss_ineq_con_to_maximize : ConstraintData
+        Second-stage inequality constraint
+        to which the current solution is mapped.
+    ss_ineq_cons_to_evaluate : list of Constraint
+        Second-stage inequality constraints whose expressions are to
         be evaluated at the current separation problem
         solution.
         Exactly one of these constraints should be mapped
@@ -772,17 +781,17 @@ def evaluate_performance_constraint_violations(
         Uncertain parameter realization corresponding to maximum
         constraint violation.
     scaled_violations : ComponentMap
-        Mapping from performance constraints to be evaluated
+        Mapping from second-stage inequality constraints to be evaluated
         to their violations by the separation problem solution.
     constraint_violated : bool
-        True if performance constraint mapped to active
+        True if second-stage inequality constraint mapped to active
         separation model Objective is violated (beyond tolerance),
         False otherwise
 
     Raises
     ------
     ValueError
-        If `perf_cons_to_evaluate` does not contain exactly
+        If `ss_ineq_cons_to_evaluate` does not contain exactly
         1 entry which can be mapped to an active Objective
         of ``model_data.separation_model``.
     """
@@ -794,21 +803,24 @@ def evaluate_performance_constraint_violations(
         param_var.value for param_var in uncertain_param_vars
     )
 
-    # evaluate violations for all performance constraints provided
+    # evaluate violations for all second-stage inequality
+    # constraints provided
     violations_by_sep_solution = get_sep_objective_values(
-        separation_data=separation_data, config=config, perf_cons=perf_cons_to_evaluate
+        separation_data=separation_data,
+        config=config,
+        ss_ineq_cons=ss_ineq_cons_to_evaluate
     )
 
     # normalize constraint violation: i.e. divide by
     # absolute value of constraint expression evaluated at
     # nominal master solution (if expression value is large enough)
     scaled_violations = ComponentMap()
-    for perf_con, sep_sol_violation in violations_by_sep_solution.items():
+    for ss_ineq_con, sep_sol_violation in violations_by_sep_solution.items():
         scaled_violation = sep_sol_violation / max(
-            1, abs(separation_data.nom_perf_con_violations[perf_con])
+            1, abs(separation_data.nom_ss_ineq_con_violations[ss_ineq_con])
         )
-        scaled_violations[perf_con] = scaled_violation
-        if perf_con is perf_con_to_maximize:
+        scaled_violations[ss_ineq_con] = scaled_violation
+        if ss_ineq_con is ss_ineq_con_to_maximize:
             scaled_active_obj_violation = scaled_violation
 
     constraint_violated = (
@@ -818,15 +830,16 @@ def evaluate_performance_constraint_violations(
     return (violating_param_realization, scaled_violations, constraint_violated)
 
 
-def initialize_separation(perf_con_to_maximize, separation_data, master_data, config):
+def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data, config):
     """
     Initialize separation problem variables using the solution
     to the most recent master problem.
 
     Parameters
     ----------
-    perf_con_to_maximize : ConstraintData
-        Performance constraint whose violation is to be maximized
+    ss_ineq_con_to_maximize : ConstraintData
+        Second-stage inequality constraint
+        whose violation is to be maximized
         for the separation problem of interest.
     separation_data : SeparationProblemData
         Separation problem data.
@@ -848,16 +861,16 @@ def initialize_separation(perf_con_to_maximize, separation_data, master_data, co
 
     def eval_master_violation(scenario_idx):
         """
-        Evaluate violation of `perf_con` by variables of
+        Evaluate violation of `ss_ineq_con` by variables of
         specified master block.
         """
         master_con = (
-            master_model.scenarios[scenario_idx].find_component(perf_con_to_maximize)
+            master_model.scenarios[scenario_idx].find_component(ss_ineq_con_to_maximize)
         )
         return value(master_con)
 
     # initialize from master block with max violation of the
-    # performance constraint of interest. This gives the best known
+    # second-stage ineq constraint of interest. Gives the best known
     # feasible solution (for case of non-discrete uncertainty sets).
     worst_master_block_idx = max(
         master_model.scenarios.keys(),
@@ -894,9 +907,9 @@ def initialize_separation(perf_con_to_maximize, separation_data, master_data, co
     #       revisit initialization of auxiliary uncertainty set
     #       variables later
     tol = ABS_CON_CHECK_FEAS_TOL
-    perf_con_name_repr = get_con_name_repr(
+    ss_ineq_con_name_repr = get_con_name_repr(
         separation_model=sep_model,
-        con=perf_con_to_maximize,
+        con=ss_ineq_con_to_maximize,
         with_obj_name=True,
     )
     uncertainty_set_is_discrete = (
@@ -911,8 +924,8 @@ def initialize_separation(perf_con_to_maximize, separation_data, master_data, co
                 with_obj_name=False,
             )
             config.progress_logger.debug(
-                f"Initial point for separation of performance constraint "
-                f"{perf_con_name_repr} violates the model constraint "
+                f"Initial point for separation of second-stage ineq constraint "
+                f"{ss_ineq_con_name_repr} violates the model constraint "
                 f"{con_name_repr} by more than {tol}. "
                 f"(lslack={con.lslack()}, uslack={con.uslack()})"
             )
@@ -924,7 +937,7 @@ globally_acceptable = {tc.optimal, tc.globallyOptimal}
 
 def solver_call_separation(
     separation_data, master_data, config,
-    solve_globally, perf_con_to_maximize, perf_cons_to_evaluate
+    solve_globally, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
 ):
     """
     Invoke subordinate solver(s) on separation problem.
@@ -938,11 +951,12 @@ def solver_call_separation(
     solve_globally : bool
         True to solve separation problems globally,
         False to solve locally.
-    perf_con_to_maximize : Constraint
-        Performance constraint for which to solve separation problem.
+    ss_ineq_con_to_maximize : Constraint
+        Second-stage inequality constraint
+        for which to solve separation problem.
         Informs the objective (constraint violation) to maximize.
-    perf_cons_to_evaluate : list of Constraint
-        Performance constraints whose expressions are to be
+    ss_ineq_cons_to_evaluate : list of Constraint
+        Second-stage inequality constraints whose expressions are to be
         evaluated at the separation problem solution
         obtained.
 
@@ -953,15 +967,15 @@ def solver_call_separation(
     """
     # prepare the problem
     separation_model = separation_data.separation_model
-    objectives_map = separation_data.separation_model.perf_ineq_con_to_obj_map
-    separation_obj = objectives_map[perf_con_to_maximize]
-    initialize_separation(perf_con_to_maximize, separation_data, master_data, config)
+    objectives_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
+    separation_obj = objectives_map[ss_ineq_con_to_maximize]
+    initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data, config)
     separation_obj.activate()
 
-    # get name of constraint for loggers
+    # get name (index) of constraint for loggers
     con_name_repr = get_con_name_repr(
         separation_model=separation_model,
-        con=perf_con_to_maximize,
+        con=ss_ineq_con_to_maximize,
         with_obj_name=True,
     )
 
@@ -986,7 +1000,7 @@ def solver_call_separation(
             config.progress_logger.warning(
                 f"Invoking backup solver {opt!r} "
                 f"(solver {idx + 1} of {len(solvers)}) for {solve_mode} "
-                f"separation of performance constraint {con_name_repr} "
+                f"separation of second-stage inequality constraint {con_name_repr} "
                 f"in iteration {separation_data.iteration}."
             )
         results = call_solver(
@@ -1035,8 +1049,8 @@ def solver_call_separation(
                 solve_call_results.violating_param_realization,
                 solve_call_results.scaled_violations,
                 solve_call_results.found_violation,
-            ) = evaluate_performance_constraint_violations(
-                separation_data, config, perf_con_to_maximize, perf_cons_to_evaluate
+            ) = evaluate_ss_ineq_con_violations(
+                separation_data, config, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
             )
             solve_call_results.auxiliary_param_values = [
                 auxvar.value
@@ -1049,7 +1063,7 @@ def solver_call_separation(
         else:
             config.progress_logger.debug(
                 f"Solver {opt} ({idx + 1} of {len(solvers)}) "
-                f"failed for {solve_mode} separation of performance "
+                f"failed for {solve_mode} separation of second-stage inequality "
                 f"constraint {con_name_repr} in iteration "
                 f"{separation_data.iteration}. Termination condition: "
                 f"{results.solver.termination_condition!r}."
@@ -1087,7 +1101,7 @@ def solver_call_separation(
     solve_call_results.message = (
         "Could not successfully solve separation problem of iteration "
         f"{separation_data.iteration} "
-        f"for performance constraint {con_name_repr} with any of the "
+        f"for second-stage inequality constraint {con_name_repr} with any of the "
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
         f"{[str(term_cond) for term_cond in solver_status_dict.values()]}.)"
@@ -1102,7 +1116,7 @@ def solver_call_separation(
 
 def discrete_solve(
     separation_data, master_data, config,
-    solve_globally, perf_con_to_maximize, perf_cons_to_evaluate
+    solve_globally, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
 ):
     """
     Obtain separation problem solution for each scenario
@@ -1120,18 +1134,18 @@ def discrete_solve(
         the model.
     solve_globally : bool
         Is separation problem to be solved globally.
-    perf_con_to_maximize : Constraint
-        Performance constraint for which to solve separation
+    ss_ineq_con_to_maximize : Constraint
+        Second-stage inequality constraint for which to solve separation
         problem.
-    perf_cons_to_evaluate : list of Constraint
-        Performance constraints whose expressions are to be
+    ss_ineq_cons_to_evaluate : list of Constraint
+        Secnod-stage inequality constraints whose expressions are to be
         evaluated at the each of separation problem solutions
         obtained.
 
     Returns
     -------
     discrete_separation_results : DiscreteSeparationSolveCallResults
-        Separation solver call results on performance constraint
+        Separation solver call results on second-stage inequality constraint
         of interest for every scenario considered.
 
     Notes
@@ -1140,8 +1154,9 @@ def discrete_solve(
     variables and uncertain parameter values uniquely define the state
     variables, this method need be only be invoked once per separation
     loop. Subject to our assumption, the choice of objective
-    (``perf_con_to_maximize``) should not affect the solutions returned
-    beyond subsolver tolerances. For other performance constraints, the
+    (``ss_ineq_con_to_maximize``) should not affect the solutions returned
+    beyond subsolver tolerances.
+    For other second-stage inequality constraints, the
     optimal separation problem solution can then be evaluated by simple
     enumeration of the solutions returned by this function, since for
     discrete uncertainty sets, the number of feasible separation
@@ -1175,8 +1190,8 @@ def discrete_solve(
             master_data=master_data,
             config=config,
             solve_globally=solve_globally,
-            perf_con_to_maximize=perf_con_to_maximize,
-            perf_cons_to_evaluate=perf_cons_to_evaluate,
+            ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+            ss_ineq_cons_to_evaluate=ss_ineq_cons_to_evaluate,
         )
         solve_call_results.discrete_set_scenario_index = scenario_idx
         solve_call_results_dict[scenario_idx] = solve_call_results
@@ -1191,7 +1206,7 @@ def discrete_solve(
     return DiscreteSeparationSolveCallResults(
         solved_globally=solve_globally,
         solver_call_results=solve_call_results_dict,
-        performance_constraint=perf_con_to_maximize,
+        second_stage_ineq_con=ss_ineq_con_to_maximize,
     )
 
 

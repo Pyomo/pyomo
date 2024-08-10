@@ -84,7 +84,7 @@ def construct_initial_master_problem(model_data, config):
     # model rather than to the model to prevent
     # duplication across scenario sub-blocks
     master_model.epigraph_obj = Objective(
-        expr=master_model.scenarios[0, 0].epigraph_var,
+        expr=master_model.scenarios[0, 0].first_stage.epigraph_var,
     )
 
     return master_model
@@ -149,11 +149,9 @@ def add_scenario_block_to_master_problem(
     # deactivate the first-stage constraints: they are duplicate
     if scenario_idx != (0, 0):
         new_blk = master_model.scenarios[scenario_idx]
-        new_blk_first_stage_cons = (
-            new_blk.effective_first_stage_inequality_cons
-            + new_blk.effective_first_stage_equality_cons
-        )
-        for con in new_blk_first_stage_cons:
+        for con in new_blk.first_stage.inequality_cons.values():
+            con.deactivate()
+        for con in new_blk.first_stage.equality_cons.values():
             con.deactivate()
 
 
@@ -162,8 +160,9 @@ def construct_master_feasibility_problem(master_data, config):
     Construct slack variable minimization problem from the master
     model.
 
-    Slack variables are added only to the performance constraints
-    of the blocks added for the current PyROS iteration.
+    Slack variables are added only to the seconds-stage
+    inequality constraints of the blocks added for the
+    current PyROS iteration.
 
     Parameters
     ----------
@@ -203,13 +202,14 @@ def construct_master_feasibility_problem(master_data, config):
         obj.deactivate()
     iteration = master_data.iteration
 
-    # add slacks only to performance inequality constraints for the newest
-    # master block. these should be the only constraints which
+    # add slacks only to second-stage inequality constraints for the
+    # newest master block(s).
+    # these should be the only constraints that
     # may have been violated by the previous master and separation
     # solution(s)
     targets = []
     for blk in slack_model.scenarios[iteration, :]:
-        targets.extend(blk.effective_performance_inequality_cons)
+        targets.extend(blk.second_stage.inequality_cons.values())
 
     # retain original constraint expressions before adding slacks
     # (to facilitate slack initialization and scaling)
@@ -383,7 +383,7 @@ def construct_dr_polishing_problem(master_data, config):
         nominal_eff_var_partitioning.first_stage_variables
         # fixing epigraph variable constrains the problem
         # to the optimal master problem solution set
-        + [nominal_polishing_block.epigraph_var]
+        + [nominal_polishing_block.first_stage.epigraph_var]
     )
     for var in nondr_nonadjustable_vars:
         var.fix()
@@ -408,7 +408,8 @@ def construct_dr_polishing_problem(master_data, config):
     polishing_model.epigraph_obj.deactivate()
 
     polishing_model.polishing_vars = polishing_vars = []
-    for idx, indexed_dr_var in enumerate(nominal_polishing_block.decision_rule_vars):
+    indexed_dr_var_list = nominal_polishing_block.first_stage.decision_rule_vars
+    for idx, indexed_dr_var in enumerate(indexed_dr_var_list):
         # auxiliary 'polishing' variables.
         # these are meant to represent the absolute values
         # of the terms of DR polynomial;
@@ -417,7 +418,7 @@ def construct_dr_polishing_problem(master_data, config):
             list(indexed_dr_var.keys()), domain=NonNegativeReals
         )
         polishing_model.add_component(
-            unique_component_name(polishing_model, f"dr_polishing_var_{idx}"),
+            f"dr_polishing_var_{idx}",
             indexed_polishing_var,
         )
         polishing_vars.append(indexed_polishing_var)
@@ -443,11 +444,11 @@ def construct_dr_polishing_problem(master_data, config):
 
         # add indexed constraints to polishing model
         polishing_model.add_component(
-            unique_component_name(polishing_model, f"polishing_abs_val_lb_con_{idx}"),
+            f"polishing_abs_val_lb_con_{idx}",
             polishing_absolute_value_lb_cons,
         )
         polishing_model.add_component(
-            unique_component_name(polishing_model, f"polishing_abs_val_ub_con_{idx}"),
+            f"polishing_abs_val_ub_con_{idx}",
             polishing_absolute_value_ub_cons,
         )
 
@@ -479,7 +480,10 @@ def construct_dr_polishing_problem(master_data, config):
             #     in DR expression is 0
             #     across all master blocks
             dr_term_copies = [
-                scenario_blk.decision_rule_eqns[idx].body.args[dr_var_in_term_idx]
+                (
+                    scenario_blk.second_stage.decision_rule_eqns[idx]
+                    .body.args[dr_var_in_term_idx]
+                )
                 for scenario_blk in master_model.scenarios.values()
             ]
             all_copy_coeffs_zero = is_a_nonstatic_dr_term and all(
@@ -614,8 +618,8 @@ def minimize_dr_vars(master_data, config):
         for master_var, polish_var in adjustable_vars_zip:
             master_var.set_value(value(polish_var))
         dr_var_zip = zip(
-            blk.decision_rule_vars,
-            polishing_model.scenarios[idx].decision_rule_vars,
+            blk.first_stage.decision_rule_vars,
+            polishing_model.scenarios[idx].first_stage.decision_rule_vars,
         )
         for master_dr, polish_dr in dr_var_zip:
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
@@ -702,7 +706,7 @@ def higher_order_decision_rule_efficiency(master_data, config):
     """
     order_to_enforce = get_master_dr_degree(master_data, config)
     enforce_dr_degree(
-        blk=master_data.master_model.scenarios[0, 0],
+        working_blk=master_data.master_model.scenarios[0, 0],
         config=config,
         degree=order_to_enforce,
     )

@@ -30,6 +30,7 @@ from pyomo.common.log import Preformatted
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import HierarchicalTimer, TicTocTimer
 from pyomo.core.base import (
+    Any,
     Block,
     Component,
     ConcreteModel,
@@ -1400,12 +1401,12 @@ def add_effective_var_partitioning(model_data, config):
     )
 
 
-def create_bound_constraint_expr(expr, bound, bound_type):
+def create_bound_constraint_expr(expr, bound, bound_type, standardize=True):
     """
     Create a relational expression establishing a bound
     for a numeric expression of interest.
 
-    The expression is such that the bound appears on the
+    If desired, the expression is such that `bound` appears on the
     right-hand side of the relational (inequality/equality)
     operator.
 
@@ -1420,6 +1421,9 @@ def create_bound_constraint_expr(expr, bound, bound_type):
     bound_type : {'lower', 'eq', 'upper'}
         Indicator for whether `expr` is to be lower bounded,
         equality bounded, or upper bounded, by `bound`.
+    standardize : bool, optional
+        True to ensure `expr` appears on the left-hand side of the
+        relational operator, False otherwise.
 
     Returns
     -------
@@ -1427,7 +1431,7 @@ def create_bound_constraint_expr(expr, bound, bound_type):
         Establishes a bound on `expr`.
     """
     if bound_type == "lower":
-        return -expr <= -bound
+        return -expr <= -bound if standardize else bound <= expr
     elif bound_type == "eq":
         return expr == bound
     elif bound_type == "upper":
@@ -1485,7 +1489,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     constraints, as these are the only bounds we need to
     reformulate to properly construct the subproblems.
     Consequently, all constraints added to the working model
-    in this method are considered performance constraints.
+    in this method are considered second-stage constraints.
 
     Parameters
     ----------
@@ -1495,9 +1499,6 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
         PyROS solver settings.
     """
     working_model = model_data.working_model
-    performance_eq_cons = working_model.effective_performance_equality_cons
-    performance_ineq_cons = working_model.effective_performance_inequality_cons
-
     nonadjustable_vars = (
         working_model.effective_var_partitioning.first_stage_variables
     )
@@ -1518,22 +1519,17 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                 )
             )
             if is_bound_uncertain:
-                var_bound_con = Constraint(
-                    expr=create_bound_constraint_expr(var, bound, btype),
-                )
-                working_model.user_model.add_component(
-                    unique_component_name(
-                        working_model.user_model,
-                        f"var_{var_name}_uncertain_{btype}_bound_con",
-                    ),
-                    var_bound_con,
-                )
+                new_con_expr = create_bound_constraint_expr(var, bound, btype)
+                new_con_name = f"var_{var_name}_uncertain_{btype}_bound_con"
                 remove_var_declared_bound(var, btype)
-
                 if btype == "eq":
-                    performance_eq_cons.append(var_bound_con)
+                    working_model.second_stage.equality_cons[new_con_name] = (
+                        new_con_expr
+                    )
                 else:
-                    performance_ineq_cons.append(var_bound_con)
+                    working_model.second_stage.inequality_cons[new_con_name] = (
+                        new_con_expr
+                    )
 
     # for subsequent developments: return a mapping
     # from each variable to the corresponding binding constraints?
@@ -1552,7 +1548,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     as this is required for appropriate construction of the
     subproblems later.
     Since these constraints depend on adjustable variables,
-    they are taken to be (effective) performance constraints.
+    they are taken to be (effective) second-stage constraints.
 
     Parameters
     ----------
@@ -1562,8 +1558,6 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
         PyROS solver settings.
     """
     working_model = model_data.working_model
-    performance_eq_cons = working_model.effective_performance_equality_cons
-    performance_ineq_cons = working_model.effective_performance_inequality_cons
 
     adjustable_vars = (
         working_model.effective_var_partitioning.second_stage_variables
@@ -1584,20 +1578,16 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
         for certainty_desc, bound_triple in cert_uncert_bound_zip:
             for btype, bound in bound_triple._asdict().items():
                 if bound is not None:
-                    var_bound_con = Constraint(
-                        expr=create_bound_constraint_expr(var, bound, btype),
-                    )
-                    working_model.user_model.add_component(
-                        unique_component_name(
-                            working_model.user_model,
-                            f"var_{var_name}_{certainty_desc}_{btype}_bound_con",
-                        ),
-                        var_bound_con,
-                    )
+                    new_con_name = f"var_{var_name}_{certainty_desc}_{btype}_bound_con"
+                    new_con_expr = create_bound_constraint_expr(var, bound, btype)
                     if btype == "eq":
-                        performance_eq_cons.append(var_bound_con)
+                        working_model.second_stage.equality_cons[new_con_name] = (
+                            new_con_expr
+                        )
                     else:
-                        performance_ineq_cons.append(var_bound_con)
+                        working_model.second_stage.inequality_cons[new_con_name] = (
+                            new_con_expr
+                        )
 
         remove_all_var_bounds(var)
 
@@ -1639,6 +1629,14 @@ def setup_working_model(model_data, config, user_var_partitioning):
     # now set up working model
     model_data.working_model = working_model = ConcreteModel()
 
+    # stagewise blocks for containing stagewise constraints
+    working_model.first_stage = Block()
+    working_model.first_stage.equality_cons = Constraint(Any)
+    working_model.first_stage.inequality_cons = Constraint(Any)
+    working_model.second_stage = Block()
+    working_model.second_stage.equality_cons = Constraint(Any)
+    working_model.second_stage.inequality_cons = Constraint(Any)
+
     # original user model will be a sub-block of working model,
     # in order to avoid attribute name clashes later
     working_model.user_model = original_model.clone()
@@ -1670,38 +1668,12 @@ def setup_working_model(model_data, config, user_var_partitioning):
         else:
             working_model.original_active_inequality_cons.append(con)
 
-    # partition the constraints according to their
-    # status as equality/inequality constraints
-    # and their dependence on adjustable variables or uncertain
-    # parameters.
-    # we will need this later for construction of the subproblems
-    working_model.effective_first_stage_equality_cons = []
-    working_model.effective_first_stage_inequality_cons = []
-    working_model.effective_performance_equality_cons = []
-    working_model.effective_performance_inequality_cons = []
-
-
-def remove_con_declared_bound(con, bound_type):
-    """
-    Remove a bound in a constraint data expression.
-    """
-    if bound_type == "lower":
-        con.set_value((None, con.body, con.upper))
-    elif bound_type == "eq":
-        con.set_value((None, con.body, None))
-    elif bound_type == "upper":
-        con.set_value((con.lower, con.body, None))
-    else:
-        raise ValueError(
-            f"Bound type {bound_type} not supported."
-        )
-
 
 def standardize_inequality_constraints(model_data):
     """
     Standardize the inequality constraints of the working model,
-    and classify them as first-stage inequalities or performance
-    (i.e., second-stage) inequalities.
+    and classify them as first-stage inequalities or second-stage
+    inequalities.
 
     Parameters
     ----------
@@ -1722,6 +1694,10 @@ def standardize_inequality_constraints(model_data):
         adjustable_vars_in_con_body = (
             ComponentSet(identify_variables(con.body))
             & adjustable_vars_set
+        )
+        con_rel_name = con.getname(
+            relative_to=working_model.user_model,
+            fully_qualified=True,
         )
 
         if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
@@ -1748,48 +1724,45 @@ def standardize_inequality_constraints(model_data):
                         "Report this case to the Pyomo/PyROS developers."
                     )
 
-                std_con_expr = create_bound_constraint_expr(con.body, bound, btype)
+                std_con_expr = create_bound_constraint_expr(
+                    expr=con.body,
+                    bound=bound,
+                    bound_type=btype,
+                    standardize=True,
+                )
+                new_con_name = f"ineq_con_{con_rel_name}_{btype}_bound_con"
 
-                uncertain_params_in_std_expr = ComponentSet(
+                uncertain_params_in_std_expr = uncertain_params_set & ComponentSet(
                     identify_mutable_parameters(std_con_expr)
-                ) & uncertain_params_set
+                )
                 if adjustable_vars_in_con_body | uncertain_params_in_std_expr:
-                    if len(finite_bounds) == 1:
-                        # modify constraints with only a single inequality
-                        # operator in place, for efficiency
-                        con.set_value(std_con_expr)
-                        new_con = con
-                    else:
-                        # ranged constraint: declare a new constraint for
-                        # each of the performance inequalities;
-                        # first-stage inequalities remain in place
-                        new_con_name = con.getname(
-                            relative_to=working_model.user_model,
-                            fully_qualified=True,
-                        )
-                        new_con = Constraint(expr=std_con_expr)
-                        working_model.user_model.add_component(
-                            f"con_{new_con_name}_{btype}_bound_con",
-                            new_con,
-                        )
-                        remove_con_declared_bound(con, btype)
-                    working_model.effective_performance_inequality_cons.append(new_con)
+                    working_model.second_stage.inequality_cons[new_con_name] = (
+                        std_con_expr
+                    )
                 else:
-                    # constraint has a first-stage inequality (bound)
-                    # this inequality (bound) will not be modified
-                    working_model.effective_first_stage_inequality_cons.append(con)
+                    # we do not want to modify the arrangement of
+                    # lower bound for first-stage inequalities, so
+                    # pass `standardize=False`
+                    working_model.first_stage.inequality_cons[new_con_name] = (
+                        create_bound_constraint_expr(
+                            expr=con.body,
+                            bound=bound,
+                            bound_type=btype,
+                            standardize=False,
+                        )
+                    )
 
-            if con.lower is None and con.upper is None:
-                # either the original constraint had no bounds,
-                # or the inequalities (bounds) have been stripped
-                # and used to declare performance constraints
-                con.deactivate()
+            # constraint has now been moved over to stagewise blocks
+            con.deactivate()
         else:
             # constraint depends on the nonadjustable variables only
-            working_model.effective_first_stage_inequality_cons.append(con)
+            working_model.first_stage.inequality_cons[f"ineq_con_{con_rel_name}"] = (
+                con.expr
+            )
+            con.deactivate()
 
     # for subsequent developments: map the original constraints
-    # to the derived performance inequalities?
+    # to the derived second-stage inequalities?
     # we will add this as needed when changes are made to
     # the interface for separation priority ordering
 
@@ -1797,7 +1770,7 @@ def standardize_inequality_constraints(model_data):
 def standardize_equality_constraints(model_data):
     """
     Classify the original active equality constraints of the
-    working model as first-stage or performance constraints.
+    working model as first-stage or second-stage constraints.
 
     Parameters
     ----------
@@ -1821,10 +1794,21 @@ def standardize_equality_constraints(model_data):
         )
 
         # note: none of the equality constraint expressions are modified
+        con_rel_name = con.getname(
+            relative_to=working_model.user_model,
+            fully_qualified=True,
+        )
         if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
-            working_model.effective_performance_equality_cons.append(con)
+            working_model.second_stage.equality_cons[f"eq_con_{con_rel_name}"] = (
+                con.expr
+            )
         else:
-            working_model.effective_first_stage_equality_cons.append(con)
+            working_model.first_stage.equality_cons[f"eq_con_{con_rel_name}"] = (
+                con.expr
+            )
+
+        # definitely don't want active duplicate
+        con.deactivate()
 
 
 def get_summands(expr):
@@ -1964,10 +1948,9 @@ def standardize_active_objective(model_data, config):
         objective=active_obj,
     )
 
-    # epigraph reformulation components will be useful for later
-    working_model.epigraph_var = Var(initialize=value(active_obj, exception=False))
-    working_model.epigraph_con = Constraint(
-        expr=working_model.full_objective.expr - working_model.epigraph_var <= 0
+    # useful for later
+    working_model.first_stage.epigraph_var = Var(
+        initialize=value(active_obj, exception=False)
     )
 
     # we add the epigraph objective later, as needed,
@@ -1975,7 +1958,7 @@ def standardize_active_objective(model_data, config):
     # doing so is more efficient than adding the objective now
     active_obj.deactivate()
 
-    # classify the epigraph constraint
+    # add the epigraph constraint
     adjustable_vars = (
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
@@ -1990,12 +1973,16 @@ def standardize_active_objective(model_data, config):
     )
     if (uncertain_params_in_obj | adjustable_vars_in_obj):
         if config.objective_focus == ObjectiveType.worst_case:
-            working_model.effective_performance_inequality_cons.append(
-                working_model.epigraph_con
+            working_model.second_stage.inequality_cons["epigraph_con"] = (
+                working_model.full_objective.expr
+                - working_model.first_stage.epigraph_var
+                <= 0
             )
         elif config.objective_focus == ObjectiveType.nominal:
-            working_model.effective_first_stage_inequality_cons.append(
-                working_model.epigraph_con
+            working_model.first_stage.inequality_cons["epigraph_con"] = (
+                working_model.full_objective.expr
+                - working_model.first_stage.epigraph_var
+                <= 0
             )
         else:
             raise ValueError(
@@ -2004,8 +1991,10 @@ def standardize_active_objective(model_data, config):
                 f"for objective focus {config.objective_focus!r}."
             )
     else:
-        working_model.effective_first_stage_inequality_cons.append(
-            working_model.epigraph_con
+        working_model.first_stage.inequality_cons["epigraph_con"] = (
+            working_model.full_objective.expr
+            - working_model.first_stage.epigraph_var
+            <= 0
         )
 
 
@@ -2019,7 +2008,7 @@ def get_all_nonadjustable_variables(working_model):
     - decision rule variables
     - effective first-stage variables
     """
-    epigraph_var = working_model.epigraph_var
+    epigraph_var = working_model.first_stage.epigraph_var
     decision_rule_vars = list(
         generate_all_decision_rule_var_data_objects(working_model)
     )
@@ -2056,7 +2045,7 @@ def generate_all_decision_rule_var_data_objects(working_blk):
     VarData
         Decision rule variable.
     """
-    for indexed_var in working_blk.decision_rule_vars:
+    for indexed_var in working_blk.first_stage.decision_rule_vars:
         yield from indexed_var.values()
 
 
@@ -2064,8 +2053,7 @@ def generate_all_decision_rule_eqns(working_blk):
     """
     Generate sequence of all decision rule equations.
     """
-    for indexed_con in working_blk.decision_rule_eqns:
-        yield from indexed_con.values()
+    yield from working_blk.second_stage.decision_rule_eqns.values()
 
 
 def get_dr_expression(working_blk, second_stage_var):
@@ -2138,10 +2126,10 @@ def check_time_limit_reached(timing_data, config):
 
 def reformulate_state_var_independent_eq_cons(model_data, config):
     """
-    Reformulate performance equality constraints that are
+    Reformulate second-stage equality constraints that are
     independent of the state variables.
 
-    The state variable-independent performance equality
+    The state variable-independent second-stage equality
     constraints that can be rewritten as polynomials
     in terms of the uncertain parameters
     are reformulated to first-stage equalities
@@ -2151,8 +2139,8 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
     In some cases, matching of the coefficients may lead to
     a certificate of robust infeasibility.
 
-    All other state variable-independent performance equality
-    constraints are recast to pairs of opposing performance inequality
+    All other state variable-independent second-stage equality
+    constraints are recast to pairs of opposing second-stage inequality
     constraints, as they would otherwise over-constrain the uncertain
     parameters in the separation subproblems.
 
@@ -2206,13 +2194,11 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
         id(param): var for param, var in uncertain_param_to_temp_var_map.items()
     }
 
-    # constraints generated during the reformulation will be placed here
-    working_model.coefficient_matching_conlist = coeff_matching_conlist = (
-        ConstraintList()
-    )
-
-    performance_eq_cons = working_model.effective_performance_equality_cons.copy()
-    for con in performance_eq_cons:
+    # copy the items iterable,
+    # as we will be modifying the constituents of the constraint
+    # in place
+    working_model.first_stage.coefficient_matching_cons = coefficient_matching_cons = []
+    for con_idx, con in list(working_model.second_stage.equality_cons.items()):
         vars_in_con = ComponentSet(identify_variables(con.expr))
         mutable_params_in_con = ComponentSet(identify_mutable_parameters(con.expr))
 
@@ -2273,29 +2259,22 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                 # in the separation problems, since the effective DOF
                 # variables and DR variables are fixed.
                 # hence, we reformulate to inequalities
-                con_name = con.getname(
-                    relative_to=working_model.user_model,
-                    fully_qualified=True,
-                )
                 for bound_type in ["lower", "upper"]:
                     std_con_expr = create_bound_constraint_expr(
                         expr=con.body, bound=con.upper, bound_type=bound_type
                     )
-                    new_con = Constraint(expr=std_con_expr)
-                    working_model.user_model.add_component(
-                        f"con_{con_name}_{bound_type}_bound_con",
-                        new_con,
-                    )
-                    working_model.effective_performance_inequality_cons.append(new_con)
+                    working_model.second_stage.inequality_cons[
+                        f"reform_{bound_type}_bound_from_{con_idx}"
+                    ] = std_con_expr
             else:
                 polynomial_repn_coeffs = (
                     [expr_repn.constant]
                     + list(expr_repn.linear_coefs)
                     + list(expr_repn.quadratic_coefs)
                 )
-                for coef_expr in polynomial_repn_coeffs:
-                    simplified_coef_expr = generate_standard_repn(
-                        expr=coef_expr,
+                for coeff_idx, coeff_expr in enumerate(polynomial_repn_coeffs):
+                    simplified_coeff_expr = generate_standard_repn(
+                        expr=coeff_expr,
                         compute_values=True,
                     ).to_expression()
 
@@ -2305,12 +2284,12 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                     # we either check for trivial robust
                     # feasibility/infeasibility, or add a constraint
                     # restricting the coefficient expression to value 0
-                    if isinstance(simplified_coef_expr, tuple(native_types)):
+                    if isinstance(simplified_coeff_expr, tuple(native_types)):
                         # coefficient is a constant;
                         # check value to determine
                         # trivial feasibility/infeasibility
                         robust_infeasible = not math.isclose(
-                            a=simplified_coef_expr,
+                            a=simplified_coeff_expr,
                             b=0,
                             rel_tol=COEFF_MATCH_REL_TOL,
                             abs_tol=COEFF_MATCH_ABS_TOL,
@@ -2336,26 +2315,24 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                     else:
                         # coefficient is dependent on model first-stage
                         # and DR variables. add matching constraint
-                        coeff_matching_conlist.add(simplified_coef_expr == 0)
-
-                        # matching constraint depends on nonadjustable
-                        # variables only, so it is first-stage
-                        last_idx = coeff_matching_conlist.index_set().last()
-                        working_model.effective_first_stage_equality_cons.append(
-                            coeff_matching_conlist[last_idx]
+                        new_con_name = f"coeff_matching_{con_idx}_coeff_{coeff_idx}"
+                        working_model.first_stage.equality_cons[new_con_name] = (
+                            simplified_coeff_expr == 0
                         )
+                        new_con = working_model.first_stage.equality_cons[new_con_name]
+                        coefficient_matching_cons.append(new_con)
 
                         config.progress_logger.info(
                             f"Derived from constraint {con.name!r} a coefficient "
-                            "matching constraint with expression: \n    "
-                            f"{coeff_matching_conlist[last_idx].expr}."
+                            f"matching constraint named {new_con_name!r} "
+                            "with expression: \n    "
+                            f"{new_con.expr}."
                         )
 
-            # constraint has been reformulated out of the model,
-            # either by coefficient matching
-            # or by casting to two inequalities
-            con.deactivate()
-            working_model.effective_performance_equality_cons.remove(con)
+            # remove rather than deactivate to facilitate:
+            # - we no longer need this constraint anywhere
+            # - faciliates accurate counting of active constraints
+            del working_model.second_stage.equality_cons[con_idx]
 
     # we no longer need these auxiliary components
     working_model.del_component(temp_param_vars)
@@ -2421,12 +2398,11 @@ def preprocess_model_data(model_data, config, user_var_partitioning):
     )
     model_data.working_model.all_variables = (
         model_data.working_model.all_nonadjustable_variables
-        + model_data.working_model.effective_var_partitioning.second_stage_variables
-        + model_data.working_model.effective_var_partitioning.state_variables
+        + model_data.working_model.all_adjustable_variables
     )
 
     config.progress_logger.debug(
-        "Reformulating state variable-independent performance equality constraints..."
+        "Reformulating state variable-independent second-stage equality constraints..."
     )
     robust_infeasible = reformulate_state_var_independent_eq_cons(
         model_data,
@@ -2473,24 +2449,24 @@ def log_model_statistics(model_data, config):
     )
 
     # # equality constraints
-    num_eq_cons = len(
-        working_model.effective_first_stage_equality_cons
-        + working_model.effective_performance_equality_cons
-        + working_model.decision_rule_eqns
+    num_eq_cons = (
+        len(working_model.first_stage.equality_cons)
+        + len(working_model.second_stage.equality_cons)
+        + len(working_model.second_stage.decision_rule_eqns)
     )
-    num_first_stage_eq_cons = len(working_model.effective_first_stage_equality_cons)
-    num_coeff_matching_cons = len(working_model.coefficient_matching_conlist)
+    num_first_stage_eq_cons = len(working_model.first_stage.equality_cons)
+    num_coeff_matching_cons = len(working_model.first_stage.coefficient_matching_cons)
     num_other_first_stage_eqns = num_first_stage_eq_cons - num_coeff_matching_cons
-    num_performance_eq_cons = len(working_model.effective_performance_equality_cons)
-    num_dr_eq_cons = len(working_model.decision_rule_eqns)
+    num_second_stage_eq_cons = len(working_model.second_stage.equality_cons)
+    num_dr_eq_cons = len(working_model.second_stage.decision_rule_eqns)
 
     # # inequality constraints
-    num_ineq_cons = len(
-        working_model.effective_first_stage_inequality_cons
-        + working_model.effective_performance_inequality_cons
+    num_ineq_cons = (
+        len(working_model.first_stage.inequality_cons)
+        + len(working_model.second_stage.inequality_cons)
     )
-    num_first_stage_ineq_cons = len(working_model.effective_first_stage_inequality_cons)
-    num_performance_ineq_cons = len(working_model.effective_performance_inequality_cons)
+    num_first_stage_ineq_cons = len(working_model.first_stage.inequality_cons)
+    num_second_stage_ineq_cons = len(working_model.second_stage.inequality_cons)
 
     info_log_func = config.progress_logger.info
 
@@ -2516,11 +2492,11 @@ def log_model_statistics(model_data, config):
     info_log_func(f"    Equality constraints : {num_eq_cons}")
     info_log_func(f"      Coefficient matching constraints : {num_coeff_matching_cons}")
     info_log_func(f"      Other first-stage equations : {num_other_first_stage_eqns}")
-    info_log_func(f"      Performance equations : {num_performance_eq_cons}")
+    info_log_func(f"      Second-stage equations : {num_second_stage_eq_cons}")
     info_log_func(f"      Decision rule equations : {num_dr_eq_cons}")
     info_log_func(f"    Inequality constraints : {num_ineq_cons}")
     info_log_func(f"      First-stage inequalities : {num_first_stage_ineq_cons}")
-    info_log_func(f"      Performance inequalities : {num_performance_ineq_cons}")
+    info_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
 
 
 def add_decision_rule_variables(model_data, config):
@@ -2547,7 +2523,7 @@ def add_decision_rule_variables(model_data, config):
     effective_second_stage_vars = (
         model_data.working_model.effective_var_partitioning.second_stage_variables
     )
-    model_data.working_model.decision_rule_vars = decision_rule_vars = []
+    model_data.working_model.first_stage.decision_rule_vars = decision_rule_vars = []
 
     # facilitate matching of effective second-stage vars to DR vars later
     model_data.working_model.eff_ss_var_to_dr_var_map = eff_ss_var_to_dr_var_map = (
@@ -2568,7 +2544,7 @@ def add_decision_rule_variables(model_data, config):
         indexed_dr_var = Var(
             range(num_dr_vars), initialize=0, bounds=(None, None), domain=Reals
         )
-        model_data.working_model.add_component(
+        model_data.working_model.first_stage.add_component(
             f"decision_rule_var_{idx}", indexed_dr_var
         )
 
@@ -2598,11 +2574,13 @@ def add_decision_rule_constraints(model_data, config):
     effective_second_stage_vars = (
         model_data.working_model.effective_var_partitioning.second_stage_variables
     )
-    indexed_dr_var_list = model_data.working_model.decision_rule_vars
+    indexed_dr_var_list = model_data.working_model.first_stage.decision_rule_vars
     uncertain_params = model_data.working_model.uncertain_params
     degree = config.decision_rule_order
 
-    model_data.working_model.decision_rule_eqns = decision_rule_eqns = []
+    model_data.working_model.second_stage.decision_rule_eqns = decision_rule_eqns = (
+        Constraint(range(len(effective_second_stage_vars)))
+    )
 
     # keeping track of degree of monomial
     # (in terms of the uncertain parameters)
@@ -2649,14 +2627,11 @@ def add_decision_rule_constraints(model_data, config):
             dr_var_to_exponent_map[dr_var] = len(param_combo)
 
         # declare constraint on model
-        dr_eqn = Constraint(expr=dr_expression - eff_ss_var == 0)
-        model_data.working_model.add_component(f"decision_rule_eqn_{idx}", dr_eqn)
-
-        decision_rule_eqns.append(dr_eqn)
-        eff_ss_var_to_dr_eqn_map[eff_ss_var] = dr_eqn
+        decision_rule_eqns[idx] = dr_expression - eff_ss_var == 0
+        eff_ss_var_to_dr_eqn_map[eff_ss_var] = decision_rule_eqns[idx]
 
 
-def enforce_dr_degree(blk, config, degree):
+def enforce_dr_degree(working_blk, config, degree):
     """
     Make decision rule polynomials of a given degree
     by fixing value of the appropriate subset of the decision
@@ -2671,9 +2646,9 @@ def enforce_dr_degree(blk, config, degree):
     degree : int
         Degree of the DR polynomials that is to be enforced.
     """
-    for indexed_dr_var in blk.decision_rule_vars:
+    for indexed_dr_var in working_blk.first_stage.decision_rule_vars:
         for dr_var in indexed_dr_var.values():
-            dr_var_degree = blk.dr_var_to_exponent_map[dr_var]
+            dr_var_degree = working_blk.dr_var_to_exponent_map[dr_var]
             if dr_var_degree > degree:
                 dr_var.fix(0)
             else:
@@ -2886,7 +2861,7 @@ class IterationLogRecord:
     dr_polishing_success : bool or None, optional
         True if DR polishing solved successfully, False otherwise.
     num_violated_cons : int or None, optional
-        Number of performance constraints found to be violated
+        Number of second-stage constraints found to be violated
         during separation step.
     all_sep_problems_solved : int or None, optional
         True if all separation problems were solved successfully,
@@ -2897,7 +2872,7 @@ class IterationLogRecord:
         True if separation problems were solved with the subordinate
         global optimizer(s), False otherwise.
     max_violation : int or None
-        Maximum scaled violation of any performance constraint
+        Maximum scaled violation of any second-stage constraint
         found during separation step.
     elapsed_time : float, optional
         Total time elapsed up to the current iteration, in seconds.
@@ -2925,7 +2900,7 @@ class IterationLogRecord:
     dr_polishing_success : bool or None
         True if DR polishing was solved successfully, False otherwise.
     num_violated_cons : int or None
-        Number of performance constraints found to be violated
+        Number of second-stage constraints found to be violated
         during separation step.
     all_sep_problems_solved : int or None
         True if all separation problems were solved successfully,
@@ -2936,7 +2911,7 @@ class IterationLogRecord:
         True if separation problems were solved with the subordinate
         global optimizer(s), False otherwise.
     max_violation : int or None
-        Maximum scaled violation of any performance constraint
+        Maximum scaled violation of any second-stage constraint
         found during separation step.
     elapsed_time : float
         Total time elapsed up to the current iteration, in seconds.

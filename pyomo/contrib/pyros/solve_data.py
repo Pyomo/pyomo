@@ -113,7 +113,7 @@ class SeparationSolveCallResults:
         subordinate local/global solvers provided (including backup)
         and the number of scenarios in the uncertainty set.
     scaled_violations : ComponentMap, optional
-        Mapping from performance constraints to floats equal
+        Mapping from second-stage inequality constraints to floats equal
         to their scaled violations by separation problem solution
         stored in this result.
     violating_param_realization : list of float, optional
@@ -126,9 +126,9 @@ class SeparationSolveCallResults:
         Second-stage DOF and state variable values for reported
         separation problem solution.
     found_violation : bool, optional
-        True if violation of performance constraint (i.e. constraint
-        expression value) by reported separation solution was found to
-        exceed tolerance, False otherwise.
+        True if violation of second-stage inequality constraint
+        (i.e. constraint expression value) by reported separation
+        solution was found to exceed tolerance, False otherwise.
     time_out : bool, optional
         True if PyROS time limit reached attempting to solve the
         separation problem, False otherwise.
@@ -240,8 +240,8 @@ class DiscreteSeparationSolveCallResults:
         Mapping from discrete uncertainty set scenario list
         indexes to solver call results for separation problems
         subject to the scenarios.
-    performance_constraint : Constraint
-        Separation problem performance constraint for which
+    second_stage_ineq_con : Constraint
+        Separation problem second-stage inequality constraint for which
         `self` was generated.
 
     Attributes
@@ -249,18 +249,18 @@ class DiscreteSeparationSolveCallResults:
     solved_globally
     scenario_indexes
     solver_call_results
-    performance_constraint
+    second_stage_ineq_con
     time_out
     subsolver_error
     """
 
     def __init__(
-        self, solved_globally, solver_call_results=None, performance_constraint=None
+        self, solved_globally, solver_call_results=None, second_stage_ineq_con=None
     ):
         """Initialize self (see class docstring)."""
         self.solved_globally = solved_globally
         self.solver_call_results = solver_call_results
-        self.performance_constraint = performance_constraint
+        self.second_stage_ineq_con = second_stage_ineq_con
 
     @property
     def time_out(self):
@@ -317,10 +317,11 @@ class SeparationLoopResults:
         True if separation problems were solved to global optimality,
         False otherwise.
     solver_call_results : ComponentMap
-        Mapping from performance constraints to corresponding
+        Mapping from second-stage inequality constraints to corresponding
         ``SeparationSolveCallResults`` objects.
-    worst_case_perf_con : None or Constraint
-        Performance constraint mapped to ``SeparationSolveCallResults``
+    worst_case_ss_ineq_con : None or Constraint
+        Second-stage inequality constraint mapped to
+        ``SeparationSolveCallResults``
         object in `self` corresponding to maximally violating
         separation problem solution.
     all_discrete_scenarios_exhausted : bool, optional
@@ -334,7 +335,7 @@ class SeparationLoopResults:
     ----------
     solver_call_results
     solved_globally
-    worst_case_perf_con
+    worst_case_ss_ineq_con
     all_discrete_scenarios_exhausted
     found_violation
     violating_param_realization
@@ -349,13 +350,13 @@ class SeparationLoopResults:
         self,
         solved_globally,
         solver_call_results,
-        worst_case_perf_con,
+        worst_case_ss_ineq_con,
         all_discrete_scenarios_exhausted=False,
     ):
         """Initialize self (see class docstring)."""
         self.solver_call_results = solver_call_results
         self.solved_globally = solved_globally
-        self.worst_case_perf_con = worst_case_perf_con
+        self.worst_case_ss_ineq_con = worst_case_ss_ineq_con
         self.all_discrete_scenarios_exhausted = all_discrete_scenarios_exhausted
 
     @property
@@ -363,8 +364,8 @@ class SeparationLoopResults:
         """
         bool : True if separation solution for at least one
         ``SeparationSolveCallResults`` object listed in self
-        was reported to violate its corresponding performance
-        constraint, False otherwise.
+        was reported to violate its corresponding second-stage
+        inequality constraint, False otherwise.
         """
         return any(
             solver_call_res.found_violation
@@ -377,13 +378,13 @@ class SeparationLoopResults:
         None or list of float : Uncertain parameter values for
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_perf_con``.
-        If ``self.worst_case_perf_con`` is not specified,
+        listed in self at index ``self.worst_case_ss_ineq_con``.
+        If ``self.worst_case_ss_ineq_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_perf_con is not None:
+        if self.worst_case_ss_ineq_con is not None:
             return self.solver_call_results[
-                self.worst_case_perf_con
+                self.worst_case_ss_ineq_con
             ].violating_param_realization
         else:
             return None
@@ -394,9 +395,9 @@ class SeparationLoopResults:
         None or list of float : Auxiliary parameter values for the
         maximially violating separation problem solution.
         """
-        if self.worst_case_perf_con is not None:
+        if self.worst_case_ss_ineq_con is not None:
             return self.solver_call_results[
-                self.worst_case_perf_con
+                self.worst_case_ss_ineq_con
             ].auxiliary_param_values
         else:
             return None
@@ -404,15 +405,16 @@ class SeparationLoopResults:
     @property
     def scaled_violations(self):
         """
-        None or ComponentMap : Scaled performance constraint violations
+        None or ComponentMap : Scaled second-stage inequality
+        constraint violations
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_perf_con``.
-        If ``self.worst_case_perf_con`` is not specified,
+        listed in self at index ``self.worst_case_ss_ineq_con``.
+        If ``self.worst_case_ss_ineq_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_perf_con is not None:
-            return self.solver_call_results[self.worst_case_perf_con].scaled_violations
+        if self.worst_case_ss_ineq_con is not None:
+            return self.solver_call_results[self.worst_case_ss_ineq_con].scaled_violations
         else:
             return None
 
@@ -422,20 +424,20 @@ class SeparationLoopResults:
         None or ComponentMap : Second-stage and state variable values
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_perf_con``.
-        If ``self.worst_case_perf_con`` is not specified,
+        listed in self at index ``self.worst_case_ss_ineq_con``.
+        If ``self.worst_case_ss_ineq_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_perf_con is not None:
-            return self.solver_call_results[self.worst_case_perf_con].variable_values
+        if self.worst_case_ss_ineq_con is not None:
+            return self.solver_call_results[self.worst_case_ss_ineq_con].variable_values
         else:
             return None
 
     @property
-    def violated_performance_constraints(self):
+    def violated_second_stage_ineq_cons(self):
         """
-        list of Constraint : Performance constraints for which violation
-        found.
+        list of Constraint : Second-stage inequality constraints
+        for which violation found.
         """
         return [
             con
@@ -612,12 +614,13 @@ class SeparationResults:
         return self.get_violating_attr("all_discrete_scenarios_exhausted")
 
     @property
-    def worst_case_perf_con(self):
+    def worst_case_ss_ineq_con(self):
         """
-        ConstraintData : Performance constraint corresponding to the
+        ConstraintData : Second-stage inequality constraint
+        corresponding to the
         separation solution chosen for the next master problem.
         """
-        return self.get_violating_attr("worst_case_perf_con")
+        return self.get_violating_attr("worst_case_ss_ineq_con")
 
     @property
     def main_loop_results(self):
@@ -648,7 +651,7 @@ class SeparationResults:
         None or list of float : Uncertain parameter values
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_perf_con``
+        If no such solution found, (i.e. ``worst_case_ss_ineq_con``
         set to None for both local and global loop results),
         then None is returned.
         """
@@ -665,10 +668,11 @@ class SeparationResults:
     @property
     def scaled_violations(self):
         """
-        None or ComponentMap : Scaled performance constraint violations
+        None or ComponentMap :
+        Scaled second-stage inequality constraint violations
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_perf_con``
+        If no such solution found, (i.e. ``worst_case_ss_ineq_con``
         set to None for both local and global loop results),
         then None is returned.
         """
@@ -680,18 +684,18 @@ class SeparationResults:
         None or ComponentMap : Second-stage and state variable values
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_perf_con``
+        If no such solution found, (i.e. ``worst_case_ss_ineq_con``
         set to None for both local and global loop results),
         then None is returned.
         """
         return self.get_violating_attr("violating_separation_variable_values")
 
     @property
-    def violated_performance_constraints(self):
+    def violated_second_stage_ineq_cons(self):
         """
-        Return list of violated performance constraints.
+        Return list of violated second-stage inequality constraints.
         """
-        return self.get_violating_attr("violated_performance_constraints")
+        return self.get_violating_attr("violated_second_stage_ineq_cons")
 
     def evaluate_local_solve_time(self, evaluator_func, **evaluator_func_kwargs):
         """

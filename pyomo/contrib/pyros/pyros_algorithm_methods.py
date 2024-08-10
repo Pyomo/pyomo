@@ -153,8 +153,8 @@ def ROSolver_iterative_solve(model_data, config):
     previous_iter_var_data = None
     current_iter_var_data = None
 
-    num_performance_cons = len(
-        separation_data.separation_model.effective_performance_inequality_cons
+    num_second_stage_ineq_cons = len(
+        separation_data.separation_model.second_stage.inequality_cons
     )
     IterationLogRecord.log_header(config.progress_logger.info)
     k = 0
@@ -206,7 +206,7 @@ def ROSolver_iterative_solve(model_data, config):
         polishing_successful = True
         polish_master_solution = (
             config.decision_rule_order != 0
-            and nominal_master_blk.decision_rule_vars
+            and nominal_master_blk.first_stage.decision_rule_vars
             and k != 0
         )
         if polish_master_solution:
@@ -264,10 +264,10 @@ def ROSolver_iterative_solve(model_data, config):
             max_sep_con_violation = max(scaled_violations)
         else:
             max_sep_con_violation = None
-        num_violated_cons = len(separation_results.violated_performance_constraints)
+        num_violated_cons = len(separation_results.violated_second_stage_ineq_cons)
 
         all_sep_problems_solved = (
-            len(scaled_violations) == num_performance_cons
+            len(scaled_violations) == num_second_stage_ineq_cons
             and not separation_results.subsolver_error
             and not separation_results.time_out
         ) or separation_results.all_discrete_scenarios_exhausted
