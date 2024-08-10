@@ -440,8 +440,8 @@ class Estimator(object):
             )
 
         # Convert theta Params to Vars, and unfix theta Vars
-        theta_names = [k.name for k, v in model.unknown_parameters.items()]
-        parmest_model = utils.convert_params_to_vars(model, theta_names, fix_vars=False)
+        theta_CUIDs = [v for k, v in model.unknown_parameters.items()]
+        parmest_model = utils.convert_params_to_vars(model, theta_CUIDs, fix_vars=False)
 
         return parmest_model
 
@@ -1556,7 +1556,8 @@ class _DeprecatedEstimator(object):
             )
 
         # Convert theta Params to Vars, and unfix theta Vars
-        model = utils.convert_params_to_vars(model, self.theta_names)
+        theta_CUIDs = [ComponentUID(theta_name) for theta_name in self.theta_names]
+        model = utils.convert_params_to_vars(model, theta_CUIDs)
 
         # Update theta names list to use CUID string representation
         for i, theta in enumerate(self.theta_names):

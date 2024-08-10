@@ -29,6 +29,9 @@ class TestUtils(unittest.TestCase):
     def test_convert_param_to_var(self):
         # TODO: Check that this works for different structured models (indexed, blocks, etc)
 
+        # test params
+        #############
+
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
             ReactorDesignExperiment,
         )
@@ -46,12 +49,12 @@ class TestUtils(unittest.TestCase):
         exp = ReactorDesignExperiment(data, 0)
         instance = exp.get_labeled_model()
 
-        theta_names = ['k1', 'k2', 'k3']
+        param_CUIDs = [v for k, v in instance.unknown_parameters.items()]
         m_vars = parmest.utils.convert_params_to_vars(
-            instance, theta_names, fix_vars=True
+            instance, param_CUIDs, fix_vars=True
         )
 
-        for v in theta_names:
+        for v in [str(CUID) for CUID in param_CUIDs]:
             self.assertTrue(hasattr(m_vars, v))
             c = m_vars.find_component(v)
             self.assertIsInstance(c, pyo.Var)
@@ -60,6 +63,44 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(pyo.value(c), pyo.value(c_old))
             self.assertTrue(c in m_vars.unknown_parameters)
 
+
+        # test indexed params
+        #####################
+
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+            RooneyBieglerExperiment,
+        )
+
+        self.data = pd.DataFrame(
+            data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+            columns=["hour", "y"],
+        )
+
+        class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
+
+            def create_model(self):
+                data_df = self.data.to_frame().transpose()
+                self.model = rooney_biegler_indexed_params(data_df)
+
+            def label_model(self):
+
+                m = self.model
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    [(m.hour, self.data["hour"]), (m.y, self.data["y"])]
+                )
+
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
+
+        rooney_biegler_indexed_params_exp_list = []
+        for i in range(self.data.shape[0]):
+            rooney_biegler_indexed_params_exp_list.append(
+                RooneyBieglerExperimentIndexedParams(self.data.loc[i, :])
+            )
+        
+        
 
 if __name__ == "__main__":
     unittest.main()
