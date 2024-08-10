@@ -81,7 +81,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
 
         # Indexed Param -- Delete Param, add Var
         elif isinstance(theta_object, IndexedParam):
-            
+
             # save Param values
             vals = theta_object.extract_values()
 
@@ -89,8 +89,9 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             param_theta_objects = [theta_obj for _, theta_obj in theta_object.items()]
 
             # get indexed Param names
-            indexed_param_CUIDs += [ComponentUID(theta_obj) 
-                                    for _, theta_obj in theta_object.items()]
+            indexed_param_CUIDs += [
+                ComponentUID(theta_obj) for _, theta_obj in theta_object.items()
+            ]
 
             # delete Param
             model.del_component(theta_object)
@@ -107,7 +108,9 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             theta_var_cuid = ComponentUID(theta_object.name)
             theta_var_object = theta_var_cuid.find_component_on(model)
             comp_map[theta_object] = theta_var_object
-            var_theta_objects = [var_theta_obj for _, var_theta_obj in theta_var_object.items()]
+            var_theta_objects = [
+                var_theta_obj for _, var_theta_obj in theta_var_object.items()
+            ]
             for param_theta_obj, var_theta_obj in zip(
                 param_theta_objects, var_theta_objects
             ):
@@ -150,7 +153,8 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
         model.constraints = pyo.ConstraintList()
         for c in model.component_data_objects(pyo.Constraint):
             if c.active and any(
-                ComponentUID(v) in param_CUIDs for v in identify_mutable_parameters(c.expr)
+                ComponentUID(v) in param_CUIDs
+                for v in identify_mutable_parameters(c.expr)
             ):
                 if c.equality:
                     model.constraints.add(

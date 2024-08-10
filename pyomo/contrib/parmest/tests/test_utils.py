@@ -64,7 +64,6 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(pyo.value(c), pyo.value(c_old))
             self.assertTrue(c in m_vars.unknown_parameters)
 
-
         # test indexed params
         #####################
 
@@ -99,7 +98,7 @@ class TestUtils(unittest.TestCase):
             model.response_function = pyo.Expression(data.hour, rule=response_rule)
 
             return model
-        
+
         class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
 
             def create_model(self):
