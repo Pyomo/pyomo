@@ -2282,7 +2282,7 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                         new_con = working_model.first_stage.equality_cons[new_con_name]
                         coefficient_matching_cons.append(new_con)
 
-                        config.progress_logger.info(
+                        config.progress_logger.debug(
                             f"Derived from constraint {con.name!r} a coefficient "
                             f"matching constraint named {new_con_name!r} "
                             "with expression: \n    "
