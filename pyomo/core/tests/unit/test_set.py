@@ -34,6 +34,7 @@ from pyomo.core.base.initializer import (
     ConstantInitializer,
     ItemInitializer,
     IndexedCallInitializer,
+    ParameterizedScalarCallInitializer,
 )
 from pyomo.core.base.set import (
     NumericRange as NR,
@@ -4293,8 +4294,7 @@ class TestSet(unittest.TestCase):
             return i >= j
 
         m.K = Set(initialize=RangeSet(3) * RangeSet(3), filter=_l_tri)
-        self.assertIsInstance(m.K.filter, IndexedCallInitializer)
-        self.assertIs(m.K.filter._fcn, _l_tri)
+        self.assertIsInstance(m.K.filter, ParameterizedScalarCallInitializer)
         self.assertEqual(list(m.K), [(1, 1), (2, 1), (2, 2), (3, 1), (3, 2), (3, 3)])
 
         output = StringIO()
@@ -5921,7 +5921,7 @@ class TestDeprecation(unittest.TestCase):
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
-            self.assertIsInstance(m.K.filter, IndexedCallInitializer)
+            self.assertIsInstance(m.K.filter, ParameterizedScalarCallInitializer)
         self.assertRegex(
             output.getvalue(), "^DEPRECATED: 'filter' is no longer a public attribute"
         )

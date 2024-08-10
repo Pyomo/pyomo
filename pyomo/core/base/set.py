@@ -1428,7 +1428,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
             val_iter = self._cb_domain_verifier(self._domain, val_iter)
 
         if self._filter is not None:
-            val_iter = filter(partial(self._filter, self.parent_block()), val_iter)
+            val_iter = self._cb_validate_filter('filter', val_iter)
 
         if self._validate is not None:
             val_iter = self._cb_validate_filter('validate', val_iter)
@@ -2234,7 +2234,7 @@ class Set(IndexedComponent):
             )
         )
         self._validate = Initializer(kwds.pop('validate', None), additional_args=1)
-        self._init_filter = Initializer(kwds.pop('filter', None))
+        self._filter = Initializer(kwds.pop('filter', None), additional_args=1)
 
         if 'virtual' in kwds:
             deprecation_warning(
@@ -2369,19 +2369,8 @@ class Set(IndexedComponent):
             obj._dimen = _d
         if self._validate is not None:
             obj._validate = self._validate
-        if self._init_filter is not None:
-            try:
-                obj._filter = Initializer(self._init_filter(_block, index))
-                if obj._filter.constant():
-                    # _init_filter was the actual filter function; use it.
-                    obj._filter = self._init_filter
-            except:
-                # We will assume any exceptions raised when getting the
-                # filter for this index indicate that the function
-                # should have been passed directly to the underlying sets.
-                obj._filter = self._init_filter
-        else:
-            obj._filter = None
+        if self._filter is not None:
+            obj._filter = self._filter
         if self._init_values is not None:
             # record the user-provided dimen in the initializer
             self._init_values._dimen = _d
@@ -3065,7 +3054,7 @@ class RangeSet(Component):
         kwds.pop('finite', None)
         self._init_data = (args, kwds.pop('ranges', ()))
         self._validate = Initializer(kwds.pop('validate', None), additional_args=1)
-        self._init_filter = Initializer(kwds.pop('filter', None))
+        self._filter = Initializer(kwds.pop('filter', None), additional_args=1)
         self._init_bounds = kwds.pop('bounds', None)
         if self._init_bounds is not None:
             self._init_bounds = BoundsInitializer(self._init_bounds)
@@ -3216,23 +3205,13 @@ class RangeSet(Component):
 
         self._ranges = ranges
 
-        if self._init_filter is not None:
+        if self._filter is not None:
             if not self.isfinite():
                 raise ValueError(
                     "The 'filter' keyword argument is not valid for "
                     "non-finite RangeSet component (%s)" % (self.name,)
                 )
-
-            try:
-                _filter = Initializer(self._init_filter(_block, None))
-                if _filter.constant():
-                    # _init_filter was the actual filter function; use it.
-                    _filter = self._init_filter
-            except:
-                # We will assume any exceptions raised when getting the
-                # filter for this index indicate that the function
-                # should have been passed directly to the underlying sets.
-                _filter = self._init_filter
+            _filter = self._filter
 
             # If this is a finite set, then we can go ahead and filter
             # all the ranges.  This allows pprint and len to be correct,
@@ -3243,7 +3222,7 @@ class RangeSet(Component):
             while old_ranges:
                 r = old_ranges.pop()
                 for i, val in enumerate(FiniteRangeSetData._range_gen(r)):
-                    if not _filter(_block, val):
+                    if not _filter(_block, (), val):
                         split_r = r.range_difference((NumericRange(val, val, 0),))
                         if len(split_r) == 2:
                             new_ranges.append(split_r[0])
