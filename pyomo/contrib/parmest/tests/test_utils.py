@@ -11,6 +11,7 @@
 
 from pyomo.common.dependencies import pandas as pd, pandas_available
 
+from pyomo.core.base.var import IndexedVar
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
@@ -76,6 +77,29 @@ class TestUtils(unittest.TestCase):
             columns=["hour", "y"],
         )
 
+        def rooney_biegler_indexed_params(data):
+            model = pyo.ConcreteModel()
+
+            model.param_names = pyo.Set(initialize=["asymptote", "rate_constant"])
+            model.theta = pyo.Param(
+                model.param_names,
+                initialize={"asymptote": 15, "rate_constant": 0.5},
+                mutable=True,
+            )
+
+            model.hour = pyo.Param(within=pyo.PositiveReals, mutable=True)
+            model.y = pyo.Param(within=pyo.PositiveReals, mutable=True)
+
+            def response_rule(m, h):
+                expr = m.theta["asymptote"] * (
+                    1 - pyo.exp(-m.theta["rate_constant"] * h)
+                )
+                return expr
+
+            model.response_function = pyo.Expression(data.hour, rule=response_rule)
+
+            return model
+        
         class RooneyBieglerExperimentIndexedParams(RooneyBieglerExperiment):
 
             def create_model(self):
@@ -94,13 +118,24 @@ class TestUtils(unittest.TestCase):
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update((k, pyo.ComponentUID(k)) for k in [m.theta])
 
-        rooney_biegler_indexed_params_exp_list = []
-        for i in range(self.data.shape[0]):
-            rooney_biegler_indexed_params_exp_list.append(
-                RooneyBieglerExperimentIndexedParams(self.data.loc[i, :])
-            )
-        
-        
+        exp = RooneyBieglerExperimentIndexedParams(self.data.loc[0, :])
+        instance = exp.get_labeled_model()
+
+        param_CUIDs = [v for k, v in instance.unknown_parameters.items()]
+        m_vars = parmest.utils.convert_params_to_vars(
+            instance, param_CUIDs, fix_vars=True
+        )
+
+        for v in [str(CUID) for CUID in param_CUIDs]:
+            self.assertTrue(hasattr(m_vars, v))
+            c = m_vars.find_component(v)
+            self.assertIsInstance(c, IndexedVar)
+            for _, iv in c.items():
+                self.assertTrue(iv.fixed)
+                iv_old = instance.find_component(iv)
+                self.assertEqual(pyo.value(iv), pyo.value(iv_old))
+            self.assertTrue(c in m_vars.unknown_parameters)
+
 
 if __name__ == "__main__":
     unittest.main()

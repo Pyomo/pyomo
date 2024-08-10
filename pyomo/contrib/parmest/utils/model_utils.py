@@ -21,6 +21,7 @@ from pyomo.environ import ComponentUID
 
 logger = logging.getLogger(__name__)
 
+
 def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
     """
     Convert select Params to Vars
@@ -29,7 +30,8 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
     ----------
     model : Pyomo concrete model
         Original model
-    param_CUIDs : list of CUIDs to convert, if None then all Params are converted
+    param_CUIDs : list of strings
+        List of parameter CUIDs to convert, if None then all Params are converted
     fix_vars : bool
         Fix the new variables, default is False
 
@@ -45,89 +47,93 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
         param_CUIDs = [
             ComponentUID(param) for param in model.component_data_objects(pyo.Param)
         ]
-    
-    # keep a list of the parameter names for creating the new model
-    param_names = [str(param_CUID) for param_CUID in param_CUIDs]
+
+    # if param_CUIDs is None:
+    #     param_CUIDs = [
+    #         ComponentUID(param.name)
+    #         for param in model.component_data_objects(pyo.Param)
+    #     ]
+
+    # keep a list of the parameter CUIDs in the case of indexing
+    indexed_param_CUIDs = []
 
     # Convert Params to Vars, unfix Vars, and create a substitution map
-    indexed_param_names = []
     substitution_map = {}
     comp_map = ComponentMap()
     for param_CUID in param_CUIDs:
 
         # Leverage the parser in ComponentUID to locate the component.
-        param_object = param_CUID.find_component_on(model)
+        theta_object = param_CUID.find_component_on(model)
 
         # Param
-        if param_object.is_parameter_type():
+        if theta_object.is_parameter_type():
 
             # Delete Param, add Var
-            vals = param_object.extract_values()
-            model.del_component(param_object)
-            model.add_component(param_object.name, pyo.Var(initialize=vals[None]))
+            vals = theta_object.extract_values()
+            model.del_component(theta_object)
+            model.add_component(theta_object.name, pyo.Var(initialize=vals[None]))
 
             # Update substitution map
-            new_var_cuid = ComponentUID(param_object)
-            new_var_object = new_var_cuid.find_component_on(model)
-            substitution_map[id(param_object)] = new_var_object
-            comp_map[param_object] = new_var_object
+            theta_var_cuid = ComponentUID(theta_object.name)
+            theta_var_object = theta_var_cuid.find_component_on(model)
+            substitution_map[id(theta_object)] = theta_var_object
+            comp_map[theta_object] = theta_var_object
 
-        # Indexed Param
-        elif isinstance(param_object, IndexedParam):
+        # Indexed Param -- Delete Param, add Var
+        elif isinstance(theta_object, IndexedParam):
+            
+            # save Param values
+            vals = theta_object.extract_values()
 
-            print('indexed param')
-            # Delete Param, add Var
-            # Before deleting the Param, create a list of the indexed param names
-            vals = param_object.extract_values()
-            param_objects = []
-            for param_obj in param_object:
-                indexed_param_name = param_object.name + "[" + str(param_obj) + "]"
-                param_cuid = ComponentUID(indexed_param_name)
-                param_objects.append(param_cuid.find_component_on(model))
-                indexed_param_names.append(indexed_param_name)
+            # get indexed Params
+            param_theta_objects = [theta_obj for _, theta_obj in theta_object.items()]
 
-            model.del_component(param_object)
+            # get indexed Param names
+            indexed_param_CUIDs += [ComponentUID(theta_obj) 
+                                    for _, theta_obj in theta_object.items()]
 
-            index_name = param_object.index_set().name
+            # delete Param
+            model.del_component(theta_object)
+
+            # add Var w/ previous Param values
+            index_name = theta_object.index_set().name
             index_cuid = ComponentUID(index_name)
             index_object = index_cuid.find_component_on(model)
             model.add_component(
-                param_object.name, pyo.Var(index_object, initialize=vals)
+                theta_object.name, pyo.Var(index_object, initialize=vals)
             )
 
             # Update substitution map (map each indexed param to indexed var)
-            new_var_cuid = ComponentUID(param_object.name)
-            new_var_object = new_var_cuid.find_component_on(model)
-            comp_map[param_object] = new_var_object
-            new_var_objects = []
-            for var_obj in new_var_object:
-                var_cuid = ComponentUID(new_var_object.name + "[" + str(var_obj) + "]")
-                new_var_objects.append(var_cuid.find_component_on(model))
-
-            for param_obj, new_var_obj in zip(param_objects, new_var_objects):
-                substitution_map[id(param_obj)] = new_var_obj
-                comp_map[param_obj] = new_var_obj
+            theta_var_cuid = ComponentUID(theta_object.name)
+            theta_var_object = theta_var_cuid.find_component_on(model)
+            comp_map[theta_object] = theta_var_object
+            var_theta_objects = [var_theta_obj for _, var_theta_obj in theta_var_object.items()]
+            for param_theta_obj, var_theta_obj in zip(
+                param_theta_objects, var_theta_objects
+            ):
+                substitution_map[id(param_theta_obj)] = var_theta_obj
+                comp_map[param_theta_obj] = var_theta_obj
 
         # Var or Indexed Var
-        elif isinstance(param_object, IndexedVar) or param_object.is_variable_type():
-            new_var_object = param_object
+        elif isinstance(theta_object, IndexedVar) or theta_object.is_variable_type():
+            theta_var_object = theta_object
 
         else:
-            logger.warning("%s is not a Param or Var on the model", (str(param_object)))
+            logger.warning("%s is not a Param or Var on the model", (param_name))
             return model
 
         if fix_vars:
-            new_var_object.fix()
+            theta_var_object.fix()
         else:
-            new_var_object.unfix()
+            theta_var_object.unfix()
 
     # If no substitutions are needed, return the model
     if len(substitution_map) == 0:
         return model
 
-    # Update the list of param_names if the parameters were indexed
-    if len(indexed_param_names) > 0:
-        param_names = indexed_param_names
+    # Update the list of param_CUIDs if the parameters were indexed
+    if len(indexed_param_CUIDs) > 0:
+        param_CUIDs = indexed_param_CUIDs
 
     # Convert Params to Vars in Expressions
     for expr in model.component_data_objects(pyo.Expression):
