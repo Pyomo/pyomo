@@ -40,10 +40,13 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
-    InitializerBase,
-    Initializer,
     CountedCallInitializer,
     IndexedCallInitializer,
+    Initializer,
+    InitializerBase,
+    ParameterizedIndexedCallInitializer,
+    ParameterizedInitializer,
+    ParameterizedScalarCallInitializer,
 )
 from pyomo.core.base.range import (
     NumericRange,
@@ -1428,7 +1431,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
             val_iter = filter(partial(self._filter, self.parent_block()), val_iter)
 
         if self._validate is not None:
-            val_iter = self._cb_validate(self._validate, self.parent_block(), val_iter)
+            val_iter = self._cb_validate_filter('validate', val_iter)
 
         # We wrap this check in a try-except because some values
         #  (like lists) are not hashable and can raise exceptions.
@@ -1456,22 +1459,82 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                 return
             yield value
 
-    def _cb_validate(self, validate, block, val_iter):
+    def _cb_validate_filter(self, mode, val_iter):
+        failFalse = mode == 'validate'
+        fcn = getattr(self, '_' + mode)
+        block = self.parent_block()
+        idx = self.index()
         for value in val_iter:
             try:
-                flag = validate(block, value)
-            except:
-                logger.error(
-                    "Exception raised while validating element '%s' "
-                    "for Set %s" % (value, self.name)
-                )
-                raise
-            if not flag:
-                raise ValueError(
-                    "The value=%s violates the validation rule of Set %s"
-                    % (value, self.name)
-                )
-            yield value
+                flag = fcn(block, idx, value)
+                if flag:
+                    yield value
+                    continue
+            except Exception as e:
+                flag = None
+                exc = e
+
+            if isinstance(value, tuple):
+                vstar = value
+            else:
+                vstar = (value,)
+
+            # First: try the old format: *values and no index
+            if fcn.__class__ is ParameterizedIndexedCallInitializer:
+                try:
+                    flag = fcn(block, (), *vstar)
+                    if flag:
+                        deprecation_warning(
+                            f"{self.__class__.__name__} {self.name}: {mode} "
+                            "callback signature matched (block, *value).  "
+                            "Please update the callback to match the signature "
+                            "(block, value, *index).",
+                            version='6.7.4.dev0'
+                        )
+                        orig_fcn = fcn._fcn
+                        fcn = ParameterizedScalarCallInitializer(
+                            lambda m, v: orig_fcn(m, *v), True
+                        )
+                        setattr(self, '_' + mode, fcn)
+                        yield value
+                        continue
+                except TypeError:
+                    pass
+                except Exception as e:
+                    exc = e
+
+            # Now try *values and index
+            try:
+                flag = fcn(block, idx, *value)
+                if flag:
+                    deprecation_warning(
+                        f"{self.__class__.__name__} {self.name}: {mode} "
+                        "callback signature matched (block, *value, *index).  "
+                        "Please update the callback to match the signature "
+                        "(block, value, *index).",
+                        version='6.7.4.dev0'
+                    )
+                    if fcn.__class__ is not ParameterizedInitializer:
+                        orig_fcn = fcn._fcn
+                        fcn._fcn = lambda m, v, *i: orig_fcn(m, *v, *i)
+                    yield value
+                    continue
+            except TypeError:
+                pass
+            except Exception as e:
+                exc = e
+            if flag is not None:
+                if failFalse:
+                    raise ValueError(
+                        "The value=%s violates the validation rule of Set %s"
+                        % (value, self.name)
+                    )
+                continue
+            logger.error(
+                "Exception raised while validating element '%s' "
+                "for Set %s" % (value, self.name)
+            )
+            raise exc from None
 
     def _cb_normalized_dimen_verifier(self, dimen, val_iter):
         for value in val_iter:
@@ -2170,7 +2233,7 @@ class Set(IndexedComponent):
                 allow_generators=True,
             )
         )
-        self._init_validate = Initializer(kwds.pop('validate', None))
+        self._validate = Initializer(kwds.pop('validate', None), additional_args=1)
         self._init_filter = Initializer(kwds.pop('filter', None))
 
         if 'virtual' in kwds:
@@ -2182,6 +2245,19 @@ class Set(IndexedComponent):
             kwds.pop('virtual')
 
         IndexedComponent.__init__(self, *args, **kwds)
+
+        if (
+            self._validate.__class__ is ParameterizedIndexedCallInitializer
+            and not self.parent_component().is_indexed()
+        ):
+            # TBD [JDS: 8/2024]: should we deprecate the "expanded
+            # tuple" version of the validate callback for scalar sets?
+            # It is widely used and we can (reasonably reliably) map to
+            # the expected behavior.
+            orig_fcn = self._validate._fcn
+            self._validate = ParameterizedScalarCallInitializer(
+                lambda m, v: orig_fcn(m, *v), True
+            )
 
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
@@ -2291,17 +2367,8 @@ class Set(IndexedComponent):
         obj._domain = domain
         if _d is not UnknownSetDimen:
             obj._dimen = _d
-        if self._init_validate is not None:
-            try:
-                obj._validate = Initializer(self._init_validate(_block, index))
-                if obj._validate.constant():
-                    # _init_validate was the actual validate function; use it.
-                    obj._validate = self._init_validate
-            except:
-                # We will assume any exceptions raised when getting the
-                # validator for this index indicate that the function
-                # should have been passed directly to the underlying sets.
-                obj._validate = self._init_validate
+        if self._validate is not None:
+            obj._validate = self._validate
         if self._init_filter is not None:
             try:
                 obj._filter = Initializer(self._init_filter(_block, index))
@@ -2997,7 +3064,7 @@ class RangeSet(Component):
             )
         kwds.pop('finite', None)
         self._init_data = (args, kwds.pop('ranges', ()))
-        self._init_validate = Initializer(kwds.pop('validate', None))
+        self._validate = Initializer(kwds.pop('validate', None), additional_args=1)
         self._init_filter = Initializer(kwds.pop('filter', None))
         self._init_bounds = kwds.pop('bounds', None)
         if self._init_bounds is not None:
@@ -3192,38 +3259,25 @@ class RangeSet(Component):
                     new_ranges.append(r)
             self._ranges = new_ranges
 
-        if self._init_validate is not None:
+        if self._validate is not None:
             if not self.isfinite():
                 raise ValueError(
                     "The 'validate' keyword argument is not valid for "
                     "non-finite RangeSet component (%s)" % (self.name,)
                 )
-
             try:
-                _validate = Initializer(self._init_validate(_block, None))
-                if _validate.constant():
-                    # _init_validate was the actual validate function; use it.
-                    _validate = self._init_validate
+                for val in self:
+                    if not self._validate(_block, None, val):
+                        raise ValueError(
+                            "The value=%s violates the validation rule of "
+                            "Set %s" % (val, self.name)
+                        )
             except:
-                # We will assume any exceptions raised when getting the
-                # validator for this index indicate that the function
-                # should have been passed directly to the underlying set.
-                _validate = self._init_validate
-
-            for val in self:
-                try:
-                    flag = _validate(_block, val)
-                except:
-                    logger.error(
-                        "Exception raised while validating element '%s' "
-                        "for Set %s" % (val, self.name)
-                    )
-                    raise
-                if not flag:
-                    raise ValueError(
-                        "The value=%s violates the validation rule of "
-                        "Set %s" % (val, self.name)
-                    )
+                logger.error(
+                    "Exception raised while validating element '%s' "
+                    "for Set %s" % (val, self.name)
+                )
+                raise
 
         # Defer the warning about non-constant args until after the
         # component has been constructed, so that the conversion of the
