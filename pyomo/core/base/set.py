@@ -1301,7 +1301,7 @@ class _FiniteSetMixin(object):
 class FiniteSetData(_FiniteSetMixin, SetData):
     """A general unordered iterable Set"""
 
-    __slots__ = ('_values', '_domain', '_validate', '_filter', '_dimen')
+    __slots__ = ('_values', '_domain', '_dimen')
 
     def __init__(self, component):
         SetData.__init__(self, component=component)
@@ -1310,8 +1310,6 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         if not hasattr(self, '_values'):
             self._values = set()
         self._domain = Any
-        self._validate = None
-        self._filter = None
         self._dimen = UnknownSetDimen
 
     def get(self, value, default=None):
@@ -1427,10 +1425,11 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         if self._domain is not Any:
             val_iter = self._cb_domain_verifier(self._domain, val_iter)
 
-        if self._filter is not None:
+        comp = self.parent_component()
+        if comp._filter is not None:
             val_iter = self._cb_validate_filter('filter', val_iter)
 
-        if self._validate is not None:
+        if comp._validate is not None:
             val_iter = self._cb_validate_filter('validate', val_iter)
 
         # We wrap this check in a try-except because some values
@@ -1461,8 +1460,9 @@ class FiniteSetData(_FiniteSetMixin, SetData):
 
     def _cb_validate_filter(self, mode, val_iter):
         failFalse = mode == 'validate'
-        fcn = getattr(self, '_' + mode)
-        block = self.parent_block()
+        comp = self.parent_component()
+        fcn = getattr(comp, '_' + mode)
+        block = comp.parent_block()
         idx = self.index()
         for value in val_iter:
             try:
@@ -1495,7 +1495,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                         fcn = ParameterizedScalarCallInitializer(
                             lambda m, v: orig_fcn(m, *v), True
                         )
-                        setattr(self, '_' + mode, fcn)
+                        setattr(comp, '_' + mode, fcn)
                         yield value
                         continue
                 except TypeError:
@@ -2367,10 +2367,6 @@ class Set(IndexedComponent):
         obj._domain = domain
         if _d is not UnknownSetDimen:
             obj._dimen = _d
-        if self._validate is not None:
-            obj._validate = self._validate
-        if self._filter is not None:
-            obj._filter = self._filter
         if self._init_values is not None:
             # record the user-provided dimen in the initializer
             self._init_values._dimen = _d
