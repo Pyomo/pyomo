@@ -4328,7 +4328,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
 
-        def _validate_I(model, i, j):
+        def _validate(model, i, j):
             self.assertIs(model, m)
             if i + j < 2:
                 return True
@@ -4336,7 +4336,7 @@ class TestSet(unittest.TestCase):
                 return False
             raise RuntimeError("Bogus value")
 
-        m.I = Set(validate=_validate_I)
+        m.I = Set(validate=_validate)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.I.add((0, 1)))
