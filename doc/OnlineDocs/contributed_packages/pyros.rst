@@ -884,7 +884,7 @@ Observe that the log contains the following information:
   adjustable second-stage variables and state variables
   are included in parentheses, next to the total numbers
   of second-stage variables and state variables, respectively;
-  note that 'adjustable' has been abbreviated as 'adj.'.
+  note that "adjustable" has been abbreviated as "adj."
 * **Iteration log table** (lines 59--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
