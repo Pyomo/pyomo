@@ -850,7 +850,7 @@ for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
          every master feasility, master, and DR polishing problem
        * Progress updates for the separation procedure
        * Separation subproblem initial point infeasibilities
-       * Summary of separation loop outcomes: performance constraints
+       * Summary of separation loop outcomes: second-stage inequality constraints
          violated, uncertain parameter scenario added to the
          master problem
        * Uncertain parameter scenarios added to the master problem
@@ -871,12 +871,19 @@ Observe that the log contains the following information:
 * **Preprocessing information** (lines 39--41).
   Wall time required for preprocessing
   the deterministic model and associated components,
-  i.e. standardizing model components and adding the decision rule
+  i.e., standardizing model components and adding the decision rule
   variables and equations.
 * **Model component statistics** (lines 42--58).
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
+  The preprocessor may find that some second-stage variables
+  and state variables are mathematically
+  not adjustable to the uncertain parameters;
+  to this end, in the logs, the numbers of
+  adjustable second-stage variables and state variables
+  are included in parentheses, next to the total numbers
+  of second-stage variables and state variables, respectively.
 * **Iteration log table** (lines 59--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
@@ -914,20 +921,20 @@ Observe that the log contains the following information:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver, v1.2.11.
-          Pyomo version: 6.7.2
+          Pyomo version: 6.7.4
           Commit hash: unknown
-          Invoked at UTC 2024-03-28T00:00:00.000000
-
+          Invoked at UTC 2024-09-01T00:00:00.000000
+   
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
    (1) Carnegie Mellon University, Department of Chemical Engineering
    (2) Sandia National Laboratories, Center for Computing Research
-
+   
    The developers gratefully acknowledge support from the U.S. Department
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
    ================================= DISCLAIMER =================================
-   PyROS is still under development. 
+   PyROS is still under development.
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
@@ -953,55 +960,56 @@ Observe that the log contains the following information:
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.175s.
+   Done preprocessing; required wall time of 0.018s.
    ------------------------------------------------------------------------------
-   Model statistics:
+   Model Statistics:
      Number of variables : 62
        Epigraph variable : 1
        First-stage variables : 7
-       Second-stage variables : 6
-       State variables : 18
+       Second-stage variables : 6 (6 adj.)
+       State variables : 18 (7 adj.)
        Decision rule variables : 30
      Number of uncertain parameters : 4
-     Number of constraints : 81
+     Number of constraints : 52
        Equality constraints : 24
          Coefficient matching constraints : 0
+         Other first-stage equations : 10
+         Second-stage equations : 8
          Decision rule equations : 6
-         All other equality constraints : 18
-       Inequality constraints : 57
-         First-stage inequalities (incl. certain var bounds) : 10
-         Performance constraints (incl. var bounds) : 47
+       Inequality constraints : 28
+         First-stage inequalities : 1
+         Second-stage inequalities : 27
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   1.741        
-   1     3.5838e+07  3.5184e-15   3.9404e-15   10      4.2516e+06   3.766        
-   2     3.5993e+07  1.8105e-01   7.1406e-01   13      5.2004e+06   6.288
-   3     3.6285e+07  5.1968e-01   7.7753e-01   4       1.7892e+04   8.247
-   4     3.6285e+07  9.1166e-13   1.9702e-15   0       7.1157e-10g  11.456
+   0     3.5838e+07  -            -            1       2.7000e+02   0.657
+   1     3.6087e+07  8.0199e-01   1.2807e-01   5       4.1852e+04   1.460
+   2     3.6125e+07  8.7068e-01   2.7098e-01   8       2.7711e+01   3.041
+   3     3.6174e+07  7.6526e-01   2.2357e-01   4       1.3893e+02   4.186
+   4     3.6285e+07  2.8923e-01   3.4064e-01   0       1.2670e-09g  7.162
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-
+   
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1    11.457    11.457  100.0
+   main                           1     7.163     7.163  100.0
         ------------------------------------------------------
-        dr_polishing              4     0.682     0.171    6.0
-        global_separation        47     1.109     0.024    9.7
-        local_separation        235     5.810     0.025   50.7
-        master                    5     1.353     0.271   11.8
-        master_feasibility        4     0.247     0.062    2.2
-        preprocessing             1     0.429     0.429    3.7
-        other                   n/a     1.828       n/a   16.0
+        dr_polishing              4     0.293     0.073    4.1
+        global_separation        27     1.106     0.041   15.4
+        local_separation        135     3.385     0.025   47.3
+        master                    5     1.396     0.279   19.5
+        master_feasibility        4     0.155     0.039    2.2
+        preprocessing             1     0.018     0.018    0.2
+        other                   n/a     0.811       n/a   11.3
         ======================================================
    ===========================================================
-
+   
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 5
-    Solve time (wall s)   : 11.457
+    Solve time (wall s)   : 7.163
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -1059,10 +1067,10 @@ The constituent columns are defined in the
        there are no second-stage variables,
        or the master problem of the current iteration is not solved successfully.
    * - #CViol
-     - Number of performance constraints found to be violated during
+     - Number of second-stage inequality constraints found to be violated during
        the separation step of the current iteration.
-       Unless a custom prioritization of the model's performance constraints
-       is specified (through the ``separation_priority_order`` argument),
+       Unless a custom prioritization of the model's second-stage inequality
+       constraints is specified (through the ``separation_priority_order`` argument),
        expect this number to trend downward as the iteration number increases.
        A "+" is appended if not all of the separation problems
        were solved successfully, either due to custom prioritization, a time out,
@@ -1070,13 +1078,13 @@ The constituent columns are defined in the
        A dash ("-") is produced in lieu of a value if the separation
        routine is not invoked during the current iteration.
    * - Max Viol
-     - Maximum scaled performance constraint violation.
+     - Maximum scaled second-stage inequality constraint violation.
        Expect this value to trend downward as the iteration number increases.
        A 'g' is appended to the value if the separation problems were solved
        globally during the current iteration.
        A dash ("-") is produced in lieu of a value if the separation
        routine is not invoked during the current iteration, or if there are
-       no performance constraints.
+       no second-stage inequality constraints.
    * - Wall time (s)
      - Total time elapsed by the solver, in seconds, up to the end of the
        current iteration.
