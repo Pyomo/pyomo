@@ -48,13 +48,14 @@ class GRCSResults:
     iterations : int
         Number of iterations required.
     """
+
     def __init__(
-            self,
-            master_results,
-            separation_results,
-            pyros_termination_condition,
-            iterations,
-            ):
+        self,
+        master_results,
+        separation_results,
+        pyros_termination_condition,
+        iterations,
+    ):
         self.master_results = master_results
         self.separation_results = separation_results
         self.pyros_termination_condition = pyros_termination_condition
@@ -66,8 +67,7 @@ def _evaluate_shift(current, prev, initial, norm=None):
         return None
     else:
         normalizers = np.max(
-            np.vstack((np.ones(initial.size), np.abs(initial))),
-            axis=0,
+            np.vstack((np.ones(initial.size), np.abs(initial))), axis=0
         )
         return np.max(np.abs(current - prev) / normalizers)
 
@@ -91,8 +91,7 @@ def get_variable_value_data(working_blk, dr_var_to_monomial_map):
     )
     dr_term_data = ComponentMap(
         (dr_var, value(monomial))
-        for dr_var, monomial
-        in get_dr_var_to_monomial_map(working_blk).items()
+        for dr_var, monomial in get_dr_var_to_monomial_map(working_blk).items()
     )
 
     return VariableValueData(
@@ -171,14 +170,11 @@ def ROSolver_iterative_solve(model_data, config):
 
         # check master solve status
         # to determine whether to terminate here
-        master_termination_not_acceptable = (
-            master_soln.pyros_termination_condition
-            in {
-                pyrosTerminationCondition.robust_infeasible,
-                pyrosTerminationCondition.time_out,
-                pyrosTerminationCondition.subsolver_error,
-            }
-        )
+        master_termination_not_acceptable = master_soln.pyros_termination_condition in {
+            pyrosTerminationCondition.robust_infeasible,
+            pyrosTerminationCondition.time_out,
+            pyrosTerminationCondition.subsolver_error,
+        }
         if master_termination_not_acceptable:
             iter_log_record = IterationLogRecord(
                 iteration=k,
@@ -212,8 +208,7 @@ def ROSolver_iterative_solve(model_data, config):
 
         # track variable values
         current_iter_var_data = get_variable_value_data(
-            nominal_master_blk,
-            dr_var_monomial_map,
+            nominal_master_blk, dr_var_monomial_map
         )
         if k == 0:
             first_iter_var_data = current_iter_var_data

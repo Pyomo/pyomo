@@ -19,13 +19,7 @@ import unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
-from pyomo.core.base import (
-    ConcreteModel,
-    Constraint,
-    Objective,
-    Param,
-    Var,
-)
+from pyomo.core.base import ConcreteModel, Constraint, Objective, Param, Var
 from pyomo.core.expr import exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -55,9 +49,7 @@ def build_simple_model_data(objective_focus="worst_case"):
     m.x1 = Var(bounds=[-1000, 1000])
     m.x2 = Var(bounds=[-1000, 1000])
     m.x3 = Var(bounds=[-1000, 1000])
-    m.con = Constraint(
-        expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0,
-    )
+    m.con = Constraint(expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0)
 
     # this makes x2 nonadjustable
     m.eq_con = Constraint(expr=m.x2 - 1 == 0)
@@ -88,6 +80,7 @@ class TestConstructSeparationProblem(unittest.TestCase):
     """
     Test method for construction of separation problem.
     """
+
     def test_construct_separation_problem_nonadj_components(self):
         """
         Check first-stage variables and constraints of the
@@ -109,7 +102,7 @@ class TestConstructSeparationProblem(unittest.TestCase):
         for coeff_con in separation_model.first_stage.coefficient_matching_cons:
             self.assertFalse(
                 coeff_con.active,
-                msg=f"Coefficient mathcing constraint {coeff_con.name!r} active."
+                msg=f"Coefficient mathcing constraint {coeff_con.name!r} active.",
             )
 
     def test_construct_separation_problem_ss_ineq_cons(self):
@@ -130,8 +123,13 @@ class TestConstructSeparationProblem(unittest.TestCase):
             self,
             separation_model.second_stage.inequality_cons["epigraph_con"].expr,
             (
-                m.x1 + m.x2 / 2 + m.x3 / 3 + u1_var + u2_var
-                - separation_model.first_stage.epigraph_var <= 0
+                m.x1
+                + m.x2 / 2
+                + m.x3 / 3
+                + u1_var
+                + u2_var
+                - separation_model.first_stage.epigraph_var
+                <= 0
             ),
         )
 
@@ -140,15 +138,21 @@ class TestConstructSeparationProblem(unittest.TestCase):
         )
         self.assertFalse(
             m.con.active,
-            separation_model.second_stage.inequality_cons["ineq_con_con_upper_bound_con"].active
+            separation_model.second_stage.inequality_cons[
+                "ineq_con_con_upper_bound_con"
+            ].active,
         )
         self.assertFalse(
             m.con.active,
-            separation_model.second_stage.inequality_cons["var_x3_certain_lower_bound_con"].active
+            separation_model.second_stage.inequality_cons[
+                "var_x3_certain_lower_bound_con"
+            ].active,
         )
         self.assertFalse(
             m.con.active,
-            separation_model.second_stage.inequality_cons["var_x3_certain_upper_bound_con"].active
+            separation_model.second_stage.inequality_cons[
+                "var_x3_certain_upper_bound_con"
+            ].active,
         )
 
         # check second-stage ineq con expressions match obj expressions
@@ -158,11 +162,7 @@ class TestConstructSeparationProblem(unittest.TestCase):
             len(separation_model.second_stage.inequality_cons),
         )
         for ineq_con, obj in separation_model.second_stage_ineq_con_to_obj_map.items():
-            assertExpressionsEqual(
-                self,
-                ineq_con.body - ineq_con.upper,
-                obj.expr,
-            )
+            assertExpressionsEqual(self, ineq_con.body - ineq_con.upper, obj.expr)
 
     def test_construct_separation_problem_ss_eq_and_dr_cons(self):
         """
@@ -230,10 +230,7 @@ class TestConstructSeparationProblem(unittest.TestCase):
         """
         model_data, config = build_simple_model_data(objective_focus="worst_case")
         config.uncertainty_set = FactorModelSet(
-            origin=[1, 0],
-            beta=1,
-            number_of_factors=2,
-            psi_mat=[[1, 2.5], [0, 1]],
+            origin=[1, 0], beta=1, number_of_factors=2, psi_mat=[[1, 2.5], [0, 1]]
         )
         separation_model = construct_separation_problem(model_data, config)
         uncertainty_blk = separation_model.uncertainty
@@ -246,19 +243,13 @@ class TestConstructSeparationProblem(unittest.TestCase):
         self.assertTrue(matrix_product_cons[1].active)
         self.assertTrue(aux_sum_con.active)
         assertExpressionsEqual(
-            self,
-            aux_sum_con.expr,
-            RangedExpression((-2, auxvar1 + auxvar2, 2), False),
+            self, aux_sum_con.expr, RangedExpression((-2, auxvar1 + auxvar2, 2), False)
         )
         assertExpressionsEqual(
-            self,
-            matrix_product_cons[0].expr,
-            auxvar1 + 2.5 * auxvar2 + 1 == paramvar1,
+            self, matrix_product_cons[0].expr, auxvar1 + 2.5 * auxvar2 + 1 == paramvar1
         )
         assertExpressionsEqual(
-            self,
-            matrix_product_cons[1].expr,
-            0.0 * auxvar1 + auxvar2 == paramvar2,
+            self, matrix_product_cons[1].expr, 0.0 * auxvar1 + auxvar2 == paramvar2
         )
 
         # none of the vars should be fixed

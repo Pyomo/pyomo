@@ -23,11 +23,7 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 from pyomo.environ import SolverFactory
-from pyomo.core.base import (
-    ConcreteModel,
-    Param,
-    Var,
-)
+from pyomo.core.base import ConcreteModel, Param, Var
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
@@ -286,14 +282,10 @@ class TestBoxSet(unittest.TestCase):
         var1, var2 = uq.uncertain_param_vars
 
         assertExpressionsEqual(
-            self,
-            con1.expr,
-            RangedExpression((np.int64(1), var1, np.int64(2)), False),
+            self, con1.expr, RangedExpression((np.int64(1), var1, np.int64(2)), False)
         )
         assertExpressionsEqual(
-            self,
-            con2.expr,
-            RangedExpression((np.int64(3), var2, np.int64(4)), False),
+            self, con2.expr, RangedExpression((np.int64(3), var2, np.int64(4)), False)
         )
 
     def test_set_as_constraint_dim_mismatch(self):
@@ -342,12 +334,12 @@ class TestBoxSet(unittest.TestCase):
         for point in in_set_points:
             self.assertTrue(
                 box_set.point_in_set(point),
-                msg=f"Point {point} should not be in uncertainty set {box_set}."
+                msg=f"Point {point} should not be in uncertainty set {box_set}.",
             )
         for point in out_of_set_points:
             self.assertFalse(
                 box_set.point_in_set(point),
-                msg=f"Point {point} should not be in uncertainty set {box_set}."
+                msg=f"Point {point} should not be in uncertainty set {box_set}.",
             )
 
         # check what happens if dimensions are off
@@ -360,8 +352,7 @@ class TestBoxSet(unittest.TestCase):
         box_set = BoxSet(bounds=[(1, 2), (3, 4)])
 
         box_set._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.uncertain_param_vars,
+            global_solver=None, uncertain_param_vars=m.uncertain_param_vars
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (3, 4))
@@ -549,8 +540,7 @@ class TestBudgetSet(unittest.TestCase):
 
         buset1 = BudgetSet([[1, 1], [0, 1]], rhs_vec=[2, 3], origin=None)
         np.testing.assert_allclose(
-            buset1.parameter_bounds,
-            buset1._compute_parameter_bounds(solver),
+            buset1.parameter_bounds, buset1._compute_parameter_bounds(solver)
         )
 
         # this also checks that the list entries are tuples
@@ -558,12 +548,10 @@ class TestBudgetSet(unittest.TestCase):
 
         buset2 = BudgetSet([[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 2])
         self.assertEqual(
-            buset2.parameter_bounds,
-            buset2._compute_parameter_bounds(solver),
+            buset2.parameter_bounds, buset2._compute_parameter_bounds(solver)
         )
         np.testing.assert_allclose(
-            buset2.parameter_bounds,
-            buset2._compute_parameter_bounds(solver),
+            buset2.parameter_bounds, buset2._compute_parameter_bounds(solver)
         )
         self.assertEqual(buset2.parameter_bounds, [(1, 3), (2, 4)])
 
@@ -590,9 +578,7 @@ class TestBudgetSet(unittest.TestCase):
             m.v1 + np.float64(0) * m.v2 <= np.int64(4),
         )
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[1].expr,
-            m.v1 + m.v2 <= np.int64(6),
+            self, uq.uncertainty_cons[1].expr, m.v1 + m.v2 <= np.int64(6)
         )
         assertExpressionsEqual(
             self,
@@ -653,12 +639,9 @@ class TestBudgetSet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.v = Var([0, 1], initialize=0.5)
-        buset = BudgetSet(
-            [[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 3]
-        )
+        buset = BudgetSet([[1, 0], [1, 1]], rhs_vec=[3, 2], origin=[1, 3])
         buset._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.v,
+            global_solver=None, uncertain_param_vars=m.v
         )
         self.assertEqual(m.v[0].bounds, (1, 3))
         self.assertEqual(m.v[1].bounds, (3, 5))
@@ -799,16 +782,39 @@ class TestFactorModelSet(unittest.TestCase):
             )
 
     @unittest.skipUnless(baron_available, "BARON is not available")
-    @parameterized.expand([
-        # map beta to expected parameter bounds
-        ["beta0", 0, [(-2.0, 2.0), (0.1, 1.9), (-5.0, 9.0), (-4.0, 10.0)]],
-        ["beta1ov6", 1/6, [(-2.5, 2.5), (-0.4, 2.4), (-8.0, 12.0), (-7.0, 13.0)]],
-        ["beta1ov3", 1/3, [(-3.0, 3.0), (-0.9, 2.9), (-11.0, 15.0), (-10.0, 16.0)]],
-        ["beta1ov2", 1/2, [(-3.0, 3.0), (-0.95, 2.95), (-11.5, 15.5), (-10.5, 16.5)]],
-        ["beta2ov3", 2/3, [(-3.0, 3.0), (-1.0, 3.0), (-12.0, 16.0), (-11.0, 17.0)]],
-        ["beta7ov9", 7/9, [(-3.0, 3.0), (-31/30, 91/30), (-37/3, 49/3), (-34/3, 52/3)]],
-        ["beta1", 1, [(-3.0, 3.0), (-1.1, 3.1), (-13.0, 17.0), (-12.0, 18.0)]],
-    ])
+    @parameterized.expand(
+        [
+            # map beta to expected parameter bounds
+            ["beta0", 0, [(-2.0, 2.0), (0.1, 1.9), (-5.0, 9.0), (-4.0, 10.0)]],
+            ["beta1ov6", 1 / 6, [(-2.5, 2.5), (-0.4, 2.4), (-8.0, 12.0), (-7.0, 13.0)]],
+            [
+                "beta1ov3",
+                1 / 3,
+                [(-3.0, 3.0), (-0.9, 2.9), (-11.0, 15.0), (-10.0, 16.0)],
+            ],
+            [
+                "beta1ov2",
+                1 / 2,
+                [(-3.0, 3.0), (-0.95, 2.95), (-11.5, 15.5), (-10.5, 16.5)],
+            ],
+            [
+                "beta2ov3",
+                2 / 3,
+                [(-3.0, 3.0), (-1.0, 3.0), (-12.0, 16.0), (-11.0, 17.0)],
+            ],
+            [
+                "beta7ov9",
+                7 / 9,
+                [
+                    (-3.0, 3.0),
+                    (-31 / 30, 91 / 30),
+                    (-37 / 3, 49 / 3),
+                    (-34 / 3, 52 / 3),
+                ],
+            ],
+            ["beta1", 1, [(-3.0, 3.0), (-1.1, 3.1), (-13.0, 17.0), (-12.0, 18.0)]],
+        ]
+    )
     def test_compute_parameter_bounds(self, name, beta, expected_param_bounds):
         """
         Test parameter bounds computations give expected results.
@@ -824,11 +830,7 @@ class TestFactorModelSet(unittest.TestCase):
 
         param_bounds = fset.parameter_bounds
         # won't be exactly equal,
-        np.testing.assert_allclose(
-            param_bounds,
-            expected_param_bounds,
-            atol=1e-13,
-        )
+        np.testing.assert_allclose(param_bounds, expected_param_bounds, atol=1e-13)
 
         # check parameter bounds matches LP results
         # exactly for each case
@@ -1000,8 +1002,7 @@ class TestFactorModelSet(unittest.TestCase):
         )
 
         fset._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.uncertain_param_vars,
+            global_solver=None, uncertain_param_vars=m.uncertain_param_vars
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-3.0, 3.0))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1.1, 3.1))
@@ -1195,10 +1196,7 @@ class TestIntersectionSet(unittest.TestCase):
         i_set = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
             set2=FactorModelSet(
-                origin=[0, 0],
-                number_of_factors=2,
-                beta=0.75,
-                psi_mat=[[1, 1], [1, 2]],
+                origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
             # ellipsoid. this is enclosed in all the other sets
@@ -1227,41 +1225,28 @@ class TestIntersectionSet(unittest.TestCase):
         # factor model constraints
         aux_vars = uq.auxiliary_vars
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[2].expr,
-            aux_vars[0] + aux_vars[1] == m.v1,
+            self, uq.uncertainty_cons[2].expr, aux_vars[0] + aux_vars[1] == m.v1
         )
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[3].expr,
-            aux_vars[0] + 2 * aux_vars[1] == m.v2,
+            self, uq.uncertainty_cons[3].expr, aux_vars[0] + 2 * aux_vars[1] == m.v2
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[4].expr,
-            RangedExpression(
-                (-1.5, aux_vars[0] + aux_vars[1], 1.5),
-                False,
-            ),
+            RangedExpression((-1.5, aux_vars[0] + aux_vars[1], 1.5), False),
         )
         self.assertEqual(aux_vars[0].bounds, (-1, 1))
         self.assertEqual(aux_vars[1].bounds, (-1, 1))
 
         # cardinality set constraints
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[5].expr,
-            -0.5 + 2 * aux_vars[2] == m.v1,
+            self, uq.uncertainty_cons[5].expr, -0.5 + 2 * aux_vars[2] == m.v1
         )
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[6].expr,
-            -0.5 + 2 * aux_vars[3] == m.v2,
+            self, uq.uncertainty_cons[6].expr, -0.5 + 2 * aux_vars[3] == m.v2
         )
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[7].expr,
-            sum(aux_vars[2:4]) <= 2,
+            self, uq.uncertainty_cons[7].expr, sum(aux_vars[2:4]) <= 2
         )
         self.assertEqual(aux_vars[2].bounds, (0, 1))
         self.assertEqual(uq.auxiliary_vars[3].bounds, (0, 1))
@@ -1270,7 +1255,7 @@ class TestIntersectionSet(unittest.TestCase):
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[8].expr,
-            m.v1 ** 2 / np.float64(0.0625) + m.v2 ** 2 / np.float64(0.0625) <= 1
+            m.v1**2 / np.float64(0.0625) + m.v2**2 / np.float64(0.0625) <= 1,
         )
 
     def test_set_as_constraint_dim_mismatch(self):
@@ -1312,10 +1297,7 @@ class TestIntersectionSet(unittest.TestCase):
         i_set = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
             set2=FactorModelSet(
-                origin=[0, 0],
-                number_of_factors=2,
-                beta=0.75,
-                psi_mat=[[1, 1], [1, 2]],
+                origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
             # another origin-centered square
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
@@ -1339,10 +1321,7 @@ class TestIntersectionSet(unittest.TestCase):
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
             # this is just an origin-centered square
             set2=FactorModelSet(
-                origin=[0, 0],
-                number_of_factors=2,
-                beta=0.75,
-                psi_mat=[[1, 1], [1, 2]],
+                origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
             # ellipsoid. this is enclosed in all the other sets
@@ -1369,10 +1348,7 @@ class TestIntersectionSet(unittest.TestCase):
         iset = IntersectionSet(
             set1=BoxSet([(-0.5, 0.5), (-0.5, 0.5)]),
             set2=FactorModelSet(
-                origin=[0, 0],
-                number_of_factors=2,
-                beta=0.75,
-                psi_mat=[[1, 1], [1, 2]],
+                origin=[0, 0], number_of_factors=2, beta=0.75, psi_mat=[[1, 1], [1, 2]]
             ),
             set3=CardinalitySet([-0.5, -0.5], [2, 2], 2),
             # ellipsoid. this is enclosed in all the other sets
@@ -1509,25 +1485,11 @@ class TestCardinalitySet(unittest.TestCase):
         auxvar1, auxvar2, auxvar3 = uq.auxiliary_vars
 
         assertExpressionsEqual(
-            self,
-            hadamard_cons[0].expr,
-            -0.5 + 2.5 * auxvar1 == var1,
+            self, hadamard_cons[0].expr, -0.5 + 2.5 * auxvar1 == var1
         )
-        assertExpressionsEqual(
-            self,
-            hadamard_cons[1].expr,
-            1.0 + 3.0 * auxvar2 == var2,
-        )
-        assertExpressionsEqual(
-            self,
-            hadamard_cons[2].expr,
-            2.0 + 0.0 * auxvar3 == var3,
-        )
-        assertExpressionsEqual(
-            self,
-            gamma_con.expr,
-            auxvar1 + auxvar2 + auxvar3 <= 1.5,
-        )
+        assertExpressionsEqual(self, hadamard_cons[1].expr, 1.0 + 3.0 * auxvar2 == var2)
+        assertExpressionsEqual(self, hadamard_cons[2].expr, 2.0 + 0.0 * auxvar3 == var3)
+        assertExpressionsEqual(self, gamma_con.expr, auxvar1 + auxvar2 + auxvar3 <= 1.5)
 
     def test_set_as_constraint_dim_mismatch(self):
         """
@@ -1556,9 +1518,7 @@ class TestCardinalitySet(unittest.TestCase):
 
     def test_point_in_set(self):
         cset = CardinalitySet(
-            origin=[-0.5, 1, 2],
-            positive_deviation=[2.5, 3, 0],
-            gamma=1.5,
+            origin=[-0.5, 1, 2], positive_deviation=[2.5, 3, 0], gamma=1.5
         )
 
         self.assertTrue(cset.point_in_set(cset.origin))
@@ -1587,9 +1547,7 @@ class TestCardinalitySet(unittest.TestCase):
         Test parameter bounds computations give expected results.
         """
         cset = CardinalitySet(
-            origin=[-0.5, 1, 2],
-            positive_deviation=[2.5, 3, 0],
-            gamma=1.5,
+            origin=[-0.5, 1, 2], positive_deviation=[2.5, 3, 0], gamma=1.5
         )
         computed_bounds = cset._compute_parameter_bounds(SolverFactory("baron"))
         np.testing.assert_allclose(computed_bounds, [[-0.5, 2], [1, 4], [2, 2]])
@@ -1599,14 +1557,11 @@ class TestCardinalitySet(unittest.TestCase):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1, 2], initialize=0)
         cset = CardinalitySet(
-            origin=[-0.5, 1, 2],
-            positive_deviation=[2.5, 3, 0],
-            gamma=1.5,
+            origin=[-0.5, 1, 2], positive_deviation=[2.5, 3, 0], gamma=1.5
         )
 
         cset._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.uncertain_param_vars,
+            global_solver=None, uncertain_param_vars=m.uncertain_param_vars
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-0.5, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 4))
@@ -1713,8 +1668,7 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         dset = DiscreteScenarioSet([(0, 0), (1.5, 0), (0, 1), (1, 1), (2, 0)])
 
         dset._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.uncertain_param_vars,
+            global_solver=None, uncertain_param_vars=m.uncertain_param_vars
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (0, 1.0))
@@ -1804,9 +1758,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.v = Var([0, 1, 2])
-        aeset = AxisAlignedEllipsoidalSet(
-            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
-        )
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 1.5, 1], half_lengths=[1.5, 2, 0])
         uq = aeset.set_as_constraint(uncertain_params=m.v, block=m)
 
         self.assertEqual(len(uq.uncertainty_cons), 2)
@@ -1816,17 +1768,13 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
 
         con1, con2 = uq.uncertainty_cons
 
-        assertExpressionsEqual(
-            self,
-            con1.expr,
-            m.v[2] == np.float64(1.0)
-        )
+        assertExpressionsEqual(self, con1.expr, m.v[2] == np.float64(1.0))
         assertExpressionsEqual(
             self,
             con2.expr,
             m.v[0] ** 2 / np.float64(2.25)
             + (m.v[1] - np.float64(1.5)) ** 2 / np.float64(4)
-            <= 1
+            <= 1,
         )
 
     def test_set_as_constraint_dim_mismatch(self):
@@ -1836,9 +1784,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.v1 = Var(initialize=0)
-        aeset = AxisAlignedEllipsoidalSet(
-            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
-        )
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 1.5, 1], half_lengths=[1.5, 2, 0])
         with self.assertRaisesRegex(ValueError, ".*dimension"):
             aeset.set_as_constraint(uncertain_params=[m.v1], block=m)
 
@@ -1849,9 +1795,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         """
         m = ConcreteModel()
         m.p1 = Param([0, 1, 2], initialize=0, mutable=True)
-        aeset = AxisAlignedEllipsoidalSet(
-            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
-        )
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 1.5, 1], half_lengths=[1.5, 2, 0])
         with self.assertRaisesRegex(TypeError, ".*valid component type"):
             aeset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
 
@@ -1863,17 +1807,13 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         """
         Test parameter bounds computations give expected results.
         """
-        aeset = AxisAlignedEllipsoidalSet(
-            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
-        )
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 1.5, 1], half_lengths=[1.5, 2, 0])
         computed_bounds = aeset._compute_parameter_bounds(SolverFactory("baron"))
         np.testing.assert_allclose(computed_bounds, [[-1.5, 1.5], [-0.5, 3.5], [1, 1]])
         np.testing.assert_allclose(computed_bounds, aeset.parameter_bounds)
 
     def test_point_in_set(self):
-        aeset = AxisAlignedEllipsoidalSet(
-            center=[0, 0, 1], half_lengths=[1.5, 2, 0],
-        )
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 0, 1], half_lengths=[1.5, 2, 0])
 
         self.assertTrue(aeset.point_in_set([0, 0, 1]))
         self.assertTrue(aeset.point_in_set([0, 2, 1]))
@@ -1891,12 +1831,9 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1, 2], initialize=0)
-        aeset = AxisAlignedEllipsoidalSet(
-            center=[0, 1.5, 1], half_lengths=[1.5, 2, 0],
-        )
+        aeset = AxisAlignedEllipsoidalSet(center=[0, 1.5, 1], half_lengths=[1.5, 2, 0])
         aeset._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.uncertain_param_vars,
+            global_solver=None, uncertain_param_vars=m.uncertain_param_vars
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (-1.5, 1.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.5, 3.5))
@@ -2066,9 +2003,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         """
         m = ConcreteModel()
         eset = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=2.5,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=2.5
         )
         uq = eset.set_as_constraint(uncertain_params=None, block=m)
 
@@ -2083,10 +2018,16 @@ class TestEllipsoidalSet(unittest.TestCase):
             self,
             uq.uncertainty_cons[0].expr,
             (
-                np.float64(4/3) * (var1 - np.float64(1.0)) * (var1 - np.float64(1.0))
-                + np.float64(-2/3) * (var1 - np.float64(1.0)) * (var2 - np.float64(1.5))
-                + np.float64(-2/3) * (var2 - np.float64(1.5)) * (var1 - np.float64(1.0))
-                + np.float64(4/3) * (var2 - np.float64(1.5)) * (var2 - np.float64(1.5))
+                np.float64(4 / 3) * (var1 - np.float64(1.0)) * (var1 - np.float64(1.0))
+                + np.float64(-2 / 3)
+                * (var1 - np.float64(1.0))
+                * (var2 - np.float64(1.5))
+                + np.float64(-2 / 3)
+                * (var2 - np.float64(1.5))
+                * (var1 - np.float64(1.0))
+                + np.float64(4 / 3)
+                * (var2 - np.float64(1.5))
+                * (var2 - np.float64(1.5))
                 <= 2.5
             ),
         )
@@ -2099,9 +2040,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         m = ConcreteModel()
         m.v1 = Var(initialize=0)
         eset = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=2.5,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=2.5
         )
         with self.assertRaisesRegex(ValueError, ".*dimension"):
             eset.set_as_constraint(uncertain_params=[m.v1], block=m)
@@ -2114,9 +2053,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         m = ConcreteModel()
         m.p1 = Param([0, 1], initialize=0, mutable=True)
         eset = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=2.5,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=2.5
         )
         with self.assertRaisesRegex(TypeError, ".*valid component type"):
             eset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
@@ -2126,12 +2063,10 @@ class TestEllipsoidalSet(unittest.TestCase):
 
     def test_point_in_set(self):
         eset = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=2.5,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=2.5
         )
         sqrt_mat = np.linalg.cholesky(eset.shape_matrix)
-        sqrt_scale = eset.scale ** 0.5
+        sqrt_scale = eset.scale**0.5
         center = eset.center
         self.assertTrue(eset.point_in_set(eset.center))
 
@@ -2163,18 +2098,14 @@ class TestEllipsoidalSet(unittest.TestCase):
         """
         baron = SolverFactory("baron")
         eset = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=0.25,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=0.25
         )
         computed_bounds = eset._compute_parameter_bounds(baron)
         np.testing.assert_allclose(computed_bounds, [[0.5, 1.5], [1.0, 2.0]])
         np.testing.assert_allclose(computed_bounds, eset.parameter_bounds)
 
         eset2 = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=2.25,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=2.25
         )
         computed_bounds_2 = eset2._compute_parameter_bounds(baron)
 
@@ -2187,13 +2118,10 @@ class TestEllipsoidalSet(unittest.TestCase):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
         eset = EllipsoidalSet(
-            center=[1, 1.5],
-            shape_matrix=[[1, 0.5], [0.5, 1]],
-            scale=0.25,
+            center=[1, 1.5], shape_matrix=[[1, 0.5], [0.5, 1]], scale=0.25
         )
         eset._add_bounds_on_uncertain_parameters(
-            global_solver=None,
-            uncertain_param_vars=m.uncertain_param_vars,
+            global_solver=None, uncertain_param_vars=m.uncertain_param_vars
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0.5, 1.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 2))
@@ -2311,8 +2239,7 @@ class TestPolyhedralSet(unittest.TestCase):
         """
         m = ConcreteModel()
         pset = PolyhedralSet(
-            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
-            rhs_vec=[2, -1, -1],
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]], rhs_vec=[2, -1, -1]
         )
         uq = pset.set_as_constraint(uncertain_params=None, block=m)
 
@@ -2324,9 +2251,7 @@ class TestPolyhedralSet(unittest.TestCase):
         var1, var2 = uq.uncertain_param_vars
 
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[0].expr,
-            var1 + np.int64(0) * var2 <= np.int64(2),
+            self, uq.uncertainty_cons[0].expr, var1 + np.int64(0) * var2 <= np.int64(2)
         )
         assertExpressionsEqual(
             self,
@@ -2347,8 +2272,7 @@ class TestPolyhedralSet(unittest.TestCase):
         m = ConcreteModel()
         m.v1 = Var(initialize=0)
         pset = PolyhedralSet(
-            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
-            rhs_vec=[2, -1, -1],
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]], rhs_vec=[2, -1, -1]
         )
         with self.assertRaisesRegex(ValueError, ".*dimension"):
             pset.set_as_constraint(uncertain_params=[m.v1], block=m)
@@ -2361,8 +2285,7 @@ class TestPolyhedralSet(unittest.TestCase):
         m = ConcreteModel()
         m.p1 = Param([0, 1], initialize=0, mutable=True)
         pset = PolyhedralSet(
-            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
-            rhs_vec=[2, -1, -1],
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]], rhs_vec=[2, -1, -1]
         )
         with self.assertRaisesRegex(TypeError, ".*valid component type"):
             pset.set_as_constraint(uncertain_params=[m.p1[0], m.p1[1]], block=m)
@@ -2376,8 +2299,7 @@ class TestPolyhedralSet(unittest.TestCase):
         Test parameter bounds computations give expected results.
         """
         pset = PolyhedralSet(
-            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
-            rhs_vec=[2, -1, -1],
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]], rhs_vec=[2, -1, -1]
         )
         self.assertEqual(pset.parameter_bounds, [])
         computed_bounds = pset._compute_parameter_bounds(SolverFactory("baron"))
@@ -2388,8 +2310,7 @@ class TestPolyhedralSet(unittest.TestCase):
         Test point in set checks work as expected.
         """
         pset = PolyhedralSet(
-            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
-            rhs_vec=[2, -1, -1],
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]], rhs_vec=[2, -1, -1]
         )
         self.assertTrue(pset.point_in_set([1, 0]))
         self.assertTrue(pset.point_in_set([2, 1]))
@@ -2407,8 +2328,7 @@ class TestPolyhedralSet(unittest.TestCase):
         m = ConcreteModel()
         m.uncertain_param_vars = Var([0, 1], initialize=0)
         pset = PolyhedralSet(
-            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]],
-            rhs_vec=[2, -1, -1],
+            lhs_coefficients_mat=[[1, 0], [-1, 1], [-1, -1]], rhs_vec=[2, -1, -1]
         )
         pset._add_bounds_on_uncertain_parameters(
             global_solver=SolverFactory("baron"),
@@ -2422,6 +2342,7 @@ class CustomUncertaintySet(UncertaintySet):
     """
     Test simple custom uncertainty set subclass.
     """
+
     def __init__(self, dim):
         self._dim = dim
 

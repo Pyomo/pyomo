@@ -18,13 +18,7 @@ import os
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import TransformationFactory
-from pyomo.core.base import (
-    ConcreteModel,
-    Block,
-    Var,
-    Objective,
-    Constraint,
-)
+from pyomo.core.base import ConcreteModel, Block, Var, Objective, Constraint
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
 from pyomo.core.expr import identify_variables, value
 from pyomo.core.util import prod
@@ -84,19 +78,19 @@ def construct_initial_master_problem(model_data, config):
     # model rather than to the model to prevent
     # duplication across scenario sub-blocks
     master_model.epigraph_obj = Objective(
-        expr=master_model.scenarios[0, 0].first_stage.epigraph_var,
+        expr=master_model.scenarios[0, 0].first_stage.epigraph_var
     )
 
     return master_model
 
 
 def add_scenario_block_to_master_problem(
-        master_model,
-        scenario_idx,
-        param_realization,
-        from_block,
-        clone_first_stage_components,
-        ):
+    master_model,
+    scenario_idx,
+    param_realization,
+    from_block,
+    clone_first_stage_components,
+):
     """
     Add new scenario block to the master model.
 
@@ -140,9 +134,7 @@ def add_scenario_block_to_master_problem(
     master_model.scenarios[scenario_idx].transfer_attributes_from(new_block)
 
     # update uncertain parameter values in new block
-    new_uncertain_params = (
-        master_model.scenarios[scenario_idx].uncertain_params
-    )
+    new_uncertain_params = master_model.scenarios[scenario_idx].uncertain_params
     for param, val in zip(new_uncertain_params, param_realization):
         param.set_value(val)
 
@@ -218,13 +210,12 @@ def construct_master_feasibility_problem(master_data, config):
     # add slack variables and objective
     # inequalities g(v) <= b become g(v) - s^- <= b
     TransformationFactory("core.add_slack_variables").apply_to(
-        slack_model,
-        targets=targets,
+        slack_model, targets=targets
     )
     slack_vars = ComponentSet(
-        slack_model
-        ._core_add_slack_variables
-        .component_data_objects(Var, descend_into=True)
+        slack_model._core_add_slack_variables.component_data_objects(
+            Var, descend_into=True
+        )
     )
 
     # initialize slack variables
@@ -417,10 +408,7 @@ def construct_dr_polishing_problem(master_data, config):
         indexed_polishing_var = Var(
             list(indexed_dr_var.keys()), domain=NonNegativeReals
         )
-        polishing_model.add_component(
-            f"dr_polishing_var_{idx}",
-            indexed_polishing_var,
-        )
+        polishing_model.add_component(f"dr_polishing_var_{idx}", indexed_polishing_var)
         polishing_vars.append(indexed_polishing_var)
 
     # we need the DR expressions to set up the
@@ -431,10 +419,7 @@ def construct_dr_polishing_problem(master_data, config):
         for ss_var in nominal_eff_var_partitioning.second_stage_variables
     ]
 
-    dr_eq_var_zip = zip(
-        polishing_vars,
-        eff_ss_var_to_dr_expr_pairs,
-    )
+    dr_eq_var_zip = zip(polishing_vars, eff_ss_var_to_dr_expr_pairs)
     polishing_model.polishing_abs_val_lb_cons = all_lb_cons = []
     polishing_model.polishing_abs_val_ub_cons = all_ub_cons = []
     for idx, (indexed_polishing_var, (ss_var, dr_expr)) in enumerate(dr_eq_var_zip):
@@ -444,12 +429,10 @@ def construct_dr_polishing_problem(master_data, config):
 
         # add indexed constraints to polishing model
         polishing_model.add_component(
-            f"polishing_abs_val_lb_con_{idx}",
-            polishing_absolute_value_lb_cons,
+            f"polishing_abs_val_lb_con_{idx}", polishing_absolute_value_lb_cons
         )
         polishing_model.add_component(
-            f"polishing_abs_val_ub_con_{idx}",
-            polishing_absolute_value_ub_cons,
+            f"polishing_abs_val_ub_con_{idx}", polishing_absolute_value_ub_cons
         )
 
         # update list of absolute value (i.e., polishing) cons
@@ -481,14 +464,14 @@ def construct_dr_polishing_problem(master_data, config):
             #     across all master blocks
             dr_term_copies = [
                 (
-                    scenario_blk.second_stage.decision_rule_eqns[idx]
-                    .body.args[dr_var_in_term_idx]
+                    scenario_blk.second_stage.decision_rule_eqns[idx].body.args[
+                        dr_var_in_term_idx
+                    ]
                 )
                 for scenario_blk in master_model.scenarios.values()
             ]
             all_copy_coeffs_zero = is_a_nonstatic_dr_term and all(
-                abs(value(prod(term.args[:-1]))) <= 1e-10
-                for term in dr_term_copies
+                abs(value(prod(term.args[:-1]))) <= 1e-10 for term in dr_term_copies
             )
             if all_copy_coeffs_zero:
                 # increment static DR variable value
@@ -611,9 +594,9 @@ def minimize_dr_vars(master_data, config):
     # update master problem variable values
     for idx, blk in master_data.master_model.scenarios.items():
         master_adjustable_vars = blk.all_adjustable_variables
-        polishing_adjustable_vars = (
-            polishing_model.scenarios[idx].all_adjustable_variables
-        )
+        polishing_adjustable_vars = polishing_model.scenarios[
+            idx
+        ].all_adjustable_variables
         adjustable_vars_zip = zip(master_adjustable_vars, polishing_adjustable_vars)
         for master_var, polish_var in adjustable_vars_zip:
             master_var.set_value(value(polish_var))
@@ -698,9 +681,7 @@ def log_master_solve_results(master_model, config, results, desc="Optimized"):
     if config.objective_focus == ObjectiveType.worst_case:
         eval_obj_blk_idx = max(
             master_model.scenarios.keys(),
-            key=lambda idx: value(
-                master_model.scenarios[idx].second_stage_objective
-            ),
+            key=lambda idx: value(master_model.scenarios[idx].second_stage_objective),
         )
     else:
         eval_obj_blk_idx = (0, 0)
@@ -810,9 +791,7 @@ def solver_call_master(master_data, config, master_soln):
                 None,
                 pyrosTerminationCondition.time_out,
             )
-            master_soln.pyros_termination_condition = (
-                pyrosTerminationCondition.time_out
-            )
+            master_soln.pyros_termination_condition = pyrosTerminationCondition.time_out
 
         if not try_backup:
             if infeasible:
@@ -895,18 +874,14 @@ def solve_master(master_data, config):
             setattr(master_soln.results.solver, TIC_TOC_SOLVE_TIME_ATTR, 0)
 
             # PyROS time out status
-            master_soln.pyros_termination_condition = (
-                pyrosTerminationCondition.time_out
-            )
+            master_soln.pyros_termination_condition = pyrosTerminationCondition.time_out
             master_soln.master_subsolver_results = (
                 None,
                 pyrosTerminationCondition.time_out,
             )
             return master_soln
 
-    solver_call_master(
-        master_data=master_data, config=config, master_soln=master_soln
-    )
+    solver_call_master(master_data=master_data, config=config, master_soln=master_soln)
 
     return master_soln
 
@@ -915,10 +890,9 @@ class MasterProblemData:
     """
     Container for objects pertaining to the PyROS master problem.
     """
-    def __init__(self, model_data, config):
-        """Initialize self (see docstring).
 
-        """
+    def __init__(self, model_data, config):
+        """Initialize self (see docstring)."""
         self.master_model = construct_initial_master_problem(model_data, config)
         # we track the original model name for serialization purposes
         self.original_model_name = model_data.original_model.name

@@ -20,19 +20,9 @@ import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
-from pyomo.core.base import (
-    Block,
-    Constraint,
-    maximize,
-    Objective,
-    value,
-    Var,
-)
+from pyomo.core.base import Block, Constraint, maximize, Objective, value, Var
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core.expr import (
-    replace_expressions,
-    identify_mutable_parameters,
-)
+from pyomo.core.expr import replace_expressions, identify_mutable_parameters
 
 from pyomo.contrib.pyros.solve_data import (
     DiscreteSeparationSolveCallResults,
@@ -67,11 +57,8 @@ def add_uncertainty_set_constraints(separation_model, config):
         },
     )
     indexed_param_var = separation_model.uncertainty.uncertain_param_indexed_var
-    uncertainty_quantification = (
-        config.uncertainty_set.set_as_constraint(
-            uncertain_params=indexed_param_var,
-            block=separation_model.uncertainty,
-        )
+    uncertainty_quantification = config.uncertainty_set.set_as_constraint(
+        uncertain_params=indexed_param_var, block=separation_model.uncertainty
     )
 
     # facilitate retrieval later
@@ -81,15 +68,11 @@ def add_uncertainty_set_constraints(separation_model, config):
     separation_model.uncertainty.uncertainty_cons_list = uncertainty_cons
 
     config.uncertainty_set._add_bounds_on_uncertain_parameters(
-        uncertain_param_vars=param_var_list,
-        global_solver=config.global_solver,
+        uncertain_param_vars=param_var_list, global_solver=config.global_solver
     )
     if aux_vars:
-        aux_var_vals = (
-            config.uncertainty_set.compute_auxiliary_uncertain_param_vals(
-                point=config.nominal_uncertain_param_vals,
-                solver=config.global_solver,
-            )
+        aux_var_vals = config.uncertainty_set.compute_auxiliary_uncertain_param_vals(
+            point=config.nominal_uncertain_param_vals, solver=config.global_solver
         )
         for auxvar, auxval in zip(aux_vars, aux_var_vals):
             auxvar.set_value(auxval)
@@ -144,8 +127,7 @@ def construct_separation_problem(model_data, config):
     uncertain_params = separation_model.uncertain_params
     uncertain_param_vars = separation_model.uncertainty.uncertain_param_var_list
     param_id_to_var_map = {
-        id(param): var
-        for param, var in zip(uncertain_params, uncertain_param_vars)
+        id(param): var for param, var in zip(uncertain_params, uncertain_param_vars)
     }
     uncertain_params_set = ComponentSet(uncertain_params)
     adjustable_cons = (
@@ -154,9 +136,10 @@ def construct_separation_problem(model_data, config):
         + list(separation_model.second_stage.decision_rule_eqns.values())
     )
     for adjcon in adjustable_cons:
-        uncertain_params_in_con = ComponentSet(
-            identify_mutable_parameters(adjcon.expr)
-        ) & uncertain_params_set
+        uncertain_params_in_con = (
+            ComponentSet(identify_mutable_parameters(adjcon.expr))
+            & uncertain_params_set
+        )
         if uncertain_params_in_con:
             adjcon.set_value(
                 replace_expressions(adjcon.expr, substitution_map=param_id_to_var_map)
@@ -168,11 +151,10 @@ def construct_separation_problem(model_data, config):
     ss_ineq_cons = separation_model.second_stage.inequality_cons.values()
     for idx, ss_ineq_con in enumerate(ss_ineq_cons):
         ss_ineq_con.deactivate()
-        separation_obj = Objective(expr=ss_ineq_con.body - ss_ineq_con.upper, sense=maximize)
-        separation_model.add_component(
-            f"separation_obj_{idx}",
-            separation_obj,
+        separation_obj = Objective(
+            expr=ss_ineq_con.body - ss_ineq_con.upper, sense=maximize
         )
+        separation_model.add_component(f"separation_obj_{idx}", separation_obj)
         separation_model.second_stage_ineq_con_to_obj_map[ss_ineq_con] = separation_obj
         separation_obj.deactivate()
 
@@ -354,11 +336,7 @@ def solve_separation_problem(separation_data, master_data, config):
     )
 
 
-def evaluate_violations_by_nominal_master(
-        separation_data,
-        master_data,
-        ss_ineq_cons,
-        ):
+def evaluate_violations_by_nominal_master(separation_data, master_data, ss_ineq_cons):
     """
     Evaluate violation of second-stage inequality constraints by
     variables in nominal block of most recent master
@@ -424,10 +402,7 @@ def group_ss_ineq_constraints_by_priority(separation_data, config):
 
 
 def get_worst_discrete_separation_solution(
-    ss_ineq_con,
-    config,
-    ss_ineq_cons_to_evaluate,
-    discrete_solve_results,
+    ss_ineq_con, config, ss_ineq_cons_to_evaluate, discrete_solve_results
 ):
     """
     Determine separation solution (and therefore worst-case
@@ -492,8 +467,7 @@ def get_worst_discrete_separation_solution(
     if is_optimized_ss_ineq_con:
         results_list = [
             res
-            for solve_call_results
-            in discrete_solve_results.solver_call_results.values()
+            for solve_call_results in discrete_solve_results.solver_call_results.values()
             for res in solve_call_results.results_list
         ]
     else:
@@ -622,8 +596,7 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
             single_solver_call_res = ComponentMap()
             results_list = [
                 res
-                for solve_call_results
-                in discrete_sep_results.solver_call_results.values()
+                for solve_call_results in discrete_sep_results.solver_call_results.values()
                 for res in solve_call_results.results_list
             ]
             single_solver_call_res[ss_ineq_con_to_maximize] = (
@@ -808,7 +781,7 @@ def evaluate_ss_ineq_con_violations(
     violations_by_sep_solution = get_sep_objective_values(
         separation_data=separation_data,
         config=config,
-        ss_ineq_cons=ss_ineq_cons_to_evaluate
+        ss_ineq_cons=ss_ineq_cons_to_evaluate,
     )
 
     # normalize constraint violation: i.e. divide by
@@ -830,7 +803,9 @@ def evaluate_ss_ineq_con_violations(
     return (violating_param_realization, scaled_violations, constraint_violated)
 
 
-def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data, config):
+def initialize_separation(
+    ss_ineq_con_to_maximize, separation_data, master_data, config
+):
     """
     Initialize separation problem variables using the solution
     to the most recent master problem.
@@ -864,8 +839,8 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data,
         Evaluate violation of `ss_ineq_con` by variables of
         specified master block.
         """
-        master_con = (
-            master_model.scenarios[scenario_idx].find_component(ss_ineq_con_to_maximize)
+        master_con = master_model.scenarios[scenario_idx].find_component(
+            ss_ineq_con_to_maximize
         )
         return value(master_con)
 
@@ -873,8 +848,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data,
     # second-stage ineq constraint of interest. Gives the best known
     # feasible solution (for case of non-discrete uncertainty sets).
     worst_master_block_idx = max(
-        master_model.scenarios.keys(),
-        key=eval_master_violation,
+        master_model.scenarios.keys(), key=eval_master_violation
     )
     worst_case_master_blk = master_model.scenarios[worst_master_block_idx]
     for sep_var in sep_model.all_variables:
@@ -885,9 +859,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data,
     # have already been addressed
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
         param_vars = sep_model.uncertainty.uncertain_param_var_list
-        param_values = separation_data.points_added_to_master[
-            worst_master_block_idx
-        ]
+        param_values = separation_data.points_added_to_master[worst_master_block_idx]
         for param_var, val in zip(param_vars, param_values):
             param_var.set_value(val)
 
@@ -908,9 +880,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data,
     #       variables later
     tol = ABS_CON_CHECK_FEAS_TOL
     ss_ineq_con_name_repr = get_con_name_repr(
-        separation_model=sep_model,
-        con=ss_ineq_con_to_maximize,
-        with_obj_name=True,
+        separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
     )
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry is Geometry.DISCRETE_SCENARIOS
@@ -919,9 +889,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data,
         lslack, uslack = con.lslack(), con.uslack()
         if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
             con_name_repr = get_con_name_repr(
-                separation_model=sep_model,
-                con=con,
-                with_obj_name=False,
+                separation_model=sep_model, con=con, with_obj_name=False
             )
             config.progress_logger.debug(
                 f"Initial point for separation of second-stage ineq constraint "
@@ -936,8 +904,12 @@ globally_acceptable = {tc.optimal, tc.globallyOptimal}
 
 
 def solver_call_separation(
-    separation_data, master_data, config,
-    solve_globally, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
+    separation_data,
+    master_data,
+    config,
+    solve_globally,
+    ss_ineq_con_to_maximize,
+    ss_ineq_cons_to_evaluate,
 ):
     """
     Invoke subordinate solver(s) on separation problem.
@@ -1050,7 +1022,10 @@ def solver_call_separation(
                 solve_call_results.scaled_violations,
                 solve_call_results.found_violation,
             ) = evaluate_ss_ineq_con_violations(
-                separation_data, config, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
+                separation_data,
+                config,
+                ss_ineq_con_to_maximize,
+                ss_ineq_cons_to_evaluate,
             )
             solve_call_results.auxiliary_param_values = [
                 auxvar.value
@@ -1115,8 +1090,12 @@ def solver_call_separation(
 
 
 def discrete_solve(
-    separation_data, master_data, config,
-    solve_globally, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
+    separation_data,
+    master_data,
+    config,
+    solve_globally,
+    ss_ineq_con_to_maximize,
+    ss_ineq_cons_to_evaluate,
 ):
     """
     Obtain separation problem solution for each scenario
@@ -1214,21 +1193,22 @@ class SeparationProblemData:
     """
     Container for objects related to the PyROS separation problem.
     """
-    def __init__(self, model_data, config):
-        """Initialize self (see class docstring).
 
-        """
+    def __init__(self, model_data, config):
+        """Initialize self (see class docstring)."""
         self.separation_model = construct_separation_problem(model_data, config)
         self.timing = model_data.timing
         self.iteration = 0
         self.config = config
         self.points_added_to_master = {(0, 0): config.nominal_uncertain_param_vals}
-        self.auxiliary_values_for_master_points = {(0, 0): [
-            # auxiliary variable values for nominal point have already
-            # been computed and loaded into separation model
-            aux_var.value
-            for aux_var in self.separation_model.uncertainty.auxiliary_var_list
-        ]}
+        self.auxiliary_values_for_master_points = {
+            (0, 0): [
+                # auxiliary variable values for nominal point have already
+                # been computed and loaded into separation model
+                aux_var.value
+                for aux_var in self.separation_model.uncertainty.auxiliary_var_list
+            ]
+        }
 
         if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
             self.idxs_of_master_scenarios = [

@@ -21,14 +21,7 @@ import unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import numpy_available, scipy_available
-from pyomo.core.base import (
-    ConcreteModel,
-    Constraint,
-    minimize,
-    Objective,
-    Param,
-    Var,
-)
+from pyomo.core.base import ConcreteModel, Constraint, minimize, Objective, Param, Var
 from pyomo.core.expr import exp
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import SolverFactory
@@ -71,9 +64,7 @@ def build_simple_model_data(objective_focus="worst_case"):
     m.x1 = Var(bounds=[-1000, 1000], initialize=1)
     m.x2 = Var(bounds=[-1000, 1000], initialize=1)
     m.x3 = Var(bounds=[-1000, 1000], initialize=-3)
-    m.con = Constraint(
-        expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0,
-    )
+    m.con = Constraint(expr=exp(m.u - 1) - m.x1 - m.x2 * m.u - m.x3 * m.u**2 <= 0)
     m.eq_con = Constraint(expr=m.x2 - 1 == 0)
 
     m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3)
@@ -291,7 +282,7 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         assertExpressionsEqual(
             self,
             slack_user_model_x3_lb_con.body <= slack_user_model_x3_lb_con.upper,
-            -scenario_10_blk.user_model.x3 - slack_user_model_x3_lb_con_var <= 1000.0
+            -scenario_10_blk.user_model.x3 - slack_user_model_x3_lb_con_var <= 1000.0,
         )
         self.assertEqual(slack_user_model_x3_lb_con_var.value, 0)
 
@@ -305,7 +296,7 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         assertExpressionsEqual(
             self,
             slack_user_model_x3_ub_con.body <= slack_user_model_x3_ub_con.upper,
-            scenario_10_blk.user_model.x3 - slack_user_model_x3_ub_con_var <= 1000.0
+            scenario_10_blk.user_model.x3 - slack_user_model_x3_ub_con_var <= 1000.0,
         )
         self.assertEqual(slack_user_model_x3_lb_con_var.value, 0)
 
@@ -328,15 +319,14 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         slack_model = construct_master_feasibility_problem(master_data, config)
 
         self.assertFalse(slack_model.epigraph_obj.active)
-        self.assertTrue(
-            slack_model._core_add_slack_variables._slack_objective.active
-        )
+        self.assertTrue(slack_model._core_add_slack_variables._slack_objective.active)
 
 
 class TestDRPolishingProblem(unittest.TestCase):
     """
     Tests for the PyROS DR polishing problem.
     """
+
     def build_simple_master_data(self):
         """
         Construct master data-like object for feasibility problem
@@ -362,12 +352,9 @@ class TestDRPolishingProblem(unittest.TestCase):
         """
         master_data, config = self.build_simple_master_data()
         polishing_model = construct_dr_polishing_problem(master_data, config)
-        eff_first_stage_vars = (
-            polishing_model
-            .scenarios[0, 0]
-            .effective_var_partitioning
-            .first_stage_variables
-        )
+        eff_first_stage_vars = polishing_model.scenarios[
+            0, 0
+        ].effective_var_partitioning.first_stage_variables
         for effective_first_stage_var in eff_first_stage_vars:
             self.assertTrue(
                 effective_first_stage_var.fixed,
@@ -390,8 +377,9 @@ class TestDRPolishingProblem(unittest.TestCase):
         # so they should remain active
         # self.assertTrue(nom_polishing_block.user_model.con.active)
         self.assertTrue(
-            nom_polishing_block
-            .second_stage.inequality_cons["ineq_con_con_upper_bound_con"].active
+            nom_polishing_block.second_stage.inequality_cons[
+                "ineq_con_con_upper_bound_con"
+            ].active
         )
         self.assertTrue(nom_polishing_block.second_stage.decision_rule_eqns[0].active)
 
@@ -403,9 +391,9 @@ class TestDRPolishingProblem(unittest.TestCase):
         master_data, config = self.build_simple_master_data()
         # DR order is 1, and x3 is second-stage.
         # to test fixing efficiency, fix the affine DR variable
-        decision_rule_vars = (
-            master_data.master_model.scenarios[0, 0].first_stage.decision_rule_vars
-        )
+        decision_rule_vars = master_data.master_model.scenarios[
+            0, 0
+        ].first_stage.decision_rule_vars
         decision_rule_vars[0][1].fix()
         polishing_model = construct_dr_polishing_problem(master_data, config)
         nom_polishing_block = polishing_model.scenarios[0, 0]
@@ -484,18 +472,21 @@ class TestSolveMaster(unittest.TestCase):
     """
     Test method for solving master problem
     """
+
     @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
     def test_solve_master(self):
         model_data, config = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(dict(
-            local_solver=baron,
-            global_solver=baron,
-            backup_local_solvers=[],
-            backup_global_solvers=[],
-            tee=False,
-        ))
+        config.update(
+            dict(
+                local_solver=baron,
+                global_solver=baron,
+                backup_local_solvers=[],
+                backup_global_solvers=[],
+                tee=False,
+            )
+        )
         master_data = MasterProblemData(model_data, config)
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = master_data.solve_master()
@@ -517,14 +508,16 @@ class TestSolveMaster(unittest.TestCase):
         model_data, config = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(dict(
-            local_solver=baron,
-            global_solver=baron,
-            backup_local_solvers=[],
-            backup_global_solvers=[],
-            tee=False,
-            time_limit=1,
-        ))
+        config.update(
+            dict(
+                local_solver=baron,
+                global_solver=baron,
+                backup_local_solvers=[],
+                backup_global_solvers=[],
+                tee=False,
+                time_limit=1,
+            )
+        )
         master_data = MasterProblemData(model_data, config)
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
@@ -551,14 +544,16 @@ class TestSolveMaster(unittest.TestCase):
         model_data, config = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(dict(
-            local_solver=baron,
-            global_solver=baron,
-            backup_local_solvers=[],
-            backup_global_solvers=[],
-            tee=False,
-            time_limit=1,
-        ))
+        config.update(
+            dict(
+                local_solver=baron,
+                global_solver=baron,
+                backup_local_solvers=[],
+                backup_global_solvers=[],
+                tee=False,
+                time_limit=1,
+            )
+        )
         master_data = MasterProblemData(model_data, config)
         add_scenario_block_to_master_problem(
             master_data.master_model,
@@ -585,6 +580,7 @@ class TestPolishDRVars(unittest.TestCase):
     """
     Test DR polishing subroutine.
     """
+
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
@@ -592,13 +588,15 @@ class TestPolishDRVars(unittest.TestCase):
         model_data, config = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(dict(
-            local_solver=baron,
-            global_solver=baron,
-            backup_local_solvers=[],
-            backup_global_solvers=[],
-            tee=False,
-        ))
+        config.update(
+            dict(
+                local_solver=baron,
+                global_solver=baron,
+                backup_local_solvers=[],
+                backup_global_solvers=[],
+                tee=False,
+            )
+        )
         master_data = MasterProblemData(model_data, config)
         add_scenario_block_to_master_problem(
             master_data.master_model,
@@ -613,8 +611,7 @@ class TestPolishDRVars(unittest.TestCase):
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = master_data.solve_master()
             self.assertEqual(
-                master_soln.termination_condition,
-                TerminationCondition.optimal,
+                master_soln.termination_condition, TerminationCondition.optimal
             )
 
             results, success = master_data.solve_dr_polishing()

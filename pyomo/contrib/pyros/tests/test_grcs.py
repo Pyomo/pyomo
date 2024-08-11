@@ -207,10 +207,7 @@ class TestPyROSSolveFactorModelSet(unittest.TestCase):
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
         fset = FactorModelSet(
-            origin=[1.125, 1],
-            beta=1,
-            number_of_factors=1,
-            psi_mat=[[0.5], [0.5]],
+            origin=[1.125, 1], beta=1, number_of_factors=1, psi_mat=[[0.5], [0.5]]
         )
 
         # Instantiate the PyROS solver
@@ -312,6 +309,7 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
     """
     Test PyROS solves models with discrete uncertainty sets.
     """
+
     @unittest.skipUnless(
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
@@ -1539,7 +1537,7 @@ class RegressionTest(unittest.TestCase):
     )
     @unittest.skipIf(
         (24, 1, 5) <= baron_version and baron_version <= (24, 5, 8),
-        f"Test expected to fail for BARON version {baron_version}"
+        f"Test expected to fail for BARON version {baron_version}",
     )
     def test_coeff_matching_solver_insensitive(self):
         """
@@ -1745,8 +1743,7 @@ class RegressionTest(unittest.TestCase):
 
         pyros_log = LOG.getvalue()
         self.assertRegex(
-            pyros_log,
-            r".*Equality constraint '.*eq_con.*'.*cannot be written.*",
+            pyros_log, r".*Equality constraint '.*eq_con.*'.*cannot be written.*"
         )
 
         # should still solve in spite of coefficient matching
@@ -3063,10 +3060,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
 
         # now perform checks
         with LoggingIntercept(level=logging.ERROR) as LOG:
-            exc_str = (
-                "Found Vars.*active.*"
-                "not descended from.*model.*"
-            )
+            exc_str = "Found Vars.*active.*" "not descended from.*model.*"
             with self.assertRaisesRegex(ValueError, exc_str):
                 pyros.solve(
                     model=mdl,
@@ -3086,8 +3080,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
             msg="Number of lines referencing name of invalid Vars not as expected.",
         )
         self.assertRegex(
-            text=invalid_vars_strs_list[0],
-            expected_regex=f"{mdl2.x2.name!r}",
+            text=invalid_vars_strs_list[0], expected_regex=f"{mdl2.x2.name!r}"
         )
 
     def test_pyros_non_continuous_vars(self):

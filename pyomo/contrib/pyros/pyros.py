@@ -357,8 +357,7 @@ class PyROS(object):
             self._log_disclaimer(logger=progress_logger, level=logging.INFO)
 
             config, user_var_partitioning = self._resolve_and_validate_pyros_args(
-                model,
-                **kwds,
+                model, **kwds
             )
             self._log_config(
                 logger=config.progress_logger,
@@ -370,9 +369,7 @@ class PyROS(object):
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
             robust_infeasible = preprocess_model_data(
-                model_data,
-                config,
-                user_var_partitioning,
+                model_data, config, user_var_partitioning
             )
             model_data.timing.stop_timer("main.preprocessing")
             preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
@@ -389,13 +386,10 @@ class PyROS(object):
                 pyros_soln = ROSolver_iterative_solve(model_data, config)
                 IterationLogRecord.log_header_rule(config.progress_logger.info)
 
-                termination_acceptable = (
-                    pyros_soln.pyros_termination_condition
-                    in {
-                        pyrosTerminationCondition.robust_optimal,
-                        pyrosTerminationCondition.robust_feasible
-                    }
-                )
+                termination_acceptable = pyros_soln.pyros_termination_condition in {
+                    pyrosTerminationCondition.robust_optimal,
+                    pyrosTerminationCondition.robust_feasible,
+                }
                 if termination_acceptable:
                     load_final_solution(
                         model_data=model_data,
@@ -407,8 +401,7 @@ class PyROS(object):
                 # get the most recent master objective, if available
                 return_soln.final_objective_value = None
                 master_epigraph_obj_value = value(
-                    pyros_soln.master_results.master_model.epigraph_obj,
-                    exception=False,
+                    pyros_soln.master_results.master_model.epigraph_obj, exception=False
                 )
                 if master_epigraph_obj_value is not None:
                     # account for sense of the original model objective

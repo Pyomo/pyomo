@@ -321,7 +321,12 @@ def validate_dimensions(arr_name, arr, dim, display_value=False):
 
 
 def validate_array(
-    arr, arr_name, dim, valid_types, valid_type_desc=None, required_shape=None,
+    arr,
+    arr_name,
+    dim,
+    valid_types,
+    valid_type_desc=None,
+    required_shape=None,
     required_shape_qual="",
 ):
     """
@@ -377,7 +382,9 @@ def validate_array(
                 actual_shape_str = generate_shape_str(np_arr.shape, required_shape)
                 required_shape_qual = (
                     # add a preceding space, if needed
-                    f" {required_shape_qual}" if required_shape_qual else ""
+                    f" {required_shape_qual}"
+                    if required_shape_qual
+                    else ""
                 )
                 raise ValueError(
                     f"Attribute '{arr_name}' should be of shape "
@@ -581,7 +588,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             valid_types=valid_num_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
-            required_shape_qual="to match the set dimension"
+            required_shape_qual="to match the set dimension",
         )
 
         m = ConcreteModel()
@@ -1241,7 +1248,7 @@ class CardinalitySet(UncertaintySet):
             valid_types=valid_num_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
-            required_shape_qual="to match the set dimension"
+            required_shape_qual="to match the set dimension",
         )
         point_arr = np.array(point)
 
@@ -2091,7 +2098,7 @@ class FactorModelSet(UncertaintySet):
             valid_types=valid_num_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
-            required_shape_qual="to match the set dimension"
+            required_shape_qual="to match the set dimension",
         )
         point_arr = np.array(point)
 
@@ -2120,9 +2127,10 @@ class FactorModelSet(UncertaintySet):
         """
         aux_space_pt = self.compute_auxiliary_uncertain_param_vals(point)
         tol = 1e-8
-        return (
-            abs(aux_space_pt.sum()) <= self.beta * self.number_of_factors + tol
-            and np.all(np.abs(aux_space_pt) <= 1 + tol)
+        return abs(
+            aux_space_pt.sum()
+        ) <= self.beta * self.number_of_factors + tol and np.all(
+            np.abs(aux_space_pt) <= 1 + tol
         )
 
 
@@ -2551,7 +2559,7 @@ class EllipsoidalSet(UncertaintySet):
             valid_types=valid_num_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
-            required_shape_qual="to match the set dimension"
+            required_shape_qual="to match the set dimension",
         )
         off_center = point - self.center
         normalized_pt_radius = np.sqrt(
@@ -2746,7 +2754,7 @@ class DiscreteScenarioSet(UncertaintySet):
             valid_types=valid_num_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
-            required_shape_qual="to match the set dimension"
+            required_shape_qual="to match the set dimension",
         )
         # Round all double precision to a tolerance
         rounded_scenarios = np.round(self.scenarios, decimals=8)

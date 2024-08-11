@@ -34,17 +34,8 @@ from pyomo.core.base import (
     maximize,
     Block,
 )
-from pyomo.core.base.set_types import (
-    NonNegativeReals,
-    NonPositiveReals,
-    Reals,
-)
-from pyomo.core.expr import (
-    log,
-    sin,
-    exp,
-    RangedExpression,
-)
+from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
+from pyomo.core.expr import log, sin, exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.util import (
@@ -66,6 +57,7 @@ from pyomo.contrib.pyros.util import (
     preprocess_model_data,
     log_model_statistics,
 )
+
 parameterized, param_available = attempt_import('parameterized')
 
 if not (numpy_available and scipy_available and param_available):
@@ -98,15 +90,11 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
 
         m.c0 = Constraint(expr=m.q + m.x1 + m.z == 0)
         m.c1 = Constraint(expr=(0, m.x1 - m.z, 0))
-        m.c2 = Constraint(expr=m.x1 ** 2 - m.z + m.y[1] == 0)
-        m.c2_dupl = Constraint(expr=m.x1 ** 2 - m.z + m.y[1] == 0)
-        m.c3 = Constraint(expr=m.x1 ** 3 + m.y[1] + 2 * m.y[2] == 0)
-        m.c4 = Constraint(
-            expr=m.x2 ** 2 + m.y[1] + m.y[2] + m.y[3] + m.y[4] == 0
-        )
-        m.c5 = Constraint(
-            expr=m.x2 + 2 * m.y[2] + m.y[3] + 2 * m.y[4] == 0
-        )
+        m.c2 = Constraint(expr=m.x1**2 - m.z + m.y[1] == 0)
+        m.c2_dupl = Constraint(expr=m.x1**2 - m.z + m.y[1] == 0)
+        m.c3 = Constraint(expr=m.x1**3 + m.y[1] + 2 * m.y[2] == 0)
+        m.c4 = Constraint(expr=m.x2**2 + m.y[1] + m.y[2] + m.y[3] + m.y[4] == 0)
+        m.c5 = Constraint(expr=m.x2 + 2 * m.y[2] + m.y[3] + 2 * m.y[4] == 0)
 
         model_data = Bunch()
         model_data.working_model = ConcreteModel()
@@ -140,8 +128,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data,
-                config=config,
+                model_data=model_data, config=config
             )
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
@@ -160,8 +147,8 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
 
         # linear coefficient below tolerance;
         # that should prevent pretriangularization
-        m.c2.set_value(m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
-        m.c2_dupl.set_value(m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
+        m.c2.set_value(m.x1**2 + m.z + 1e-10 * m.y[1] == 0)
+        m.c2_dupl.set_value(m.x1**2 + m.z + 1e-10 * m.y[1] == 0)
         expected_partitioning = {
             "first_stage_variables": [m.x1, m.x2, m.z],
             "second_stage_variables": [],
@@ -170,8 +157,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data,
-                config=config,
+                model_data=model_data, config=config
             )
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
@@ -190,8 +176,8 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
 
         # put linear coefs above tolerance again:
         # original behavior expected
-        m.c2.set_value(1e-6 * m.y[1] + m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
-        m.c2_dupl.set_value(1e-6 * m.y[1] + m.x1 ** 2 + m.z + 1e-10 * m.y[1] == 0)
+        m.c2.set_value(1e-6 * m.y[1] + m.x1**2 + m.z + 1e-10 * m.y[1] == 0)
+        m.c2_dupl.set_value(1e-6 * m.y[1] + m.x1**2 + m.z + 1e-10 * m.y[1] == 0)
         expected_partitioning = {
             "first_stage_variables": [m.x1, m.x2, m.z, m.y[1], m.y[2]],
             "second_stage_variables": [],
@@ -200,8 +186,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data,
-                config=config,
+                model_data=model_data, config=config
             )
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
@@ -225,12 +210,11 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             "second_stage_variables": [],
             "state_variables": [m.y[2], m.y[3], m.y[4]],
         }
-        m.c3.set_value(m.x1 ** 3 + m.y[1] + 2 * m.y[1] * m.y[2] == 0)
+        m.c3.set_value(m.x1**3 + m.y[1] + 2 * m.y[1] * m.y[2] == 0)
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data,
-                config=config,
+                model_data=model_data, config=config
             )
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
@@ -257,8 +241,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data,
-                config=config,
+                model_data=model_data, config=config
             )
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
@@ -285,7 +268,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         # now the second-stage variable can't be determined uniquely;
         # can't pretriangularize this unless z already known to be
         # nonadjustable
-        m.c1.set_value((0, m.x1 + m.z ** 2, 0))
+        m.c1.set_value((0, m.x1 + m.z**2, 0))
 
         config = Bunch()
         config.decision_rule_order = 0
@@ -297,8 +280,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             "state_variables": [m.y[3], m.y[4]],
         }
         actual_partitioning_static_dr = get_effective_var_partitioning(
-            model_data=model_data,
-            config=config,
+            model_data=model_data, config=config
         )
         for vartype, expected_vars in expected_partitioning_static_dr.items():
             actual_vars = getattr(actual_partitioning_static_dr, vartype)
@@ -323,8 +305,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         }
         for dr_order in [1, 2]:
             actual_partitioning_nonstatic_dr = get_effective_var_partitioning(
-                model_data=model_data,
-                config=config,
+                model_data=model_data, config=config
             )
             for vartype, expected_vars in expected_partitioning_nonstatic_dr.items():
                 actual_vars = getattr(actual_partitioning_nonstatic_dr, vartype)
@@ -346,6 +327,7 @@ class TestSetupModelData(unittest.TestCase):
     """
     Test method for setting up the working model works as expected.
     """
+
     def build_test_model_data(self):
         """
         Build model data object for the preprocessor.
@@ -363,7 +345,7 @@ class TestSetupModelData(unittest.TestCase):
 
         # second-stage variables
         m.z1 = Var(domain=RangeSet(2, 4, 0), bounds=[-m.p, m.q], initialize=2)
-        m.z2 = Var(bounds=(-2 * m.q ** 2, None), initialize=1)
+        m.z2 = Var(bounds=(-2 * m.q**2, None), initialize=1)
         m.z3 = Var(bounds=(-m.q, 0), initialize=0)
         m.z4 = Var(initialize=5)
         m.z5 = Var(domain=NonNegativeReals, bounds=(m.q, m.q))
@@ -382,14 +364,14 @@ class TestSetupModelData(unittest.TestCase):
         # EQUALITY CONSTRAINTS
         m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
         m.eq2 = Constraint(expr=m.x1 - m.z1 == 0)
-        m.eq3 = Constraint(expr=m.x1 ** 2 + m.x2 + m.p * m.z2 == m.p)
+        m.eq3 = Constraint(expr=m.x1**2 + m.x2 + m.p * m.z2 == m.p)
         m.eq4 = Constraint(expr=m.z3 + m.y1 == m.q)
 
         # INEQUALITY CONSTRAINTS
         m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
         m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
         m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
-        m.ineq4 = Constraint(expr=-m.q <= m.y2 ** 2 + log(m.y2))
+        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + log(m.y2))
 
         # out of scope: deactivated
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
@@ -399,15 +381,15 @@ class TestSetupModelData(unittest.TestCase):
         # contains a rich combination of first-stage and second-stage terms
         m.obj = Objective(
             expr=(
-                m.p ** 2
+                m.p**2
                 + 2 * m.p * m.q
                 + log(m.x1)
                 + 2 * m.p * m.x1
-                + m.q ** 2 * m.x1
-                + m.p ** 3 * (m.z1 + m.z2 + m.y1)
+                + m.q**2 * m.x1
+                + m.p**3 * (m.z1 + m.z2 + m.y1)
                 + m.z4
                 + m.z5
-            ),
+            )
         )
 
         # set up the var partitioning
@@ -448,28 +430,22 @@ class TestSetupModelData(unittest.TestCase):
         # user var partitioning
         up = working_model.user_var_partitioning
         self.assertEqual(
-            ComponentSet(up.first_stage_variables),
-            ComponentSet([m.x1, m.x2]),
+            ComponentSet(up.first_stage_variables), ComponentSet([m.x1, m.x2])
         )
         self.assertEqual(
             ComponentSet(up.second_stage_variables),
             ComponentSet([m.z1, m.z2, m.z3, m.z4, m.z5]),
         )
-        self.assertEqual(
-            ComponentSet(up.state_variables),
-            ComponentSet([m.y1, m.y2]),
-        )
+        self.assertEqual(ComponentSet(up.state_variables), ComponentSet([m.y1, m.y2]))
 
         # uncertain params
         self.assertEqual(
-            ComponentSet(working_model.uncertain_params),
-            ComponentSet([m.q]),
+            ComponentSet(working_model.uncertain_params), ComponentSet([m.q])
         )
 
         # ensure original model unchanged
         self.assertFalse(
-            hasattr(om, "util"),
-            msg="Original model still has temporary util block",
+            hasattr(om, "util"), msg="Original model still has temporary util block"
         )
 
         # constraint partitioning initialization
@@ -483,6 +459,7 @@ class TestResolveVarBounds(unittest.TestCase):
     """
     Tests for resolution of variable bounds.
     """
+
     def test_resolve_var_bounds(self):
         """
         Test resolve variable bounds.
@@ -504,10 +481,12 @@ class TestResolveVarBounds(unittest.TestCase):
         m.z10 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p2])
 
         # useful for checking domains later
-        original_var_domains = ComponentMap((
-            (var, var.domain) for var in
-            (m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8, m.z9, m.z10)
-        ))
+        original_var_domains = ComponentMap(
+            (
+                (var, var.domain)
+                for var in (m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8, m.z9, m.z10)
+            )
+        )
 
         expected_bounds = (
             (m.z1, (0, None, 1), (None, None, None)),
@@ -575,7 +554,7 @@ class TestResolveVarBounds(unittest.TestCase):
                     f"from {orig_domain} to {var.domain} "
                     "by the bounds resolution method "
                     f"{get_var_certain_uncertain_bounds.__name__!r}."
-                )
+                ),
             )
 
 
@@ -636,9 +615,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
 
         # mock effective partitioning for testing
         ep = model_data.working_model.effective_var_partitioning = Bunch()
-        ep.first_stage_variables = [
-            m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8
-        ]
+        ep.first_stage_variables = [m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8]
         ep.second_stage_variables = [m.z9]
         ep.state_variables = [m.z10]
         effective_first_stage_var_set = ComponentSet(ep.first_stage_variables)
@@ -649,16 +626,18 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         )
 
         # expected final bounds and bound constraint types
-        expected_final_nonadj_var_bounds = ComponentMap((
-            (m.z1, (get_var_bound_pairs(m.z1)[1], [])),
-            (m.z2, (get_var_bound_pairs(m.z2)[1], [])),
-            (m.z3, (get_var_bound_pairs(m.z3)[1], [])),
-            (m.z4, ((None, 0), ["lower"])),
-            (m.z5, ((4, None), ["upper"])),
-            (m.z6, ((None, None), ["eq"])),
-            (m.z7, ((None, None), ["eq"])),
-            (m.z8, ((None, None), ["lower", "upper"])),
-        ))
+        expected_final_nonadj_var_bounds = ComponentMap(
+            (
+                (m.z1, (get_var_bound_pairs(m.z1)[1], [])),
+                (m.z2, (get_var_bound_pairs(m.z2)[1], [])),
+                (m.z3, (get_var_bound_pairs(m.z3)[1], [])),
+                (m.z4, ((None, 0), ["lower"])),
+                (m.z5, ((4, None), ["upper"])),
+                (m.z6, ((None, None), ["eq"])),
+                (m.z7, ((None, None), ["eq"])),
+                (m.z8, ((None, None), ["lower", "upper"])),
+            )
+        )
 
         turn_nonadjustable_var_bounds_to_constraints(model_data)
 
@@ -737,7 +716,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         assertExpressionsEqual(
             self,
             second_stage.equality_cons["var_z6_uncertain_eq_bound_con"].expr,
-            m.z6 == m.q1
+            m.z6 == m.q1,
         )
         assertExpressionsEqual(
             self,
@@ -759,12 +738,12 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         self.assertEqual(
             len(working_model.second_stage.inequality_cons),
             4,
-            msg="Number of second-stage inequalities not as expected."
+            msg="Number of second-stage inequalities not as expected.",
         )
         self.assertEqual(
             len(working_model.second_stage.equality_cons),
             2,
-            msg="Number of second-stage equalities not as expected."
+            msg="Number of second-stage equalities not as expected.",
         )
 
     def test_turn_adjustable_bounds_to_constraints(self):
@@ -888,7 +867,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         assertExpressionsEqual(
             self,
             second_stage.inequality_cons["var_z4_uncertain_lower_bound_con"].expr,
-            - m.z4 <= -m.q1,
+            -m.z4 <= -m.q1,
         )
         assertExpressionsEqual(
             self,
@@ -933,7 +912,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         assertExpressionsEqual(
             self,
             second_stage.inequality_cons["var_z8_uncertain_lower_bound_con"].expr,
-            - m.z8 <= -m.q1,
+            -m.z8 <= -m.q1,
         )
         assertExpressionsEqual(
             self,
@@ -975,11 +954,11 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         m.c5 = Constraint(expr=(m.q, m.x2, 2 * m.q))
         m.c6 = Constraint(expr=m.z1 <= 1)
         m.c7 = Constraint(expr=(0, m.z2, 1))
-        m.c8 = Constraint(expr=(m.p ** 0.5, m.y1, m.p))
+        m.c8 = Constraint(expr=(m.p**0.5, m.y1, m.p))
         m.c9 = Constraint(expr=m.y1 - m.q <= 0)
-        m.c10 = Constraint(expr=m.y1 <= m.q ** 2)
+        m.c10 = Constraint(expr=m.y1 <= m.q**2)
         m.c11 = Constraint(expr=m.z2 <= m.q)
-        m.c12 = Constraint(expr=(m.q ** 2, m.x1, sin(m.p)))
+        m.c12 = Constraint(expr=(m.q**2, m.x1, sin(m.p)))
 
         m.c11.deactivate()
 
@@ -991,7 +970,17 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         model_data.working_model.second_stage.inequality_cons = Constraint(Any)
 
         model_data.working_model.original_active_inequality_cons = [
-            m.c1, m.c2, m.c3, m.c4, m.c5, m.c6, m.c7, m.c8, m.c9, m.c10, m.c12,
+            m.c1,
+            m.c2,
+            m.c3,
+            m.c4,
+            m.c5,
+            m.c6,
+            m.c7,
+            m.c8,
+            m.c9,
+            m.c10,
+            m.c12,
         ]
 
         ep = model_data.working_model.effective_var_partitioning = Bunch()
@@ -1035,7 +1024,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         self.assertFalse(m.c3.active)
         new_c3_con = ss_ineq_cons["ineq_con_c3_lower_bound_con"]
         self.assertTrue(new_c3_con.active)
-        assertExpressionsEqual(self, new_c3_con.expr, - m.x1 <= -m.q)
+        assertExpressionsEqual(self, new_c3_con.expr, -m.x1 <= -m.q)
 
         # log(m.p) <= m.x2 <= m.q
         # lower bound is first-stage, upper bound second-stage
@@ -1054,7 +1043,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         new_c5_upper_bound_con = ss_ineq_cons["ineq_con_c5_upper_bound_con"]
         self.assertTrue(new_c5_lower_bound_con.active)
         self.assertTrue(new_c5_lower_bound_con.active)
-        assertExpressionsEqual(self, new_c5_lower_bound_con.expr, - m.x2 <= -m.q)
+        assertExpressionsEqual(self, new_c5_lower_bound_con.expr, -m.x2 <= -m.q)
         assertExpressionsEqual(self, new_c5_upper_bound_con.expr, m.x2 <= 2 * m.q)
 
         # single second-stage inequality
@@ -1079,7 +1068,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         new_c8_upper_bound_con = ss_ineq_cons["ineq_con_c8_upper_bound_con"]
         self.assertTrue(new_c8_lower_bound_con.active)
         self.assertTrue(new_c8_upper_bound_con.active)
-        assertExpressionsEqual(self, new_c8_lower_bound_con.expr, - m.y1 <= -m.p ** 0.5)
+        assertExpressionsEqual(self, new_c8_lower_bound_con.expr, -m.y1 <= -m.p**0.5)
         assertExpressionsEqual(self, new_c8_upper_bound_con.expr, m.y1 <= m.p)
 
         # m.y1 - m.q <= 0
@@ -1092,11 +1081,9 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         # m.y1 <= m.q ** 2
         # single second-stage inequality
         self.assertFalse(m.c10.active)
-        new_c10_upper_bound_con = (
-            ss_ineq_cons["ineq_con_c10_upper_bound_con"]
-        )
+        new_c10_upper_bound_con = ss_ineq_cons["ineq_con_c10_upper_bound_con"]
         self.assertTrue(new_c10_upper_bound_con.active)
-        assertExpressionsEqual(self, new_c10_upper_bound_con.expr, m.y1 <= m.q ** 2)
+        assertExpressionsEqual(self, new_c10_upper_bound_con.expr, m.y1 <= m.q**2)
 
         # originally deactivated;
         # no modification
@@ -1105,13 +1092,11 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
 
         # lower bound second-stage; upper bound first-stage
         self.assertFalse(m.c12.active)
-        new_c12_lower_bound_con = (
-            ss_ineq_cons["ineq_con_c12_lower_bound_con"]
-        )
+        new_c12_lower_bound_con = ss_ineq_cons["ineq_con_c12_lower_bound_con"]
         new_c12_upper_bound_con = fs_ineq_cons["ineq_con_c12_upper_bound_con"]
         self.assertTrue(new_c12_lower_bound_con.active)
         self.assertTrue(new_c12_upper_bound_con.active)
-        assertExpressionsEqual(self, new_c12_lower_bound_con.expr, - m.x1 <= -m.q ** 2)
+        assertExpressionsEqual(self, new_c12_lower_bound_con.expr, -m.x1 <= -m.q**2)
         assertExpressionsEqual(self, new_c12_upper_bound_con.expr, m.x1 <= sin(m.p))
 
     def test_standardize_inequality_error(self):
@@ -1160,7 +1145,7 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
 
         # second-stage equalities
         m.eq3 = Constraint(expr=m.x2 * m.q == 1)
-        m.eq4 = Constraint(expr=m.x2 - m.z1 ** 2 == 0)
+        m.eq4 = Constraint(expr=m.x2 - m.z1**2 == 0)
         m.eq5 = Constraint(expr=m.q == m.y1)
         m.eq6 = Constraint(expr=(m.q, m.y1, m.q))
         m.eq7 = Constraint(expr=m.z2 == 0)
@@ -1176,7 +1161,12 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         model_data.working_model.second_stage.equality_cons = Constraint(Any)
 
         model_data.working_model.original_active_equality_cons = [
-            m.eq1, m.eq2, m.eq3, m.eq4, m.eq5, m.eq6,
+            m.eq1,
+            m.eq2,
+            m.eq3,
+            m.eq4,
+            m.eq5,
+            m.eq6,
         ]
 
         ep = model_data.working_model.effective_var_partitioning = Bunch()
@@ -1222,7 +1212,7 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         self.assertFalse(m.eq4.active)
         new_eq4_con = second_stage_eq_cons["eq_con_eq4"]
         self.assertTrue(new_eq4_con)
-        assertExpressionsEqual(self, new_eq4_con.expr, m.x2 - m.z1 ** 2 == 0)
+        assertExpressionsEqual(self, new_eq4_con.expr, m.x2 - m.z1**2 == 0)
 
         self.assertFalse(m.eq5.active)
         new_eq5_con = second_stage_eq_cons["eq_con_eq5"]
@@ -1233,7 +1223,7 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         new_eq6_con = second_stage_eq_cons["eq_con_eq6"]
         self.assertTrue(new_eq6_con.active)
         assertExpressionsEqual(
-            self, new_eq6_con.expr, RangedExpression((m.q, m.y1, m.q), False),
+            self, new_eq6_con.expr, RangedExpression((m.q, m.y1, m.q), False)
         )
 
         # excluded from the list of active constraints;
@@ -1265,12 +1255,10 @@ class TestStandardizeActiveObjective(unittest.TestCase):
 
         m.obj1 = Objective(
             expr=(
-                10 + m.p + m.q + m.p * m.x + m.z * m.p + m.y ** 2 * m.q + m.y + log(m.x)
-            ),
+                10 + m.p + m.q + m.p * m.x + m.z * m.p + m.y**2 * m.q + m.y + log(m.x)
+            )
         )
-        m.obj2 = Objective(
-            expr=m.p + m.x * m.z + m.z ** 2,
-        )
+        m.obj2 = Objective(expr=m.p + m.x * m.z + m.z**2)
 
         model_data.working_model.uncertain_params = [m.q]
 
@@ -1309,13 +1297,9 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.second_stage_objective.expr,
-            m.q + m.z * m.p + m.y ** 2 * m.q + m.y,
+            m.q + m.z * m.p + m.y**2 * m.q + m.y,
         )
-        assertExpressionsEqual(
-            self,
-            working_model.full_objective.expr,
-            m.obj1.expr,
-        )
+        assertExpressionsEqual(self, working_model.full_objective.expr, m.obj1.expr)
 
     def test_declare_objective_expressions_maximization_obj(self):
         """
@@ -1336,13 +1320,9 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.second_stage_objective.expr,
-            -m.q - m.z * m.p - m.y ** 2 * m.q - m.y,
+            -m.q - m.z * m.p - m.y**2 * m.q - m.y,
         )
-        assertExpressionsEqual(
-            self,
-            working_model.full_objective.expr,
-            -m.obj1.expr,
-        )
+        assertExpressionsEqual(self, working_model.full_objective.expr, -m.obj1.expr)
 
     def test_standardize_active_obj_worst_case_focus(self):
         """
@@ -1549,7 +1529,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
                     f"Second-stage var {ess_var.name!r} "
                     f"is mapped to DR var {mapped_dr_var.name!r}, "
                     f"but expected mapping to DR var {indexed_dr_var.name!r}."
-                )
+                ),
             )
 
     def test_correct_num_dr_vars_affine(self):
@@ -1601,7 +1581,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
                     f"Second-stage var {ess_var.name!r} "
                     f"is mapped to DR var {mapped_dr_var.name!r}, "
                     f"but expected mapping to DR var {indexed_dr_var.name!r}."
-                )
+                ),
             )
 
     def test_correct_num_dr_vars_quadratic(self):
@@ -1621,8 +1601,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         for indexed_dr_var in model_data.working_model.first_stage.decision_rule_vars:
             self.assertEqual(
                 len(indexed_dr_var),
-                1  # static term
-                + num_params  # affine terms
+                1 + num_params  # static term  # affine terms
                 # quadratic terms
                 + sp.special.comb(num_params, 2, repetition=True, exact=True),
                 msg=(
@@ -1658,7 +1637,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
                     f"Second-stage var {ess_var.name!r} "
                     f"is mapped to DR var {mapped_dr_var.name!r}, "
                     f"but expected mapping to DR var {indexed_dr_var.name!r}."
-                )
+                ),
             )
 
 
@@ -1731,7 +1710,7 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
             msg=(
                 "Number of decision rule equations should match number of "
                 "effective second-stage variables."
-            )
+            ),
         )
 
         # check second-stage var to DR equation mapping is as expected
@@ -1748,7 +1727,7 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
                     f"Second-stage var {ess_var.name!r} "
                     f"is mapped to DR equation {mapped_dr_eqn.name!r}, "
                     f"but expected mapping to DR equation {dr_eqn.name!r}."
-                )
+                ),
             )
             self.assertTrue(mapped_dr_eqn.active)
 
@@ -1799,18 +1778,20 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
             )
             assertExpressionsEqual(self, dr_eq.expr, expected_dr_eq_expression)
 
-            expected_dr_var_to_exponent_map = ComponentMap((
-                (indexed_dr_var[0], 0),
-                (indexed_dr_var[1], 1),
-                (indexed_dr_var[2], 1),
-                (indexed_dr_var[3], 1),
-                (indexed_dr_var[4], 2),
-                (indexed_dr_var[5], 2),
-                (indexed_dr_var[6], 2),
-                (indexed_dr_var[7], 2),
-                (indexed_dr_var[8], 2),
-                (indexed_dr_var[9], 2),
-            ))
+            expected_dr_var_to_exponent_map = ComponentMap(
+                (
+                    (indexed_dr_var[0], 0),
+                    (indexed_dr_var[1], 1),
+                    (indexed_dr_var[2], 1),
+                    (indexed_dr_var[3], 1),
+                    (indexed_dr_var[4], 2),
+                    (indexed_dr_var[5], 2),
+                    (indexed_dr_var[6], 2),
+                    (indexed_dr_var[7], 2),
+                    (indexed_dr_var[8], 2),
+                    (indexed_dr_var[9], 2),
+                )
+            )
             self.assertEqual(
                 working_model.dr_var_to_exponent_map,
                 expected_dr_var_to_exponent_map,
@@ -1823,6 +1804,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
     Unit tests for routine that reformulates
     state variable-independent second-stage equality constraints.
     """
+
     def setup_test_model_data(self):
         """
         Set up simple test model for testing the reformulation
@@ -1838,10 +1820,8 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
         m.eq_con = Constraint(
-            expr=m.u**2 * (m.x2 - 1)
-            + m.u * (m.x1**3 + 0.5)
-            - 5 * m.u * m.x1 * m.x2
-            == - m.u * (m.x1 + 2)
+            expr=m.u**2 * (m.x2 - 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2
+            == -m.u * (m.x1 + 2)
         )
 
         # mathematically redundant, but makes the tests more rigorous
@@ -1914,7 +1894,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         self.assertEqual(
             len(first_stage_eq_cons),
             3,
-            msg="Number of coefficient matching constraints not as expected."
+            msg="Number of coefficient matching constraints not as expected.",
         )
         self.assertEqual(len(model_data.working_model.second_stage.equality_cons), 0)
         # we originally declared an inequality constraint on the model
@@ -1923,7 +1903,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         assertExpressionsEqual(
             self,
             first_stage_eq_cons["coeff_matching_eq_con_coeff_1"].expr,
-            2.5 + m.x1 + (-5) * (m.x1 * m.x2) + m.x1 ** 3 == 0,
+            2.5 + m.x1 + (-5) * (m.x1 * m.x2) + m.x1**3 == 0,
         )
         assertExpressionsEqual(
             self,
@@ -1975,9 +1955,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         err_msg = LOG.getvalue()
         self.assertRegex(
             text=err_msg,
-            expected_regex=(
-                r".*Equality constraint '.*eq_con.*'.*cannot be written.*"
-            ),
+            expected_regex=(r".*Equality constraint '.*eq_con.*'.*cannot be written.*"),
         )
 
         self.assertFalse(
@@ -2010,7 +1988,8 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
                 + m.u * (m.x1**3 + 0.5)
                 - ((5 * m.u * m.x1) * m.x2)
                 - (-m.u) * (m.x1 + 2)
-            ) <= 0.0,
+            )
+            <= 0.0,
         )
         assertExpressionsEqual(
             self,
@@ -2071,7 +2050,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             expected_regex=(
                 r"PyROS has determined that the model is robust infeasible\. "
                 r"One reason for this.*equality constraint '.*eq_con.*'.*"
-            )
+            ),
         )
 
 
@@ -2079,6 +2058,7 @@ class TestPreprocessModelData(unittest.TestCase):
     """
     Test the PyROS preprocessor.
     """
+
     def build_test_model_data(self):
         """
         Build model data object for the preprocessor.
@@ -2096,7 +2076,7 @@ class TestPreprocessModelData(unittest.TestCase):
 
         # second-stage variables
         m.z1 = Var(domain=RangeSet(2, 4, 0), bounds=[-m.p, m.q], initialize=2)
-        m.z2 = Var(bounds=(-2 * m.q ** 2, None), initialize=1)
+        m.z2 = Var(bounds=(-2 * m.q**2, None), initialize=1)
         m.z3 = Var(bounds=(-m.q, 0), initialize=0)
         m.z4 = Var(initialize=5)
         # the bounds produce an equality constraint
@@ -2123,7 +2103,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # this makes z1 nonadjustable
         m.eq2 = Constraint(expr=m.x1 - m.z1 == 0)
         # pretriangular: makes z2 nonadjustable, so first-stage
-        m.eq3 = Constraint(expr=m.x1 ** 2 + m.x2 + m.p * m.z2 == m.p)
+        m.eq3 = Constraint(expr=m.x1**2 + m.x2 + m.p * m.z2 == m.p)
         # second-stage equality
         m.eq4 = Constraint(expr=m.z3 + m.y1 == m.q)
 
@@ -2142,7 +2122,7 @@ class TestPreprocessModelData(unittest.TestCase):
         m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
         # second-stage inequality. trivially satisfied/infeasible,
         # since y2 is fixed
-        m.ineq4 = Constraint(expr=-m.q <= m.y2 ** 2 + log(m.y2))
+        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + log(m.y2))
 
         # out of scope: deactivated
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
@@ -2152,15 +2132,15 @@ class TestPreprocessModelData(unittest.TestCase):
         # contains a rich combination of first-stage and second-stage terms
         m.obj = Objective(
             expr=(
-                m.p ** 2
+                m.p**2
                 + 2 * m.p * m.q
                 + log(m.x1)
                 + 2 * m.p * m.x1
-                + m.q ** 2 * m.x1
-                + m.p ** 3 * (m.z1 + m.z2 + m.y1)
+                + m.q**2 * m.x1
+                + m.p**3 * (m.z1 + m.z2 + m.y1)
                 + m.z4
                 + m.z5
-            ),
+            )
         )
 
         # set up the var partitioning
@@ -2187,19 +2167,25 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=0,
             progress_logger=logger,
         )
-        preprocess_model_data(
-            model_data, config, user_var_partitioning,
-        )
+        preprocess_model_data(model_data, config, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
         ublk = model_data.working_model.user_model
         self.assertEqual(
             ComponentSet(ep.first_stage_variables),
-            ComponentSet([
-                # all second-stage variables are nonadjustable
-                # due to the DR
-                ublk.x1, ublk.x2, ublk.z1, ublk.z2,
-                ublk.z3, ublk.z4, ublk.z5, ublk.y2,
-            ]),
+            ComponentSet(
+                [
+                    # all second-stage variables are nonadjustable
+                    # due to the DR
+                    ublk.x1,
+                    ublk.x2,
+                    ublk.z1,
+                    ublk.z2,
+                    ublk.z3,
+                    ublk.z4,
+                    ublk.z5,
+                    ublk.y2,
+                ]
+            ),
         )
         self.assertEqual(ep.second_stage_variables, [])
         self.assertEqual(ep.state_variables, [ublk.y1])
@@ -2208,10 +2194,7 @@ class TestPreprocessModelData(unittest.TestCase):
         self.assertEqual(
             ComponentSet(working_model.all_nonadjustable_variables),
             ComponentSet(
-                [
-                    ublk.x1, ublk.x2, ublk.z1, ublk.z2,
-                    ublk.z3, ublk.z4, ublk.z5, ublk.y2,
-                ]
+                [ublk.x1, ublk.x2, ublk.z1, ublk.z2, ublk.z3, ublk.z4, ublk.z5, ublk.y2]
                 + [working_model.first_stage.epigraph_var]
             ),
         )
@@ -2233,10 +2216,7 @@ class TestPreprocessModelData(unittest.TestCase):
             ),
         )
 
-    @parameterized.expand([
-        ["affine", 1],
-        ["quadratic", 2],
-    ])
+    @parameterized.expand([["affine", 1], ["quadratic", 2]])
     def test_preprocessor_effective_var_partitioning_nonstatic_dr(self, name, dr_order):
         """
         Test preprocessor repartitions the variables
@@ -2250,9 +2230,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
-        preprocess_model_data(
-            model_data, config, user_var_partitioning,
-        )
+        preprocess_model_data(model_data, config, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
         ublk = model_data.working_model.user_model
         self.assertEqual(
@@ -2260,13 +2238,9 @@ class TestPreprocessModelData(unittest.TestCase):
             ComponentSet([ublk.x1, ublk.x2, ublk.z1, ublk.z2, ublk.z4, ublk.y2]),
         )
         self.assertEqual(
-            ComponentSet(ep.second_stage_variables),
-            ComponentSet([ublk.z3, ublk.z5]),
+            ComponentSet(ep.second_stage_variables), ComponentSet([ublk.z3, ublk.z5])
         )
-        self.assertEqual(
-            ComponentSet(ep.state_variables),
-            ComponentSet([ublk.y1]),
-        )
+        self.assertEqual(ComponentSet(ep.state_variables), ComponentSet([ublk.y1]))
         working_model = model_data.working_model
         self.assertEqual(
             ComponentSet(working_model.all_nonadjustable_variables),
@@ -2297,17 +2271,19 @@ class TestPreprocessModelData(unittest.TestCase):
             ),
         )
 
-    @parameterized.expand([
-        ["affine_nominal", 1, "nominal"],
-        ["affine_worst_case", 1, "worst_case"],
-        # eq1 doesn't get reformulated in coefficient matching
-        #  as the polynomial degree is too high
-        ["quadratic_nominal", 2, "nominal"],
-        ["quadratic_worst_case", 2, "worst_case"],
-    ])
+    @parameterized.expand(
+        [
+            ["affine_nominal", 1, "nominal"],
+            ["affine_worst_case", 1, "worst_case"],
+            # eq1 doesn't get reformulated in coefficient matching
+            #  as the polynomial degree is too high
+            ["quadratic_nominal", 2, "nominal"],
+            ["quadratic_worst_case", 2, "worst_case"],
+        ]
+    )
     def test_preprocessor_constraint_partitioning_nonstatic_dr(
-            self, name, dr_order, obj_focus,
-            ):
+        self, name, dr_order, obj_focus
+    ):
         """
         Test preprocessor partitions constraints as expected
         for nonstatic DR.
@@ -2320,9 +2296,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
-        preprocess_model_data(
-            model_data, config, user_var_partitioning,
-        )
+        preprocess_model_data(model_data, config, user_var_partitioning)
 
         working_model = model_data.working_model
         ublk = working_model.user_model
@@ -2349,7 +2323,7 @@ class TestPreprocessModelData(unittest.TestCase):
             (
                 ["ineq_con_ineq1_lower_bound_con", "ineq_con_ineq2"]
                 + (["epigraph_con"] if obj_focus == "nominal" else [])
-            )
+            ),
         )
         self.assertEqual(
             list(working_model.first_stage.equality_cons),
@@ -2381,7 +2355,8 @@ class TestPreprocessModelData(unittest.TestCase):
                         "reform_lower_bound_from_eq_con_eq1",
                         "reform_upper_bound_from_eq_con_eq1",
                     ]
-                    if dr_order == 2 else []
+                    if dr_order == 2
+                    else []
                 )
             ),
         )
@@ -2421,7 +2396,7 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ss.inequality_cons["var_z2_uncertain_lower_bound_con"].expr,
-            -m.z2 <= -(-2 * m.q ** 2),
+            -m.z2 <= -(-2 * m.q**2),
         )
         assertExpressionsEqual(
             self,
@@ -2429,19 +2404,13 @@ class TestPreprocessModelData(unittest.TestCase):
             -m.z3 <= -(-m.q),
         )
         assertExpressionsEqual(
-            self,
-            ss.inequality_cons["var_z3_certain_upper_bound_con"].expr,
-            m.z3 <= 0,
+            self, ss.inequality_cons["var_z3_certain_upper_bound_con"].expr, m.z3 <= 0
         )
         assertExpressionsEqual(
-            self,
-            ss.inequality_cons["var_z5_certain_lower_bound_con"].expr,
-            -m.z5 <= 0,
+            self, ss.inequality_cons["var_z5_certain_lower_bound_con"].expr, -m.z5 <= 0
         )
         assertExpressionsEqual(
-            self,
-            ss.inequality_cons["var_y1_certain_lower_bound_con"].expr,
-            -m.y1 <= 0,
+            self, ss.inequality_cons["var_y1_certain_lower_bound_con"].expr, -m.y1 <= 0
         )
         assertExpressionsEqual(
             self,
@@ -2471,19 +2440,17 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ss.inequality_cons["ineq_con_ineq4_lower_bound_con"].expr,
-            -(m.y2 ** 2 + log(m.y2)) <= -(-m.q),
+            -(m.y2**2 + log(m.y2)) <= -(-m.q),
         )
         self.assertFalse(m.ineq5.active)
 
         assertExpressionsEqual(
-            self,
-            fs.equality_cons["eq_con_eq2"].expr,
-            m.x1 - m.z1 == 0,
+            self, fs.equality_cons["eq_con_eq2"].expr, m.x1 - m.z1 == 0
         )
         assertExpressionsEqual(
             self,
             fs.equality_cons["eq_con_eq3"].expr,
-            m.x1 ** 2 + m.x2 + m.p * m.z2 == m.p,
+            m.x1**2 + m.x2 + m.p * m.z2 == m.p,
         )
         if dr_order < 2:
             # due to coefficient matching, this should have been deleted
@@ -2492,14 +2459,12 @@ class TestPreprocessModelData(unittest.TestCase):
         # user model block should have no active constraints
         self.assertFalse(list(m.component_data_objects(Constraint, active=True)))
 
-    @parameterized.expand([
-        ["static", 0, True],
-        ["affine", 1, False],
-        ["quadratic", 2, False],
-    ])
+    @parameterized.expand(
+        [["static", 0, True], ["affine", 1, False], ["quadratic", 2, False]]
+    )
     def test_preprocessor_coefficient_matching(
-            self, name, dr_order, expected_robust_infeas,
-            ):
+        self, name, dr_order, expected_robust_infeas
+    ):
         """
         Check preprocessor robust infeasibility return status.
         """
@@ -2516,7 +2481,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # due to the coefficient matching constraints derived
         # from bounds on z5
         robust_infeasible = preprocess_model_data(
-            model_data, config, user_var_partitioning,
+            model_data, config, user_var_partitioning
         )
         self.assertIsInstance(robust_infeasible, bool)
         self.assertEqual(robust_infeasible, expected_robust_infeas)
@@ -2579,11 +2544,7 @@ class TestPreprocessModelData(unittest.TestCase):
                 fs.decision_rule_vars[1][2] == 0,
             )
 
-    @parameterized.expand([
-        ["static", 0],
-        ["affine", 1],
-        ["quadratic", 2],
-    ])
+    @parameterized.expand([["static", 0], ["affine", 1], ["quadratic", 2]])
     def test_preprocessor_objective_standardization(self, name, dr_order):
         """
         Test preprocessor standardizes the active objective as
@@ -2597,9 +2558,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=dr_order,
             progress_logger=logger,
         )
-        preprocess_model_data(
-            model_data, config, user_var_partitioning,
-        )
+        preprocess_model_data(model_data, config, user_var_partitioning)
 
         ublk = model_data.working_model.user_model
         working_model = model_data.working_model
@@ -2607,13 +2566,9 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.second_stage.inequality_cons["epigraph_con"].expr,
-            ublk.obj.expr - working_model.first_stage.epigraph_var <= 0
+            ublk.obj.expr - working_model.first_stage.epigraph_var <= 0,
         )
-        assertExpressionsEqual(
-            self,
-            working_model.full_objective.expr,
-            ublk.obj.expr,
-        )
+        assertExpressionsEqual(self, working_model.full_objective.expr, ublk.obj.expr)
 
         # recall: objective summands are classified according
         # to dependence on uncertain parameters and variables
@@ -2623,15 +2578,15 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.first_stage_objective.expr,
-            ublk.p ** 2 + log(ublk.x1) + 2 * ublk.p * ublk.x1,
+            ublk.p**2 + log(ublk.x1) + 2 * ublk.p * ublk.x1,
         )
         assertExpressionsEqual(
             self,
             working_model.second_stage_objective.expr,
             (
                 2 * ublk.p * ublk.q
-                + ublk.q ** 2 * ublk.x1
-                + ublk.p ** 3 * (ublk.z1 + ublk.z2 + ublk.y1)
+                + ublk.q**2 * ublk.x1
+                + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
                 + ublk.z4
                 + ublk.z5
             ),
@@ -2651,9 +2606,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=1,
             progress_logger=logger,
         )
-        preprocess_model_data(
-            model_data, config, user_var_partitioning,
-        )
+        preprocess_model_data(model_data, config, user_var_partitioning)
 
         # expected model stats worked out by hand
         expected_log_str = textwrap.dedent(
@@ -2703,9 +2656,7 @@ class TestPreprocessModelData(unittest.TestCase):
             decision_rule_order=2,
             progress_logger=logger,
         )
-        preprocess_model_data(
-            model_data, config, user_var_partitioning,
-        )
+        preprocess_model_data(model_data, config, user_var_partitioning)
 
         # expected model stats worked out by hand
         expected_log_str = textwrap.dedent(

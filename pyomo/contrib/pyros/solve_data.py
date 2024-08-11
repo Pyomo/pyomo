@@ -414,7 +414,9 @@ class SeparationLoopResults:
         then None is returned.
         """
         if self.worst_case_ss_ineq_con is not None:
-            return self.solver_call_results[self.worst_case_ss_ineq_con].scaled_violations
+            return self.solver_call_results[
+                self.worst_case_ss_ineq_con
+            ].scaled_violations
         else:
             return None
 
