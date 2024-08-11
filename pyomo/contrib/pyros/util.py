@@ -25,7 +25,7 @@ import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import scipy as sp
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, InvalidValueError
 from pyomo.common.log import Preformatted
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import HierarchicalTimer, TicTocTimer
@@ -35,7 +35,6 @@ from pyomo.core.base import (
     Component,
     ConcreteModel,
     Constraint,
-    ConstraintList,
     Expression,
     Objective,
     maximize,
@@ -2700,7 +2699,7 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
             load_solutions=False,
             symbolic_solver_labels=config.symbolic_solver_labels,
         )
-    except ApplicationError:
+    except (ApplicationError, InvalidValueError):
         # account for possible external subsolver errors
         # (such as segmentation faults, function evaluation
         # errors, etc.)

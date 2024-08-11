@@ -20,6 +20,7 @@ import time
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
+from pyomo.common.errors import InvalidValueError
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 from pyomo.common.dependencies import numpy as np, numpy_available
@@ -1078,7 +1079,6 @@ class RegressionTest(unittest.TestCase):
         m.obj = Objective(expr=m.x1 + m.x2)
 
         box_set = BoxSet(bounds=[(0, 1)])
-        d_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
 
         local_solver = SolverFactory("ipopt")
         global_solver = SolverFactory("baron")
@@ -1104,24 +1104,76 @@ class RegressionTest(unittest.TestCase):
             ),
         )
 
-    # FIXME: This test is expected to fail now, as writing out invalid
-    # models generates an exception in the problem writer (and is never
-    # actually sent to the solver)
-    @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
-    )
-    @unittest.expectedFailure
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    @unittest.skipUnless(baron_license_is_valid, "BARON is not available and licensed.")
     def test_discrete_separation_subsolver_error(self):
         """
         Test PyROS for two-stage problem with discrete type set,
         subsolver error status.
+        """
+        class BadSeparationSolver:
+            def __init__(self, solver):
+                self.solver = solver
+
+            def available(self, exception_flag=False):
+                return self.solver.available(exception_flag=exception_flag)
+
+            def solve(self, model, *args, **kwargs):
+                is_separation = hasattr(model, "uncertainty")
+                if is_separation:
+                    res = SolverResults()
+                    res.solver.termination_condition = TerminationCondition.unknown
+                else:
+                    res = self.solver.solve(model, *args, **kwargs)
+                return res
+
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+        m.x2 = Var(initialize=2, bounds=(0, m.q))
+        m.obj = Objective(expr=m.x1 + m.x2, sense=maximize)
+
+        discrete_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            res = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=discrete_set,
+                local_solver=BadSeparationSolver(local_solver),
+                global_solver=BadSeparationSolver(global_solver),
+                decision_rule_order=1,
+                tee=True,
+            )
+
+        self.assertRegex(LOG.getvalue(), "Could not.*separation.*iteration 0.*")
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+        )
+        self.assertEqual(res.iterations, 1)
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_discrete_separation_invalid_value_error(self):
+        """
+        Test PyROS properly handles InvalidValueError.
         """
         m = ConcreteModel()
 
         m.q = Param(initialize=1, mutable=True)
         m.x1 = Var(initialize=1, bounds=(0, 1))
 
-        # upper bound induces subsolver error: separation
+        # upper bound induces invalid value error: separation
         # max(x2 - log(m.q)) will force subsolver to q = 0
         m.x2 = Var(initialize=2, bounds=(None, log(m.q)))
 
@@ -1133,24 +1185,24 @@ class RegressionTest(unittest.TestCase):
         global_solver = SolverFactory("baron")
         pyros_solver = SolverFactory("pyros")
 
-        res = pyros_solver.solve(
-            model=m,
-            first_stage_variables=[m.x1],
-            second_stage_variables=[m.x2],
-            uncertain_params=[m.q],
-            uncertainty_set=discrete_set,
-            local_solver=local_solver,
-            global_solver=global_solver,
-            decision_rule_order=1,
-            tee=True,
-        )
-        self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.subsolver_error,
-            msg=(
-                "Returned termination condition for separation error"
-                f"test is not {pyrosTerminationCondition.subsolver_error}."
-            ),
+        with LoggingIntercept(level=logging.ERROR) as LOG:
+            with self.assertRaises(InvalidValueError):
+                pyros_solver.solve(
+                    model=m,
+                    first_stage_variables=[m.x1],
+                    second_stage_variables=[m.x2],
+                    uncertain_params=[m.q],
+                    uncertainty_set=discrete_set,
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                    decision_rule_order=1,
+                    tee=True,
+                )
+
+        err_str = LOG.getvalue()
+        self.assertRegex(
+            err_str,
+            "Optimizer.*exception.*separation problem.*iteration 0"
         )
 
     @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
