@@ -422,6 +422,41 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
         )
 
 
+class TestPyROSRobustInfeasible(unittest.TestCase):
+    @unittest.skipUnless(baron_available, "BARON is not available and licensed")
+    def test_pyros_robust_infeasible(self):
+        """
+        Test PyROS behavior when robust infeasibility detected
+        from a master problem.
+        """
+        m = ConcreteModel()
+        m.q = Param(initialize=0.5, mutable=True)
+        m.x = Var(bounds=(m.q, 1))
+        # makes model infeasible since 2 is outside bounds
+        m.con1 = Constraint(expr=m.x == 2)
+        m.obj = Objective(expr=m.x)
+        baron = SolverFactory("baron")
+        pyros = SolverFactory("pyros")
+        results = pyros.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+        )
+        self.assertEqual(results.iterations, 1)
+        # since x was not initialized
+        self.assertEqual(results.final_objective_value, None)
+
+
 global_solver = "baron"
 
 

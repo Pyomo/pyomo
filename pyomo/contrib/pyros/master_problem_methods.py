@@ -837,7 +837,7 @@ def solver_call_master(master_data, config, master_soln):
 
         if not try_backup:
             if infeasible:
-                master_soln.pyrosTerminationCondition = (
+                master_soln.pyros_termination_condition = (
                     pyrosTerminationCondition.robust_infeasible
                 )
             return
