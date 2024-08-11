@@ -879,11 +879,12 @@ Observe that the log contains the following information:
   and equations.
   The preprocessor may find that some second-stage variables
   and state variables are mathematically
-  not adjustable to the uncertain parameters;
-  to this end, in the logs, the numbers of
+  not adjustable to the uncertain parameters.
+  To this end, in the logs, the numbers of
   adjustable second-stage variables and state variables
   are included in parentheses, next to the total numbers
-  of second-stage variables and state variables, respectively.
+  of second-stage variables and state variables, respectively;
+  note that 'adjustable' has been abbreviated as 'adj.'.
 * **Iteration log table** (lines 59--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
