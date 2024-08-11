@@ -449,6 +449,36 @@ class TestDRPolishingProblem(unittest.TestCase):
         self.assertFalse(polishing_model.epigraph_obj.active)
         self.assertTrue(polishing_model.polishing_obj.active)
 
+    def test_construct_dr_polishing_problem_params_zero(self):
+        """
+        Check that DR polishing fixes/deactivates components
+        for DR expression terms where the product of uncertain
+        parameters is below tolerance.
+        """
+        master_data, config = self.build_simple_master_data()
+
+        # trigger fixing of the corresponding polishing vars
+        master_data.master_model.scenarios[0, 0].user_model.u.set_value(1e-10)
+        master_data.master_model.scenarios[1, 0].user_model.u.set_value(1e-11)
+
+        polishing_model = construct_dr_polishing_problem(master_data, config)
+
+        dr_vars = polishing_model.scenarios[0, 0].first_stage.decision_rule_vars
+
+        # since static DR terms should not be polished
+        self.assertTrue(polishing_model.polishing_vars[0][0].fixed)
+        self.assertFalse(polishing_model.polishing_abs_val_lb_con_0[0].active)
+        self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[0].active)
+
+        # affine term should be fixed to 0,
+        # since the uncertain param values are small enough.
+        # polishing constraints are deactivated since we don't need them
+        self.assertTrue(dr_vars[0][1].fixed)
+        self.assertEqual(dr_vars[0][1].value, 0)
+        self.assertTrue(polishing_model.polishing_vars[0][1].fixed)
+        self.assertFalse(polishing_model.polishing_abs_val_lb_con_0[1].active)
+        self.assertFalse(polishing_model.polishing_abs_val_ub_con_0[1].active)
+
 
 class TestSolveMaster(unittest.TestCase):
     """
