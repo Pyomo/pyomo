@@ -935,6 +935,37 @@ def validate_pyros_inputs(model, config):
     return user_var_partitioning
 
 
+class ModelData:
+    """
+    Container for modeling objects from which the PyROS
+    subproblems are constructed.
+
+    Parameters
+    ----------
+    original_model : ConcreteModel
+        Original user-provided model.
+    timing : TimingData
+        Main timing data object.
+
+    Attributes
+    ----------
+    original_model : ConcreteModel
+        Original user-provided model.
+    timing : TimingData
+        Main PyROS solver timing data object.
+    working_model : ConcreteModel
+        Preprocessed clone of `original_model` from which
+        the PyROS cutting set subproblems are to be
+        constructed.
+    """
+
+    def __init__(self, original_model, timing):
+        self.original_model = original_model
+        self.timing = timing
+        # working model will be addressed by preprocessing
+        self.working_model = None
+
+
 def get_var_bound_pairs(var):
     """
     Get the domain and declared lower/upper

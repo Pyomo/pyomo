@@ -30,6 +30,7 @@ from pyomo.contrib.pyros.util import (
     setup_pyros_logger,
     time_code,
     TimingData,
+    ModelData,
 )
 
 
@@ -321,9 +322,7 @@ class PyROS(object):
             Summary of PyROS termination outcome.
 
         """
-        model_data = ROSolveResults()
-        model_data.timing = TimingData()
-        model_data.original_model = model
+        model_data = ModelData(original_model=model, timing=TimingData())
         with time_code(
             timing_data_obj=model_data.timing,
             code_block_name="main",
