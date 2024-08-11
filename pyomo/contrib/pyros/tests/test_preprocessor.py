@@ -1326,7 +1326,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
 
     def test_standardize_active_obj_worst_case_focus(self):
         """
-        Test preprocesing step for standardization
+        Test preprocessing step for standardization
         of the active model objective.
         """
         model_data = self.build_simple_test_model_data()
@@ -1858,7 +1858,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
     def test_coefficient_matching_correct_constraints_added(self):
         """
         Test coefficient matching adds correct number of constraints
-        in event of sucessful use.
+        in event of successful use.
         """
         model_data = self.setup_test_model_data()
         m = model_data.working_model.user_model

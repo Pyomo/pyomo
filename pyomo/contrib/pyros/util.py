@@ -2144,7 +2144,7 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                     "the currently available expression analyzers "
                     "and selected decision rules "
                     f"(decision_rule_order={config.decision_rule_order}). "
-                    "We are unable to write a coefficent matching reformulation "
+                    "We are unable to write a coefficient matching reformulation "
                     "of this constraint."
                     "Recasting to two inequality constraints."
                 )
@@ -2225,7 +2225,7 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
 
             # remove rather than deactivate to facilitate:
             # - we no longer need this constraint anywhere
-            # - faciliates accurate counting of active constraints
+            # - facilitates accurate counting of active constraints
             del working_model.second_stage.equality_cons[con_idx]
 
     # we no longer need these auxiliary components

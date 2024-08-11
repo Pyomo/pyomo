@@ -102,7 +102,7 @@ class TestConstructSeparationProblem(unittest.TestCase):
         for coeff_con in separation_model.first_stage.coefficient_matching_cons:
             self.assertFalse(
                 coeff_con.active,
-                msg=f"Coefficient mathcing constraint {coeff_con.name!r} active.",
+                msg=f"Coefficient matching constraint {coeff_con.name!r} active.",
             )
 
     def test_construct_separation_problem_ss_ineq_cons(self):
