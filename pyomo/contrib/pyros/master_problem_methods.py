@@ -631,27 +631,6 @@ def minimize_dr_vars(master_data, config):
     return results, True
 
 
-def add_p_robust_constraint(master_data, config):
-    """
-    p-robustness--adds constraints to the master problem ensuring that the
-    optimal k-th iteration solution is within (1+rho) of the nominal
-    objective. The parameter rho is specified by the user and should be between.
-    """
-    rho = config.p_robustness['rho']
-    model = master_data.master_model
-    block_0 = model.scenarios[0, 0]
-    frac_nom_cost = (1 + rho) * (
-        block_0.first_stage_objective + block_0.second_stage_objective
-    )
-
-    for block_k in model.scenarios[master_data.iteration, :]:
-        model.p_robust_constraints.add(
-            block_k.first_stage_objective + block_k.second_stage_objective
-            <= frac_nom_cost
-        )
-    return
-
-
 def get_master_dr_degree(master_data, config):
     """
     Determine DR polynomial degree to enforce based on

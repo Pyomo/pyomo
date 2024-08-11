@@ -162,8 +162,6 @@ def ROSolver_iterative_solve(model_data, config):
     while config.max_iter == -1 or k < config.max_iter:
         master_data.iteration = k
 
-        # TODO: what about p-robustness?
-
         # === Solve Master Problem
         config.progress_logger.debug(f"PyROS working on iteration {k}...")
         master_soln = master_data.solve_master()
