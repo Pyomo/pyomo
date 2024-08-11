@@ -200,31 +200,6 @@ class SeparationSolveCallResults:
             for res in self.results_list
         )
 
-    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by subordinate solvers
-        for separation problem of interest, according to Pyomo
-        ``SolverResults`` objects stored in ``self.results_list``.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolverResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by solvers.
-        """
-        return sum(
-            evaluator_func(res, **evaluator_func_kwargs) for res in self.results_list
-        )
-
 
 class DiscreteSeparationSolveCallResults:
     """
@@ -279,31 +254,6 @@ class DiscreteSeparationSolveCallResults:
         in `self`, False otherwise.
         """
         return any(res.subsolver_error for res in self.solver_call_results.values())
-
-    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolveResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by solvers.
-        """
-        return sum(
-            solver_call_res.evaluate_total_solve_time(evaluator_func)
-            for solver_call_res in self.solver_call_results.values()
-        )
 
 
 class SeparationLoopResults:
@@ -469,31 +419,6 @@ class SeparationLoopResults:
         return any(
             solver_call_res.time_out
             for solver_call_res in self.solver_call_results.values()
-        )
-
-    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolveResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by solvers.
-        """
-        return sum(
-            res.evaluate_total_solve_time(evaluator_func)
-            for res in self.solver_call_results.values()
         )
 
 
@@ -699,60 +624,6 @@ class SeparationResults:
         """
         return self.get_violating_attr("violated_second_stage_ineq_cons")
 
-    def evaluate_local_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by local subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolverResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by local solvers.
-        """
-        if self.solved_locally:
-            return self.local_separation_loop_results.evaluate_total_solve_time(
-                evaluator_func, **evaluator_func_kwargs
-            )
-        else:
-            return 0
-
-    def evaluate_global_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by global subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolverResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by global solvers.
-        """
-        if self.solved_globally:
-            return self.global_separation_loop_results.evaluate_total_solve_time(
-                evaluator_func, **evaluator_func_kwargs
-            )
-        else:
-            return 0
-
     @property
     def robustness_certified(self):
         """
@@ -780,30 +651,3 @@ class SeparationResults:
             is_robust = heuristically_robust
 
         return is_robust
-
-    def generate_subsolver_results(self, include_local=True, include_global=True):
-        """
-        Generate flattened sequence all Pyomo SolverResults objects
-        for all ``SeparationSolveCallResults`` objects listed in
-        the local and global ``SeparationLoopResults``
-        attributes of `self`.
-
-        Yields
-        ------
-        pyomo.opt.SolverResults
-        """
-        if include_local and self.local_separation_loop_results is not None:
-            all_local_call_results = (
-                self.local_separation_loop_results.solver_call_results.values()
-            )
-            for solve_call_res in all_local_call_results:
-                for res in solve_call_res.results_list:
-                    yield res
-
-        if include_global and self.global_separation_loop_results is not None:
-            all_global_call_results = (
-                self.global_separation_loop_results.solver_call_results.values()
-            )
-            for solve_call_res in all_global_call_results:
-                for res in solve_call_res.results_list:
-                    yield res
