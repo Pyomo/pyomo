@@ -294,10 +294,6 @@ def enumerate_linear_solutions(
                 for var in continuous_var:
                     if continuous_var[var].value > zero_threshold:
                         num_non_zero += 1
-                        # WEH - I don't think you need to add the binary variable.  It
-                        #       should be automatically added when used.
-                        # if var not in binary_var:
-                        #    binary_var[var]
 
                         # Eqn (3): if binary choice variable is not selected, then
                         # continuous variable is zero.
