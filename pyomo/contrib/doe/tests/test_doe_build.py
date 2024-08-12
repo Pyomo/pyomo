@@ -259,14 +259,12 @@ class TestReactorExampleBuild(unittest.TestCase):
                 continue
 
             con_name = con_name_base + str(ind)
-            assert hasattr(model, con_name)
-
+            self.assertTrue(hasattr(model, con_name))
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
-            assert len(getattr(model, con_name)) == (len(model.scenarios) - 1)
-
-        # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
-        assert not hasattr(model, con_name_base + str(len(design_vars)))
+            self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
+            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+        self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_fd_backward_design_fixing(self):
         fd_method = "backward"
@@ -293,14 +291,12 @@ class TestReactorExampleBuild(unittest.TestCase):
                 continue
 
             con_name = con_name_base + str(ind)
-            assert hasattr(model, con_name)
-
+            self.assertTrue(hasattr(model, con_name))
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
-            assert len(getattr(model, con_name)) == (len(model.scenarios) - 1)
-
-        # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
-        assert not hasattr(model, con_name_base + str(len(design_vars)))
+            self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
+            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+        self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_fd_forward_design_fixing(self):
         fd_method = "forward"
@@ -327,14 +323,12 @@ class TestReactorExampleBuild(unittest.TestCase):
                 continue
 
             con_name = con_name_base + str(ind)
-            assert hasattr(model, con_name)
-
+            self.assertTrue(hasattr(model, con_name))
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
-            assert len(getattr(model, con_name)) == (len(model.scenarios) - 1)
-
-        # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
-        assert not hasattr(model, con_name_base + str(len(design_vars)))
+            self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
+            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+        self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_check_user_initialization(self):
         fd_method = "central"
@@ -399,9 +393,10 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         stuff = doe_obj.get_experiment_input_values(model=doe_obj.compute_FIM_model)
 
-        assert len(stuff) == len(
-            [k.name for k, v in doe_obj.compute_FIM_model.experiment_inputs.items()]
-        )
+        count = 0
+        for k, v in doe_obj.compute_FIM_model.experiment_inputs.items():
+            self.assertTrue(pyo.value(k) == stuff[count])
+            count += 1
 
     def test_get_experiment_outputs_without_blocks(self):
         fd_method = "forward"
@@ -417,9 +412,10 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         stuff = doe_obj.get_experiment_output_values(model=doe_obj.compute_FIM_model)
 
-        assert len(stuff) == len(
-            [k.name for k, v in doe_obj.compute_FIM_model.experiment_outputs.items()]
-        )
+        count = 0
+        for k, v in doe_obj.compute_FIM_model.experiment_outputs.items():
+            self.assertTrue(pyo.value(k) == stuff[count])
+            count += 1
 
     def test_get_measurement_error_without_blocks(self):
         fd_method = "forward"
@@ -435,9 +431,10 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         stuff = doe_obj.get_measurement_error_values(model=doe_obj.compute_FIM_model)
 
-        assert len(stuff) == len(
-            [k.name for k, v in doe_obj.compute_FIM_model.measurement_error.items()]
-        )
+        count = 0
+        for k, v in doe_obj.compute_FIM_model.measurement_error.items():
+            self.assertTrue(pyo.value(k) == stuff[count])
+            count += 1
 
     def test_get_unknown_parameters_without_blocks(self):
         fd_method = "forward"
@@ -454,9 +451,10 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Make sure the values can be retrieved
         stuff = doe_obj.get_unknown_parameter_values(model=doe_obj.compute_FIM_model)
 
-        assert len(stuff) == len(
-            [k.name for k, v in doe_obj.compute_FIM_model.unknown_parameters.items()]
-        )
+        count = 0
+        for k, v in doe_obj.compute_FIM_model.unknown_parameters.items():
+            self.assertTrue(pyo.value(k) == stuff[count])
+            count += 1
 
     def test_generate_blocks_without_model(self):
         fd_method = "forward"
@@ -469,6 +467,11 @@ class TestReactorExampleBuild(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj._generate_scenario_blocks()
+
+        for i in doe_obj.model.parameter_scenarios:
+            self.assertTrue(
+                doe_obj.model.find_component("scenario_blocks[" + str(i) + "]")
+            )
 
 
 if __name__ == "__main__":
