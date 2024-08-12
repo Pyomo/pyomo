@@ -1036,10 +1036,8 @@ class XpressDirect(DirectSolver):
             if xpress_con in self._range_constraints:
                 ## for xpress, the slack on a range constraint
                 ## is based on the upper bound
-                ## FIXME: This looks like a bug - there is no variable named
-                ## `con` - there is, however, `xpress_con` and `pyomo_con`
-                lb = con.lb
-                ub = con.ub
+                lb = xpress_con.lb
+                ub = xpress_con.ub
                 ub_s = val
                 expr_val = ub - ub_s
                 lb_s = lb - expr_val
