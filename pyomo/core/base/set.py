@@ -2246,19 +2246,6 @@ class Set(IndexedComponent):
 
         IndexedComponent.__init__(self, *args, **kwds)
 
-        if (
-            self._validate.__class__ is ParameterizedIndexedCallInitializer
-            and not self.parent_component().is_indexed()
-        ):
-            # TBD [JDS: 8/2024]: should we deprecate the "expanded
-            # tuple" version of the validate callback for scalar sets?
-            # It is widely used and we can (reasonably reliably) map to
-            # the expected behavior.
-            orig_fcn = self._validate._fcn
-            self._validate = ParameterizedScalarCallInitializer(
-                lambda m, v: orig_fcn(m, *v), True
-            )
-
         # HACK to make the "counted call" syntax work.  We wait until
         # after the base class is set up so that is_indexed() is
         # reliable.
@@ -2276,6 +2263,26 @@ class Set(IndexedComponent):
                 self._domain = self._init_domain(self.parent_block(), None, self)
             if self._init_dimen.constant():
                 self._dimen = self._init_dimen(self.parent_block(), None)
+
+            if self._validate.__class__ is ParameterizedIndexedCallInitializer:
+                # TBD [JDS: 8/2024]: should we deprecate the "expanded
+                # tuple" version of the validate callback for scalar sets?
+                # It is widely used and we can (reasonably reliably) map to
+                # the expected behavior...
+                orig_fcn = self._validate._fcn
+                self._validate = ParameterizedScalarCallInitializer(
+                    lambda m, v: orig_fcn(m, *v), True
+                )
+
+            if self._filter.__class__ is ParameterizedIndexedCallInitializer:
+                # TBD [JDS: 8/2024]: should we deprecate the "expanded
+                # tuple" version of the filter callback for scalar sets?
+                # It is widely used and we can (reasonably reliably) map to
+                # the expected behavior...
+                orig_fcn = self._filter._fcn
+                self._filter = ParameterizedScalarCallInitializer(
+                    lambda m, v: orig_fcn(m, *v), True
+                )
 
     @deprecated(
         "check_values() is deprecated: Sets only contain valid members", version='5.7'
