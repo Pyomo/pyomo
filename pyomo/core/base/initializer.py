@@ -83,7 +83,7 @@ def Initializer(
         if arg.__class__ in function_types:
             if allow_generators or inspect.isgeneratorfunction(arg):
                 raise ValueError(
-                    "Generator functions are not allowed when prassing additional args"
+                    "Generator functions are not allowed when passing additional args"
                 )
             _args = inspect.getfullargspec(arg)
             _nargs = len(_args.args)

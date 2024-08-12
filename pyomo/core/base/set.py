@@ -1459,7 +1459,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
             yield value
 
     def _cb_validate_filter(self, mode, val_iter):
-        failFalse = mode == 'validate'
+        fail_false = mode == 'validate'
         comp = self.parent_component()
         fcn = getattr(comp, '_' + mode)
         block = comp.parent_block()
@@ -1524,7 +1524,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
             except Exception as e:
                 exc = e
             if flag is not None:
-                if failFalse:
+                if fail_false:
                     raise ValueError(
                         "The value=%s violates the validation rule of Set %s"
                         % (value, self.name)
