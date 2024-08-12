@@ -165,7 +165,8 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an Experiment object
     >>> import idaes  # Required to add ipopt linear solvers to path if not done manually
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 19-24
+    :start-after: ========================
+    :end-before: End constructor definition
 
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -173,7 +174,8 @@ Step 1: Define the Pyomo process model
 The process model for the reaction kinetics problem is shown below. We build the model in without any data or discretization.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 33-102
+    :start-after: Create flexible model without data
+    :end-before: End equation def'n
 
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -181,7 +183,8 @@ Step 2: Finalize the Pyomo process model
 Here we add data to the model and finalize the discretization. This step is required before the model can be labeled.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 104-157
+    :start-after: End equation def'n
+    :end-before: End model finalization
 
 Step 3: Label the important information for model on the DoE object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -189,7 +192,8 @@ Step 3: Label the important information for model on the DoE object
 We label the four important groups as defined before.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 159-203
+    :start-after: End model finalization
+    :end-before: End model labeling
 
 Step 4: We give the experiment object a get_labeled_model function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,7 +201,8 @@ Step 4: We give the experiment object a get_labeled_model function
 This function summarizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :lines: 26-31
+    :start-after: End constructor definition
+    :end-before: Create flexible model without data
 
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

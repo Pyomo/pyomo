@@ -30,6 +30,9 @@ class ReactorExperiment(Experiment):
         self.ncp = ncp
         self.model = None
 
+        #############################
+        # End constructor definition
+
     def get_labeled_model(self):
         if self.model is None:
             self.create_model()
@@ -37,6 +40,7 @@ class ReactorExperiment(Experiment):
             self.label_experiment()
         return self.model
 
+    # Create flexible model without data
     def create_model(self):
         """
         This is an example user model provided to DoE library.
@@ -163,6 +167,9 @@ class ReactorExperiment(Experiment):
             neighbour_t = max(tc for tc in control_points if tc < t)
             return m.T[t] == m.T[neighbour_t]
 
+        #########################
+        # End model finalization
+
     def label_experiment(self):
         """
         Example for annotating (labeling) the model with a
@@ -200,3 +207,6 @@ class ReactorExperiment(Experiment):
         m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         # Add labels to all unknown parameters with nominal value as the value
         m.unknown_parameters.update((k, pyo.value(k)) for k in [m.A1, m.A2, m.E1, m.E2])
+
+        #########################
+        # End model labeling
