@@ -217,7 +217,7 @@ class TestOBBTUnit:
                     if var is const.body and bounds[0] == const.lb:
                         match = True
                         break
-                assert match, "Constaint not found for {} lower bound {}".format(
+                assert match, "Constraint not found for {} lower bound {}".format(
                     var, bounds[0]
                 )
             if m.var_bounds[var][1] < var.ub:
@@ -227,7 +227,7 @@ class TestOBBTUnit:
                     if var is const.body and bounds[1] == const.ub:
                         match = True
                         break
-                assert match, "Constaint not found for {} upper bound {}".format(
+                assert match, "Constraint not found for {} upper bound {}".format(
                     var, bounds[1]
                 )
 
