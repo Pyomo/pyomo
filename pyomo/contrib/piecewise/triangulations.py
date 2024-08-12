@@ -14,7 +14,7 @@ from enum import Enum
 from pyomo.common.errors import DeveloperError
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
-    get_hamiltonian_paths#as incremental_3d_simplex_pair_to_path,
+    get_hamiltonian_paths,
 )
 
 
