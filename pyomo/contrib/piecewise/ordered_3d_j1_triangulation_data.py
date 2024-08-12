@@ -12,6 +12,7 @@
 from pyomo.common.dependencies import networkx as nx
 import itertools
 
+
 def _get_double_cube_graph():
     # Graph of a double cube
     sign_vecs = list(itertools.product((-1, 1), repeat=3))
@@ -40,6 +41,7 @@ def _get_double_cube_graph():
         G.add_edge(simplex, neighbor_simplex)
 
     return G
+
 
 """
 This code was used to generate the data structure in this file. It should never
@@ -102,6 +104,7 @@ if __name__ == '__main__':
     print(all_needed_hamiltonians)
 
 """
+
 
 # This file was generated using generate_ordered_3d_j1_triangulation_data.py
 # Data format: Keys are a pair of simplices specified as the direction they are facing,

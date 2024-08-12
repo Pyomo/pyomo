@@ -225,6 +225,7 @@ class TestTriangulations(unittest.TestCase):
         self.check_grid_hamiltonian(3, 5)
         self.check_grid_hamiltonian(4, 3)
 
+
 @unittest.skipUnless(networkx_available, "Networkx is not available")
 class TestHamiltonianPaths(unittest.TestCase):
     def test_hamiltonian_paths(self):
