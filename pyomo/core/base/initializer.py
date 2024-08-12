@@ -102,14 +102,17 @@ def Initializer(
                 treat_sequences_as_mappings=treat_sequences_as_mappings,
                 arg_not_specified=arg_not_specified,
             )
-            if arg.__class__ in function_types:
+            if type(base_initializer) in (
+                ScalarCallInitializer,
+                IndexedCallInitializer,
+            ):
                 # This is an edge case: if we are providing additional
                 # args, but this is the first time we are seeing a
                 # callable type, we will (potentially) incorrectly
                 # categorize this as an IndexedCallInitializer.  Re-try
                 # now that we know this is a function_type.
                 return Initializer(
-                    arg=arg,
+                    arg=base_initializer._fcn,
                     allow_generators=allow_generators,
                     treat_sequences_as_mappings=treat_sequences_as_mappings,
                     arg_not_specified=arg_not_specified,
