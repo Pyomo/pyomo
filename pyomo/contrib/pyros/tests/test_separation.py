@@ -210,12 +210,12 @@ class TestConstructSeparationProblem(unittest.TestCase):
         assertExpressionsEqual(
             self,
             boxcon1.expr,
-            RangedExpression((np.int64(0), paramvar1, np.int64(1)), False),
+            RangedExpression((np.int_(0), paramvar1, np.int_(1)), False),
         )
         assertExpressionsEqual(
             self,
             boxcon2.expr,
-            RangedExpression((np.int64(0), paramvar2, np.int64(0)), False),
+            RangedExpression((np.int_(0), paramvar2, np.int_(0)), False),
         )
         self.assertTrue(boxcon1.active)
         self.assertTrue(boxcon2.active)

@@ -282,10 +282,10 @@ class TestBoxSet(unittest.TestCase):
         var1, var2 = uq.uncertain_param_vars
 
         assertExpressionsEqual(
-            self, con1.expr, RangedExpression((np.int64(1), var1, np.int64(2)), False)
+            self, con1.expr, RangedExpression((np.int_(1), var1, np.int_(2)), False)
         )
         assertExpressionsEqual(
-            self, con2.expr, RangedExpression((np.int64(3), var2, np.int64(4)), False)
+            self, con2.expr, RangedExpression((np.int_(3), var2, np.int_(4)), False)
         )
 
     def test_set_as_constraint_dim_mismatch(self):
@@ -575,20 +575,20 @@ class TestBudgetSet(unittest.TestCase):
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[0].expr,
-            m.v1 + np.float64(0) * m.v2 <= np.int64(4),
+            m.v1 + np.float64(0) * m.v2 <= np.int_(4),
         )
         assertExpressionsEqual(
-            self, uq.uncertainty_cons[1].expr, m.v1 + m.v2 <= np.int64(6)
+            self, uq.uncertainty_cons[1].expr, m.v1 + m.v2 <= np.int_(6)
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[2].expr,
-            -np.float64(1.0) * m.v1 - np.float64(0) * m.v2 <= np.int64(-1),
+            -np.float64(1.0) * m.v1 - np.float64(0) * m.v2 <= np.int_(-1),
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[3].expr,
-            -np.float64(0) * m.v1 + np.float64(-1.0) * m.v2 <= np.int64(-3),
+            -np.float64(0) * m.v1 + np.float64(-1.0) * m.v2 <= np.int_(-3),
         )
 
     def test_set_as_constraint_dim_mismatch(self):
@@ -2251,17 +2251,17 @@ class TestPolyhedralSet(unittest.TestCase):
         var1, var2 = uq.uncertain_param_vars
 
         assertExpressionsEqual(
-            self, uq.uncertainty_cons[0].expr, var1 + np.int64(0) * var2 <= np.int64(2)
+            self, uq.uncertainty_cons[0].expr, var1 + np.int_(0) * var2 <= np.int_(2)
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[1].expr,
-            np.int64(-1) * var1 + np.int64(1) * var2 <= np.int64(-1),
+            np.int_(-1) * var1 + np.int_(1) * var2 <= np.int_(-1),
         )
         assertExpressionsEqual(
             self,
             uq.uncertainty_cons[2].expr,
-            np.int64(-1) * var1 + np.int64(-1) * var2 <= np.int64(-1),
+            np.int_(-1) * var1 + np.int_(-1) * var2 <= np.int_(-1),
         )
 
     def test_set_as_constraint_dim_mismatch(self):
