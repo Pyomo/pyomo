@@ -14,7 +14,8 @@ import itertools
 from unittest import skipUnless
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.ordered_3d_j1_triangulation_data import (
-    get_hamiltonian_paths
+    get_hamiltonian_paths,
+    _get_double_cube_graph,
 )
 from pyomo.contrib.piecewise.triangulations import (
     get_unordered_j1_triangulation,
@@ -22,7 +23,7 @@ from pyomo.contrib.piecewise.triangulations import (
     _get_Gn_hamiltonian,
     _get_grid_hamiltonian,
 )
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import numpy as np, numpy_available, networkx_available
 from math import factorial
 import itertools
 
@@ -224,6 +225,20 @@ class TestTriangulations(unittest.TestCase):
         self.check_grid_hamiltonian(3, 5)
         self.check_grid_hamiltonian(4, 3)
 
+@unittest.skipUnless(networkx_available, "Networkx is not available")
 class TestHamiltonianPaths(unittest.TestCase):
     def test_hamiltonian_paths(self):
+        G = _get_double_cube_graph()
+
         paths = get_hamiltonian_paths()
+        self.assertEqual(len(paths), 60)
+
+        for ((s1, t1), (s2, t2)), path in paths.items():
+            # ESJ: I'm not quite sure how to check this is *the right* path
+            # given the key?
+
+            # Check it's Hamiltonian
+            self.assertEqual(len(path), 48)
+            # Check it's a path
+            for idx in range(1, 48):
+                self.assertTrue(G.has_edge(path[idx - 1], path[idx]))

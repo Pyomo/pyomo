@@ -9,17 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-"""
-This code was used to generate the data structure in this file. It should never
-need to be run again, but is here for the sake of documentation:
-
-import networkx as nx
+from pyomo.common.dependencies import networkx as nx
 import itertools
 
-# Get a list of 60 hamiltonian paths used in the 3d version of the ordered J1
-# triangulation, and dump it to stdout.
-if __name__ == '__main__':
+def _get_double_cube_graph():
     # Graph of a double cube
     sign_vecs = list(itertools.product((-1, 1), repeat=3))
     permutations = itertools.permutations(range(1, 4))
@@ -45,6 +38,17 @@ if __name__ == '__main__':
         neighbor_sign[simplex[1][2] - 1] *= -1
         neighbor_simplex = (tuple(neighbor_sign), simplex[1])
         G.add_edge(simplex, neighbor_simplex)
+
+    return G
+
+"""
+This code was used to generate the data structure in this file. It should never
+need to be run again, but is here for the sake of documentation:
+
+# Get a list of 60 hamiltonian paths used in the 3d version of the ordered J1
+# triangulation, and dump it to stdout.
+if __name__ == '__main__':
+    G = _get_double_cube_graph()
 
     # Each of these simplices has an outward face in the specified direction; also,
     # the +x simplex of one cube is adjacent to the -x simplex of a cube adjacent in
