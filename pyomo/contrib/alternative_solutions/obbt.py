@@ -223,6 +223,8 @@ def obbt_analysis_bounds_and_solutions(
     obj_constraints = aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
+    if refine_discrete_bounds:
+        aos_block.bound_constraints = pe.ConstraintList()
     new_constraint = False
     if len(obj_constraints) > 0:
         new_constraint = True
@@ -296,15 +298,11 @@ def obbt_analysis_bounds_and_solutions(
 
                 if refine_discrete_bounds and not var.is_continuous():
                     if sense == pe.minimize and var.lb < obj_val:
-                        bound_name = var.name + "_" + str.lower(bound_dir)
-                        bound = pe.Constraint(expr=var >= obj_val)
-                        setattr(aos_block, bound_name, bound)
+                        aos_block.bound_constraints.add(var >= obj_val)
                         new_constraint = True
 
                     if sense == pe.maximize and var.ub > obj_val:
-                        bound_name = var.name + "_" + str.lower(bound_dir)
-                        bound = pe.Constraint(expr=var <= obj_val)
-                        setattr(aos_block, bound_name, bound)
+                        aos_block.bound_constraints.add(var <= obj_val)
                         new_constraint = True
 
             # An infeasibleOrUnbounded status code will imply the problem is
