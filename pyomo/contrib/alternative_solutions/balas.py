@@ -91,6 +91,10 @@ def enumerate_binary_solutions(
         binary_variables = [
             var for var in all_variables if var.is_binary() and not var.is_fixed()
         ]
+        logger.debug(
+            "Analysis using %d binary variables: %s"
+            % (len(binary_variables), " ".join(var.name for var in binary_variables))
+        )
     else:
         binary_variables = ComponentSet()
         non_binary_variables = []
@@ -109,6 +113,9 @@ def enumerate_binary_solutions(
             logger.warn(", ".join(non_binary_variables))
 
     orig_objective = aos_utils.get_active_objective(model)
+
+    if len(binary_variables) == 0:
+        logger.warn("No binary variables found!")
 
     #
     # Setup solver

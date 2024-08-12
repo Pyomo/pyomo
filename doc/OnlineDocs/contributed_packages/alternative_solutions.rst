@@ -45,17 +45,20 @@ The following functions are defined in the alternative-solutions library:
 Usage Example
 -------------
 
-Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple model whose feasible space is an isosceles right triangle. The optimal solutiosn fall along the hypotenuse, where :math:`x + y == 5`.  Alternative near-optimal feasible points have integer objective values ranging from 0 to 4.
+Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple model whose feasible space is an isosceles right triangle. The optimal solutions fall along the hypotenuse, where :math:`x + y == 5`.  Alternative near-optimal feasible points have integer objective values ranging from 0 to 4.
 
 .. doctest::
 
    >>> import pyomo.environ as pyo
 
+   >>> values = [10, 40, 30, 50]
+   >>> weights = [5, 4, 6, 3]
+   >>> capacity = 10
+
    >>> m = pyo.ConcreteModel()
-   >>> m.x = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, 5))
-   >>> m.y = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, 5))
-   >>> m.o = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
-   >>> m.c = pyo.Constraint(expr=m.x + m.y <= 5)
+   >>> m.x = pyo.Var(range(4), within=pyo.Binary)
+   >>> m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in range(4)), sense=pyo.maximize)
+   >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(4)) <= capacity)
 
 We can execute the ``enumerate_binary_solutions`` function to generate a list of ``Solution`` objects that represent alternative optimal solutions:
 
@@ -64,7 +67,7 @@ We can execute the ``enumerate_binary_solutions`` function to generate a list of
 
    >>> import pyomo.contrib.alternative_solutions as aos
    >>> solns = aos.enumerate_binary_solutions(m, num_solutions=100, solver="glpk")
-   >>> assert len(solns) == 1
+   >>> assert len(solns) == 10
 
 Each ``Solution`` object contains information about the objective and variables, and it includes various methods to access this information.  For example:
 
@@ -75,10 +78,12 @@ Each ``Solution`` object contains information about the objective and variables,
    {
        "fixed_variables": [],
        "objective": "o",
-       "objective_value": 5.0,
+       "objective_value": 90.0,
        "solution": {
-           "x": 5,
-           "y": 0
+           "x[0]": 0,
+           "x[1]": 1,
+           "x[2]": 0,
+           "x[3]": 1
        }
    }
 

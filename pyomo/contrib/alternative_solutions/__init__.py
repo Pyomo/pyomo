@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.contrib.alternative_solutions.aos_utils import logcontext
 from pyomo.contrib.alternative_solutions.solution import Solution
 from pyomo.contrib.alternative_solutions.solnpool import gurobi_generate_solutions
 from pyomo.contrib.alternative_solutions.balas import enumerate_binary_solutions
