@@ -153,8 +153,8 @@ The goal of MBDoE is to optimize the experiment design variables :math:`\boldsym
 The observation errors are assumed to be independent both in time and across measurements with a constant standard deviation of 1 M for each species.
 
 
-Step 0: Import Pyomo and the Pyomo.DoE module and create an Experiment object
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -186,8 +186,8 @@ Here we add data to the model and finalize the discretization. This step is requ
     :start-after: End equation def'n
     :end-before: End model finalization
 
-Step 3: Label the important information for model on the DoE object
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Step 3: Label the information needed for DoE analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 We label the four important groups as defined before.
 
@@ -195,10 +195,10 @@ We label the four important groups as defined before.
     :start-after: End model finalization
     :end-before: End model labeling
 
-Step 4: We give the experiment object a get_labeled_model function
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Step 4: Implement the ``get_labeled_model`` method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This function summarizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
+This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End constructor definition
@@ -210,10 +210,8 @@ Step 5: Exploratory analysis (Enumeration)
 Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, 
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
-Pyomo.DoE accomplishes the exploratory analysis with the ``compute_FIM_full_factorial`` function.
-It allows users to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
-1D curve can be drawn by one design variable, fixing all other variables.
-The function ``compute_FIM_full_factorial`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method.
+Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` function.
+The ``compute_FIM_full_factorial`` function generates a grid over the design space as specified by the user. Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. In this way, sensitivity of the FIM over the design space can be evaluated.
 
 The following code executes the above problem description:
 
