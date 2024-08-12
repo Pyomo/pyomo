@@ -20,7 +20,9 @@ from pyomo.common.dependencies import (
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.tests.experiment_class_example import FullReactorExperiment
+from pyomo.contrib.doe.examples.reactor_example import (
+    ReactorExperiment as FullReactorExperiment,
+)
 
 import pyomo.environ as pyo
 

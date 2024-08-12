@@ -180,21 +180,21 @@ class ReactorExperiment(Experiment):
         # Set measurement labels
         m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         # Add CA to experiment outputs
-        m.experiment_outputs.update((m.CA[t], None) for t in m.t)
+        m.experiment_outputs.update((m.CA[t], None) for t in m.t_control)
         # Add CB to experiment outputs
-        m.experiment_outputs.update((m.CB[t], None) for t in m.t)
+        m.experiment_outputs.update((m.CB[t], None) for t in m.t_control)
         # Add CC to experiment outputs
-        m.experiment_outputs.update((m.CC[t], None) for t in m.t)
+        m.experiment_outputs.update((m.CC[t], None) for t in m.t_control)
 
         # Adding error for measurement values (assuming no covariance and constant error for all measurements)
         m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         concentration_error = 1e-2  # Error in concentration measurement
         # Add measurement error for CA
-        m.measurement_error.update((m.CA[t], concentration_error) for t in m.t)
+        m.measurement_error.update((m.CA[t], concentration_error) for t in m.t_control)
         # Add measurement error for CB
-        m.measurement_error.update((m.CB[t], concentration_error) for t in m.t)
+        m.measurement_error.update((m.CB[t], concentration_error) for t in m.t_control)
         # Add measurement error for CC
-        m.measurement_error.update((m.CC[t], concentration_error) for t in m.t)
+        m.measurement_error.update((m.CC[t], concentration_error) for t in m.t_control)
 
         # Identify design variables (experiment inputs) for the model
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
