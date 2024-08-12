@@ -59,10 +59,7 @@ class NoGoodCutGenerator:
             self.solutions.append(sol)
 
             if len(self.solutions) >= self.num_solutions:
-                # TODO: (nicely) terminate the solve
-                # cb_m.terminate()
-                return
-
+                cb_opt._solver_model.terminate()
             num_non_zero = 0
             non_zero_basic_expr = 1
             for idx in range(len(self.variable_groups)):
@@ -142,9 +139,9 @@ def enumerate_linear_solutions_soln_pool(
     if variables == None:
         all_variables = aos_utils.get_model_variables(model)
     for var in all_variables:
-        if var.is_binary():
+        if var.is_integer():
             raise pyomo.common.errors.ApplicationError(
-                f"The enumerate_linear_solutions_soln_pool() function cannot be used with models that contain binary variables"
+                f"The enumerate_linear_solutions_soln_pool() function cannot be used with models that contain discrete variables"
             )
 
     opt = pe.SolverFactory("gurobi")
