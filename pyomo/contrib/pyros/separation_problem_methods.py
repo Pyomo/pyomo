@@ -766,8 +766,7 @@ def evaluate_ss_ineq_con_violations(
     # evaluate violations for all second-stage inequality
     # constraints provided
     violations_by_sep_solution = get_sep_objective_values(
-        separation_data=separation_data,
-        ss_ineq_cons=ss_ineq_cons_to_evaluate,
+        separation_data=separation_data, ss_ineq_cons=ss_ineq_cons_to_evaluate
     )
 
     # normalize constraint violation: i.e. divide by
@@ -789,9 +788,7 @@ def evaluate_ss_ineq_con_violations(
     return (violating_param_realization, scaled_violations, constraint_violated)
 
 
-def initialize_separation(
-    ss_ineq_con_to_maximize, separation_data, master_data
-):
+def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data):
     """
     Initialize separation problem variables using the solution
     to the most recent master problem.

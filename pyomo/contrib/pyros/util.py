@@ -960,7 +960,7 @@ class ModelData:
         the PyROS cutting set subproblems are to be
         constructed.
     separation_priority_order : dict
-        Mapping from contraint names to separation priority
+        Mapping from constraint names to separation priority
         values.
     """
 
@@ -2594,9 +2594,7 @@ def enforce_dr_degree(working_blk, config, degree):
                 dr_var.unfix()
 
 
-def load_final_solution(
-    model_data, master_soln, original_user_var_partitioning
-):
+def load_final_solution(model_data, master_soln, original_user_var_partitioning):
     """
     Load variable values from the master problem to the
     original model.

@@ -129,9 +129,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         }
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
-            actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data
-            )
+            actual_partitioning = get_effective_var_partitioning(model_data=model_data)
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
@@ -1986,9 +1984,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         wm.second_stage.equality_cons["eq_con_2"].set_value(m.u * (m.x1 - 1) == 0)
 
         with LoggingIntercept(level=logging.DEBUG) as LOG:
-            robust_infeasible = reformulate_state_var_independent_eq_cons(
-                model_data
-            )
+            robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
         err_msg = LOG.getvalue()
         self.assertRegex(
@@ -2206,13 +2202,15 @@ class TestPreprocessModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType.worst_case,
-            decision_rule_order=0,
-            progress_logger=logger,
-            separation_priority_order=dict(),
-        ))
+        config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType.worst_case,
+                decision_rule_order=0,
+                progress_logger=logger,
+                separation_priority_order=dict(),
+            )
+        )
         preprocess_model_data(model_data, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
         ublk = model_data.working_model.user_model
@@ -2271,13 +2269,15 @@ class TestPreprocessModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType.worst_case,
-            decision_rule_order=dr_order,
-            progress_logger=logger,
-            separation_priority_order=dict(),
-        ))
+        config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType.worst_case,
+                decision_rule_order=dr_order,
+                progress_logger=logger,
+                separation_priority_order=dict(),
+            )
+        )
         preprocess_model_data(model_data, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
         ublk = model_data.working_model.user_model
@@ -2338,13 +2338,15 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        model_data.config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType[obj_focus],
-            decision_rule_order=dr_order,
-            progress_logger=logger,
-            separation_priority_order=dict(ineq3=2),
-        ))
+        model_data.config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType[obj_focus],
+                decision_rule_order=dr_order,
+                progress_logger=logger,
+                separation_priority_order=dict(ineq3=2),
+            )
+        )
         preprocess_model_data(model_data, user_var_partitioning)
 
         working_model = model_data.working_model
@@ -2532,20 +2534,20 @@ class TestPreprocessModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType.worst_case,
-            decision_rule_order=dr_order,
-            progress_logger=logger,
-            separation_priority_order=dict(),
-        ))
+        config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType.worst_case,
+                decision_rule_order=dr_order,
+                progress_logger=logger,
+                separation_priority_order=dict(),
+            )
+        )
 
         # for static DR, problem should be robust infeasible
         # due to the coefficient matching constraints derived
         # from bounds on z5
-        robust_infeasible = preprocess_model_data(
-            model_data, user_var_partitioning
-        )
+        robust_infeasible = preprocess_model_data(model_data, user_var_partitioning)
         self.assertIsInstance(robust_infeasible, bool)
         self.assertEqual(robust_infeasible, expected_robust_infeas)
 
@@ -2616,13 +2618,15 @@ class TestPreprocessModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType.worst_case,
-            decision_rule_order=dr_order,
-            progress_logger=logger,
-            separation_priority_order=dict(),
-        ))
+        config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType.worst_case,
+                decision_rule_order=dr_order,
+                progress_logger=logger,
+                separation_priority_order=dict(),
+            )
+        )
         preprocess_model_data(model_data, user_var_partitioning)
 
         ublk = model_data.working_model.user_model
@@ -2666,13 +2670,15 @@ class TestPreprocessModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType[obj_focus],
-            decision_rule_order=1,
-            progress_logger=logger,
-            separation_priority_order=dict(),
-        ))
+        config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType[obj_focus],
+                decision_rule_order=1,
+                progress_logger=logger,
+                separation_priority_order=dict(),
+            )
+        )
         preprocess_model_data(model_data, user_var_partitioning)
 
         # expected model stats worked out by hand
@@ -2718,13 +2724,15 @@ class TestPreprocessModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.update(dict(
-            uncertain_params=[om.q],
-            objective_focus=ObjectiveType[obj_focus],
-            decision_rule_order=2,
-            progress_logger=logger,
-            separation_priority_order=dict(),
-        ))
+        config.update(
+            dict(
+                uncertain_params=[om.q],
+                objective_focus=ObjectiveType[obj_focus],
+                decision_rule_order=2,
+                progress_logger=logger,
+                separation_priority_order=dict(),
+            )
+        )
         preprocess_model_data(model_data, user_var_partitioning)
 
         # expected model stats worked out by hand
