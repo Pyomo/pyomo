@@ -39,7 +39,7 @@ ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory('k_aug', solver_io='nl', validate=False)
 
 DATA_DIR = Path(__file__).parent
-file_path = DATA_DIR / "result.json"
+file_path = DATA_DIR / ".." / "examples" / "result.json"
 
 with open(file_path) as f:
     data_ex = json.load(f)
