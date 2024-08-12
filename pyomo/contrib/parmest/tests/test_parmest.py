@@ -9,43 +9,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-    pandas as pd,
-    pandas_available,
-    scipy,
-    scipy_available,
-    matplotlib,
-    matplotlib_available,
-)
-
 import platform
-
-is_osx = platform.mac_ver()[0] != ""
-
-import pyomo.common.unittest as unittest
 import sys
 import os
 import subprocess
 from itertools import product
 
+import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
-from pyomo.contrib.parmest.experiment import Experiment
 import pyomo.environ as pyo
 import pyomo.dae as dae
 
+from pyomo.common.dependencies import numpy as np, pandas as pd, scipy, matplotlib
+from pyomo.common.fileutils import this_file_dir
+from pyomo.contrib.parmest.experiment import Experiment
+from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.opt import SolverFactory
 
+is_osx = platform.mac_ver()[0] != ""
 ipopt_available = SolverFactory("ipopt").available()
-
-from pyomo.common.fileutils import find_library
-
-pynumero_ASL_available = False if find_library("pynumero_ASL") is None else True
-
-testdir = os.path.dirname(os.path.abspath(__file__))
+pynumero_ASL_available = AmplInterface.available()
+testdir = this_file_dir()
 
 
 @unittest.skipIf(
@@ -208,17 +194,7 @@ class TestRooneyBiegler(unittest.TestCase):
             retcode = subprocess.call(rlist)
         self.assertEqual(retcode, 0)
 
-    @unittest.skip("Most folks don't have k_aug installed")
-    def test_theta_k_aug_for_Hessian(self):
-        # this will fail if k_aug is not installed
-        objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
-        self.assertAlmostEqual(objval, 4.4675, places=2)
-
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
-    @unittest.skipIf(
-        not parmest.inverse_reduced_hessian_available,
-        "Cannot test covariance matrix: required ASL dependency is missing",
-    )
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_theta_est_cov(self):
         objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
 
@@ -568,11 +544,7 @@ class TestModelVariants(unittest.TestCase):
             },
         }
 
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
-    @unittest.skipIf(
-        not parmest.inverse_reduced_hessian_available,
-        "Cannot test covariance matrix: required ASL dependency is missing",
-    )
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def check_rooney_biegler_results(self, objval, cov):
 
         # get indices in covariance matrix
@@ -596,6 +568,7 @@ class TestModelVariants(unittest.TestCase):
             cov.iloc[rate_constant_index, rate_constant_index], 0.04193591, places=2
         )  # 0.04124 from paper
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics(self):
 
         for model_type, parmest_input in self.input.items():
@@ -609,6 +582,7 @@ class TestModelVariants(unittest.TestCase):
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
 
         for model_type, parmest_input in self.input.items():
@@ -625,6 +599,7 @@ class TestModelVariants(unittest.TestCase):
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
 
         for model_type, parmest_input in self.input.items():
@@ -641,6 +616,7 @@ class TestModelVariants(unittest.TestCase):
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
 
         for model_type, parmest_input in self.input.items():
@@ -923,6 +899,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(return_vals1["time"].loc[1][18], 2.368, places=3)
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_covariance(self):
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
             inv_reduced_hessian_barrier,
@@ -1217,17 +1194,7 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
             retcode = subprocess.call(rlist)
         assert retcode == 0
 
-    @unittest.skip("Most folks don't have k_aug installed")
-    def test_theta_k_aug_for_Hessian(self):
-        # this will fail if k_aug is not installed
-        objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
-        self.assertAlmostEqual(objval, 4.4675, places=2)
-
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
-    @unittest.skipIf(
-        not parmest.inverse_reduced_hessian_available,
-        "Cannot test covariance matrix: required ASL dependency is missing",
-    )
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_theta_est_cov(self):
         objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
 
@@ -1485,11 +1452,7 @@ class TestModelVariantsDeprecated(unittest.TestCase):
             },
         }
 
-    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
-    @unittest.skipIf(
-        not parmest.inverse_reduced_hessian_available,
-        "Cannot test covariance matrix: required ASL dependency is missing",
-    )
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_parmest_basics(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
@@ -1518,6 +1481,7 @@ class TestModelVariantsDeprecated(unittest.TestCase):
             obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
@@ -1549,6 +1513,7 @@ class TestModelVariantsDeprecated(unittest.TestCase):
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
@@ -1580,6 +1545,7 @@ class TestModelVariantsDeprecated(unittest.TestCase):
 
             self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
         for model_type, parmest_input in self.input.items():
             pest = parmest.Estimator(
@@ -1923,6 +1889,7 @@ class TestReactorDesign_DAE_Deprecated(unittest.TestCase):
         self.assertAlmostEqual(return_vals1["time"].loc[1][18], 2.368, places=3)
         self.assertAlmostEqual(return_vals2["time"].loc[1][18], 2.368, places=3)
 
+    @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_covariance(self):
         from pyomo.contrib.interior_point.inverse_reduced_hessian import (
             inv_reduced_hessian_barrier,
