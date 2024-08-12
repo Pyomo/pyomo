@@ -135,7 +135,7 @@ class DesignOfExperiments:
         get_labeled_model_args:
             Additional arguments for the ``get_labeled_model`` function on the Experiment object.
         _Cholesky_option:
-            Boolean value of whether or not to use the choleskyn factorization to compute the
+            Boolean value of whether or not to use the cholesky factorization to compute the
             determinant for the D-optimality criteria. This parameter should not be changed
             unless the user intends to make performance worse (i.e., compare an existing tool
             that uses the full FIM to this algorithm)
