@@ -39,6 +39,7 @@ from pyomo.core.expr import log, sin, exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.util import (
+    ModelData,
     ObjectiveType,
     get_effective_var_partitioning,
     get_var_certain_uncertain_bounds,
@@ -595,6 +596,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         model_data.working_model.second_stage = Block()
         model_data.working_model.second_stage.inequality_cons = Constraint(Any)
         model_data.working_model.second_stage.equality_cons = Constraint(Any)
+        model_data.separation_priority_order = dict()
 
         return model_data
 
@@ -639,7 +641,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             )
         )
 
-        turn_nonadjustable_var_bounds_to_constraints(model_data)
+        turn_nonadjustable_var_bounds_to_constraints(model_data, config=Bunch())
 
         for var, (orig_domain, orig_bounds) in original_var_domains_and_bounds.items():
             # all var domains should remain unchanged
@@ -746,6 +748,17 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             msg="Number of second-stage equalities not as expected.",
         )
 
+        # check separation priorities
+        for con_name in second_stage.inequality_cons:
+            self.assertEqual(
+                model_data.separation_priority_order[con_name],
+                0,
+                msg=(
+                    f"Separation priority for entry {con_name!r} of second-stage "
+                    "inequalities not as expected."
+                ),
+            )
+
     def test_turn_adjustable_bounds_to_constraints(self):
         """
         Test subroutine for reformulating domains and bounds
@@ -774,7 +787,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             for var in model_data.working_model.user_model.component_data_objects(Var)
         )
 
-        turn_adjustable_var_bounds_to_constraints(model_data)
+        turn_adjustable_var_bounds_to_constraints(model_data, config=Bunch())
 
         for var, (orig_domain, orig_bounds) in original_var_domains_and_bounds.items():
             _, (final_lb, final_ub) = get_var_bound_pairs(var)
@@ -842,6 +855,9 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
                 )
 
         second_stage = model_data.working_model.second_stage
+
+        self.assertEqual(len(second_stage.inequality_cons), 10)
+        self.assertEqual(len(second_stage.equality_cons), 5)
 
         # verify bound constraint expressions
         assertExpressionsEqual(
@@ -920,8 +936,16 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             m.z8 <= m.q2,
         )
 
-        self.assertEqual(len(second_stage.inequality_cons), 10)
-        self.assertEqual(len(second_stage.equality_cons), 5)
+        # check separation priorities
+        for con_name in second_stage.inequality_cons:
+            self.assertEqual(
+                model_data.separation_priority_order[con_name],
+                0,
+                msg=(
+                    f"Separation priority for entry {con_name!r} of second-stage "
+                    "inequalities not as expected."
+                ),
+            )
 
 
 class TestStandardizeInequalityConstraints(unittest.TestCase):
@@ -988,6 +1012,8 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         ep.second_stage_variables = [m.z1, m.z2]
         ep.state_variables = [m.y1]
 
+        model_data.separation_priority_order = dict()
+
         return model_data
 
     def test_standardize_inequality_constraints(self):
@@ -998,7 +1024,10 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         working_model = model_data.working_model
         m = working_model.user_model
 
-        standardize_inequality_constraints(model_data)
+        standardize_inequality_constraints(
+            model_data,
+            config=Bunch(separation_priority_order=dict(c3=1, c5=2)),
+        )
 
         fs_ineq_cons = working_model.first_stage.inequality_cons
         ss_ineq_cons = working_model.second_stage.inequality_cons
@@ -1007,7 +1036,6 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         self.assertEqual(len(ss_ineq_cons), 12)
 
         self.assertFalse(m.c1.active)
-        fs_ineq_cons.pprint()
         new_c1_con = fs_ineq_cons["ineq_con_c1"]
         self.assertTrue(new_c1_con.active)
         assertExpressionsEqual(self, new_c1_con.expr, m.x1 <= 1)
@@ -1025,6 +1053,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         new_c3_con = ss_ineq_cons["ineq_con_c3_lower_bound_con"]
         self.assertTrue(new_c3_con.active)
         assertExpressionsEqual(self, new_c3_con.expr, -m.x1 <= -m.q)
+        self.assertEqual(model_data.separation_priority_order[new_c3_con.index()], 1)
 
         # log(m.p) <= m.x2 <= m.q
         # lower bound is first-stage, upper bound second-stage
@@ -1045,6 +1074,12 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         self.assertTrue(new_c5_lower_bound_con.active)
         assertExpressionsEqual(self, new_c5_lower_bound_con.expr, -m.x2 <= -m.q)
         assertExpressionsEqual(self, new_c5_upper_bound_con.expr, m.x2 <= 2 * m.q)
+        self.assertEqual(
+            model_data.separation_priority_order[new_c5_lower_bound_con.index()], 2
+        )
+        self.assertEqual(
+            model_data.separation_priority_order[new_c5_upper_bound_con.index()], 2
+        )
 
         # single second-stage inequality
         self.assertFalse(m.c6.active)
@@ -1099,6 +1134,18 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         assertExpressionsEqual(self, new_c12_lower_bound_con.expr, -m.x1 <= -m.q**2)
         assertExpressionsEqual(self, new_c12_upper_bound_con.expr, m.x1 <= sin(m.p))
 
+        # check separation priorities
+        for con_name in ss_ineq_cons:
+            if "c3" not in con_name and "c5" not in con_name:
+                self.assertEqual(
+                    model_data.separation_priority_order[con_name],
+                    0,
+                    msg=(
+                        f"Separation priority for entry {con_name!r} of second-stage "
+                        "inequalities not as expected."
+                    ),
+                )
+
     def test_standardize_inequality_error(self):
         """
         Test exception raised by inequality constraint standardization
@@ -1113,7 +1160,9 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
 
         exc_str = r"Found an equality bound.*1.0.*for the constraint.*c6'"
         with self.assertRaisesRegex(ValueError, exc_str):
-            standardize_inequality_constraints(model_data)
+            standardize_inequality_constraints(
+                model_data, Bunch(separation_priority_order=dict()),
+            )
 
 
 class TestStandardizeEqualityConstraints(unittest.TestCase):
@@ -1277,6 +1326,8 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         model_data.working_model.second_stage = Block()
         model_data.working_model.second_stage.inequality_cons = Constraint(Any)
 
+        model_data.separation_priority_order = dict()
+
         return model_data
 
     def test_declare_objective_expressions(self):
@@ -1351,6 +1402,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
             working_model.second_stage.inequality_cons["epigraph_con"].expr,
             m.obj1.expr - working_model.first_stage.epigraph_var <= 0,
         )
+        self.assertEqual(model_data.separation_priority_order["epigraph_con"], 0)
 
     def test_standardize_active_obj_nominal_focus(self):
         """
@@ -1379,6 +1431,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
             working_model.first_stage.inequality_cons["epigraph_con"].expr,
             m.obj1.expr - working_model.first_stage.epigraph_var <= 0,
         )
+        self.assertNotIn("epigraph_con", model_data.separation_priority_order)
 
     def test_standardize_active_obj_unsupported_focus(self):
         """
@@ -1432,6 +1485,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
             working_model.first_stage.inequality_cons["epigraph_con"].expr,
             -m.obj2.expr - working_model.first_stage.epigraph_var <= 0,
         )
+        self.assertNotIn("epigraph_con", model_data.separation_priority_order)
 
 
 class TestAddDecisionRuleVars(unittest.TestCase):
@@ -1923,6 +1977,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         and recasting of nonlinear constraints to opposing equalities.
         """
         model_data = self.setup_test_model_data()
+        model_data.separation_priority_order = dict()
 
         config = Bunch()
         config.decision_rule_order = 1
@@ -2008,6 +2063,16 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             (-1) + m.x1 == 0,
         )
 
+        # separation priorities were also updated
+        self.assertEqual(
+            model_data.separation_priority_order["reform_lower_bound_from_eq_con"],
+            0,
+        )
+        self.assertEqual(
+            model_data.separation_priority_order["reform_upper_bound_from_eq_con"],
+            0,
+        )
+
     def test_coefficient_matching_robust_infeasible_proof(self):
         """
         Test coefficient matching detects robust infeasibility
@@ -2063,8 +2128,7 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         Build model data object for the preprocessor.
         """
-        model_data = Bunch()
-        model_data.original_model = m = ConcreteModel()
+        m = ConcreteModel()
 
         # PARAMS: p uncertain, q certain
         m.p = Param(initialize=2, mutable=True)
@@ -2143,6 +2207,8 @@ class TestPreprocessModelData(unittest.TestCase):
             )
         )
 
+        model_data = ModelData(original_model=m, timing=None)
+
         # set up the var partitioning
         user_var_partitioning = VariablePartitioning(
             first_stage_variables=[m.x1, m.x2],
@@ -2166,6 +2232,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=0,
             progress_logger=logger,
+            separation_priority_order=dict(),
         )
         preprocess_model_data(model_data, config, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
@@ -2229,6 +2296,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=dr_order,
             progress_logger=logger,
+            separation_priority_order=dict(),
         )
         preprocess_model_data(model_data, config, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
@@ -2295,6 +2363,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=dr_order,
             progress_logger=logger,
+            separation_priority_order=dict(ineq3=2),
         )
         preprocess_model_data(model_data, config, user_var_partitioning)
 
@@ -2459,6 +2528,18 @@ class TestPreprocessModelData(unittest.TestCase):
         # user model block should have no active constraints
         self.assertFalse(list(m.component_data_objects(Constraint, active=True)))
 
+        # check separation priorities
+        for con_name, order in model_data.separation_priority_order.items():
+            expected_order = 2 if "ineq3" in con_name else 0
+            self.assertEqual(
+                order,
+                expected_order,
+                msg=(
+                    "Separation priority order for second-stage inequality "
+                    f"{con_name!r} not as expected."
+                ),
+            )
+
     @parameterized.expand(
         [["static", 0, True], ["affine", 1, False], ["quadratic", 2, False]]
     )
@@ -2475,6 +2556,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=dr_order,
             progress_logger=logger,
+            separation_priority_order=dict(),
         )
 
         # for static DR, problem should be robust infeasible
@@ -2557,6 +2639,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=dr_order,
             progress_logger=logger,
+            separation_priority_order=dict(),
         )
         preprocess_model_data(model_data, config, user_var_partitioning)
 
@@ -2605,6 +2688,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=1,
             progress_logger=logger,
+            separation_priority_order=dict(),
         )
         preprocess_model_data(model_data, config, user_var_partitioning)
 
@@ -2655,6 +2739,7 @@ class TestPreprocessModelData(unittest.TestCase):
             objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=2,
             progress_logger=logger,
+            separation_priority_order=dict(),
         )
         preprocess_model_data(model_data, config, user_var_partitioning)
 

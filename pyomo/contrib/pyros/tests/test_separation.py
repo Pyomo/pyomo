@@ -23,9 +23,13 @@ from pyomo.core.base import ConcreteModel, Constraint, Objective, Param, Var
 from pyomo.core.expr import exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
-from pyomo.contrib.pyros.separation_problem_methods import construct_separation_problem
+from pyomo.contrib.pyros.separation_problem_methods import (
+    construct_separation_problem,
+    group_ss_ineq_constraints_by_priority,
+)
 from pyomo.contrib.pyros.uncertainty_sets import BoxSet, FactorModelSet
 from pyomo.contrib.pyros.util import (
+    ModelData,
     preprocess_model_data,
     ObjectiveType,
     VariablePartitioning,
@@ -63,8 +67,9 @@ def build_simple_model_data(objective_focus="worst_case"):
         progress_logger=logger,
         nominal_uncertain_param_vals=[0.5, 0],
         uncertainty_set=BoxSet([[0, 1], [0, 0]]),
+        separation_priority_order=dict(con=2),
     )
-    model_data = Bunch(original_model=m)
+    model_data = ModelData(original_model=m, timing=None)
     user_var_partitioning = VariablePartitioning(
         first_stage_variables=[m.x1],
         second_stage_variables=[m.x2, m.x3],
@@ -265,6 +270,35 @@ class TestConstructSeparationProblem(unittest.TestCase):
         # factor set bounds are tighter
         self.assertEqual(paramvar1.bounds, (-2.5, 4.5))
         self.assertEqual(paramvar2.bounds, (-1.0, 1.0))
+
+
+class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
+    def test_group_ss_ineq_constraints_by_priority(self):
+        model_data, config = build_simple_model_data()
+        separation_model = construct_separation_problem(model_data, config)
+
+        # build mock separation data-like object
+        # since we are testing only the grouping method
+        separation_data = Bunch(
+            separation_model=separation_model,
+            separation_priority_order=model_data.separation_priority_order
+        )
+
+        priority_groups = group_ss_ineq_constraints_by_priority(separation_data, config)
+
+        self.assertEqual(list(priority_groups.keys()), [2, 0])
+        ss_ineq_cons = separation_model.second_stage.inequality_cons
+        self.assertEqual(
+            priority_groups[2], [ss_ineq_cons["ineq_con_con_upper_bound_con"]]
+        )
+        self.assertEqual(
+            priority_groups[0],
+            [
+                ss_ineq_cons["var_x3_certain_lower_bound_con"],
+                ss_ineq_cons["var_x3_certain_upper_bound_con"],
+                ss_ineq_cons["epigraph_con"],
+            ]
+        )
 
 
 if __name__ == "__main__":

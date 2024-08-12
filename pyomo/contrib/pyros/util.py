@@ -64,8 +64,10 @@ COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
 ABS_CON_CHECK_FEAS_TOL = 1e-5
 PRETRIANGULAR_VAR_COEFF_TOL = 1e-6
+
 TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 DEFAULT_LOGGER_NAME = "pyomo.contrib.pyros"
+DEFAULT_SEPARATION_PRIORITY = 0
 
 
 class TimingData:
@@ -957,6 +959,9 @@ class ModelData:
         Preprocessed clone of `original_model` from which
         the PyROS cutting set subproblems are to be
         constructed.
+    separation_priority_order : dict
+        Mapping from contraint names to separation priority
+        values.
     """
 
     def __init__(self, original_model, timing):
@@ -964,6 +969,7 @@ class ModelData:
         self.timing = timing
         # working model will be addressed by preprocessing
         self.working_model = None
+        self.separation_priority_order = dict()
 
 
 def get_var_bound_pairs(var):
@@ -1438,7 +1444,7 @@ def remove_all_var_bounds(var):
     var.domain = Reals
 
 
-def turn_nonadjustable_var_bounds_to_constraints(model_data):
+def turn_nonadjustable_var_bounds_to_constraints(model_data, config):
     """
     Reformulate uncertain bounds for the nonadjustable
     (i.e. effective first-stage) variables of the working
@@ -1482,6 +1488,10 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                     working_model.second_stage.inequality_cons[new_con_name] = (
                         new_con_expr
                     )
+                    # can't specify custom priorities for variable bounds
+                    model_data.separation_priority_order[new_con_name] = (
+                        DEFAULT_SEPARATION_PRIORITY
+                    )
 
     # for subsequent developments: return a mapping
     # from each variable to the corresponding binding constraints?
@@ -1489,7 +1499,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     # the interface for separation priority ordering
 
 
-def turn_adjustable_var_bounds_to_constraints(model_data):
+def turn_adjustable_var_bounds_to_constraints(model_data, config):
     """
     Reformulate domain and declared bounds for the
     adjustable (i.e., effective second-stage and effective state)
@@ -1538,6 +1548,11 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
                     else:
                         working_model.second_stage.inequality_cons[new_con_name] = (
                             new_con_expr
+                        )
+                        # no custom separation priorities for Var
+                        # bound constraints
+                        model_data.separation_priority_order[new_con_name] = (
+                            DEFAULT_SEPARATION_PRIORITY
                         )
 
         remove_all_var_bounds(var)
@@ -1617,7 +1632,7 @@ def setup_working_model(model_data, config, user_var_partitioning):
             working_model.original_active_inequality_cons.append(con)
 
 
-def standardize_inequality_constraints(model_data):
+def standardize_inequality_constraints(model_data, config):
     """
     Standardize the inequality constraints of the working model,
     and classify them as first-stage inequalities or second-stage
@@ -1681,6 +1696,12 @@ def standardize_inequality_constraints(model_data):
                     working_model.second_stage.inequality_cons[new_con_name] = (
                         std_con_expr
                     )
+                    # account for user-specified priority specifications
+                    model_data.separation_priority_order[new_con_name] = (
+                        config.separation_priority_order.get(
+                            con_rel_name, DEFAULT_SEPARATION_PRIORITY
+                        )
+                    )
                 else:
                     # we do not want to modify the arrangement of
                     # lower bound for first-stage inequalities, so
@@ -1702,11 +1723,6 @@ def standardize_inequality_constraints(model_data):
                 con.expr
             )
             con.deactivate()
-
-    # for subsequent developments: map the original constraints
-    # to the derived second-stage inequalities?
-    # we will add this as needed when changes are made to
-    # the interface for separation priority ordering
 
 
 def standardize_equality_constraints(model_data):
@@ -1907,6 +1923,9 @@ def standardize_active_objective(model_data, config):
                 working_model.full_objective.expr
                 - working_model.first_stage.epigraph_var
                 <= 0
+            )
+            model_data.separation_priority_order["epigraph_con"] = (
+                DEFAULT_SEPARATION_PRIORITY
             )
         elif config.objective_focus == ObjectiveType.nominal:
             working_model.first_stage.inequality_cons["epigraph_con"] = (
@@ -2188,9 +2207,14 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                     std_con_expr = create_bound_constraint_expr(
                         expr=con.body, bound=con.upper, bound_type=bound_type
                     )
+                    new_con_name = f"reform_{bound_type}_bound_from_{con_idx}"
                     working_model.second_stage.inequality_cons[
-                        f"reform_{bound_type}_bound_from_{con_idx}"
+                        new_con_name
                     ] = std_con_expr
+                    # no custom priorities specified
+                    model_data.separation_priority_order[new_con_name] = (
+                        DEFAULT_SEPARATION_PRIORITY
+                    )
             else:
                 polynomial_repn_coeffs = (
                     [expr_repn.constant]
@@ -2296,11 +2320,11 @@ def preprocess_model_data(model_data, config, user_var_partitioning):
     # different treatment for effective first-stage
     # than for effective second-stage and state variables
     config.progress_logger.debug("Turning some variable bounds to constraints...")
-    turn_nonadjustable_var_bounds_to_constraints(model_data)
-    turn_adjustable_var_bounds_to_constraints(model_data)
+    turn_nonadjustable_var_bounds_to_constraints(model_data, config)
+    turn_adjustable_var_bounds_to_constraints(model_data, config)
 
     config.progress_logger.debug("Standardizing the model constraints...")
-    standardize_inequality_constraints(model_data)
+    standardize_inequality_constraints(model_data, config)
     standardize_equality_constraints(model_data)
 
     # includes epigraph reformulation

@@ -381,14 +381,11 @@ def group_ss_ineq_constraints_by_priority(separation_data, config):
         Keys are sorted in descending order
         (i.e. highest priority first).
     """
-    all_ss_ineq_cons = list(
-        separation_data.separation_model.second_stage.inequality_cons.values()
-    )
+    ss_ineq_cons = separation_data.separation_model.second_stage.inequality_cons
     separation_priority_groups = dict()
-    config_sep_priority_dict = config.separation_priority_order
-    for ss_ineq_con in all_ss_ineq_cons:
+    for name, ss_ineq_con in ss_ineq_cons.items():
         # by default, priority set to 0
-        priority = config_sep_priority_dict.get(ss_ineq_con.name, 0)
+        priority = separation_data.separation_priority_order[name]
         cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
         cons_with_same_priority.append(ss_ineq_con)
 
@@ -1198,6 +1195,7 @@ class SeparationProblemData:
         """Initialize self (see class docstring)."""
         self.separation_model = construct_separation_problem(model_data, config)
         self.timing = model_data.timing
+        self.separation_priority_order = model_data.separation_priority_order.copy()
         self.iteration = 0
         self.config = config
         self.points_added_to_master = {(0, 0): config.nominal_uncertain_param_vals}

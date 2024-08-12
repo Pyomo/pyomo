@@ -35,6 +35,7 @@ from pyomo.contrib.pyros.master_problem_methods import (
     MasterProblemData,
 )
 from pyomo.contrib.pyros.util import (
+    ModelData,
     preprocess_model_data,
     ObjectiveType,
     time_code,
@@ -75,8 +76,9 @@ def build_simple_model_data(objective_focus="worst_case"):
         decision_rule_order=1,
         progress_logger=logger,
         nominal_uncertain_param_vals=[0.4],
+        separation_priority_order=dict(),
     )
-    model_data = Bunch(original_model=m)
+    model_data = ModelData(original_model=m, timing=TimingData())
     user_var_partitioning = VariablePartitioning(
         first_stage_variables=[m.x1],
         second_stage_variables=[m.x2, m.x3],
