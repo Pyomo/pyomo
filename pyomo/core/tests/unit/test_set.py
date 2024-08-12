@@ -4456,6 +4456,41 @@ class TestSet(unittest.TestCase):
             "Exception raised while validating element '(2, 2)' for Set J3[2,2]\n",
         )
 
+        # Testing the processing of (deprecated) APIs that raise exceptions
+        def _validate(m, i, j):
+            assert i == 2
+            assert j == 3
+            raise RuntimeError("Bogus value")
+
+        m.K1 = Set([1], dimen=2, validate=_validate)
+        with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+            m.K1[1].add((2, 3))
+
+        # Testing the processing of (deprecated) APIs that raise exceptions
+        def _validate(m, i, j, k):
+            assert i == 2
+            assert j == 3
+            assert k == 1
+            raise RuntimeError("Bogus value")
+
+        m.K2 = Set([1], dimen=2, validate=_validate)
+        with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+            m.K2[1].add((2, 3))
+
+        # Testing passing the validation rule by dict
+        _validate = {1: lambda m, i: i == 10, 2: lambda m, i: i == 20}
+        m.L = Set([1, 2], validate=_validate)
+        m.L[1].add(10)
+        with self.assertRaisesRegex(
+            ValueError, r"The value=20 violates the validation rule of Set L\[1\]"
+        ):
+            m.L[1].add(20)
+        with self.assertRaisesRegex(
+            ValueError, r"The value=10 violates the validation rule of Set L\[2\]"
+        ):
+            m.L[2].add(10)
+        m.L[2].add(20)
+
     def test_domain(self):
         m = ConcreteModel()
         m.I = Set()
