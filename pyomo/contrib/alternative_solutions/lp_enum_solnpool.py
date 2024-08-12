@@ -60,6 +60,7 @@ class NoGoodCutGenerator:
 
             if len(self.solutions) >= self.num_solutions:
                 # TODO: (nicely) terminate the solve
+                # cb_m.terminate()
                 return
 
             num_non_zero = 0

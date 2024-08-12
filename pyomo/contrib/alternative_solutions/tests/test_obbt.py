@@ -211,9 +211,25 @@ class TestOBBTUnit:
         assert len(solns) == 2 * len(all_bounds) + 1
         for var, bounds in all_bounds.items():
             if m.var_bounds[var][0] > var.lb:
-                assert hasattr(m._obbt, var.name + "_lb")
+                match = False
+                for idx in m._obbt.bound_constraints:
+                    const = m._obbt.bound_constraints[idx]
+                    if var is const.body and bounds[0] == const.lb:
+                        match = True
+                        break
+                assert match, "Constaint not found for {} lower bound {}".format(
+                    var, bounds[0]
+                )
             if m.var_bounds[var][1] < var.ub:
-                assert hasattr(m._obbt, var.name + "_ub")
+                match = False
+                for idx in m._obbt.bound_constraints:
+                    const = m._obbt.bound_constraints[idx]
+                    if var is const.body and bounds[1] == const.ub:
+                        match = True
+                        break
+                assert match, "Constaint not found for {} upper bound {}".format(
+                    var, bounds[1]
+                )
 
     def test_obbt_infeasible(self, mip_solver):
         """
