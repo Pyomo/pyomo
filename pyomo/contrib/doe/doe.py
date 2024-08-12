@@ -65,7 +65,7 @@ class FiniteDifferenceStep(Enum):
 class DesignOfExperiments:
     def __init__(
         self,
-        experiment,
+        experiment=None,
         fd_formula="central",
         step=1e-3,
         objective_option="determinant",
@@ -81,6 +81,7 @@ class DesignOfExperiments:
         logger_level=logging.WARNING,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
+        **kwargs
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
@@ -145,6 +146,19 @@ class DesignOfExperiments:
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
+        # Deprecation error
+        if 'create_model' in kwargs:
+            raise ValueError(
+                "DEPRECATION ERROR: Pyomo.DoE has been refactored. The current interface utilizes Experiment "
+                "objects that label unknown parameters, experiment inputs, experiment outputs and measurement "
+                "error. This avoids string-based naming which is fragile. For instruction to use the new "
+                "interface, please see Pyomo.DoE under the contributed packages documentation at "
+                "`https://pyomo.readthedocs.io/en/stable/`"
+            )
+
+        if experiment is None:
+            raise ValueError("Experiment object must be provided to perform DoE.")
+
         # Check if the Experiment object has callable ``get_labeled_model`` function
         if not hasattr(experiment, "get_labeled_model"):
             raise ValueError(
