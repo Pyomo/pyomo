@@ -231,7 +231,8 @@ Step 6: Performing an optimal experimental design
 This is an example of running an experimental design to determine an optimal experiment for the reactor example. We utilize the determinant as the objective.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
-    :lines: 24-90
+    :start-after: Read in file
+    :end-before: Print out a results summary
 
 When run, the optimal design is an initial concentration of 5.0 mol/L and an initial temperature of 494 K with all other temperatures being 300 K. The corresponding log-10 determinant of the FIM is 13.75
 
