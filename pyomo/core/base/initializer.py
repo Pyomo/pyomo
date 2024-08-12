@@ -561,7 +561,7 @@ class ParameterizedInitializer(InitializerBase):
         return self._base_initializer.indices()
 
     def __call__(self, parent, idx, *args):
-        return self._base_initializer(parent, idx)(*args)
+        return self._base_initializer(parent, idx)(parent, *args)
 
 
 _bound_sequence_types = collections.defaultdict(None.__class__)
