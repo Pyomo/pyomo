@@ -193,10 +193,8 @@ def obbt_analysis_bounds_and_solutions(
             results = opt.solve(
                 model, warmstart=warmstart, tee=tee, load_solutions=False
             )
-        except:
-            # Assume that we failed b.c. of warm starts
-            results = None
-        if results is None:
+        except ValueError:
+            # An exception occurs if the solver does not recognize the warmstart option
             results = opt.solve(model, tee=tee, load_solutions=False)
         condition = results.solver.termination_condition
         optimal_tc = pe.TerminationCondition.optimal
@@ -277,9 +275,8 @@ def obbt_analysis_bounds_and_solutions(
                     results = opt.solve(
                         model, warmstart=warmstart, tee=tee, load_solutions=False
                     )
-                except:
-                    results = None
-                if results is None:
+                except ValueError:
+                    # An exception occurs if the solver does not recognize the warmstart option
                     results = opt.solve(model, tee=tee, load_solutions=False)
                 condition = results.solver.termination_condition
             new_constraint = False
