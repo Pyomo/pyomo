@@ -964,12 +964,26 @@ class ModelData:
         values.
     """
 
-    def __init__(self, original_model, timing):
+    def __init__(self, original_model, config, timing):
         self.original_model = original_model
         self.timing = timing
+        self.config = config
+        self.separation_priority_order = dict()
         # working model will be addressed by preprocessing
         self.working_model = None
-        self.separation_priority_order = dict()
+
+    def preprocess(self, user_var_partitioning):
+        """
+        Preprocess model data.
+
+        See `preprocess_model_data()`.
+
+        Returns
+        -------
+        bool
+            True if robust infeasibility detected, False otherwise.
+        """
+        return preprocess_model_data(self, user_var_partitioning)
 
 
 def get_var_bound_pairs(var):
@@ -1160,7 +1174,7 @@ def get_var_certain_uncertain_bounds(var, uncertain_params):
     return certain_bounds, uncertain_bounds
 
 
-def get_effective_var_partitioning(model_data, config):
+def get_effective_var_partitioning(model_data):
     """
     Partition the in-scope variables of the input model
     according to known nonadjustability to the uncertain parameters.
@@ -1179,14 +1193,13 @@ def get_effective_var_partitioning(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver options.
 
     Returns
     -------
     effective_partitioning : VariablePartitioning
         Effective variable partitioning.
     """
+    config = model_data.config
     working_model = model_data.working_model
     user_var_partitioning = model_data.working_model.user_var_partitioning
 
@@ -1346,7 +1359,7 @@ def get_effective_var_partitioning(model_data, config):
     )
 
 
-def add_effective_var_partitioning(model_data, config):
+def add_effective_var_partitioning(model_data):
     """
     Obtain a repartitioning of the in-scope variables of the
     working model according to known adjustability to the
@@ -1357,12 +1370,8 @@ def add_effective_var_partitioning(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver options.
     """
-    effective_partitioning = get_effective_var_partitioning(
-        model_data=model_data, config=config
-    )
+    effective_partitioning = get_effective_var_partitioning(model_data)
     model_data.working_model.effective_var_partitioning = VariablePartitioning(
         **effective_partitioning._asdict()
     )
@@ -1444,7 +1453,7 @@ def remove_all_var_bounds(var):
     var.domain = Reals
 
 
-def turn_nonadjustable_var_bounds_to_constraints(model_data, config):
+def turn_nonadjustable_var_bounds_to_constraints(model_data):
     """
     Reformulate uncertain bounds for the nonadjustable
     (i.e. effective first-stage) variables of the working
@@ -1460,8 +1469,6 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver settings.
     """
     working_model = model_data.working_model
     nonadjustable_vars = working_model.effective_var_partitioning.first_stage_variables
@@ -1499,7 +1506,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data, config):
     # the interface for separation priority ordering
 
 
-def turn_adjustable_var_bounds_to_constraints(model_data, config):
+def turn_adjustable_var_bounds_to_constraints(model_data):
     """
     Reformulate domain and declared bounds for the
     adjustable (i.e., effective second-stage and effective state)
@@ -1516,8 +1523,6 @@ def turn_adjustable_var_bounds_to_constraints(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver settings.
     """
     working_model = model_data.working_model
 
@@ -1563,7 +1568,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data, config):
     # the interface for separation priority ordering
 
 
-def setup_working_model(model_data, config, user_var_partitioning):
+def setup_working_model(model_data, user_var_partitioning):
     """
     Set up (construct) the working model based on user inputs,
     and add it to the model data object.
@@ -1572,12 +1577,11 @@ def setup_working_model(model_data, config, user_var_partitioning):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solve settings.
     user_var_partitioning : VariablePartitioning
         User-based partitioning of the in-scope
         variables of the input model.
     """
+    config = model_data.config
     original_model = model_data.original_model
 
     # add temporary block to help keep track of variables
@@ -1632,7 +1636,7 @@ def setup_working_model(model_data, config, user_var_partitioning):
             working_model.original_active_inequality_cons.append(con)
 
 
-def standardize_inequality_constraints(model_data, config):
+def standardize_inequality_constraints(model_data):
     """
     Standardize the inequality constraints of the working model,
     and classify them as first-stage inequalities or second-stage
@@ -1643,6 +1647,7 @@ def standardize_inequality_constraints(model_data, config):
     model_data : model data object
         Main model data object, containing the working model.
     """
+    config = model_data.config
     working_model = model_data.working_model
     uncertain_params_set = ComponentSet(working_model.uncertain_params)
     adjustable_vars_set = ComponentSet(
@@ -1865,7 +1870,7 @@ def declare_objective_expressions(working_model, objective, sense=minimize):
     )
 
 
-def standardize_active_objective(model_data, config):
+def standardize_active_objective(model_data):
     """
     Standardize the active objective of the working model.
 
@@ -1886,6 +1891,7 @@ def standardize_active_objective(model_data, config):
     model_data : model data object
         Main model data object.
     """
+    config = model_data.config
     working_model = model_data.working_model
 
     active_obj = next(
@@ -2072,7 +2078,7 @@ def check_time_limit_reached(timing_data, config):
     )
 
 
-def reformulate_state_var_independent_eq_cons(model_data, config):
+def reformulate_state_var_independent_eq_cons(model_data):
     """
     Reformulate second-stage equality constraints that are
     independent of the state variables.
@@ -2096,8 +2102,6 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
@@ -2105,6 +2109,7 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
         True if model found to be robust infeasible,
         False otherwise.
     """
+    config = model_data.config
     working_model = model_data.working_model
     ep = working_model.effective_var_partitioning
 
@@ -2289,7 +2294,7 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
     return False
 
 
-def preprocess_model_data(model_data, config, user_var_partitioning):
+def preprocess_model_data(model_data, user_var_partitioning):
     """
     Preprocess user inputs to modeling objects from which
     PyROS subproblems can be efficiently constructed.
@@ -2298,8 +2303,6 @@ def preprocess_model_data(model_data, config, user_var_partitioning):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver options.
     user_var_partitioning : VariablePartitioning
         User-based partitioning of the in-scope
         variables of the input model.
@@ -2310,31 +2313,32 @@ def preprocess_model_data(model_data, config, user_var_partitioning):
         True if RO problem was found to be robust infeasible,
         False otherwise.
     """
-    setup_working_model(model_data, config, user_var_partitioning)
+    config = model_data.config
+    setup_working_model(model_data, user_var_partitioning)
 
     # extract as many truly nonadjustable variables as possible
     # from the second-stage and state variables
     config.progress_logger.debug("Repartitioning variables by nonadjustability...")
-    add_effective_var_partitioning(model_data, config)
+    add_effective_var_partitioning(model_data)
 
     # different treatment for effective first-stage
     # than for effective second-stage and state variables
     config.progress_logger.debug("Turning some variable bounds to constraints...")
-    turn_nonadjustable_var_bounds_to_constraints(model_data, config)
-    turn_adjustable_var_bounds_to_constraints(model_data, config)
+    turn_nonadjustable_var_bounds_to_constraints(model_data)
+    turn_adjustable_var_bounds_to_constraints(model_data)
 
     config.progress_logger.debug("Standardizing the model constraints...")
-    standardize_inequality_constraints(model_data, config)
+    standardize_inequality_constraints(model_data)
     standardize_equality_constraints(model_data)
 
     # includes epigraph reformulation
     config.progress_logger.debug("Standardizing the active objective...")
-    standardize_active_objective(model_data, config)
+    standardize_active_objective(model_data)
 
     # DR components are added only per effective second-stage variable
     config.progress_logger.debug("Adding decision rule components...")
-    add_decision_rule_variables(model_data, config)
-    add_decision_rule_constraints(model_data, config)
+    add_decision_rule_variables(model_data)
+    add_decision_rule_constraints(model_data)
 
     # the epigraph and DR variables are also first-stage
     config.progress_logger.debug("Finalizing nonadjustable variables...")
@@ -2352,12 +2356,12 @@ def preprocess_model_data(model_data, config, user_var_partitioning):
     config.progress_logger.debug(
         "Reformulating state variable-independent second-stage equality constraints..."
     )
-    robust_infeasible = reformulate_state_var_independent_eq_cons(model_data, config)
+    robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
     return robust_infeasible
 
 
-def log_model_statistics(model_data, config):
+def log_model_statistics(model_data):
     """
     Log statistics for the preprocessed model.
 
@@ -2365,9 +2369,8 @@ def log_model_statistics(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver settings.
     """
+    config = model_data.config
     working_model = model_data.working_model
 
     ep = working_model.effective_var_partitioning
@@ -2438,7 +2441,7 @@ def log_model_statistics(model_data, config):
     info_log_func(f"      Second-stage inequalities : {num_second_stage_ineq_cons}")
 
 
-def add_decision_rule_variables(model_data, config):
+def add_decision_rule_variables(model_data):
     """
     Add variables parameterizing the (polynomial)
     decision rules to the working model.
@@ -2447,8 +2450,6 @@ def add_decision_rule_variables(model_data, config):
     ----------
     model_data : model data object
         Model data.
-    config : ConfigDict
-        PyROS solver options.
 
     Notes
     -----
@@ -2459,6 +2460,7 @@ def add_decision_rule_variables(model_data, config):
        variables, since the decision rules for such variables
        are necessarily nonstatic.
     """
+    config = model_data.config
     effective_second_stage_vars = (
         model_data.working_model.effective_var_partitioning.second_stage_variables
     )
@@ -2498,7 +2500,7 @@ def add_decision_rule_variables(model_data, config):
         eff_ss_var_to_dr_var_map[eff_ss_var] = indexed_dr_var
 
 
-def add_decision_rule_constraints(model_data, config):
+def add_decision_rule_constraints(model_data):
     """
     Add decision rule equality constraints to the working model.
 
@@ -2506,10 +2508,8 @@ def add_decision_rule_constraints(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver options.
     """
-
+    config = model_data.config
     effective_second_stage_vars = (
         model_data.working_model.effective_var_partitioning.second_stage_variables
     )
@@ -2595,7 +2595,7 @@ def enforce_dr_degree(working_blk, config, degree):
 
 
 def load_final_solution(
-    model_data, master_soln, config, original_user_var_partitioning
+    model_data, master_soln, original_user_var_partitioning
 ):
     """
     Load variable values from the master problem to the
@@ -2605,12 +2605,11 @@ def load_final_solution(
     ----------
     master_soln : master solution object
         Master solution object, containing the master model.
-    config : ConfigDict
-        PyROS solver options.
     original_user_var_partitioning : VariablePartitioning
         User partitioning of the variables of the original
         model.
     """
+    config = model_data.config
     if config.objective_focus == ObjectiveType.nominal:
         soln_master_blk = master_soln.nominal_block
     elif config.objective_focus == ObjectiveType.worst_case:

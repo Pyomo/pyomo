@@ -90,7 +90,7 @@ def add_uncertainty_set_constraints(separation_model, config):
             param_var.fix(nomval)
 
 
-def construct_separation_problem(model_data, config):
+def construct_separation_problem(model_data):
     """
     Construct the separation problem model from the fully preprocessed
     working model.
@@ -99,14 +99,13 @@ def construct_separation_problem(model_data, config):
     ----------
     model_data : model data object
         Main model data object.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
     separation_model : ConcreteModel
         Separation problem model.
     """
+    config = model_data.config
     separation_model = model_data.working_model.clone()
 
     # fix/deactivate all nonadjustable components
@@ -161,7 +160,7 @@ def construct_separation_problem(model_data, config):
     return separation_model
 
 
-def get_sep_objective_values(separation_data, config, ss_ineq_cons):
+def get_sep_objective_values(separation_data, ss_ineq_cons):
     """
     Evaluate second-stage inequality constraint functions at current
     separation solution.
@@ -170,8 +169,6 @@ def get_sep_objective_values(separation_data, config, ss_ineq_cons):
     ----------
     separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        PyROS solver settings.
     ss_ineq_cons : list of Constraint
         Second-stage inequality constraints to be evaluated.
 
@@ -181,6 +178,7 @@ def get_sep_objective_values(separation_data, config, ss_ineq_cons):
         Mapping from second-stage inequality constraints
         to violation values.
     """
+    config = separation_data.config
     con_to_obj_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     violations = ComponentMap()
 
@@ -280,7 +278,7 @@ def get_argmax_sum_violations(solver_call_results_map, ss_ineq_cons_to_evaluate)
     return idx_to_ss_ineq_con_map[idxs_of_violated_cons[worst_col_idx]]
 
 
-def solve_separation_problem(separation_data, master_data, config):
+def solve_separation_problem(separation_data, master_data):
     """
     Solve PyROS separation problems.
 
@@ -288,14 +286,15 @@ def solve_separation_problem(separation_data, master_data, config):
     ----------
     separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        PyROS solver settings.
+    master_data : MasterProblemData
+        Master problem data.
 
     Returns
     -------
     pyros.solve_data.SeparationResults
         Separation problem solve results.
     """
+    config = separation_data.config
     run_local = not config.bypass_local_separation
     run_global = config.bypass_local_separation
 
@@ -307,7 +306,6 @@ def solve_separation_problem(separation_data, master_data, config):
         local_separation_loop_results = perform_separation_loop(
             separation_data=separation_data,
             master_data=master_data,
-            config=config,
             solve_globally=False,
         )
         run_global = not (
@@ -324,7 +322,6 @@ def solve_separation_problem(separation_data, master_data, config):
         global_separation_loop_results = perform_separation_loop(
             separation_data=separation_data,
             master_data=master_data,
-            config=config,
             solve_globally=True,
         )
     else:
@@ -359,7 +356,7 @@ def evaluate_violations_by_nominal_master(separation_data, master_data, ss_ineq_
     return nom_ss_ineq_con_violations
 
 
-def group_ss_ineq_constraints_by_priority(separation_data, config):
+def group_ss_ineq_constraints_by_priority(separation_data):
     """
     Group model second-stage inequality constraints
     by separation priority.
@@ -368,8 +365,6 @@ def group_ss_ineq_constraints_by_priority(separation_data, config):
     ----------
     separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        User-specified PyROS solve options.
 
     Returns
     -------
@@ -410,8 +405,6 @@ def get_worst_discrete_separation_solution(
     ----------
     ss_ineq_con : Constraint
         Second-stage inequality constraint of interest.
-    separation_data : SeparationProblemData
-        Separation problem data.
     config : ConfigDict
         User-specified PyROS solver settings.
     ss_ineq_cons_to_evaluate : list of Constraint
@@ -513,17 +506,17 @@ def get_con_name_repr(separation_model, con, with_obj_name=True):
     return f"{con.index()!r}{qual_str}"
 
 
-def perform_separation_loop(separation_data, master_data, config, solve_globally):
+def perform_separation_loop(separation_data, master_data, solve_globally):
     """
     Loop through, and solve, PyROS separation problems to
     desired optimality condition.
 
     Parameters
     ----------
-    model_data : SeparationProblemData
+    separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        PyROS solver settings.
+    master_data : MasterProblemData
+        Master problem data.
     solve_globally : bool
         True to solve separation problems globally,
         False to solve separation problems locally.
@@ -533,6 +526,7 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
     pyros.solve_data.SeparationLoopResults
         Separation problem solve results.
     """
+    config = separation_data.config
     all_ss_ineq_constraints = list(
         separation_data.separation_model.second_stage.inequality_cons.values()
     )
@@ -550,9 +544,7 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
         master_data=master_data,
         ss_ineq_cons=all_ss_ineq_constraints,
     )
-    sorted_priority_groups = group_ss_ineq_constraints_by_priority(
-        separation_data, config
-    )
+    sorted_priority_groups = group_ss_ineq_constraints_by_priority(separation_data)
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
@@ -580,7 +572,6 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
         discrete_sep_results = discrete_solve(
             separation_data=separation_data,
             master_data=master_data,
-            config=config,
             solve_globally=solve_globally,
             ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
             ss_ineq_cons_to_evaluate=all_ss_ineq_constraints,
@@ -644,7 +635,6 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
                 solve_call_results = solver_call_separation(
                     separation_data=separation_data,
                     master_data=master_data,
-                    config=config,
                     solve_globally=solve_globally,
                     ss_ineq_con_to_maximize=ss_ineq_con,
                     ss_ineq_cons_to_evaluate=all_ss_ineq_constraints,
@@ -719,7 +709,7 @@ def perform_separation_loop(separation_data, master_data, config, solve_globally
 
 
 def evaluate_ss_ineq_con_violations(
-    separation_data, config, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
+    separation_data, ss_ineq_con_to_maximize, ss_ineq_cons_to_evaluate
 ):
     """
     Evaluate the inequality constraint function violations
@@ -733,8 +723,6 @@ def evaluate_ss_ineq_con_violations(
     ----------
     separation_data : SeparationProblemData
         Object containing the separation model.
-    config : ConfigDict
-        PyROS solver settings.
     ss_ineq_con_to_maximize : ConstraintData
         Second-stage inequality constraint
         to which the current solution is mapped.
@@ -765,6 +753,8 @@ def evaluate_ss_ineq_con_violations(
         1 entry which can be mapped to an active Objective
         of ``model_data.separation_model``.
     """
+    config = separation_data.config
+
     # parameter realization for current separation problem solution
     uncertain_param_vars = (
         separation_data.separation_model.uncertainty.uncertain_param_var_list
@@ -777,7 +767,6 @@ def evaluate_ss_ineq_con_violations(
     # constraints provided
     violations_by_sep_solution = get_sep_objective_values(
         separation_data=separation_data,
-        config=config,
         ss_ineq_cons=ss_ineq_cons_to_evaluate,
     )
 
@@ -801,7 +790,7 @@ def evaluate_ss_ineq_con_violations(
 
 
 def initialize_separation(
-    ss_ineq_con_to_maximize, separation_data, master_data, config
+    ss_ineq_con_to_maximize, separation_data, master_data
 ):
     """
     Initialize separation problem variables using the solution
@@ -815,8 +804,8 @@ def initialize_separation(
         for the separation problem of interest.
     separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        PyROS solver settings.
+    master_data : MasterProblemData
+        Master problem data.
 
     Note
     ----
@@ -828,6 +817,7 @@ def initialize_separation(
     auxiliary variables, then some uncertainty set constraints
     may be violated.
     """
+    config = separation_data.config
     master_model = master_data.master_model
     sep_model = separation_data.separation_model
 
@@ -903,7 +893,6 @@ globally_acceptable = {tc.optimal, tc.globallyOptimal}
 def solver_call_separation(
     separation_data,
     master_data,
-    config,
     solve_globally,
     ss_ineq_con_to_maximize,
     ss_ineq_cons_to_evaluate,
@@ -915,8 +904,8 @@ def solver_call_separation(
     ----------
     separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        PyROS solver settings.
+    master_data : MasterProblemData
+        Master problem data.
     solve_globally : bool
         True to solve separation problems globally,
         False to solve locally.
@@ -934,11 +923,12 @@ def solver_call_separation(
     solve_call_results : pyros.solve_data.SeparationSolveCallResults
         Solve results for separation problem of interest.
     """
+    config = separation_data.config
     # prepare the problem
     separation_model = separation_data.separation_model
     objectives_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     separation_obj = objectives_map[ss_ineq_con_to_maximize]
-    initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data, config)
+    initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
     separation_obj.activate()
 
     # get name (index) of constraint for loggers
@@ -1019,10 +1009,9 @@ def solver_call_separation(
                 solve_call_results.scaled_violations,
                 solve_call_results.found_violation,
             ) = evaluate_ss_ineq_con_violations(
-                separation_data,
-                config,
-                ss_ineq_con_to_maximize,
-                ss_ineq_cons_to_evaluate,
+                separation_data=separation_data,
+                ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+                ss_ineq_cons_to_evaluate=ss_ineq_cons_to_evaluate,
             )
             solve_call_results.auxiliary_param_values = [
                 auxvar.value
@@ -1089,7 +1078,6 @@ def solver_call_separation(
 def discrete_solve(
     separation_data,
     master_data,
-    config,
     solve_globally,
     ss_ineq_con_to_maximize,
     ss_ineq_cons_to_evaluate,
@@ -1103,8 +1091,8 @@ def discrete_solve(
     ----------
     separation_data : SeparationProblemData
         Separation problem data.
-    config : ConfigDict
-        PyROS solver settings.
+    master_data : MasterProblemData
+        Master problem data.
     solver : solver type
         Primary subordinate optimizer with which to solve
         the model.
@@ -1139,6 +1127,7 @@ def discrete_solve(
     solutions is, under our assumption, merely equal to the number
     of scenarios in the uncertainty set.
     """
+    config = separation_data.config
 
     uncertain_param_vars = list(
         separation_data.separation_model.uncertainty.uncertain_param_var_list
@@ -1164,7 +1153,6 @@ def discrete_solve(
         solve_call_results = solver_call_separation(
             separation_data=separation_data,
             master_data=master_data,
-            config=config,
             solve_globally=solve_globally,
             ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
             ss_ineq_cons_to_evaluate=ss_ineq_cons_to_evaluate,
@@ -1191,12 +1179,14 @@ class SeparationProblemData:
     Container for objects related to the PyROS separation problem.
     """
 
-    def __init__(self, model_data, config):
+    def __init__(self, model_data):
         """Initialize self (see class docstring)."""
-        self.separation_model = construct_separation_problem(model_data, config)
+        self.separation_model = construct_separation_problem(model_data)
         self.timing = model_data.timing
         self.separation_priority_order = model_data.separation_priority_order.copy()
         self.iteration = 0
+
+        config = model_data.config
         self.config = config
         self.points_added_to_master = {(0, 0): config.nominal_uncertain_param_vals}
         self.auxiliary_values_for_master_points = {
@@ -1221,4 +1211,4 @@ class SeparationProblemData:
         """
         Solve the separation problem.
         """
-        return solve_separation_problem(self, master_data, self.config)
+        return solve_separation_problem(self, master_data)

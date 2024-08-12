@@ -98,6 +98,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         m.c5 = Constraint(expr=m.x2 + 2 * m.y[2] + m.y[3] + 2 * m.y[4] == 0)
 
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = mdl = m.clone()
         model_data.working_model.uncertain_params = [mdl.q]
@@ -117,7 +118,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         model_data = self.build_simple_test_model_data()
         m = model_data.working_model.user_model
 
-        config = Bunch()
+        config = model_data.config
         config.decision_rule_order = 0
         config.progress_logger = logger
 
@@ -129,7 +130,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
             actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data, config=config
+                model_data=model_data
             )
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
@@ -157,9 +158,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         }
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
-            actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data, config=config
-            )
+            actual_partitioning = get_effective_var_partitioning(model_data)
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
@@ -186,9 +185,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         }
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
-            actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data, config=config
-            )
+            actual_partitioning = get_effective_var_partitioning(model_data)
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
@@ -214,9 +211,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         m.c3.set_value(m.x1**3 + m.y[1] + 2 * m.y[1] * m.y[2] == 0)
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
-            actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data, config=config
-            )
+            actual_partitioning = get_effective_var_partitioning(model_data)
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
@@ -241,9 +236,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         }
         for dr_order in [0, 1, 2]:
             config.decision_rule_order = dr_order
-            actual_partitioning = get_effective_var_partitioning(
-                model_data=model_data, config=config
-            )
+            actual_partitioning = get_effective_var_partitioning(model_data)
             for vartype, expected_vars in expected_partitioning.items():
                 actual_vars = getattr(actual_partitioning, vartype)
                 self.assertEqual(
@@ -271,7 +264,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         # nonadjustable
         m.c1.set_value((0, m.x1 + m.z**2, 0))
 
-        config = Bunch()
+        config = model_data.config
         config.decision_rule_order = 0
         config.progress_logger = logger
 
@@ -280,9 +273,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
             "second_stage_variables": [],
             "state_variables": [m.y[3], m.y[4]],
         }
-        actual_partitioning_static_dr = get_effective_var_partitioning(
-            model_data=model_data, config=config
-        )
+        actual_partitioning_static_dr = get_effective_var_partitioning(model_data)
         for vartype, expected_vars in expected_partitioning_static_dr.items():
             actual_vars = getattr(actual_partitioning_static_dr, vartype)
             self.assertEqual(
@@ -306,7 +297,7 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         }
         for dr_order in [1, 2]:
             actual_partitioning_nonstatic_dr = get_effective_var_partitioning(
-                model_data=model_data, config=config
+                model_data
             )
             for vartype, expected_vars in expected_partitioning_nonstatic_dr.items():
                 actual_vars = getattr(actual_partitioning_nonstatic_dr, vartype)
@@ -334,6 +325,7 @@ class TestSetupModelData(unittest.TestCase):
         Build model data object for the preprocessor.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.original_model = m = ConcreteModel()
 
         # PARAMS: one uncertain, one certain
@@ -409,9 +401,10 @@ class TestSetupModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(uncertain_params=[om.q])
+        config = model_data.config
+        config.uncertain_params = [om.q]
 
-        setup_working_model(model_data, config, user_var_partitioning)
+        setup_working_model(model_data, user_var_partitioning)
         working_model = model_data.working_model
 
         # active constraints
@@ -571,6 +564,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         to constraints.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
 
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = m = ConcreteModel()
@@ -641,7 +635,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             )
         )
 
-        turn_nonadjustable_var_bounds_to_constraints(model_data, config=Bunch())
+        turn_nonadjustable_var_bounds_to_constraints(model_data)
 
         for var, (orig_domain, orig_bounds) in original_var_domains_and_bounds.items():
             # all var domains should remain unchanged
@@ -787,7 +781,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             for var in model_data.working_model.user_model.component_data_objects(Var)
         )
 
-        turn_adjustable_var_bounds_to_constraints(model_data, config=Bunch())
+        turn_adjustable_var_bounds_to_constraints(model_data)
 
         for var, (orig_domain, orig_bounds) in original_var_domains_and_bounds.items():
             _, (final_lb, final_ub) = get_var_bound_pairs(var)
@@ -959,6 +953,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         routines.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -1024,9 +1019,8 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         working_model = model_data.working_model
         m = working_model.user_model
 
-        standardize_inequality_constraints(
-            model_data, config=Bunch(separation_priority_order=dict(c3=1, c5=2))
-        )
+        model_data.config.separation_priority_order = dict(c3=1, c5=2)
+        standardize_inequality_constraints(model_data)
 
         fs_ineq_cons = working_model.first_stage.inequality_cons
         ss_ineq_cons = working_model.second_stage.inequality_cons
@@ -1151,6 +1145,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         method if equality-type expression detected.
         """
         model_data = self.build_simple_test_model_data()
+        model_data.config.separation_priority_order = dict()
         working_model = model_data.working_model
         m = working_model.user_model
 
@@ -1159,9 +1154,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
 
         exc_str = r"Found an equality bound.*1.0.*for the constraint.*c6'"
         with self.assertRaisesRegex(ValueError, exc_str):
-            standardize_inequality_constraints(
-                model_data, Bunch(separation_priority_order=dict())
-            )
+            standardize_inequality_constraints(model_data)
 
 
 class TestStandardizeEqualityConstraints(unittest.TestCase):
@@ -1175,6 +1168,7 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         routines.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -1291,6 +1285,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         standardization.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -1382,12 +1377,12 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model
         m = model_data.working_model.user_model
-        config = Bunch(objective_focus=ObjectiveType.worst_case)
+        model_data.config.objective_focus = ObjectiveType.worst_case
 
         m.obj1.activate()
         m.obj2.deactivate()
 
-        standardize_active_objective(model_data, config)
+        standardize_active_objective(model_data)
 
         self.assertFalse(
             m.obj1.active,
@@ -1411,12 +1406,12 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model
         m = model_data.working_model.user_model
-        config = Bunch(objective_focus=ObjectiveType.nominal)
+        model_data.config.objective_focus = ObjectiveType.nominal
 
         m.obj1.activate()
         m.obj2.deactivate()
 
-        standardize_active_objective(model_data, config)
+        standardize_active_objective(model_data)
 
         self.assertFalse(
             m.obj1.active,
@@ -1439,14 +1434,14 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         """
         model_data = self.build_simple_test_model_data()
         m = model_data.working_model.user_model
-        config = Bunch(objective_focus="bad_focus")
+        model_data.config.objective_focus = "bad_focus"
 
         m.obj1.activate()
         m.obj2.deactivate()
 
         exc_str = r"Classification.*not implemented for objective focus 'bad_focus'"
         with self.assertRaisesRegex(ValueError, exc_str):
-            standardize_active_objective(model_data, config)
+            standardize_active_objective(model_data)
 
     def test_standardize_active_obj_nonadjustable_max(self):
         """
@@ -1457,7 +1452,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         model_data = self.build_simple_test_model_data()
         working_model = model_data.working_model
         m = working_model.user_model
-        config = Bunch(objective_focus=ObjectiveType.worst_case)
+        model_data.config.objective_focus = ObjectiveType.worst_case
 
         # assume all variables nonadjustable
         ep = model_data.working_model.effective_var_partitioning
@@ -1469,7 +1464,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         m.obj2.activate()
         m.obj2.sense = maximize
 
-        standardize_active_objective(model_data, config)
+        standardize_active_objective(model_data)
 
         self.assertFalse(
             m.obj2.active,
@@ -1505,6 +1500,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         declaration testing.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -1539,11 +1535,9 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         number of DR coefficient variables, static DR case.
         """
         model_data = self.build_simple_test_model_data()
+        model_data.config.decision_rule_order = 0
 
-        config = Bunch()
-        config.decision_rule_order = 0
-
-        add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data)
 
         for indexed_dr_var in model_data.working_model.first_stage.decision_rule_vars:
             self.assertEqual(
@@ -1591,11 +1585,9 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         number of DR coefficient variables, affine DR case.
         """
         model_data = self.build_simple_test_model_data()
+        model_data.config.decision_rule_order = 1
 
-        config = Bunch()
-        config.decision_rule_order = 1
-
-        add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data)
 
         for indexed_dr_var in model_data.working_model.first_stage.decision_rule_vars:
             self.assertEqual(
@@ -1643,11 +1635,9 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         number of DR coefficient variables, quadratic DR case.
         """
         model_data = self.build_simple_test_model_data()
+        model_data.config.decision_rule_order = 2
 
-        config = Bunch()
-        config.decision_rule_order = 2
-
-        add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data)
 
         num_params = len(model_data.working_model.uncertain_params)
 
@@ -1710,6 +1700,7 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         declaration testing.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -1746,13 +1737,10 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         of second-stage variables in the model.
         """
         model_data = self.build_simple_test_model_data()
+        model_data.config.decision_rule_order = 2
 
-        # set up simple config-like object
-        config = Bunch()
-        config.decision_rule_order = 0
-
-        add_decision_rule_variables(model_data, config)
-        add_decision_rule_constraints(model_data, config)
+        add_decision_rule_variables(model_data)
+        add_decision_rule_constraints(model_data)
 
         effective_second_stage_vars = (
             model_data.working_model.effective_var_partitioning.second_stage_variables
@@ -1802,12 +1790,11 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         m = model_data.working_model.user_model
 
         # set up simple config-like object
-        config = Bunch()
-        config.decision_rule_order = 2
+        model_data.config.decision_rule_order = 2
 
         # add DR variables and constraints
-        add_decision_rule_variables(model_data, config)
-        add_decision_rule_constraints(model_data, config)
+        add_decision_rule_variables(model_data)
+        add_decision_rule_constraints(model_data)
 
         dr_zip = zip(
             model_data.working_model.effective_var_partitioning.second_stage_variables,
@@ -1864,6 +1851,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         routine.
         """
         model_data = Bunch()
+        model_data.config = Bunch()
         model_data.working_model = working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -1921,9 +1909,8 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         ep.first_stage_variables = [m.x1, m.x2]
         ep.second_stage_variables = []
 
-        config = Bunch()
-        config.decision_rule_order = 1
-        config.progress_logger = logger
+        model_data.config.decision_rule_order = 1
+        model_data.config.progress_logger = logger
 
         model_data.working_model.first_stage.decision_rule_vars = []
         model_data.working_model.second_stage.decision_rule_eqns = []
@@ -1931,9 +1918,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             ep.first_stage_variables
         )
 
-        robust_infeasible = reformulate_state_var_independent_eq_cons(
-            model_data, config
-        )
+        robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
         self.assertFalse(
             robust_infeasible,
@@ -1978,15 +1963,14 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         model_data = self.setup_test_model_data()
         model_data.separation_priority_order = dict()
 
-        config = Bunch()
-        config.decision_rule_order = 1
-        config.progress_logger = logging.getLogger(
+        model_data.config.decision_rule_order = 1
+        model_data.config.progress_logger = logging.getLogger(
             self.test_reformulate_nonlinear_state_var_independent_eq_con.__name__
         )
-        config.progress_logger.setLevel(logging.DEBUG)
+        model_data.config.progress_logger.setLevel(logging.DEBUG)
 
-        add_decision_rule_variables(model_data=model_data, config=config)
-        add_decision_rule_constraints(model_data=model_data, config=config)
+        add_decision_rule_variables(model_data)
+        add_decision_rule_constraints(model_data)
 
         ep = model_data.working_model.effective_var_partitioning
         model_data.working_model.all_nonadjustable_variables = list(
@@ -2003,7 +1987,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
 
         with LoggingIntercept(level=logging.DEBUG) as LOG:
             robust_infeasible = reformulate_state_var_independent_eq_cons(
-                model_data, config
+                model_data
             )
 
         err_msg = LOG.getvalue()
@@ -2089,18 +2073,15 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         ep.first_stage_variables = [m.x1, m.x2]
         ep.second_stage_variables = []
 
-        config = Bunch()
-        config.decision_rule_order = 1
-        config.progress_logger = logger
+        model_data.config.decision_rule_order = 1
+        model_data.config.progress_logger = logger
 
         model_data.working_model.all_nonadjustable_variables = list(
             ep.first_stage_variables
         )
 
         with LoggingIntercept(level=logging.INFO) as LOG:
-            robust_infeasible = reformulate_state_var_independent_eq_cons(
-                model_data, config
-            )
+            robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
         self.assertTrue(
             robust_infeasible,
@@ -2204,7 +2185,7 @@ class TestPreprocessModelData(unittest.TestCase):
             )
         )
 
-        model_data = ModelData(original_model=m, timing=None)
+        model_data = ModelData(original_model=m, timing=None, config=Bunch())
 
         # set up the var partitioning
         user_var_partitioning = VariablePartitioning(
@@ -2224,14 +2205,15 @@ class TestPreprocessModelData(unittest.TestCase):
         # setup
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        config = model_data.config
+        config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=0,
             progress_logger=logger,
             separation_priority_order=dict(),
-        )
-        preprocess_model_data(model_data, config, user_var_partitioning)
+        ))
+        preprocess_model_data(model_data, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
         ublk = model_data.working_model.user_model
         self.assertEqual(
@@ -2288,14 +2270,15 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        config = model_data.config
+        config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=dr_order,
             progress_logger=logger,
             separation_priority_order=dict(),
-        )
-        preprocess_model_data(model_data, config, user_var_partitioning)
+        ))
+        preprocess_model_data(model_data, user_var_partitioning)
         ep = model_data.working_model.effective_var_partitioning
         ublk = model_data.working_model.user_model
         self.assertEqual(
@@ -2355,14 +2338,14 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        model_data.config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=dr_order,
             progress_logger=logger,
             separation_priority_order=dict(ineq3=2),
-        )
-        preprocess_model_data(model_data, config, user_var_partitioning)
+        ))
+        preprocess_model_data(model_data, user_var_partitioning)
 
         working_model = model_data.working_model
         ublk = working_model.user_model
@@ -2548,19 +2531,20 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        config = model_data.config
+        config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=dr_order,
             progress_logger=logger,
             separation_priority_order=dict(),
-        )
+        ))
 
         # for static DR, problem should be robust infeasible
         # due to the coefficient matching constraints derived
         # from bounds on z5
         robust_infeasible = preprocess_model_data(
-            model_data, config, user_var_partitioning
+            model_data, user_var_partitioning
         )
         self.assertIsInstance(robust_infeasible, bool)
         self.assertEqual(robust_infeasible, expected_robust_infeas)
@@ -2631,14 +2615,15 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        config = model_data.config
+        config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType.worst_case,
             decision_rule_order=dr_order,
             progress_logger=logger,
             separation_priority_order=dict(),
-        )
-        preprocess_model_data(model_data, config, user_var_partitioning)
+        ))
+        preprocess_model_data(model_data, user_var_partitioning)
 
         ublk = model_data.working_model.user_model
         working_model = model_data.working_model
@@ -2680,14 +2665,15 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        config = model_data.config
+        config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=1,
             progress_logger=logger,
             separation_priority_order=dict(),
-        )
-        preprocess_model_data(model_data, config, user_var_partitioning)
+        ))
+        preprocess_model_data(model_data, user_var_partitioning)
 
         # expected model stats worked out by hand
         expected_log_str = textwrap.dedent(
@@ -2713,7 +2699,7 @@ class TestPreprocessModelData(unittest.TestCase):
         )
 
         with LoggingIntercept(level=logging.INFO) as LOG:
-            log_model_statistics(model_data, config)
+            log_model_statistics(model_data)
         log_str = LOG.getvalue()
 
         log_lines = log_str.splitlines()[1:]
@@ -2731,14 +2717,15 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
-        config = Bunch(
+        config = model_data.config
+        config.update(dict(
             uncertain_params=[om.q],
             objective_focus=ObjectiveType[obj_focus],
             decision_rule_order=2,
             progress_logger=logger,
             separation_priority_order=dict(),
-        )
-        preprocess_model_data(model_data, config, user_var_partitioning)
+        ))
+        preprocess_model_data(model_data, user_var_partitioning)
 
         # expected model stats worked out by hand
         expected_log_str = textwrap.dedent(
@@ -2764,7 +2751,7 @@ class TestPreprocessModelData(unittest.TestCase):
         )
 
         with LoggingIntercept(level=logging.INFO) as LOG:
-            log_model_statistics(model_data, config)
+            log_model_statistics(model_data)
         log_str = LOG.getvalue()
 
         log_lines = log_str.splitlines()[1:]

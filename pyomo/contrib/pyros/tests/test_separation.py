@@ -69,16 +69,16 @@ def build_simple_model_data(objective_focus="worst_case"):
         uncertainty_set=BoxSet([[0, 1], [0, 0]]),
         separation_priority_order=dict(con=2),
     )
-    model_data = ModelData(original_model=m, timing=None)
+    model_data = ModelData(original_model=m, timing=None, config=config)
     user_var_partitioning = VariablePartitioning(
         first_stage_variables=[m.x1],
         second_stage_variables=[m.x2, m.x3],
         state_variables=[],
     )
 
-    preprocess_model_data(model_data, config, user_var_partitioning)
+    preprocess_model_data(model_data, user_var_partitioning)
 
-    return model_data, config
+    return model_data
 
 
 class TestConstructSeparationProblem(unittest.TestCase):
@@ -92,8 +92,8 @@ class TestConstructSeparationProblem(unittest.TestCase):
         separation problem are fixed and deactivated,
         respectively.
         """
-        model_data, config = build_simple_model_data(objective_focus="worst_case")
-        separation_model = construct_separation_problem(model_data, config)
+        model_data = build_simple_model_data(objective_focus="worst_case")
+        separation_model = construct_separation_problem(model_data)
 
         # check nonadjustable components fixed/deactivated
         self.assertTrue(separation_model.user_model.x1.fixed)
@@ -115,8 +115,8 @@ class TestConstructSeparationProblem(unittest.TestCase):
         Check second-stage inequality constraints are deactivated
         and replaced with objectives, as appropriate.
         """
-        model_data, config = build_simple_model_data(objective_focus="worst_case")
-        separation_model = construct_separation_problem(model_data, config)
+        model_data = build_simple_model_data(objective_focus="worst_case")
+        separation_model = construct_separation_problem(model_data)
 
         # check expression of second-stage ineq cons correct
         # check these individually
@@ -175,8 +175,8 @@ class TestConstructSeparationProblem(unittest.TestCase):
         by the separation problems.
         """
         # check DR equation is active
-        model_data, config = build_simple_model_data(objective_focus="worst_case")
-        separation_model = construct_separation_problem(model_data, config)
+        model_data = build_simple_model_data(objective_focus="worst_case")
+        separation_model = construct_separation_problem(model_data)
 
         self.assertTrue(separation_model.second_stage.decision_rule_eqns[0].active)
 
@@ -199,8 +199,8 @@ class TestConstructSeparationProblem(unittest.TestCase):
         Test separation problem handles uncertain parameter variable
         components as expected.
         """
-        model_data, config = build_simple_model_data(objective_focus="worst_case")
-        separation_model = construct_separation_problem(model_data, config)
+        model_data = build_simple_model_data(objective_focus="worst_case")
+        separation_model = construct_separation_problem(model_data)
         uncertainty_blk = separation_model.uncertainty
         boxcon1, boxcon2 = uncertainty_blk.uncertainty_cons_list
         paramvar1, paramvar2 = uncertainty_blk.uncertain_param_var_list
@@ -233,11 +233,11 @@ class TestConstructSeparationProblem(unittest.TestCase):
         Test separation problem uncertainty components for uncertainty
         set requiring auxiliary variables.
         """
-        model_data, config = build_simple_model_data(objective_focus="worst_case")
-        config.uncertainty_set = FactorModelSet(
+        model_data = build_simple_model_data(objective_focus="worst_case")
+        model_data.config.uncertainty_set = FactorModelSet(
             origin=[1, 0], beta=1, number_of_factors=2, psi_mat=[[1, 2.5], [0, 1]]
         )
-        separation_model = construct_separation_problem(model_data, config)
+        separation_model = construct_separation_problem(model_data)
         uncertainty_blk = separation_model.uncertainty
         *matrix_product_cons, aux_sum_con = uncertainty_blk.uncertainty_cons_list
         paramvar1, paramvar2 = uncertainty_blk.uncertain_param_var_list
@@ -274,8 +274,8 @@ class TestConstructSeparationProblem(unittest.TestCase):
 
 class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
     def test_group_ss_ineq_constraints_by_priority(self):
-        model_data, config = build_simple_model_data()
-        separation_model = construct_separation_problem(model_data, config)
+        model_data = build_simple_model_data()
+        separation_model = construct_separation_problem(model_data)
 
         # build mock separation data-like object
         # since we are testing only the grouping method
@@ -284,7 +284,7 @@ class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
             separation_priority_order=model_data.separation_priority_order,
         )
 
-        priority_groups = group_ss_ineq_constraints_by_priority(separation_data, config)
+        priority_groups = group_ss_ineq_constraints_by_priority(separation_data)
 
         self.assertEqual(list(priority_groups.keys()), [2, 0])
         ss_ineq_cons = separation_model.second_stage.inequality_cons

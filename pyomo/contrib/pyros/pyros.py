@@ -25,7 +25,6 @@ from pyomo.contrib.pyros.util import (
     pyrosTerminationCondition,
     validate_pyros_inputs,
     log_model_statistics,
-    preprocess_model_data,
     IterationLogRecord,
     setup_pyros_logger,
     time_code,
@@ -322,7 +321,7 @@ class PyROS(object):
             Summary of PyROS termination outcome.
 
         """
-        model_data = ModelData(original_model=model, timing=TimingData())
+        model_data = ModelData(original_model=model, timing=TimingData(), config=None)
         with time_code(
             timing_data_obj=model_data.timing,
             code_block_name="main",
@@ -364,12 +363,11 @@ class PyROS(object):
                 exclude_options=None,
                 level=logging.INFO,
             )
+            model_data.config = config
 
             config.progress_logger.info("Preprocessing...")
             model_data.timing.start_timer("main.preprocessing")
-            robust_infeasible = preprocess_model_data(
-                model_data, config, user_var_partitioning
-            )
+            robust_infeasible = model_data.preprocess(user_var_partitioning)
             model_data.timing.stop_timer("main.preprocessing")
             preprocessing_time = model_data.timing.get_total_time("main.preprocessing")
             config.progress_logger.info(
@@ -377,12 +375,12 @@ class PyROS(object):
                 f"{preprocessing_time:.3f}s."
             )
 
-            log_model_statistics(model_data, config)
+            log_model_statistics(model_data)
 
             # === Solve and load solution into model
             return_soln = ROSolveResults()
             if not robust_infeasible:
-                pyros_soln = ROSolver_iterative_solve(model_data, config)
+                pyros_soln = ROSolver_iterative_solve(model_data)
                 IterationLogRecord.log_header_rule(config.progress_logger.info)
 
                 termination_acceptable = pyros_soln.pyros_termination_condition in {
@@ -393,7 +391,6 @@ class PyROS(object):
                     load_final_solution(
                         model_data=model_data,
                         master_soln=pyros_soln.master_results,
-                        config=config,
                         original_user_var_partitioning=user_var_partitioning,
                     )
 

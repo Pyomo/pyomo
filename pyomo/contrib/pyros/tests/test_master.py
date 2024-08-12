@@ -78,16 +78,16 @@ def build_simple_model_data(objective_focus="worst_case"):
         nominal_uncertain_param_vals=[0.4],
         separation_priority_order=dict(),
     )
-    model_data = ModelData(original_model=m, timing=TimingData())
+    model_data = ModelData(original_model=m, timing=TimingData(), config=config)
     user_var_partitioning = VariablePartitioning(
         first_stage_variables=[m.x1],
         second_stage_variables=[m.x2, m.x3],
         state_variables=[],
     )
 
-    preprocess_model_data(model_data, config, user_var_partitioning)
+    preprocess_model_data(model_data, user_var_partitioning)
 
-    return model_data, config
+    return model_data
 
 
 class TestConstructMasterProblem(unittest.TestCase):
@@ -101,8 +101,8 @@ class TestConstructMasterProblem(unittest.TestCase):
         Test initial construction of the master problem
         from the preprocesed working model.
         """
-        model_data, config = build_simple_model_data()
-        master_model = construct_initial_master_problem(model_data, config)
+        model_data = build_simple_model_data()
+        master_model = construct_initial_master_problem(model_data)
 
         self.assertTrue(hasattr(master_model, "scenarios"))
         self.assertIsNot(master_model.scenarios[0, 0], model_data.working_model)
@@ -128,7 +128,7 @@ class TestConstructMasterProblem(unittest.TestCase):
         # check parameter value is set to the nominal realization
         self.assertEqual(
             master_model.scenarios[0, 0].user_model.u.value,
-            config.nominal_uncertain_param_vals[0],
+            model_data.config.nominal_uncertain_param_vals[0],
         )
 
     def test_add_scenario_block_to_master(self):
@@ -137,8 +137,8 @@ class TestConstructMasterProblem(unittest.TestCase):
         constructed master problem, without cloning of the
         first-stage variables.
         """
-        model_data, config = build_simple_model_data()
-        master_model = construct_initial_master_problem(model_data, config)
+        model_data = build_simple_model_data()
+        master_model = construct_initial_master_problem(model_data)
         add_scenario_block_to_master_problem(
             master_model=master_model,
             scenario_idx=[0, 1],
@@ -230,8 +230,8 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         Construct master data-like object for feasibility problem
         tests.
         """
-        model_data, config = build_simple_model_data()
-        master_model = construct_initial_master_problem(model_data, config)
+        model_data = build_simple_model_data()
+        master_model = construct_initial_master_problem(model_data)
         add_scenario_block_to_master_problem(
             master_model=master_model,
             scenario_idx=[1, 0],
@@ -239,16 +239,18 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
             from_block=master_model.scenarios[0, 0],
             clone_first_stage_components=False,
         )
-        master_data = Bunch(master_model=master_model, iteration=1)
+        master_data = Bunch(
+            master_model=master_model, iteration=1, config=model_data.config
+        )
 
-        return master_data, config
+        return master_data
 
     def test_construct_master_feasibility_problem_var_map(self):
         """
         Test construction of feasibility problem var map.
         """
-        master_data, config = self.build_simple_master_data()
-        slack_model = construct_master_feasibility_problem(master_data, config)
+        master_data = self.build_simple_master_data()
+        slack_model = construct_master_feasibility_problem(master_data)
 
         self.assertTrue(master_data.feasibility_problem_varmap)
         for mvar, feasvar in master_data.feasibility_problem_varmap:
@@ -267,8 +269,8 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         """
         Check master feasibility slack variables.
         """
-        master_data, config = self.build_simple_master_data()
-        slack_model = construct_master_feasibility_problem(master_data, config)
+        master_data = self.build_simple_master_data()
+        slack_model = construct_master_feasibility_problem(master_data)
 
         slack_var_blk = slack_model._core_add_slack_variables
         scenario_10_blk = slack_model.scenarios[1, 0]
@@ -317,8 +319,8 @@ class TestNewConstructMasterFeasibilityProblem(unittest.TestCase):
         """
         Check master feasibility slack variables.
         """
-        master_data, config = self.build_simple_master_data()
-        slack_model = construct_master_feasibility_problem(master_data, config)
+        master_data = self.build_simple_master_data()
+        slack_model = construct_master_feasibility_problem(master_data)
 
         self.assertFalse(slack_model.epigraph_obj.active)
         self.assertTrue(slack_model._core_add_slack_variables._slack_objective.active)
@@ -334,8 +336,8 @@ class TestDRPolishingProblem(unittest.TestCase):
         Construct master data-like object for feasibility problem
         tests.
         """
-        model_data, config = build_simple_model_data()
-        master_model = construct_initial_master_problem(model_data, config)
+        model_data = build_simple_model_data()
+        master_model = construct_initial_master_problem(model_data)
         add_scenario_block_to_master_problem(
             master_model=master_model,
             scenario_idx=[1, 0],
@@ -343,17 +345,19 @@ class TestDRPolishingProblem(unittest.TestCase):
             from_block=master_model.scenarios[0, 0],
             clone_first_stage_components=False,
         )
-        master_data = Bunch(master_model=master_model, iteration=1)
+        master_data = Bunch(
+            master_model=master_model, iteration=1, config=model_data.config
+        )
 
-        return master_data, config
+        return master_data
 
     def test_construct_dr_polishing_problem_nonadj_components(self):
         """
         Test state of the nonadjustable components
         of the DR polishing problem.
         """
-        master_data, config = self.build_simple_master_data()
-        polishing_model = construct_dr_polishing_problem(master_data, config)
+        master_data = self.build_simple_master_data()
+        polishing_model = construct_dr_polishing_problem(master_data)
         eff_first_stage_vars = polishing_model.scenarios[
             0, 0
         ].effective_var_partitioning.first_stage_variables
@@ -390,14 +394,14 @@ class TestDRPolishingProblem(unittest.TestCase):
         Test auxiliary Var/Constraint components of the DR polishing
         problem.
         """
-        master_data, config = self.build_simple_master_data()
+        master_data = self.build_simple_master_data()
         # DR order is 1, and x3 is second-stage.
         # to test fixing efficiency, fix the affine DR variable
         decision_rule_vars = master_data.master_model.scenarios[
             0, 0
         ].first_stage.decision_rule_vars
         decision_rule_vars[0][1].fix()
-        polishing_model = construct_dr_polishing_problem(master_data, config)
+        polishing_model = construct_dr_polishing_problem(master_data)
         nom_polishing_block = polishing_model.scenarios[0, 0]
 
         self.assertFalse(decision_rule_vars[0][0].fixed)
@@ -434,8 +438,8 @@ class TestDRPolishingProblem(unittest.TestCase):
         Test states of the Objective components of the DR
         polishing model.
         """
-        master_data, config = self.build_simple_master_data()
-        polishing_model = construct_dr_polishing_problem(master_data, config)
+        master_data = self.build_simple_master_data()
+        polishing_model = construct_dr_polishing_problem(master_data)
         self.assertFalse(polishing_model.epigraph_obj.active)
         self.assertTrue(polishing_model.polishing_obj.active)
 
@@ -445,13 +449,13 @@ class TestDRPolishingProblem(unittest.TestCase):
         for DR expression terms where the product of uncertain
         parameters is below tolerance.
         """
-        master_data, config = self.build_simple_master_data()
+        master_data = self.build_simple_master_data()
 
         # trigger fixing of the corresponding polishing vars
         master_data.master_model.scenarios[0, 0].user_model.u.set_value(1e-10)
         master_data.master_model.scenarios[1, 0].user_model.u.set_value(1e-11)
 
-        polishing_model = construct_dr_polishing_problem(master_data, config)
+        polishing_model = construct_dr_polishing_problem(master_data)
 
         dr_vars = polishing_model.scenarios[0, 0].first_stage.decision_rule_vars
 
@@ -477,10 +481,10 @@ class TestSolveMaster(unittest.TestCase):
 
     @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
     def test_solve_master(self):
-        model_data, config = build_simple_model_data()
+        model_data = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(
+        model_data.config.update(
             dict(
                 local_solver=baron,
                 global_solver=baron,
@@ -489,7 +493,7 @@ class TestSolveMaster(unittest.TestCase):
                 tee=False,
             )
         )
-        master_data = MasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data)
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = master_data.solve_master()
             self.assertEqual(
@@ -507,10 +511,10 @@ class TestSolveMaster(unittest.TestCase):
         Test method for solution of master problems times out
         on feasibility problem.
         """
-        model_data, config = build_simple_model_data()
+        model_data = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(
+        model_data.config.update(
             dict(
                 local_solver=baron,
                 global_solver=baron,
@@ -520,7 +524,7 @@ class TestSolveMaster(unittest.TestCase):
                 time_limit=1,
             )
         )
-        master_data = MasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data)
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
             master_soln = master_data.solve_master()
@@ -543,10 +547,10 @@ class TestSolveMaster(unittest.TestCase):
         Test method for solution of master problems times out
         on feasibility problem.
         """
-        model_data, config = build_simple_model_data()
+        model_data = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(
+        model_data.config.update(
             dict(
                 local_solver=baron,
                 global_solver=baron,
@@ -556,7 +560,7 @@ class TestSolveMaster(unittest.TestCase):
                 time_limit=1,
             )
         )
-        master_data = MasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data)
         add_scenario_block_to_master_problem(
             master_data.master_model,
             scenario_idx=[1, 0],
@@ -587,10 +591,10 @@ class TestPolishDRVars(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_polish_dr_vars(self):
-        model_data, config = build_simple_model_data()
+        model_data = build_simple_model_data()
         model_data.timing = TimingData()
         baron = SolverFactory("baron")
-        config.update(
+        model_data.config.update(
             dict(
                 local_solver=baron,
                 global_solver=baron,
@@ -599,7 +603,7 @@ class TestPolishDRVars(unittest.TestCase):
                 tee=False,
             )
         )
-        master_data = MasterProblemData(model_data, config)
+        master_data = MasterProblemData(model_data)
         add_scenario_block_to_master_problem(
             master_data.master_model,
             scenario_idx=[1, 0],

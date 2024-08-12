@@ -43,7 +43,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-def construct_initial_master_problem(model_data, config):
+def construct_initial_master_problem(model_data):
     """
     Construct the initial master problem model object
     from the preprocessed working model.
@@ -53,8 +53,6 @@ def construct_initial_master_problem(model_data, config):
     model_data : model data object
         Main model data object,
         containing the preprocessed working model.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
@@ -68,7 +66,7 @@ def construct_initial_master_problem(model_data, config):
     add_scenario_block_to_master_problem(
         master_model=master_model,
         scenario_idx=(0, 0),
-        param_realization=config.nominal_uncertain_param_vals,
+        param_realization=model_data.config.nominal_uncertain_param_vals,
         from_block=model_data.working_model,
         clone_first_stage_components=True,
     )
@@ -147,7 +145,7 @@ def add_scenario_block_to_master_problem(
             con.deactivate()
 
 
-def construct_master_feasibility_problem(master_data, config):
+def construct_master_feasibility_problem(master_data):
     """
     Construct slack variable minimization problem from the master
     model.
@@ -160,8 +158,6 @@ def construct_master_feasibility_problem(master_data, config):
     ----------
     master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver options.
 
     Returns
     -------
@@ -260,7 +256,7 @@ def construct_master_feasibility_problem(master_data, config):
     return slack_model
 
 
-def solve_master_feasibility_problem(master_data, config):
+def solve_master_feasibility_problem(master_data):
     """
     Solve a slack variable-based feasibility model derived
     from the master problem. Initialize the master problem
@@ -271,18 +267,17 @@ def solve_master_feasibility_problem(master_data, config):
     ----------
     master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
     results : SolverResults
         Solver results.
     """
-    model = construct_master_feasibility_problem(master_data, config)
+    model = construct_master_feasibility_problem(master_data)
 
     active_obj = next(model.component_data_objects(Objective, active=True))
 
+    config = master_data.config
     config.progress_logger.debug("Solving master feasibility problem")
     config.progress_logger.debug(
         f" Initial objective (total slack): {value(active_obj)}"
@@ -340,7 +335,7 @@ def solve_master_feasibility_problem(master_data, config):
     return results
 
 
-def construct_dr_polishing_problem(master_data, config):
+def construct_dr_polishing_problem(master_data):
     """
     Construct DR polishing problem from the master problem.
 
@@ -348,8 +343,6 @@ def construct_dr_polishing_problem(master_data, config):
     ----------
     master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
@@ -514,7 +507,7 @@ def construct_dr_polishing_problem(master_data, config):
     return polishing_model
 
 
-def minimize_dr_vars(master_data, config):
+def minimize_dr_vars(master_data):
     """
     Polish decision rule of most recent master problem solution.
 
@@ -522,8 +515,6 @@ def minimize_dr_vars(master_data, config):
     ----------
     master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
@@ -533,8 +524,10 @@ def minimize_dr_vars(master_data, config):
         True if polishing model was solved to acceptable level,
         False otherwise.
     """
+    config = master_data.config
+
     # create polishing NLP
-    polishing_model = construct_dr_polishing_problem(master_data, config)
+    polishing_model = construct_dr_polishing_problem(master_data)
 
     if config.solve_master_globally:
         solver = config.global_solver
@@ -614,7 +607,7 @@ def minimize_dr_vars(master_data, config):
     return results, True
 
 
-def get_master_dr_degree(master_data, config):
+def get_master_dr_degree(master_data):
     """
     Determine DR polynomial degree to enforce based on
     the iteration number.
@@ -630,8 +623,6 @@ def get_master_dr_degree(master_data, config):
     ----------
     master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver options.
 
     Returns
     -------
@@ -640,13 +631,13 @@ def get_master_dr_degree(master_data, config):
     """
     if master_data.iteration == 0:
         return 0
-    elif master_data.iteration <= len(config.uncertain_params):
-        return min(1, config.decision_rule_order)
+    elif master_data.iteration <= len(master_data.config.uncertain_params):
+        return min(1, master_data.config.decision_rule_order)
     else:
-        return min(2, config.decision_rule_order)
+        return min(2, master_data.config.decision_rule_order)
 
 
-def higher_order_decision_rule_efficiency(master_data, config):
+def higher_order_decision_rule_efficiency(master_data):
     """
     Enforce DR coefficient variable efficiencies for
     master problem-like formulation.
@@ -655,8 +646,6 @@ def higher_order_decision_rule_efficiency(master_data, config):
     ----------
     master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver options.
 
     Note
     ----
@@ -666,10 +655,10 @@ def higher_order_decision_rule_efficiency(master_data, config):
     to be set depends on the iteration number;
     see ``get_master_dr_degree``.
     """
-    order_to_enforce = get_master_dr_degree(master_data, config)
+    order_to_enforce = get_master_dr_degree(master_data)
     enforce_dr_degree(
         working_blk=master_data.master_model.scenarios[0, 0],
-        config=config,
+        config=master_data.config,
         degree=order_to_enforce,
     )
 
@@ -704,7 +693,7 @@ def log_master_solve_results(master_model, config, results, desc="Optimized"):
     )
 
 
-def solver_call_master(master_data, config, master_soln):
+def solver_call_master(master_data, master_soln):
     """
     Invoke subsolver(s) on PyROS master problem,
     and update the MasterResults object accordingly.
@@ -713,12 +702,11 @@ def solver_call_master(master_data, config, master_soln):
     ----------
     master_data : MasterProblemData
         Container for current master problem and related data.
-    config : ConfigDict
-        PyROS solver settings.
     master_soln : MasterResults
         Master problem results object. May be empty or contain
         master feasibility problem results.
     """
+    config = master_data.config
     master_model = master_data.master_model
     solver_term_cond_dict = {}
 
@@ -731,7 +719,7 @@ def solver_call_master(master_data, config, master_soln):
     config.progress_logger.debug("Solving master problem")
 
     nominal_block = master_model.scenarios[0, 0]
-    higher_order_decision_rule_efficiency(master_data, config)
+    higher_order_decision_rule_efficiency(master_data)
 
     for idx, opt in enumerate(solvers):
         if idx > 0:
@@ -851,7 +839,7 @@ def solver_call_master(master_data, config, master_soln):
     )
 
 
-def solve_master(master_data, config):
+def solve_master(master_data):
     """
     Solve the master problem
     """
@@ -859,12 +847,12 @@ def solve_master(master_data, config):
 
     # no master feas problem for iteration 0
     if master_data.iteration > 0:
-        results = solve_master_feasibility_problem(master_data, config)
+        results = solve_master_feasibility_problem(master_data)
         master_soln.feasibility_problem_results = results
 
         # if pyros time limit reached, load time out status
         # to master results and return to caller
-        if check_time_limit_reached(master_data.timing, config):
+        if check_time_limit_reached(master_data.timing, master_data.config):
             # load master model
             master_soln.master_model = master_data.master_model
             master_soln.nominal_block = master_data.master_model.scenarios[0, 0]
@@ -881,7 +869,7 @@ def solve_master(master_data, config):
             )
             return master_soln
 
-    solver_call_master(master_data=master_data, config=config, master_soln=master_soln)
+    solver_call_master(master_data=master_data, master_soln=master_soln)
 
     return master_soln
 
@@ -891,23 +879,23 @@ class MasterProblemData:
     Container for objects pertaining to the PyROS master problem.
     """
 
-    def __init__(self, model_data, config):
+    def __init__(self, model_data):
         """Initialize self (see docstring)."""
-        self.master_model = construct_initial_master_problem(model_data, config)
+        self.master_model = construct_initial_master_problem(model_data)
         # we track the original model name for serialization purposes
         self.original_model_name = model_data.original_model.name
         self.iteration = 0
         self.timing = model_data.timing
-        self.config = config
+        self.config = model_data.config
 
     def solve_master(self):
         """
         Solve the master problem.
         """
-        return solve_master(self, self.config)
+        return solve_master(self)
 
     def solve_dr_polishing(self):
         """
         Solve the DR polishing problem.
         """
-        return minimize_dr_vars(self, self.config)
+        return minimize_dr_vars(self)

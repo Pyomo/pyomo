@@ -123,7 +123,7 @@ def evaluate_variable_shifts(current_var_data, previous_var_data, initial_var_da
     return tuple(var_shifts)
 
 
-def ROSolver_iterative_solve(model_data, config):
+def ROSolver_iterative_solve(model_data):
     """
     Solve an RO problem with the iterative GRCS algorithm.
 
@@ -132,16 +132,15 @@ def ROSolver_iterative_solve(model_data, config):
     model_data : model data object
         Model data object, equipped with the
         fully preprocessed working model.
-    config : ConfigDict
-        PyROS solver options
 
     Returns
     -------
     GRCSResults
         Iterative solve results.
     """
-    master_data = mp_methods.MasterProblemData(model_data, config)
-    separation_data = sp_methods.SeparationProblemData(model_data, config)
+    config = model_data.config
+    master_data = mp_methods.MasterProblemData(model_data)
+    separation_data = sp_methods.SeparationProblemData(model_data)
 
     # set up first-stage variable and DR variable sets
     nominal_master_blk = master_data.master_model.scenarios[0, 0]
