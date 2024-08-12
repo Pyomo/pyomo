@@ -116,14 +116,14 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required inputs to the Pyomo.DoE solver is an Experiment object. The experiment object must have a get_labeled_model function which returns a pyomo model with four special labeled components as suffixes on the pyomo model. This is in line with the convention used in the new interface in the contributed package, `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_. The four suffix components are:
+The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_. The four ``Suffix`` components are:
 
-* experiment_inputs - The experimental design decisions
-* experiment_outputs - The values measured during the experiment
-* measurement_error - The error associated with individual values measured during the experiment
-* unknown_parameters - Those parameters in the model that are estimated using the measured values during the experiment
+* ``experiment_inputs`` - The experimental design decisions
+* ``experiment_outputs`` - The values measured during the experiment
+* ``measurement_error`` - The error associated with individual values measured during the experiment
+* ``unknown_parameters`` - Those parameters in the model that are estimated using the measured values during the experiment
 
-An example an Experiment object that builds and labels the model is shown in the next few sections.
+An example ``Experiment`` object that builds and labels the model is shown in the next few sections.
 
 Pyomo.DoE Usage Example
 -----------------------
@@ -162,6 +162,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an Experiment object
     >>> import pyomo.environ as pyo
     >>> from pyomo.contrib.doe import DesignOfExperiments
     >>> import numpy as np
+    >>> import idaes  # Required to add ipopt linear solvers to path if not done manually
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :lines: 19-24
