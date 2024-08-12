@@ -53,8 +53,8 @@ class OptFactoryDebug(unittest.TestCase):
 
     def tearDown(self):
         ReaderFactory.unregister('rtest3')
-        ReaderFactory.unregister('stest3')
-        ReaderFactory.unregister('wtest3')
+        SolverFactory.unregister('stest3')
+        WriterFactory.unregister('wtest3')
 
     def test_solver_factory(self):
         """
@@ -118,6 +118,9 @@ class OptFactoryDebug(unittest.TestCase):
         """
         ans = WriterFactory("none")
         self.assertEqual(ans, None)
+        ans = WriterFactory("wtest3")
+        self.assertEqual(ans, None)
+        WriterFactory.register('wtest3')(MockWriter)
         ans = WriterFactory("wtest3")
         self.assertNotEqual(ans, None)
 
