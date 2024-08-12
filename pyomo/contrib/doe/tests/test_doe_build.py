@@ -148,9 +148,9 @@ class TestReactorExampleBuild(unittest.TestCase):
             ] * (1 + diff)
 
             for k, v in model.scenario_blocks[s].unknown_parameters.items():
-                name_ind = k.name.split(".").index("scenario_blocks[" + str(s) + "]")
-
-                if ".".join(k.name.split(".")[name_ind + 1 :]) == param.name:
+                if pyo.ComponentUID(
+                    k, context=model.scenario_blocks[s]
+                ) == pyo.ComponentUID(param):
                     continue
 
                 other_param_val = pyo.value(k)
@@ -188,12 +188,9 @@ class TestReactorExampleBuild(unittest.TestCase):
                 self.assertAlmostEqual(param_val, param_val_from_step)
 
             for k, v in model.scenario_blocks[s].unknown_parameters.items():
-                name_ind = k.name.split(".").index("scenario_blocks[" + str(s) + "]")
-
-                if (
-                    not (s == 0)
-                    and ".".join(k.name.split(".")[name_ind + 1 :]) == param.name
-                ):
+                if (s != 0) and pyo.ComponentUID(
+                    k, context=model.scenario_blocks[s]
+                ) == pyo.ComponentUID(param):
                     continue
 
                 other_param_val = pyo.value(k)
@@ -229,12 +226,9 @@ class TestReactorExampleBuild(unittest.TestCase):
                 self.assertAlmostEqual(param_val, param_val_from_step)
 
             for k, v in model.scenario_blocks[s].unknown_parameters.items():
-                name_ind = k.name.split(".").index("scenario_blocks[" + str(s) + "]")
-
-                if (
-                    not (s == 0)
-                    and ".".join(k.name.split(".")[name_ind + 1 :]) == param.name
-                ):
+                if (s != 0) and pyo.ComponentUID(
+                    k, context=model.scenario_blocks[s]
+                ) == pyo.ComponentUID(param):
                     continue
 
                 other_param_val = pyo.value(k)
