@@ -45,7 +45,7 @@ The following functions are defined in the alternative-solutions library:
 Usage Example
 -------------
 
-Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple model whose feasible space is an isosceles right triangle. The optimal solutions fall along the hypotenuse, where :math:`x + y == 5`.  Alternative near-optimal feasible points have integer objective values ranging from 0 to 4.
+Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple knapsack example whose alternative solutions have integer objective values ranging from 0 to 90.
 
 .. doctest::
 
