@@ -19,7 +19,8 @@ import json
 from pathlib import Path
 
 
-# Example to run a DOE on the reactor
+# Example for sensitivity analysis on the reactor experiment
+# After sensitivity analysis is done, we perform optimal DoE
 def run_reactor_doe():
     # Read in file
     DATA_DIR = Path(__file__).parent
@@ -67,6 +68,37 @@ def run_reactor_doe():
         _only_compute_fim_lower=True,
     )
 
+    # Make design ranges to compute the full factorial design
+    design_ranges = {"CA[0]": [1, 5, 9], "T[0]": [300, 700, 9]}
+
+    # Compute the full factorial design with the sequential FIM calculation
+    doe_obj.compute_FIM_full_factorial(design_ranges=design_ranges, method="sequential")
+
+    # Plot the results
+    doe_obj.draw_factorial_figure(
+        sensitivity_design_variables=["CA[0]", "T[0]"],
+        fixed_design_variables={
+            "T[0.125]": 300,
+            "T[0.25]": 300,
+            "T[0.375]": 300,
+            "T[0.5]": 300,
+            "T[0.625]": 300,
+            "T[0.75]": 300,
+            "T[0.875]": 300,
+            "T[1]": 300,
+        },
+        title_text="Reactor Example",
+        xlabel_text="Concentration of A (M)",
+        ylabel_text="Initial Temperature (K)",
+        figure_file_name="example_reactor_compute_FIM",
+        log_scale=False,
+    )
+
+    ###########################
+    # End sensitivity analysis
+
+    # Begin optimal DoE
+    ####################
     doe_obj.run_doe()
 
     # Print out a results summary
@@ -89,6 +121,9 @@ def run_reactor_doe():
     )
 
     print(doe_obj.results["Experiment Design Names"])
+
+    ###################
+    # End optimal DoE
 
 
 if __name__ == "__main__":

@@ -215,8 +215,9 @@ The ``compute_FIM_full_factorial`` function generates a grid over the design spa
 
 The following code executes the above problem description:
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_factorial_FIM.py
-    :lines: 24-95
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
+    :start-after: Read in file
+    :end-before: End sensitivity analysis
 
 An example output of the code above, a design exploration for the initial concentration and temperature as experimental design variables with 9 values, produces the four figures summarized below:
 
@@ -228,10 +229,10 @@ A heatmap shows the change of the objective function, a.k.a. the experimental in
 Step 6: Performing an optimal experimental design
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is an example of running an experimental design to determine an optimal experiment for the reactor example. We utilize the determinant as the objective.
+In step 5, the DoE object was constructed to perform an exploratory sensitivity analysis. The same object can be used to design an optimal experiment with a single line of code.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
-    :start-after: Read in file
+    :start-after: Begin optimal DoE
     :end-before: Print out a results summary
 
 When run, the optimal design is an initial concentration of 5.0 mol/L and an initial temperature of 494 K with all other temperatures being 300 K. The corresponding log-10 determinant of the FIM is 13.75
