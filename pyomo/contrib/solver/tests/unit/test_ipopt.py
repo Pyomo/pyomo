@@ -84,6 +84,7 @@ class TestIpoptInterface(unittest.TestCase):
             'CONFIG',
             'config',
             'available',
+            'has_linear_solver',
             'is_persistent',
             'solve',
             'version',
@@ -166,6 +167,29 @@ class TestIpoptInterface(unittest.TestCase):
             with open(filename + '.opt', 'r') as f:
                 data = f.readlines()
                 self.assertEqual(len(data), len(list(opt.config.solver_options.keys())))
+
+    def test_has_linear_solver(self):
+        opt = ipopt.Ipopt()
+        self.assertTrue(
+            any(
+                map(
+                    opt.has_linear_solver,
+                    [
+                        'mumps',
+                        'ma27',
+                        'ma57',
+                        'ma77',
+                        'ma86',
+                        'ma97',
+                        'pardiso',
+                        'pardisomkl',
+                        'spral',
+                        'wsmp',
+                    ],
+                )
+            )
+        )
+        self.assertFalse(opt.has_linear_solver('bogus_linear_solver'))
 
     def test_create_command_line(self):
         opt = ipopt.Ipopt()
