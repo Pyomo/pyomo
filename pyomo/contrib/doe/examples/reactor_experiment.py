@@ -18,6 +18,13 @@ from pyomo.contrib.parmest.experiment import Experiment
 # ========================
 class ReactorExperiment(Experiment):
     def __init__(self, data, nfe, ncp):
+        """
+        Arguments
+        ---------
+        data: object containing vital experimental information
+        nfe: number of finite elements
+        ncp: number of collocation points for the finite elements
+        """
         self.data = data
         self.nfe = nfe
         self.ncp = ncp
@@ -108,13 +115,6 @@ class ReactorExperiment(Experiment):
             1. Extracting useful information for the model to align
                with the experiment. (Here: CA0, t_final, t_control)
             2. Discretizing the model subject to this information.
-
-        Arguments
-        ---------
-        m: Pyomo model
-        data: object containing vital experimental information
-        nfe: number of finite elements
-        ncp: number of collocation points for the finite elements
         """
         m = self.model
 
@@ -167,10 +167,6 @@ class ReactorExperiment(Experiment):
         """
         Example for annotating (labeling) the model with a
         full experiment.
-
-        Arguments
-        ---------
-
         """
         m = self.model
 
@@ -196,9 +192,6 @@ class ReactorExperiment(Experiment):
         # Identify design variables (experiment inputs) for the model
         m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
         # Add experimental input label for initial concentration
-        # m.experiment_inputs.update(
-        #     (m.CA[t], None) for t in [m.t.first()]
-        # )
         m.experiment_inputs[m.CA[m.t.first()]] = None
         # Add experimental input label for Temperature
         m.experiment_inputs.update((m.T[t], None) for t in m.t_control)
