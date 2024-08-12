@@ -24,7 +24,7 @@ from pyomo.common.errors import InvalidValueError
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy as scipy_available
+from pyomo.common.dependencies import scipy_available
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.environ import maximize as pyo_max
 from pyomo.opt import (

@@ -19,7 +19,7 @@ import textwrap
 import unittest
 
 from pyomo.common.collections import Bunch, ComponentSet, ComponentMap
-from pyomo.common.dependencies import numpy as numpy_available
+from pyomo.common.dependencies import numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
