@@ -573,9 +573,7 @@ class TestBudgetSet(unittest.TestCase):
         self.assertEqual(len(uq.uncertainty_cons), 4)
 
         assertExpressionsEqual(
-            self,
-            uq.uncertainty_cons[0].expr,
-            m.v1 + np.float64(0) * m.v2 <= np.int_(4),
+            self, uq.uncertainty_cons[0].expr, m.v1 + np.float64(0) * m.v2 <= np.int_(4)
         )
         assertExpressionsEqual(
             self, uq.uncertainty_cons[1].expr, m.v1 + m.v2 <= np.int_(6)
