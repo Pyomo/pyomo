@@ -113,6 +113,33 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.check_pw_linear_log_x(m, pwlf, x1, x2, x3)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
+    def test_clone_transformed_model(self):
+        m = self.make_model()
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=3,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+        )
+
+        twin = m.clone()
+
+        # cons is transformed
+        self.assertFalse(twin.cons.active)
+
+        pwlf = list(
+            twin.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
+        points = [(1.0009,), (5.5,), (9.9991,)]
+        (x1, x2, x3) = 1.0009, 5.5, 9.9991
+
+        self.check_pw_linear_log_x(twin, pwlf, x1, x2, x3)
+
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
     def test_log_constraint_random_grid(self):
         m = self.make_model()
 
