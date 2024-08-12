@@ -32,8 +32,8 @@ ipopt_available = SolverFactory("ipopt").available()
 DATA_DIR = Path(__file__).parent
 file_path = DATA_DIR / "result.json"
 
-f = open(file_path)
-data_ex = json.load(f)
+with open(file_path) as f:
+    data_ex = json.load(f)
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 

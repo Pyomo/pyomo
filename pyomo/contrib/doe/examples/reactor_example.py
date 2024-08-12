@@ -26,8 +26,8 @@ def run_reactor_doe():
     DATA_DIR = Path(__file__).parent
     file_path = DATA_DIR / "result.json"
 
-    f = open(file_path)
-    data_ex = json.load(f)
+    with open(file_path) as f:
+        data_ex = json.load(f)
 
     # Put temperature control time points into correct format for reactor experiment
     data_ex["control_points"] = {

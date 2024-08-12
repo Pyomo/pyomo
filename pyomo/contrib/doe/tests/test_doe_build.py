@@ -31,8 +31,9 @@ ipopt_available = SolverFactory("ipopt").available()
 DATA_DIR = Path(__file__).parent
 file_path = DATA_DIR / "result.json"
 
-f = open(file_path)
-data_ex = json.load(f)
+with open(file_path) as f:
+    data_ex = json.load(f)
+
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 
@@ -151,9 +152,9 @@ class TestReactorExampleBuild(unittest.TestCase):
                     continue
 
                 other_param_val = pyo.value(k)
-                assert np.isclose(other_param_val, v)
+                self.assertAlmostEqual(other_param_val, v)
 
-            assert np.isclose(param_val, param_val_from_step)
+            self.assertAlmostEqual(param_val, param_val_from_step)
 
     def test_reactor_fd_backward_check_fd_eqns(self):
         fd_method = "backward"
@@ -182,7 +183,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                 param_val_from_step = model.scenario_blocks[0].unknown_parameters[
                     pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
                 ] * (1 + diff)
-                assert np.isclose(param_val, param_val_from_step)
+                self.assertAlmostEqual(param_val, param_val_from_step)
 
             for k, v in model.scenario_blocks[s].unknown_parameters.items():
                 name_ind = k.name.split(".").index("scenario_blocks[" + str(s) + "]")
@@ -194,7 +195,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                     continue
 
                 other_param_val = pyo.value(k)
-                assert np.isclose(other_param_val, v)
+                self.assertAlmostEqual(other_param_val, v)
 
     def test_reactor_fd_forward_check_fd_eqns(self):
         fd_method = "forward"
@@ -223,7 +224,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                 param_val_from_step = model.scenario_blocks[0].unknown_parameters[
                     pyo.ComponentUID(param).find_component_on(model.scenario_blocks[0])
                 ] * (1 + diff)
-                assert np.isclose(param_val, param_val_from_step)
+                self.assertAlmostEqual(param_val, param_val_from_step)
 
             for k, v in model.scenario_blocks[s].unknown_parameters.items():
                 name_ind = k.name.split(".").index("scenario_blocks[" + str(s) + "]")
@@ -235,7 +236,7 @@ class TestReactorExampleBuild(unittest.TestCase):
                     continue
 
                 other_param_val = pyo.value(k)
-                assert np.isclose(other_param_val, v)
+                self.assertAlmostEqual(other_param_val, v)
 
     def test_reactor_fd_central_design_fixing(self):
         fd_method = "central"
