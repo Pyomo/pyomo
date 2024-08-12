@@ -70,8 +70,8 @@ def gurobi_generate_solutions(
     if not gurobipy_available:
         raise pyomo.common.errors.ApplicationError("Solver (gurobi) not available")
     opt = appsi.solvers.Gurobi()
-    opt.available()
-    if not opt.available():  # pragma: no cover
+
+    if not opt.available():
         raise pyomo.common.errors.ApplicationError("Solver (gurobi) not available")
 
     opt.config.stream_solver = tee

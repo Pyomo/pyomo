@@ -156,8 +156,7 @@ def enumerate_linear_solutions(
             opt.gurobi_options[parameter] = value
     else:
         opt = pe.SolverFactory(solver)
-        if not opt.available():
-            raise ValueError(solver + " is not available")
+        opt.available()
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
         if solver == "gurobi":
