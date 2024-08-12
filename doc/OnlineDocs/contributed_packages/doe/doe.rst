@@ -171,7 +171,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The process model for the reaction kinetics problem is shown below. We build the model in without any data or discretization.
+The process model for the reaction kinetics problem is shown below. We build the model without any data or discretization.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: Create flexible model without data
