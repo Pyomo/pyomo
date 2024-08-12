@@ -1111,6 +1111,7 @@ class RegressionTest(unittest.TestCase):
         Test PyROS for two-stage problem with discrete type set,
         subsolver error status.
         """
+
         class BadSeparationSolver:
             def __init__(self, solver):
                 self.solver = solver
@@ -1155,8 +1156,7 @@ class RegressionTest(unittest.TestCase):
 
         self.assertRegex(LOG.getvalue(), "Could not.*separation.*iteration 0.*")
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.subsolver_error,
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
         )
         self.assertEqual(res.iterations, 1)
 
@@ -1201,8 +1201,7 @@ class RegressionTest(unittest.TestCase):
 
         err_str = LOG.getvalue()
         self.assertRegex(
-            err_str,
-            "Optimizer.*exception.*separation problem.*iteration 0"
+            err_str, "Optimizer.*exception.*separation problem.*iteration 0"
         )
 
     @unittest.skipUnless(ipopt_available, "IPOPT is not available.")

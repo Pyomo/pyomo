@@ -2208,9 +2208,9 @@ def reformulate_state_var_independent_eq_cons(model_data, config):
                         expr=con.body, bound=con.upper, bound_type=bound_type
                     )
                     new_con_name = f"reform_{bound_type}_bound_from_{con_idx}"
-                    working_model.second_stage.inequality_cons[
-                        new_con_name
-                    ] = std_con_expr
+                    working_model.second_stage.inequality_cons[new_con_name] = (
+                        std_con_expr
+                    )
                     # no custom priorities specified
                     model_data.separation_priority_order[new_con_name] = (
                         DEFAULT_SEPARATION_PRIORITY

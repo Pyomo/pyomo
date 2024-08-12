@@ -1025,8 +1025,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         m = working_model.user_model
 
         standardize_inequality_constraints(
-            model_data,
-            config=Bunch(separation_priority_order=dict(c3=1, c5=2)),
+            model_data, config=Bunch(separation_priority_order=dict(c3=1, c5=2))
         )
 
         fs_ineq_cons = working_model.first_stage.inequality_cons
@@ -1161,7 +1160,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         exc_str = r"Found an equality bound.*1.0.*for the constraint.*c6'"
         with self.assertRaisesRegex(ValueError, exc_str):
             standardize_inequality_constraints(
-                model_data, Bunch(separation_priority_order=dict()),
+                model_data, Bunch(separation_priority_order=dict())
             )
 
 
@@ -2065,12 +2064,10 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
 
         # separation priorities were also updated
         self.assertEqual(
-            model_data.separation_priority_order["reform_lower_bound_from_eq_con"],
-            0,
+            model_data.separation_priority_order["reform_lower_bound_from_eq_con"], 0
         )
         self.assertEqual(
-            model_data.separation_priority_order["reform_upper_bound_from_eq_con"],
-            0,
+            model_data.separation_priority_order["reform_upper_bound_from_eq_con"], 0
         )
 
     def test_coefficient_matching_robust_infeasible_proof(self):

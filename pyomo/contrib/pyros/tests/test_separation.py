@@ -281,7 +281,7 @@ class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
         # since we are testing only the grouping method
         separation_data = Bunch(
             separation_model=separation_model,
-            separation_priority_order=model_data.separation_priority_order
+            separation_priority_order=model_data.separation_priority_order,
         )
 
         priority_groups = group_ss_ineq_constraints_by_priority(separation_data, config)
@@ -297,7 +297,7 @@ class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
                 ss_ineq_cons["var_x3_certain_lower_bound_con"],
                 ss_ineq_cons["var_x3_certain_upper_bound_con"],
                 ss_ineq_cons["epigraph_con"],
-            ]
+            ],
         )
 
 
