@@ -75,7 +75,7 @@ def _create_strict_inequality_map(vars_):
     }
 
 
-class text_nl_debug_template(object):
+class TextNLDebugTemplate(object):
     unary = {
         'log': 'o43\t#log\n',
         'log10': 'o42\t#log10\n',
@@ -172,8 +172,8 @@ def _strip_template_comments(vars_, base_):
 
 # The "standard" text mode template is the debugging template with the
 # comments removed
-class text_nl_template(text_nl_debug_template):
-    _strip_template_comments(vars(), text_nl_debug_template)
+class TextNLTemplate(TextNLDebugTemplate):
+    _strip_template_comments(vars(), TextNLDebugTemplate)
     _create_strict_inequality_map(vars())
 
 
@@ -200,7 +200,7 @@ class NLFragment(object):
 class AMPLRepn(object):
     __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
-    template = text_nl_template
+    template = TextNLTemplate
 
     def __init__(self, const, linear, nonlinear):
         self.nl = None
@@ -446,7 +446,7 @@ class AMPLRepn(object):
 
 class DebugAMPLRepn(AMPLRepn):
     __slots__ = ()
-    template = text_nl_debug_template
+    template = TextNLDebugTemplate
 
 
 def handle_negation_node(visitor, node, arg1):
