@@ -766,7 +766,9 @@ class RegressionTest(unittest.TestCase):
                 ),
             )
 
-    @unittest.skipUnless(baron_license_is_valid, "BARON not available and licensed")
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
     def test_pyros_backup_solvers(self):
         m = ConcreteModel()
         m.name = "s381"
@@ -1744,6 +1746,7 @@ class RegressionTest(unittest.TestCase):
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
 
+    @unittest.skipUnless(baron_license_is_valid, "BARON solver license is invalid.")
     def test_coefficient_matching_nonlinear_expr(self):
         """
         Test behavior of PyROS solver for model with
@@ -1807,6 +1810,8 @@ class RegressionTest(unittest.TestCase):
 
 @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
 class testBypassingSeparation(unittest.TestCase):
+    @unittest.skipUnless(scip_available, "SCIP is not available.")
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
         m = ConcreteModel()
