@@ -236,6 +236,21 @@ class ConstraintData(ActiveComponentData):
             return 0 if expr.__class__ is EqualityExpression else None, lhs - rhs, 0
         return None, None, None
 
+    def _evaluate_bound(self, bound, is_lb):
+        if bound is None:
+            return None
+        if bound.__class__ not in native_numeric_types:
+            bound = float(value(bound))
+        # Note that "bound != bound" catches float('nan')
+        if bound in _nonfinite_values or bound != bound:
+            if bound == (-_inf if is_lb else _inf):
+                return None
+            raise ValueError(
+                f"Constraint '{self.name}' created with an invalid non-finite "
+                f"{'lower' if is_lb else 'upper'} bound ({bound})."
+            )
+        return bound
+
     @property
     def body(self):
         """Access the body of a constraint expression."""
@@ -291,38 +306,12 @@ class ConstraintData(ActiveComponentData):
     @property
     def lb(self):
         """Access the value of the lower bound of a constraint expression."""
-        bound = self.to_bounded_expression()[0]
-        if bound is None:
-            return None
-        if bound.__class__ not in native_numeric_types:
-            bound = float(value(bound))
-        # Note that "bound != bound" catches float('nan')
-        if bound in _nonfinite_values or bound != bound:
-            if bound == -_inf:
-                return None
-            raise ValueError(
-                f"Constraint '{self.name}' created with an invalid non-finite "
-                f"lower bound ({bound})."
-            )
-        return bound
+        return self._evaluate_bound(self.to_bounded_expression()[0], True)
 
     @property
     def ub(self):
         """Access the value of the upper bound of a constraint expression."""
-        bound = self.to_bounded_expression()[2]
-        if bound is None:
-            return None
-        if bound.__class__ not in native_numeric_types:
-            bound = float(value(bound))
-        # Note that "bound != bound" catches float('nan')
-        if bound in _nonfinite_values or bound != bound:
-            if bound == _inf:
-                return None
-            raise ValueError(
-                f"Constraint '{self.name}' created with an invalid non-finite "
-                f"upper bound ({bound})."
-            )
-        return bound
+        return self._evaluate_bound(self.to_bounded_expression()[2], False)
 
     @property
     def equality(self):
