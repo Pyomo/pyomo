@@ -707,7 +707,11 @@ class TestScaleModelTransformation(unittest.TestCase):
             pyo.TransformationFactory("core.scale_model").propagate_solution(
                 scaled_model, m
             )
-        self.assertIn("replacing value of variable", OUTPUT.getvalue())
+        msg = (
+            "Variable with value None in the scaled model is replacing value of"
+            " variable x[2] in the original model with None (was 1.0).\n"
+        )
+        self.assertEqual(OUTPUT.getvalue(), msg)
         self.assertAlmostEqual(m.x[1].value, 2.0, delta=1e-8)
         # Note that value of x[2] in original model *has* been overridden to None.
         # In this case, a warning has been raised.
