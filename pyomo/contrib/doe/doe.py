@@ -1551,10 +1551,10 @@ class DesignOfExperiments:
 
         self.fim_factorial_results = fim_factorial_results
 
-        # ToDo: add automated figure drawing as it was before (perhaps reuse the code)
         return self.fim_factorial_results
 
-    # Plotting
+    # TODO: Overhaul plotting functions to not use strings
+    # TODO: Make the plotting functionalities work for >2 design features
     def draw_factorial_figure(
         self,
         results=None,
