@@ -371,7 +371,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         for x in [0, 1]:
             for y in [0, 1]:
                 for z in [0, 2, 5]:
-                    self.assertIn((x, y, z), points)    
+                    self.assertIn((x, y, z), points)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
     def test_random_sampling_discrete_vars(self):

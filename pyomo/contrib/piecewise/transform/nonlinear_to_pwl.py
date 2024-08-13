@@ -99,8 +99,9 @@ def _get_random_point_grid(bounds, n, func, config, seed=42):
             linspaces.append(np.random.uniform(lb, ub, n))
         else:
             size = min(n, ub - lb + 1)
-            linspaces.append(np.random.choice(range(lb, ub + 1), size=size,
-                                              replace=False))
+            linspaces.append(
+                np.random.choice(range(lb, ub + 1), size=size, replace=False)
+            )
     return list(itertools.product(*linspaces))
 
 
@@ -169,7 +170,7 @@ def _get_pwl_function_approximation(func, config, bounds):
     func: function to approximate
     config: ConfigDict for transformation, specifying domain_partitioning_method,
        num_points, and max_depth (if using linear trees)
-    bounds: list of tuples giving upper and lower bounds and a boolean indicating 
+    bounds: list of tuples giving upper and lower bounds and a boolean indicating
        if the variable's domain is discrete or not, for each of func's arguments
     """
     method = config.domain_partitioning_method
