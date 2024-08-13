@@ -408,10 +408,10 @@ class _LPWriter_impl(object):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
-            # Note: Constraint.lb/ub guarantee a return value that is
-            # either a (finite) native_numeric_type, or None
-            lb = con.lb
-            ub = con.ub
+            # Note: Constraint.to_bounded_expression(evaluate_bounds=True)
+            # guarantee a return value that is either a (finite)
+            # native_numeric_type, or None
+            lb, body, ub = con.to_bounded_expression(True)
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -419,7 +419,7 @@ class _LPWriter_impl(object):
                 # slack variable if skip_trivial_constraints is False,
                 # but that seems rather silly.
                 continue
-            repn = constraint_visitor.walk_expression(con.body)
+            repn = constraint_visitor.walk_expression(body)
             if repn.nonlinear is not None:
                 raise ValueError(
                     f"Model constraint ({con.name}) contains nonlinear terms that "
