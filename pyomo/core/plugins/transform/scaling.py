@@ -82,11 +82,6 @@ class ScaleModel(Transformation):
         self._apply_to(scaled_model, **kwds)
         return scaled_model
 
-    def _get_float_scaling_factor(self, component):
-        if self._suffix_finder is None:
-            self._suffix_finder = SuffixFinder('scaling_factor', 1.0)
-        return self._suffix_finder.find(component)
-
     def _apply_to(self, model, rename=True):
         # create a map of component to scaling factor
         component_scaling_factor_map = ComponentMap()
