@@ -46,6 +46,7 @@ if cyipopt_available:
     # We don't raise unittest.SkipTest if not cyipopt_available as there is a
     # test below that tests an exception when cyipopt is unavailable.
     cyipopt_ge_1_3 = hasattr(cyipopt, "CyIpoptEvaluationError")
+    ipopt_ge_3_14 = cyipopt.IPOPT_VERSION >= (3, 14, 0)
 
 
 def create_model1():
@@ -369,11 +370,12 @@ class TestCyIpoptSolver(unittest.TestCase):
         # only has access to the *previous iteration's* dual values.
 
     # The 13-arg callback works with cyipopt < 1.3, but we will use the
-    # get_current_iterate method, which is only available in 1.3+
+    # get_current_iterate method, which is only available in 1.3+ and IPOPT 3.14+
     @unittest.skipIf(
-        not cyipopt_available or not cyipopt_ge_1_3, "cyipopt version < 1.3.0"
+        not cyipopt_available or not cyipopt_ge_1_3 or not ipopt_ge_3_14,
+        "cyipopt version < 1.3.0",
     )
-    def test_solve_13arg_callback(self):
+    def test_solve_get_current_iterate(self):
         m = create_model1()
 
         iterate_data = []
