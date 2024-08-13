@@ -553,6 +553,8 @@ class DesignOfExperiments:
                 res = self.solver.solve(model)
                 pyo.assert_optimal_termination(res)
             except:
+                # TODO: Make error message more verbose, i.e., add unknown parameter values so the
+                # user can try to solve the model instance outside of the pyomo.DoE framework.
                 raise RuntimeError(
                     "Model from experiment did not solve appropriately. Make sure the model is well-posed."
                 )
