@@ -282,6 +282,13 @@ class DesignOfExperiments:
         for comp in model.scenario_blocks[0].experiment_inputs:
             comp.fix()
 
+        # TODO: safeguard solver call to see if solver terminated successfully
+        # see below commented code:
+        # res = self.solver.solve(model, tee=self.tee, load_solutions=False)
+        # if pyo.check_optimal_termination(res):
+        #     model.load_solution(res)
+        # else:
+        #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(model, tee=self.tee)
 
