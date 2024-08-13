@@ -19,6 +19,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.base.block import BlockData
 from pyomo.core.base.component import ActiveComponent, ModelComponentFactory
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import Initializer
@@ -409,7 +410,7 @@ class AbstractSuffix(Suffix):
 
 
 class SuffixFinder(object):
-    def __init__(self, name, default=None):
+    def __init__(self, name, default=None, context=None):
         """This provides an efficient utility for finding suffix values on a
         (hierarchical) Pyomo model.
 
@@ -428,7 +429,14 @@ class SuffixFinder(object):
         self.name = name
         self.default = default
         self.all_suffixes = []
-        self._suffixes_by_block = {None: []}
+        self._context = context
+        self._suffixes_by_block = ComponentMap()
+        self._suffixes_by_block[self._context] = []
+        if context is not None:
+            s = context.component(name)
+            if s is not None and s.ctype is Suffix and s.active:
+                self._suffixes_by_block[context].append(s)
+                self.all_suffixes.append(s)
 
     def find(self, component_data):
         """Find suffix value for a given component data object in model tree
@@ -458,7 +466,17 @@ class SuffixFinder(object):
 
         """
         # Walk parent tree and search for suffixes
-        suffixes = self._get_suffix_list(component_data.parent_block())
+        if isinstance(component_data, BlockData):
+            _block = component_data
+        else:
+            _block = component_data.parent_block()
+        try:
+            suffixes = self._get_suffix_list(_block)
+        except AttributeError:
+            raise ValueError(
+                f"Component '{component_data.name}' not found in the SuffixFinder "
+                f"context (Block hierarchy rooted at {self._context.name})"
+            ) from None
         # Pass 1: look for the component_data, working root to leaf
         for s in suffixes:
             if component_data in s:
