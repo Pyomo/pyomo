@@ -967,6 +967,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         m.c1 = Constraint(expr=m.x1 <= 1)
         m.c2 = Constraint(expr=(1, m.x1, 2))
         m.c3 = Constraint(expr=m.q <= m.x1)
+        m.c3_up = Constraint(expr=m.x1 - 2 * m.q <= 0)
         m.c4 = Constraint(expr=(log(m.p), m.x2, m.q))
         m.c5 = Constraint(expr=(m.q, m.x2, 2 * m.q))
         m.c6 = Constraint(expr=m.z1 <= 1)
@@ -990,6 +991,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
             m.c1,
             m.c2,
             m.c3,
+            m.c3_up,
             m.c4,
             m.c5,
             m.c6,
@@ -1024,7 +1026,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         ss_ineq_cons = working_model.second_stage.inequality_cons
 
         self.assertEqual(len(fs_ineq_cons), 4)
-        self.assertEqual(len(ss_ineq_cons), 12)
+        self.assertEqual(len(ss_ineq_cons), 13)
 
         self.assertFalse(m.c1.active)
         new_c1_con = fs_ineq_cons["ineq_con_c1"]
@@ -1045,6 +1047,15 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         self.assertTrue(new_c3_con.active)
         assertExpressionsEqual(self, new_c3_con.expr, -m.x1 <= -m.q)
         self.assertEqual(model_data.separation_priority_order[new_c3_con.index()], 1)
+
+        # m.x1 - 2 * m.q <= 0;
+        # single second-stage inequality. modify in place
+        # test case where uncertain param is in body,
+        # rather than bound, and rest of expression is first-stage
+        self.assertFalse(m.c3_up.active)
+        new_c3_up_con = ss_ineq_cons["ineq_con_c3_up_upper_bound_con"]
+        self.assertTrue(new_c3_up_con.active)
+        assertExpressionsEqual(self, new_c3_up_con.expr, m.x1 - 2 * m.q <= 0.0)
 
         # log(m.p) <= m.x2 <= m.q
         # lower bound is first-stage, upper bound second-stage
