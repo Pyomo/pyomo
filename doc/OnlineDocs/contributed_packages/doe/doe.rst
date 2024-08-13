@@ -162,7 +162,6 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
     >>> import pyomo.environ as pyo
     >>> from pyomo.contrib.doe import DesignOfExperiments
     >>> import numpy as np
-    >>> import idaes  # Required to add ipopt linear solvers to path if not done manually
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: ========================
