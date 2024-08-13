@@ -160,6 +160,17 @@ class IConstraint(ICategorizedObject):
         ub = self.ub
         return (ub is not None) and (value(ub) != float('inf'))
 
+    def to_bounded_expression(self, evaluate_bounds=False):
+        if evaluate_bounds:
+            lb = self.lb
+            if lb == -float('inf'):
+                lb = None
+            ub = self.ub
+            if ub == float('inf'):
+                ub = None
+            return lb, self.body, ub
+        return self.lower, self.body, self.upper
+
 
 class _MutableBoundsConstraintMixin(object):
     """
@@ -176,9 +187,6 @@ class _MutableBoundsConstraintMixin(object):
     #
     # Define some of the IConstraint abstract methods
     #
-
-    def to_bounded_expression(self):
-        return self.lower, self.body, self.upper
 
     @property
     def lower(self):
