@@ -77,7 +77,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
         self.assertEqual(len(pwlf._expressions), 1)
         new_cons = n_to_pwl.get_transformed_component(m.cons)
         self.assertTrue(new_cons.active)
-        self.assertIs(new_cons.body, pwlf._expressions[id(new_cons.body.expr)])
+        self.assertIs(new_cons.body, pwlf._expressions[pwlf._expression_ids[new_cons.body.expr]])
         self.assertIsNone(new_cons.ub)
         self.assertEqual(new_cons.lb, 0.35)
         self.assertIs(n_to_pwl.get_src_component(new_cons), m.cons)
@@ -331,7 +331,7 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
         self.assertEqual(len(pwlf._expressions), 1)
         new_obj = n_to_pwl.get_transformed_component(m.obj)
         self.assertTrue(new_obj.active)
-        self.assertIs(new_obj.expr, pwlf._expressions[id(new_obj.expr.expr)])
+        self.assertIs(new_obj.expr, pwlf._expressions[pwlf._expression_ids[new_obj.expr.expr]])
         self.assertIs(n_to_pwl.get_src_component(new_obj), m.obj)
 
         quadratic = n_to_pwl.get_transformed_quadratic_constraints(m)

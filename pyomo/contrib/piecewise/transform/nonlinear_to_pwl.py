@@ -641,7 +641,7 @@ class NonlinearToPWL(Transformation):
             return None, expr_type
 
         # Additively decompose expr and work on the pieces
-        pwl_func = 0
+        pwl_summands = []
         for k, subexpr in enumerate(
             _additively_decompose_expr(
                 expr, config.min_dimension_to_additively_decompose
@@ -661,10 +661,10 @@ class NonlinearToPWL(Transformation):
                     "'max_dimension' or additively separating the expression."
                     % (obj.name, config.max_dimension)
                 )
-                pwl_func = pwl_func + subexpr
+                pwl_summands.append(subexpr)
                 continue
             elif not self._needs_approximating(subexpr, approximate_quadratic)[1]:
-                pwl_func = pwl_func + subexpr
+                pwl_summands.append(subexpr)
                 continue
             # else we approximate subexpr
 
@@ -684,13 +684,13 @@ class NonlinearToPWL(Transformation):
             # implementation of iadd and dereference the ExpressionData holding
             # the PiecewiseLinearExpression that we later transform my remapping
             # it to a Var...
-            pwl_func = pwl_func + pwlf(*expr_vars)
+            pwl_summands.append(pwlf(*expr_vars))
 
             # restore var values
             for v, val in orig_values.items():
                 v.value = val
 
-        return pwl_func, expr_type
+        return sum(pwl_summands), expr_type
 
     def get_src_component(self, cons):
         data = cons.parent_block().private_data().src_component
