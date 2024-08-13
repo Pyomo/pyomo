@@ -90,7 +90,7 @@ class ScaleModel(Transformation):
     def _apply_to(self, model, rename=True):
         # create a map of component to scaling factor
         component_scaling_factor_map = ComponentMap()
-        self._suffix_finder = SuffixFinder('scaling_factor', 1.0)
+        self._suffix_finder = SuffixFinder('scaling_factor', 1.0, model)
 
         # if the scaling_method is 'user', get the scaling parameters from the suffixes
         if self._scaling_method == 'user':
