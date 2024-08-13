@@ -254,9 +254,11 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
         else:
-            doe_block = pyo.Block()
-            doe_block_name = unique_component_name(model, "design_of_experiments_block")
-            model.add_component(doe_block_name, doe_block)
+            # TODO: Add safe naming when a model is passed by the user.
+            # doe_block = pyo.Block()
+            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # model.add_component(doe_block_name, doe_block)
+            pass
 
         # ToDo: potentially work with this for more complicated models
         # Create the full DoE model (build scenarios for F.D. scheme)
@@ -346,23 +348,23 @@ class DesignOfExperiments:
         self.results["Sensitivity Matrix"] = self.get_sensitivity_matrix()
         self.results["Experiment Design"] = self.get_experiment_input_values()
         self.results["Experiment Design Names"] = [
-            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
-            for k in self.model.scenario_blocks[0].experiment_inputs
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].experiment_inputs
         ]
         self.results["Experiment Outputs"] = self.get_experiment_output_values()
         self.results["Experiment Output Names"] = [
-            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
-            for k in self.model.scenario_blocks[0].experiment_outputs
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].experiment_outputs
         ]
         self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
         self.results["Unknown Parameter Names"] = [
-            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
-            for k in self.model.scenario_blocks[0].unknown_parameters
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].unknown_parameters
         ]
         self.results["Measurement Error"] = self.get_measurement_error_values()
         self.results["Measurement Error Names"] = [
-            str(pyo.ComponentUID(k, context=self.model.scenario_blocks[0]))
-            for k in self.model.scenario_blocks[0].measurement_error
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].measurement_error
         ]
 
         self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
