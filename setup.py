@@ -262,7 +262,7 @@ setup_kwargs = dict(
         'optional': [
             'dill',  # No direct use, but improves lambda pickle
             'ipython',  # contrib.viewer
-            'linear-tree', # contrib.piecewise
+            'linear-tree',  # contrib.piecewise
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
             # Note: minimum version from community_detection use of
