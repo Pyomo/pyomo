@@ -133,7 +133,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         doe_obj.run_doe()
 
         # assert model solves
-        self.assertTrue(doe_obj.results["Solver Status"] == "ok")
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
@@ -155,7 +155,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.run_doe()
 
-        self.assertTrue(doe_obj.results["Solver Status"] == "ok")
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
@@ -177,7 +177,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.run_doe()
 
-        self.assertTrue(doe_obj.results["Solver Status"] == "ok")
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
@@ -204,7 +204,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.run_doe()
 
-        self.assertTrue(doe_obj.results['Solver Status'] == "ok")
+        self.assertEqual(doe_obj.results['Solver Status'], "ok")
 
     def test_reactor_obj_cholesky_solve(self):
         fd_method = "central"
@@ -218,7 +218,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.run_doe()
 
-        self.assertTrue(doe_obj.results["Solver Status"] == "ok")
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
         # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
