@@ -146,16 +146,6 @@ class DesignOfExperiments:
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
-        # Deprecation error
-        if 'create_model' in kwargs:
-            raise ValueError(
-                "DEPRECATION ERROR: Pyomo.DoE has been refactored. The current interface utilizes Experiment "
-                "objects that label unknown parameters, experiment inputs, experiment outputs and measurement "
-                "error. This avoids string-based naming which is fragile. For instruction to use the new "
-                "interface, please see the Pyomo.DoE under the contributed packages documentation at "
-                "`https://pyomo.readthedocs.io/en/latest/contributed_packages/doe/doe.html`"
-            )
-
         if experiment is None:
             raise ValueError("Experiment object must be provided to perform DoE.")
 
