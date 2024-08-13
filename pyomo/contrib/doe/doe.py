@@ -1199,18 +1199,20 @@ class DesignOfExperiments:
                 # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
 
-        def trace_calc(m):
+        def trace_calc(b):
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            return model.trace == sum(model.fim[j, j] for j in model.parameter_names)
+            m = b.model()
+            return m.trace == sum(m.fim[j, j] for j in m.parameter_names)
 
-        def determinant_general(m):
+        def determinant_general(b):
             r"""Calculate determinant. Can be applied to FIM of any size.
             det(A) = \sum_{\sigma in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """
-            r_list = list(range(len(model.parameter_names)))
+            m = b.model()
+            r_list = list(range(len(m.parameter_names)))
             # get all permutations
             object_p = permutations(r_list)
             list_p = list(object_p)
@@ -1222,22 +1224,22 @@ class DesignOfExperiments:
                 x_order = list_p[i]
                 # sigma_i is the value in the i-th position after the reordering \sigma
                 for x in range(len(x_order)):
-                    for y, element in enumerate(model.parameter_names):
+                    for y, element in enumerate(m.parameter_names):
                         if x_order[x] == y:
                             name_order.append(element)
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
                 * math.prod(
-                    model.fim[
-                        model.parameter_names.at(val + 1),
-                        model.parameter_names.at(ind + 1),
+                    m.fim[
+                        m.parameter_names.at(val + 1),
+                        m.parameter_names.at(ind + 1),
                     ]
                     for ind, val in enumerate(list_p[d])
                 )
                 for d in range(len(list_p))
             )
-            return model.determinant == det_perm
+            return m.determinant == det_perm
 
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
             model.obj_cons.cholesky_cons = pyo.Constraint(
