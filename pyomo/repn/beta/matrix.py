@@ -587,6 +587,11 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     # Abstract Interface (ConstraintData)
     #
 
+    def to_bounded_expression(self, evaluate_bounds=False):
+        """Access this constraint as a single expression."""
+        # Note that the bounds are always going to be floats...
+        return self.lower, self.body, self.upper
+
     @property
     def body(self):
         """Access the body of a constraint expression."""
