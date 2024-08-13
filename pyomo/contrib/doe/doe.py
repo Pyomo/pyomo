@@ -1722,6 +1722,7 @@ class DesignOfExperiments:
             In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
         font_axes: axes label font size
         font_tick: tick label font size
+        figure_file_name: string or Path, path to save the figure as
         log_scale: if True, the result matrix will be scaled by log10
 
         Returns
@@ -1856,6 +1857,7 @@ class DesignOfExperiments:
             In a 2D heatmap, it should be the first design variable in the dv_ranges
         font_axes: axes label font size
         font_tick: tick label font size
+        figure_file_name: string or Path, path to save the figure as
         log_scale: if True, the result matrix will be scaled by log10
 
         Returns
