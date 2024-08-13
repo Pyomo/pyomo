@@ -433,10 +433,12 @@ class DesignOfExperiments:
             ).clone()
             model = self.compute_FIM_model
         else:
-            doe_block = pyo.Block()
-            doe_block_name = unique_component_name(model, "design_of_experiments_block")
-            model.add_component(doe_block_name, doe_block)
-            self.compute_FIM_model = model
+            # TODO: Add safe naming when a model is passed by the user.
+            # doe_block = pyo.Block()
+            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # model.add_component(doe_block_name, doe_block)
+            # self.compute_FIM_model = model
+            pass
 
         self.check_model_labels(model=model)
 
@@ -731,9 +733,11 @@ class DesignOfExperiments:
         if model is None:
             model = self.model
         else:
-            doe_block = pyo.Block()
-            doe_block_name = unique_component_name(model, "design_of_experiments_block")
-            model.add_component(doe_block_name, doe_block)
+            # TODO: Add safe naming when a model is passed by the user.
+            # doe_block = pyo.Block()
+            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # model.add_component(doe_block_name, doe_block)
+            pass
 
         # Developer recommendation: use the Cholesky decomposition for D-optimality
         # The explicit formula is available for benchmarking purposes and is NOT recommended
