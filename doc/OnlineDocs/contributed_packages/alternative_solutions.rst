@@ -3,7 +3,7 @@ Generating Alternative (Near-)Optimal Solutions
 ###############################################
 
 Optimization solvers are generally designed to return a feasible solution
-to the user. However, there are many applications where a users needs
+to the user. However, there are many applications where a user needs
 more context than this result. For example,
 
 * alternative solutions can support an assessment of trade-offs between competing objectives;
@@ -35,7 +35,7 @@ The following functions are defined in the alternative-solutions library:
 
 * ``gurobi_generate_solutions``
 
-    * Finds alternative optimal solutions for discrete variables using Gurobi's built-in Solution Pool capability.
+    * Finds alternative optimal solutions for discrete variables using Gurobi's built-in solution pool capability.
 
 * ``obbt_analysis_bounds_and_solutions``
 
