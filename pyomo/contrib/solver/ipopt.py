@@ -238,6 +238,21 @@ class Ipopt(SolverBase):
                 self._version_cache = (pth, version)
         return self._version_cache[1]
 
+    def has_linear_solver(self, linear_solver):
+        import pyomo.core as AML
+
+        m = AML.ConcreteModel()
+        m.x = AML.Var()
+        m.o = AML.Objective(expr=(m.x - 2) ** 2)
+        results = self.solve(
+            m,
+            tee=False,
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+            solver_options={'linear_solver': linear_solver},
+        )
+        return 'running with linear solver' in results.solver_log
+
     def _write_options_file(self, filename: str, options: Mapping):
         # First we need to determine if we even need to create a file.
         # If options is empty, then we return False
