@@ -325,7 +325,85 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                 additively_decompose=False,
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             )
+        # No warnings (this is to check that we aren't emitting a bunch of
+        # warnings about setting variables outside of their domains)
         self.assertEqual(output.getvalue().strip(), "")
+
+        transformed_c = n_to_pwl.get_transformed_component(m.c)
+        pwlf = transformed_c.body.expr.pw_linear_function
+
+        # should sample 0, 1 for th m.x's
+        # should sample 0, 2, 5 for m.y (because of half to even rounding (*sigh*))
+        points = set(pwlf._points)
+        self.assertEqual(len(points), 12)
+        for x in [0, 1]:
+            for y in [0, 1]:
+                for z in [0, 2, 5]:
+                    self.assertIn((x, y, z), points)
+
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
+    def test_uniform_sampling_discrete_vars(self):
+        m = ConcreteModel()
+        m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
+        m.y = Var(domain=Integers, bounds=(0, 5))
+        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y <= 4)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.WARNING):
+            n_to_pwl.apply_to(
+                m,
+                num_points=3,
+                additively_decompose=False,
+                domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+            )
+        # No warnings (this is to check that we aren't emitting a bunch of
+        # warnings about setting variables outside of their domains)
+        self.assertEqual(output.getvalue().strip(), "")
+
+        transformed_c = n_to_pwl.get_transformed_component(m.c)
+        pwlf = transformed_c.body.expr.pw_linear_function
+
+        # should sample 0, 1 for th m.x's
+        # should sample 0, 2, 5 for m.y (because of half to even rounding (*sigh*))
+        points = set(pwlf._points)
+        self.assertEqual(len(points), 12)
+        for x in [0, 1]:
+            for y in [0, 1]:
+                for z in [0, 2, 5]:
+                    self.assertIn((x, y, z), points)    
+
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
+    def test_random_sampling_discrete_vars(self):
+        m = ConcreteModel()
+        m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
+        m.y = Var(domain=Integers, bounds=(0, 5))
+        m.c = Constraint(expr=m.x['rocky'] * m.x['bullwinkle'] + m.y <= 4)
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core', logging.WARNING):
+            n_to_pwl.apply_to(
+                m,
+                num_points=3,
+                additively_decompose=False,
+                domain_partitioning_method=DomainPartitioningMethod.RANDOM_GRID,
+            )
+        # No warnings (this is to check that we aren't emitting a bunch of
+        # warnings about setting variables outside of their domains)
+        self.assertEqual(output.getvalue().strip(), "")
+
+        transformed_c = n_to_pwl.get_transformed_component(m.c)
+        pwlf = transformed_c.body.expr.pw_linear_function
+
+        # should sample 0, 1 for th m.x's
+        # Happen to get 0, 1, 5 for m.y
+        points = set(pwlf._points)
+        self.assertEqual(len(points), 12)
+        for x in [0, 1]:
+            for y in [0, 1]:
+                for z in [0, 1, 5]:
+                    self.assertIn((x, y, z), points)
 
 
 class TestNonlinearToPWL_2D(unittest.TestCase):

@@ -93,19 +93,29 @@ Block.register_private_data_initializer(_NonlinearToPWLTransformationData)
 def _get_random_point_grid(bounds, n, func, config, seed=42):
     # Generate randomized grid of points
     linspaces = []
-    for lb, ub in bounds:
-        np.random.seed(seed)
-        linspaces.append(np.random.uniform(lb, ub, n))
+    np.random.seed(seed)
+    for (lb, ub), is_integer in bounds:
+        if not is_integer:
+            linspaces.append(np.random.uniform(lb, ub, n))
+        else:
+            size = min(n, ub - lb + 1)
+            linspaces.append(np.random.choice(range(lb, ub + 1), size=size,
+                                              replace=False))
     return list(itertools.product(*linspaces))
 
 
 def _get_uniform_point_grid(bounds, n, func, config):
     # Generate non-randomized grid of points
     linspaces = []
-    for lb, ub in bounds:
-        # Issues happen when exactly using the boundary
-        nudge = (ub - lb) * 1e-4
-        linspaces.append(np.linspace(lb + nudge, ub - nudge, n))
+    for (lb, ub), is_integer in bounds:
+        if not is_integer:
+            # Issues happen when exactly using the boundary
+            nudge = (ub - lb) * 1e-4
+            linspaces.append(np.linspace(lb + nudge, ub - nudge, n))
+        else:
+            size = min(n, ub - lb + 1)
+            pts = np.linspace(lb, ub, size)
+            linspaces.append(np.array([round(i) for i in pts]))
     return list(itertools.product(*linspaces))
 
 
@@ -159,8 +169,8 @@ def _get_pwl_function_approximation(func, config, bounds):
     func: function to approximate
     config: ConfigDict for transformation, specifying domain_partitioning_method,
        num_points, and max_depth (if using linear trees)
-    bounds: list of tuples giving upper and lower bounds for each of func's
-       arguments
+    bounds: list of tuples giving upper and lower bounds and a boolean indicating 
+       if the variable's domain is discrete or not, for each of func's arguments
     """
     method = config.domain_partitioning_method
     n = config.num_points
@@ -195,8 +205,8 @@ def _generate_bound_points(leaves, bounds):
         for pt in [lower_corner_list, upper_corner_list]:
             for i in range(len(pt)):
                 # clamp within bounds range
-                pt[i] = max(pt[i], bounds[i][0])
-                pt[i] = min(pt[i], bounds[i][1])
+                pt[i] = max(pt[i], bounds[i][0][0])
+                pt[i] = min(pt[i], bounds[i][0][1])
 
         if tuple(lower_corner_list) not in bound_points:
             bound_points.append(tuple(lower_corner_list))
@@ -206,7 +216,7 @@ def _generate_bound_points(leaves, bounds):
     # This process should have gotten every interior bound point. However, all
     # but two of the corners of the overall bounding box should have been
     # missed. Let's fix that now.
-    for outer_corner in itertools.product(*bounds):
+    for outer_corner in itertools.product(*[b[0] for b in bounds]):
         if outer_corner not in bound_points:
             bound_points.append(outer_corner)
     return bound_points
@@ -296,9 +306,9 @@ def _reassign_none_bounds(leaves, input_bounds):
     for l in L:
         for f in features:
             if leaves[l]['bounds'][f][0] == None:
-                leaves[l]['bounds'][f][0] = input_bounds[f][0]
+                leaves[l]['bounds'][f][0] = input_bounds[f][0][0]
             if leaves[l]['bounds'][f][1] == None:
-                leaves[l]['bounds'][f][1] = input_bounds[f][1]
+                leaves[l]['bounds'][f][1] = input_bounds[f][0][1]
     return leaves
 
 
@@ -615,7 +625,7 @@ class NonlinearToPWL(Transformation):
                     "at least one bound" % (v.name, obj.name)
                 )
             else:
-                bounds.append(v.bounds)
+                bounds.append((v.bounds, v.is_integer()))
         return bounds
 
     def _needs_approximating(self, expr, approximate_quadratic):
