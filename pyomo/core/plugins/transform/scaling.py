@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
-from pyomo.core.base import Block, Var, Constraint, Objective, Suffix, value
+from pyomo.core.base import Block, Var, Constraint, Objective, Suffix, value, Expression
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.base.suffix import SuffixFinder
@@ -174,7 +174,7 @@ class ScaleModel(Transformation):
 
         already_scaled = set()
         for component in model.component_objects(
-            ctype=(Constraint, Objective), descend_into=True
+            ctype=(Constraint, Objective, Expression), descend_into=True
         ):
             if component.is_reference():
                 # Skip any references - these should get picked up when
@@ -187,13 +187,13 @@ class ScaleModel(Transformation):
                     continue
                 already_scaled.add(id(c))
                 # perform the constraint/objective scaling and variable sub
-                scaling_factor = component_scaling_factor_map[c]
                 if c.ctype is Constraint:
+                    scaling_factor = component_scaling_factor_map[c]
                     body = scaling_factor * replace_expressions(
                         expr=c.body,
                         substitution_map=variable_substitution_dict,
-                        descend_into_named_expressions=True,
-                        remove_named_expressions=True,
+                        descend_into_named_expressions=False,
+                        remove_named_expressions=False,
                     )
 
                     # scale the rhs
@@ -218,11 +218,22 @@ class ScaleModel(Transformation):
                         c.set_value((lower, body, upper))
 
                 elif c.ctype is Objective:
+                    scaling_factor = component_scaling_factor_map[c]
                     c.expr = scaling_factor * replace_expressions(
                         expr=c.expr,
                         substitution_map=variable_substitution_dict,
-                        descend_into_named_expressions=True,
-                        remove_named_expressions=True,
+                        descend_into_named_expressions=False,
+                        remove_named_expressions=False,
+                    )
+                elif c.ctype is Expression:
+                    # Note that we don't have a scaling factor for Expression objects.
+                    # If we want to add this, Expressions would need to be added to
+                    # component_scaling_factor_map, defined above.
+                    c.expr = replace_expressions(
+                        expr=c.expr,
+                        substitution_map=variable_substitution_dict,
+                        descend_into_named_expressions=False,
+                        remove_named_expressions=False,
                     )
                 else:
                     raise NotImplementedError(

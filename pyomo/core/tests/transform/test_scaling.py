@@ -690,6 +690,21 @@ class TestScaleModelTransformation(unittest.TestCase):
         sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v3)
         assert sf == float(0.3)
 
+    def test_scaled_named_expressions(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=10)
+        m.y = pyo.Var(initialize=0.1)
+        m.inner_expr = pyo.Expression(expr=3 + m.x**2 + m.y)
+        m.sum = pyo.Expression(expr=m.x + m.y + m.inner_expr)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x] = 0.1
+        m.scaling_factor[m.y] = 10
+        m_scaled = pyo.TransformationFactory('core.scale_model').create_using(
+            m, rename=False
+        )
+        self.assertAlmostEqual(pyo.value(m.sum), 113.2)
+        self.assertAlmostEqual(pyo.value(m_scaled.sum), 113.2)
+
 
 if __name__ == "__main__":
     unittest.main()
