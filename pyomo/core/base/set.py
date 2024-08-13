@@ -1488,7 +1488,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                             f"{self.__class__.__name__} {self.name}: '{mode}=' "
                             "callback signature matched (block, *value).  "
                             "Please update the callback to match the signature "
-                            "(block, value, *index).",
+                            f"(block, value{', *index' if comp.is_indexed() else ''}).",
                             version='6.7.4.dev0',
                         )
                         orig_fcn = fcn._fcn
@@ -2263,26 +2263,6 @@ class Set(IndexedComponent):
                 self._domain = self._init_domain(self.parent_block(), None, self)
             if self._init_dimen.constant():
                 self._dimen = self._init_dimen(self.parent_block(), None)
-
-            if self._validate.__class__ is ParameterizedIndexedCallInitializer:
-                # TBD [JDS: 8/2024]: should we deprecate the "expanded
-                # tuple" version of the validate callback for scalar sets?
-                # It is widely used and we can (reasonably reliably) map to
-                # the expected behavior...
-                orig_fcn = self._validate._fcn
-                self._validate = ParameterizedScalarCallInitializer(
-                    lambda m, v: orig_fcn(m, *v), True
-                )
-
-            if self._filter.__class__ is ParameterizedIndexedCallInitializer:
-                # TBD [JDS: 8/2024]: should we deprecate the "expanded
-                # tuple" version of the filter callback for scalar sets?
-                # It is widely used and we can (reasonably reliably) map to
-                # the expected behavior...
-                orig_fcn = self._filter._fcn
-                self._filter = ParameterizedScalarCallInitializer(
-                    lambda m, v: orig_fcn(m, *v), True
-                )
 
     @deprecated(
         "check_values() is deprecated: Sets only contain valid members", version='5.7'

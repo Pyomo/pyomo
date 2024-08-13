@@ -4336,6 +4336,33 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
 
+        def _validate(model, val):
+            i, j = val
+            self.assertIs(model, m)
+            if i + j < 2:
+                return True
+            if i - j > 2:
+                return False
+            raise RuntimeError("Bogus value")
+
+        m.I1 = Set(validate=_validate)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue(m.I1.add((0, 1)))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(4, 1\) violates the validation rule of " r"Set I1",
+            ):
+                m.I1.add((4, 1))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+                m.I1.add((2, 2))
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set I1\n",
+        )
+
         def _validate(model, i, j):
             self.assertIs(model, m)
             if i + j < 2:
@@ -4344,22 +4371,28 @@ class TestSet(unittest.TestCase):
                 return False
             raise RuntimeError("Bogus value")
 
-        m.I = Set(validate=_validate)
-        output = StringIO()
-        with LoggingIntercept(output, 'pyomo.core'):
-            self.assertTrue(m.I.add((0, 1)))
-            self.assertEqual(output.getvalue(), "")
+        m.I2 = Set(validate=_validate)
+        with LoggingIntercept(module='pyomo.core') as output:
+            self.assertTrue(m.I2.add((0, 1)))
+            self.assertRegex(
+                output.getvalue().replace('\n', ' '),
+                r"DEPRECATED: OrderedScalarSet I2: 'validate=' callback "
+                r"signature matched \(block, \*value\).  Please update the "
+                r"callback to match the signature \(block, value\)",
+            )
+        with LoggingIntercept(module='pyomo.core') as output:
             with self.assertRaisesRegex(
                 ValueError,
-                r"The value=\(4, 1\) violates the validation rule of " r"Set I",
+                r"The value=\(4, 1\) violates the validation rule of " r"Set I2",
             ):
-                m.I.add((4, 1))
-            self.assertEqual(output.getvalue(), "")
+                m.I2.add((4, 1))
+        self.assertEqual(output.getvalue(), "")
+        with LoggingIntercept(module='pyomo.core') as output:
             with self.assertRaisesRegex(RuntimeError, "Bogus value"):
-                m.I.add((2, 2))
+                m.I2.add((2, 2))
         self.assertEqual(
             output.getvalue(),
-            "Exception raised while validating element '(2, 2)' for Set I\n",
+            "Exception raised while validating element '(2, 2)' for Set I2\n",
         )
 
         m.J1 = Set([(0, 0), (2, 2)], validate=_validate)
