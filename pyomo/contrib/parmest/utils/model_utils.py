@@ -48,12 +48,6 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             ComponentUID(param) for param in model.component_data_objects(pyo.Param)
         ]
 
-    # if param_CUIDs is None:
-    #     param_CUIDs = [
-    #         ComponentUID(param.name)
-    #         for param in model.component_data_objects(pyo.Param)
-    #     ]
-
     # keep a list of the parameter CUIDs in the case of indexing
     indexed_param_CUIDs = []
 
