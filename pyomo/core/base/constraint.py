@@ -179,7 +179,7 @@ class ConstraintData(ActiveComponentData):
             body = value(self.body, exception=exception)
         return body
 
-    def to_bounded_expression(self):
+    def to_bounded_expression(self, evaluate_bounds=False):
         """Convert this constraint to a tuple of 3 expressions (lb, body, ub)
 
         This method "standardizes" the expression into a 3-tuple of
@@ -194,6 +194,13 @@ class ConstraintData(ActiveComponentData):
         expression, any required expression manipulations (and by
         extension, the result) can change after fixing / unfixing
         :py:class:`Var` objects.
+
+        Parameters
+        ----------
+        evaluate_bounds: bool
+
+            If True, then the lower and upper bounds will be evaluated
+            to a finite numeric constant or None.
 
         Raises
         ------
@@ -226,15 +233,21 @@ class ConstraintData(ActiveComponentData):
                     "variable upper bound.  Cannot normalize the "
                     "constraint or send it to a solver."
                 )
-            return ans
-        elif expr is not None:
+        elif expr is None:
+            ans = None, None, None
+        else:
             lhs, rhs = expr.args
             if rhs.__class__ in native_types or not rhs.is_potentially_variable():
-                return rhs if expr.__class__ is EqualityExpression else None, lhs, rhs
-            if lhs.__class__ in native_types or not lhs.is_potentially_variable():
-                return lhs, rhs, lhs if expr.__class__ is EqualityExpression else None
-            return 0 if expr.__class__ is EqualityExpression else None, lhs - rhs, 0
-        return None, None, None
+                ans = rhs if expr.__class__ is EqualityExpression else None, lhs, rhs
+            elif lhs.__class__ in native_types or not lhs.is_potentially_variable():
+                ans = lhs, rhs, lhs if expr.__class__ is EqualityExpression else None
+            else:
+                ans = 0 if expr.__class__ is EqualityExpression else None, lhs - rhs, 0
+
+        if evaluate_bounds:
+            lb, body, ub = ans
+            return self._evaluate_bound(lb, True), body, self._evaluate_bound(ub, False)
+        return ans
 
     def _evaluate_bound(self, bound, is_lb):
         if bound is None:
