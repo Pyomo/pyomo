@@ -82,7 +82,7 @@ class ReactorExperiment(Experiment):
         ########################
         # End variable def.
 
-        # Equation def'n
+        # Equation definition
         ########################
 
         # Expression for rate constants
@@ -110,7 +110,7 @@ class ReactorExperiment(Experiment):
             return m.CA[0] == m.CA[t] + m.CB[t] + m.CC[t]
 
         ########################
-        # End equation def'n
+        # End equation definition
 
     def finalize_model(self):
         """

@@ -174,7 +174,7 @@ The process model for the reaction kinetics problem is shown below. We build the
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: Create flexible model without data
-    :end-before: End equation def'n
+    :end-before: End equation definition
 
 Step 2: Finalize the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -182,7 +182,7 @@ Step 2: Finalize the Pyomo process model
 Here we add data to the model and finalize the discretization. This step is required before the model can be labeled.
 
 .. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
-    :start-after: End equation def'n
+    :start-after: End equation definition
     :end-before: End model finalization
 
 Step 3: Label the information needed for DoE analysis
