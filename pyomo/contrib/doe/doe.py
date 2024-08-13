@@ -454,6 +454,9 @@ class DesignOfExperiments:
         else:
             self.check_model_FIM(FIM=self.prior_FIM)
 
+        # TODO: Add a check to see if the model has an objective and deactivate it.
+        #       This solve should only be a square solve without any obj function.
+
         if method == "sequential":
             self._sequential_FIM(model=model)
             self._computed_FIM = self.seq_FIM
@@ -478,7 +481,7 @@ class DesignOfExperiments:
         matrix to subsequently compute the FIM.
 
         """
-        # Build a singular model instance
+        # Build a single model instance
         if model is None:
             self.compute_FIM_model = self.experiment.get_labeled_model(
                 **self.get_labeled_model_args
@@ -548,7 +551,7 @@ class DesignOfExperiments:
             # Simulate the model
             try:
                 res = self.solver.solve(model)
-                assert res.solver.termination_condition == "optimal"
+                pyo.assert_optimal_termination(res)
             except:
                 raise RuntimeError(
                     "Model from experiment did not solve appropriately. Make sure the model is well-posed."
@@ -635,9 +638,7 @@ class DesignOfExperiments:
         if not hasattr(model, "objective"):
             model.objective = pyo.Objective(expr=0, sense=pyo.minimize)
 
-        # call k_aug get_dsdp function
-        # Solve the square problem
-        # Deactivate object and fix experimental design decisions to make square
+        # Fix design variables to make the problem square
         for comp in model.experiment_inputs:
             comp.fix()
 
@@ -789,8 +790,9 @@ class DesignOfExperiments:
                 return dict_jac_initialize[(i, j)]
             # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
             else:
-                # Add flag as this should never be reached.
-                return 0.1
+                raise AttributeError(
+                    "Jacobian being initialized when the jac_initial attribute is None. Please contact the developers as you should not see this error."
+                )
 
         model.sensitivity_jacobian = pyo.Var(
             model.output_names, model.parameter_names, initialize=initialize_jac
