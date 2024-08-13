@@ -318,14 +318,14 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
 
         n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
         output = StringIO()
-        with LoggingIntercept(output, 'pyomo.contrib.piecewise', logging.WARNING):
+        with LoggingIntercept(output, 'pyomo.core', logging.WARNING):
             n_to_pwl.apply_to(
                 m,
                 num_points=3,
                 additively_decompose=False,
                 domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
             )
-        self.assertEqual(output.getvalue().strip())
+        self.assertEqual(output.getvalue().strip(), "")
 
 
 class TestNonlinearToPWL_2D(unittest.TestCase):
