@@ -57,8 +57,8 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     return args
 
 
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestReactorExampleErrors(unittest.TestCase):
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
         obj_used = "trace"
@@ -74,7 +74,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
             doe_obj = DesignOfExperiments(**DoE_args)
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_experiment_outputs(self):
         fd_method = "central"
         obj_used = "trace"
@@ -92,7 +91,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_measurement_error(self):
         fd_method = "central"
         obj_used = "trace"
@@ -110,7 +108,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_experiment_inputs(self):
         fd_method = "central"
         obj_used = "trace"
@@ -128,7 +125,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_no_unknown_parameters(self):
         fd_method = "central"
         obj_used = "trace"
@@ -146,7 +142,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_bad_prior_size(self):
         fd_method = "central"
         obj_used = "trace"
@@ -169,7 +164,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_bad_jacobian_init_size(self):
         fd_method = "central"
         obj_used = "trace"
@@ -192,7 +186,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_unbuilt_update_FIM(self):
         fd_method = "central"
         obj_used = "trace"
@@ -212,7 +205,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.update_FIM_prior(FIM=FIM_update)
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_none_update_FIM(self):
         fd_method = "central"
         obj_used = "trace"
@@ -232,7 +224,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.update_FIM_prior(FIM=FIM_update)
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_results_file_name(self):
         fd_method = "central"
         obj_used = "trace"
@@ -249,7 +240,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.run_doe(results_file=int(15))
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_measurement_and_output_length_match(self):
         fd_method = "central"
         obj_used = "trace"
@@ -273,7 +263,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_grid_search_des_range_inputs(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -296,7 +285,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_premature_figure_drawing(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -315,7 +303,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_no_des_var_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -340,7 +327,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_no_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -364,7 +350,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_no_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -388,7 +373,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_bad_fixed_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -416,7 +400,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_figure_drawing_bad_sens_names(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -442,7 +425,6 @@ class TestReactorExampleErrors(unittest.TestCase):
                 fixed_design_variables={"CA[0]": 1},
             )
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_FIM_without_FIM(self):
         fd_method = "central"
         obj_used = "trace"
@@ -462,7 +444,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.get_FIM()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_sens_mat_without_model(self):
         fd_method = "central"
         obj_used = "trace"
@@ -482,7 +463,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.get_sensitivity_matrix()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_exp_inputs_without_model(self):
         fd_method = "central"
         obj_used = "trace"
@@ -502,7 +482,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.get_experiment_input_values()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_exp_outputs_without_model(self):
         fd_method = "central"
         obj_used = "trace"
@@ -522,7 +501,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.get_experiment_output_values()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_unknown_params_without_model(self):
         fd_method = "central"
         obj_used = "trace"
@@ -542,7 +520,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.get_unknown_parameter_values()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_reactor_check_get_meas_error_without_model(self):
         fd_method = "central"
         obj_used = "trace"
@@ -562,7 +539,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.get_measurement_error_values()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_multiple_exp_not_implemented_seq(self):
         fd_method = "central"
         obj_used = "trace"
@@ -581,7 +557,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.run_multi_doe_sequential(N_exp=1)
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_multiple_exp_not_implemented_sim(self):
         fd_method = "central"
         obj_used = "trace"
@@ -600,7 +575,6 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.run_multi_doe_simultaneous(N_exp=1)
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_update_unknown_parameter_values_not_implemented_seq(self):
         fd_method = "central"
         obj_used = "trace"
@@ -620,7 +594,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.update_unknown_parameter_values()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_bad_FD_generate_scens(self):
         fd_method = "central"
         obj_used = "trace"
@@ -642,7 +615,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj._generate_scenario_blocks()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_bad_FD_seq_compute_FIM(self):
         fd_method = "central"
         obj_used = "trace"
@@ -663,7 +635,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.fd_formula = "bad things"
             doe_obj.compute_FIM(method="sequential")
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_bad_objective(self):
         fd_method = "central"
         obj_used = "trace"
@@ -684,7 +655,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.objective_option = "bad things"
             doe_obj.create_objective_function()
 
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_no_model_for_objective(self):
         fd_method = "central"
         obj_used = "trace"
@@ -705,7 +675,6 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.create_objective_function()
 
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    @unittest.skipIf(not numpy_available, "Numpy is not available")
     def test_bad_compute_FIM_option(self):
         fd_method = "central"
         obj_used = "trace"

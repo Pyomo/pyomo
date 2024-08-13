@@ -307,9 +307,10 @@ class TestReactorExampleSolving(unittest.TestCase):
         self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
 
         # self.assertTrue(unique values are correct
-        self.assertTrue((set(CA_vals).issuperset(set([1, 3, 5]))) and (
-            set(T_vals).issuperset(set([300, 500, 700]))
-        ))
+        self.assertTrue(
+            (set(CA_vals).issuperset(set([1, 3, 5])))
+            and (set(T_vals).issuperset(set([300, 500, 700])))
+        )
 
     def test_rescale_FIM(self):
         fd_method = "central"
@@ -395,9 +396,10 @@ class TestReactorExampleSolving(unittest.TestCase):
         self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
 
         # self.assertTrue(unique values are correct
-        self.assertTrue((set(CA_vals).issuperset(set([1, 3, 5]))) and (
-            set(T_vals).issuperset(set([300, 500, 700]))
-        ))
+        self.assertTrue(
+            (set(CA_vals).issuperset(set([1, 3, 5])))
+            and (set(T_vals).issuperset(set([300, 500, 700])))
+        )
 
 
 if __name__ == "__main__":
