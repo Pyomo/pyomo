@@ -87,7 +87,7 @@ class DesignOfExperiments:
         This package enables model-based design of experiments analysis with Pyomo.
         Both direct optimization and enumeration modes are supported.
 
-        The package has been refactored from its original form as of ##/##/##24. See
+        The package has been refactored from its original form as of August 24. See
         the documentation for more information.
 
         Parameters
@@ -152,8 +152,8 @@ class DesignOfExperiments:
                 "DEPRECATION ERROR: Pyomo.DoE has been refactored. The current interface utilizes Experiment "
                 "objects that label unknown parameters, experiment inputs, experiment outputs and measurement "
                 "error. This avoids string-based naming which is fragile. For instruction to use the new "
-                "interface, please see Pyomo.DoE under the contributed packages documentation at "
-                "`https://pyomo.readthedocs.io/en/stable/`"
+                "interface, please see the Pyomo.DoE under the contributed packages documentation at "
+                "`https://pyomo.readthedocs.io/en/latest/contributed_packages/doe/doe.html`"
             )
 
         if experiment is None:
