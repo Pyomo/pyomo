@@ -132,10 +132,10 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.run_doe()
 
-        # self.assertTrue(model solves
+        # assert model solves
         self.assertTrue(doe_obj.results["Solver Status"] == "ok")
 
-        # self.assertTrue(that Q, F, and L are the same.
+        # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
@@ -157,7 +157,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         self.assertTrue(doe_obj.results["Solver Status"] == "ok")
 
-        # self.assertTrue(that Q, F, and L are the same.
+        # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
@@ -179,7 +179,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         self.assertTrue(doe_obj.results["Solver Status"] == "ok")
 
-        # self.assertTrue(that Q, F, and L are the same.
+        # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Trace is used, no comparison for FIM and L.T @ L
@@ -220,7 +220,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         self.assertTrue(doe_obj.results["Solver Status"] == "ok")
 
-        # self.assertTrue(that Q, F, and L are the same.
+        # assert that Q, F, and L are the same.
         FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
 
         # Since Cholesky is used, there is comparison for FIM and L.T @ L
@@ -302,11 +302,11 @@ class TestReactorExampleSolving(unittest.TestCase):
         CA_vals = doe_obj.fim_factorial_results["CA[0]"]
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
-        # self.assertTrue(length is correct
+        # assert length is correct
         self.assertTrue((len(CA_vals) == 9) and (len(T_vals) == 9))
         self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
 
-        # self.assertTrue(unique values are correct
+        # assert unique values are correct
         self.assertTrue(
             (set(CA_vals).issuperset(set([1, 3, 5])))
             and (set(T_vals).issuperset(set([300, 500, 700])))
@@ -391,11 +391,11 @@ class TestReactorExampleSolving(unittest.TestCase):
         CA_vals = doe_obj.fim_factorial_results["CA[0]"]
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
-        # self.assertTrue(length is correct
+        # assert length is correct
         self.assertTrue((len(CA_vals) == 9) and (len(T_vals) == 9))
         self.assertTrue((len(set(CA_vals)) == 3) and (len(set(T_vals)) == 3))
 
-        # self.assertTrue(unique values are correct
+        # assert unique values are correct
         self.assertTrue(
             (set(CA_vals).issuperset(set([1, 3, 5])))
             and (set(T_vals).issuperset(set([300, 500, 700])))
