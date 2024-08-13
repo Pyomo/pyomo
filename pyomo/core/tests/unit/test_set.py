@@ -4367,7 +4367,7 @@ class TestSet(unittest.TestCase):
             self.assertTrue(m.J1[2, 2].add((0, 1)))
             self.assertRegex(
                 OUT.getvalue().replace('\n', ' '),
-                r"DEPRECATED: InsertionOrderSetData J1\[2,2\]: validate callback "
+                r"DEPRECATED: InsertionOrderSetData J1\[2,2\]: 'validate=' callback "
                 r"signature matched \(block, \*value\).  Please update the "
                 r"callback to match the signature \(block, value, \*index\)",
             )
@@ -4397,7 +4397,7 @@ class TestSet(unittest.TestCase):
             self.assertTrue(m.J2[2, 2].add((0, 1)))
             self.assertRegex(
                 OUT.getvalue().replace('\n', ' '),
-                r"DEPRECATED: InsertionOrderSetData J2\[2,2\]: validate callback "
+                r"DEPRECATED: InsertionOrderSetData J2\[2,2\]: 'validate=' callback "
                 r"signature matched \(block, \*value, \*index\).  Please update the "
                 r"callback to match the signature \(block, value, \*index\)",
             )

@@ -1485,7 +1485,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                     flag = fcn(block, (), *vstar)
                     if flag:
                         deprecation_warning(
-                            f"{self.__class__.__name__} {self.name}: {mode} "
+                            f"{self.__class__.__name__} {self.name}: '{mode}=' "
                             "callback signature matched (block, *value).  "
                             "Please update the callback to match the signature "
                             "(block, value, *index).",
@@ -1508,7 +1508,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                 flag = fcn(block, idx, *value)
                 if flag:
                     deprecation_warning(
-                        f"{self.__class__.__name__} {self.name}: {mode} "
+                        f"{self.__class__.__name__} {self.name}: '{mode}=' "
                         "callback signature matched (block, *value, *index).  "
                         "Please update the callback to match the signature "
                         "(block, value, *index).",
