@@ -1155,7 +1155,6 @@ class DesignOfExperiments:
 
         ### Initialize the Cholesky decomposition matrix
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
-
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
 
@@ -1465,7 +1464,6 @@ class DesignOfExperiments:
         time_set = []
         curr_point = 1  # Initial current point
         for design_point in factorial_points:
-
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
                 design_map[i][1].fix(design_point[i])
