@@ -115,6 +115,40 @@ When using PyROS, please consider citing [Isenberg_et_al]_.
     and one or more of the :math:`y` variables should be appropriately
     redesignated to be part of either :math:`x` or :math:`z`.
 
+PyROS Installation
+-----------------------------
+PyROS can be installed as follows:
+
+1. :doc:`Install Pyomo <../../installation>`.
+   PyROS is included in the Pyomo software package, at pyomo/contrib/pyros.
+2. Install NumPy and SciPy with your preferred package manager;
+   both NumPy and SciPy are required dependencies of PyROS.
+   You may install NumPy and SciPy with, for example, ``conda``:
+
+   ::
+
+      conda install numpy scipy
+
+   or ``pip``:
+
+   ::
+
+      pip install numpy scipy
+3. (*Optional*) Test your installation:
+   install ``pytest`` and ``parameterized``
+   with your preferred package manager (as in the previous step).
+   You may then run the PyROS tests as follows:
+
+   ::
+
+      cd pyomo/contrib/pyros/tests
+      pytest
+
+   Some tests involving solvers may fail or be skipped,
+   depending on the solver distributions (e.g., Ipopt, BARON, SCIP)
+   that you have pre-installed and licensed on your system.
+
+
 PyROS Required Inputs
 -----------------------------
 The required inputs to the PyROS solver are:
