@@ -378,6 +378,36 @@ class TestNonlinearToPWL_2D(unittest.TestCase):
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
     @unittest.skipUnless(scipy_available, "Scipy is not available")
+    def test_multivariate_clone(self):
+        m = self.make_paraboloid_model()
+
+        n_to_pwl = TransformationFactory('contrib.piecewise.nonlinear_to_pwl')
+        n_to_pwl.apply_to(
+            m,
+            num_points=2,
+            domain_partitioning_method=DomainPartitioningMethod.UNIFORM_GRID,
+        )
+
+        twin = m.clone()
+
+        # check obj is transformed
+        self.assertFalse(twin.obj.active)
+
+        pwlf = list(
+            twin.component_data_objects(PiecewiseLinearFunction, descend_into=True)
+        )
+        self.assertEqual(len(pwlf), 1)
+        pwlf = pwlf[0]
+
+        x1 = 0.00030000000000000003
+        x2 = 2.9997
+        y1 = 1.0006
+        y2 = 6.9994
+
+        self.check_pw_linear_paraboloid(twin, pwlf, x1, x2, y1, y2)
+
+    @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_objective_target(self):
         m = self.make_paraboloid_model()
 
