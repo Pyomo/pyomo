@@ -39,6 +39,7 @@ import pyomo.common.unittest as unittest
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+k_aug_available = SolverFactory("k_aug").available(exception_flag=False)
 
 
 class TestReactorExamples(unittest.TestCase):
@@ -57,6 +58,7 @@ class TestReactorExamples(unittest.TestCase):
 
         reactor_optimize_doe.main()
 
+    @unittest.skipIf(not k_aug_available, "The 'k_aug' command is not available")
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     @unittest.skipIf(not pandas_available, "pandas is not available")
     @unittest.skipIf(not numpy_available, "Numpy is not available")

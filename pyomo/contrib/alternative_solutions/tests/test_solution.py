@@ -42,7 +42,7 @@ class TestSolutionUnit(unittest.TestCase):
 
     @unittest.skipUnless(
         pe.SolverFactory(mip_solver).available(exception_flag=False),
-        "MIP solver not available"
+        "MIP solver not available",
     )
     def test_solution(self):
         """
