@@ -395,7 +395,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         count = 0
         for k, v in doe_obj.compute_FIM_model.experiment_inputs.items():
-            self.assertTrue(pyo.value(k) == stuff[count])
+            self.assertEqual(pyo.value(k), stuff[count])
             count += 1
 
     def test_get_experiment_outputs_without_blocks(self):
@@ -414,7 +414,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         count = 0
         for k, v in doe_obj.compute_FIM_model.experiment_outputs.items():
-            self.assertTrue(pyo.value(k) == stuff[count])
+            self.assertEqual(pyo.value(k), stuff[count])
             count += 1
 
     def test_get_measurement_error_without_blocks(self):
@@ -433,7 +433,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         count = 0
         for k, v in doe_obj.compute_FIM_model.measurement_error.items():
-            self.assertTrue(pyo.value(k) == stuff[count])
+            self.assertEqual(pyo.value(k), stuff[count])
             count += 1
 
     def test_get_unknown_parameters_without_blocks(self):
@@ -453,7 +453,7 @@ class TestReactorExampleBuild(unittest.TestCase):
 
         count = 0
         for k, v in doe_obj.compute_FIM_model.unknown_parameters.items():
-            self.assertTrue(pyo.value(k) == stuff[count])
+            self.assertEqual(pyo.value(k), stuff[count])
             count += 1
 
     def test_generate_blocks_without_model(self):
