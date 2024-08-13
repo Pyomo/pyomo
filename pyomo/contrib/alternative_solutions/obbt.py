@@ -216,6 +216,8 @@ def obbt_analysis_bounds_and_solutions(
     orig_objective_value = pe.value(orig_objective)
     logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
     aos_block = aos_utils._add_aos_block(model, name="_obbt")
+    # placeholder for objective
+    aos_block.var_objective = pe.Objective(expr=0)
     logger.info("Added block {} to the model.".format(aos_block))
     obj_constraints = aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
@@ -236,7 +238,7 @@ def obbt_analysis_bounds_and_solutions(
         opt.update_config.update_vars = False
         opt.update_config.update_params = False
         opt.update_config.update_named_expressions = False
-        opt.update_config.update_objective = False
+        opt.update_config.update_objective = True
         opt.update_config.treat_fixed_vars_as_params = False
 
     variable_bounds = pe.ComponentMap()
@@ -254,11 +256,8 @@ def obbt_analysis_bounds_and_solutions(
             if idx == 0:
                 variable_bounds[var] = [None, None]
 
-            # NOTE: Simply setting the expr/sense values works differently with the APPSI solver
-            if hasattr(aos_block, "var_objective"):
-                aos_block.del_component("var_objective")
-
-            aos_block.var_objective = pe.Objective(expr=var, sense=sense)
+            aos_block.var_objective.expr = var
+            aos_block.var_objective.sense = sense
 
             if warmstart:
                 _update_values(var, bound_dir, solutions)
