@@ -1231,10 +1231,7 @@ class DesignOfExperiments:
             det_perm = sum(
                 self._sgn(list_p[d])
                 * math.prod(
-                    m.fim[
-                        m.parameter_names.at(val + 1),
-                        m.parameter_names.at(ind + 1),
-                    ]
+                    m.fim[m.parameter_names.at(val + 1), m.parameter_names.at(ind + 1)]
                     for ind, val in enumerate(list_p[d])
                 )
                 for d in range(len(list_p))
@@ -1280,12 +1277,9 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        model: model for suffix checking, Default: None, (self.model)
+        model: model for suffix checking
 
         """
-        if model is None:
-            model = self.model.base_model
-
         # Check that experimental outputs exist
         try:
             outputs = [k.name for k, v in model.experiment_outputs.items()]
@@ -1403,7 +1397,9 @@ class DesignOfExperiments:
         )
 
     # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
-    def compute_FIM_full_factorial(self, design_ranges=None, method="sequential"):
+    def compute_FIM_full_factorial(
+        self, model=None, design_ranges=None, method="sequential"
+    ):
         """
         Will run a simulation-based full factorial exploration of
         the experimental input space (i.e., a ``grid search`` or
@@ -1452,7 +1448,7 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objetive types? i.e., modified-E; G-opt; V-opt; etc?
+        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
         # ToDo: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
