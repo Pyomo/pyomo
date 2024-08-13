@@ -845,7 +845,7 @@ class DesignOfExperiments:
             """
             fd_step_mult = 1
             cuid = pyo.ComponentUID(n)
-            param_ind = model.parameter_names.data().index(p)
+            param_ind = m.parameter_names.data().index(p)
 
             # Different FD schemes lead to different scenarios for the computation
             if self.fd_formula == FiniteDifferenceStep.central:
@@ -862,11 +862,9 @@ class DesignOfExperiments:
             var_up = cuid.find_component_on(m.scenario_blocks[s1])
             var_lo = cuid.find_component_on(m.scenario_blocks[s2])
 
-            param = model.parameter_scenarios[max(s1, s2)]
-            param_loc = pyo.ComponentUID(param).find_component_on(
-                model.scenario_blocks[0]
-            )
-            param_val = model.scenario_blocks[0].unknown_parameters[param_loc]
+            param = m.parameter_scenarios[max(s1, s2)]
+            param_loc = pyo.ComponentUID(param).find_component_on(m.scenario_blocks[0])
+            param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
             param_diff = param_val * fd_step_mult * self.step
 
             if self.scale_nominal_param_value:
@@ -905,8 +903,8 @@ class DesignOfExperiments:
             p: unknown parameter
             q: unknown parameter
             """
-            p_ind = list(model.parameter_names).index(p)
-            q_ind = list(model.parameter_names).index(q)
+            p_ind = list(m.parameter_names).index(p)
+            q_ind = list(m.parameter_names).index(q)
 
             # If the row is less than the column, skip the constraint
             # This logic is consistent with making the FIM a lower
@@ -921,14 +919,12 @@ class DesignOfExperiments:
                     m.fim[p, q]
                     == sum(
                         1
-                        / model.scenario_blocks[0].measurement_error[
-                            pyo.ComponentUID(n).find_component_on(
-                                model.scenario_blocks[0]
-                            )
+                        / m.scenario_blocks[0].measurement_error[
+                            pyo.ComponentUID(n).find_component_on(m.scenario_blocks[0])
                         ]
                         * m.sensitivity_jacobian[n, p]
                         * m.sensitivity_jacobian[n, q]
-                        for n in model.output_names
+                        for n in m.output_names
                     )
                     + m.prior_FIM[p, q]
                 )
@@ -1057,7 +1053,8 @@ class DesignOfExperiments:
         # Generate blocks for finite difference scenarios
         def build_block_scenarios(b, s):
             # Generate model for the finite difference scenario
-            b.transfer_attributes_from(model.base_model.clone())
+            m = b.model()
+            b.transfer_attributes_from(m.base_model.clone())
 
             # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
             if self.fd_formula in [
@@ -1067,7 +1064,7 @@ class DesignOfExperiments:
                 if s == 0:
                     return
 
-            param = model.parameter_scenarios[s]
+            param = m.parameter_scenarios[s]
 
             # Perturbation to be (1 + diff) * param_value
             if self.fd_formula == FiniteDifferenceStep.central:
@@ -1084,9 +1081,9 @@ class DesignOfExperiments:
                 pass
 
             # Update parameter values for the given finite difference scenario
-            pyo.ComponentUID(param, context=model.base_model).find_component_on(
+            pyo.ComponentUID(param, context=m.base_model).find_component_on(
                 b
-            ).set_value(model.base_model.unknown_parameters[param] * (1 + diff))
+            ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
@@ -1103,8 +1100,8 @@ class DesignOfExperiments:
                 if s == 0:
                     return pyo.Constraint.Skip
                 block_design_var = pyo.ComponentUID(
-                    d, context=model.scenario_blocks[0]
-                ).find_component_on(model.scenario_blocks[s])
+                    d, context=m.scenario_blocks[0]
+                ).find_component_on(m.scenario_blocks[s])
                 return d == block_design_var
 
             model.add_component(
@@ -1184,20 +1181,19 @@ class DesignOfExperiments:
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L[i, j]
 
-        def cholesky_imp(m, c, d):
+        def cholesky_imp(b, c, d):
             """
             Calculate Cholesky L matrix using algebraic constraints
             """
             # If the row is greater than or equal to the column, we are in the
             # lower triangle region of the L and FIM matrices.
             # This region is where our equations are well-defined.
-            if list(model.parameter_names).index(c) >= list(
-                model.parameter_names
-            ).index(d):
-                return model.fim[c, d] == sum(
-                    model.L[c, model.parameter_names.at(k + 1)]
-                    * model.L[d, model.parameter_names.at(k + 1)]
-                    for k in range(list(model.parameter_names).index(d) + 1)
+            m = b.model()
+            if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
+                return m.fim[c, d] == sum(
+                    m.L[c, m.parameter_names.at(k + 1)]
+                    * m.L[d, m.parameter_names.at(k + 1)]
+                    for k in range(list(m.parameter_names).index(d) + 1)
                 )
             else:
                 # This is the empty half of L above the diagonal
