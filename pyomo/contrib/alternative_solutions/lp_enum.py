@@ -27,9 +27,9 @@ def enumerate_linear_solutions(
     model,
     *,
     num_solutions=10,
-    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
+    zero_threshold=1e-5,
     search_mode="optimal",
     solver="gurobi",
     solver_options={},
@@ -52,10 +52,6 @@ def enumerate_linear_solutions(
         A concrete Pyomo model
     num_solutions : int
         The maximum number of solutions to generate.
-    variables: None or a collection of Pyomo _GeneralVarData variables
-        The variables for which bounds will be generated. None indicates
-        that all variables will be included. Alternatively, a collection of
-        _GenereralVarData variables can be provided.
     rel_opt_gap : float or None
         The relative optimality gap for the original objective for which
         variable bounds will be found. None indicates that a relative gap
@@ -64,6 +60,9 @@ def enumerate_linear_solutions(
         The absolute optimality gap for the original objective for which
         variable bounds will be found. None indicates that an absolute gap
         constraint will not be added to the model.
+    zero_threshold: float
+        The threshold for which a continuous variables' value is considered
+        to be equal to zero.
     search_mode : 'optimal', 'random', or 'norm'
         Indicates the mode that is used to generate alternative solutions.
         The optimal mode finds the next best solution. The random mode
@@ -87,13 +86,6 @@ def enumerate_linear_solutions(
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
 
-    # TODO: Make this a parameter?
-    zero_threshold = 1e-5
-
-    # For now keeping things simple
-    # TODO: See if this can be relaxed, but for now just leave as all
-    assert variables == None
-
     assert search_mode in [
         "optimal",
         "random",
@@ -106,8 +98,7 @@ def enumerate_linear_solutions(
     # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
 
-    if variables == None:
-        all_variables = aos_utils.get_model_variables(model)
+    all_variables = aos_utils.get_model_variables(model)
     # else:
     #     binary_variables = ComponentSet()
     #     non_binary_variables = []
@@ -128,7 +119,6 @@ def enumerate_linear_solutions(
         assert var.is_continuous(), "Model must be an LP"
 
     use_appsi = False
-    # TODO Check all this once implemented
     if "appsi" in solver:
         use_appsi = True
         opt = appsi.solvers.Gurobi()

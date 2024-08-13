@@ -83,7 +83,6 @@ class NoGoodCutGenerator:
 def enumerate_linear_solutions_soln_pool(
     model,
     num_solutions=10,
-    variables=None,
     rel_opt_gap=None,
     abs_opt_gap=None,
     zero_threshold=1e-5,
@@ -133,11 +132,7 @@ def enumerate_linear_solutions_soln_pool(
     if not gurobi_available:
         raise pyomo.common.errors.ApplicationError(f"Solver (gurobi) not available")
 
-    # For now keeping things simple
-    # TODO: See if this can be relaxed, but for now just leave as all
-    assert variables == None
-    if variables == None:
-        all_variables = aos_utils.get_model_variables(model)
+    all_variables = aos_utils.get_model_variables(model)
     for var in all_variables:
         if var.is_integer():
             raise pyomo.common.errors.ApplicationError(
