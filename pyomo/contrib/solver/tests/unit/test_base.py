@@ -16,6 +16,10 @@ from pyomo.common.config import ConfigDict
 from pyomo.contrib.solver import base
 
 
+class _LegacyWrappedSolverBase(base.LegacySolverWrapper, base.SolverBase):
+    pass
+
+
 class TestSolverBase(unittest.TestCase):
     def test_abstract_member_list(self):
         expected_list = ['solve', 'available', 'version']
@@ -192,11 +196,13 @@ class TestLegacySolverWrapper(unittest.TestCase):
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
+    @unittest.mock.patch.multiple(_LegacyWrappedSolverBase, __abstractmethods__=set())
     def test_context_manager(self):
-        with base.LegacySolverWrapper() as instance:
-            with self.assertRaises(AttributeError):
-                instance.available()
+        with _LegacyWrappedSolverBase() as instance:
+            self.assertIsInstance(instance, _LegacyWrappedSolverBase)
+            self.assertFalse(instance.available(False))
 
+    @unittest.mock.patch.multiple(_LegacyWrappedSolverBase, __abstractmethods__=set())
     def test_map_config(self):
         # Create a fake/empty config structure that can be added to an empty
         # instance of LegacySolverWrapper
@@ -205,7 +211,7 @@ class TestLegacySolverWrapper(unittest.TestCase):
             'solver_options',
             ConfigDict(implicit=True, description="Options to pass to the solver."),
         )
-        instance = base.LegacySolverWrapper()
+        instance = _LegacyWrappedSolverBase()
         instance.config = self.config
         instance._map_config(
             True, False, False, 20, True, False, None, None, None, False, None, None
@@ -272,98 +278,81 @@ class TestLegacySolverWrapper(unittest.TestCase):
         with self.assertRaises(AttributeError):
             print(instance.config.keepfiles)
 
+    @unittest.mock.patch.multiple(_LegacyWrappedSolverBase, __abstractmethods__=set())
     def test_solver_options_behavior(self):
         # options can work in multiple ways (set from instantiation, set
         # after instantiation, set during solve).
         # Test case 1: Set at instantiation
-        solver = base.LegacySolverWrapper(options={'max_iter': 6})
+        solver = _LegacyWrappedSolverBase(options={'max_iter': 6})
         self.assertEqual(solver.options, {'max_iter': 6})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 6})
 
         # Test case 2: Set later
-        solver = base.LegacySolverWrapper()
+        solver = _LegacyWrappedSolverBase()
         solver.options = {'max_iter': 4, 'foo': 'bar'}
         self.assertEqual(solver.options, {'max_iter': 4, 'foo': 'bar'})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 4, 'foo': 'bar'})
 
         # Test case 3: pass some options to the mapping (aka, 'solve' command)
-        solver = base.LegacySolverWrapper()
-        config = ConfigDict(implicit=True)
-        config.declare(
-            'solver_options',
-            ConfigDict(implicit=True, description="Options to pass to the solver."),
-        )
-        solver.config = config
+        solver = _LegacyWrappedSolverBase()
         solver._map_config(options={'max_iter': 4})
+        self.assertEqual(solver.options, {'max_iter': 4})
         self.assertEqual(solver.config.solver_options, {'max_iter': 4})
 
         # Test case 4: Set at instantiation and override during 'solve' call
-        solver = base.LegacySolverWrapper(options={'max_iter': 6})
-        config = ConfigDict(implicit=True)
-        config.declare(
-            'solver_options',
-            ConfigDict(implicit=True, description="Options to pass to the solver."),
-        )
-        solver.config = config
+        solver = _LegacyWrappedSolverBase(options={'max_iter': 6})
         solver._map_config(options={'max_iter': 4})
+        self.assertEqual(solver.options, {'max_iter': 4})
         self.assertEqual(solver.config.solver_options, {'max_iter': 4})
-        self.assertEqual(solver.options, {'max_iter': 6})
 
         # solver_options are also supported
         # Test case 1: set at instantiation
-        solver = base.LegacySolverWrapper(solver_options={'max_iter': 6})
+        solver = _LegacyWrappedSolverBase(solver_options={'max_iter': 6})
         self.assertEqual(solver.options, {'max_iter': 6})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 6})
 
         # Test case 2: pass some solver_options to the mapping (aka, 'solve' command)
-        solver = base.LegacySolverWrapper()
-        config = ConfigDict(implicit=True)
-        config.declare(
-            'solver_options',
-            ConfigDict(implicit=True, description="Options to pass to the solver."),
-        )
-        solver.config = config
+        solver = _LegacyWrappedSolverBase()
         solver._map_config(solver_options={'max_iter': 4})
+        self.assertEqual(solver.options, {'max_iter': 4})
         self.assertEqual(solver.config.solver_options, {'max_iter': 4})
 
         # Test case 3: Set at instantiation and override during 'solve' call
-        solver = base.LegacySolverWrapper(solver_options={'max_iter': 6})
-        config = ConfigDict(implicit=True)
-        config.declare(
-            'solver_options',
-            ConfigDict(implicit=True, description="Options to pass to the solver."),
-        )
-        solver.config = config
+        solver = _LegacyWrappedSolverBase(solver_options={'max_iter': 6})
         solver._map_config(solver_options={'max_iter': 4})
+        self.assertEqual(solver.options, {'max_iter': 4})
         self.assertEqual(solver.config.solver_options, {'max_iter': 4})
-        self.assertEqual(solver.options, {'max_iter': 6})
 
         # users can mix... sort of
         # Test case 1: Initialize with options, solve with solver_options
-        solver = base.LegacySolverWrapper(options={'max_iter': 6})
-        config = ConfigDict(implicit=True)
-        config.declare(
-            'solver_options',
-            ConfigDict(implicit=True, description="Options to pass to the solver."),
-        )
-        solver.config = config
+        solver = _LegacyWrappedSolverBase(options={'max_iter': 6})
         solver._map_config(solver_options={'max_iter': 4})
+        self.assertEqual(solver.options, {'max_iter': 4})
         self.assertEqual(solver.config.solver_options, {'max_iter': 4})
 
         # users CANNOT initialize both values at the same time, because how
         # do we know what to do with it then?
         # Test case 1: Class instance
         with self.assertRaises(ValueError):
-            solver = base.LegacySolverWrapper(
+            solver = _LegacyWrappedSolverBase(
                 options={'max_iter': 6}, solver_options={'max_iter': 4}
             )
         # Test case 2: Passing to `solve`
-        solver = base.LegacySolverWrapper()
+        solver = _LegacyWrappedSolverBase()
+        with self.assertRaises(ValueError):
+            solver._map_config(solver_options={'max_iter': 4}, options={'max_iter': 6})
+
+        # Test that assignment to maps to set_value:
+        solver = _LegacyWrappedSolverBase()
         config = ConfigDict(implicit=True)
         config.declare(
             'solver_options',
             ConfigDict(implicit=True, description="Options to pass to the solver."),
         )
         solver.config = config
-        with self.assertRaises(ValueError):
-            solver._map_config(solver_options={'max_iter': 4}, options={'max_iter': 6})
+        solver.config.solver_options.max_iter = 6
+        self.assertEqual(solver.options, {'max_iter': 6})
+        self.assertEqual(solver.config.solver_options, {'max_iter': 6})
 
     def test_map_results(self):
         # Unclear how to test this
