@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import json
-from pathlib import Path
+import os.path
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -17,6 +17,7 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pandas_available,
 )
+from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.doe import DesignOfExperiments
@@ -30,8 +31,8 @@ from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
 
-DATA_DIR = Path(__file__).parent
-file_path = DATA_DIR / ".." / "examples" / "result.json"
+currdir = this_file_dir()
+file_path = os.path.join(currdir, "..", "examples", "result.json")
 
 with open(file_path) as f:
     data_ex = json.load(f)
