@@ -425,6 +425,14 @@ class SuffixFinder(object):
             Default value to return from `.find()` if no matching Suffix
             is found.
 
+        context: BlockData
+
+            The root of the Block hierarchy to use when searching for
+            Suffix components.  Suffixes outside this hierarchy will not
+            be interrogated and components that are queried (with
+            :py:meth:`find(component_data)` will return the default
+            value.
+
         """
         self.name = name
         self.default = default
