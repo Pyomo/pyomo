@@ -81,7 +81,6 @@ class DesignOfExperiments:
         logger_level=logging.WARNING,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
-        **kwargs
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
