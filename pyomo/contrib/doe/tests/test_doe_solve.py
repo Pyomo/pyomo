@@ -230,6 +230,8 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
+    # This test ensure that compute FIM runs without error using the 
+    # `sequential` option with central finite differences
     def test_compute_FIM_seq_centr(self):
         fd_method = "central"
         obj_used = "determinant"
@@ -242,6 +244,8 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="sequential")
 
+    # This test ensure that compute FIM runs without error using the 
+    # `sequential` option with forward finite differences
     def test_compute_FIM_seq_forward(self):
         fd_method = "forward"
         obj_used = "determinant"
@@ -254,6 +258,9 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="sequential")
 
+    # This test ensure that compute FIM runs without error using the 
+    # `kaug` option. kaug computes the FIM directly so no finite difference
+    # scheme is needed.
     @unittest.skipIf(not scipy_available, "Scipy is not available")
     @unittest.skipIf(
         not k_aug_available.available(False), "The 'k_aug' command is not available"
@@ -270,6 +277,8 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         doe_obj.compute_FIM(method="kaug")
 
+    # This test ensure that compute FIM runs without error using the 
+    # `sequential` option with backward finite differences
     def test_compute_FIM_seq_backward(self):
         fd_method = "backward"
         obj_used = "determinant"
