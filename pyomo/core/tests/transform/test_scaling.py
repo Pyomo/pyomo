@@ -15,6 +15,7 @@ import pyomo.environ as pyo
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.core.plugins.transform.scaling import ScaleModel, SuffixFinder
 
+
 class TestScaleModelTransformation(unittest.TestCase):
     def test_linear_scaling(self):
         model = pyo.ConcreteModel()
