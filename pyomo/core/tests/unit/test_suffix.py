@@ -1849,28 +1849,13 @@ class TestSuffixFinder(unittest.TestCase):
         # Make sure we don't find default suffixes at lower levels
         self.assertEqual(_suffix_finder.find(m.b1.v2), 1)
         self.assertEqual(_suffix_b1_finder.find(m.b1.v2), None)
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Component 'b1.v2' not found in the SuffixFinder context "
-            r"\(Block hierarchy rooted at b1.b2\)",
-        ):
-            _suffix_b2_finder.find(m.b1.v2)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.v2), None)
 
         # Make sure we don't find specific suffixes at lower levels
         m.b1.b2.suffix[m.v1] = 5
         self.assertEqual(_suffix_finder.find(m.v1), 1)
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Component 'v1' not found in the SuffixFinder context "
-            r"\(Block hierarchy rooted at b1\)",
-        ):
-            _suffix_b1_finder.find(m.v1)
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Component 'v1' not found in the SuffixFinder context "
-            r"\(Block hierarchy rooted at b1.b2\)",
-        ):
-            _suffix_b2_finder.find(m.v1)
+        self.assertEqual(_suffix_b1_finder.find(m.v1), None)
+        self.assertEqual(_suffix_b2_finder.find(m.v1), None)
 
         # Make sure we can look up Blocks and that they will match
         # suffixes that they hold
@@ -1880,12 +1865,7 @@ class TestSuffixFinder(unittest.TestCase):
 
         self.assertEqual(_suffix_finder.find(m.b1), 1)
         self.assertEqual(_suffix_b1_finder.find(m.b1), None)
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Component 'b1' not found in the SuffixFinder context "
-            r"\(Block hierarchy rooted at b1.b2\)",
-        ):
-            _suffix_b2_finder.find(m.b1)
+        self.assertEqual(_suffix_b2_finder.find(m.b1), None)
 
 
 if __name__ == "__main__":

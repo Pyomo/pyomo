@@ -473,10 +473,10 @@ class SuffixFinder(object):
         try:
             suffixes = self._get_suffix_list(_block)
         except AttributeError:
-            raise ValueError(
-                f"Component '{component_data.name}' not found in the SuffixFinder "
-                f"context (Block hierarchy rooted at {self._context.name})"
-            ) from None
+            # Component was outside the context (eventually parent
+            # becomes None and parent.parent_block() raises an
+            # AttributeError): we will return the default value
+            return self.default
         # Pass 1: look for the component_data, working root to leaf
         for s in suffixes:
             if component_data in s:
