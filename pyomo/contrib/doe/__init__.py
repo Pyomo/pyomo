@@ -19,8 +19,7 @@ deprecation_message = (
     "objects that label unknown parameters, experiment inputs, experiment outputs "
     "and measurement error. This avoids string-based naming which is fragile. For "
     "instructions to use the new interface, please see the Pyomo.DoE under the contributed "
-    "packages documentation at "
-    #    "`https://pyomo.readthedocs.io/en/latest/contributed_packages/doe/doe.html`"
+    "packages documentation at `https://pyomo.readthedocs.io/en/latest/contributed_packages/doe/doe.html`"
 )
 
 
