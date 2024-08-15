@@ -342,6 +342,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                     self.assertIn((x, y, z), points)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_uniform_sampling_discrete_vars(self):
         m = ConcreteModel()
         m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
@@ -374,6 +375,7 @@ class TestNonlinearToPWL_1D(unittest.TestCase):
                     self.assertIn((x, y, z), points)
 
     @unittest.skipUnless(numpy_available, "Numpy is not available")
+    @unittest.skipUnless(scipy_available, "Scipy is not available")
     def test_random_sampling_discrete_vars(self):
         m = ConcreteModel()
         m.x = Var(['rocky', 'bullwinkle'], domain=Binary)
