@@ -13,7 +13,7 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.opt.base.solvers import UnknownSolver
-from pyomo.core.plugins.transform.scaling import ScaleModel
+from pyomo.core.plugins.transform.scaling import ScaleModel, SuffixFinder
 
 
 class TestScaleModelTransformation(unittest.TestCase):
@@ -600,6 +600,13 @@ class TestScaleModelTransformation(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.zcon), -8, 4)
 
     def test_get_float_scaling_factor_top_level(self):
+        # Note: the transformation used to have a private method for
+        # finding suffix values (which this method tested).  The
+        # transformation now leverages the SuffixFinder.  To ensure that
+        # the SuffixFinder behaves in the same way as the original local
+        # method, we preserve these tests, but directly test the
+        # SuffixFinder
+
         m = pyo.ConcreteModel()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
@@ -616,17 +623,23 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.scaling_factor[m.v1] = 0.1
         m.scaling_factor[m.b1.v2] = 0.2
 
+        _finder = SuffixFinder('scaling_factor', 1.0, m)
+
         # SF should be 0.1 from top level
-        sf = ScaleModel()._get_float_scaling_factor(m.v1)
-        assert sf == float(0.1)
+        self.assertEqual(_finder.find(m.v1), 0.1)
         # SF should be 0.1 from top level, lower level ignored
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.v2)
-        assert sf == float(0.2)
+        self.assertEqual(_finder.find(m.b1.v2), 0.2)
         # No SF, should return 1
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.v3)
-        assert sf == 1.0
+        self.assertEqual(_finder.find(m.b1.b2.v3), 1.0)
 
     def test_get_float_scaling_factor_local_level(self):
+        # Note: the transformation used to have a private method for
+        # finding suffix values (which this method tested).  The
+        # transformation now leverages the SuffixFinder.  To ensure that
+        # the SuffixFinder behaves in the same way as the original local
+        # method, we preserve these tests, but directly test the
+        # SuffixFinder
+
         m = pyo.ConcreteModel()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
@@ -647,15 +660,21 @@ class TestScaleModelTransformation(unittest.TestCase):
         # Add an intermediate scaling factor - this should take priority
         m.b1.scaling_factor[m.b1.b2.v3] = 0.4
 
+        _finder = SuffixFinder('scaling_factor', 1.0, m)
+
         # Should get SF from local levels
-        sf = ScaleModel()._get_float_scaling_factor(m.v1)
-        assert sf == float(0.1)
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.v2)
-        assert sf == float(0.2)
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.v3)
-        assert sf == float(0.4)
+        self.assertEqual(_finder.find(m.v1), 0.1)
+        self.assertEqual(_finder.find(m.b1.v2), 0.2)
+        self.assertEqual(_finder.find(m.b1.b2.v3), 0.4)
 
     def test_get_float_scaling_factor_intermediate_level(self):
+        # Note: the transformation used to have a private method for
+        # finding suffix values (which this method tested).  The
+        # transformation now leverages the SuffixFinder.  To ensure that
+        # the SuffixFinder behaves in the same way as the original local
+        # method, we preserve these tests, but directly test the
+        # SuffixFinder
+
         m = pyo.ConcreteModel()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
@@ -680,15 +699,14 @@ class TestScaleModelTransformation(unittest.TestCase):
 
         m.b1.b2.b3.scaling_factor[m.b1.b2.b3.v3] = 0.4
 
+        _finder = SuffixFinder('scaling_factor', 1.0, m)
+
         # v1 should be unscaled as SF set below variable level
-        sf = ScaleModel()._get_float_scaling_factor(m.v1)
-        assert sf == 1.0
+        self.assertEqual(_finder.find(m.v1), 1.0)
         # v2 should get SF from b1 level
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v2)
-        assert sf == float(0.2)
+        self.assertEqual(_finder.find(m.b1.b2.b3.v2), 0.2)
         # v2 should get SF from highest level, ignoring b3 level
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v3)
-        assert sf == float(0.3)
+        self.assertEqual(_finder.find(m.b1.b2.b3.v3), 0.3)
 
 
 if __name__ == "__main__":
