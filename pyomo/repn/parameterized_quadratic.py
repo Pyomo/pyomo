@@ -31,6 +31,7 @@ from pyomo.repn.parameterized_linear import (
     ParameterizedLinearRepnVisitor,
     to_expression,
     _handle_division_ANY_pseudo_constant,
+    _merge_dict,
 )
 from pyomo.repn.quadratic import QuadraticRepn, _mul_linear_linear
 from pyomo.repn.util import ExprType
@@ -41,25 +42,6 @@ _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 _QUADRATIC = ExprType.QUADRATIC
-
-
-def _merge_dict(dest_dict, mult, src_dict):
-    """
-    Slightly different from `merge_dict`
-    in the `parameterized_linear` module.
-    """
-    if not is_equal_to(mult, 1):
-        for vid, coef in src_dict.items():
-            if vid in dest_dict:
-                dest_dict[vid] += mult * coef
-            else:
-                dest_dict[vid] = mult * coef
-    else:
-        for vid, coef in src_dict.items():
-            if vid in dest_dict:
-                dest_dict[vid] += coef
-            else:
-                dest_dict[vid] = coef
 
 
 class ParameterizedQuadraticRepn(QuadraticRepn):
