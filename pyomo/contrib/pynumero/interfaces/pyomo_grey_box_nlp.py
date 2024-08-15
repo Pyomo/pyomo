@@ -228,7 +228,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             need_scaling = True
 
         self._primals_scaling = np.ones(self.n_primals())
-        scaling_suffix_finder = SuffixFinder('scaling_factor')
+        scaling_suffix_finder = SuffixFinder(
+            'scaling_factor', context=self._pyomo_model
+        )
         for i, v in enumerate(self._pyomo_model_var_datas):
             v_scaling = scaling_suffix_finder.find(v)
             if v_scaling is not None:
