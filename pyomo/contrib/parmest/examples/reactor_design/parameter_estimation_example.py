@@ -39,3 +39,7 @@ def main():
     obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=17)
     print(obj)
     print(theta)
+
+
+if __name__ == "__main__":
+    main()
