@@ -510,8 +510,8 @@ class _SuffixData(object):
 class CachingNumericSuffixFinder(SuffixFinder):
     scale = True
 
-    def __init__(self, name, default=None):
-        super().__init__(name, default)
+    def __init__(self, name, default=None, context=None):
+        super().__init__(name, default, context)
         self.suffix_cache = {}
 
     def __call__(self, obj):
@@ -646,7 +646,7 @@ class _NLWriter_impl(object):
         # Data structures to support variable/constraint scaling
         #
         if self.config.scale_model and 'scaling_factor' in suffix_data:
-            scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1)
+            scaling_factor = CachingNumericSuffixFinder('scaling_factor', 1, model)
             scaling_cache = scaling_factor.suffix_cache
             del suffix_data['scaling_factor']
         else:
@@ -723,14 +723,14 @@ class _NLWriter_impl(object):
                     timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
             scale = scaling_factor(con)
-            expr_info = visitor.walk_expression((con.body, con, 0, scale))
+            # Note: Constraint.to_bounded_expression(evaluate_bounds=True)
+            # guarantee a return value that is either a (finite)
+            # native_numeric_type, or None
+            lb, body, ub = con.to_bounded_expression(True)
+            expr_info = visitor.walk_expression((body, con, 0, scale))
             if expr_info.named_exprs:
                 self._record_named_expression_usage(expr_info.named_exprs, con, 0)
 
-            # Note: Constraint.lb/ub guarantee a return value that is
-            # either a (finite) native_numeric_type, or None
-            lb = con.lb
-            ub = con.ub
             if lb is None and ub is None:  # and self.config.skip_trivial_constraints:
                 continue
             if scale != 1:
