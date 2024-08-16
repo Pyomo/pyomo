@@ -718,6 +718,23 @@ class TestPyomoNLP(unittest.TestCase):
         assert nlp.get_primals_scaling()[0] == 1e16
         assert nlp.get_constraints_scaling()[0] == 1e16
 
+    def test_subblock_no_scaling(self):
+        m = pyo.ConcreteModel()
+        m.b = pyo.Block()
+        m.b.x = pyo.Var([1, 2], initialize={1: 100, 2: 20})
+
+        # Components so we don't have an empty NLP
+        m.b.eq = pyo.Constraint(expr=m.b.x[1] * m.b.x[2] == 2000)
+        m.b.obj = pyo.Objective(expr=m.b.x[1] ** 2 + m.b.x[2] ** 2)
+
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.b.x[1]] = 1e-2
+        m.scaling_factor[m.b.x[2]] = 1e-1
+
+        nlp = PyomoNLP(m.b)
+        scaling = nlp.get_primals_scaling()
+        assert scaling is None
+
     def test_no_objective(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
