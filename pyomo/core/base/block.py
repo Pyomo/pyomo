@@ -960,13 +960,8 @@ class BlockData(ActiveComponentData):
                 % (name, type(val), self.name, type(getattr(self, name)))
             )
         #
-        # Skip the add_component() logic if this is a
-        # component type that is suppressed.
-        #
         _component = self.parent_component()
         _type = val.ctype
-        if _type in _component._suppress_ctypes:
-            return
         #
         # Raise an exception if the component already has a parent.
         #
@@ -1047,12 +1042,6 @@ component, use the block del_component() and add_component() methods.
             idx_info[2] += 1
         else:
             self._ctypes[_type] = [_new_idx, _new_idx, 1]
-        #
-        # Propagate properties to sub-blocks:
-        #   suppressed ctypes
-        #
-        if _type is Block:
-            val._suppress_ctypes |= _component._suppress_ctypes
         #
         # Error, for disabled support implicit rule names
         #
@@ -2029,7 +2018,6 @@ class Block(ActiveIndexedComponent):
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
-        self._suppress_ctypes = set()
         _rule = kwargs.pop('rule', None)
         _options = kwargs.pop('options', None)
         # As concrete applies to the Block at declaration time, we will
