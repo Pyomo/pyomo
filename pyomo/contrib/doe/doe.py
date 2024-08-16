@@ -1079,6 +1079,7 @@ class DesignOfExperiments:
             pyo.ComponentUID(param, context=m.base_model).find_component_on(
                 b
             ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
+            res = self.solver.solve(b, tee=self.tee)
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
