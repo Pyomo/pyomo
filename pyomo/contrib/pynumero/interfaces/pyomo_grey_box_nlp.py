@@ -227,19 +227,15 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         else:
             need_scaling = True
 
-        self._primals_scaling = np.ones(self.n_primals())
-        scaling_suffix_finder = SuffixFinder(
-            'scaling_factor', context=self._pyomo_model
+        scaling_finder = SuffixFinder(
+            'scaling_factor', default=1.0, context=self._pyomo_model
         )
-        for i, v in enumerate(self._pyomo_model_var_datas):
-            v_scaling = scaling_suffix_finder.find(v)
-            if v_scaling is not None:
-                need_scaling = True
-                self._primals_scaling[i] = v_scaling
-        # maintain backwards compatibility
-        scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            need_scaling = True
+        self._primals_scaling = np.fromiter(
+            (scaling_finder.find(v) for v in self._pyomo_model_var_datas),
+            count=self.n_primals(),
+            dtype=float,
+        )
+        need_scaling = bool(scaling_finder.all_suffixes)
 
         self._constraints_scaling = BlockVector(len(nlps))
         for i, nlp in enumerate(nlps):
