@@ -97,6 +97,20 @@ def _set_options(model_or_env, options):
             model_or_env.setParam(key, float(option))
 
 
+class GurobiModel(gurobipy.Model):
+    def __init__(self, *args, **kwds):
+        super().__init__(*args, **kwds)
+
+    def addConstr(self, degree, lhs, sense=None, rhs=None, name=""):
+        if degree == 1:
+            con = self.addLConstr(lhs, sense, rhs, name)
+        elif degree == 2:
+            con = self.addQConstr(lhs, sense, rhs, name)
+        else:
+            raise DegreeError('GurobiModel.addConstr: Unsupported degree: %s' % degree)
+        return con
+
+
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
     """A direct interface to Gurobi using gurobipy.
@@ -308,7 +322,7 @@ class GurobiDirect(DirectSolver):
 
         new_expr += repn.constant
 
-        return new_expr, referenced_vars
+        return new_expr, referenced_vars, degree
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
         if max_degree == 2:
@@ -317,7 +331,7 @@ class GurobiDirect(DirectSolver):
             repn = generate_standard_repn(expr, quadratic=False)
 
         try:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+            gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_repn(
                 repn, max_degree
             )
         except DegreeError as e:
@@ -325,7 +339,7 @@ class GurobiDirect(DirectSolver):
             msg += '\nexpr: {0}'.format(expr)
             raise DegreeError(msg)
 
-        return gurobi_expr, referenced_vars
+        return gurobi_expr, referenced_vars, degree
 
     def _gurobi_lb_ub_from_var(self, var):
         if var.is_fixed():
@@ -404,10 +418,12 @@ class GurobiDirect(DirectSolver):
         self._init_env()
         if self._solver_model is not None:
             self._solver_model.close()
-        if model.name is not None:
-            self._solver_model = gurobipy.Model(model.name, env=self._env)
-        else:
-            self._solver_model = gurobipy.Model(env=self._env)
+
+        self._solver_model = (
+            GurobiModel(model.name, env=self._env)
+            if model.name is not None
+            else GurobiModel(env=self._env)
+        )
 
     def close(self):
         """Frees local Gurobi resources used by this solver instance.
@@ -499,15 +515,11 @@ class GurobiDirect(DirectSolver):
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
         if con._linear_canonical_form:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+            gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_repn(
                 con.canonical_form(), self._max_constraint_degree
             )
-        # elif isinstance(con, LinearCanonicalRepn):
-        #    gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-        #        con,
-        #        self._max_constraint_degree)
         else:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
                 con.body, self._max_constraint_degree
             )
 
@@ -524,6 +536,7 @@ class GurobiDirect(DirectSolver):
 
         if con.equality:
             gurobipy_con = self._solver_model.addConstr(
+                degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.EQUAL,
                 rhs=value(con.lower),
@@ -536,6 +549,7 @@ class GurobiDirect(DirectSolver):
             self._range_constraints.add(con)
         elif con.has_lb():
             gurobipy_con = self._solver_model.addConstr(
+                degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.GREATER_EQUAL,
                 rhs=value(con.lower),
@@ -543,6 +557,7 @@ class GurobiDirect(DirectSolver):
             )
         elif con.has_ub():
             gurobipy_con = self._solver_model.addConstr(
+                degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.LESS_EQUAL,
                 rhs=value(con.upper),
