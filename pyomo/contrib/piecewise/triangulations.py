@@ -504,8 +504,11 @@ def _fix_vertices_incremental_order(simplices):
                 if simplex[n] in simplices[i + 1] and n != first:
                     last = n
                     break
-        if first is None or last is None:
-            raise DeveloperError("Couldn't fix vertex ordering for incremental.")
+            else:
+                # For the Python neophytes in the audience (and other sane
+                # people), the 'else' only runs if we do *not* break out of the
+                # for loop.
+                raise DeveloperError("Couldn't fix vertex ordering for incremental.")
 
         # reorder the simplex with the desired first and last
         new_simplex = list(simplex)
