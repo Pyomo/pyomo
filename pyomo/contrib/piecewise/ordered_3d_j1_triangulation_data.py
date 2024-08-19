@@ -82,14 +82,17 @@ if __name__ == '__main__':
     all_needed_hamiltonians = {}
     for i, s1 in border_simplices.items():
         for j, s2 in border_simplices.items():
-            # I could cut the number of these in half or less via symmetry but I don't care
+            # I could cut the number of these in half or less via symmetry but
+            # I don't care
             if i[0] != j[0]:
                 if (i, (j[0], 1)) in all_needed_hamiltonians.keys() or (
                     i,
                     (j[0], 2),
                 ) in all_needed_hamiltonians.keys():
                     print(
-                        f"skipping search for path from {i} to {j} because we have a path from {i} to {(j[0], 1) if (i, (j[0], 1)) in all_needed_hamiltonians.keys() else (j[0], 2)}"
+                        f"skipping search for path from {i} to {j} because we have a "
+                        f"path from {i} to {(j[0], 1) if (i, (j[0], 1)) in "
+                        f"all_needed_hamiltonians.keys() else (j[0], 2)}"
                     )
                     continue
                 print(f"searching for path from {i} to {j}")
