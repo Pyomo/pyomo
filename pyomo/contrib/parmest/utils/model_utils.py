@@ -83,9 +83,9 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             param_theta_objects = [theta_obj for _, theta_obj in theta_object.items()]
 
             # get indexed Param names
-            indexed_param_CUIDs += [
-                ComponentUID(theta_obj) for _, theta_obj in theta_object.items()
-            ]
+            indexed_param_CUIDs.extend(
+                ComponentUID(theta_obj) for theta_obj in theta_object.values()
+            )
 
             # delete Param
             model.del_component(theta_object)
@@ -102,9 +102,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             theta_var_cuid = ComponentUID(theta_object.name)
             theta_var_object = theta_var_cuid.find_component_on(model)
             comp_map[theta_object] = theta_var_object
-            var_theta_objects = [
-                var_theta_obj for _, var_theta_obj in theta_var_object.items()
-            ]
+            var_theta_objects = list(theta_var_object.values())
             for param_theta_obj, var_theta_obj in zip(
                 param_theta_objects, var_theta_objects
             ):
@@ -132,10 +130,14 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
     if len(indexed_param_CUIDs) > 0:
         param_CUIDs = indexed_param_CUIDs
 
+    # convert to a set for look up efficiency
+    param_CUIDs_set = set(param_CUIDs)
+
     # Convert Params to Vars in Expressions
     for expr in model.component_data_objects(pyo.Expression):
         if expr.active and any(
-            ComponentUID(v) in param_CUIDs for v in identify_mutable_parameters(expr)
+            ComponentUID(v) in param_CUIDs_set
+            for v in identify_mutable_parameters(expr)
         ):
             new_expr = replace_expressions(expr=expr, substitution_map=substitution_map)
             model.del_component(expr)
@@ -147,7 +149,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
         model.constraints = pyo.ConstraintList()
         for c in model.component_data_objects(pyo.Constraint):
             if c.active and any(
-                ComponentUID(v) in param_CUIDs
+                ComponentUID(v) in param_CUIDs_set
                 for v in identify_mutable_parameters(c.expr)
             ):
                 if c.equality:
@@ -186,7 +188,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
     # Convert Params to Vars in Objective expressions
     for obj in model.component_data_objects(pyo.Objective):
         if obj.active and any(
-            ComponentUID(v) in param_CUIDs for v in identify_mutable_parameters(obj)
+            ComponentUID(v) in param_CUIDs_set for v in identify_mutable_parameters(obj)
         ):
             expr = replace_expressions(expr=obj.expr, substitution_map=substitution_map)
             model.del_component(obj)
