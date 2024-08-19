@@ -26,6 +26,20 @@ class Triangulation(Enum):
     OrderedJ1 = 4
 
 
+# Duck-typed thing that looks reasonably similar to an instance of
+# scipy.spatial.Delaunay
+# Fields:
+#   - points: list of P points as P x n array
+#   - simplices: list of M simplices as P x (n + 1) array of point _indices_
+#   - coplanar: list of N points omitted from triangulation as tuples of (point index,
+#     nearest simplex index, nearest vertex index), stacked into an N x 3 array
+class _Triangulation:
+    def __init__(self, points, simplices, coplanar):
+        self.points = points
+        self.simplices = simplices
+        self.coplanar = coplanar
+
+
 # Get an unordered J1 triangulation, as described by [1], of a finite grid of
 # points in R^n having the same odd number of points along each axis.
 # References
@@ -72,19 +86,6 @@ def get_ordered_j1_triangulation(points, dimension):
         simplices=np.array(simplices_list),
         coplanar=np.array([]),
     )
-
-
-# Duck-typed thing that looks reasonably similar to an instance of scipy.spatial.Delaunay
-# Fields:
-#   - points: list of P points as P x n array
-#   - simplices: list of M simplices as P x (n + 1) array of point _indices_
-#   - coplanar: list of N points omitted from triangulation as tuples of (point index,
-#     nearest simplex index, nearest vertex index), stacked into an N x 3 array
-class _Triangulation:
-    def __init__(self, points, simplices, coplanar):
-        self.points = points
-        self.simplices = simplices
-        self.coplanar = coplanar
 
 
 # Does some validation but mostly assumes the user did the right thing
@@ -144,6 +145,13 @@ def _get_j1_triangulation(points_map, K, n):
     return ret
 
 
+class Direction(Enum):
+    left = 0
+    down = 1
+    up = 2
+    right = 3
+
+
 # Implement something similar to proof-by-picture from Todd 79 (Figure 1).
 # However, that drawing is misleading at best so I do it in a working way, and
 # also slightly more regularly. I also go from the outside in instead of from
@@ -153,12 +161,6 @@ def _get_ordered_j1_triangulation_2d(points_map, num_pts):
     square_parity_tlbr = lambda x, y: x % 2 == y % 2
     # check when we are in a "turnaround square" as seen in the picture
     is_turnaround = lambda x, y: x >= num_pts / 2 and y == (num_pts / 2) - 1
-
-    class Direction(Enum):
-        left = 0
-        down = 1
-        up = 2
-        right = 3
 
     facing = None
 
