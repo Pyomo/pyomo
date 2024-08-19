@@ -13,12 +13,15 @@ import logging
 import datetime
 import io
 from typing import List, Optional
+from threading import Thread
+import time
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream, capture_output
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import ConstraintData
@@ -142,6 +145,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         self._objective_helpers = []
         self._last_results_object: Optional[Results] = None
         self._sol = None
+        self.log_buffer_interval = 2
 
     def available(self):
         if highspy_available:
@@ -170,9 +174,42 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         options = config.solver_options
         ostreams = [io.StringIO()] + config.tee
 
-        with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=True):
-            self._solver_model.setOptionValue('log_to_console', True)
+        class LogReader:
+            def __init__(self, logfile, ostreams, sleep_time):
+                self.fname = logfile
+                self.ostreams = ostreams
+                self.stop = False
+                self.sleep_time = sleep_time
 
+            def run(self):
+                pos = 0
+                while not self.stop:
+                    f = open(self.fname, 'r')
+                    f.seek(pos)
+                    msg = f.read()
+                    pos = f.tell()
+                    f.close()
+                    for s in self.ostreams:
+                        s.write(msg)
+                    time.sleep(self.sleep_time)
+                f = open(self.fname, 'r')
+                f.seek(pos)
+                msg = f.read()
+                pos = f.tell()
+                f.close()
+                for s in self.ostreams:
+                    s.write(msg)
+
+        context = TempfileManager.push()
+        log_fname = context.create_tempfile()
+        reader = LogReader(log_fname, ostreams, self.log_buffer_interval)
+        thread = Thread(target=reader.run)
+        thread.start()
+
+        try:
+            self._solver_model.setOptionValue('log_to_console', False)
+            self._solver_model.setOptionValue('log_file', log_fname)
+            
             if config.threads is not None:
                 self._solver_model.setOptionValue('threads', config.threads)
             if config.time_limit is not None:
@@ -181,12 +218,16 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
                 self._solver_model.setOptionValue('mip_rel_gap', config.rel_gap)
             if config.abs_gap is not None:
                 self._solver_model.setOptionValue('mip_abs_gap', config.abs_gap)
-
+            
             for key, option in options.items():
                 self._solver_model.setOptionValue(key, option)
             timer.start('optimize')
             self._solver_model.run()
             timer.stop('optimize')
+        finally:
+            reader.stop = True
+            thread.join()
+            TempfileManager.pop()
 
         return self._postsolve()
 
