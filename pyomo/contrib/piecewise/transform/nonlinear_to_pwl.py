@@ -66,12 +66,6 @@ class DomainPartitioningMethod(enum.IntEnum):
     LINEAR_MODEL_TREE_RANDOM = 4
 
 
-# This should be safe to use many times; declare it globally
-_quadratic_repn_visitor = QuadraticRepnVisitor(
-    subexpression_cache={}, var_map={}, var_order={}, sorter=None
-)
-
-
 class _NonlinearToPWLTransformationData(AutoSlots.Mixin):
     __slots__ = (
         'transformed_component',
@@ -502,6 +496,9 @@ class NonlinearToPWL(Transformation):
         }
         self._transformation_blocks = {}
         self._transformation_block_set = ComponentSet()
+        self._quadratic_repn_visitor = QuadraticRepnVisitor(
+            subexpression_cache={}, var_map={}, var_order={}, sorter=None
+        )
 
     def _apply_to(self, instance, **kwds):
         try:
@@ -630,7 +627,7 @@ class NonlinearToPWL(Transformation):
         return bounds
 
     def _needs_approximating(self, expr, approximate_quadratic):
-        repn = _quadratic_repn_visitor.walk_expression(expr)
+        repn = self._quadratic_repn_visitor.walk_expression(expr)
         if repn.nonlinear is None:
             if repn.quadratic is None:
                 # Linear constraint. Always skip.
