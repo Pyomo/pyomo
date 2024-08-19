@@ -198,6 +198,58 @@ class NLFragment(object):
 
 
 class AMPLRepn(object):
+    """The "compiled" representation of an expression in AMPL NL format.
+
+    This stores a compiled form of an expression in the AMPL "NL"
+    format.  The data structure contains 6 fields:
+
+    Attributes
+    ----------
+    mult : float
+
+        A constant multiplier applied to this expression.  The
+        :py:class`AMPLRepn` returned by the :py:class`AMPLRepnVisitor`
+        should always have `mult` == 1.
+
+    const : float
+
+        The constant portion of this expression
+
+    linear : Dict[int, float] or None
+
+        Mapping of `id(VarData)` to linear coefficient
+
+    nonlinear : Tuple[str, List[int]] or List[Tuple[str, List[int]]] or None
+
+        The general nonlinear portion of the compiled expression as a
+        tuple of two parts:
+          - the nl template string: this is the NL string with
+            placeholders (`%s`) for all the variables that appear in
+            the expression.
+          - an iterable if the `VarData` IDs that correspond to the
+            placeholders in the nl template string
+        This is `None` if there is no general nonlinear part of the
+        expression.  Note that this can be a list of tuple fragments
+        within AMPLRepnVisitor, but that list is concatenated to a
+        single tuple when exiting the `AMPLRepnVisitor`.
+
+    named_exprs : Set[int]
+
+        A set of IDs point to named expressions (:py:class:`Expression`)
+        objects appearing in this expression.
+
+    nl : Tuple[str, Iterable[int]]
+
+        This holds the complete compiled representation of this
+        expression (including multiplier, constant, linear terms, and
+        nonlinear fragment) using the same format as the `nonlinear`
+        attribute.  This field (if not None) should be considered
+        authoritative, as there are NL fragments that are not
+        representable by {mult, const, linear, nonlinear} (e.g., string
+        arguments).
+
+    """
+
     __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
     template = TextNLTemplate
@@ -445,6 +497,15 @@ class AMPLRepn(object):
 
 
 class DebugAMPLRepn(AMPLRepn):
+    """An `AMPLRepn` that uses the "debug" (annotated) NL format
+
+    This is identical to the :py:class:`AMPLRepn` class, except it is
+    built using the `TextNLDebugTemplate` formatting template.  This
+    format includes descriptions of the operators and variable /
+    expression names in the NL text.
+
+    """
+
     __slots__ = ()
     template = TextNLDebugTemplate
 
