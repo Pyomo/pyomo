@@ -479,7 +479,7 @@ class AMPLRepn(object):
 
     def to_expr(self, var_map):
         if self.nl is not None or self.nonlinear is not None:
-            # TODO: support converting general nonlinear expressiosn
+            # TODO: support converting general nonlinear expressions
             # back to Pyomo expressions.  This will require an AMPL
             # parser.
             raise MouseTrap("Cannot convert nonlinear AMPLRepn to Pyomo Expression")
