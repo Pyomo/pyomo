@@ -37,12 +37,13 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         vars_to_load: list
-            The minimum set of variables whose solution should be loaded. If vars_to_load is None, then the solution
-            to all primal variables will be loaded. Even if vars_to_load is specified, the values of other
-            variables may also be loaded depending on the interface.
+            The minimum set of variables whose solution should be loaded. If vars_to_load
+            is None, then the solution to all primal variables will be loaded. Even if
+            vars_to_load is specified, the values of other variables may also be
+            loaded depending on the interface.
         """
-        for v, val in self.get_primals(vars_to_load=vars_to_load).items():
-            v.set_value(val, skip_validation=True)
+        for var, val in self.get_primals(vars_to_load=vars_to_load).items():
+            var.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     @abc.abstractmethod
@@ -55,8 +56,8 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose solution value should be retrieved. If vars_to_load is None,
-            then the values for all variables will be retrieved.
+            A list of the variables whose solution value should be retrieved. If vars_to_load
+            is None, then the values for all variables will be retrieved.
 
         Returns
         -------
@@ -73,8 +74,8 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         cons_to_load: list
-            A list of the constraints whose duals should be retrieved. If cons_to_load is None, then the duals for all
-            constraints will be retrieved.
+            A list of the constraints whose duals should be retrieved. If cons_to_load
+            is None, then the duals for all constraints will be retrieved.
 
         Returns
         -------
@@ -92,8 +93,8 @@ class SolutionLoaderBase(abc.ABC):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose reduced cost should be retrieved. If vars_to_load is None, then the
-            reduced costs for all variables will be loaded.
+            A list of the variables whose reduced cost should be retrieved. If vars_to_load
+            is None, then the reduced costs for all variables will be loaded.
 
         Returns
         -------
@@ -106,6 +107,10 @@ class SolutionLoaderBase(abc.ABC):
 
 
 class PersistentSolutionLoader(SolutionLoaderBase):
+    """
+    Loader for persistent solvers
+    """
+
     def __init__(self, solver):
         self._solver = solver
         self._valid = True
@@ -135,6 +140,10 @@ class PersistentSolutionLoader(SolutionLoaderBase):
 
 
 class SolSolutionLoader(SolutionLoaderBase):
+    """
+    Loader for solvers that create .sol files (e.g., ipopt)
+    """
+
     def __init__(self, sol_data: SolFileData, nl_info: NLWriterInfo) -> None:
         self._sol_data = sol_data
         self._nl_info = nl_info
@@ -149,18 +158,18 @@ class SolSolutionLoader(SolutionLoaderBase):
             assert len(self._nl_info.variables) == 0
         else:
             if self._nl_info.scaling:
-                for v, val, scale in zip(
+                for var, val, scale in zip(
                     self._nl_info.variables,
                     self._sol_data.primals,
                     self._nl_info.scaling.variables,
                 ):
-                    v.set_value(val / scale, skip_validation=True)
+                    var.set_value(val / scale, skip_validation=True)
             else:
-                for v, val in zip(self._nl_info.variables, self._sol_data.primals):
-                    v.set_value(val, skip_validation=True)
+                for var, val in zip(self._nl_info.variables, self._sol_data.primals):
+                    var.set_value(val, skip_validation=True)
 
-        for v, v_expr in self._nl_info.eliminated_vars:
-            v.value = value(v_expr)
+        for var, v_expr in self._nl_info.eliminated_vars:
+            var.value = value(v_expr)
 
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
@@ -172,7 +181,7 @@ class SolSolutionLoader(SolutionLoaderBase):
                 'Solution loader does not currently have a valid solution. Please '
                 'check results.TerminationCondition and/or results.SolutionStatus.'
             )
-        val_map = dict()
+        val_map = {}
         if self._sol_data is None:
             assert len(self._nl_info.variables) == 0
         else:
@@ -180,23 +189,23 @@ class SolSolutionLoader(SolutionLoaderBase):
                 scale_list = [1] * len(self._nl_info.variables)
             else:
                 scale_list = self._nl_info.scaling.variables
-            for v, val, scale in zip(
+            for var, val, scale in zip(
                 self._nl_info.variables, self._sol_data.primals, scale_list
             ):
-                val_map[id(v)] = val / scale
+                val_map[id(var)] = val / scale
 
-        for v, v_expr in self._nl_info.eliminated_vars:
+        for var, v_expr in self._nl_info.eliminated_vars:
             val = replace_expressions(v_expr, substitution_map=val_map)
-            v_id = id(v)
+            v_id = id(var)
             val_map[v_id] = val
 
         res = ComponentMap()
         if vars_to_load is None:
             vars_to_load = self._nl_info.variables + [
-                v for v, _ in self._nl_info.eliminated_vars
+                var for var, _ in self._nl_info.eliminated_vars
             ]
-        for v in vars_to_load:
-            res[v] = val_map[id(v)]
+        for var in vars_to_load:
+            res[var] = val_map[id(var)]
 
         return res
 
@@ -218,7 +227,7 @@ class SolSolutionLoader(SolutionLoaderBase):
                 "Solution data is empty. This should not "
                 "have happened. Report this error to the Pyomo Developers."
             )
-        res = dict()
+        res = {}
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.constraints)
             obj_scale = 1
@@ -229,9 +238,9 @@ class SolSolutionLoader(SolutionLoaderBase):
             cons_to_load = set(self._nl_info.constraints)
         else:
             cons_to_load = set(cons_to_load)
-        for c, val, scale in zip(
+        for cons, val, scale in zip(
             self._nl_info.constraints, self._sol_data.duals, scale_list
         ):
-            if c in cons_to_load:
-                res[c] = val * scale / obj_scale
+            if cons in cons_to_load:
+                res[cons] = val * scale / obj_scale
         return res

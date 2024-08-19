@@ -33,6 +33,11 @@ from pyomo.contrib.solver.config import SolverConfig
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader
+from pyomo.contrib.solver.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+    NoValidSolutionError,
+)
 from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
@@ -79,14 +84,9 @@ class IpoptConfig(SolverConfig):
 
 
 class IpoptSolutionLoader(SolSolutionLoader):
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
-    ) -> Mapping[VarData, float]:
+    def _error_check(self):
         if self._nl_info is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.TerminationCondition and/or results.SolutionStatus.'
-            )
+            raise NoValidSolutionError()
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
                 'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
@@ -97,6 +97,11 @@ class IpoptSolutionLoader(SolSolutionLoader):
                 "Solution data is empty. This should not "
                 "have happened. Report this error to the Pyomo Developers."
             )
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
+        self._error_check()
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
@@ -107,7 +112,7 @@ class IpoptSolutionLoader(SolSolutionLoader):
         nl_info = self._nl_info
         zl_map = sol_data.var_suffixes['ipopt_zL_out']
         zu_map = sol_data.var_suffixes['ipopt_zU_out']
-        rc = dict()
+        rc = {}
         for ndx, v in enumerate(nl_info.variables):
             scale = scale_list[ndx]
             v_id = id(v)
@@ -231,6 +236,7 @@ class Ipopt(SolverBase):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
+                    check=False,
                 )
                 version = results.stdout.splitlines()[0]
                 version = version.split(' ')[1].strip()
@@ -288,7 +294,8 @@ class Ipopt(SolverBase):
         if config.threads:
             logger.log(
                 logging.WARNING,
-                msg=f"The `threads` option was specified, but this is not used by {self.__class__}.",
+                msg="The `threads` option was specified, "
+                f"but this is not used by {self.__class__}.",
             )
         if config.timer is None:
             timer = HierarchicalTimer()
@@ -364,6 +371,7 @@ class Ipopt(SolverBase):
                         universal_newlines=True,
                         stdout=t.STDOUT,
                         stderr=t.STDERR,
+                        check=False,
                     )
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
@@ -419,23 +427,14 @@ class Ipopt(SolverBase):
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
         ):
-            raise RuntimeError(
-                'Solver did not find the optimal solution. Set '
-                'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
-            )
+            raise NoOptimalSolutionError()
 
         results.solver_name = self.name
         results.solver_version = self.version(config)
-        if (
-            config.load_solutions
-            and results.solution_status == SolutionStatus.noSolution
-        ):
-            raise RuntimeError(
-                'A feasible solution was not found, so no solution can be loaded.'
-                'Please set opt.config.load_solutions=False to bypass this error.'
-            )
 
         if config.load_solutions:
+            if results.solution_status == SolutionStatus.noSolution:
+                raise NoFeasibleSolutionError()
             results.solution_loader.load_vars()
             if (
                 hasattr(model, 'dual')

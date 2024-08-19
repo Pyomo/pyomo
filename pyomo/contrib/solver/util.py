@@ -21,19 +21,61 @@ from pyomo.opt.results.solver import (
 from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
 
 
+class NoFeasibleSolutionError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'A feasible solution was not found, so no solution can be loaded. '
+            'Please set opt.config.load_solutions=False and check '
+            'results.solution_status and '
+            'results.incumbent_objective before loading a solution.'
+        )
+
+
+class NoOptimalSolutionError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solver did not find the optimal solution. Set '
+            'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+        )
+
+
+class NoValidSolutionError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solution loader does not currently have a valid solution. Please '
+            'check results.termination_condition and/or results.solution_status.'
+        )
+
+
+class NoValidDualsError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solver does not currently have valid duals. Please '
+            'check the termination condition.'
+        )
+
+
+class NoValidReducedCostsError(RuntimeError):
+    def __init__(self):
+        super().__init__(
+            'Solver does not currently have valid reduced costs. Please '
+            'check the termination condition.'
+        )
+
+
 def get_objective(block):
     """
     Get current active objective on a block. If there is more than one active,
     return an error.
     """
-    obj = None
-    for o in block.component_data_objects(
+    objective = None
+    for obj in block.component_data_objects(
         Objective, descend_into=True, active=True, sort=True
     ):
-        if obj is not None:
-            raise ValueError('Multiple active objectives found')
-        obj = o
-    return obj
+        if objective is not None:
+            raise ValueError('Multiple active objectives found.')
+        objective = obj
+    return objective
 
 
 def check_optimal_termination(results):
@@ -57,11 +99,12 @@ def check_optimal_termination(results):
             return True
     else:
         if results.solver.status == SolverStatus.ok and (
-            results.solver.termination_condition == LegacyTerminationCondition.optimal
-            or results.solver.termination_condition
-            == LegacyTerminationCondition.locallyOptimal
-            or results.solver.termination_condition
-            == LegacyTerminationCondition.globallyOptimal
+            results.solver.termination_condition
+            in (
+                LegacyTerminationCondition.optimal,
+                LegacyTerminationCondition.locallyOptimal,
+                LegacyTerminationCondition.globallyOptimal,
+            )
         ):
             return True
     return False
@@ -81,16 +124,14 @@ def assert_optimal_termination(results):
         if hasattr(results, 'solution_status'):
             msg = (
                 'Solver failed to return an optimal solution. '
-                'Solution status: {}, Termination condition: {}'.format(
-                    results.solution_status, results.termination_condition
-                )
+                f'Solution status: {results.solution_status}, '
+                f'Termination condition: {results.termination_condition}'
             )
         else:
             msg = (
                 'Solver failed to return an optimal solution. '
-                'Solver status: {}, Termination condition: {}'.format(
-                    results.solver.status, results.solver.termination_condition
-                )
+                f'Solution status: {results.solver.status}, '
+                f'Termination condition: {results.solver.termination_condition}'
             )
         raise RuntimeError(msg)
 
@@ -119,7 +160,7 @@ class _VarAndNamedExprCollector(ExpressionValueVisitor):
             self.named_expressions[id(node)] = node
             return False, None
 
-        if type(node) is EXPR.ExternalFunctionExpression:
+        if isinstance(node, EXPR.ExternalFunctionExpression):
             self._external_functions[id(node)] = node
             return False, None
 

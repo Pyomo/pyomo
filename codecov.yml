@@ -1,0 +1,21 @@
+codecov:
+  notify:
+    # GHA: 5, Jenkins: 11
+    # Accurate as of July 3, 2024
+    # Potential to change when Python versions change
+    after_n_builds: 16
+    wait_for_ci: true
+coverage:
+  range:
+  - 50.0
+  - 100.0
+  status:
+    patch:
+      default:
+        # Force patches to be covered at the level of the codebase
+        threshold: 0.0
+    project:
+      default:
+        # Allow overall coverage to drop to avoid failures due to code
+        # cleanup or CI unavailability/lag
+        threshold: 5.0

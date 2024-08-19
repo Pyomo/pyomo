@@ -78,9 +78,7 @@ class PersistentSolverUtils(abc.ABC):
     def add_variables(self, variables: List[VarData]):
         for v in variables:
             if id(v) in self._referenced_variables:
-                raise ValueError(
-                    'variable {name} has already been added'.format(name=v.name)
-                )
+                raise ValueError(f'Variable {v.name} has already been added')
             self._referenced_variables[id(v)] = [{}, {}, None]
             self._vars[id(v)] = (
                 v,
@@ -126,9 +124,7 @@ class PersistentSolverUtils(abc.ABC):
         all_fixed_vars = {}
         for con in cons:
             if con in self._named_expressions:
-                raise ValueError(
-                    'constraint {name} has already been added'.format(name=con.name)
-                )
+                raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = (con.lower, con.body, con.upper)
             tmp = collect_vars_and_named_exprs(con.body)
             named_exprs, variables, fixed_vars, external_functions = tmp
@@ -154,9 +150,7 @@ class PersistentSolverUtils(abc.ABC):
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
         for con in cons:
             if con in self._vars_referenced_by_con:
-                raise ValueError(
-                    'constraint {name} has already been added'.format(name=con.name)
-                )
+                raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = tuple()
             variables = con.get_variables()
             self._check_for_new_vars(variables)
@@ -235,9 +229,7 @@ class PersistentSolverUtils(abc.ABC):
         for con in cons:
             if con not in self._named_expressions:
                 raise ValueError(
-                    'cannot remove constraint {name} - it was not added'.format(
-                        name=con.name
-                    )
+                    f'Cannot remove constraint {con.name} - it was not added'
                 )
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][0].pop(con)
@@ -256,9 +248,7 @@ class PersistentSolverUtils(abc.ABC):
         for con in cons:
             if con not in self._vars_referenced_by_con:
                 raise ValueError(
-                    'cannot remove constraint {name} - it was not added'.format(
-                        name=con.name
-                    )
+                    f'Cannot remove constraint {con.name} - it was not added'
                 )
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][1].pop(con)
@@ -277,16 +267,12 @@ class PersistentSolverUtils(abc.ABC):
             v_id = id(v)
             if v_id not in self._referenced_variables:
                 raise ValueError(
-                    'cannot remove variable {name} - it has not been added'.format(
-                        name=v.name
-                    )
+                    f'Cannot remove variable {v.name} - it has not been added'
                 )
             cons_using, sos_using, obj_using = self._referenced_variables[v_id]
             if cons_using or sos_using or (obj_using is not None):
                 raise ValueError(
-                    'cannot remove variable {name} - it is still being used by constraints or the objective'.format(
-                        name=v.name
-                    )
+                    f'Cannot remove variable {v.name} - it is still being used by constraints or the objective'
                 )
             del self._referenced_variables[v_id]
             del self._vars[v_id]
@@ -358,7 +344,6 @@ class PersistentSolverUtils(abc.ABC):
         old_cons = []
         old_sos = []
         new_sos = []
-        current_vars_dict = {}
         current_cons_dict = {}
         current_sos_dict = {}
         timer.start('vars')
@@ -399,7 +384,7 @@ class PersistentSolverUtils(abc.ABC):
             for c in current_sos_dict.keys():
                 if c not in self._vars_referenced_by_con:
                     new_sos.append(c)
-            for c in self._vars_referenced_by_con.keys():
+            for c in self._vars_referenced_by_con:
                 if c not in current_cons_dict and c not in current_sos_dict:
                     if (c.ctype is Constraint) or (
                         c.ctype is None and isinstance(c, ConstraintData)
@@ -431,7 +416,6 @@ class PersistentSolverUtils(abc.ABC):
         self.add_sos_constraints(new_sos)
         new_cons_set = set(new_cons)
         new_sos_set = set(new_sos)
-        new_vars_set = set(id(v) for v in new_vars)
         cons_to_remove_and_add = {}
         need_to_set_objective = False
         if config.update_constraints:

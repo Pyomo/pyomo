@@ -1051,7 +1051,7 @@ class SimpleSetNumpy(SimpleSetA):
         self.instance = self.model.create_instance(currdir + "setA.dat")
         self.e1 = numpy.bool_(1)
         self.e2 = numpy.int_(2)
-        self.e3 = numpy.float_(3.0)
+        self.e3 = numpy.float64(3.0)
         self.e4 = numpy.int_(4)
         self.e5 = numpy.int_(5)
         self.e6 = numpy.int_(6)
@@ -1068,7 +1068,7 @@ class SimpleSetNumpy(SimpleSetA):
 
     def test_numpy_float(self):
         model = ConcreteModel()
-        model.A = Set(initialize=[numpy.float_(1.0), numpy.float_(0.0)])
+        model.A = Set(initialize=[numpy.float64(1.0), numpy.float64(0.0)])
         self.assertEqual(model.A.bounds(), (0, 1))
 
 
@@ -3213,7 +3213,7 @@ class TestSetErrors(PyomoModel):
         self.assertEqual(numpy.int_(1) in Boolean, True)
         self.assertEqual(numpy.bool_(True) in Boolean, True)
         self.assertEqual(numpy.bool_(False) in Boolean, True)
-        self.assertEqual(numpy.float_(1.1) in Boolean, False)
+        self.assertEqual(numpy.float64(1.1) in Boolean, False)
         self.assertEqual(numpy.int_(2) in Boolean, False)
 
         self.assertEqual(numpy.int_(0) in Integers, True)
@@ -3222,7 +3222,7 @@ class TestSetErrors(PyomoModel):
         # identically to 1
         self.assertEqual(numpy.bool_(True) in Integers, True)
         self.assertEqual(numpy.bool_(False) in Integers, True)
-        self.assertEqual(numpy.float_(1.1) in Integers, False)
+        self.assertEqual(numpy.float64(1.1) in Integers, False)
         self.assertEqual(numpy.int_(2) in Integers, True)
 
         self.assertEqual(numpy.int_(0) in Reals, True)
@@ -3231,14 +3231,14 @@ class TestSetErrors(PyomoModel):
         # identically to 1
         self.assertEqual(numpy.bool_(True) in Reals, True)
         self.assertEqual(numpy.bool_(False) in Reals, True)
-        self.assertEqual(numpy.float_(1.1) in Reals, True)
+        self.assertEqual(numpy.float64(1.1) in Reals, True)
         self.assertEqual(numpy.int_(2) in Reals, True)
 
         self.assertEqual(numpy.int_(0) in Any, True)
         self.assertEqual(numpy.int_(1) in Any, True)
         self.assertEqual(numpy.bool_(True) in Any, True)
         self.assertEqual(numpy.bool_(False) in Any, True)
-        self.assertEqual(numpy.float_(1.1) in Any, True)
+        self.assertEqual(numpy.float64(1.1) in Any, True)
         self.assertEqual(numpy.int_(2) in Any, True)
 
     def test_setargs1(self):
