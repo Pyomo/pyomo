@@ -619,11 +619,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # encountered will be added to the var_list due to the labeler
         # defined above.
         for con in model.component_data_objects(Constraint, active=True, sort=sort):
-            if not con.has_lb() and not con.has_ub():
+            lb, body, ub = con.to_bounded_expression(True)
+            if lb is None and ub is None:
                 assert not con.equality
                 continue  # non-binding, so skip
 
-            con_body = as_numeric(con.body)
+            con_body = as_numeric(body)
             if skip_trivial_constraints and con_body.is_fixed():
                 continue
             if linear:
@@ -642,20 +643,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write(
                     '%s.. %s =e= %s ;\n'
-                    % (constraint_names[-1], con_body_str, ftoa(con.upper, False))
+                    % (constraint_names[-1], con_body_str, ftoa(ub, False))
                 )
             else:
-                if con.has_lb():
+                if lb is not None:
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], ftoa(con.lower, False), con_body_str)
+                        % (constraint_names[-1], ftoa(lb, False), con_body_str)
                     )
-                if con.has_ub():
+                if ub is not None:
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write(
                         '%s.. %s =l= %s ;\n'
-                        % (constraint_names[-1], con_body_str, ftoa(con.upper, False))
+                        % (constraint_names[-1], con_body_str, ftoa(ub, False))
                     )
 
         obj = list(model.component_data_objects(Objective, active=True, sort=sort))

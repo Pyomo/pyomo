@@ -605,8 +605,6 @@ class ScalarPiecewiseLinearFunction(
     PiecewiseLinearFunctionData, PiecewiseLinearFunction
 ):
     def __init__(self, *args, **kwds):
-        self._suppress_ctypes = set()
-
         PiecewiseLinearFunctionData.__init__(self, self)
         PiecewiseLinearFunction.__init__(self, *args, **kwds)
         self._data[None] = self
