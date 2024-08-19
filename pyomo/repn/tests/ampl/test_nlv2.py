@@ -2765,3 +2765,35 @@ G0 3	#o
                 OUT.getvalue(),
             )
         )
+
+    @unittest.skipUnless(numpy_available, "test requires numpy")
+    def test_objective_numpy_const(self):
+        # This tests issue #3352
+        m = ConcreteModel()
+        m.e = Expression(expr=numpy.float64(0))
+        m.obj = Objective(expr=m.e)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(m, OUT, linear_presolve=False, scale_model=True)
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 0 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 0   #nonzeros in Jacobian, obj. gradient
+ 0 0   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+O0 0
+n0
+x0
+r
+b
+k-1
+""",
+                OUT.getvalue(),
+            )
+        )
