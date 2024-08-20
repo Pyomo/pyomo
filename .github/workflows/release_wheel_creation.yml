@@ -78,7 +78,7 @@ jobs:
             CIBW_ARCHS_LINUX: "native"
             CIBW_ARCHS_MACOS: "native arm64"
             CIBW_ARCHS_WINDOWS: "native ARM64"
-            CIBW_SKIP: "*-musllinux* *{311,312}-win*"
+            CIBW_SKIP: "cp{311,312}-win32 cp{311,312}-win_amd64 cp{311,312}-win_arm64 *-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
