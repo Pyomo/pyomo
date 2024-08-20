@@ -6,10 +6,18 @@ Pyomo CHANGELOG
 Pyomo 6.8.0   (20 Aug 2024)
 -------------------------------------------------------------------------------
 
+SIGNIFICANT CHANGE NOTICE
+
+- Internal data storage for Constraint objects (see #3293)
+- No longer release cythonized wheel for Python 3.11+ (see #3355)
+
+CHANGELOG
+
 - General
   - Add ParameterizedQuadraticRepn and corresponding walker (#3324)
   - Update Pyomo for NumPy 2.0 compatibility (#3292, #3353)
   - Add ParameterizedLinearRepn and corresponding walker (#3268)
+  - Update Release Process Workflow for changes in `pip` (#3355)
 - Core
   - Handle uninitialized variable in `propagate_solution` of scaling
     transformation (#3275)

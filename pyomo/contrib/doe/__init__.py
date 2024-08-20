@@ -25,7 +25,7 @@ deprecation_message = (
 
 @deprecated(
     "Use of MeasurementVariables in Pyomo.DoE is no longer supported.",
-    version='6.7.4.dev0',
+    version='6.8.0',
 )
 class MeasurementVariables:
     def __init__(self, *args):
@@ -33,7 +33,7 @@ class MeasurementVariables:
 
 
 @deprecated(
-    "Use of DesignVariables in Pyomo.DoE is no longer supported.", version='6.7.4.dev0'
+    "Use of DesignVariables in Pyomo.DoE is no longer supported.", version='6.8.0'
 )
 class DesignVariables:
     def __init__(self, *args):
@@ -41,7 +41,7 @@ class DesignVariables:
 
 
 @deprecated(
-    "Use of ModelOptionLib in Pyomo.DoE is no longer supported.", version='6.7.4.dev0'
+    "Use of ModelOptionLib in Pyomo.DoE is no longer supported.", version='6.8.0'
 )
 class ModelOptionLib:
     def __init__(self, *args):

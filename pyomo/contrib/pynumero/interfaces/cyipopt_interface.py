@@ -310,7 +310,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         # cyipopt.Problem.__init__
         super(CyIpoptNLP, self).__init__()
 
-        # Pre-Pyomo 6.7.4.dev0, we had no way to pass the cyipopt.Problem object
+        # Pre-Pyomo 6.8.0, we had no way to pass the cyipopt.Problem object
         # to the user in an intermediate callback. This prevented them from calling
         # the useful get_current_iterate and get_current_violations methods. Now,
         # we support this by adding the Problem object to the args we pass to a user's
@@ -496,7 +496,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         """
         if self._intermediate_callback is not None:
             if self._use_13arg_callback:
-                # This is the callback signature expected as of Pyomo 6.7.4.dev0
+                # This is the callback signature expected as of Pyomo 6.8.0
                 return self._intermediate_callback(
                     self._nlp,
                     self,
@@ -513,7 +513,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
                     ls_trials,
                 )
             else:
-                # This is the callback signature expected pre-Pyomo 6.7.4.dev0 and
+                # This is the callback signature expected pre-Pyomo 6.8.0 and
                 # is supported for backwards compatibility.
                 return self._intermediate_callback(
                     self._nlp,
