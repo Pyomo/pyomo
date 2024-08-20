@@ -136,13 +136,17 @@ PyROS can be installed as follows:
       pip install numpy scipy
 3. (*Optional*) Test your installation:
    install ``pytest`` and ``parameterized``
-   with your preferred package manager (as in the previous step).
+   with your preferred package manager (as in the previous step):
+
+   ::
+
+      pip install pytest parameterized
+
    You may then run the PyROS tests as follows:
 
    ::
 
-      cd pyomo/contrib/pyros/tests
-      pytest
+      python -c 'import os, pytest, pyomo.contrib.pyros as p; pytest.main([os.path.dirname(p.__file__)])'
 
    Some tests involving solvers may fail or be skipped,
    depending on the solver distributions (e.g., Ipopt, BARON, SCIP)
