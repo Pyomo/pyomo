@@ -96,20 +96,6 @@ def _set_options(model_or_env, options):
             model_or_env.setParam(key, float(option))
 
 
-class GurobiModel(gurobipy.Model):
-    def __init__(self, *args, **kwds):
-        super().__init__(*args, **kwds)
-
-    def addConstr(self, degree, lhs, sense=None, rhs=None, name=""):
-        if degree == 1:
-            con = self.addLConstr(lhs, sense, rhs, name)
-        elif degree == 2:
-            con = self.addQConstr(lhs, sense, rhs, name)
-        else:
-            raise DegreeError('GurobiModel.addConstr: Unsupported degree: %s' % degree)
-        return con
-
-
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
     """A direct interface to Gurobi using gurobipy.
@@ -409,7 +395,7 @@ class GurobiDirect(DirectSolver):
         else:
             # Ensure the (global) default env is started
             if not GurobiDirect._default_env_started:
-                m = GurobiModel()
+                m = gurobipy.Model()
                 m.close()
                 GurobiDirect._default_env_started = True
 
@@ -419,9 +405,9 @@ class GurobiDirect(DirectSolver):
             self._solver_model.close()
 
         self._solver_model = (
-            GurobiModel(model.name, env=self._env)
+            gurobipy.Model(model.name, env=self._env)
             if model.name is not None
-            else GurobiModel(env=self._env)
+            else gurobipy.Model(env=self._env)
         )
 
     def close(self):
@@ -504,6 +490,15 @@ class GurobiDirect(DirectSolver):
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
 
+    def _addConstr(self, degree, lhs, sense=None, rhs=None, name=""):
+        if degree == 1:
+            con = self._solver_model.addLConstr(lhs, sense, rhs, name)
+        elif degree == 2:
+            con = self._solver_model.addQConstr(lhs, sense, rhs, name)
+        else:
+            raise DegreeError('GurobiModel.addConstr: Unsupported degree: %s' % degree)
+        return con
+
     def _add_constraint(self, con):
         if not con.active:
             return None
@@ -534,7 +529,7 @@ class GurobiDirect(DirectSolver):
                 )
 
         if con.equality:
-            gurobipy_con = self._solver_model.addConstr(
+            gurobipy_con = self._addConstr(
                 degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.EQUAL,
@@ -547,7 +542,7 @@ class GurobiDirect(DirectSolver):
             )
             self._range_constraints.add(con)
         elif con.has_lb():
-            gurobipy_con = self._solver_model.addConstr(
+            gurobipy_con = self._addConstr(
                 degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.GREATER_EQUAL,
@@ -555,7 +550,7 @@ class GurobiDirect(DirectSolver):
                 name=conname,
             )
         elif con.has_ub():
-            gurobipy_con = self._solver_model.addConstr(
+            gurobipy_con = self._addConstr(
                 degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.LESS_EQUAL,
@@ -650,7 +645,7 @@ class GurobiDirect(DirectSolver):
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             obj.expr, self._max_obj_degree
         )
 
