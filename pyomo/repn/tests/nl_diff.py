@@ -15,9 +15,7 @@ import re
 from difflib import SequenceMatcher, unified_diff
 
 from pyomo.repn.tests.diffutils import compare_floats, load_baseline
-import pyomo.repn.plugins.nl_writer as nl_writer
-
-template = nl_writer.text_nl_debug_template
+from pyomo.repn.ampl import TextNLDebugTemplate as template
 
 _norm_whitespace = re.compile(r'[^\S\n]+')
 _norm_integers = re.compile(r'(?m)\.0+$')
