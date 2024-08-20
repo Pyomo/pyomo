@@ -53,19 +53,30 @@ def get_version():
     return import_pyomo_module('pyomo', 'version', 'info.py')['__version__']
 
 
+def check_config_arg(name):
+    if name in sys.argv:
+        sys.argv.remove(name)
+        return True
+    if name in os.getenv('PYOMO_SETUP_ARGS', "").split():
+        return True
+    return False
+
+
 CYTHON_REQUIRED = "required"
 if not any(
-    arg.startswith(cmd) for cmd in ('build', 'install', 'bdist') for arg in sys.argv
+    arg.startswith(cmd)
+    for cmd in ('build', 'install', 'bdist', 'wheel')
+    for arg in sys.argv
 ):
     using_cython = False
-else:
+elif sys.version_info[:2] < (3, 11):
     using_cython = "automatic"
-if '--with-cython' in sys.argv:
-    using_cython = CYTHON_REQUIRED
-    sys.argv.remove('--with-cython')
-if '--without-cython' in sys.argv:
+else:
     using_cython = False
-    sys.argv.remove('--without-cython')
+if check_config_arg('--with-cython'):
+    using_cython = CYTHON_REQUIRED
+if check_config_arg('--without-cython'):
+    using_cython = False
 
 ext_modules = []
 if using_cython:
@@ -107,14 +118,7 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
             raise
         using_cython = False
 
-if ('--with-distributable-extensions' in sys.argv) or (
-    os.getenv('PYOMO_SETUP_ARGS') is not None
-    and '--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS')
-):
-    try:
-        sys.argv.remove('--with-distributable-extensions')
-    except:
-        pass
+if check_config_arg('--with-distributable-extensions'):
     #
     # Import the APPSI extension builder
     # NOTE: There is inconsistent behavior in Windows for APPSI.
