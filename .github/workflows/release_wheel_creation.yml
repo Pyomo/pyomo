@@ -28,19 +28,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--without-cython --with-distributable-extensions"'
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--without-cython --with-distributable-extensions"'
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
@@ -74,19 +74,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--without-cython --with-distributable-extensions"'
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: '--use-pep517 --global-option="--without-cython --with-distributable-extensions"'
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
