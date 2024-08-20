@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-13]
+        os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [all]
         wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
 
@@ -57,8 +57,8 @@ jobs:
           output-dir: dist
         env:
             CIBW_ARCHS_LINUX: "native"
-            CIBW_ARCHS_MACOS: "native arm64"
-            CIBW_ARCHS_WINDOWS: "native ARM64"
+            CIBW_ARCHS_MACOS: "x86_64 arm64"
+            CIBW_ARCHS_WINDOWS: "AMD64 ARM64"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD_VERBOSITY: 1
