@@ -33,19 +33,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: $WITH_CYTHON
+          GLOBAL_OPTIONS: "$WITH_CYTHON"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: $WITH_CYTHON
+          GLOBAL_OPTIONS: "$WITH_CYTHON"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: $WITH_CYTHON
+          GLOBAL_OPTIONS: "$WITH_CYTHON"
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: $WITHOUT_CYTHON
+          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: $WITHOUT_CYTHON
+          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
 
         exclude:
         - wheel-version: 'cp311*'
@@ -86,19 +86,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: $WITH_CYTHON
+          GLOBAL_OPTIONS: "$WITH_CYTHON"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: $WITH_CYTHON
+          GLOBAL_OPTIONS: "$WITH_CYTHON"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: $WITH_CYTHON
+          GLOBAL_OPTIONS: "$WITH_CYTHON"
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: $WITHOUT_CYTHON
+          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: $WITHOUT_CYTHON
+          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
