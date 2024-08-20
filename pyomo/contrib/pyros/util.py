@@ -990,11 +990,7 @@ class ModelData:
 
 
 def setup_quadratic_expression_visitor(
-    wrt,
-    subexpression_cache=None,
-    var_map=None,
-    var_order=None,
-    sorter=None,
+    wrt, subexpression_cache=None, var_map=None, var_order=None, sorter=None
 ):
     """Setup a parameterized quadratic expression walker."""
     visitor = ParameterizedQuadraticRepnVisitor(
@@ -1320,11 +1316,9 @@ def get_effective_var_partitioning(model_data):
                 adj_var_in_con = next(iter(adj_vars_in_con))
                 visitor = setup_quadratic_expression_visitor(wrt=[])
                 ccon_expr_repn = visitor.walk_expression(expr=ccon.body - ccon.upper)
-                adj_var_appears_linearly = (
-                    adj_var_in_con
-                    not in ComponentSet(identify_variables(ccon_expr_repn.nonlinear))
-                    and id(adj_var_in_con) in ComponentSet(ccon_expr_repn.linear)
-                )
+                adj_var_appears_linearly = adj_var_in_con not in ComponentSet(
+                    identify_variables(ccon_expr_repn.nonlinear)
+                ) and id(adj_var_in_con) in ComponentSet(ccon_expr_repn.linear)
                 if adj_var_appears_linearly:
                     adj_var_linear_coeff = ccon_expr_repn.linear[id(adj_var_in_con)]
                     if abs(adj_var_linear_coeff) > PRETRIANGULAR_VAR_COEFF_TOL:
@@ -2247,7 +2241,8 @@ def reformulate_state_var_independent_eq_cons(model_data):
                     [expr_repn.constant]
                     + list(expr_repn.linear.values())
                     + (
-                        [] if expr_repn.quadratic is None
+                        []
+                        if expr_repn.quadratic is None
                         else list(expr_repn.quadratic.values())
                     )
                 )

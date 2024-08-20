@@ -1950,7 +1950,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         assertExpressionsEqual(
             self,
             first_stage_eq_cons["coeff_matching_eq_con_coeff_1"].expr,
-            m.x1 ** 3 + 0.5 + 5 * m.x1 * m.x2 * (-1) + (-1) * (m.x1 + 2) * (-1) == 0,
+            m.x1**3 + 0.5 + 5 * m.x1 * m.x2 * (-1) + (-1) * (m.x1 + 2) * (-1) == 0,
         )
         assertExpressionsEqual(
             self,
