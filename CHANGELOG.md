@@ -20,6 +20,7 @@ Pyomo 6.8.0   (20 Aug 2024)
     lower/body/upper) (#3293)
   - Kernel: fix bug in conic geomean (#3310)
   - Fix bug with IndexedSet objects and the within argument (#3288)
+  - Support validate/filter for IndexedSet components using the index (#3338)
 - Solver Interfaces
   - Resolve NLv2 incompatibility with multithreading (#3332)
   - Resolve writer performance degradation  (#3343)
