@@ -1747,7 +1747,7 @@ class RegressionTest(unittest.TestCase):
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
 
-    @unittest.skipUnless(baron_license_is_valid, "BARON solver license is invalid.")
+    @unittest.skipUnless(scip_license_is_valid, "SCIP solver not licensed.")
     def test_coefficient_matching_nonlinear_expr(self):
         """
         Test behavior of PyROS solver for model with
@@ -1776,8 +1776,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory('baron')
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory("scip")
+        global_subsolver = SolverFactory("scip")
 
         # Call the PyROS solver
         with LoggingIntercept(module="pyomo.contrib.pyros", level=logging.DEBUG) as LOG:
