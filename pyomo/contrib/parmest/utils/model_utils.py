@@ -16,6 +16,7 @@ from pyomo.core.expr import replace_expressions, identify_mutable_parameters
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.param import IndexedParam
 from pyomo.common.collections import ComponentMap
+from pyomo.core.base import Model
 
 from pyomo.environ import ComponentUID
 
@@ -62,14 +63,15 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
         # Param
         if theta_object.is_parameter_type():
 
-            # Delete Param, add Var
+            # change from Param to Var
             vals = theta_object.extract_values()
-            model.del_component(theta_object)
-            model.add_component(theta_object.name, pyo.Var(initialize=vals[None]))
+            parent = theta_object.parent_block()
+            parent.del_component(theta_object)
+            parent.add_component(theta_object.name, pyo.Var(initialize=vals[None]))
 
             # Update substitution map
-            theta_var_cuid = ComponentUID(theta_object.name)
-            theta_var_object = theta_var_cuid.find_component_on(model)
+            theta_var_cuid = ComponentUID(theta_object.local_name)
+            theta_var_object = theta_var_cuid.find_component_on(parent)
             substitution_map[id(theta_object)] = theta_var_object
             comp_map[theta_object] = theta_var_object
 
@@ -88,19 +90,20 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             )
 
             # delete Param
-            model.del_component(theta_object)
+            parent = theta_object.parent_block()
+            parent.del_component(theta_object)
 
             # add Var w/ previous Param values
             index_name = theta_object.index_set().name
             index_cuid = ComponentUID(index_name)
-            index_object = index_cuid.find_component_on(model)
-            model.add_component(
+            index_object = index_cuid.find_component_on(parent)
+            parent.add_component(
                 theta_object.name, pyo.Var(index_object, initialize=vals)
             )
 
             # Update substitution map (map each indexed param to indexed var)
             theta_var_cuid = ComponentUID(theta_object.name)
-            theta_var_object = theta_var_cuid.find_component_on(model)
+            theta_var_object = theta_var_cuid.find_component_on(parent)
             comp_map[theta_object] = theta_var_object
             var_theta_objects = list(theta_var_object.values())
             for param_theta_obj, var_theta_obj in zip(
@@ -114,7 +117,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             theta_var_object = theta_object
 
         else:
-            logger.warning("%s is not a Param or Var on the model", (param_name))
+            logger.warning("%s is not a Param or Var on the model", (theta_object))
             return model
 
         if fix_vars:

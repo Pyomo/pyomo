@@ -135,6 +135,22 @@ class TestUtils(unittest.TestCase):
                 self.assertEqual(pyo.value(iv), pyo.value(iv_old))
             self.assertTrue(c in m_vars.unknown_parameters)
 
+        # test hierarchical model
+        #########################
+
+        m = pyo.ConcreteModel()
+        m.p1 = pyo.Param(initialize=1, mutable=True)
+        m.b = pyo.Block()
+        m.b.p2 = pyo.Param(initialize=2, mutable=True)
+
+        param_CUIDs = [pyo.ComponentUID(m.p1), pyo.ComponentUID(m.b.p2)]
+        m_vars = parmest.utils.convert_params_to_vars(m, param_CUIDs)
+
+        for v in [str(CUID) for CUID in param_CUIDs]:
+            c = m_vars.find_component(v)
+            self.assertIsInstance(c, pyo.Var)
+            c_old = m.find_component(v)
+            self.assertEqual(pyo.value(c), pyo.value(c_old))
 
 if __name__ == "__main__":
     unittest.main()
