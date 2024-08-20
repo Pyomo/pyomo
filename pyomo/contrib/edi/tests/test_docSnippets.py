@@ -509,9 +509,7 @@ class TestEDISnippets(unittest.TestCase):
         y = f.Variable(name='y', guess=1.0, units='m', description='The y variable')
         c = f.Constant(name='c', value=1.0, units='', description='A constant c')
         f.Objective(c * x + y)
-        f.ConstraintList(
-            [x**2 + y**2 <= 1.0 * units.m**2, x <= 0.75 * units.m, x >= y]
-        )
+        f.ConstraintList([x**2 + y**2 <= 1.0 * units.m**2, x <= 0.75 * units.m, x >= y])
         # END: Constraints_Snippet_01
 
     def test_edi_snippet_constraints_02(self):
