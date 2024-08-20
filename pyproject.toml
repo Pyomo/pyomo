@@ -1,0 +1,4 @@
+[tool.cibuildwheel.config-settings]
+--build-option = "--with-distributable-extensions"
+--build-option = "--with-cython"
+
