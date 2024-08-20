@@ -43,9 +43,6 @@ jobs:
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up global variable
-        run: |
-          echo "PIP_GLOBAL_OPTION=${{ matrix.GLOBAL_OPTIONS }}" >> $GITHUB_ENV
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
         with:
@@ -57,6 +54,7 @@ jobs:
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
+            CIBW_ENVIRONMENT: PIP_GLOBAL_OPTION="${{ matrix.GLOBAL_OPTIONS }}"
             CIBW_BEFORE_BUILD: pip install cython pybind11
       - uses: actions/upload-artifact@v4
         with:
@@ -91,9 +89,6 @@ jobs:
           PIP_GLOBAL_OPTION: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up global variable
-        run: |
-          echo "PIP_GLOBAL_OPTION=${{ matrix.GLOBAL_OPTIONS }}" >> $GITHUB_ENV
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
@@ -108,6 +103,7 @@ jobs:
             CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
+            CIBW_ENVIRONMENT: PIP_GLOBAL_OPTION="${{ matrix.GLOBAL_OPTIONS }}"
             CIBW_BEFORE_BUILD: pip install cython pybind11
       - uses: actions/upload-artifact@v4
         with:
