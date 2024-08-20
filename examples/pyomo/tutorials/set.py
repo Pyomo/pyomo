@@ -187,7 +187,17 @@ def T_validate(model, value):
     return value in model.A
 
 
-model.T = Set(model.B, validate=M_validate)
+model.T = Set(model.B, validate=T_validate)
+
+
+#
+# Validation also provides the index within the IndexedSet being validated:
+#
+def T_indexed_validate(model, value, i):
+    return value in model.A and value < i
+
+
+model.T_indexed_validate = Set(model.B, validate=T_indexed_validate)
 
 
 ##

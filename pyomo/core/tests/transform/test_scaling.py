@@ -10,10 +10,12 @@
 #  ___________________________________________________________________________
 #
 
+import io
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.core.plugins.transform.scaling import ScaleModel, SuffixFinder
+from pyomo.common.log import LoggingIntercept
 
 
 class TestScaleModelTransformation(unittest.TestCase):
@@ -707,6 +709,31 @@ class TestScaleModelTransformation(unittest.TestCase):
         self.assertEqual(_finder.find(m.b1.b2.b3.v2), 0.2)
         # v2 should get SF from highest level, ignoring b3 level
         self.assertEqual(_finder.find(m.b1.b2.b3.v3), 0.3)
+
+    def test_propagate_solution_uninitialized_variable(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2], initialize=1.0)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x[1]] = 10.0
+        m.scaling_factor[m.x[2]] = 10.0
+        scaled_model = pyo.TransformationFactory("core.scale_model").create_using(m)
+        scaled_model.scaled_x[1] = 20.0
+        scaled_model.scaled_x[2] = None
+
+        OUTPUT = io.StringIO()
+        with LoggingIntercept(OUTPUT, "pyomo.core.plugins.transform.scaling"):
+            pyo.TransformationFactory("core.scale_model").propagate_solution(
+                scaled_model, m
+            )
+        msg = (
+            "Variable with value None in the scaled model is replacing value of"
+            " variable x[2] in the original model with None (was 1.0).\n"
+        )
+        self.assertEqual(OUTPUT.getvalue(), msg)
+        self.assertAlmostEqual(m.x[1].value, 2.0, delta=1e-8)
+        # Note that value of x[2] in original model *has* been overridden to None.
+        # In this case, a warning has been raised.
+        self.assertIs(m.x[2].value, None)
 
 
 if __name__ == "__main__":
