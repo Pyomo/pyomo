@@ -24,8 +24,7 @@ deprecation_message = (
 
 
 @deprecated(
-    "Use of MeasurementVariables in Pyomo.DoE is no longer supported.",
-    version='6.8.0',
+    "Use of MeasurementVariables in Pyomo.DoE is no longer supported.", version='6.8.0'
 )
 class MeasurementVariables:
     def __init__(self, *args):
