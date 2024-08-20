@@ -72,15 +72,16 @@ def _evaluate_shift(current, prev, initial, norm=None):
         return np.max(np.abs(current - prev) / normalizers)
 
 
+VariableValueData = namedtuple(
+    "VariableValueData",
+    ("first_stage_variables", "second_stage_variables", "decision_rule_monomials"),
+)
+
+
 def get_variable_value_data(working_blk, dr_var_to_monomial_map):
     """
     Get variable value data.
     """
-    VariableValueData = namedtuple(
-        "VariableValueData",
-        ("first_stage_variables", "second_stage_variables", "decision_rule_monomials"),
-    )
-
     ep = working_blk.effective_var_partitioning
 
     first_stage_data = ComponentMap(
