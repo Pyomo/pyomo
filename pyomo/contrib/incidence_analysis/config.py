@@ -14,7 +14,7 @@
 import enum
 from pyomo.common.config import ConfigDict, ConfigValue, InEnum
 from pyomo.common.modeling import NOTSET
-from pyomo.repn.plugins.nl_writer import AMPLRepnVisitor, text_nl_template
+from pyomo.repn.ampl import AMPLRepnVisitor
 from pyomo.repn.util import FileDeterminism, FileDeterminism_to_SortComponents
 
 
@@ -33,7 +33,14 @@ class IncidenceMethod(enum.Enum):
     """
 
     ampl_repn = 3
-    """Use ``pyomo.repn.plugins.nl_writer.AMPLRepnVisitor``"""
+    """Use ``pyomo.repn.ampl.AMPLRepnVisitor``"""
+
+
+class IncidenceOrder(enum.Enum):
+
+    dulmage_mendelsohn_upper = 0
+
+    dulmage_mendelsohn_lower = 1
 
 
 _include_fixed = ConfigValue(
@@ -123,7 +130,6 @@ def get_config_from_kwds(**kwds):
         and kwds.get("_ampl_repn_visitor", None) is None
     ):
         subexpression_cache = {}
-        subexpression_order = []
         external_functions = {}
         var_map = {}
         used_named_expressions = set()
@@ -134,9 +140,7 @@ def get_config_from_kwds(**kwds):
         export_defined_variables = False
         sorter = FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
         amplvisitor = AMPLRepnVisitor(
-            text_nl_template,
             subexpression_cache,
-            subexpression_order,
             external_functions,
             var_map,
             used_named_expressions,

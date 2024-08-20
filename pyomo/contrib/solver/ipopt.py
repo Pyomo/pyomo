@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 import os
 import subprocess
 import datetime
@@ -24,12 +25,11 @@ from pyomo.common.errors import (
 )
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.base import SolverBase
 from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.factory import SolverFactory
 from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
 from pyomo.contrib.solver.sol_reader import parse_sol_file
 from pyomo.contrib.solver.solution import SolSolutionLoader
@@ -38,8 +38,6 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +80,8 @@ class IpoptConfig(SolverConfig):
 
 class IpoptSolutionLoader(SolSolutionLoader):
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         if self._nl_info is None:
             raise RuntimeError(
                 'Solution loader does not currently have a valid solution. Please '
@@ -198,7 +196,6 @@ ipopt_command_line_options = {
 }
 
 
-@SolverFactory.register('ipopt_v2', doc='The ipopt NLP solver (new interface)')
 class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
@@ -207,6 +204,7 @@ class Ipopt(SolverBase):
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
+        self._version_timeout = 2
 
     def available(self, config=None):
         if config is None:
@@ -229,7 +227,7 @@ class Ipopt(SolverBase):
             else:
                 results = subprocess.run(
                     [str(pth), '--version'],
-                    timeout=1,
+                    timeout=self._version_timeout,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
@@ -239,6 +237,21 @@ class Ipopt(SolverBase):
                 version = tuple(int(i) for i in version.split('.'))
                 self._version_cache = (pth, version)
         return self._version_cache[1]
+
+    def has_linear_solver(self, linear_solver):
+        import pyomo.core as AML
+
+        m = AML.ConcreteModel()
+        m.x = AML.Var()
+        m.o = AML.Objective(expr=(m.x - 2) ** 2)
+        results = self.solve(
+            m,
+            tee=False,
+            raise_exception_on_nonoptimal_result=False,
+            load_solutions=False,
+            solver_options={'linear_solver': linear_solver},
+        )
+        return 'running with linear solver' in results.solver_log
 
     def _write_options_file(self, filename: str, options: Mapping):
         # First we need to determine if we even need to create a file.
@@ -309,7 +322,12 @@ class Ipopt(SolverBase):
                 raise RuntimeError(
                     f"NL file with the same name {basename + '.nl'} already exists!"
                 )
-            with open(basename + '.nl', 'w') as nl_file, open(
+            # Note: the ASL has an issue where string constants written
+            # to the NL file (e.g. arguments in external functions) MUST
+            # be terminated with '\n' regardless of platform.  We will
+            # disable universal newlines in the NL file to prevent
+            # Python from mapping those '\n' to '\r\n' on Windows.
+            with open(basename + '.nl', 'w', newline='\n') as nl_file, open(
                 basename + '.row', 'w'
             ) as row_file, open(basename + '.col', 'w') as col_file:
                 timer.start('write_nl_file')

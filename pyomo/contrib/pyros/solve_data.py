@@ -347,16 +347,23 @@ class SeparationLoopResults:
     solver_call_results : ComponentMap
         Mapping from performance constraints to corresponding
         ``SeparationSolveCallResults`` objects.
-    worst_case_perf_con : None or int, optional
+    worst_case_perf_con : None or Constraint
         Performance constraint mapped to ``SeparationSolveCallResults``
         object in `self` corresponding to maximally violating
         separation problem solution.
+    all_discrete_scenarios_exhausted : bool, optional
+        For problems with discrete uncertainty sets,
+        True if all scenarios were explicitly accounted for in master
+        (which occurs if there have been
+        as many PyROS iterations as there are scenarios in the set)
+        False otherwise.
 
     Attributes
     ----------
     solver_call_results
     solved_globally
     worst_case_perf_con
+    all_discrete_scenarios_exhausted
     found_violation
     violating_param_realization
     scaled_violations
@@ -365,11 +372,18 @@ class SeparationLoopResults:
     time_out
     """
 
-    def __init__(self, solved_globally, solver_call_results, worst_case_perf_con):
+    def __init__(
+        self,
+        solved_globally,
+        solver_call_results,
+        worst_case_perf_con,
+        all_discrete_scenarios_exhausted=False,
+    ):
         """Initialize self (see class docstring)."""
         self.solver_call_results = solver_call_results
         self.solved_globally = solved_globally
         self.worst_case_perf_con = worst_case_perf_con
+        self.all_discrete_scenarios_exhausted = all_discrete_scenarios_exhausted
 
     @property
     def found_violation(self):
@@ -598,6 +612,17 @@ class SeparationResults:
             Attribute value.
         """
         return getattr(self.main_loop_results, attr_name, None)
+
+    @property
+    def all_discrete_scenarios_exhausted(self):
+        """
+        bool : For problems where the uncertainty set is of type
+        DiscreteScenarioSet,
+        True if last master problem solved explicitly
+        accounts for all scenarios in the uncertainty set,
+        False otherwise.
+        """
+        return self.get_violating_attr("all_discrete_scenarios_exhausted")
 
     @property
     def worst_case_perf_con(self):

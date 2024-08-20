@@ -53,19 +53,30 @@ def get_version():
     return import_pyomo_module('pyomo', 'version', 'info.py')['__version__']
 
 
+def check_config_arg(name):
+    if name in sys.argv:
+        sys.argv.remove(name)
+        return True
+    if name in os.getenv('PYOMO_SETUP_ARGS', '').split():
+        return True
+    return False
+
+
 CYTHON_REQUIRED = "required"
 if not any(
-    arg.startswith(cmd) for cmd in ('build', 'install', 'bdist') for arg in sys.argv
+    arg.startswith(cmd)
+    for cmd in ('build', 'install', 'bdist', 'wheel')
+    for arg in sys.argv
 ):
     using_cython = False
-else:
+elif sys.version_info[:2] < (3, 11):
     using_cython = "automatic"
-if '--with-cython' in sys.argv:
-    using_cython = CYTHON_REQUIRED
-    sys.argv.remove('--with-cython')
-if '--without-cython' in sys.argv:
+else:
     using_cython = False
-    sys.argv.remove('--without-cython')
+if check_config_arg('--with-cython'):
+    using_cython = CYTHON_REQUIRED
+if check_config_arg('--without-cython'):
+    using_cython = False
 
 ext_modules = []
 if using_cython:
@@ -107,14 +118,7 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
             raise
         using_cython = False
 
-if ('--with-distributable-extensions' in sys.argv) or (
-    os.getenv('PYOMO_SETUP_ARGS') is not None
-    and '--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS')
-):
-    try:
-        sys.argv.remove('--with-distributable-extensions')
-    except:
-        pass
+if check_config_arg('--with-distributable-extensions'):
     #
     # Import the APPSI extension builder
     # NOTE: There is inconsistent behavior in Windows for APPSI.
@@ -262,9 +266,12 @@ setup_kwargs = dict(
         'optional': [
             'dill',  # No direct use, but improves lambda pickle
             'ipython',  # contrib.viewer
+            'linear-tree',  # contrib.piecewise
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
-            'matplotlib!=3.6.1',
+            # Note: minimum version from community_detection use of
+            # matplotlib.pyplot.get_cmap()
+            'matplotlib>=3.6.0,!=3.6.1',
             # network, incidence_analysis, community_detection
             # Note: networkx 3.2 is Python>-3.9, but there is a broken
             # 3.2 package on conda-forge that will get implicitly
@@ -306,6 +313,7 @@ setup_kwargs = dict(
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
         "pyomo.contrib.viewer": ["*.ui"],
+        "pyomo.contrib.simplification.ginac": ["src/*.cpp", "src/*.hpp"],
     },
     ext_modules=ext_modules,
     entry_points="""

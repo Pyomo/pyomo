@@ -19,6 +19,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.core.base.set_types import NonNegativeIntegers
+from pyomo.core.base.var import VarData
 from pyomo.core.expr import (
     identify_variables,
     identify_mutable_parameters,
@@ -41,6 +42,7 @@ from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
+from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 import time
 import math
 from pyomo.contrib.pyros.util import time_code
@@ -67,7 +69,7 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData, ROSolveResults
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
-from pyomo.common.errors import ApplicationError
+from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -571,22 +573,30 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
                 dr_polynomial_terms, indexed_dr_var.values(), dr_monomial_param_combos
             )
             for idx, (term, dr_var, param_combo) in enumerate(dr_polynomial_zip):
-                # term should be a monomial expression of form
-                # (uncertain parameter product) * (decision rule variable)
-                # so length of expression object should be 2
-                self.assertEqual(
-                    len(term.args),
-                    2,
-                    msg=(
-                        f"Length of `args` attribute of term {str(term)} "
-                        f"of DR equation {dr_eq.name!r} is not as expected. "
-                        f"Args: {term.args}"
-                    ),
-                )
+                # term should be either a monomial expression or scalar variable
+                if isinstance(term, MonomialTermExpression):
+                    # should be of form (uncertain parameter product) *
+                    # (decision rule variable) so length of expression
+                    # object should be 2
+                    self.assertEqual(
+                        len(term.args),
+                        2,
+                        msg=(
+                            f"Length of `args` attribute of term {str(term)} "
+                            f"of DR equation {dr_eq.name!r} is not as expected. "
+                            f"Args: {term.args}"
+                        ),
+                    )
 
-                # check that uncertain parameters participating in
-                # the monomial are as expected
-                param_product_multiplicand = term.args[0]
+                    # check that uncertain parameters participating in
+                    # the monomial are as expected
+                    param_product_multiplicand = term.args[0]
+                    dr_var_multiplicand = term.args[1]
+                else:
+                    self.assertIsInstance(term, VarData)
+                    param_product_multiplicand = 1
+                    dr_var_multiplicand = term
+
                 if idx == 0:
                     # static DR term
                     param_combo_found_in_term = (param_product_multiplicand,)
@@ -612,7 +622,6 @@ class testAddDecisionRuleConstraints(unittest.TestCase):
 
                 # check that DR variable participating in the monomial
                 # is as expected
-                dr_var_multiplicand = term.args[1]
                 self.assertIs(
                     dr_var_multiplicand,
                     dr_var,
@@ -3787,6 +3796,7 @@ class testSolveMaster(unittest.TestCase):
         config.declare(
             "progress_logger", ConfigValue(default=logging.getLogger(__name__))
         )
+        config.declare("symbolic_solver_labels", ConfigValue(default=False))
 
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = solve_master(master_data, config)
@@ -4333,14 +4343,16 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        SolverFactory('gams').license_is_valid()
-        and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.",
+        ipopt_available
+        and SolverFactory('gams').license_is_valid()
+        and SolverFactory('baron').license_is_valid()
+        and SolverFactory("scip").license_is_valid(),
+        "IPOPT not available or one of GAMS/BARON/SCIP not licensed",
     )
-    def test_gams_successful_time_limit(self):
+    def test_pyros_subsolver_time_limit_adjustment(self):
         """
-        Test PyROS time limit status returned in event
-        separation problem times out.
+        Check that PyROS does not ultimately alter state of
+        subordinate solver options due to time limit adjustments.
         """
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -4359,20 +4371,26 @@ class RegressionTest(unittest.TestCase):
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
 
-        # Define subsolvers utilized in the algorithm
-        # two GAMS solvers, one of which has reslim set
-        # (overridden when invoked in PyROS)
+        # subordinate solvers to test.
+        # for testing, we pass each as the 'local' solver,
+        # and the BARON solver without custom options
+        # as the 'global' solver
+        baron_no_options = SolverFactory("baron")
         local_subsolvers = [
             SolverFactory("gams:conopt"),
             SolverFactory("gams:conopt"),
             SolverFactory("ipopt"),
+            SolverFactory("ipopt", options={"max_cpu_time": 300}),
+            SolverFactory("scip"),
+            SolverFactory("scip", options={"limits/time": 300}),
+            baron_no_options,
+            SolverFactory("baron", options={"MaxTime": 300}),
         ]
         local_subsolvers[0].options["add_options"] = ["option reslim=100;"]
-        global_subsolver = SolverFactory("baron")
-        global_subsolver.options["MaxTime"] = 300
 
         # Call the PyROS solver
         for idx, opt in enumerate(local_subsolvers):
+            original_solver_options = opt.options.copy()
             results = pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1, m.x2],
@@ -4380,68 +4398,25 @@ class RegressionTest(unittest.TestCase):
                 uncertain_params=[m.u],
                 uncertainty_set=interval,
                 local_solver=opt,
-                global_solver=global_subsolver,
+                global_solver=baron_no_options,
                 objective_focus=ObjectiveType.worst_case,
                 solve_master_globally=True,
                 time_limit=100,
             )
-
             self.assertEqual(
                 results.pyros_termination_condition,
                 pyrosTerminationCondition.robust_optimal,
                 msg=(
-                    f"Returned termination condition with local "
-                    "subsolver {idx + 1} of 2 is not robust_optimal."
+                    "Returned termination condition with local "
+                    f"subsolver {idx + 1} of 2 is not robust_optimal."
                 ),
             )
-
-        # check first local subsolver settings
-        # remain unchanged after PyROS exit
-        self.assertEqual(
-            len(list(local_subsolvers[0].options["add_options"])),
-            1,
-            msg=(
-                f"Local subsolver {local_subsolvers[0]} options 'add_options'"
-                "were changed by PyROS"
-            ),
-        )
-        self.assertEqual(
-            local_subsolvers[0].options["add_options"][0],
-            "option reslim=100;",
-            msg=(
-                f"Local subsolver {local_subsolvers[0]} setting "
-                "'add_options' was modified "
-                "by PyROS, but changes were not properly undone"
-            ),
-        )
-
-        # check global subsolver settings unchanged
-        self.assertEqual(
-            len(list(global_subsolver.options.keys())),
-            1,
-            msg=(f"Global subsolver {global_subsolver} options were changed by PyROS"),
-        )
-        self.assertEqual(
-            global_subsolver.options["MaxTime"],
-            300,
-            msg=(
-                f"Global subsolver {global_subsolver} setting "
-                "'MaxTime' was modified "
-                "by PyROS, but changes were not properly undone"
-            ),
-        )
-
-        # check other local subsolvers remain unchanged
-        for slvr, key in zip(local_subsolvers[1:], ["add_options", "max_cpu_time"]):
-            # no custom options were added to the `options`
-            # attribute of the optimizer, so any attribute
-            # of `options` should be `None`
-            self.assertIs(
-                getattr(slvr.options, key, None),
-                None,
+            self.assertEqual(
+                opt.options,
+                original_solver_options,
                 msg=(
-                    f"Local subsolver {slvr} setting '{key}' was added "
-                    "by PyROS, but not reverted"
+                    f"Options for subordinate solver {opt} were changed "
+                    "by PyROS, and the changes wee not properly reverted."
                 ),
             )
 
@@ -4639,6 +4614,76 @@ class RegressionTest(unittest.TestCase):
             msg=(
                 "Returned termination condition for separation error"
                 f"test is not {pyrosTerminationCondition.subsolver_error}."
+            ),
+        )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+    def test_pyros_nl_writer_tol(self):
+        """
+        Test PyROS subsolver call routine behavior
+        with respect to the NL writer tolerance is as
+        expected.
+        """
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+        m.x2 = Var(initialize=2, bounds=(0, m.q))
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        # fixed just inside the PyROS-specified NL writer tolerance.
+        m.x1.fix(m.x1.upper + 9.9e-5)
+
+        current_nl_writer_tol = pyomo_nl_writer.TOL
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+            decision_rule_order=0,
+            solve_master_globally=False,
+            bypass_global_separation=True,
+        )
+
+        self.assertEqual(
+            pyomo_nl_writer.TOL,
+            current_nl_writer_tol,
+            msg="Pyomo NL writer tolerance not restored as expected.",
+        )
+
+        # fixed just outside the PyROS-specified NL writer tolerance.
+        # this should be exceptional.
+        m.x1.fix(m.x1.upper + 1.01e-4)
+
+        err_msg = (
+            "model contains a trivially infeasible variable.*x1"
+            ".*fixed.*outside bounds"
+        )
+        with self.assertRaisesRegex(InfeasibleConstraintException, err_msg):
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=BoxSet([[0, 1]]),
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+                decision_rule_order=0,
+                solve_master_globally=False,
+                bypass_global_separation=True,
+            )
+
+        self.assertEqual(
+            pyomo_nl_writer.TOL,
+            current_nl_writer_tol,
+            msg=(
+                "Pyomo NL writer tolerance not restored as expected "
+                "after exceptional test."
             ),
         )
 
@@ -6198,6 +6243,7 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
             " keepfiles=False\n"
             " tee=False\n"
             " load_solution=True\n"
+            " symbolic_solver_labels=False\n"
             " objective_focus=<ObjectiveType.nominal: 2>\n"
             " nominal_uncertain_param_vals=[0.5]\n"
             " decision_rule_order=0\n"

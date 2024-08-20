@@ -31,11 +31,9 @@ from pyomo.environ import (
 from ..nl_diff import load_and_compare_nl_baseline
 
 import pyomo.repn.plugins.ampl.ampl_ as ampl_
-import pyomo.repn.plugins.nl_writer as nl_writer
+from pyomo.repn.ampl import TextNLDebugTemplate as template
 
 gsr = ampl_.generate_standard_repn
-template = nl_writer.text_nl_debug_template
-
 thisdir = this_file_dir()
 
 

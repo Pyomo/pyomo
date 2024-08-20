@@ -65,7 +65,7 @@ relocated_module_attribute(
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import Block, Objective, minimize
-from pyomo.opt import SolverStatus, SolverResults, TerminationCondition, ProblemSense
+from pyomo.opt import SolverStatus, SolverResults, TerminationCondition
 from pyomo.opt.results.solution import Solution
 
 logger = logging.getLogger(__name__)
@@ -319,7 +319,13 @@ class PyomoCyIpoptSolver(object):
         return True
 
     def version(self):
-        return tuple(int(_) for _ in cyipopt.__version__.split("."))
+        def _int(x):
+            try:
+                return int(x)
+            except:
+                return x
+
+        return tuple(_int(_) for _ in cyipopt_interface.cyipopt.__version__.split("."))
 
     def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
@@ -441,11 +447,10 @@ class PyomoCyIpoptSolver(object):
 
         results.problem.name = model.name
         obj = next(model.component_data_objects(Objective, active=True))
+        results.problem.sense = obj.sense
         if obj.sense == minimize:
-            results.problem.sense = ProblemSense.minimize
             results.problem.upper_bound = info["obj_val"]
         else:
-            results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = info["obj_val"]
         results.problem.number_of_objectives = 1
         results.problem.number_of_constraints = ng

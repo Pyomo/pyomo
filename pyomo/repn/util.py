@@ -40,7 +40,7 @@ from pyomo.core.base import (
     SortComponents,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.base.expression import NamedExpressionData
 from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
@@ -55,7 +55,7 @@ sum_like_expression_types = {
     EXPR.NPV_SumExpression,
 }
 _named_subexpression_types = (
-    _ExpressionData,
+    NamedExpressionData,
     kernel.expression.expression,
     kernel.objective.objective,
 )
@@ -67,6 +67,7 @@ int_float = {int, float}
 
 class ExprType(enum.IntEnum):
     CONSTANT = 0
+    FIXED = 5
     MONOMIAL = 10
     LINEAR = 20
     QUADRATIC = 30
@@ -378,18 +379,16 @@ class ExitNodeDispatcher(collections.defaultdict):
     `exitNode` callback
 
     This dispatcher implements a specialization of :py:`defaultdict`
-    that supports automatic type registration.  Any missing types will
-    return the :py:meth:`register_dispatcher` method, which (when called
-    as a callback) will interrogate the type, identify the appropriate
-    callback, add the callback to the dict, and return the result of
-    calling the callback.  As the callback is added to the dict, no type
-    will incur the overhead of `register_dispatcher` more than once.
+    that supports automatic type registration.  As the identified
+    callback is added to the dict, no type will incur the overhead of
+    `register_dispatcher` more than once.
 
     Note that in this case, the client is expected to register all
     non-NPV expression types.  The auto-registration is designed to only
     handle two cases:
     - Auto-detection of user-defined Named Expression types
     - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
+    - Automatic registration of derived expression types
 
     """
 
@@ -400,7 +399,15 @@ class ExitNodeDispatcher(collections.defaultdict):
 
     def __missing__(self, key):
         if type(key) is tuple:
-            node_class = key[0]
+            # Only lookup/cache argument-specific handlers for unary,
+            # binary and ternary operators
+            if len(key) <= 3:
+                node_class = key[0]
+                node_args = key[1:]
+            else:
+                node_class = key = key[0]
+                if node_class in self:
+                    return self[node_class]
         else:
             node_class = key
         bases = node_class.__mro__
@@ -412,30 +419,31 @@ class ExitNodeDispatcher(collections.defaultdict):
             bases = [Expression]
         fcn = None
         for base_type in bases:
-            if isinstance(key, tuple):
-                base_key = (base_type,) + key[1:]
-                # Only cache handlers for unary, binary and ternary operators
-                cache = len(key) <= 4
-            else:
-                base_key = base_type
-                cache = True
-            if base_key in self:
-                fcn = self[base_key]
-            elif base_type in self:
+            if key is not node_class:
+                if (base_type,) + node_args in self:
+                    fcn = self[(base_type,) + node_args]
+                    break
+            if base_type in self:
                 fcn = self[base_type]
-            elif any((k[0] if type(k) is tuple else k) is base_type for k in self):
-                raise DeveloperError(
-                    f"Base expression key '{base_key}' not found when inserting "
-                    f"dispatcher for node '{node_class.__name__}' while walking "
-                    "expression tree."
-                )
+                break
         if fcn is None:
-            fcn = self.unexpected_expression_type
-        if cache:
-            self[key] = fcn
+            partial_matches = set(
+                k[0] for k in self if type(k) is tuple and issubclass(node_class, k[0])
+            )
+            for base_type in node_class.__mro__:
+                if node_class is not key:
+                    key = (base_type,) + node_args
+                if base_type in partial_matches:
+                    raise DeveloperError(
+                        f"Base expression key '{key}' not found when inserting "
+                        f"dispatcher for node '{node_class.__name__}' while walking "
+                        "expression tree."
+                    )
+            return self.unexpected_expression_type
+        self[key] = fcn
         return fcn
 
-    def unexpected_expression_type(self, visitor, node, *arg):
+    def unexpected_expression_type(self, visitor, node, *args):
         raise DeveloperError(
             f"Unexpected expression node type '{type(node).__name__}' "
             f"found while walking expression tree in {type(visitor).__name__}."
@@ -486,7 +494,7 @@ def categorize_valid_components(
 
     Parameters
     ----------
-    model: _BlockData
+    model: BlockData
         The model tree to walk
 
     active: True or None
@@ -507,7 +515,7 @@ def categorize_valid_components(
 
     Returns
     -------
-    component_map: Dict[type, List[_BlockData]]
+    component_map: Dict[type, List[BlockData]]
         A dict mapping component type to a list of block data
         objects that contain declared component of that type.
 

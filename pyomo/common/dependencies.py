@@ -611,7 +611,7 @@ def attempt_import(
         want to import/return the first one that is available.
 
     defer_check: bool, optional
-        DEPRECATED: renamed to ``defer_import`` (deprecated in version 6.7.2.dev0)
+        DEPRECATED: renamed to ``defer_import`` (deprecated in version 6.7.2)
 
     defer_import: bool, optional
         If True, then the attempted import is deferred until the first
@@ -674,7 +674,7 @@ def attempt_import(
     if defer_check is not None:
         deprecation_warning(
             'defer_check=%s is deprecated.  Please use defer_import' % (defer_check,),
-            version='6.7.2.dev0',
+            version='6.7.2',
         )
         assert defer_import is None
         defer_import = defer_check
@@ -787,7 +787,7 @@ def _perform_import(
 @deprecated(
     "``declare_deferred_modules_as_importable()`` is deprecated.  "
     "Use the :py:class:`declare_modules_as_importable` context manager.",
-    version='6.7.2.dev0',
+    version='6.7.2',
 )
 def declare_deferred_modules_as_importable(globals_dict):
     """Make all :py:class:`DeferredImportModules` in ``globals_dict`` importable
@@ -999,10 +999,13 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    _floats = [np.float_, np.float16, np.float32, np.float64]
+    _floats = [np.float16, np.float32, np.float64]
     # float96 and float128 may or may not be defined in this particular
     # numpy build (it depends on platform and version).
     # Register them only if they are present
+    if hasattr(np, 'float_'):
+        # Prepend to preserve previous functionality
+        _floats.insert(0, np.float_)
     if hasattr(np, 'float96'):
         _floats.append(np.float96)
     if hasattr(np, 'float128'):
@@ -1013,10 +1016,13 @@ def _finalize_numpy(np, available):
         # registration here (to bypass the deprecation warning) until we
         # finally remove all support for it
         numeric_types._native_boolean_types.add(t)
-    _complex = [np.complex_, np.complex64, np.complex128]
+    _complex = [np.complex64, np.complex128]
     # complex192 and complex256 may or may not be defined in this
     # particular numpy build (it depends on platform and version).
     # Register them only if they are present
+    if hasattr(np, 'np.complex_'):
+        # Prepend to preserve functionality
+        _complex.insert(0, np.complex_)
     if hasattr(np, 'complex192'):
         _complex.append(np.complex192)
     if hasattr(np, 'complex256'):
