@@ -77,7 +77,11 @@ from pyomo.core.base import (
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
 from pyomo.opt.results import check_optimal_termination
-from pyomo.contrib.pyros.util import copy_docstring, standardize_component_data
+from pyomo.contrib.pyros.util import (
+    copy_docstring,
+    POINT_IN_UNCERTAINTY_SET_TOL,
+    standardize_component_data,
+)
 
 
 valid_num_types = tuple(native_numeric_types)
@@ -2126,7 +2130,7 @@ class FactorModelSet(UncertaintySet):
             True if the point lies in the set, False otherwise.
         """
         aux_space_pt = self.compute_auxiliary_uncertain_param_vals(point)
-        tol = 1e-8
+        tol = POINT_IN_UNCERTAINTY_SET_TOL
         return abs(
             aux_space_pt.sum()
         ) <= self.beta * self.number_of_factors + tol and np.all(
@@ -2566,7 +2570,10 @@ class EllipsoidalSet(UncertaintySet):
             off_center @ np.linalg.inv(self.shape_matrix) @ off_center
         )
         normalized_boundary_radius = np.sqrt(self.scale)
-        return normalized_pt_radius <= normalized_boundary_radius + 1e-8
+        return (
+            normalized_pt_radius
+            <= normalized_boundary_radius + POINT_IN_UNCERTAINTY_SET_TOL
+        )
 
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -2757,8 +2764,9 @@ class DiscreteScenarioSet(UncertaintySet):
             required_shape_qual="to match the set dimension",
         )
         # Round all double precision to a tolerance
-        rounded_scenarios = np.round(self.scenarios, decimals=8)
-        rounded_point = np.round(point, decimals=8)
+        num_decimals = round(-np.log10(POINT_IN_UNCERTAINTY_SET_TOL))
+        rounded_scenarios = np.round(self.scenarios, decimals=num_decimals)
+        rounded_point = np.round(point, decimals=num_decimals)
         return np.any(np.all(rounded_point == rounded_scenarios, axis=1))
 
 
