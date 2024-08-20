@@ -23,6 +23,7 @@ from pyomo.common.collections import Bunch
 from pyomo.common.errors import InvalidValueError
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
+import pyomo.repn.ampl as pyomo_ampl_repn
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
@@ -1207,10 +1208,10 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
-    def test_pyros_nl_writer_tol(self):
+    def test_pyros_nl_and_ampl_writer_tol(self):
         """
         Test PyROS subsolver call routine behavior
-        with respect to the NL writer tolerance is as
+        with respect to the NL and AMPL writer tolerances is as
         expected.
         """
         m = ConcreteModel()
@@ -1222,7 +1223,7 @@ class RegressionTest(unittest.TestCase):
         # fixed just inside the PyROS-specified NL writer tolerance.
         m.x1.fix(m.x1.upper + 9.9e-5)
 
-        current_nl_writer_tol = pyomo_nl_writer.TOL
+        current_nl_writer_tol = pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL
         ipopt_solver = SolverFactory("ipopt")
         pyros_solver = SolverFactory("pyros")
 
@@ -1240,12 +1241,12 @@ class RegressionTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            pyomo_nl_writer.TOL,
+            (pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL),
             current_nl_writer_tol,
-            msg="Pyomo NL writer tolerance not restored as expected.",
+            msg="Pyomo writer tolerances not restored as expected.",
         )
 
-        # fixed just outside the PyROS-specified NL writer tolerance.
+        # fixed just outside the PyROS-specified writer tolerances.
         # this should be exceptional.
         m.x1.fix(m.x1.upper + 1.01e-4)
 
@@ -1268,10 +1269,10 @@ class RegressionTest(unittest.TestCase):
             )
 
         self.assertEqual(
-            pyomo_nl_writer.TOL,
+            (pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL),
             current_nl_writer_tol,
             msg=(
-                "Pyomo NL writer tolerance not restored as expected "
+                "Pyomo writer tolerances not restored as expected "
                 "after exceptional test."
             ),
         )
