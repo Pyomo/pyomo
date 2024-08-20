@@ -1489,7 +1489,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                             "callback signature matched (block, *value).  "
                             "Please update the callback to match the signature "
                             f"(block, value{', *index' if comp.is_indexed() else ''}).",
-                            version='6.7.4.dev0',
+                            version='6.8.0',
                         )
                         orig_fcn = fcn._fcn
                         fcn = ParameterizedScalarCallInitializer(
@@ -1512,7 +1512,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                         "callback signature matched (block, *value, *index).  "
                         "Please update the callback to match the signature "
                         "(block, value, *index).",
-                        version='6.7.4.dev0',
+                        version='6.8.0',
                     )
                     if fcn.__class__ is not ParameterizedInitializer:
                         orig_fcn = fcn._fcn
