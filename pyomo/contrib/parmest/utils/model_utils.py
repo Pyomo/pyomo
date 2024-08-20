@@ -80,9 +80,9 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
             vals = theta_object.extract_values()
 
             # get indexed Params
-            param_theta_objects = [theta_obj for _, theta_obj in theta_object.items()]
-
-            # get indexed Param names
+            param_theta_objects = list(theta_object.values())
+            
+            # get indexed Param CUIDs
             indexed_param_CUIDs.extend(
                 ComponentUID(theta_obj) for theta_obj in theta_object.values()
             )
@@ -135,8 +135,7 @@ def convert_params_to_vars(model, param_CUIDs=None, fix_vars=False):
 
     # Convert Params to Vars in Expressions
     for expr in model.component_data_objects(pyo.Expression):
-        if expr.active and any(
-            ComponentUID(v) in param_CUIDs_set
+        if any(ComponentUID(v) in param_CUIDs_set
             for v in identify_mutable_parameters(expr)
         ):
             new_expr = replace_expressions(expr=expr, substitution_map=substitution_map)

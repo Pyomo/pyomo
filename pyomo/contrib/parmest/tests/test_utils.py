@@ -50,7 +50,7 @@ class TestUtils(unittest.TestCase):
         exp = ReactorDesignExperiment(data, 0)
         instance = exp.get_labeled_model()
 
-        param_CUIDs = [v for k, v in instance.unknown_parameters.items()]
+        param_CUIDs = list(instance.unknown_parameters.values())
         m_vars = parmest.utils.convert_params_to_vars(
             instance, param_CUIDs, fix_vars=True
         )
@@ -120,7 +120,7 @@ class TestUtils(unittest.TestCase):
         exp = RooneyBieglerExperimentIndexedParams(self.data.loc[0, :])
         instance = exp.get_labeled_model()
 
-        param_CUIDs = [v for k, v in instance.unknown_parameters.items()]
+        param_CUIDs = list(instance.unknown_parameters.values())
         m_vars = parmest.utils.convert_params_to_vars(
             instance, param_CUIDs, fix_vars=True
         )

@@ -440,7 +440,7 @@ class Estimator(object):
             )
 
         # Convert theta Params to Vars, and unfix theta Vars
-        theta_CUIDs = [v for k, v in model.unknown_parameters.items()]
+        theta_CUIDs = list(model.unknown_parameters.values())
         parmest_model = utils.convert_params_to_vars(model, theta_CUIDs, fix_vars=False)
 
         return parmest_model
