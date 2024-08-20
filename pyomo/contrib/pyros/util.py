@@ -989,6 +989,17 @@ class ModelData:
         return preprocess_model_data(self, user_var_partitioning)
 
 
+class BoundType:
+    """
+    Indicator for whether a bound on a variable/constraint
+    is a lower bound, "equality" bound, or upper bound.
+    """
+
+    LOWER = "lower"
+    EQ = "eq"
+    UPPER = "upper"
+
+
 def get_var_bound_pairs(var):
     """
     Get the domain and declared lower/upper
@@ -1038,7 +1049,7 @@ def determine_certain_and_uncertain_bound(
         Declared bound.
     uncertain_params : iterable of ParamData
         Uncertain model parameters.
-    bound_type : {'lower', 'upper'}
+    bound_type : {BoundType.LOWER, BoundType.UPPER}
         Indication of whether the domain bound and declared bound
         specify lower or upper bounds for the variable value.
 
@@ -1049,9 +1060,10 @@ def determine_certain_and_uncertain_bound(
     uncertain_bound : numeric expression or None
         Bound that is dependent on the uncertain parameters.
     """
-    if bound_type not in {"lower", "upper"}:
+    if bound_type not in {BoundType.LOWER, BoundType.UPPER}:
         raise ValueError(
-            f"Argument {bound_type=!r} should be either 'lower' or 'upper'."
+            f"Argument {bound_type=!r} should be either "
+            f"'{BoundType.LOWER}' or '{BoundType.UPPER}'."
         )
 
     if declared_bound is not None:
@@ -1069,7 +1081,7 @@ def determine_certain_and_uncertain_bound(
         elif domain_bound is None:
             certain_bound = declared_bound
         else:
-            if bound_type == "lower":
+            if bound_type == BoundType.LOWER:
                 certain_bound = (
                     declared_bound
                     if value(declared_bound) >= domain_bound
@@ -1088,7 +1100,9 @@ def determine_certain_and_uncertain_bound(
     return certain_bound, uncertain_bound
 
 
-BoundTriple = namedtuple("BoundTriple", ("lower", "eq", "upper"))
+BoundTriple = namedtuple(
+    "BoundTriple", (BoundType.LOWER, BoundType.EQ, BoundType.UPPER)
+)
 
 
 def rearrange_bound_pair_to_triple(lower_bound, upper_bound):
@@ -1158,13 +1172,13 @@ def get_var_certain_uncertain_bounds(var, uncertain_params):
         domain_bound=domain_lb,
         declared_bound=declared_lb,
         uncertain_params=uncertain_params,
-        bound_type="lower",
+        bound_type=BoundType.LOWER,
     )
     certain_ub, uncertain_ub = determine_certain_and_uncertain_bound(
         domain_bound=domain_ub,
         declared_bound=declared_ub,
         uncertain_params=uncertain_params,
-        bound_type="upper",
+        bound_type=BoundType.UPPER,
     )
 
     certain_bounds = rearrange_bound_pair_to_triple(
@@ -1397,7 +1411,7 @@ def create_bound_constraint_expr(expr, bound, bound_type, standardize=True):
     bound : native numeric type or NumericValue
         Bound for `expr`. This should be a numeric constant,
         Param, or constant/mutable Pyomo expression.
-    bound_type : {'lower', 'eq', 'upper'}
+    bound_type : BoundType
         Indicator for whether `expr` is to be lower bounded,
         equality bounded, or upper bounded, by `bound`.
     standardize : bool, optional
@@ -1409,11 +1423,11 @@ def create_bound_constraint_expr(expr, bound, bound_type, standardize=True):
     RelationalExpression
         Establishes a bound on `expr`.
     """
-    if bound_type == "lower":
+    if bound_type == BoundType.LOWER:
         return -expr <= -bound if standardize else bound <= expr
-    elif bound_type == "eq":
+    elif bound_type == BoundType.EQ:
         return expr == bound
-    elif bound_type == "upper":
+    elif bound_type == BoundType.UPPER:
         return expr <= bound
     else:
         raise ValueError(f"Bound type {bound_type!r} not supported.")
@@ -1427,22 +1441,23 @@ def remove_var_declared_bound(var, bound_type):
     ----------
     var : VarData
         Variable data object of interest.
-    bound_type : {'lower', 'eq', 'upper'}
+    bound_type : BoundType
         Indicator for the declared bound(s) to remove.
-        Note: if 'eq' is specified, then both the
+        Note: if BoundType.EQ is specified, then both the
         lower and upper bounds are removed.
     """
-    if bound_type == "lower":
+    if bound_type == BoundType.LOWER:
         var.setlb(None)
-    elif bound_type == "eq":
+    elif bound_type == BoundType.EQ:
         var.setlb(None)
         var.setub(None)
-    elif bound_type == "upper":
+    elif bound_type == BoundType.UPPER:
         var.setub(None)
     else:
         raise ValueError(
             f"Bound type {bound_type!r} not supported. "
-            "Bound type must be 'lower', 'eq, or 'upper'."
+            f"Bound type must be '{BoundType.LOWER}', "
+            f"'{BoundType.EQ}, or '{BoundType.UPPER}'."
         )
 
 
@@ -1490,7 +1505,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                 new_con_expr = create_bound_constraint_expr(var, bound, btype)
                 new_con_name = f"var_{var_name}_uncertain_{btype}_bound_con"
                 remove_var_declared_bound(var, btype)
-                if btype == "eq":
+                if btype == BoundType.EQ:
                     working_model.second_stage.equality_cons[new_con_name] = (
                         new_con_expr
                     )
@@ -1549,7 +1564,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
                 if bound is not None:
                     new_con_name = f"var_{var_name}_{certainty_desc}_{btype}_bound_con"
                     new_con_expr = create_bound_constraint_expr(var, bound, btype)
-                    if btype == "eq":
+                    if btype == BoundType.EQ:
                         working_model.second_stage.equality_cons[new_con_name] = (
                             new_con_expr
                         )
@@ -1678,7 +1693,7 @@ def standardize_inequality_constraints(model_data):
                 if bd is not None
             }
             for btype, bound in finite_bounds.items():
-                if btype == "eq":
+                if btype == BoundType.EQ:
                     # no equality bounds should be identified here.
                     # equality bound may be identified if:
                     # 1. bound rearrangement method has a bug
@@ -2211,7 +2226,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
                 # in the separation problems, since the effective DOF
                 # variables and DR variables are fixed.
                 # hence, we reformulate to inequalities
-                for bound_type in ["lower", "upper"]:
+                for bound_type in [BoundType.LOWER, BoundType.UPPER]:
                     std_con_expr = create_bound_constraint_expr(
                         expr=con.body, bound=con.upper, bound_type=bound_type
                     )
