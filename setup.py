@@ -54,9 +54,12 @@ def get_version():
 
 
 def check_config_arg(name):
+    print(f"SEARCHING FOR '{name}' in '{sys.argv}'")
     if name in sys.argv:
         sys.argv.remove(name)
         return True
+    print(f"SEARCHING FOR '{name}' in '{os.getenv('PYOMO_SETUP_ARGS', "").split()}'")
+    print("    ", os.getenv('PYOMO_SETUP_ARGS', ""))
     if name in os.getenv('PYOMO_SETUP_ARGS', "").split():
         print(f"FOUND {name}")
         return True
