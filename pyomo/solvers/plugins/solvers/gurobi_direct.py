@@ -491,12 +491,10 @@ class GurobiDirect(DirectSolver):
         DirectOrPersistentSolver._add_block(self, block)
 
     def _addConstr(self, degree, lhs, sense=None, rhs=None, name=""):
-        if degree == 1:
-            con = self._solver_model.addLConstr(lhs, sense, rhs, name)
-        elif degree == 2:
+        if degree == 2:
             con = self._solver_model.addQConstr(lhs, sense, rhs, name)
         else:
-            raise DegreeError('GurobiModel.addConstr: Unsupported degree: %s' % degree)
+            con = self._solver_model.addLConstr(lhs, sense, rhs, name)
         return con
 
     def _add_constraint(self, con):
