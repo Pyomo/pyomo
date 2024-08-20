@@ -34,6 +34,7 @@ from pyomo.core.base.initializer import (
     ConstantInitializer,
     ItemInitializer,
     IndexedCallInitializer,
+    ParameterizedScalarCallInitializer,
 )
 from pyomo.core.base.set import (
     NumericRange as NR,
@@ -4301,8 +4302,7 @@ class TestSet(unittest.TestCase):
             return i >= j
 
         m.K = Set(initialize=RangeSet(3) * RangeSet(3), filter=_l_tri)
-        self.assertIsInstance(m.K.filter, IndexedCallInitializer)
-        self.assertIs(m.K.filter._fcn, _l_tri)
+        self.assertIsInstance(m.K.filter, ParameterizedScalarCallInitializer)
         self.assertEqual(list(m.K), [(1, 1), (2, 1), (2, 2), (3, 1), (3, 2), (3, 3)])
 
         output = StringIO()
@@ -4336,6 +4336,33 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
 
+        def _validate(model, val):
+            i, j = val
+            self.assertIs(model, m)
+            if i + j < 2:
+                return True
+            if i - j > 2:
+                return False
+            raise RuntimeError("Bogus value")
+
+        m.I1 = Set(validate=_validate)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core'):
+            self.assertTrue(m.I1.add((0, 1)))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(4, 1\) violates the validation rule of " r"Set I1",
+            ):
+                m.I1.add((4, 1))
+            self.assertEqual(output.getvalue(), "")
+            with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+                m.I1.add((2, 2))
+        self.assertEqual(
+            output.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set I1\n",
+        )
+
         def _validate(model, i, j):
             self.assertIs(model, m)
             if i + j < 2:
@@ -4344,43 +4371,158 @@ class TestSet(unittest.TestCase):
                 return False
             raise RuntimeError("Bogus value")
 
-        m.I = Set(validate=_validate)
-        output = StringIO()
-        with LoggingIntercept(output, 'pyomo.core'):
-            self.assertTrue(m.I.add((0, 1)))
-            self.assertEqual(output.getvalue(), "")
+        m.I2 = Set(validate=_validate)
+        with LoggingIntercept(module='pyomo.core') as output:
+            self.assertTrue(m.I2.add((0, 1)))
+            self.assertRegex(
+                output.getvalue().replace('\n', ' '),
+                r"DEPRECATED: OrderedScalarSet I2: 'validate=' callback "
+                r"signature matched \(block, \*value\).  Please update the "
+                r"callback to match the signature \(block, value\)",
+            )
+        with LoggingIntercept(module='pyomo.core') as output:
             with self.assertRaisesRegex(
                 ValueError,
-                r"The value=\(4, 1\) violates the validation rule of " r"Set I",
+                r"The value=\(4, 1\) violates the validation rule of " r"Set I2",
             ):
-                m.I.add((4, 1))
-            self.assertEqual(output.getvalue(), "")
+                m.I2.add((4, 1))
+        self.assertEqual(output.getvalue(), "")
+        with LoggingIntercept(module='pyomo.core') as output:
             with self.assertRaisesRegex(RuntimeError, "Bogus value"):
-                m.I.add((2, 2))
+                m.I2.add((2, 2))
         self.assertEqual(
             output.getvalue(),
-            "Exception raised while validating element '(2, 2)' for Set I\n",
+            "Exception raised while validating element '(2, 2)' for Set I2\n",
         )
 
-        # Note: one of these indices will trigger the exception in the
-        # validot when it is called for the index.
-        m.J = Set([(0, 0), (2, 2)], validate=_validate)
-        output = StringIO()
-        with LoggingIntercept(output, 'pyomo.core'):
-            self.assertTrue(m.J[2, 2].add((0, 1)))
-            self.assertEqual(output.getvalue(), "")
+        m.J1 = Set([(0, 0), (2, 2)], validate=_validate)
+        with LoggingIntercept() as OUT:
+            self.assertTrue(m.J1[2, 2].add((0, 1)))
+            self.assertRegex(
+                OUT.getvalue().replace('\n', ' '),
+                r"DEPRECATED: InsertionOrderSetData J1\[2,2\]: 'validate=' callback "
+                r"signature matched \(block, \*value\).  Please update the "
+                r"callback to match the signature \(block, value, \*index\)",
+            )
+        with LoggingIntercept() as OUT:
             with self.assertRaisesRegex(
                 ValueError,
-                r"The value=\(4, 1\) violates the validation rule of " r"Set J\[0,0\]",
+                r"The value=\(4, 1\) violates the validation rule of " r"Set J1\[0,0\]",
             ):
-                m.J[0, 0].add((4, 1))
-            self.assertEqual(output.getvalue(), "")
+                m.J1[0, 0].add((4, 1))
             with self.assertRaisesRegex(RuntimeError, "Bogus value"):
-                m.J[2, 2].add((2, 2))
+                m.J1[2, 2].add((2, 2))
         self.assertEqual(
-            output.getvalue(),
-            "Exception raised while validating element '(2, 2)' for Set J[2,2]\n",
+            OUT.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set J1[2,2]\n",
         )
+
+        def _validate(model, i, j, ind1, ind2):
+            self.assertIs(model, m)
+            if i + j < ind1 + ind2:
+                return True
+            if i - j > ind1 + ind2:
+                return False
+            raise RuntimeError("Bogus value")
+
+        m.J2 = Set([(0, 0), (2, 2)], validate=_validate)
+        with LoggingIntercept() as OUT:
+            self.assertTrue(m.J2[2, 2].add((0, 1)))
+            self.assertRegex(
+                OUT.getvalue().replace('\n', ' '),
+                r"DEPRECATED: InsertionOrderSetData J2\[2,2\]: 'validate=' callback "
+                r"signature matched \(block, \*value, \*index\).  Please update the "
+                r"callback to match the signature \(block, value, \*index\)",
+            )
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(OUT.getvalue(), "")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(1, 0\) violates the validation rule of Set J2\[0,0\]",
+            ):
+                m.J2[0, 0].add((1, 0))
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(4, 1\) violates the validation rule of Set J2\[0,0\]",
+            ):
+                m.J2[0, 0].add((4, 1))
+            self.assertEqual(OUT.getvalue(), "")
+            with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+                m.J2[2, 2].add((2, 2))
+        self.assertEqual(
+            OUT.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set J2[2,2]\n",
+        )
+
+        def _validate(model, v, ind1, ind2):
+            self.assertIs(model, m)
+            i, j = v
+            if i + j < ind1 + ind2:
+                return True
+            if i - j > ind1 + ind2:
+                return False
+            raise RuntimeError("Bogus value")
+
+        m.J3 = Set([(0, 0), (2, 2)], validate=_validate)
+        with LoggingIntercept() as OUT:
+            self.assertTrue(m.J3[2, 2].add((0, 1)))
+            self.assertEqual(OUT.getvalue(), "")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(OUT.getvalue(), "")
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(1, 0\) violates the validation rule of Set J3\[0,0\]",
+            ):
+                m.J3[0, 0].add((1, 0))
+            with self.assertRaisesRegex(
+                ValueError,
+                r"The value=\(4, 1\) violates the validation rule of Set J3\[0,0\]",
+            ):
+                m.J3[0, 0].add((4, 1))
+            self.assertEqual(OUT.getvalue(), "")
+            with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+                m.J3[2, 2].add((2, 2))
+        self.assertEqual(
+            OUT.getvalue(),
+            "Exception raised while validating element '(2, 2)' for Set J3[2,2]\n",
+        )
+
+        # Testing the processing of (deprecated) APIs that raise exceptions
+        def _validate(m, i, j):
+            assert i == 2
+            assert j == 3
+            raise RuntimeError("Bogus value")
+
+        m.K1 = Set([1], dimen=2, validate=_validate)
+        with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+            m.K1[1].add((2, 3))
+
+        # Testing the processing of (deprecated) APIs that raise exceptions
+        def _validate(m, i, j, k):
+            assert i == 2
+            assert j == 3
+            assert k == 1
+            raise RuntimeError("Bogus value")
+
+        m.K2 = Set([1], dimen=2, validate=_validate)
+        with self.assertRaisesRegex(RuntimeError, "Bogus value"):
+            m.K2[1].add((2, 3))
+
+        # Testing passing the validation rule by dict
+        _validate = {1: lambda m, i: i == 10, 2: lambda m, i: i == 20}
+        m.L = Set([1, 2], validate=_validate)
+        m.L[1].add(10)
+        with self.assertRaisesRegex(
+            ValueError, r"The value=20 violates the validation rule of Set L\[1\]"
+        ):
+            m.L[1].add(20)
+        with self.assertRaisesRegex(
+            ValueError, r"The value=10 violates the validation rule of Set L\[2\]"
+        ):
+            m.L[2].add(10)
+        m.L[2].add(20)
 
     def test_domain(self):
         m = ConcreteModel()
@@ -5854,7 +5996,7 @@ class TestDeprecation(unittest.TestCase):
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
-            self.assertIsInstance(m.K.filter, IndexedCallInitializer)
+            self.assertIsInstance(m.K.filter, ParameterizedScalarCallInitializer)
         self.assertRegex(
             output.getvalue(), "^DEPRECATED: 'filter' is no longer a public attribute"
         )
