@@ -28,21 +28,24 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: ' --global-option=--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: ' --global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: ' --global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: ' --global-option="--without-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: ' --global-option="--without-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
+      - name: Set up global variable
+        run: |
+          echo "PIP_GLOBAL_OPTION=${{ matrix.GLOBAL_OPTIONS }}" >> $GITHUB_ENV
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
         with:
@@ -73,21 +76,24 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: ' --global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: ' --global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: ' --global-option="--with-cython --with-distributable-extensions"'
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: ' --global-option="--without-cython --with-distributable-extensions"'
+          PIP_GLOBAL_OPTION: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: ' --global-option="--without-cython --with-distributable-extensions"'
+          PIP_GLOBAL_OPTION: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
+      - name: Set up global variable
+        run: |
+          echo "PIP_GLOBAL_OPTION=${{ matrix.GLOBAL_OPTIONS }}" >> $GITHUB_ENV
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
