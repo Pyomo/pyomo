@@ -14,33 +14,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  WITH_CYTHON: "--with-cython --with-distributable-extensions"
+  WITHOUT_CYTHON: "--without-cython --with-distributable-extensions"
+
 jobs:
-  pure_python:
-    name: Build pure wheels (${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        python-version: ['3.11']
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install twine wheel setuptools pybind11
-      - name: Build generic tarball
-        run: |
-          python setup.py --without-cython sdist --format=gztar bdist_wheel
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: purepython_wheel-${{ matrix.python-version }}
-          path: dist/*.whl
-          overwrite: true
 
   native_wheels:
     name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native and cross-compiled architecture
@@ -55,19 +33,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITH_CYTHON }}
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITH_CYTHON }}
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITH_CYTHON }}
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITHOUT_CYTHON }}
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITHOUT_CYTHON }}
 
         exclude:
         - wheel-version: 'cp311*'
@@ -108,19 +86,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITH_CYTHON }}
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITH_CYTHON }}
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITH_CYTHON }}
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITHOUT_CYTHON }}
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+          GLOBAL_OPTIONS: ${{ env.WITHOUT_CYTHON }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -142,6 +120,32 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: alt_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
+          path: dist/*.whl
+          overwrite: true
+
+  pure_python:
+    name: Build pure wheels (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install twine wheel setuptools pybind11
+      - name: Build pure python wheel
+        run: |
+          python setup.py --without-cython sdist --format=gztar bdist_wheel
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: purepython_wheel-${{ matrix.python-version }}
           path: dist/*.whl
           overwrite: true
 
