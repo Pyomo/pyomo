@@ -58,7 +58,9 @@ def check_config_arg(name):
         sys.argv.remove(name)
         return True
     if name in os.getenv('PYOMO_SETUP_ARGS', "").split():
+        print(f"FOUND {name}")
         return True
+    print(f"NOT FOUND {name}")
     return False
 
 
@@ -134,6 +136,7 @@ if check_config_arg('--with-distributable-extensions'):
         )
         ext_modules.append(appsi_extension)
 
+print(f"\nEXTENSIONS: {ext_modules}\n")
 
 class DependenciesCommand(Command):
     """Custom setuptools command
