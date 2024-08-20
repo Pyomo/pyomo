@@ -53,7 +53,8 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.util import prod
 from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
+import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
+import pyomo.repn.ampl as pyomo_ampl_repn
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
 
@@ -2741,8 +2742,9 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
     # e.g., a Var fixed outside bounds beyond the Pyomo NL writer
     # tolerance, but still within the default IPOPT feasibility
     # tolerance
-    current_nl_writer_tol = pyomo_nl_writer.TOL
+    current_nl_writer_tol = pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL
     pyomo_nl_writer.TOL = 1e-4
+    pyomo_ampl_repn.TOL = 1e-4
 
     try:
         results = solver.solve(
@@ -2762,7 +2764,7 @@ def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
             results.solver, TIC_TOC_SOLVE_TIME_ATTR, tt_timer.toc(msg=None, delta=True)
         )
     finally:
-        pyomo_nl_writer.TOL = current_nl_writer_tol
+        pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL = current_nl_writer_tol
 
         timing_obj.stop_timer(timer_name)
         revert_solver_max_time_adjustment(
