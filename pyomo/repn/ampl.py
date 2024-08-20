@@ -113,7 +113,7 @@ class TextNLDebugTemplate(object):
     # NOTE: to support scaling and substitutions, we do NOT include the
     # 'v' or the EOL here:
     var = '%s'
-    const = 'n%r\n'
+    const = 'n%s\n'
     string = 'h%d:%s\n'
     monomial = product + const + var.replace('%', '%%')
     multiplier = product + const
