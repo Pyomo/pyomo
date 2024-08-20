@@ -6,7 +6,7 @@ Overview
 
 Objectives are the mathematical representation of what you wish to minimize or maximize.  In engineering design, objectives are often minimizing cost, material, or time, or alternatively maximizing profit or utility.
 
-The Objective constructor is a very thin wrapper on Pyomo ``Objective``, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
+The Objective constructor is a very thin wrapper on Pyomo :py:class:`Objective <pyomo.environ.Objective>`, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
 
 
 Construction
@@ -16,7 +16,7 @@ Objectives are constructed by creating an instance of a new objective in a EDI F
 
 .. py:function:: f.Objective(expr, sense=minimize)
 
-    Declares an objective in a pyomo.edi.formulation
+    Declares an objective in a pyomo.contrib.edi.formulation
 
    :param expr: The expression to be optimized
    :type  expr: pyomo expression

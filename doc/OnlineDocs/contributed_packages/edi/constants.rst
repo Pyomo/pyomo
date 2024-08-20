@@ -39,7 +39,7 @@ Relation to Pyomo Param
 
 The arguments ``name``, ``within``, and ``bounds`` are directly passed to the Pyomo ``Param`` constructor, with some minor checking.  The ``value`` field is passed to the ``Param`` ``initialize`` field.  The ``description`` field is passed to the ``doc`` field in the Pyomo ``Param``.  Units are passed directly with an additional check.  All Constants set the Pyomo ``Param`` ``mutable`` field to True.
 
-Non-scalar constants are constructed using Pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a Pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar Pyomo ``Param``.
+Non-scalar constants are constructed using Pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a Pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constants are slightly less flexible than general non-scalar Pyomo ``Param``.
 
 
 Examples

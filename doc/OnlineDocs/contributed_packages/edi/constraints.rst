@@ -7,7 +7,7 @@ Overview
 
 Constraints are the mathematical representation of rules that are imposed on your decisions/variables when minimizing or maximizing.  In engineering design, constraints are often imposed by physics or operational limits.
 
-The Constraint constructor is a very thin wrapper on Pyomo ``Constraint``, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
+The Constraint constructor is a very thin wrapper on Pyomo :py:class:`Constraint <pyomo.environ.Constraint>`, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
 
 
 Construction
@@ -17,7 +17,7 @@ Constraints are constructed by creating an instance of a new constraint in a EDI
 
 .. py:function:: f.Constraint(expr)
 
-    Declares a constraint in a pyomo.edi.formulation
+    Declares a constraint in a pyomo.contrib.edi.formulation
 
    :param expr: The expression representing the constraint
    :type  expr: pyomo expression
@@ -30,7 +30,7 @@ However, the expected use case is the ``f.ConstraintList()`` function:
 
 .. py:function:: f.ConstraintList(conList)
 
-    Declares new constraints in a pyomo.edi.formulation from a list of inputs
+    Declares new constraints in a pyomo.contrib.edi.formulation from a list of inputs
 
    :param conList: The list of constraints to be generated.  Entries will be Pyomo expressions, or lists/tuples/dicts that are used to create RuntimeConstraints (see :doc:`here <./blackboxconstraints>`)
    :type  conList: list

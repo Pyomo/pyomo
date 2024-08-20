@@ -33,7 +33,7 @@ A simple example is shown below:
     :start-after: # BEGIN: RuntimeConstraints_Snippet_01
     :end-before: # END: RuntimeConstraints_Snippet_01
 
-The inheriting classes can have any valid python name (in this case ``Parabola``) and have two methods ``__init__()`` and ``BlackBox()``.  
+The inheriting classes can have any valid Python name (in this case ``Parabola``) and must have two methods ``__init__()`` and ``BlackBox()``.  
 
 
 The init method
@@ -49,19 +49,19 @@ The ``__init__()`` function sets up the model, and has 5 distinct steps.  First,
 
 In general, this line can be used verbatim.
 
-Next, you must tell the model what its inputs are by appending them to the ``self.inputs`` attribute.  These inputs exist entirely in the local namespace of the black-box model, and are **independent** of the namespace in the optimization model (ex, something called ``x`` in the optimization can be called ``y`` in the black-box model).  Inputs must have a ``name`` and ``units``, and has optional arguments ``description``, and ``size``, all of which are defined the same way as EDI variables.  (There are some advanced uses reserved for the advanced discussion).
+Next, you must tell the model what its inputs are by appending them to the ``self.inputs`` attribute.  These inputs exist entirely in the local namespace of the black-box model, and are **independent** of the namespace in the optimization model (e.g. something called ``x`` in the optimization model can be called ``y`` in the black-box model).  Inputs must have a ``name`` and ``units`` and can optionally have a ``description``, and ``size``.
 
 .. py:function:: self.inputs.append(name, units, description='', size=0)
 
     Appends a variable to a black box input list
 
-   :param name: The name of the variable, any valid python string.  **Does not** have to match the name in the optimization formulation
+   :param name: The name of the variable, any valid Python string.  **Does not** have to match the name in the optimization formulation
    :type  name: str
-   :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertible to the units used in the optimization formulation (ex, meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
+   :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertible to the units used in the optimization formulation (e.g., meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
    :param description: A description of the variable
    :type  description: str
-   :param size: The size (or shape) of the variable.  Entries of 0, 1, and None all correspond to scalar variables.  Other integers correspond to vector variables.  Matrix and tensor variable are declared using lists of ints, ex: [10,10].  Matrix and tensor variables with a dimension of 1 (ie, [10,10,1]) will be rejected as the extra dimension holds no meaningful value.  
+   :param size: The size (or shape) of the variable.  Entries of 0, 1, and None all correspond to scalar variables.  Other integers correspond to vector variables.  Matrix and tensor variable are declared using lists of ints, ex: [10,10].  Matrix and tensor variables with a dimension of 1 (i.e., [10,10,1]) will be rejected as the extra dimension holds no meaningful value.  
    :type  size: int or list
    
 
@@ -81,13 +81,13 @@ Next, outputs must be added to the model.  This is done identically to inputs, h
 
     Appends a variable to a black box output list
 
-   :param name: The name of the variable, any valid python string.  **Does not** have to match the name in the optimization formulation
+   :param name: The name of the variable, any valid Python string.  **Does not** have to match the name in the optimization formulation
    :type  name: str
    :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless. The units **must** be convertible to the units used in the optimization formulation (ex, meters and feet), but **are not required** to be the same.  Because of this, for example, a black-box can be written in imperial units, while an optimization formulation operates in metric.
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
    :param description: A description of the variable
    :type  description: str
-   :param size: The size (or shape) of the variable.  Entries of 0, 1, and None all correspond to scalar variables.  Other integers correspond to vector variables.  Matrix and tensor variable are declared using lists of ints, ex: [10,10].  Matrix and tensor variables with a dimension of 1 (ie, [10,10,1]) will be rejected as the extra dimension holds no meaningful value.  
+   :param size: The size (or shape) of the variable.  Entries of 0, 1, and None all correspond to scalar variables.  Other integers correspond to vector variables.  Matrix and tensor variable are declared using lists of ints, ex: [10,10].  Matrix and tensor variables with a dimension of 1 (i.e., [10,10,1]) will be rejected as the extra dimension holds no meaningful value.  
    :type  size: int or list
    
 
@@ -100,7 +100,7 @@ and similarly:
     :end-before: # END: RuntimeConstraints_Snippet_04
 
 
-Finally, the highest available derivative must be set.  For models being used in optimization, this will most often be ``1``, ie first derivative, gradient, or Jacobian information.
+Finally, the highest available derivative must be set.  For models being used in optimization, this will most often be ``1``, i.e. first derivative, gradient, or Jacobian information.
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -114,7 +114,7 @@ The BlackBox method
 
 The ``BlackBox`` is extremely flexible, but here we present standard usage for a typical user.
 
-The ``BlackBox`` method assumes to take in the inputs as arguments in the order defined during the ``__init__()`` method.  Note that the method assumes inputs **with units** and expects outputs **with units**.  In general, the units on inputs and outputs need not be in any specific system, but should be convertible (ex, meters and feet) to whatever has been specified as the input units when defining in the ``__init__()`` function.  
+The ``BlackBox`` method should take in the inputs as arguments in the order defined during the ``__init__()`` method.  Note that the method assumes inputs are passed in **with units** and outputs are returned **with units**.  In general, the units on inputs and outputs need not be in any specific system, but should be convertible (e.g. meters and feet) to the units specified in the ``__init__()`` function. 
 
 Various unpacking schemes are enabled by default via the ``parse_inputs`` function.  Use of this function is not necessary, but provides for the parsing of index argumented lists (ex: ``function(x1, x2, x3)``) and keyword argumented dictionaries (ex: ``function({'x2':x2, 'x1':x1, 'x3',x3})``), along with a few other possibilities.
 
@@ -396,10 +396,10 @@ Tips
 * Use the Pyomo ``tostr()`` function (``from pyomo.common.formatting import tostr``) to print the results of black-boxes for more meaningful printouts
 * Align input and output declarations just as is recommended for optimization variable and constant declarations
 * Declare an input/output all on one line, no matter what the style guides say
-* This interface is really designed for subject matter experts who are not python users to have a simple, easy path to include their tools into a python based optimization architecture.  Try to let them build their own models as a means of fostering trust in the optimization tools
+* * This interface is designed for subject matter experts who are not Python users to have a simple, easy path to include their tools/models into a Python based optimization architecture.  
 * Embrace units.  They will save you so many times, it is well worth the minor additional overhead
-* Pyomo units work slightly diffenrently than pint (for those with pint experience), but those differences should be hidden from the model creator for the most part
-* It is common to use this framework to call to a piece of software external to python
+* Pyomo units work slightly differently than pint (for those with pint experience), but those differences should be hidden from the model creator for the most part
+* It is common to use this framework to call to a piece of software external to Python
 * A model summary can be printed by calling ``print(model_instance.summary)``
 
 

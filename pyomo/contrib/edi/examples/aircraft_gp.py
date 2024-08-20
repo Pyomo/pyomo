@@ -11,10 +11,7 @@
 # Import Statements
 # =================
 import numpy as np
-import pyomo.environ as pyo
-from pyomo.environ import units
 from pyomo.contrib.edi import Formulation
-from pyomo.contrib.edi import BlackBoxFunctionModel
 
 # ===================
 # Declare Formulation
