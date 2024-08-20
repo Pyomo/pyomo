@@ -78,11 +78,10 @@ jobs:
             CIBW_ARCHS_LINUX: "native"
             CIBW_ARCHS_MACOS: "native arm64"
             CIBW_ARCHS_WINDOWS: "native ARM64"
-            CIBW_SKIP: "*-musllinux*"
+            CIBW_SKIP: "*-musllinux* *{311,312}-win*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
-            CIBW_TEST_SKIP: "*{311,312}-win*"
             CIBW_ENVIRONMENT: PYOMO_SETUP_ARGS="${{ matrix.GLOBAL_OPTIONS }}"
       - uses: actions/upload-artifact@v4
         with:
