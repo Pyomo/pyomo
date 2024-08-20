@@ -19,7 +19,12 @@ from pyomo.common.dependencies.scipy import spatial
 from pyomo.contrib.piecewise.piecewise_linear_expression import (
     PiecewiseLinearExpression,
 )
-from pyomo.core import Any, NonNegativeIntegers, value, Var
+from pyomo.contrib.piecewise.triangulations import (
+    get_unordered_j1_triangulation,
+    get_ordered_j1_triangulation,
+    Triangulation,
+)
+from pyomo.core import Any, NonNegativeIntegers, value
 from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.expression import Expression
@@ -53,6 +58,11 @@ class PiecewiseLinearFunctionData(BlockData):
             # These will always be tuples, even when we only have one dimension.
             self._points = []
             self._linear_functions = []
+            self._triangulation = None
+
+    @property
+    def triangulation(self):
+        return self._triangulation
 
     def __call__(self, *args):
         """
@@ -235,6 +245,19 @@ class PiecewiseLinearFunction(Block):
             expression for a linear function of the arguments.
         tabular_data: A dictionary mapping values of the nonlinear function
             to points in the domain
+        triangulation (optional): An enum value of type Triangulation specifying
+            how Pyomo should triangulate the function domain, or None. Behavior
+            depends on how this piecewise-linear function is constructed:
+            when constructed using methods (1) or (4) above, valid arguments
+            are the members of Triangulation except Unknown or AssumeValid,
+            and Pyomo will use that method to triangulate the domain and to tag
+            the resulting PWLF. If no argument or None is passed, the default
+            is Triangulation.Delaunay. When constructed using methods (2) or (3)
+            above, valid arguments are only Triangulation.Unknown and
+            Triangulation.AssumeValid. Pyomo will tag the constructed PWLF
+            as specified, trusting the user in the case of AssumeValid.
+            When no argument or None is passed, the default is
+            Triangulation.Unknown
     """
 
     _ComponentDataClass = PiecewiseLinearFunctionData
@@ -261,6 +284,7 @@ class PiecewiseLinearFunction(Block):
         _linear_functions = kwargs.pop('linear_functions', None)
         _tabular_data_arg = kwargs.pop('tabular_data', None)
         _tabular_data_rule_arg = kwargs.pop('tabular_data_rule', None)
+        _triangulation_rule_arg = kwargs.pop('triangulation', None)
 
         kwargs.setdefault('ctype', PiecewiseLinearFunction)
         Block.__init__(self, *args, **kwargs)
@@ -279,6 +303,9 @@ class PiecewiseLinearFunction(Block):
         self._tabular_data_rule = Initializer(
             _tabular_data_rule_arg, treat_sequences_as_mappings=False
         )
+        self._triangulation_rule = Initializer(
+            _triangulation_rule_arg, treat_sequences_as_mappings=False
+        )
 
     def _get_dimension_from_points(self, points):
         if len(points) < 1:
@@ -294,12 +321,34 @@ class PiecewiseLinearFunction(Block):
 
         return dimension
 
-    def _construct_simplices_from_multivariate_points(self, obj, points, dimension):
-        try:
-            triangulation = spatial.Delaunay(points)
-        except (spatial.QhullError, ValueError) as error:
-            logger.error("Unable to triangulate the set of input points.")
-            raise
+    def _construct_simplices_from_multivariate_points(
+        self, obj, parent, points, dimension
+    ):
+        if self._triangulation_rule is None:
+            tri = Triangulation.Delaunay
+        else:
+            tri = self._triangulation_rule(parent, obj._index)
+            if tri is None:
+                tri = Triangulation.Delaunay
+
+        if tri == Triangulation.Delaunay:
+            try:
+                triangulation = spatial.Delaunay(points)
+            except (spatial.QhullError, ValueError) as error:
+                logger.error("Unable to triangulate the set of input points.")
+                raise
+            obj._triangulation = tri
+        elif tri == Triangulation.J1:
+            triangulation = get_unordered_j1_triangulation(points, dimension)
+            obj._triangulation = tri
+        elif tri == Triangulation.OrderedJ1:
+            triangulation = get_ordered_j1_triangulation(points, dimension)
+            obj._triangulation = tri
+        else:
+            raise ValueError(
+                "Invalid or unrecognized triangulation specified for '%s': %s"
+                % (obj, tri)
+            )
 
         # Get the points for the triangulation because they might not all be
         # there if any were coplanar.
@@ -318,7 +367,13 @@ class PiecewiseLinearFunction(Block):
             # checking the determinant because matrix_rank will by default calculate a
             # tolerance based on the input to account for numerical errors in the
             # SVD computation.
-            if (
+            if tri in (Triangulation.J1, Triangulation.OrderedJ1):
+                # Note: do not sort vertices from OrderedJ1, or it will break.
+                # Non-ordered J1 is already sorted, though it doesn't matter.
+                # Also, we don't need to check for degeneracy with simplices we
+                # made ourselves.
+                obj._simplices.append(tuple(simplex))
+            elif (
                 np.linalg.matrix_rank(
                     points[:, 1:]
                     - np.append(points[:, : dimension - 1], points[:, [0]], axis=1)
@@ -334,6 +389,24 @@ class PiecewiseLinearFunction(Block):
             logger.info(
                 "The Delaunay triangulation dropped the point with index "
                 "%s from the triangulation." % pt[0]
+            )
+
+    # Call when constructing from simplices to allow use of AssumeValid and
+    # ensure the user is not making mistakes
+    def _check_and_set_triangulation_from_user(self, parent, obj):
+        if self._triangulation_rule is None:
+            tri = None
+        else:
+            tri = self._triangulation_rule(parent, obj._index)
+        if tri is None or tri == Triangulation.Unknown:
+            obj._triangulation = Triangulation.Unknown
+        elif tri == Triangulation.AssumeValid:
+            obj._triangulation = Triangulation.AssumeValid
+        else:
+            raise ValueError(
+                f"Invalid or unrecognized triangulation tag specified for {obj} when"
+                f" giving simplices: {tri}. Valid arguments when giving simplices are"
+                " Triangulation.Unknown and Triangulation.AssumeValid."
             )
 
     def _construct_one_dimensional_simplices_from_points(self, obj, points):
@@ -357,15 +430,25 @@ class PiecewiseLinearFunction(Block):
             # avoid a dependence on scipy.
             self._construct_one_dimensional_simplices_from_points(obj, points)
             return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function
+                obj, parent, nonlinear_function, segments_are_user_defined=False
             )
 
-        self._construct_simplices_from_multivariate_points(obj, points, dimension)
+        self._construct_simplices_from_multivariate_points(
+            obj, parent, points, dimension
+        )
         return self._construct_from_function_and_simplices(
             obj, parent, nonlinear_function, simplices_are_user_defined=False
         )
 
-    def _construct_from_univariate_function_and_segments(self, obj, func):
+    def _construct_from_univariate_function_and_segments(
+        self, obj, parent, func, segments_are_user_defined=True
+    ):
+        # We can trust they are nicely ordered if we made them, otherwise anything goes.
+        if segments_are_user_defined:
+            self._check_and_set_triangulation_from_user(parent, obj)
+        else:
+            obj._triangulation = Triangulation.AssumeValid
+
         for idx1, idx2 in obj._simplices:
             x1 = obj._points[idx1][0]
             x2 = obj._points[idx2][0]
@@ -396,8 +479,13 @@ class PiecewiseLinearFunction(Block):
             # it separately in order to avoid a kind of silly dependence on
             # numpy.
             return self._construct_from_univariate_function_and_segments(
-                obj, nonlinear_function
+                obj, parent, nonlinear_function, simplices_are_user_defined
             )
+
+        # If we triangulated, then this tag was already set. If they provided it,
+        # then check their arguments and set.
+        if simplices_are_user_defined:
+            self._check_and_set_triangulation_from_user(parent, obj)
 
         # evaluate the function at each of the points and form the homogeneous
         # system of equations
@@ -450,6 +538,7 @@ class PiecewiseLinearFunction(Block):
         # have been called.
         obj._get_simplices_from_arg(self._simplices_rule(parent, obj._index))
         obj._linear_functions = [f for f in self._linear_funcs_rule(parent, obj._index)]
+        self._check_and_set_triangulation_from_user(parent, obj)
         return obj
 
     @_define_handler(_handlers, False, False, False, False, True)
@@ -467,12 +556,20 @@ class PiecewiseLinearFunction(Block):
             # avoid a dependence on scipy.
             self._construct_one_dimensional_simplices_from_points(obj, points)
             return self._construct_from_univariate_function_and_segments(
-                obj, _tabular_data_functor(tabular_data, tupleize=True)
+                obj,
+                parent,
+                _tabular_data_functor(tabular_data, tupleize=True),
+                segments_are_user_defined=False,
             )
 
-        self._construct_simplices_from_multivariate_points(obj, points, dimension)
+        self._construct_simplices_from_multivariate_points(
+            obj, parent, points, dimension
+        )
         return self._construct_from_function_and_simplices(
-            obj, parent, _tabular_data_functor(tabular_data)
+            obj,
+            parent,
+            _tabular_data_functor(tabular_data),
+            simplices_are_user_defined=False,
         )
 
     def _getitem_when_not_present(self, index):
@@ -509,7 +606,9 @@ class PiecewiseLinearFunction(Block):
                 "a list of corresponding simplices, or a dictionary "
                 "mapping points to nonlinear function values."
             )
-        return handler(self, obj, parent, nonlinear_function)
+        obj = handler(self, obj, parent, nonlinear_function)
+
+        return obj
 
 
 class ScalarPiecewiseLinearFunction(
