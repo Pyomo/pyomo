@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  pure-python:
+  pure_python:
     name: Build pure wheels (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
