@@ -152,5 +152,6 @@ class TestUtils(unittest.TestCase):
             c_old = m.find_component(v)
             self.assertEqual(pyo.value(c), pyo.value(c_old))
 
+
 if __name__ == "__main__":
     unittest.main()
