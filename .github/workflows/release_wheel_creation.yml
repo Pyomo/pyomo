@@ -37,10 +37,10 @@ jobs:
           GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: ''
+          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: ''
+          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
@@ -83,10 +83,10 @@ jobs:
           GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: ''
+          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: ''
+          GLOBAL_OPTIONS: '--global-option="--without-cython --with-distributable-extensions"'
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
