@@ -32,6 +32,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.contrib.pyros.solve_data import MasterResults
 from pyomo.contrib.pyros.util import (
     call_solver,
+    DR_POLISHING_PARAM_PRODUCT_ZERO_TOL,
     enforce_dr_degree,
     get_dr_expression,
     check_time_limit_reached,
@@ -464,7 +465,8 @@ def construct_dr_polishing_problem(master_data):
                 for scenario_blk in master_model.scenarios.values()
             ]
             all_copy_coeffs_zero = is_a_nonstatic_dr_term and all(
-                abs(value(prod(term.args[:-1]))) <= 1e-10 for term in dr_term_copies
+                abs(value(prod(term.args[:-1]))) <= DR_POLISHING_PARAM_PRODUCT_ZERO_TOL
+                for term in dr_term_copies
             )
             if all_copy_coeffs_zero:
                 # increment static DR variable value
