@@ -7,7 +7,7 @@ Variables are the mathematical representation of individual decisions being cons
 
 Using the EDI package, variables can be defined as both scalar (``pyomo.core.base.var.ScalarVar``) and vector/matrix/tensor (``pyomo.core.base.var.IndexedVar``), and can exist in many mathematical spaces (All Real, Integers, etc).
 
-The Variable constructor is a very thin wrapper, and so experienced pyomo users will not see any significant differences from base pyomo.  
+The Variable constructor is a very thin wrapper, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
 
 
 Construction
@@ -17,11 +17,11 @@ Variables are constructed by 1) creating an instance of a new variable in a EDI 
 
 .. py:function:: f.Variable(name, guess, units, description='', size=None, bounds=None, domain=None)
 
-    Declares a variable in a pyomo.edi.formulation
+    Declares a variable in a pyomo.contrib.edi.formulation
 
    :param name: The name of the variable for the purposes of tracking in the formulation.  Commonly, this will be the same as the variable name in local namespace.
    :type  name: str
-   :param guess: The initial guess of the variable.  For scalar variables, this should be a valid float or int for the specified domain.  For vector variables, this will most often also be a single float or int, but a dictionary of index-value pairs is also accepted as in accordance with base pyomo.  Numpy arrays will be supported in a future release (see `this issue <https://github.com/codykarcher/pyomo/issues/1>`_)
+   :param guess: The initial guess of the variable.  For scalar variables, this should be a valid float or int for the specified domain.  For vector variables, this will most often also be a single float or int, but a dictionary of index-value pairs is also accepted as in accordance with base Pyomo.  NumPy arrays will be supported in a future release (see `this issue <https://github.com/codykarcher/pyomo/issues/1>`_)
    :type  guess: float or int or dict
    :param units: The units of the variable.  Every entry in a vector variable must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
@@ -41,9 +41,9 @@ Variables are constructed by 1) creating an instance of a new variable in a EDI 
 Relation to Pyomo Var
 ---------------------
 
-The fields: name, domain, and bounds are directly passed to the pyomo ``Var`` constructor, with some minor checking.  The guess field is passed to initialize.  The description field is passed to the doc field in the pyomo ``Var``.  Units are passed directly with an additional check.
+The fields: name, domain, and bounds are directly passed to the Pyomo ``Var`` constructor, with some minor checking.  The guess field is passed to initialize.  The description field is passed to the doc field in the Pyomo ``Var``.  Units are passed directly with an additional check.
 
-Non-scalar variables are constructed using pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector variable of length 5 would create a pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar pyomo ``Params``.
+Non-scalar variables are constructed using Pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector variable of length 5 would create a Pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar Pyomo ``Params``.
 
 
 Examples

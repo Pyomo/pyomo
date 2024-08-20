@@ -7,14 +7,14 @@ The Pyomo Engineering Design Interface (EDI) is a lightweight wrapper on the Pyo
 Installation
 ------------
 
-EDI installs as a part of the standard pyomo install:
+EDI installs as a part of the standard Pyomo install:
 
 ::
 
     pip install pyomo
 
 
-EDI also requires packages that are optional in base pyomo:
+EDI also requires packages that are optional in base Pyomo:
 
 ::
 
@@ -44,4 +44,4 @@ User's Guide
 Developers
 ----------
 
-The pyomo EDI interface is developed and maintained by `Cody Karcher <https://github.com/codykarcher>`_ 
+The Pyomo EDI interface is developed and maintained by `Cody Karcher <https://github.com/codykarcher>`_ 

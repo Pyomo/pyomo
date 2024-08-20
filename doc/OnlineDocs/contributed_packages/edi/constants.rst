@@ -5,7 +5,7 @@ Overview
 --------
 Constants are a key mechanism used to capture the relationship between variables.  In engineering design, constants are often defined by physics or operational limits.
 
-The Constant constructor is a very thin wrapper on pyomo ``Param``, and so experienced pyomo users will not see any significant differences from base pyomo.  
+The Constant constructor is a very thin wrapper on Pyomo ``Param``, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
 
 
 Construction
@@ -19,7 +19,7 @@ Constants are constructed by 1) creating an instance of a new parameter in a EDI
 
    :param name: The name of the constant for the purposes of tracking in the formulation.  Commonly, this will be the same as the constant name in local namespace.
    :type  name: str
-   :param value: The value of the constant.  For scalar constants, this should be a valid float or int for the specified domain.  For vector constants, this will most often also be a single float or int, but a dictionary of index-value pairs is also accepted as in accordance with base pyomo.  Numpy arrays will be supported in a future release (see `this issue <https://github.com/codykarcher/pyomo/issues/1>`__)
+   :param value: The value of the constant.  For scalar constants, this should be a valid float or int for the specified domain.  For vector constants, this will most often also be a single float or int, but a dictionary of index-value pairs is also accepted as in accordance with base Pyomo.  Numpy arrays will be supported in a future release (see `this issue <https://github.com/codykarcher/pyomo/issues/1>`__)
    :type  value: float or int or dict
    :param units: The units of the constant.  Every entry in a vector constant must have the same units.  Entries of '', ' ', '-', 'None', and 'dimensionless' all become units.dimensionless
    :type  units: str or pyomo.core.base.units_container._PyomoUnit
@@ -37,9 +37,9 @@ Constants are constructed by 1) creating an instance of a new parameter in a EDI
 Relation to Pyomo Param
 -----------------------
 
-The fields: name and within, and bounds are directly passed to the pyomo ``Param`` constructor, with some minor checking.  The value field is passed to the ``Param`` initialize field.  The description field is passed to the doc field in the pyomo ``Param``.  Units are passed directly with an additional check.  All Constants set the pyomo ``Param`` mutable field to True.
+The fields: name and within, and bounds are directly passed to the Pyomo ``Param`` constructor, with some minor checking.  The value field is passed to the ``Param`` initialize field.  The description field is passed to the doc field in the Pyomo ``Param``.  Units are passed directly with an additional check.  All Constants set the Pyomo ``Param`` mutable field to True.
 
-Non-scalar constants are constructed using pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar pyomo ``Param``.
+Non-scalar constants are constructed using Pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector constant of length 5 would create a Pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar Pyomo ``Param``.
 
 
 Examples

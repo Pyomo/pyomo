@@ -6,7 +6,7 @@ Formulation
    <br />
 
 
-The core object in EDI is called a *Formulation*.  For experienced pyomo users, a Formulation inherits from a pyomo *ConcreteModel*, and can therefore be treated exactly as a typical *ConcreteModel* with a few additional features.  
+The core object in EDI is called a *Formulation*.  The core object in EDI is called a *Formulation*.  For experienced Pyomo users, a Formulation inherits from a Pyomo :class:`~pyomo.environ.ConcreteModel`, and can therefore be treated exactly as a typical :class:`~pyomo.environ.ConcreteModel` with a few additional features.  
 
 Each modeling element (ex: Variable, Constant, Objective, and Constraint) has a constructor that is used to create the corresponding element in the *Formulation* instance.  In addition, there are a number of helper functions that collect and return model elements or perform supporting actions.
 
@@ -21,7 +21,7 @@ A *Formulation* is constructed as follows:
     :end-before: # END: Formulation_Snippet_01
 
 
-Standard practice is to construct a formulation to namespace variable ``f``, but any valid python name can be used.  Standard pyomo practice would be to construct this to ``model`` or ``m``.
+Standard practice is to construct a formulation to namespace variable ``f``, but any valid Python name can be used.  Standard Pyomo practice would be to construct this to ``model`` or ``m``.
 
 
 Declaring Variables
@@ -29,7 +29,7 @@ Declaring Variables
 
 See the :doc:`Variables <./variables>` Documentation
 
-Variables are declared using the ``f.Variable()`` function.  This function creates an instance of ``pyomo.environ.Var`` and adds it to the ``edi.contrib.Formulation``.  The function returns an instance of a ``pyomo.environ.Var`` that can be used in later construction.
+Variables are declared using the ``f.Variable()`` function.  This function creates an instance of :class:`~pyomo.environ.Var` and adds it to the ``pyomo.contrib.edi.Formulation``.  The function returns an instance of a :class:`~pyomo.environ.Var` that can be used in later construction.
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -43,7 +43,7 @@ Declaring Constants
 
 See the :doc:`Constants <./constants>` Documentation
 
-Constants (referred to in base pyomo as parameters or ``Params``) are declared using the ``f.Constant()`` function.  This function creates an instance of a ``pyomo.environ.Param`` and adds it to the ``edi.contrib.Formulation``.  This function also returns an instance of ``pyomo.environ.Param`` that can be used in later construction.
+Constants (referred to in base Pyomo as parameters or ``Params``) are declared using the ``f.Constant()`` function.  This function creates an instance of a :class:`~pyomo.environ.Param` and adds it to the ``pyomo.contrib.ediFormulation``.  This function also returns an instance of :class:`~pyomo.environ.Param` that can be used in later construction.
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -58,7 +58,7 @@ Declaring Objectives
 
 See the :doc:`Objectives <./objectives>` Documentation
 
-Objectives are declared using the ``f.Objective()`` function.  This function creates an instance of a ``pyomo.environ.Objective`` and adds it to the ``edi.contrib.Formulation``.  Multiple objectives can be declared, but interpretation of multiple objectives will depend on the solver.  The returned values of the ``f.Variable()`` and ``f.Constant()`` declarations can be used to construct the objective.  Black-box (ie, Runtime) objectives are not supported at this time, but are planned in a future update.
+Objectives are declared using the ``f.Objective()`` function.  This function creates an instance of a :class:`~pyomo.environ.Objective` and adds it to the ``pyomo.contrib.edi.Formulation``.  Multiple objectives can be declared, but interpretation of multiple objectives will depend on the solver.  The returned values of the ``f.Variable()`` and ``f.Constant()`` declarations can be used to construct the objective.  Black-box (i.e. Runtime) objectives are not supported at this time, but are planned in a future update.
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -67,7 +67,7 @@ Objectives are declared using the ``f.Objective()`` function.  This function cre
     :end-before: # END: Formulation_Snippet_04
 
 
-By default, objectives are minimized, but can be switched to a maximize using the ``sense`` keyword from pyomo:
+By default, objectives are minimized, but can be switched to a maximize using the ``sense`` keyword from Pyomo:
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -84,7 +84,7 @@ Declaring Constraints
 
 See the :doc:`Constraints <./constraints>` Documentation
 
-Constraints can be declared in two ways.  First is using the standard ``f.Constraint()`` constructor.  This function creates an instance of ``pyomo.environ.Constraint`` and adds it to the ``edi.contrib.Formulation``.  The operators ``<=``, ``>=``, and ``==`` are used as constraint constructors.
+Constraints can be declared in two ways.  First is using the standard ``f.Constraint()`` constructor.  This function creates an instance of :class:`~pyomo.environ.Constraint` and adds it to the ``pyomo.contrib.edi.Formulation``.  The operators ``<=``, ``>=``, and ``==`` are used as constraint constructors.
 
 .. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
     :language: python 
@@ -116,11 +116,11 @@ Declaring Runtime (Black-Box) Constraints
 
 See the :doc:`Runtime (Black-Box) Constraints <./blackboxconstraints>` Documentation
 
-One of the main features of EDI is the streamlined implementation of Black-Box Constraints.  A *Black-Box* is defined as a routine that performs hidden computation not visible EDI, pyomo, or more generally the optimization algorithm.  However, it is **not** assumed that black-boxes are unable to return gradient information.  A black-box in this context may be capable of returning arbitrary derivative information.
+One of the main features of EDI is the streamlined implementation of Black-Box Constraints.  A *Black-Box* is defined as a routine that performs hidden computation not visible to EDI, Pyomo, or more generally the optimization algorithm.  However, it is **not** assumed that black-boxes are unable to return gradient information.  A black-box in this context may be capable of returning arbitrary derivative information.
 
-Black-box constraints are considered to be a sub-class of a more general class of constraints called *Runtime Constraints*, that is constraints that are not actually constructed until the optimization routine is actually running.  In most cases, Runtime Constraints are approximated as linear by the solver, and therefore a Runtime Constraint is expected to provide function evaluations and gradient information.
+Black-box constraints are considered to be a sub-class of a more general class of constraints called *Runtime Constraints*, that is constraints that are not actually constructed until the optimization routine is running.  In most cases, Runtime Constraints are approximated as linear by the solver, and therefore a Runtime Constraint is expected to provide function evaluations and gradient information.
 
-The use of Runtime constraints requires a black box model that is discussed in detail in the dedicated documentation (see :doc:`here <./blackboxconstraints>`), but for the purposes of demonstrating the constructors, a simple black box example will appear in all of the code snippets below.
+The use of Runtime Constraints requires a black box model that is discussed in detail in the dedicated documentation (see :doc:`here <./blackboxconstraints>`), but for the purposes of demonstrating the constructors, a simple black box example will appear in all of the code snippets below.
 
 Runtime Constraints are declared one of two ways, just as regular constraints.  The ``f.RuntimeConstraint()`` constructor is available: 
 

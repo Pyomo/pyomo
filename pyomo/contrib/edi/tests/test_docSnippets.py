@@ -940,7 +940,6 @@ class TestEDISnippets(unittest.TestCase):
         bbs = m.BlackBox_Standardized(0.5 * units.m, 0.5 * units.m)
         # END: RuntimeConstraints_Snippet_12
 
-
     def test_edi_snippet_runtimeconstraints_13(self):
         # BEGIN: RuntimeConstraints_Snippet_13
         from collections import namedtuple
@@ -980,8 +979,10 @@ class TestEDISnippets(unittest.TestCase):
 
                 outputList = []
 
-                for i in range(0,len(list_of_cases)):  # Could parallelize this loop
-                    res = self.BlackBox_Standardized(list_of_cases[i][0], list_of_cases[i][1])
+                for i in range(0, len(list_of_cases)):  # Could parallelize this loop
+                    res = self.BlackBox_Standardized(
+                        list_of_cases[i][0], list_of_cases[i][1]
+                    )
                     values = optTuple(res.values)
                     first = optTuple(iptTuple(res.first.z.x, res.first.z.y))
                     second = None  # Second derivatives not currently supported
@@ -991,7 +992,9 @@ class TestEDISnippets(unittest.TestCase):
 
         m = UnitCircle()
         bb = m.BlackBox(0.5 * units.m, 0.5 * units.m)
-        bbm = m.MultiCase([[0.5 * units.m, 0.5 * units.m],[1.0 * units.m, 1.0 * units.m]])
+        bbm = m.MultiCase(
+            [[0.5 * units.m, 0.5 * units.m], [1.0 * units.m, 1.0 * units.m]]
+        )
         # END: RuntimeConstraints_Snippet_13
 
     def test_edi_snippet_advancedRTC_01(self):

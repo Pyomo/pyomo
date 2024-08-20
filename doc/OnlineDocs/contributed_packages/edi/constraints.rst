@@ -7,7 +7,7 @@ Overview
 
 Constraints are the mathematical representation of rules that are imposed on your decisions/variables when minimizing or maximizing.  In engineering design, constraints are often imposed by physics or operational limits.
 
-The Constraint constructor is a very thin wrapper on pyomo ``Constraint``, and so experienced pyomo users will not see any significant differences from base pyomo.  
+The Constraint constructor is a very thin wrapper on Pyomo ``Constraint``, and so experienced Pyomo users will not see any significant differences from base Pyomo.  
 
 
 Construction
@@ -32,7 +32,7 @@ However, the expected use case is the ``f.ConstraintList()`` function:
 
     Declares new constraints in a pyomo.edi.formulation from a list of inputs
 
-   :param conList: The list of constraints to be generated.  Entries will be pyomo expressions, or lists/tuples/dicts that are used to create RuntimeConstraints (see :doc:`here <./blackboxconstraints>`)
+   :param conList: The list of constraints to be generated.  Entries will be Pyomo expressions, or lists/tuples/dicts that are used to create RuntimeConstraints (see :doc:`here <./blackboxconstraints>`)
    :type  conList: list
 
    :return: None
@@ -42,7 +42,7 @@ However, the expected use case is the ``f.ConstraintList()`` function:
 Relation to Pyomo Constraint
 ----------------------------
 
-The EDI constraint constructor is essentially a direct pass through to base pyomo.  Constraints will be added to the ``pyomo.ConcreteModel`` in increasing order with key ``constraint_###`` where the the index of the objective appears after the underscore.  First constraint is labeled as ``constraint_1``, and constraint names are never padded with zeros.  RuntimeConstraints also contribute to this counter.
+The EDI constraint constructor is essentially a direct pass through to base Pyomo.  Constraints will be added to the ``pyomo.ConcreteModel`` in increasing order with key ``constraint_###`` where the the index of the objective appears after the underscore.  First constraint is labeled as ``constraint_1``, and constraint names are never padded with zeros.  RuntimeConstraints also contribute to this counter.
 
 
 Examples
@@ -85,5 +85,5 @@ Tips
 Known Issues
 ------------
 
-* Indexed variables must be broken up using either indices or a pyomo rule (see `this issue <https://github.com/codykarcher/pyomo/issues/3>`__)
+* Indexed variables must be broken up using either indices or a Pyomo rule (see `this issue <https://github.com/codykarcher/pyomo/issues/3>`__)
 * Units that are inconsistent, but not the same (ie, meters and feet) will flag as invalid when checking units (see `this issue <https://github.com/codykarcher/pyomo/issues/6>`__)

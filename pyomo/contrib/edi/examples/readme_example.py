@@ -61,7 +61,7 @@ class UnitCircle(BlackBoxFunctionModel):
         dzdx = 2 * x  # Compute dz/dx
         dzdy = 2 * y  # Compute dz/dy
 
-        z *= units.ft**2
+        z *= self.outputs['z'].units
         dzdx *= units.ft  # units.ft**2 / units.ft
         dzdy *= units.ft  # units.ft**2 / units.ft
 
@@ -73,8 +73,8 @@ class UnitCircle(BlackBoxFunctionModel):
 # =======================
 f.ConstraintList([[z, '==', [x, y], UnitCircle()], z <= 1 * units.m**2])
 
-# =============================================
-# Run the black box (improves coverage metrics)
-# =============================================
+# =================
+# Run the black box
+# =================
 uc = UnitCircle()
 bbo = uc.BlackBox(0.5 * units.m, 0.5 * units.m)

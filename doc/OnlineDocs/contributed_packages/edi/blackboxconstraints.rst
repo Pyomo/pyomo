@@ -7,11 +7,11 @@ Overview
 
 While some constraints are explicitly known and can be written directly into the optimization problem, it is common (particularly in engineering design) for some relationships to be too complex to be directly coded as a constraint.  
 
-EDI refers to these types of constraints as ``RuntimeConstraints`` because they are not constructed until they are needed by the solver.  A particular subset of Runtime Constraints of interest are Black-Box constraints, that is, constraints which call to an external routine.  To the average pyomo and EDI user, ``RuntimeConstraints`` are (for all intents and purposes) Black-Box constraints, and the distinction is semantic.  
+EDI refers to these types of constraints as ``RuntimeConstraints`` because they are not constructed until they are needed by the solver.  A particular subset of Runtime Constraints of interest are Black-Box constraints, that is, constraints which call to an external routine.  To the average Pyomo and EDI user, ``RuntimeConstraints`` are (for all intents and purposes) Black-Box constraints, and the distinction is semantic.  
 
 In other words, if you wish to code a black-box constraint using EDI, you will be using the Runtime Constraint constructor.
 
-In this context, a *Black-Box* is defined as a routine that performs hidden computation not visible EDI, pyomo, or more generally the optimization algorithm.  However, it is **not** assumed that black-boxes are unable to return gradient information.  A black-box in this context may be capable of returning arbitrary derivative information.
+In this context, a *Black-Box* is defined as a routine that performs hidden computation not visible EDI, Pyomo, or more generally the optimization algorithm.  However, it is **not** assumed that black-boxes are unable to return gradient information.  A black-box in this context may be capable of returning arbitrary derivative information.
 
 
 Construction
@@ -23,7 +23,7 @@ Runtime constraints consist of two separate elements that need to be constructed
 Constructing a Black Box
 ++++++++++++++++++++++++
 
-First, we need to create an object which is visible to pyomo/EDI that calls the black-box function.  EDI calls this a ``BlackBoxFunctionModel``, and it is a base class that gets inherited into the objects you will create as a user.
+First, we need to create an object which is visible to Pyomo/EDI that calls the black-box function.  EDI calls this a ``BlackBoxFunctionModel``, and it is a base class that gets inherited into the objects you will create as a user.
 
 A simple example is shown below:
 
@@ -269,9 +269,9 @@ The MultiCase Method
 ********************
 The ``MultiCase`` method provides a native capability to call the ``BlackBox`` method across multiple inputs simultaneously.  This function is **not** vectorized in the base class and is **not** optimized for performance.  If you wish to have a high performance vectorized function, you will need to implement your own method.
 
-Inputs to the ``MultiCase`` funciton should be a list of cases, which can be packed in any form accepted by the ``BlackBox_Standardized`` method.  Overloading these functions may allow different forms of unpacking scheme.
+Inputs to the ``MultiCase`` function should be a list of cases, which can be packed in any form accepted by the ``BlackBox_Standardized`` method.  Overloading these functions may allow different forms of unpacking scheme.
 
-The output is a list of ``NamedTuple`` objects that are output from the ``BlackBox_Standardized`` method.  If overloading, you may choose to output via a differnt packing scheme.
+The output is a list of ``NamedTuple`` objects that are output from the ``BlackBox_Standardized`` method.  If overloading, you may choose to output via a different packing scheme.
 
 Below is an example of overriding the default ``MultiCase`` method:
 
@@ -393,7 +393,7 @@ A standard construction
 Tips
 ----
 
-* Use the pyomo ``tostr()`` function (``from pyomo.common.formatting import tostr``) to print the results of black-boxes for more meaningful printouts
+* Use the Pyomo ``tostr()`` function (``from pyomo.common.formatting import tostr``) to print the results of black-boxes for more meaningful printouts
 * Align input and output declarations just as is recommended for optimization variable and constant declarations
 * Declare an input/output all on one line, no matter what the style guides say
 * This interface is really designed for subject matter experts who are not python users to have a simple, easy path to include their tools into a python based optimization architecture.  Try to let them build their own models as a means of fostering trust in the optimization tools
@@ -406,6 +406,6 @@ Tips
 Known Issues
 ------------
 
-* Currently only equality constraints are supported, pending an update to pyomo (see `this issue <https://github.com/codykarcher/pyomo/issues/2>`__)
+* Currently only equality constraints are supported, pending an update to Pyomo (see `this issue <https://github.com/codykarcher/pyomo/issues/2>`__)
 * Runtime constraints must output to a variable, numbers and constants are not permitted (see `this issue <https://github.com/codykarcher/pyomo/issues/4>`__)
 * This functionality is not well tested when returning derivatives higher than first order.  Though it should work, exercise caution and reach out to the dev team if questions arise.
