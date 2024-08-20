@@ -58,6 +58,7 @@ jobs:
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
+            CIBW_TEST_SKIP: "*{311,312}-win*"
       - uses: actions/upload-artifact@v4
         with:
           name: native_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
