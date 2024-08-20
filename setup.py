@@ -58,9 +58,9 @@ def check_config_arg(name):
     if name in sys.argv:
         sys.argv.remove(name)
         return True
-    print(f"SEARCHING FOR '{name}' in '{os.getenv('PYOMO_SETUP_ARGS', "").split()}'")
+    print(f"SEARCHING FOR '{name}' in '{os.getenv('PYOMO_SETUP_ARGS', '').split()}'")
     print("    ", os.getenv('PYOMO_SETUP_ARGS', ""))
-    if name in os.getenv('PYOMO_SETUP_ARGS', "").split():
+    if name in os.getenv('PYOMO_SETUP_ARGS', '').split():
         print(f"FOUND {name}")
         return True
     print(f"NOT FOUND {name}")
