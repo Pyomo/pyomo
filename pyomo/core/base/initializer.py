@@ -350,7 +350,7 @@ class IndexedCallInitializer(InitializerBase):
 
 
 class ParameterizedIndexedCallInitializer(IndexedCallInitializer):
-    """IndexedCallCallInitializer that accepts additional arguments"""
+    """IndexedCallInitializer that accepts additional arguments"""
 
     __slots__ = ()
 
