@@ -43,6 +43,10 @@ class PiecewiseLinearFunctionData(BlockData):
         BlockData.__init__(self, component)
 
         with self._declare_reserved_components():
+            # map of PiecewiseLinearExpression objects to integer indices in
+            # self._expressions
+            self._expression_ids = ComponentMap()
+            # index is monotonically increasing integer
             self._expressions = Expression(NonNegativeIntegers)
             self._transformed_exprs = ComponentMap()
             self._simplices = None
@@ -63,8 +67,9 @@ class PiecewiseLinearFunctionData(BlockData):
             return self._evaluate(*args)
         else:
             expr = PiecewiseLinearExpression(args, self)
-            idx = id(expr)
+            idx = len(self._expressions)
             self._expressions[idx] = expr
+            self._expression_ids[expr] = idx
             return self._expressions[idx]
 
     def _evaluate(self, *args):
@@ -134,7 +139,12 @@ class PiecewiseLinearFunctionData(BlockData):
         Records on the PiecewiseLinearFunction object that the transformed
         form of the PiecewiseLinearExpression object pw_expr is the Var v.
         """
-        self._transformed_exprs[self._expressions[id(pw_expr)]] = v
+        if pw_expr not in self._expression_ids:
+            raise DeveloperError(
+                "ID of PiecewiseLinearExpression '%s' not in the _expression_ids "
+                "dictionary of PiecewiseLinearFunction '%s'" % (pw_expr, self)
+            )
+        self._transformed_exprs[self._expressions[self._expression_ids[pw_expr]]] = v
 
     def get_transformation_var(self, pw_expr):
         """
@@ -159,7 +169,7 @@ class _univariate_linear_functor(AutoSlots.Mixin):
 
 
 class _multivariate_linear_functor(AutoSlots.Mixin):
-    __slots__ = 'normal'
+    __slots__ = ('normal',)
 
     def __init__(self, normal):
         self.normal = normal
