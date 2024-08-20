@@ -1950,17 +1950,17 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         assertExpressionsEqual(
             self,
             first_stage_eq_cons["coeff_matching_eq_con_coeff_1"].expr,
-            2.5 + m.x1 + (-5) * (m.x1 * m.x2) + m.x1**3 == 0,
+            m.x1 ** 3 + 0.5 + 5 * m.x1 * m.x2 * (-1) + (-1) * (m.x1 + 2) * (-1) == 0,
         )
         assertExpressionsEqual(
             self,
             first_stage_eq_cons["coeff_matching_eq_con_coeff_2"].expr,
-            (-1) + m.x2 == 0,
+            m.x2 - 1 == 0,
         )
         assertExpressionsEqual(
             self,
             first_stage_eq_cons["coeff_matching_eq_con_2_coeff_1"].expr,
-            (-1) + m.x2 == 0,
+            m.x2 - 1 == 0,
         )
 
     def test_reformulate_nonlinear_state_var_independent_eq_con(self):
@@ -2050,7 +2050,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         assertExpressionsEqual(
             self,
             wm.first_stage.equality_cons["coeff_matching_eq_con_2_coeff_1"].expr,
-            (-1) + m.x1 == 0,
+            m.x1 - 1 == 0,
         )
 
         # separation priorities were also updated
@@ -2578,7 +2578,7 @@ class TestPreprocessModelData(unittest.TestCase):
             assertExpressionsEqual(
                 self,
                 fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1"].expr,
-                -1 + fs.decision_rule_vars[1][1] == 0,
+                fs.decision_rule_vars[1][1] - 1 == 0,
             )
             assertExpressionsEqual(
                 self,
@@ -2612,7 +2612,7 @@ class TestPreprocessModelData(unittest.TestCase):
             assertExpressionsEqual(
                 self,
                 fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1"].expr,
-                -1 + fs.decision_rule_vars[1][1] == 0,
+                fs.decision_rule_vars[1][1] - 1 == 0,
             )
             assertExpressionsEqual(
                 self,
