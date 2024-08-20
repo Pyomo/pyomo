@@ -43,9 +43,6 @@ jobs:
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up global variable
-        run: |
-          echo "PYOMO_SETUP_ARGS=${{ matrix.GLOBAL_OPTIONS }}" >> $GITHUB_ENV
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
         with:
@@ -59,6 +56,7 @@ jobs:
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_TEST_SKIP: "*{311,312}-win*"
+            CIBW_ENVIRONMENT: PYOMO_SETUP_ARGS="${{ matrix.GLOBAL_OPTIONS }}"
       - uses: actions/upload-artifact@v4
         with:
           name: native_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
@@ -92,9 +90,6 @@ jobs:
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up global variable
-        run: |
-          echo "PYOMO_SETUP_ARGS=${{ matrix.GLOBAL_OPTIONS }}" >> $GITHUB_ENV
       - name: Set up QEMU
         if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
@@ -110,6 +105,7 @@ jobs:
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
+            CIBW_ENVIRONMENT: PYOMO_SETUP_ARGS="${{ matrix.GLOBAL_OPTIONS }}"
       - uses: actions/upload-artifact@v4
         with:
           name: alt_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
