@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ['3.11']
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
@@ -68,6 +68,13 @@ jobs:
         - wheel-version: 'cp312*'
           TARGET: 'py312'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+
+        exclude:
+        - wheel-version: 'cp311*'
+          os: windows-latest
+        - wheel-version: 'cp312*'
+          os: windows-latest
+
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
@@ -78,8 +85,8 @@ jobs:
             CIBW_ARCHS_LINUX: "native"
             CIBW_ARCHS_MACOS: "native arm64"
             CIBW_ARCHS_WINDOWS: "native ARM64"
-            CIBW_SKIP: "cp{311,312}-win32 cp{311,312}-win_amd64 cp{311,312}-win_arm64 *-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
+            CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_ENVIRONMENT: PYOMO_SETUP_ARGS="${{ matrix.GLOBAL_OPTIONS }}"
@@ -127,8 +134,8 @@ jobs:
           output-dir: dist
         env:
             CIBW_ARCHS_LINUX: "aarch64"
-            CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD: ${{ matrix.wheel-version }}
+            CIBW_SKIP: "*-musllinux*"
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
             CIBW_ENVIRONMENT: PYOMO_SETUP_ARGS="${{ matrix.GLOBAL_OPTIONS }}"
