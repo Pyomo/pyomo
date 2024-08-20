@@ -14,9 +14,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  PYOMO_SETUP_ARGS: "--with-cython --with-distributable-extensions"
-
 jobs:
   native_wheels:
     name: Build wheels (${{ matrix.wheel-version }}) on ${{ matrix.os }} for native and cross-compiled architecture
@@ -31,14 +28,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
+          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp39*'
           TARGET: 'py39'
+          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp310*'
           TARGET: 'py310'
+          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp311*'
           TARGET: 'py311'
+          GLOBAL_OPTIONS: ''
         - wheel-version: 'cp312*'
           TARGET: 'py312'
+          GLOBAL_OPTIONS: ''
     steps:
       - uses: actions/checkout@v4
       - name: Build wheels
@@ -53,7 +55,7 @@ jobs:
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
-            CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
+            CIBW_CONFIG_SETTINGS: ${{ matrix.GLOBAL_OPTIONS }}
       - uses: actions/upload-artifact@v4
         with:
           name: native_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
@@ -72,14 +74,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
+          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp39*'
           TARGET: 'py39'
+          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp310*'
           TARGET: 'py310'
+          GLOBAL_OPTIONS: '--global-option="--with-cython --with-distributable-extensions"'
         - wheel-version: 'cp311*'
           TARGET: 'py311'
+          GLOBAL_OPTIONS: ''
         - wheel-version: 'cp312*'
           TARGET: 'py312'
+          GLOBAL_OPTIONS: ''
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -97,7 +104,7 @@ jobs:
             CIBW_BUILD: ${{ matrix.wheel-version }}
             CIBW_BUILD_VERBOSITY: 1
             CIBW_BEFORE_BUILD: pip install cython pybind11
-            CIBW_CONFIG_SETTINGS: '--global-option="--with-cython --with-distributable-extensions"'
+            CIBW_CONFIG_SETTINGS: ${{ matrix.GLOBAL_OPTIONS }}
       - uses: actions/upload-artifact@v4
         with:
           name: alt_wheels-${{ matrix.os }}-${{ matrix.TARGET }}
