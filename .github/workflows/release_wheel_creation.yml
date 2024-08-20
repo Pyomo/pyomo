@@ -14,10 +14,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  WITH_CYTHON: "--with-cython --with-distributable-extensions"
-  WITHOUT_CYTHON: "--without-cython --with-distributable-extensions"
-
 jobs:
 
   native_wheels:
@@ -33,19 +29,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: "$WITH_CYTHON"
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: "$WITH_CYTHON"
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: "$WITH_CYTHON"
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
 
         exclude:
         - wheel-version: 'cp311*'
@@ -86,19 +82,19 @@ jobs:
         include:
         - wheel-version: 'cp38*'
           TARGET: 'py38'
-          GLOBAL_OPTIONS: "$WITH_CYTHON"
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
-          GLOBAL_OPTIONS: "$WITH_CYTHON"
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp310*'
           TARGET: 'py310'
-          GLOBAL_OPTIONS: "$WITH_CYTHON"
+          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp311*'
           TARGET: 'py311'
-          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
-          GLOBAL_OPTIONS: "$WITHOUT_CYTHON"
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -124,7 +120,7 @@ jobs:
           overwrite: true
 
   pure_python:
-    name: Build pure wheels (${{ matrix.python-version }})
+    name: pure_python_wheel
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -145,7 +141,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: purepython_wheel-${{ matrix.python-version }}
+          name: purepythonwheel
           path: dist/*.whl
           overwrite: true
 
