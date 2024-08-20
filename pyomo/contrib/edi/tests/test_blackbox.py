@@ -1007,7 +1007,7 @@ class TestEDIBlackBox(unittest.TestCase):
                     self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
                 ]
                 y = [
-                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+                    self.pyomo_value(runCases[i]['y']) for i in range(0, len(runCases))
                 ]
 
                 u = []
@@ -1052,6 +1052,673 @@ class TestEDIBlackBox(unittest.TestCase):
         bb = PassThrough()
         bbo = bb.BlackBox(1.0, 1.0)
         bbo = bb.BlackBox({'x': np.linspace(0, 10, 11), 'y': np.linspace(0, 10, 11)})
+
+    def test_edi_blackbox_standardized_1(self):
+        "Tests the blackbox_standardized function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class PassThrough(BlackBoxFunctionModel):
+            def __init__(self):
+                # Set up all the attributes by calling Model.__init__
+                super().__init__()
+
+                # Setup Inputs
+                self.inputs.append('x', '', 'X Variable')
+                self.inputs.append('y', '', 'Y Variable')
+
+                # Setup Outputs
+                self.outputs.append('u', '', 'U Variable')
+                self.outputs.append('v', '', 'V Variable')
+
+                # Simple model description
+                self.description = 'This model is a pass through)'
+
+                self.availableDerivative = 1
+
+            # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+            def BlackBox(self, *args, **kwargs):
+                # Note: This function as written only operates on the first input on a multi-input list
+                runCases, extras = self.parseInputs(*args, **kwargs)
+                x = [
+                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+                ]
+                y = [
+                    self.pyomo_value(runCases[i]['y']) for i in range(0, len(runCases))
+                ]
+
+                u = []
+                dudx = []
+                dudy = []
+                v = []
+                dvdx = []
+                dvdy = []
+
+                for xval in x:
+                    u.append(xval * units.dimensionless)
+                    dudx.append(1.0 * units.dimensionless)
+                    dudy.append(0.0 * units.dimensionless)
+
+                for yval in y:
+                    v.append(yval * units.dimensionless)
+                    dvdx.append(0.0 * units.dimensionless)
+                    dvdy.append(1.0 * units.dimensionless)
+
+                if len(runCases) == 1:
+                    returnMode = -2
+                else:
+                    returnMode = 1
+
+                if returnMode < 0:
+                    returnMode = -1 * (returnMode + 1)
+                    if returnMode == 0:
+                        return [u[0], v[0]]
+                    if returnMode == 1:
+                        return [u[0], v[0]], [[dudx[0], dudy[0]], [dvdx[0], dvdy[0]]]
+                else:
+                    if returnMode == 0:
+                        opt = []
+                        for i in range(0, len(y)):
+                            opt.append([u[i], v[i]])
+                        return opt
+                    if returnMode == 1:
+                        opt = []
+                        for i in range(0, len(y)):
+                            opt.append(
+                                [[u[i], v[i]], [[dudx[i], dudy[i]], [dvdx[i], dvdy[i]]]]
+                            )
+                        return opt
+
+        bb = PassThrough()
+        bbo = bb.BlackBox(1.0, 1.5)
+        bbs = bb.BlackBox_Standardized(1.0, 1.5)
+
+        self.assertAlmostEqual(pyo.value(bbo[0][0]), pyo.value(bbs[0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][0]), pyomo_units.get_units(bbs[0][0])
+        )
+        self.assertAlmostEqual(pyo.value(bbo[0][1]), pyo.value(bbs[0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][1]), pyomo_units.get_units(bbs[0][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][0]), pyo.value(bbs[1][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0]), pyomo_units.get_units(bbs[1][0][0])
+        )
+        self.assertAlmostEqual(pyo.value(bbo[1][0][1]), pyo.value(bbs[1][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1]), pyomo_units.get_units(bbs[1][0][1])
+        )
+        self.assertAlmostEqual(pyo.value(bbo[1][1][0]), pyo.value(bbs[1][1][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][1][0]), pyomo_units.get_units(bbs[1][1][0])
+        )
+        self.assertAlmostEqual(pyo.value(bbo[1][1][1]), pyo.value(bbs[1][1][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][1][1]), pyomo_units.get_units(bbs[1][1][1])
+        )
+
+    def test_edi_blackbox_standardized_2(self):
+        "Tests the blackbox_standardized function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class Norm_2(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append(
+                    name='x', units='', description='The x variable', size=3
+                )
+                self.outputs.append(name='y', units='', description='The y variable')
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, *args, **kwargs):  # The actual function that does things
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = self.sanitizeInputs(runCases[0]['x'])
+                x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
+
+                y = x[0] ** 2 + x[1] ** 2 + x[2] ** 2  # Compute y
+                dydx0 = 2 * x[0]  # Compute dy/dx0
+                dydx1 = 2 * x[1]  # Compute dy/dx1
+                dydx2 = 2 * x[2]  # Compute dy/dx2
+
+                y = y * units.dimensionless
+                # dydx = np.array([dydx0,dydx1,dydx2]) * units.dimensionless
+                dydx0 = dydx0 * units.dimensionless
+                dydx1 = dydx1 * units.dimensionless
+                dydx2 = dydx2 * units.dimensionless
+
+                return y, [[dydx0, dydx1, dydx2]]  # return z, grad(z), hess(z)...
+
+        bb = Norm_2()
+        bbo = bb.BlackBox(np.array([1, 1, 1]))
+        bbs = bb.BlackBox_Standardized(np.array([1, 1, 1]))
+
+        self.assertAlmostEqual(pyo.value(bbs.values.y), pyo.value(bbo[0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs.values.y), pyomo_units.get_units(bbo[0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbs.first.y.x[0]), pyo.value(bbo[1][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs.first.y.x[0]), pyomo_units.get_units(bbo[1][0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0]), pyo.value(bbs[0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0]), pyomo_units.get_units(bbs[0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][0]), pyo.value(bbs[1][0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0]), pyomo_units.get_units(bbs[1][0][0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][1]), pyo.value(bbs[1][0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1]), pyomo_units.get_units(bbs[1][0][0][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][2]), pyo.value(bbs[1][0][0][2]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][2]), pyomo_units.get_units(bbs[1][0][0][2])
+        )
+
+    def test_edi_blackbox_standardized_3(self):
+        "Tests the blackbox_standardized function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class VectorCast(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append(name='x', units='', description='The x variable')
+                self.outputs.append(
+                    name='y', units='', description='The y variable', size=3
+                )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, *args, **kwargs):  # The actual function that does things
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = pyo.value(self.sanitizeInputs(runCases[0]['x']))
+
+                y = np.array([x, x, x]) * units.dimensionless
+                dydx = np.array([1.0, 1.0, 1.0]) * units.dimensionless
+
+                return y, [dydx]  # return z, grad(z), hess(z)...
+
+        bb = VectorCast()
+        bbo = bb.BlackBox(2)
+        bbs = bb.BlackBox_Standardized(2)
+
+        self.assertAlmostEqual(pyo.value(bbo[0][0]), pyo.value(bbs[0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][0]), pyomo_units.get_units(bbs[0][0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][1]), pyo.value(bbs[0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][1]), pyomo_units.get_units(bbs[0][0][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][2]), pyo.value(bbs[0][0][2]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][2]), pyomo_units.get_units(bbs[0][0][2])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][0]), pyo.value(bbs[1][0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0]), pyomo_units.get_units(bbs[1][0][0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][1]), pyo.value(bbs[1][0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1]), pyomo_units.get_units(bbs[1][0][0][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][2]), pyo.value(bbs[1][0][0][2]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][2]), pyomo_units.get_units(bbs[1][0][0][2])
+        )
+
+    def test_edi_blackbox_standardized_4(self):
+        "Tests the blackbox_standardized function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class Parabola(BlackBoxFunctionModel):
+            def __init__(self):
+                super(Parabola, self).__init__()
+                self.description = 'This model evaluates the function: y = x**2'
+                self.inputs.append(
+                    name='x', size=3, units='', description='The x variable'
+                )
+                self.outputs.append(
+                    name='y', size=3, units='', description='The y variable'
+                )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, *args, **kwargs):  # The actual function that does things
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = self.sanitizeInputs(runCases[0]['x'])
+                x = np.array([pyo.value(xval) for xval in x], dtype=np.float64)
+
+                y = x**2  # Compute y
+                dydx = 2 * x  # Compute dy/dx
+
+                y = y
+                dydx = np.diag(dydx)
+                dydx = dydx
+
+                return y, [dydx]  # return z, grad(z), hess(z)...
+
+        bb = Parabola()
+        bbo = bb.BlackBox(np.array([1, 1, 1]))
+        bbs = bb.BlackBox_Standardized(np.array([1, 1, 1]))
+
+        self.assertAlmostEqual(pyo.value(bbo[0][0]), pyo.value(bbs[0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][0]), pyomo_units.get_units(bbs[0][0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][1]), pyo.value(bbs[0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][1]), pyomo_units.get_units(bbs[0][0][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][2]), pyo.value(bbs[0][0][2]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][2]), pyomo_units.get_units(bbs[0][0][2])
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][0][0]), pyo.value(bbs[1][0][0][0][0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0][0]),
+            pyomo_units.get_units(bbs[1][0][0][0][0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][0][1]), pyo.value(bbs[1][0][0][0][1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0][1]),
+            pyomo_units.get_units(bbs[1][0][0][0][1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][0][2]), pyo.value(bbs[1][0][0][0][2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0][2]),
+            pyomo_units.get_units(bbs[1][0][0][0][2]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][1][0]), pyo.value(bbs[1][0][0][1][0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1][0]),
+            pyomo_units.get_units(bbs[1][0][0][1][0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][1][1]), pyo.value(bbs[1][0][0][1][1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1][1]),
+            pyomo_units.get_units(bbs[1][0][0][1][1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][1][2]), pyo.value(bbs[1][0][0][1][2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1][2]),
+            pyomo_units.get_units(bbs[1][0][0][1][2]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][2][0]), pyo.value(bbs[1][0][0][2][0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][2][0]),
+            pyomo_units.get_units(bbs[1][0][0][2][0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][2][1]), pyo.value(bbs[1][0][0][2][1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][2][1]),
+            pyomo_units.get_units(bbs[1][0][0][2][1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbo[1][0][2][2]), pyo.value(bbs[1][0][0][2][2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][2][2]),
+            pyomo_units.get_units(bbs[1][0][0][2][2]),
+        )
+
+    def test_edi_blackbox_standardized_5(self):
+        "Tests the blackbox_standardized function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class MatrixSum(BlackBoxFunctionModel):
+            def __init__(self):
+                # Set up all the attributes by calling Model.__init__
+                super().__init__()
+
+                # Setup Inputs
+                self.inputs.append('x', '', 'Independent Variable', size=[2, 2])
+
+                # Setup Outputs
+                self.outputs.append('y', '', 'Dependent Variable')
+
+                # Simple model description
+                self.description = 'This model sums all elements of a 2x2 matrix'
+
+                self.availableDerivative = 1
+
+            # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+            def BlackBox(self, *args, **kwargs):
+                runCases, extras = self.parseInputs(*args, **kwargs)
+                x = [
+                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+                ]
+
+                y = np.sum(x) * units.dimensionless
+                dydx = np.ones([2, 2]) * units.dimensionless
+
+                return y, dydx
+
+        bb = MatrixSum()
+        bbo = bb.BlackBox(np.array([[1, 1], [1, 1]]))
+        bbs = bb.BlackBox_Standardized(np.array([[1, 1], [1, 1]]))
+
+        self.assertAlmostEqual(pyo.value(bbo[0]), pyo.value(bbs[0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0]), pyomo_units.get_units(bbs[0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][0]), pyo.value(bbs[1][0][0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0]),
+            pyomo_units.get_units(bbs[1][0][0][0][0]),
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][1]), pyo.value(bbs[1][0][0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1]),
+            pyomo_units.get_units(bbs[1][0][0][0][1]),
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][1][0]), pyo.value(bbs[1][0][0][1][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][1][0]),
+            pyomo_units.get_units(bbs[1][0][0][1][0]),
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][1][1]), pyo.value(bbs[1][0][0][1][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][1][1]),
+            pyomo_units.get_units(bbs[1][0][0][1][1]),
+        )
+
+    def test_edi_blackbox_standardized_6(self):
+        "Tests the blackbox_standardized function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class MatrixCast(BlackBoxFunctionModel):
+            def __init__(self):
+                # Set up all the attributes by calling Model.__init__
+                super().__init__()
+
+                # Setup Inputs
+                self.inputs.append('x', '', 'Independent Variable')
+
+                # Setup Outputs
+                self.outputs.append('y', '', 'Dependent Variable', size=[2, 2])
+
+                # Simple model description
+                self.description = 'This model casts a number to a 2x2 matrix'
+
+                self.availableDerivative = 1
+
+            # standard function call is y(, dydx, ...) = self.BlackBox(**{'x1':x1, 'x2':x2, ...})
+            def BlackBox(self, *args, **kwargs):
+                runCases, extras = self.parseInputs(*args, **kwargs)
+                x = [
+                    self.pyomo_value(runCases[i]['x']) for i in range(0, len(runCases))
+                ]
+
+                y = x[0] * np.ones([2, 2]) * units.dimensionless
+                dydx = np.ones([2, 2]) * units.dimensionless
+
+                return y, dydx
+
+        bb = MatrixCast()
+        bbo = bb.BlackBox(2)
+        bbs = bb.BlackBox_Standardized(2)
+
+        self.assertAlmostEqual(pyo.value(bbo[0][0][0]), pyo.value(bbs[0][0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][0][0]), pyomo_units.get_units(bbs[0][0][0][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][0][1]), pyo.value(bbs[0][0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][0][1]), pyomo_units.get_units(bbs[0][0][0][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][1][0]), pyo.value(bbs[0][0][1][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][1][0]), pyomo_units.get_units(bbs[0][0][1][0])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[0][1][1]), pyo.value(bbs[0][0][1][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[0][1][1]), pyomo_units.get_units(bbs[0][0][1][1])
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][0]), pyo.value(bbs[1][0][0][0][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][0]),
+            pyomo_units.get_units(bbs[1][0][0][0][0]),
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][0][1]), pyo.value(bbs[1][0][0][0][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][0][1]),
+            pyomo_units.get_units(bbs[1][0][0][0][1]),
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][1][0]), pyo.value(bbs[1][0][0][1][0]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][1][0]),
+            pyomo_units.get_units(bbs[1][0][0][1][0]),
+        )
+
+        self.assertAlmostEqual(pyo.value(bbo[1][1][1]), pyo.value(bbs[1][0][0][1][1]))
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbo[1][1][1]),
+            pyomo_units.get_units(bbs[1][0][0][1][1]),
+        )
+
+    def test_edi_blackbox_multicase(self):
+        "Tests the multicase function"
+        import pyomo
+        import numpy as np
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel, ediprint
+        from pyomo.common.formatting import tostr
+        from pyomo.environ import units as pyomo_units
+
+        class VectorCast(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the two norm'
+                self.inputs.append(name='x', units='', description='The x variable')
+                self.outputs.append(
+                    name='y', units='', description='The y variable', size=3
+                )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, *args, **kwargs):  # The actual function that does things
+                runCases, remainingKwargs = self.parseInputs(*args, **kwargs)
+
+                x = pyo.value(self.sanitizeInputs(runCases[0]['x']))
+
+                y = np.array([x, x, x]) * units.dimensionless
+                dydx = np.array([1.0, 1.0, 1.0]) * units.dimensionless
+
+                return y, [dydx]  # return z, grad(z), hess(z)...
+
+        bb = VectorCast()
+        bbs = bb.BlackBox_Standardized([[1], [2]])
+        bbm = bb.MultiCase([[1], [2]])
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[0].values.y[0]), pyo.value(bbm[0].values.y[0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[0].values.y[0]),
+            pyomo_units.get_units(bbm[0].values.y[0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[0].values.y[1]), pyo.value(bbm[0].values.y[1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[0].values.y[1]),
+            pyomo_units.get_units(bbm[0].values.y[1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[0].values.y[2]), pyo.value(bbm[0].values.y[2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[0].values.y[2]),
+            pyomo_units.get_units(bbm[0].values.y[2]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[0].first.y.x[0]), pyo.value(bbm[0].first.y.x[0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[0].first.y.x[0]),
+            pyomo_units.get_units(bbm[0].first.y.x[0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[0].first.y.x[1]), pyo.value(bbm[0].first.y.x[1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[0].first.y.x[1]),
+            pyomo_units.get_units(bbm[0].first.y.x[1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[0].first.y.x[2]), pyo.value(bbm[0].first.y.x[2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[0].first.y.x[2]),
+            pyomo_units.get_units(bbm[0].first.y.x[2]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[1].values.y[0]), pyo.value(bbm[1].values.y[0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[1].values.y[0]),
+            pyomo_units.get_units(bbm[1].values.y[0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[1].values.y[1]), pyo.value(bbm[1].values.y[1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[1].values.y[1]),
+            pyomo_units.get_units(bbm[1].values.y[1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[1].values.y[2]), pyo.value(bbm[1].values.y[2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[1].values.y[2]),
+            pyomo_units.get_units(bbm[1].values.y[2]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[1].first.y.x[0]), pyo.value(bbm[1].first.y.x[0])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[1].first.y.x[0]),
+            pyomo_units.get_units(bbm[1].first.y.x[0]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[1].first.y.x[1]), pyo.value(bbm[1].first.y.x[1])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[1].first.y.x[1]),
+            pyomo_units.get_units(bbm[1].first.y.x[1]),
+        )
+
+        self.assertAlmostEqual(
+            pyo.value(bbs[1].first.y.x[2]), pyo.value(bbm[1].first.y.x[2])
+        )
+        self.assertAlmostEqual(
+            pyomo_units.get_units(bbs[1].first.y.x[2]),
+            pyomo_units.get_units(bbm[1].first.y.x[2]),
+        )
 
 
 if __name__ == '__main__':

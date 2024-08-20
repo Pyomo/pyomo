@@ -24,6 +24,8 @@ from pyomo.environ import units as pyomo_units
 from pyomo.core.base.units_container import as_quantity
 from pyomo.common.dependencies import attempt_import
 
+from pyomo.core.expr.ndarray import NumericNDArray
+
 # from pyomo.common.numeric_types import RegisterNumericType
 try:
     import pint
@@ -451,7 +453,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 modelOutputUnits = opt.units
                 outputOptimizationUnits = optimizationOutput.get_units()
                 vl = valueList[i]
-                if isinstance(vl, pyomo.core.expr.numeric_expr.NumericNDArray):
+                if isinstance(vl, NumericNDArray):
                     validIndexList = optimizationOutput.index_set().data()
                     for j in range(0, len(validIndexList)):
                         vi = validIndexList[j]
@@ -519,9 +521,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         ptr_col += 1
                         ptr_row_step = 1
 
-                    elif isinstance(
-                        jacobianValue_raw, pyomo.core.expr.numeric_expr.NumericNDArray
-                    ):
+                    elif isinstance(jacobianValue_raw, NumericNDArray):
                         jshape = jacobianValue_raw.shape
 
                         if isinstance(oopt, pyomo.core.base.var.ScalarVar):
@@ -594,7 +594,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
                 ptr_row += ptr_row_step
 
-            print(outputJacobian.dtype)
+            # print(outputJacobian.dtype)
             # print(sps.coo_matrix(outputJacobian))
             # outputJacobian = np.zeros([3,1])
             self._cache['pyomo_jacobian'] = sps.coo_matrix(
@@ -612,6 +612,11 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
     # These functions wrap black box to provide more functionality
 
     def BlackBox_Standardized(self, *args, **kwargs):
+        runCases, extras = self.parseInputs(*args, **kwargs)
+        if len(runCases) != 1:
+            # This is actually a MultiCase, run the correct function instead
+            return self.MultiCase(*args, **kwargs)
+
         # --------
         # Run
         # --------
@@ -628,13 +633,16 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         iptTuple = namedtuple('iptTuple', inputNames)
 
         structuredOutput = {}
-        structuredOutput['values'] = len(self.outputs) * [None]
-        structuredOutput['first'] = len(self.outputs) * [len(self.inputs) * [None]]
-        structuredOutput['second'] = len(self.outputs) * [
-            len(self.inputs) * [len(self.inputs) * [None]]
-        ]
+        structuredOutput['values'] = np.zeros(len(self.outputs)).tolist()
+        structuredOutput['first'] = np.zeros(
+            [len(self.outputs), len(self.inputs)]
+        ).tolist()
+        structuredOutput['second'] = np.zeros(
+            [len(self.outputs), len(self.inputs), len(self.inputs)]
+        ).tolist()
 
         opt = toList(opt_raw, ['values', 'first', 'second'])
+        # print(opt)
 
         # --------
         # Values
@@ -655,6 +663,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 structuredOutput['values'][i] = self.convert(
                     opt_values[i], self.outputs[i].units
                 )
+            elif isinstance(self.outputs[i].size, int):
+                for ix in range(0, self.outputs[i].size):
+                    structuredOutput['values'][i][ix] = opt_values[i][ix]
             else:
                 listOfIndices = list(
                     itertools.product(*[range(0, n) for n in self.outputs[i].size])
@@ -708,8 +719,11 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             for i, vl in enumerate(opt_first):
                 for j, vlj in enumerate(opt_first[i]):
-                    # print(opt_first)
-                    # print(opt_first[i])
+                    # from pyomo.contrib.edi import ediprint
+                    # print()
+                    # ediprint(opt_first)
+                    # ediprint(opt_first[i])
+                    # ediprint(opt_first[i][j])
                     # print(self.outputs)
                     # print(self.inputs)
                     # print(i)
@@ -720,35 +734,61 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                             self.outputs[i].units / self.inputs[j].units,
                         )
                     elif self.outputs[i].size == 0:
+                        # print(self.inputs[j].size)
+                        if isinstance(self.inputs[j].size, int):
+                            sizelist = [self.inputs[j].size]
+                        else:
+                            assert isinstance(self.inputs[j].size, list)
+                            sizelist = self.inputs[j].size
                         listOfIndices = list(
-                            itertools.product(
-                                *[range(0, n) for n in self.inputs[j].size]
-                            )
+                            itertools.product(*[range(0, n) for n in sizelist])
                         )
+                        # print(listOfIndices)
                         for ix in listOfIndices:
+                            if len(ix) == 1:
+                                ix = ix[0]
                             structuredOutput['first'][i][j][ix] = opt_first[i][j][
                                 ix
                             ]  # unit conversion handled automatically by pint
                     elif self.inputs[j].size == 0:
+                        if isinstance(self.outputs[i].size, int):
+                            sizelist = [self.outputs[i].size]
+                        else:
+                            assert isinstance(self.outputs[i].size, list)
+                            sizelist = self.outputs[i].size
                         listOfIndices = list(
-                            itertools.product(
-                                *[range(0, n) for n in self.outputs[i].size]
-                            )
+                            itertools.product(*[range(0, n) for n in sizelist])
                         )
                         for ix in listOfIndices:
+                            if len(ix) == 1:
+                                ix = ix[0]
                             structuredOutput['first'][i][j][ix] = opt_first[i][j][
                                 ix
                             ]  # unit conversion handled automatically by pint
                     else:
+                        if isinstance(self.inputs[j].size, int):
+                            sizelist_inputs = [self.inputs[j].size]
+                        else:
+                            assert isinstance(self.inputs[j].size, list)
+                            sizelist_inputs = self.inputs[j].size
+
+                        if isinstance(self.outputs[i].size, int):
+                            sizelist_outputs = [self.outputs[i].size]
+                        else:
+                            assert isinstance(self.inputs[j].size, list)
+                            sizelist_outputs = self.outputs[i].size
+
                         listOfIndices = list(
                             itertools.product(
                                 *[
                                     range(0, n)
-                                    for n in self.outputs[i].size + self.inputs[j].size
+                                    for n in sizelist_outputs + sizelist_inputs
                                 ]
                             )
                         )
                         for ix in listOfIndices:
+                            if len(ix) == 1:
+                                ix = ix[0]
                             structuredOutput['first'][i][j][ix] = opt_first[i][j][
                                 ix
                             ]  # unit conversion handled automatically by pint
@@ -826,6 +866,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
         try:
             val = val * pyomo_units.dimensionless
+            val = pyo.value(val) * pyomo_units.get_units(val)
         except:
             pass  ## will handle later
 
@@ -836,8 +877,9 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 pyomo.core.expr.numeric_expr.NPV_ProductExpression,
             ),
         ):
-            return pyomo_units.convert(val, unts)
-        elif isinstance(val, pyomo.core.expr.numeric_expr.NumericNDArray):
+            rval = pyomo_units.convert(val, unts)
+            return pyo.value(rval) * pyomo_units.get_units(rval)
+        elif isinstance(val, NumericNDArray):
             shp = val.shape
             ix = np.ndindex(*shp)
             opt = np.zeros(shp)
@@ -845,6 +887,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                 ixt = next(ix)
                 opt[ixt] = pyo.value(pyomo_units.convert(val[ixt], unts))
             return opt * unts
+        # elif isinstance(val, (list, tuple)):
         else:
             raise ValueError('Invalid type passed to unit conversion function')
 
@@ -852,7 +895,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         try:
             return pyo.value(val)
         except:
-            if isinstance(val, pyomo.core.expr.numeric_expr.NumericNDArray):
+            if isinstance(val, NumericNDArray):
                 shp = val.shape
                 ix = np.ndindex(*shp)
                 opt = np.zeros(shp)
@@ -867,7 +910,6 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
     # ---------------------------------------------------------------------------------------------------------------------
     def parseInputs(self, *args, **kwargs):
         args = list(args)  # convert tuple to list
-
         inputNames = [self.inputs[i].name for i in range(0, len(self.inputs))]
 
         # ------------------------------
@@ -917,7 +959,8 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         raise ValueError(
                             "Invalid data type in the input list.  Note that BlackBox([x1,x2,y]) must be passed in as BlackBox([[x1,x2,y]]) or "
                             + "BlackBox(*[x1,x2,y]) or BlackBox({'x1':x1,'x2':x2,'y':y}) or simply BlackBox(x1, x2, y) to avoid processing singularities.  "
-                            + "Best practice is BlackBox({'x1':x1,'x2':x2,'y':y})"
+                            + "Best practice is BlackBox({'x1':x1,'x2':x2,'y':y}).  For multi-case input, be sure to wrap even single inputs in lists,"
+                            + ' ex: [[x],[x],[x]] and not [x,x,x].'
                         )
                 return dataRuns, {}
 
@@ -1067,7 +1110,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
                         'Size did not match the expected size %s (ie: Scalar)'
                         % (str(size))
                     )
-            elif isinstance(szVal, pyomo.core.expr.numeric_expr.NumericNDArray):
+            elif isinstance(szVal, NumericNDArray):
                 shp = szVal.shape
                 if isinstance(size, (int, float)):
                     size = [size]
@@ -1123,7 +1166,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             ipval = inputDict[name]
 
-            if isinstance(ipval, pyomo.core.expr.numeric_expr.NumericNDArray):
+            if isinstance(ipval, NumericNDArray):
                 for ii in range(0, len(ipval)):
                     try:
                         ipval[ii] = self.convert(ipval[ii], unts)  # ipval.to(unts)
@@ -1144,7 +1187,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
 
             # superseded by the custom convert function
             # if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
-            #                                        pyomo.core.expr.numeric_expr.NumericNDArray,
+            #                                        NumericNDArray,
             #                                        pyomo.core.base.units_container._PyomoUnit)):
             #     ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
 
@@ -1198,7 +1241,7 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         #         ipval_correctUnits = ipval
 
         #     if not isinstance(ipval_correctUnits, (pyomo.core.expr.numeric_expr.NPV_ProductExpression,
-        #                                            pyomo.core.expr.numeric_expr.NumericNDArray,
+        #                                            NumericNDArray,
         #                                            pyomo.core.base.units_container._PyomoUnit)):
         #         ipval_correctUnits = ipval_correctUnits * pyomo_units.dimensionless
 

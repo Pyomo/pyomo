@@ -3,7 +3,6 @@
 The Pyomo Engineering Design Interface (EDI) is a lightweight wrapper on the Pyomo language that is targeted at composing engineering design optimization problems.  The language and interface have been designed to mimic many of the features found in [GPkit](https://github.com/convexengineering/gpkit) and [CVXPY](https://github.com/cvxpy/cvxpy) while also providing a simple, clean interface for black-box analysis codes that are common in engineering design applications.
 
 ## TODO
-- Fix broken unit tests
 - Add unit tests for the BlackBox_Standardized method
 - Add unit tests for the MultiCase method
 - Add documentation for the MultiCase method

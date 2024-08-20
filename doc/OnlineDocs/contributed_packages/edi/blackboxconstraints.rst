@@ -116,7 +116,9 @@ The ``BlackBox`` is extremely flexible, but here we present standard usage for a
 
 The ``BlackBox`` method assumes to take in the inputs as arguments in the order defined during the ``__init__()`` method.  Note that the method assumes inputs **with units** and expects outputs **with units**.  In general, the units on inputs and outputs need not be in any specific system, but should be convertible (ex, meters and feet) to whatever has been specified as the input units when defining in the ``__init__()`` function.  
 
-The unit handling system in Pyomo can be rough at times, and so the BlackBox function is expected to return values that are ``pint.Quantity`` types.  These are obtained using the ``pyo.as_quantity()`` function.
+Various unpacking schemes are enabled by default via the ``parse_inputs`` function.  Use of this function is not necessary, but provides for the parsing of index argumented lists (ex: ``function(x1, x2, x3)``) and keyword argumented dictionaries (ex: ``function({'x2':x2, 'x1':x1, 'x3',x3})``), along with a few other possibilities.
+
+The unit handling system in Pyomo can be rough at times, and so best practice is generally for the BlackBox function is expected to return values that are ``pint.Quantity`` types.  These are obtained using the ``pyo.as_quantity()`` function.
 
 Since the units cannot be assumed on input, the first step in any black box is to convert to the model units:
 
@@ -200,7 +202,7 @@ In the event that the inputs and/or outputs are non-scalar, then outputs should 
     du_dx[0,0,1,0,0] # derivative of u[0,0,1] with respect to x[0,0]
     du_dx[0,0,0,1,1] # derivative of u[0,0,0] with respect to x[1,1]
 
-Note that this may change in the future, as developers are unsatisfied with extensions of this method to second order and higher derivatives.
+Note that this may change in the future, as developers are currently unsatisfied with extensions of this method to second order and higher derivatives.
 
 The BlackBox_Standardized Method
 ********************************
@@ -267,28 +269,18 @@ The MultiCase Method
 ********************
 The ``MultiCase`` method provides a native capability to call the ``BlackBox`` method across multiple inputs simultaneously.  This function is **not** vectorized in the base class and is **not** optimized for performance.  If you wish to have a high performance vectorized function, you will need to implement your own method.
 
-The native ``MultiCase`` function can take in a variety of different input formats:
+Inputs to the ``MultiCase`` funciton should be a list of cases, which can be packed in any form accepted by the ``BlackBox_Standardized`` method.  Overloading these functions may allow different forms of unpacking scheme.
 
-
-
-
-
-
-
-The output is a list of ``NamedTuple`` objects that are output from the ``BlackBox_Standardized`` method.
+The output is a list of ``NamedTuple`` objects that are output from the ``BlackBox_Standardized`` method.  If overloading, you may choose to output via a differnt packing scheme.
 
 Below is an example of overriding the default ``MultiCase`` method:
 
 
-
-
-
-
-
-
-
-
-
+.. literalinclude:: ../../../../pyomo/contrib/edi/tests/test_docSnippets.py
+    :language: python 
+    :dedent: 8
+    :start-after: # BEGIN: RuntimeConstraints_Snippet_13
+    :end-before: # END: RuntimeConstraints_Snippet_13
 
 
 Including a Black-Box in an EDI Formulation
@@ -408,7 +400,7 @@ Tips
 * Embrace units.  They will save you so many times, it is well worth the minor additional overhead
 * Pyomo units work slightly diffenrently than pint (for those with pint experience), but those differences should be hidden from the model creator for the most part
 * It is common to use this framework to call to a piece of software external to python
-* See the :doc:`advanced <./advancedruntimeconstraints>` documentation for extra tips and tricks
+* A model summary can be printed by calling ``print(model_instance.summary)``
 
 
 Known Issues

@@ -509,7 +509,9 @@ class TestEDISnippets(unittest.TestCase):
         y = f.Variable(name='y', guess=1.0, units='m', description='The y variable')
         c = f.Constant(name='c', value=1.0, units='', description='A constant c')
         f.Objective(c * x + y)
-        f.ConstraintList([x**2 + y**2 <= 1.0 * units.m**2, x <= 0.75 * units.m, x >= y])
+        f.ConstraintList(
+            [x**2 + y**2 <= 1.0 * units.m**2, x <= 0.75 * units.m, x >= y]
+        )
         # END: Constraints_Snippet_01
 
     def test_edi_snippet_constraints_02(self):
@@ -895,13 +897,6 @@ class TestEDISnippets(unittest.TestCase):
         from pyomo.environ import units
         from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
 
-        f = Formulation()
-        x = f.Variable(name='x', guess=1.0, units='m', description='The x variable')
-        y = f.Variable(name='y', guess=1.0, units='m', description='The y variable')
-        z = f.Variable(name='z', guess=1.0, units='m^2', description='The z variable')
-
-        f.Objective(x + y)
-
         class UnitCircle(BlackBoxFunctionModel):
             def __init__(self):
                 super().__init__()
@@ -944,6 +939,60 @@ class TestEDISnippets(unittest.TestCase):
         bb = m.BlackBox(0.5 * units.m, 0.5 * units.m)
         bbs = m.BlackBox_Standardized(0.5 * units.m, 0.5 * units.m)
         # END: RuntimeConstraints_Snippet_12
+
+
+    def test_edi_snippet_runtimeconstraints_13(self):
+        # BEGIN: RuntimeConstraints_Snippet_13
+        from collections import namedtuple
+        import pyomo.environ as pyo
+        from pyomo.environ import units
+        from pyomo.contrib.edi import Formulation, BlackBoxFunctionModel
+
+        class UnitCircle(BlackBoxFunctionModel):
+            def __init__(self):
+                super().__init__()
+                self.description = 'This model evaluates the function: z = x**2 + y**2'
+                self.inputs.append(name='x', units='ft', description='The x variable')
+                self.inputs.append(name='y', units='ft', description='The y variable')
+                self.outputs.append(
+                    name='z',
+                    units='ft**2',
+                    description='Resultant of the unit circle evaluation',
+                )
+                self.availableDerivative = 1
+                self.post_init_setup(len(self.inputs))
+
+            def BlackBox(self, x, y):  # The actual function that does things
+                x = pyo.value(units.convert(x, self.inputs['x'].units))
+                y = pyo.value(units.convert(y, self.inputs['y'].units))
+                z = x**2 + y**2
+                dzdx = 2 * x
+                dzdy = 2 * y
+                z = z * self.outputs['z'].units
+                dzdx = dzdx * self.outputs['z'].units / self.inputs['x'].units
+                dzdy = dzdy * self.outputs['z'].units / self.inputs['y'].units
+                return z, [dzdx, dzdy]  # return z, grad(z), hess(z)...
+
+            def MultiCase(self, list_of_cases):  # The multi case function
+                returnTuple = namedtuple('returnTuple', ['values', 'first', 'second'])
+                optTuple = namedtuple('optTuple', [o.name for o in self.outputs])
+                iptTuple = namedtuple('iptTuple', [i.name for i in self.inputs])
+
+                outputList = []
+
+                for i in range(0,len(list_of_cases)):  # Could parallelize this loop
+                    res = self.BlackBox_Standardized(list_of_cases[i][0], list_of_cases[i][1])
+                    values = optTuple(res.values)
+                    first = optTuple(iptTuple(res.first.z.x, res.first.z.y))
+                    second = None  # Second derivatives not currently supported
+                    outputList.append(returnTuple(values, first, second))
+
+                return outputList
+
+        m = UnitCircle()
+        bb = m.BlackBox(0.5 * units.m, 0.5 * units.m)
+        bbm = m.MultiCase([[0.5 * units.m, 0.5 * units.m],[1.0 * units.m, 1.0 * units.m]])
+        # END: RuntimeConstraints_Snippet_13
 
     def test_edi_snippet_advancedRTC_01(self):
         # BEGIN: AdvancedRTC_Snippet_01
