@@ -43,7 +43,7 @@ Relation to Pyomo Var
 
 The fields: name, domain, and bounds are directly passed to the Pyomo ``Var`` constructor, with some minor checking.  The guess field is passed to initialize.  The description field is passed to the doc field in the Pyomo ``Var``.  Units are passed directly with an additional check.
 
-Non-scalar variables are constructed using Pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector variable of length 5 would create a Pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constatants are slightly less flexible than general non-scalar Pyomo ``Params``.
+Non-scalar variables are constructed using Pyomo ``Sets``.  Sets are constructed to be integer sets that fill the entire interval from lower bound to upper bound, ie a vector variable of length 5 would create a Pyomo ``Set`` with valid indices [0,1,2,3,4] with no skips.  In this way, non-scalar constants are slightly less flexible than general non-scalar Pyomo ``Params``.
 
 
 Examples
