@@ -53,10 +53,6 @@ _invalid_1j = r'InvalidNumber\((\([-+0-9.e]+\+)?1j\)?\)'
 
 class INFO(object):
     def __init__(self, symbolic=False):
-        if symbolic:
-            self.template = nl_writer.text_nl_debug_template
-        else:
-            self.template = nl_writer.text_nl_template
         self.subexpression_cache = {}
         self.external_functions = {}
         self.var_map = {}
@@ -64,7 +60,6 @@ class INFO(object):
         self.symbolic_solver_labels = symbolic
 
         self.visitor = nl_writer.AMPLRepnVisitor(
-            self.template,
             self.subexpression_cache,
             self.external_functions,
             self.var_map,
@@ -73,15 +68,13 @@ class INFO(object):
             True,
             None,
         )
+        self.template = self.visitor.template
 
     def __enter__(self):
-        assert nl_writer.AMPLRepn.ActiveVisitor is None
-        nl_writer.AMPLRepn.ActiveVisitor = self.visitor
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        assert nl_writer.AMPLRepn.ActiveVisitor is self.visitor
-        nl_writer.AMPLRepn.ActiveVisitor = None
+        pass
 
 
 class Test_AMPLRepnVisitor(unittest.TestCase):
@@ -2768,6 +2761,38 @@ G0 3	#o
 0 0
 1 0
 2 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    @unittest.skipUnless(numpy_available, "test requires numpy")
+    def test_objective_numpy_const(self):
+        # This tests issue #3352
+        m = ConcreteModel()
+        m.e = Expression(expr=numpy.float64(0))
+        m.obj = Objective(expr=m.e)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(m, OUT, linear_presolve=False, scale_model=True)
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 0 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 0   #nonzeros in Jacobian, obj. gradient
+ 0 0   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+O0 0
+n0
+x0
+r
+b
+k-1
 """,
                 OUT.getvalue(),
             )
