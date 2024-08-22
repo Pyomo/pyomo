@@ -800,7 +800,7 @@ class TemplateVarRecorder(object):
     def add(self, var):
         # Note: the following is mostly a copy of
         # LinearBeforeChildDispatcher.record_var, but with extra
-        # hanlding to update the env in the same loop
+        # handling to update the env in the same loop
         var_comp = var.parent_component()
         # Double-check that the component has not already been processed
         # (through an individual var data)

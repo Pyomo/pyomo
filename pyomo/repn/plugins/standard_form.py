@@ -574,7 +574,7 @@ class _LinearStandardFormCompiler_impl(object):
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
             # the empty CSR on the python side and convert it to CSC on
-            # the C (numpy) side, as opposed to ceating the large [0] *
+            # the C (numpy) side, as opposed to creating the large [0] *
             # (nCol + 1) array on the Python side and transfer it to C
             # (numpy)
             return self._csr_matrix(
