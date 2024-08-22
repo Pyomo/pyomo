@@ -1,0 +1,32 @@
+name: URL Validation
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Hash (Optional)
+        required: false
+
+jobs:
+  url_check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v4
+    - name: URL Checker
+      uses: urlstechie/urlchecker-action@0.0.34
+      with:
+        # A comma-separated list of file types to cover in the URL checks
+        file_types: .md,.rst,.py
+        # Choose whether to include file with no URLs in the prints.
+        print_all: false
+        # More verbose summary at the end of a run
+        verbose: true
+        # How many times to retry a failed request (defaults to 1)
+        retry_count: 3
+        # Exclude:
+        #  - Jenkins because it's behind a firewall
+        #  - RTD because a magically-generated string triggers failures
+        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
