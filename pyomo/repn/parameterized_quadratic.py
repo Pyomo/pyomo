@@ -19,12 +19,12 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.repn.linear import (
     ExitNodeDispatcher,
+    initialize_exit_node_dispatcher,
     _handle_division_ANY_constant,
     _handle_expr_if_const,
     _handle_pow_ANY_constant,
     _handle_product_ANY_constant,
     _handle_product_constant_ANY,
-    _initialize_exit_node_dispatcher,
 )
 from pyomo.repn.parameterized_linear import (
     define_exit_node_handlers as _param_linear_def_exit_node_handlers,
@@ -333,7 +333,7 @@ def define_exit_node_handlers(exit_node_handlers=None):
 class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
     Result = ParameterizedQuadraticRepn
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(define_exit_node_handlers())
+        initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
     expand_nonlinear_products = True
