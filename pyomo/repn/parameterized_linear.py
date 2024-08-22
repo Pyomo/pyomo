@@ -343,6 +343,8 @@ class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
         var_recorder=None,
     ):
         super().__init__(subexpression_cache, var_map, var_order, sorter, var_recorder)
+        if wrt is None:
+            raise ValueError("ParameterizedLinearRepn: wrt not specified")
         self.wrt = ComponentSet(_flattened(wrt))
 
     def beforeChild(self, node, child, child_idx):
