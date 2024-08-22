@@ -158,14 +158,15 @@ class QuadraticRepn(object):
                 self.nonlinear += nl
 
 
-def _mul_linear_linear(linear1, linear2):
+def _mul_linear_linear(visitor, linear1, linear2):
     quadratic = {}
+    vo = visitor.var_recorder.var_order
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
             # Note that this is random.  If the client cares about
             # determinism, it may need to reverse the keys based on
             # something more deterministic than vid
-            if vid1 < vid2:
+            if vo[vid1] < vo[vid2]:
                 key = vid1, vid2
             else:
                 key = vid2, vid1
@@ -180,7 +181,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
-    arg1.quadratic = _mul_linear_linear(arg1.linear, arg2.linear)
+    arg1.quadratic = _mul_linear_linear(visitor, arg1.linear, arg2.linear)
     # Linear second, as this relies on knowing the original constants
     if not arg2.constant:
         arg1.linear = {}
@@ -236,7 +237,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
                 ans.quadratic = {k: c * coef for k, coef in x2.quadratic.items()}
     # [BB]
     if x1.linear and x2.linear:
-        quad = _mul_linear_linear(x1.linear, x2.linear)
+        quad = _mul_linear_linear(visitor, x1.linear, x2.linear)
         if ans.quadratic:
             _merge_dict(ans.quadratic, 1, quad)
         else:
