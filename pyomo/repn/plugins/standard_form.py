@@ -250,12 +250,19 @@ class LinearStandardFormCompiler(object):
 class _LinearStandardFormCompiler_impl(object):
     # Making these methods class attributes so that others can change the hooks
     _get_visitor = LinearRepnVisitor
-    _to_vector = np.fromiter
-    _csc_matrix = scipy.sparse.csc_array
-    _csr_matrix = scipy.sparse.csr_array
+    _to_vector = None
+    _csc_matrix = None
+    _csr_matrix = None
 
     def __init__(self, config):
         self.config = config
+        # We defer the first instantiation of these attributes so we do
+        # not trigger the numpy / scipy imports when the module is
+        # imported
+        if _LinearStandardFormCompiler_impl._to_vector is None:
+            _LinearStandardFormCompiler_impl._to_vector = np.fromiter
+            _LinearStandardFormCompiler_impl._csc_matrix = scipy.sparse.csc_array
+            _LinearStandardFormCompiler_impl._csr_matrix = scipy.sparse.csr_array
 
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
