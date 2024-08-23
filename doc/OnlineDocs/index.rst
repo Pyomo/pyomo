@@ -21,7 +21,6 @@ with a diverse set of optimization capabilities.
          | :doc:`Solver Recipes`
          | :doc:`Debugging Models`
          | :doc:`Contributing to Pyomo`
-
    * - User Explanations
          | :doc:`Pyomo Philosophy`
             | :doc:`Concrete and Abstract Models`
@@ -59,7 +58,6 @@ with a diverse set of optimization capabilities.
             | :doc:`Deprecation System`
           | :doc:`Experimental`
             | :doc:`Kernel`
-
      - Reference Guide
          | :doc:`Library Reference <reference_guide/index>`
          | :doc:`Common Warnings and Errors`
