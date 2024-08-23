@@ -23,41 +23,41 @@ with a diverse set of optimization capabilities.
          | :doc:`Contributing to Pyomo`
    * - User Explanations
          | :doc:`Pyomo Philosophy`
-            | :doc:`Concrete and Abstract Models`
-            | :doc:`Component Hierarchy`
-            | :doc:`Expression System`
-            | :doc:`Transformations`
+         |    :doc:`Concrete and Abstract Models`
+         |    :doc:`Component Hierarchy`
+         |    :doc:`Expression System`
+         |    :doc:`Transformations`
          | :doc:`Modeling in Pyomo`
-            | :doc:`Math Programming`
-            | :doc:`GDP`
-            | :doc:`DAE`
-            | :doc:`Network`
-            | :doc:`Piecewise Linear`
-            | :doc:`Constraint Programming`
-            | :doc:`Units of Measure`
-        | :doc:`Solvers`
-            | :doc:`PyROS`
-            | :doc:`MindtPy`
-            | :doc:`Trust Region`
-            | :doc:`Pynumero`
-        | :doc:`Analysis in Pyomo`
-            | :doc:`IIS`
-            | :doc:`FBBT`
-            | :doc:`Incidence Analysis`
-            | :doc:`Parameter Estimation`
-            | :doc:`Design of Experiments`
-            | :doc:`MPC`
-            | :doc:`AOS`
-          | :doc:`Modeling Utilities`
-            | :doc:`Latex Printer`
-            | :doc:`FME`
-            | :doc:`Model Viewer`
-            | :doc:`Model Flattening`
-          | :doc:`Developer Utilities`
-            | :doc:`Configuration System`
-            | :doc:`Deprecation System`
-          | :doc:`Experimental`
-            | :doc:`Kernel`
+         |    :doc:`Math Programming`
+         |    :doc:`GDP`
+         |    :doc:`DAE`
+         |    :doc:`Network`
+         |    :doc:`Piecewise Linear`
+         |    :doc:`Constraint Programming`
+         |    :doc:`Units of Measure`
+         | :doc:`Solvers`
+         |    :doc:`PyROS`
+         |    :doc:`MindtPy`
+         |    :doc:`Trust Region`
+         |    :doc:`Pynumero`
+         | :doc:`Analysis in Pyomo`
+         |    :doc:`IIS`
+         |    :doc:`FBBT`
+         |    :doc:`Incidence Analysis`
+         |    :doc:`Parameter Estimation`
+         |    :doc:`Design of Experiments`
+         |    :doc:`MPC`
+         |    :doc:`AOS`
+         | :doc:`Modeling Utilities`
+         |    :doc:`Latex Printer`
+         |    :doc:`FME`
+         |    :doc:`Model Viewer`
+         |    :doc:`Model Flattening`
+         | :doc:`Developer Utilities`
+         |    :doc:`Configuration System`
+         |    :doc:`Deprecation System`
+         | :doc:`Experimental`
+         |    :doc:`Kernel`
      - Reference Guide
          | :doc:`Library Reference <reference_guide/index>`
          | :doc:`Common Warnings and Errors`
