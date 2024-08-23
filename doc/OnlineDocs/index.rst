@@ -14,13 +14,53 @@ with a diverse set of optimization capabilities.
 
    * - Getting Started
          | :doc:`Installation <getting_started/installation>`
-     - User Guide
-         | :doc:`User guide index <user_guide/index>`
-   * - Developer Guide
-         | :doc:`Index <developer_guide/index>`
+         | :doc:`Pyomo Overview <getting_started/pyomo_overview/index>`
+      - How-To Guide
+         | :doc:`Interrogating Models`
+         | :doc:`Manipulating Models`
+         | :doc:`Solver Recipes`
+         | :doc:`Debugging Models`
+
+   * - User Explanations
+         | :doc:`Pyomo Philosophy`
+            | :doc:`Concrete and Abstract Models`
+            | :doc:`Component Hierarchy`
+            | :doc:`Expression System`
+            | :doc:`Transformations`
+         | :doc:`Modeling in Pyomo `
+            | :doc:`Math Programming`
+            | :doc:`GDP`
+            | :doc:`DAE`
+            | :doc:`Network`
+            | :doc:`Piecewise Linear`
+            | :doc:`Constraint Programming`
+            | :doc:`Units of Measure`
+        | :doc:`Solvers`
+            | :doc:`PyROS`
+            | :doc:`MindtPy`
+            | :doc:`Trust Region`
+        | :doc:`Analysis in Pyomo`
+            | :doc:`IIS`
+            | :doc:`FBBT`
+            | :doc:`Incidence Analysis`
+            | :doc:`Parameter Estimation`
+            | :doc:`Design of Experiments`
+            | :doc:`MPC`
+            | :doc:`AOS`
+          | :doc:`Modeling Utilities`
+            | :doc:`Latex Printer`
+            | :doc:`FME`
+            | :doc:`Model Viewer`
+            | :doc:`Model Flattening`
+          | :doc:`Developer Utilities`
+            | :doc:`Configuration System`
+            | :doc:`Deprecation System`
+
+
      - Reference Guide
          | :doc:`Library Reference <reference_guide/index>`
-
+         | :doc:`Common Warnings and Errors`
+         | :doc:`Related Packages`
 
 .. toctree::
    :hidden:
