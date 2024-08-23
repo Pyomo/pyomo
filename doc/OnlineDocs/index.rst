@@ -61,8 +61,7 @@ with a diverse set of optimization capabilities.
      - Reference Guide
          | :doc:`Library Reference <reference_guide/index>`
          | :doc:`Common Warnings and Errors`
-         | :doc:`Related Packages`
-         | :doc:`Preview capabilities through ``pyomo.__future__```
+         | :doc:`Preview capabilities through ``pyomo.__future__`` <developer_guide/future>`
 
 .. toctree::
    :hidden:
