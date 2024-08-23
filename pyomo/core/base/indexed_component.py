@@ -349,11 +349,7 @@ class IndexedComponent(Component):
             # (where the _data points back to self) and references
             # (where the data may be stored outside this block tree and
             # therefore may not be cloned)
-            if (
-                self.is_indexed()
-                and not self.is_reference()
-                and isinstance(self._data, dict)
-            ):
+            if self.is_indexed() and not self.is_reference():
                 # Because we are already checking / updating the memo
                 # for the _data dict, we can effectively "deepcopy" it
                 # right now (almost for free!)
