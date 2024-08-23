@@ -31,6 +31,10 @@ dl.py.method dt em span.n {
   }
 }
 
+.rst-content table.docutils td {
+  vertical-align: top;
+}
+
 /* Remove space after tables in definition lists (e.g., for function
    "Parameters" lists*/
 .rst-content dl div.wy-table-responsive {
