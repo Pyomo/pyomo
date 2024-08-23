@@ -20,6 +20,7 @@ with a diverse set of optimization capabilities.
          | :doc:`Manipulating Models`
          | :doc:`Solver Recipes`
          | :doc:`Debugging Models`
+         | :doc:`Contributing to Pyomo`
 
    * - User Explanations
          | :doc:`Pyomo Philosophy`
@@ -27,7 +28,7 @@ with a diverse set of optimization capabilities.
             | :doc:`Component Hierarchy`
             | :doc:`Expression System`
             | :doc:`Transformations`
-         | :doc:`Modeling in Pyomo `
+         | :doc:`Modeling in Pyomo`
             | :doc:`Math Programming`
             | :doc:`GDP`
             | :doc:`DAE`
@@ -39,6 +40,7 @@ with a diverse set of optimization capabilities.
             | :doc:`PyROS`
             | :doc:`MindtPy`
             | :doc:`Trust Region`
+            | :doc:`Pynumero`
         | :doc:`Analysis in Pyomo`
             | :doc:`IIS`
             | :doc:`FBBT`
@@ -55,12 +57,14 @@ with a diverse set of optimization capabilities.
           | :doc:`Developer Utilities`
             | :doc:`Configuration System`
             | :doc:`Deprecation System`
-
+          | :doc:`Experimental`
+            | :doc:`Kernel`
 
      - Reference Guide
          | :doc:`Library Reference <reference_guide/index>`
          | :doc:`Common Warnings and Errors`
          | :doc:`Related Packages`
+         | :doc:`Preview capabilities through ``pyomo.__future__```
 
 .. toctree::
    :hidden:
@@ -109,3 +113,4 @@ Citing Pyomo
 Bynum, Michael L., Gabriel A. Hackebeil, William E. Hart, Carl D. Laird, Bethany L. Nicholson, John D. Siirola, Jean-Paul Watson, and David L. Woodruff. Pyomo - Optimization Modeling in Python, 3rd Edition. Springer, 2021.
 
 Hart, William E., Jean-Paul Watson, and David L. Woodruff. "Pyomo: modeling and solving mathematical programs in Python." Mathematical Programming Computation 3, no. 3 (2011): 219-260.
+
