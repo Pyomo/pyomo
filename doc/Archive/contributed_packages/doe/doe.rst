@@ -116,64 +116,14 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required inputs to the Pyomo.DoE solver are the following:
+The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_. The four ``Suffix`` components are:
 
-* A function that creates the process model
-* Dictionary of parameters and their nominal value
-* A measurement object
-* A design variables object
-* A Numpy ``array`` containing the Prior FIM
-* Optimization solver
+* ``experiment_inputs`` - The experimental design decisions
+* ``experiment_outputs`` - The values measured during the experiment
+* ``measurement_error`` - The error associated with individual values measured during the experiment
+* ``unknown_parameters`` - Those parameters in the model that are estimated using the measured values during the experiment
 
-Below is a list of arguments that Pyomo.DoE expects the user to provide.
-
-parameter_dict : ``dictionary``
-    A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
-
-design_variables: ``DesignVariables``
-    A ``DesignVariables`` of design variables, provided by the DesignVariables class.
-    If this design var is independent of time (constant), set the time to [0]
-
-measurement_variables : ``MeasurementVariables``
-    A ``MeasurementVariables`` of the measurements, provided by the MeasurementVariables class.
-
-create_model : ``function``
-    A ``function`` returning a deterministic process model.
-
-prior_FIM : ``array``
-    An ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
-
-Pyomo.DoE Solver Interface
----------------------------
-
-.. figure:: uml.png
-   :scale: 25 %
-
-
-.. autoclass:: pyomo.contrib.doe.doe.DesignOfExperiments
-    :members: __init__, stochastic_program, compute_FIM, run_grid_search
-
-.. Note::
-    ``stochastic_program()`` includes the following steps:
-        #.  Build two-stage stochastic programming optimization model where scenarios correspond to finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
-        #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
-        #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
-
-.. autoclass:: pyomo.contrib.doe.measurements.MeasurementVariables
-    :members: __init__, add_variables
-
-.. autoclass:: pyomo.contrib.doe.measurements.DesignVariables
-    :members: __init__, add_variables
-
-.. autoclass:: pyomo.contrib.doe.scenario.ScenarioGenerator
-    :special-members: __init__
-
-.. autoclass:: pyomo.contrib.doe.result.FisherResults
-    :members: __init__, result_analysis
-
-.. autoclass:: pyomo.contrib.doe.result.GridSearchResult
-    :special-members: __init__
-
+An example ``Experiment`` object that builds and labels the model is shown in the next few sections.
 
 Pyomo.DoE Usage Example
 -----------------------
@@ -203,89 +153,87 @@ The goal of MBDoE is to optimize the experiment design variables :math:`\boldsym
 The observation errors are assumed to be independent both in time and across measurements with a constant standard deviation of 1 M for each species.
 
 
-Step 0: Import Pyomo and the Pyomo.DoE module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
-    >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> from pyomo.contrib.doe import DesignOfExperiments, MeasurementVariables, DesignVariables
+    >>> from pyomo.contrib.doe import DesignOfExperiments
     >>> import numpy as np
+
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+    :start-after: ========================
+    :end-before: End constructor definition
 
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The process model for the reaction kinetics problem is shown below.
+The process model for the reaction kinetics problem is shown below. We build the model without any data or discretization.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_kinetics.py 
-    :language: python 
-    :pyobject: create_model
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+    :start-after: Create flexible model without data
+    :end-before: End equation definition
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_kinetics.py 
-    :language: python 
-    :pyobject: disc_for_measure
+Step 2: Finalize the Pyomo process model
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. note::
-    The model requires at least two options: "block" and "global". Both options requires the pass of a created empty Pyomo model. 
-    With "global" option, only design variables and their time sets need to be defined; 
-    With "block" option, a full model needs to be defined. 
+Here we add data to the model and finalize the discretization. This step is required before the model can be labeled.
 
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+    :start-after: End equation definition
+    :end-before: End model finalization
 
-Step 2: Define the inputs for Pyomo.DoE
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
-    :language: python 
-    :start-at: # Control time set
-    :end-before: ### Compute
+Step 3: Label the information needed for DoE analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+We label the four important groups as defined before.
 
-Step 3: Compute the FIM of a square MBDoE problem
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+    :start-after: End model finalization
+    :end-before: End model labeling
+
+Step 4: Implement the ``get_labeled_model`` method
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method computes an MBDoE optimization problem with no degree of freedom.
+This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
 
-This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_finite``.
-``direct_kaug`` mode requires the installation of the solver `k_aug <https://github.com/dthierry/k_aug>`_.
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+    :start-after: End constructor definition
+    :end-before: Create flexible model without data
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_compute_FIM.py 
-    :language: python 
-    :start-after: ### Compute the FIM
-    :end-before: # test result
-
-Step 4: Exploratory analysis (Enumeration)
+Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, 
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
-Pyomo.DoE accomplishes the exploratory analysis with the ``run_grid_search`` function.
-It allows users to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
-1D curve can be drawn by one design variable, fixing all other variables.
-The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method.
-Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
+Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` function.
+The ``compute_FIM_full_factorial`` function generates a grid over the design space as specified by the user. Each grid point represents an MBDoE problem solved using ``compute_FIM`` method. In this way, sensitivity of the FIM over the design space can be evaluated.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_grid_search.py 
-    :language: python 
-    :pyobject: main
+The following code executes the above problem description:
 
-Successful run of the above code shows the following figure:
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
+    :start-after: Read in file
+    :end-before: End sensitivity analysis
 
-.. figure:: grid-1.png
-   :scale: 35 %
+An example output of the code above, a design exploration for the initial concentration and temperature as experimental design variables with 9 values, produces the four figures summarized below:
 
-A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design region. Horizontal and vertical axes are two design variables, while the color of each grid shows the experimental information content. Taking the Fig. Reactor case - A optimality as example, A-optimality shows that the most informative region is around $C_{A0}=5.0$ M, $T=300.0$ K, while the least informative region is around $C_{A0}=1.0$ M, $T=700.0$ K.
+.. figure:: FIM_sensitivity.png
+   :scale: 50 %
 
-Step 5: Gradient-based optimization
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A heatmap shows the change of the objective function, a.k.a. the experimental information content, in the design space. Horizontal and vertical axes are the two experimental design variables, while the color of each grid shows the experimental information content. For A optimality (top left subfigure), the figure shows that the most informative region is around :math:`C_{A0}=5.0` M, :math:`T=300.0` K, while the least informative region is around :math:`C_{A0}=1.0` M, :math:`T=700.0` K.
 
-Pyomo.DoE accomplishes gradient-based optimization with the ``stochastic_program`` function for A- and D-optimality design.
+Step 6: Performing an optimal experimental design
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
+In step 5, the DoE object was constructed to perform an exploratory sensitivity analysis. The same object can be used to design an optimal experiment with a single line of code.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_optimize_doe.py 
-    :language: python 
-    :pyobject: main 
+.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
+    :start-after: Begin optimal DoE
+    :end-before: Print out a results summary
+
+When run, the optimal design is an initial concentration of 5.0 mol/L and an initial temperature of 494 K with all other temperatures being 300 K. The corresponding log-10 determinant of the FIM is 13.75
 
 

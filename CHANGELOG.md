@@ -3,6 +3,69 @@ Pyomo CHANGELOG
 
 
 -------------------------------------------------------------------------------
+Pyomo 6.8.0   (20 Aug 2024)
+-------------------------------------------------------------------------------
+
+SIGNIFICANT CHANGE NOTICE
+
+- Internal data storage for Constraint objects (see #3293)
+- No longer release cythonized wheel for Python 3.11+ (see #3355)
+
+CHANGELOG
+
+- General
+  - Add ParameterizedQuadraticRepn and corresponding walker (#3324)
+  - Update Pyomo for NumPy 2.0 compatibility (#3292, #3353)
+  - Add ParameterizedLinearRepn and corresponding walker (#3268)
+  - Update Release Process Workflow for changes in `pip` (#3355)
+- Core
+  - Handle uninitialized variable in `propagate_solution` of scaling
+    transformation (#3275)
+  - Add `context` option to `SuffixFinder` (#3348)
+  - Remove the `_suppress_ctypes` attribute from Block (#3347)
+  - Improve `Set` initialization performance (#3302)
+  - Update Constraint to only store the original expression (not
+    lower/body/upper) (#3293)
+  - Kernel: fix bug in conic geomean (#3310)
+  - Fix bug with IndexedSet objects and the within argument (#3288)
+  - Support validate/filter for IndexedSet components using index (#3338)
+- Solver Interfaces
+  - Resolve NLv2 incompatibility with multithreading (#3332)
+  - Resolve writer performance degradation  (#3343)
+  - Fix bug with inconsistent use of `result` and `results` (#3337)
+  - LegacySolverWrapper: restore 'options' attribute (#3334)
+  - Fix bug in XpressDirect._load_slacks (#3318)
+  - NLv2: support expressions with nested external functions (#3319)
+  - Ignore errors on ASL solver version check (#3298)
+  - Add SAS solver interface (#2886, #3309)
+- Testing
+  - Omnibus testing / platform portability fixes (#3335)
+  - Change BARON download URL (#3328)
+  - Disable interface/testing for NEOS/octeract (#3322)
+  - Fix typo in Jenkins driver (#3312)
+  - Jenkins: update logic for recording variables (#3311)
+  - Unpin Codecov / Update coverage (#3303)
+- GDP
+  - Don't transform known-to-be infeasible Disjuncts in multiple BigM (#3314)
+- Contributed Packages
+  - alternative_solutions: Add a new contrib package for generating
+    alternative solutions (#3270)
+  - APPSI: Allow maingo_solvermodel to be imported without maingopy (#3330)
+  - APPSI: Sort indices while removing constraints to fix bug in HiGHs
+    interface (#3281)
+  - CP: Add beforeChild handling for bools in logical expressions  (#3315)
+  - DoE: Refactor to improve API and maintainability (#3317)
+  - incidence_analysis: Raise error in `generate_strongly_connected_components`
+    instead of asserting (#3305)
+  - parmest: Add missing main call for example file (#3349)
+  - piecewise: Add incremental PW linear to MIP transformation (#3287)
+  - piecewise: Add nonlinear-to-piecewise-linear transformation (#3333)
+  - PyNumero: Support user-provided CyIpopt callbacks with 13 arguments (#3289)
+  - PyNumero: Support PyomoNLP scaling factors on sub-blocks (#3295)
+  - PyROS: Temporarily Adjust NL Writer Feasibility Tolerance (#3280)
+  - viewer: Add option to specify the model by variable name (#3271)
+
+-------------------------------------------------------------------------------
 Pyomo 6.7.3   (29 May 2024)
 -------------------------------------------------------------------------------
 
