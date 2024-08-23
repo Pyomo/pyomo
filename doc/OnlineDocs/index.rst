@@ -15,7 +15,7 @@ with a diverse set of optimization capabilities.
    * - Getting Started
          | :doc:`Installation <getting_started/installation>`
          | :doc:`Pyomo Overview <getting_started/pyomo_overview/index>`
-      - How-To Guide
+     - How-To Guide
          | :doc:`Interrogating Models`
          | :doc:`Manipulating Models`
          | :doc:`Solver Recipes`
