@@ -11,6 +11,7 @@ with a diverse set of optimization capabilities.
 
 .. list-table::
    :class: index-table
+   :widths: 50% 50%
 
    * - Getting Started
          | :doc:`Installation <getting_started/installation>`
