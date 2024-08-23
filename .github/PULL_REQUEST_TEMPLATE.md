@@ -7,6 +7,8 @@
 <!-- Contributing Guide: https://pyomo.readthedocs.io/en/stable/contribution_guide.html -->
 <!-- ##################################################################### -->
 
+<!-- DO NOT DELETE OR IGNORE THIS TEMPLATE. Failing to adhere to this template and provide the necessary information may lead to your Pull Request being closed without consideration. -->
+
 ## Fixes # .
 
 ## Summary/Motivation:

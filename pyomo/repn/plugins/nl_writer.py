@@ -74,7 +74,7 @@ from pyomo.network import Port
 
 logger = logging.getLogger(__name__)
 
-relocated_module_attribute('AMPLRepn', 'pyomo.repn.ampl.AMPLRepn', version='6.7.4.dev0')
+relocated_module_attribute('AMPLRepn', 'pyomo.repn.ampl.AMPLRepn', version='6.8.0')
 
 inf = float('inf')
 minus_inf = -inf
