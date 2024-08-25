@@ -24,6 +24,8 @@ and postpones creation of its members:
 .. doctest::
    :hide:
 
+   >>> # testcode ran in a different scope, so re-run here
+   >>> model.A = pyo.Set()
    >>> # Add some data to the Set
    >>> model.A.update([1,2,3])
 
@@ -465,20 +467,20 @@ needed for the indexed set:
 .. testcode::
 
     def NodesIn_init(m, node):
-        # Create a dict to show NodesOut list for every node
+        # Create a dict to show NodesIn list for every node
         d = {i: [] for i in m.Nodes}
         # loop over the arcs and record the end points
         for i, j in model.Arcs:
-            d[i].append[j]
-        return d
-    model.NodesOut = pyo.Set(model.Nodes, initialize=NodesOut_init)
-
-    def NodesIn_init(m, node):
-        d = {i: [] for i in m.Nodes}
-        for i, j in model.Arcs:
-            d[j].append[i]
+            d[j].append(i)
         return d
     model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
+
+    def NodesOut_init(m, node):
+        d = {i: [] for i in m.Nodes}
+        for i, j in model.Arcs:
+            d[i].append(j)
+        return d
+    model.NodesOut = pyo.Set(model.Nodes, initialize=NodesOut_init)
 
 This can also be done efficiently, and perhaps more clearly, using a
 :class:`BuildAction` (for more information, see :ref:`BuildAction`):
@@ -492,8 +494,8 @@ This can also be done efficiently, and perhaps more clearly, using a
 
 .. testcode::
 
-   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
    model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes)
+   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
 
    def Populate_In_and_Out(model):
        # loop over the arcs and record the end points
