@@ -466,7 +466,7 @@ needed for the indexed set:
 
 .. testcode::
 
-    def NodesIn_init(m, node):
+    def NodesIn_init(m):
         # Create a dict to show NodesIn list for every node
         d = {i: [] for i in m.Nodes}
         # loop over the arcs and record the end points
@@ -475,7 +475,7 @@ needed for the indexed set:
         return d
     model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
 
-    def NodesOut_init(m, node):
+    def NodesOut_init(m):
         d = {i: [] for i in m.Nodes}
         for i, j in model.Arcs:
             d[i].append(j)
