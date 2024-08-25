@@ -24,8 +24,6 @@ and postpones creation of its members:
 .. doctest::
    :hide:
 
-   >>> # testcode ran in a different scope, so re-run here
-   >>> model.A = pyo.Set()
    >>> # Add some data to the Set
    >>> model.A.update([1,2,3])
 
