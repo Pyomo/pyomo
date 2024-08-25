@@ -2306,7 +2306,10 @@ class Set(IndexedComponent):
                 # from the object it provides (e.g., a dict with all members of
                 # the indexed set). This is similar to
                 # IndexedComponent._construct_from_rule_using_setitem.
-                if self.is_indexed() and type(self._init_values._init) is ScalarCallInitializer:
+                if (
+                    self.is_indexed()
+                    and type(self._init_values._init) is ScalarCallInitializer
+                ):
                     self._init_values = TuplizeValuesInitializer(
                         Initializer(
                             self._init_values._init(self.parent_block(), None),
