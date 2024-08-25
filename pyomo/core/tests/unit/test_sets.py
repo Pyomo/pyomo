@@ -3345,7 +3345,7 @@ class TestSetErrors(PyomoModel):
         model = ConcreteModel()
         model.A = Set(initialize=[1, 2])
         model.B = Set(model.A, initialize={1: [2, 3], 2: [3, 4]})
-        model.C = Set(model.A, initialize=lambda m: {x: [x+1, x+2] for x in m.A})
+        model.C = Set(model.A, initialize=lambda m: {x: [x + 1, x + 2] for x in m.A})
         # convert to native data types for easier comparison
         B = {k: v.ordered_data() for (k, v) in model.B.items()}
         C = {k: v.ordered_data() for (k, v) in model.C.items()}
