@@ -97,7 +97,7 @@ Interface Documentation
 
 .. autofunction:: enumerate_linear_solutions
 
-.. autofunction:: enumerate_linear_solutions_soln_pool
+.. autofunction:: pyomo.contrib.alternative_solutions.lp_enum_solnpool.enumerate_linear_solutions_soln_pool
 
 .. autofunction:: gurobi_generate_solutions
 
