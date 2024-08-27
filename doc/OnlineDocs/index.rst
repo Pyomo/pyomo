@@ -60,7 +60,7 @@ with a diverse set of optimization capabilities.
          | :doc:`Experimental`
          |    :doc:`Kernel`
      - Reference Guide
-         | :doc:`Library Reference <reference_guide/index>`
+         | :doc:`Library Reference <reference/index>`
          | :doc:`Common Warnings and Errors`
          | :doc:`Preview capabilities through ``pyomo.__future__`` <developer_guide/future>`
 
@@ -69,9 +69,9 @@ with a diverse set of optimization capabilities.
    :maxdepth: 2
 
     Getting Started <getting_started/index>
-    Hot-To Guides <how_to_guide/index>
-    User Explanations <user_explanations/index>
-    Reference Guide <reference_guide/index>
+    How-To Guides <howto/index>
+    User Explanations <explanation/index>
+    Reference Guides <reference/index>
 
 
 Pyomo Resources

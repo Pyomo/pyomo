@@ -44,7 +44,7 @@ try:
 
     generate_spy_files(os.path.abspath('src'))
     generate_spy_files(
-        os.path.abspath(os.path.join('reference_guide', 'library_reference', 'kernel', 'examples'))
+        os.path.abspath(os.path.join('reference', 'library_reference', 'kernel', 'examples'))
     )
 finally:
     sys.path.pop(0)
