@@ -53,6 +53,7 @@ from pyomo.opt import SolverStatus
 class ObjectiveLib(Enum):
     determinant = "determinant"
     trace = "trace"
+    minimum_eigenvalue = "minimum_eigenvalue"
     zero = "zero"
 
 
@@ -2043,8 +2044,8 @@ class DesignOfExperiments:
 
         # FIM is a lower triangular matrix for the optimal DoE problem.
         # Exploit symmetry to fill in the zeros.
-        for i in range(4):
-            for j in range(4):
+        for i in range(len(model.parameter_names)):
+            for j in range(len(model.parameter_names)):
                 if j < i:
                     fim_np[j, i] = fim_np[i, j]
 
