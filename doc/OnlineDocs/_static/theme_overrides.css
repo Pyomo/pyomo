@@ -47,6 +47,10 @@ dl.py.method dt em span.n {
   font-size: medium;
 }
 
+.rst-content table.diataxis li ul li ul li {
+  list-style-type: "- ";
+}
+
 
 /* Remove space after tables in definition lists (e.g., for function
    "Parameters" lists*/

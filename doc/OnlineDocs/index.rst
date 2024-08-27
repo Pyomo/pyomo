@@ -40,6 +40,15 @@ Contents
 
           reference/index
 
+..
+   toctree::
+   :maxdepth: 2
+   :titlesonly:
+   :hidden:
+
+   genindex
+   modindex
+
 
 Pyomo Resources
 ---------------
