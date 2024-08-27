@@ -13,15 +13,17 @@ with a diverse set of optimization capabilities.
    :width: 100%
    :class: index-table
 
-   * - Getting Started
-         | :doc:`Installation <getting_started/installation>`
-         | :doc:`Pyomo Overview <getting_started/pyomo_overview/index>`
-     - How-To Guide
-         | :doc:`Interrogating Models`
-         | :doc:`Manipulating Models`
-         | :doc:`Solver Recipes`
-         | :doc:`Debugging Models`
-         | :doc:`Contributing to Pyomo`
+   * - .. toctree::
+          :maxdepth: 2
+          :titlesonly:
+
+          getting_started/index
+     - .. toctree::
+          :maxdepth: 2
+          :titlesonly:
+          :includehidden:
+
+          howto/index
    * - User Explanations
          | :doc:`Pyomo Philosophy`
          |    :doc:`Concrete and Abstract Models`
@@ -59,17 +61,15 @@ with a diverse set of optimization capabilities.
          |    :doc:`Deprecation System`
          | :doc:`Experimental`
          |    :doc:`Kernel`
-     - Reference Guide
+     - Reference Guides
          | :doc:`Library Reference <reference/index>`
          | :doc:`Common Warnings and Errors`
-         | :doc:`Preview capabilities through ``pyomo.__future__`` <developer_guide/future>`
+         | :doc:`Accessing preview capabilities <reference/future>`
 
 .. toctree::
    :hidden:
    :maxdepth: 2
 
-    Getting Started <getting_started/index>
-    How-To Guides <howto/index>
     User Explanations <explanation/index>
     Reference Guides <reference/index>
 
@@ -123,7 +123,12 @@ list of Pyomo-related packages may be found :doc:`here <related_packages>`.
 Citing Pyomo
 ------------
 
-Bynum, Michael L., Gabriel A. Hackebeil, William E. Hart, Carl D. Laird, Bethany L. Nicholson, John D. Siirola, Jean-Paul Watson, and David L. Woodruff. Pyomo - Optimization Modeling in Python, 3rd Edition. Springer, 2021.
+If you use Pyomo in your work, please cite:
 
-Hart, William E., Jean-Paul Watson, and David L. Woodruff. "Pyomo: modeling and solving mathematical programs in Python." Mathematical Programming Computation 3, no. 3 (2011): 219-260.
+    Bynum, Michael L., Gabriel A. Hackebeil, William E. Hart, Carl D. Laird,
+    Bethany L. Nicholson, John D. Siirola, Jean-Paul Watson, and
+    David L. Woodruff. Pyomo - Optimization Modeling in Python, 3rd
+    Edition. Springer, 2021.
 
+Additionally, several Pyomo capabilities and subpackages are described
+in further detail in separate :ref:`publications`.
