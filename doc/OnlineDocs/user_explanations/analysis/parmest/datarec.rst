@@ -20,7 +20,7 @@ The following example from the reactor design subdirectory returns reconciled va
 (`ca`, `cb`, `cc`, and `cd`) and then uses those values in 
 parameter estimation (`k1`, `k2`, and `k3`).
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/datarec_example.py
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/reactor_design/datarec_example.py
    :language: python
    
 The following example returns model values from a Pyomo Expression. 

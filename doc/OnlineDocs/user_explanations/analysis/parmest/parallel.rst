@@ -16,7 +16,7 @@ model in parallel::
 The file **parallel_example.py** is shown below. 
 Results are saved to file for later analysis.
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/parallel_example.py
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/semibatch/parallel_example.py
    :language: python
    
 Installation

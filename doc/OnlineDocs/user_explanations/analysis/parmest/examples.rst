@@ -26,7 +26,7 @@ instance of the Pyomo model.  Note that the model is defined to maximize
 `cb` and that `k1`, `k2`, and `k3` are fixed.  The _main_ program is
 included for easy testing of the model declaration.
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/reactor_design.py
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/reactor_design/reactor_design.py
    :language: python
 
 The file **parameter_estimation_example.py** uses parmest to estimate values of `k1`,
@@ -35,7 +35,7 @@ observed values of `ca`, `cb`, `cc`, and `cd`.  Additional example files use
 parmest to run parameter estimation with bootstrap resampling and
 perform a likelihood ratio test over a range of theta values.
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/reactor_design/parameter_estimation_example.py
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/reactor_design/parameter_estimation_example.py
    :language: python
 
 The semibatch and Rooney Biegler examples are defined in a similar

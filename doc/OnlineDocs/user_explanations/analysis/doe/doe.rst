@@ -163,7 +163,7 @@ Step 0: Import Pyomo and the Pyomo.DoE module and create an ``Experiment`` class
     >>> from pyomo.contrib.doe import DesignOfExperiments
     >>> import numpy as np
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: ========================
     :end-before: End constructor definition
 
@@ -172,7 +172,7 @@ Step 1: Define the Pyomo process model
 
 The process model for the reaction kinetics problem is shown below. We build the model without any data or discretization.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: Create flexible model without data
     :end-before: End equation definition
 
@@ -181,7 +181,7 @@ Step 2: Finalize the Pyomo process model
 
 Here we add data to the model and finalize the discretization. This step is required before the model can be labeled.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End equation definition
     :end-before: End model finalization
 
@@ -190,7 +190,7 @@ Step 3: Label the information needed for DoE analysis
 
 We label the four important groups as defined before.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End model finalization
     :end-before: End model labeling
 
@@ -199,7 +199,7 @@ Step 4: Implement the ``get_labeled_model`` method
 
 This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build the model to perform optimal experimental design.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_experiment.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_experiment.py
     :start-after: End constructor definition
     :end-before: Create flexible model without data
 
@@ -214,7 +214,7 @@ The ``compute_FIM_full_factorial`` function generates a grid over the design spa
 
 The following code executes the above problem description:
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
     :start-after: Read in file
     :end-before: End sensitivity analysis
 
@@ -230,7 +230,7 @@ Step 6: Performing an optimal experimental design
 
 In step 5, the DoE object was constructed to perform an exploratory sensitivity analysis. The same object can be used to design an optimal experiment with a single line of code.
 
-.. literalinclude:: ../../../../pyomo/contrib/doe/examples/reactor_example.py
+.. literalinclude:: /../../pyomo/contrib/doe/examples/reactor_example.py
     :start-after: Begin optimal DoE
     :end-before: Print out a results summary
 

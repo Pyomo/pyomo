@@ -14,7 +14,7 @@ correspond one-to-one with the experiments used as input data. It also
 creates a few scenarios using the bootstrap methods and outputs prints the
 scenarios to the screen, accessing them via the ``ScensItator`` a ``print``
 
-.. literalinclude:: ../../../../pyomo/contrib/parmest/examples/semibatch/scenario_example.py
+.. literalinclude:: /../../pyomo/contrib/parmest/examples/semibatch/scenario_example.py
    :language: python
 
 .. note::

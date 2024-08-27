@@ -12,7 +12,7 @@ or all processes/ranks.
 
 Consider the following example (in a file called "parallel_vector_ops.py").
 
-.. literalinclude:: ../../../../pyomo/contrib/pynumero/examples/parallel_vector_ops.py
+.. literalinclude:: /../../pyomo/contrib/pynumero/examples/parallel_vector_ops.py
 
 This example can be run with
 
@@ -46,7 +46,7 @@ except that the operations are now performed in parallel.
 `MPIBlockMatrix` construction is very similar. Consider the following
 example in a file called "parallel_matvec.py".
 
-.. literalinclude:: ../../../../pyomo/contrib/pynumero/examples/parallel_matvec.py
+.. literalinclude:: /../../pyomo/contrib/pynumero/examples/parallel_matvec.py
 
 Which can be run with
 

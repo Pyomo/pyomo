@@ -443,7 +443,7 @@ model is:
 
 for this model, a toy data file (in AMPL "``.dat``" format) would be:
 
-.. literalinclude:: ../src/scripting/Isinglecomm.dat
+.. literalinclude:: /src/scripting/Isinglecomm.dat
    :language: text
 
 .. doctest::
