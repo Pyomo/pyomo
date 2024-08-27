@@ -5,7 +5,6 @@ Reference Guides
    :maxdepth: 2
 
    library_reference/index
-   kernel/index
    ../errors
    future
    ../related_packages
