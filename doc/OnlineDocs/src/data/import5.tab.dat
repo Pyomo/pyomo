@@ -1,0 +1,1 @@
+load D.tab format=set_array: B;

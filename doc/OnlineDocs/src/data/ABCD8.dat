@@ -1,0 +1,1 @@
+load ABCD.xls using=pyodbc table=ABCD : Z=[A,B,C] Y=D ;

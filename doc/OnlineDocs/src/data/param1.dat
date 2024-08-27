@@ -1,0 +1,5 @@
+param A := 1.4;
+param B := 1;
+param C := abc;
+param D := true;
+param E := 1.0e+04;

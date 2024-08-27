@@ -1,0 +1,12 @@
+set C := 1 2 3 ;
+
+namespace ns1
+{
+    set C := 4 5 6 ;
+}
+
+namespace ns2
+{
+    set C := 7 8 9 ;
+}
+
