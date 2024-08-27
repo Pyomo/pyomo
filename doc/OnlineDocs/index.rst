@@ -1,5 +1,9 @@
+=============================
 Pyomo Documentation |release|
 =============================
+
+About Pyomo
+-----------
 
 .. image:: /../logos/pyomo/PyomoNewBlue3.png
    :scale: 10%
@@ -9,9 +13,11 @@ Pyomo is a Python-based, open-source optimization modeling language
 with a diverse set of optimization capabilities.
 
 
+Contents
+--------
 .. list-table::
    :width: 100%
-   :class: index-table
+   :class: diataxis
 
    * - .. toctree::
           :maxdepth: 2
@@ -24,12 +30,12 @@ with a diverse set of optimization capabilities.
 
           howto/index
    * - .. toctree::
-          :maxdepth: 2
+          :maxdepth: 3
           :titlesonly:
 
           explanation/index
      - .. toctree::
-          :maxdepth: 2
+          :maxdepth: 3
           :titlesonly:
 
           reference/index

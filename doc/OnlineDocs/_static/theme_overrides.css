@@ -31,9 +31,22 @@ dl.py.method dt em span.n {
   }
 }
 
-.rst-content table.docutils td {
+.rst-content table.diataxis td {
   vertical-align: top;
 }
+
+.rst-content table.diataxis li.toctree-l1 {
+  list-style-type: none;
+  font-weight: bold;
+  font-size: x-large;
+}
+
+.rst-content table.diataxis li ul li {
+  list-style-type: none;
+  font-weight: normal;
+  font-size: medium;
+}
+
 
 /* Remove space after tables in definition lists (e.g., for function
    "Parameters" lists*/
