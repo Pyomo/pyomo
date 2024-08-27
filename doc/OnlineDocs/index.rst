@@ -21,57 +21,18 @@ with a diverse set of optimization capabilities.
      - .. toctree::
           :maxdepth: 2
           :titlesonly:
-          :includehidden:
 
           howto/index
-   * - User Explanations
-         | :doc:`Pyomo Philosophy`
-         |    :doc:`Concrete and Abstract Models`
-         |    :doc:`Component Hierarchy`
-         |    :doc:`Expression System`
-         |    :doc:`Transformations`
-         | :doc:`Modeling in Pyomo`
-         |    :doc:`Math Programming`
-         |    :doc:`GDP`
-         |    :doc:`DAE`
-         |    :doc:`Network`
-         |    :doc:`Piecewise Linear`
-         |    :doc:`Constraint Programming`
-         |    :doc:`Units of Measure`
-         | :doc:`Solvers`
-         |    :doc:`PyROS`
-         |    :doc:`MindtPy`
-         |    :doc:`Trust Region`
-         |    :doc:`Pynumero`
-         | :doc:`Analysis in Pyomo`
-         |    :doc:`IIS`
-         |    :doc:`FBBT`
-         |    :doc:`Incidence Analysis`
-         |    :doc:`Parameter Estimation`
-         |    :doc:`Design of Experiments`
-         |    :doc:`MPC`
-         |    :doc:`AOS`
-         | :doc:`Modeling Utilities`
-         |    :doc:`Latex Printer`
-         |    :doc:`FME`
-         |    :doc:`Model Viewer`
-         |    :doc:`Model Flattening`
-         | :doc:`Developer Utilities`
-         |    :doc:`Configuration System`
-         |    :doc:`Deprecation System`
-         | :doc:`Experimental`
-         |    :doc:`Kernel`
-     - Reference Guides
-         | :doc:`Library Reference <reference/index>`
-         | :doc:`Common Warnings and Errors`
-         | :doc:`Accessing preview capabilities <reference/future>`
+   * - .. toctree::
+          :maxdepth: 2
+          :titlesonly:
 
-.. toctree::
-   :hidden:
-   :maxdepth: 2
+          explanation/index
+     - .. toctree::
+          :maxdepth: 2
+          :titlesonly:
 
-    User Explanations <explanation/index>
-    Reference Guides <reference/index>
+          reference/index
 
 
 Pyomo Resources
@@ -110,7 +71,7 @@ Contributing to Pyomo
 ---------------------
 
 Interested in contributing code or documentation to the project? Check out our
-:doc:`Contribution Guide <contribution_guide>`
+:doc:`Contribution Guide <howto/contribution_guide>`
 
 Related Packages
 ----------------

@@ -1,17 +1,20 @@
-Reference Guide
-===============
+Reference Guides
+================
 
 .. toctree::
    :maxdepth: 2
 
-   library_reference/index.rst
-   ../errors.rst
-   future.rst
+   library_reference/index
+   kernel/index
+   ../errors
+   future
+   ../related_packages
+   bibliography
 
+..
+   autosummary::
+   :toctree: API
+   :template: pyomo-autosummary-module.rst
+   :recursive:
 
-Bibliography
-------------
-
-:doc:`Bibliography <bibliography>`
-
-
+   pyomo

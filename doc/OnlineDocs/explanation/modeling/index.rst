@@ -1,13 +1,25 @@
-Pyomo Modeling Components
-=========================
+Modeling in Pyomo
+=================
 
 .. toctree::
    :maxdepth: 1
 
-   Sets.rst
-   Parameters.rst
-   Variables.rst
-   Objectives.rst
-   Constraints.rst
-   Expressions.rst
-   Suffixes.rst
+   math_programming/index
+   dae
+   gdp/index
+   mpec
+   network
+   units
+
+
+..
+   Reorganization notes:
+
+   `Modeling in Pyomo`
+       `Math Programming`
+       `GDP`
+       `DAE`
+       `Network`
+       `Piecewise Linear`
+       `Constraint Programming`
+       `Units of Measure`
