@@ -5,7 +5,7 @@ Reference Guide
    :maxdepth: 2
 
    library_reference/index.rst
-   errors.rst
+   ../errors.rst
    future.rst
 
 
