@@ -66,12 +66,11 @@ with a diverse set of optimization capabilities.
 
 .. toctree::
    :hidden:
-   :maxdepth: 1
+   :maxdepth: 2
 
-    index
     Getting Started <getting_started/index>
-    User Guide <user_guide/index>
-    Developer Guide <developer_guide/index>
+    Hot-To Guides <how_to_guide/index>
+    User Explanations <user_explanations/index>
     Reference Guide <reference_guide/index>
 
 
