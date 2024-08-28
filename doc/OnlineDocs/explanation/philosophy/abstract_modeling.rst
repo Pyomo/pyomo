@@ -4,7 +4,7 @@ Abstract Models
 .. note::
 
    TODO: this is a copy of "Abstractvs Concrete" from Getting Started.
-   This shoud beexpanded here.
+   This should be expanded here.
 
 
 A mathematical model can be defined using symbols that represent data
