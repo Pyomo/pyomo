@@ -240,6 +240,12 @@ def UnavailableClass(unavailable_module):
 
     class UnavailableMeta(type):
         def __getattr__(cls, name):
+            if 'sphinx' in sys.modules:
+                # If we are building documentation, avoid the
+                # DeferredImportError (we will still raise one if
+                # someone attempts to *create* an instance of this
+                # class)
+                super().__getattr__(name)
             raise DeferredImportError(
                 unavailable_module._moduleunavailable_message(
                     f"The class attribute '{cls.__name__}.{name}' is not available "
