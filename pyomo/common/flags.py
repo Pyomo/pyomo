@@ -74,6 +74,7 @@ def in_testing_environment(state=NOTSET):
         return bool(in_testing_environment.state)
     return any(mod in sys.modules for mod in ('nose', 'nose2', 'pytest'))
 
+
 in_testing_environment.state = None
 
 

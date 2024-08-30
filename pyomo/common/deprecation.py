@@ -228,6 +228,10 @@ def deprecation_warning(
     logger.warning(msg)
 
 
+# We do not want to cache / suppress repeated warnings when we are
+# testing or when we are building the documentation.  Note that doctest
+# doesn't set the "in_testing" flag until after pyomo.common is
+# imported.
 if in_testing_environment() or building_documentation():
     deprecation_warning.emitted_warnings = None
 else:
