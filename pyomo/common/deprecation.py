@@ -228,7 +228,7 @@ def deprecation_warning(
     logger.warning(msg)
 
 
-if in_testing_environment():
+if in_testing_environment() or building_documentation():
     deprecation_warning.emitted_warnings = None
 else:
     deprecation_warning.emitted_warnings = set()

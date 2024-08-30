@@ -28,21 +28,19 @@ import textwrap
 from pyomo.version.info import releaselevel
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
+from pyomo.common.flags import in_testing_environment
 from pyomo.common.formatting import wrap_reStructuredText
 
 _indentation_re = re.compile(r'\s*')
-
-_RTD_URL = "https://pyomo.readthedocs.io/en/%s/errors.html" % (
-    'stable'
-    if (releaselevel == 'final' or 'sphinx' in sys.modules or 'Sphinx' in sys.modules)
-    else 'latest'
-)
 
 
 def RTD(_id):
     _id = str(_id).lower()
     assert _id[0] in 'wex'
-    return f"{_RTD_URL}#{_id}"
+    return "https://pyomo.readthedocs.io/en/%s/errors.html#%s" % (
+        'stable' if (releaselevel == 'final' or in_testing_environment()) else 'latest',
+        _id,
+    )
 
 
 _DEBUG = logging.DEBUG

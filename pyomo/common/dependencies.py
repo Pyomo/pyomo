@@ -19,9 +19,10 @@ from collections.abc import Mapping
 from types import ModuleType
 from typing import List
 
-from .deprecation import deprecated, deprecation_warning, in_testing_environment
+import pyomo
+from .deprecation import deprecated, deprecation_warning
 from .errors import DeferredImportError
-
+from .flags import in_testing_environment, building_documentation
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
 
@@ -240,12 +241,12 @@ def UnavailableClass(unavailable_module):
 
     class UnavailableMeta(type):
         def __getattr__(cls, name):
-            if 'sphinx' in sys.modules:
+            if building_documentation():
                 # If we are building documentation, avoid the
                 # DeferredImportError (we will still raise one if
                 # someone attempts to *create* an instance of this
                 # class)
-                super().__getattr__(name)
+                return getattr(super(), name)
             raise DeferredImportError(
                 unavailable_module._moduleunavailable_message(
                     f"The class attribute '{cls.__name__}.{name}' is not available "

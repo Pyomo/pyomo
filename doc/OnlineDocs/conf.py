@@ -301,4 +301,7 @@ else:
     asl_available = False
     ma27_available = False
     mumps_available = False
+
+from pyomo.common.flags import in_testing_environment
+in_testing_environment(True)
 '''
