@@ -241,7 +241,7 @@ def UnavailableClass(unavailable_module):
 
     class UnavailableMeta(type):
         def __getattr__(cls, name):
-            if building_documentation():
+            if building_documentation(ignore_testing_flag=True):
                 # If we are building documentation, avoid the
                 # DeferredImportError (we will still raise one if
                 # someone attempts to *create* an instance of this
