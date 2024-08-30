@@ -11,7 +11,7 @@
 
 from .dependencies import random
 
-# [Aug 24] Importing for backwards compatability; may deprecate this import later
+# [Aug 24] Importing for backwards compatibility; may deprecate this import later
 from .flags import FlagType, NOTSET
 
 # Backward compatibility with the previous name for this flag
