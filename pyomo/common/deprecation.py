@@ -29,6 +29,7 @@ import textwrap
 import types
 
 from pyomo.common.errors import DeveloperError
+from pyomo.common.flags import in_testing_environment, building_documentation
 
 _doc_flag = '.. deprecated::'
 
@@ -149,17 +150,6 @@ def _find_calling_frame(module_offset):
         else:
             break
     return calling_frame
-
-
-def in_testing_environment():
-    """Return True if we are currently running in a "testing" environment
-
-    This currently includes if nose, nose2, pytest, or Sphinx are
-    running (imported).
-
-    """
-
-    return any(mod in sys.modules for mod in ('nose', 'nose2', 'pytest', 'sphinx'))
 
 
 def deprecation_warning(
