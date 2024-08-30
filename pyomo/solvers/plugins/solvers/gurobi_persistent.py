@@ -578,7 +578,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if is_fixed(con.body):
             raise ValueError('cbCut expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
         )
 
@@ -656,7 +656,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if is_fixed(con.body):
             raise ValueError('cbLazy expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
         )
 
