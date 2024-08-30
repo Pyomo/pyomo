@@ -29,4 +29,4 @@ jobs:
         # Exclude:
         #  - Jenkins because it's behind a firewall
         #  - RTD because a magically-generated string triggers failures
-        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html#%s
+        exclude_urls: 'https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html#%s'
