@@ -1,4 +1,4 @@
-Library Reference
+Topical Reference
 =================
 
 Pyomo is being increasingly used as a library to support Python

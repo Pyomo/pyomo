@@ -4,18 +4,10 @@ Reference Guides
 .. toctree::
    :maxdepth: 2
 
-   library_reference/index
-   ../errors
+   topical/index
+   Library Reference <../api/pyomo>
    future
+   ../errors
    ../related_packages
    bibliography
-   API/pyomo
 
-.. autosummary::
-   :toctree: API
-   :caption: Library Reference
-   :template: recursive-module.rst
-   :recursive:
-   :noindex:
-
-   pyomo
