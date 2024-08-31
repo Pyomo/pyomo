@@ -9,11 +9,13 @@ Reference Guides
    future
    ../related_packages
    bibliography
+   API/pyomo
 
-..
-   autosummary::
+.. autosummary::
    :toctree: API
-   :template: pyomo-autosummary-module.rst
+   :caption: Library Reference
+   :template: recursive-module.rst
    :recursive:
+   :noindex:
 
    pyomo
