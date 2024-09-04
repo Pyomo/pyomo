@@ -207,7 +207,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
         try:
             self._solver_model.setOptionValue('log_to_console', False)
             self._solver_model.setOptionValue('log_file', log_fname)
-            
+
             if config.threads is not None:
                 self._solver_model.setOptionValue('threads', config.threads)
             if config.time_limit is not None:
@@ -216,7 +216,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
                 self._solver_model.setOptionValue('mip_rel_gap', config.rel_gap)
             if config.abs_gap is not None:
                 self._solver_model.setOptionValue('mip_abs_gap', config.abs_gap)
-            
+
             for key, option in options.items():
                 self._solver_model.setOptionValue(key, option)
             timer.start('optimize')

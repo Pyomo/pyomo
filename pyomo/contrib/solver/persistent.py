@@ -126,9 +126,7 @@ class PersistentSolverUtils(abc.ABC):
         all_fixed_vars = {}
         for con in cons:
             if con in self._named_expressions:
-                raise ValueError(
-                    f'Constraint {con.name} has already been added'
-                )
+                raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = con.expr
             tmp = collect_vars_and_named_exprs(con.expr)
             named_exprs, variables, fixed_vars, external_functions = tmp
