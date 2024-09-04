@@ -358,15 +358,20 @@ class LegacySolverWrapper:
             raise NotImplementedError('Still working on this')
         # There is no reason for a user to be trying to mix both old
         # and new options. That is silly. So we will yell at them.
-        self.options = kwargs.pop('options', None)
+        _options = kwargs.pop('options', None)
         if 'solver_options' in kwargs:
-            if self.options is not None:
+            if _options is not None:
                 raise ValueError(
                     "Both 'options' and 'solver_options' were requested. "
                     "Please use one or the other, not both."
                 )
-            self.options = kwargs.pop('solver_options')
+            _options = kwargs.pop('solver_options')
+        if _options is not None:
+            kwargs['solver_options'] = _options
         super().__init__(**kwargs)
+        # Make the legacy 'options' attribute an alias of the new
+        # config.solver_options
+        self.options = self.config.solver_options
 
     #
     # Support "with" statements
@@ -376,6 +381,14 @@ class LegacySolverWrapper:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
+
+    def __setattr__(self, attr, value):
+        # 'options' and 'config' are really singleton attributes.  Map
+        # any assignment to set_value()
+        if attr in ('options', 'config') and attr in self.__dict__:
+            getattr(self, attr).set_value(value)
+        else:
+            super().__setattr__(attr, value)
 
     def _map_config(
         self,
@@ -395,7 +408,6 @@ class LegacySolverWrapper:
         writer_config=NOTSET,
     ):
         """Map between legacy and new interface configuration options"""
-        self.config = self.config()
         if 'report_timing' not in self.config:
             self.config.declare(
                 'report_timing', ConfigValue(domain=bool, default=False)
@@ -410,8 +422,6 @@ class LegacySolverWrapper:
             self.config.time_limit = timelimit
         if report_timing is not NOTSET:
             self.config.report_timing = report_timing
-        if self.options is not None:
-            self.config.solver_options.set_value(self.options)
         if (options is not NOTSET) and (solver_options is not NOTSET):
             # There is no reason for a user to be trying to mix both old
             # and new options. That is silly. So we will yell at them.

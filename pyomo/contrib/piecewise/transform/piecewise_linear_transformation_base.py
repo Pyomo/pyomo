@@ -31,6 +31,7 @@ from pyomo.core import (
     Connector,
     SortComponents,
     Any,
+    LogicalConstraint,
 )
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import Block
@@ -42,10 +43,10 @@ from pyomo.network import Port
 
 class PiecewiseLinearTransformationBase(Transformation):
     """
-    Base class for transformations of piecewise-linear models to GDPs
+    Base class for transformations of piecewise-linear models to GDPs, MIPs, etc.
     """
 
-    CONFIG = ConfigDict('contrib.piecewise_to_gdp')
+    CONFIG = ConfigDict('contrib.piecewise_linear_transformation_base')
     CONFIG.declare(
         'targets',
         ConfigValue(
@@ -102,6 +103,7 @@ class PiecewiseLinearTransformationBase(Transformation):
             ExternalFunction: False,
             Port: False,
             PiecewiseLinearFunction: self._transform_piecewise_linear_function,
+            LogicalConstraint: False,
         }
         self._transformation_blocks = {}
 
