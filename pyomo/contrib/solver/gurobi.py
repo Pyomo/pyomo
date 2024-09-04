@@ -42,7 +42,7 @@ from pyomo.contrib.solver.util import (
     NoValidReducedCostsError,
     NoValidSolutionError,
 )
-from pyomo.contrib.solver.persistent import PersistentSolverUtils
+from pyomo.contrib.solver.persistent import PersistentSolverUtils, PersistentSolverMixin
 from pyomo.contrib.solver.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
@@ -227,7 +227,7 @@ class _MutableQuadraticCoefficient:
         self.var2 = None
 
 
-class Gurobi(PersistentSolverUtils, PersistentSolverBase):
+class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
     """
     Interface to Gurobi
     """
@@ -365,35 +365,6 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
-        return res
-
-    def solve(self, model, **kwds) -> Results:
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
-        StaleFlagManager.mark_all_as_stale()
-        # Note: solver availability check happens in set_instance(),
-        # which will be called (either by the user before this call, or
-        # below) before this method calls self._solve.
-        if self._last_results_object is not None:
-            self._last_results_object.solution_loader.invalidate()
-        if config.timer is None:
-            config.timer = HierarchicalTimer()
-        timer = config.timer
-        if model is not self._model:
-            timer.start('set_instance')
-            self.set_instance(model)
-            timer.stop('set_instance')
-        else:
-            timer.start('update')
-            self.update(timer=timer)
-            timer.stop('update')
-        res = self._solve()
-        self._last_results_object = res
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
-        res.timing_info.timer = timer
-        self._active_config = self.config
         return res
 
     def _process_domain_and_bounds(

@@ -11,6 +11,7 @@
 
 import abc
 from typing import List
+import datetime
 
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
@@ -21,6 +22,8 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.expr.numvalue import NumericConstant
 from pyomo.contrib.solver.util import collect_vars_and_named_exprs, get_objective
+from pyomo.core.staleflag import StaleFlagManager
+from pyomo.contrib.solver.results import Results
 
 
 class PersistentSolverUtils(abc.ABC):
@@ -523,3 +526,38 @@ class PersistentSolverUtils(abc.ABC):
         timer.start('vars')
         self.remove_variables(old_vars)
         timer.stop('vars')
+
+
+class PersistentSolverMixin:
+    """
+    Mixin class for common solver functionality
+    """
+
+    def solve(self, model, **kwds) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
+        StaleFlagManager.mark_all_as_stale()
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+        if model is not self._model:
+            timer.start('set_instance')
+            self.set_instance(model)
+            timer.stop('set_instance')
+        else:
+            timer.start('update')
+            self.update(timer=timer)
+            timer.stop('update')
+        res = self._solve()
+        self._last_results_object = res
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        self._active_config = self.config
+        return res
+
+    def _solve(self):
+        raise NotImplementedError("Subclasses should implement this method")
