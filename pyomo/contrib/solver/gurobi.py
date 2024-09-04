@@ -243,6 +243,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
         PersistentSolverUtils.__init__(
             self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
         )
+        PersistentSolverMixin.__init__(self)
         Gurobi._num_instances += 1
         self._solver_model = None
         self._symbol_map = SymbolMap()
