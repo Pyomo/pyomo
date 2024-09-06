@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['Port']
 
 import logging, sys
 from weakref import ref as weakref_ref
@@ -38,7 +36,7 @@ from pyomo.network.util import create_var, tighten_var_domain
 logger = logging.getLogger('pyomo.network')
 
 
-class _PortData(ComponentData):
+class PortData(ComponentData):
     """
     This class defines the data for a single Port
 
@@ -287,6 +285,11 @@ class _PortData(ComponentData):
             return res
 
 
+class _PortData(metaclass=RenamedClass):
+    __renamed__new_class__ = PortData
+    __renamed__version__ = '6.7.2'
+
+
 @ModelComponentFactory.register(
     "A bundle of variables that can be connected to other ports."
 )
@@ -341,21 +344,25 @@ class Port(IndexedComponent):
     # IndexedComponent that support implicit definition
     def _getitem_when_not_present(self, idx):
         """Returns the default component data value."""
-        tmp = self._data[idx] = _PortData(component=self)
+        tmp = self._data[idx] = PortData(component=self)
         tmp._index = idx
         return tmp
 
     def construct(self, data=None):
+        if self._constructed:
+            return
+        self._constructed = True
+
+        timer = ConstructionTimer(self)
+
         if is_debug_set(logger):  # pragma:nocover
             logger.debug("Constructing Port, name=%s, from data=%s" % (self.name, data))
 
-        if self._constructed:
-            return
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
-        timer = ConstructionTimer(self)
-        self._constructed = True
-
-        # Construct _PortData objects for all index values
+        # Construct PortData objects for all index values
         if self.is_indexed():
             self._initialize_members(self._index_set)
         else:
@@ -761,9 +768,9 @@ class Port(IndexedComponent):
         return evar
 
 
-class ScalarPort(Port, _PortData):
+class ScalarPort(Port, PortData):
     def __init__(self, *args, **kwd):
-        _PortData.__init__(self, component=self)
+        PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 

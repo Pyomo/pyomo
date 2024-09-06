@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,11 +9,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.piecewise import PiecewiseLinearFunction
+from pyomo.contrib.piecewise import PiecewiseLinearFunction, Triangulation
 from pyomo.environ import ConcreteModel, Constraint, log, Objective, Var
 
+default_simplices = [
+    [(0, 1), (0, 4), (3, 4)],
+    [(0, 1), (3, 4), (3, 1)],
+    [(3, 4), (3, 7), (0, 7)],
+    [(0, 7), (0, 4), (3, 4)],
+]
 
-def make_log_x_model():
+
+def make_log_x_model(simplices=default_simplices):
     m = ConcreteModel()
     m.x = Var(bounds=(1, 10))
     m.pw_log = PiecewiseLinearFunction(points=[1, 3, 6, 10], function=log)
@@ -50,14 +57,11 @@ def make_log_x_model():
         return 3 * x1 + 11 * x2 - 28
 
     m.g2 = g2
-    simplices = [
-        [(0, 1), (0, 4), (3, 4)],
-        [(0, 1), (3, 4), (3, 1)],
-        [(3, 4), (3, 7), (0, 7)],
-        [(0, 7), (0, 4), (3, 4)],
-    ]
+
     m.pw_paraboloid = PiecewiseLinearFunction(
-        simplices=simplices, linear_functions=[g1, g1, g2, g2]
+        simplices=simplices,
+        linear_functions=[g1, g1, g2, g2],
+        triangulation=Triangulation.AssumeValid,
     )
     m.paraboloid_expr = m.pw_paraboloid(m.x1, m.x2)
 

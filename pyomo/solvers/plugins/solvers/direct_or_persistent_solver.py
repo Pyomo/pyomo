@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.base.PyomoModel import Model
-from pyomo.core.base.block import Block, _BlockData
+from pyomo.core.base.block import Block, BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -177,7 +177,7 @@ class DirectOrPersistentSolver(OptSolver):
     """ This method should be implemented by subclasses."""
 
     def _set_instance(self, model, kwds={}):
-        if not isinstance(model, (Model, IBlock, Block, _BlockData)):
+        if not isinstance(model, (Model, IBlock, Block, BlockData)):
             msg = (
                 "The problem instance supplied to the {0} plugin "
                 "'_presolve' method must be a Model or a Block".format(type(self))

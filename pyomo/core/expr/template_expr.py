@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,11 +19,12 @@ from pyomo.common.errors import TemplateExpressionError
 from pyomo.core.expr.base import ExpressionBase, ExpressionArgs_Mixin, NPV_Mixin
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.expr.numeric_expr import (
-    NumericExpression,
-    SumExpression,
-    Numeric_NPV_Mixin,
-    register_arg_type,
     ARG_TYPE,
+    NumericExpression,
+    Numeric_NPV_Mixin,
+    SumExpression,
+    mutable_expression,
+    register_arg_type,
     _balanced_parens,
 )
 from pyomo.core.expr.numvalue import (
@@ -116,18 +117,10 @@ class GetItemExpression(ExpressionBase):
         return "%s[%s]" % (values[0], ','.join(values[1:]))
 
     def _resolve_template(self, args):
-        return args[0].__getitem__(tuple(args[1:]))
+        return args[0].__getitem__(args[1:])
 
     def _apply_operation(self, result):
-        args = tuple(
-            (
-                arg
-                if arg.__class__ in native_types or not arg.is_numeric_type()
-                else value(arg)
-            )
-            for arg in result[1:]
-        )
-        return result[0].__getitem__(tuple(result[1:]))
+        return result[0].__getitem__(result[1:])
 
 
 class Numeric_GetItemExpression(GetItemExpression, NumericExpression):
@@ -258,8 +251,8 @@ class GetAttrExpression(ExpressionBase):
         return 2
 
     def _apply_operation(self, result):
-        assert len(result) == 2
-        return getattr(result[0], result[1])
+        obj, attr = result
+        return getattr(obj, attr)
 
     def _to_string(self, values, verbose, smap):
         assert len(values) == 2
@@ -273,7 +266,7 @@ class GetAttrExpression(ExpressionBase):
         return "%s.%s" % (values[0], attr)
 
     def _resolve_template(self, args):
-        return getattr(*tuple(args))
+        return getattr(*args)
 
 
 class Numeric_GetAttrExpression(GetAttrExpression, NumericExpression):
@@ -521,7 +514,15 @@ class TemplateSumExpression(NumericExpression):
             return 'SUM(%s %s)' % (val, iterStr)
 
     def _resolve_template(self, args):
-        return SumExpression(args)
+        with mutable_expression() as e:
+            for arg in args:
+                e += arg
+        if e.nargs() > 1:
+            return e
+        elif not e.nargs():
+            return 0
+        else:
+            return e.arg(0)
 
 
 class IndexTemplate(NumericValue):

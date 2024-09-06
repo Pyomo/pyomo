@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -27,6 +27,7 @@ from pyomo.common.dependencies import (
 from pyomo.core.base.util import flatten_tuple
 from pyomo.core.base.initializer import (
     Initializer,
+    BoundInitializer,
     ConstantInitializer,
     ItemInitializer,
     ScalarCallInitializer,
@@ -35,6 +36,10 @@ from pyomo.core.base.initializer import (
     CountedCallGenerator,
     DataFrameInitializer,
     DefaultInitializer,
+    ParameterizedInitializer,
+    ParameterizedIndexedCallInitializer,
+    ParameterizedScalarCallInitializer,
+    function_types,
 )
 from pyomo.environ import ConcreteModel, Var
 
@@ -550,6 +555,54 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(a(None, 5), 15)
 
+    def test_function(self):
+        def _scalar(m):
+            return 10
+
+        a = Initializer(_scalar)
+        self.assertIs(type(a), ScalarCallInitializer)
+        self.assertTrue(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, None), 10)
+
+        def _indexed(m, i):
+            return 10 + i
+
+        a = Initializer(_indexed)
+        self.assertIs(type(a), IndexedCallInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertEqual(a(None, 5), 15)
+
+        try:
+            original_fcn_types = set(function_types)
+            function_types.clear()
+            self.assertEqual(len(function_types), 0)
+
+            a = Initializer(_scalar)
+            self.assertIs(type(a), ScalarCallInitializer)
+            self.assertTrue(a.constant())
+            self.assertFalse(a.verified)
+            self.assertEqual(a(None, None), 10)
+            self.assertEqual(len(function_types), 1)
+        finally:
+            function_types.clear()
+            function_types.update(original_fcn_types)
+
+        try:
+            original_fcn_types = set(function_types)
+            function_types.clear()
+            self.assertEqual(len(function_types), 0)
+
+            a = Initializer(_indexed)
+            self.assertIs(type(a), IndexedCallInitializer)
+            self.assertFalse(a.constant())
+            self.assertFalse(a.verified)
+            self.assertEqual(a(None, 5), 15)
+        finally:
+            function_types.clear()
+            function_types.update(original_fcn_types)
+
     def test_no_argspec(self):
         a = Initializer(getattr)
         self.assertIs(type(a), IndexedCallInitializer)
@@ -805,3 +858,87 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(a(None, 'opt_1'), 1)
         self.assertEqual(a(None, 'opt_3'), 3)
         self.assertEqual(a(None, 'opt_5'), 5)
+
+    def _bound_function1(self, m, i):
+        return m, i
+
+    def _bound_function2(self, m, i, j):
+        return m, i, j
+
+    def test_additional_args(self):
+        def a_init(m):
+            yield 0
+            yield 3
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Generator functions are not allowed when passing additional args",
+        ):
+            a = Initializer(a_init, additional_args=1)
+
+        a = Initializer(self._bound_function1, additional_args=1)
+        self.assertIs(type(a), ParameterizedScalarCallInitializer)
+        self.assertEqual(a('m', None, 5), ('m', 5))
+
+        a = Initializer(self._bound_function2, additional_args=1)
+        self.assertIs(type(a), ParameterizedIndexedCallInitializer)
+        self.assertEqual(a('m', 1, 5), ('m', 5, 1))
+
+        class Functor(object):
+            def __init__(self, i):
+                self.i = i
+
+            def __call__(self, m, i):
+                return m, i * self.i
+
+        a = Initializer(Functor(10), additional_args=1)
+        self.assertIs(type(a), ParameterizedScalarCallInitializer)
+        self.assertEqual(a('m', None, 5), ('m', 50))
+
+        a_init = {1: lambda m, i: ('m', i), 2: lambda m, i: ('m', 2 * i)}
+        a = Initializer(a_init, additional_args=1)
+        self.assertIs(type(a), ParameterizedInitializer)
+        self.assertFalse(a.constant())
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [1, 2])
+        self.assertEqual(a('m', 1, 5), ('m', 5))
+        self.assertEqual(a('m', 2, 5), ('m', 10))
+
+    def test_bound_initializer(self):
+        m = ConcreteModel()
+        m.x = Var([0, 1, 2])
+        m.y = Var()
+
+        b = BoundInitializer(None, m.x)
+        self.assertIsNone(b)
+
+        b = BoundInitializer((0, 1), m.x)
+        self.assertIs(type(b), BoundInitializer)
+        self.assertTrue(b.constant())
+        self.assertFalse(b.verified)
+        self.assertFalse(b.contains_indices())
+        self.assertEqual(b(None, 1), (0, 1))
+
+        b = BoundInitializer([(0, 1)], m.x)
+        self.assertIs(type(b), BoundInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertTrue(b.contains_indices())
+        self.assertTrue(list(b.indices()), [0])
+        self.assertEqual(b(None, 0), (0, 1))
+
+        init = {1: (2, 3), 4: (5, 6)}
+        b = BoundInitializer(init, m.x)
+        self.assertIs(type(b), BoundInitializer)
+        self.assertFalse(b.constant())
+        self.assertFalse(b.verified)
+        self.assertTrue(b.contains_indices())
+        self.assertEqual(list(b.indices()), [1, 4])
+        self.assertEqual(b(None, 1), (2, 3))
+        self.assertEqual(b(None, 4), (5, 6))
+
+        b = BoundInitializer((0, 1), m.y)
+        self.assertEqual(b(None, None), (0, 1))
+
+        b = BoundInitializer(5, m.y)
+        self.assertEqual(b(None, None), (5, 5))

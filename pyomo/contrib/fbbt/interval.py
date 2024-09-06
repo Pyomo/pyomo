@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,6 +15,123 @@ from pyomo.common.errors import InfeasibleConstraintException, IntervalException
 
 logger = logging.getLogger(__name__)
 inf = float('inf')
+
+
+class _bool_flag(object):
+    def __init__(self, val):
+        self._val = val
+
+    def __bool__(self):
+        return self._val
+
+    def _op(self, *others):
+        raise ValueError(
+            f"{self._val!r} ({type(self._val).__name__}) is not a valid numeric type. "
+            f"Cannot compute bounds on expression."
+        )
+
+    def __repr__(self):
+        return repr(self._val)
+
+    __float__ = _op
+    __int__ = _op
+    __abs__ = _op
+    __neg__ = _op
+    __add__ = _op
+    __sub__ = _op
+    __mul__ = _op
+    __div__ = _op
+    __pow__ = _op
+    __radd__ = _op
+    __rsub__ = _op
+    __rmul__ = _op
+    __rdiv__ = _op
+    __rpow__ = _op
+
+
+_true = _bool_flag(True)
+_false = _bool_flag(False)
+
+
+def BoolFlag(val):
+    return _true if val else _false
+
+
+def ineq(xl, xu, yl, yu, feasibility_tol):
+    """Compute the "bounds" on an InequalityExpression
+
+    Note this is *not* performing interval arithmetic: we are
+    calculating the "bounds" on a RelationalExpression (whose domain is
+    {True, False}).  Therefore we are determining if `x` can be less
+    than `y`, `x` can not be less than `y`, or both.
+
+    """
+    ans = []
+    if yl < xu - feasibility_tol:
+        ans.append(_false)
+    if xl <= yu + feasibility_tol:
+        ans.append(_true)
+    assert ans
+    if len(ans) == 1:
+        ans.append(ans[0])
+    return tuple(ans)
+
+
+def eq(xl, xu, yl, yu, feasibility_tol):
+    """Compute the "bounds" on an EqualityExpression
+
+    Note this is *not* performing interval arithmetic: we are
+    calculating the "bounds" on a RelationalExpression (whose domain is
+    {True, False}).  Therefore we are determining if `x` can be equal to
+    `y`, `x` can not be equal to `y`, or both.
+
+    """
+    ans = []
+    if (
+        abs(xl - xu) > feasibility_tol
+        or abs(yl - yu) > feasibility_tol
+        or abs(xl - yl) > feasibility_tol
+    ):
+        ans.append(_false)
+    if xl <= yu + feasibility_tol and yl <= xu + feasibility_tol:
+        ans.append(_true)
+    assert ans
+    if len(ans) == 1:
+        ans.append(ans[0])
+    return tuple(ans)
+
+
+def ranged(xl, xu, yl, yu, zl, zu, feasibility_tol):
+    """Compute the "bounds" on a RangedExpression
+
+    Note this is *not* performing interval arithmetic: we are
+    calculating the "bounds" on a RelationalExpression (whose domain is
+    {True, False}).  Therefore we are determining if `y` can be between
+    `z` and `z`, `y` can be outside the range `x` and `z`, or both.
+
+    """
+    lb = ineq(xl, xu, yl, yu, feasibility_tol)
+    ub = ineq(yl, yu, zl, zu, feasibility_tol)
+    ans = []
+    if not lb[0] or not ub[0]:
+        ans.append(_false)
+    if lb[1] and ub[1]:
+        ans.append(_true)
+    if len(ans) == 1:
+        ans.append(ans[0])
+    return tuple(ans)
+
+
+def if_(il, iu, tl, tu, fl, fu):
+    l = []
+    u = []
+    if iu:
+        l.append(tl)
+        u.append(tu)
+    if not il:
+        l.append(fl)
+        u.append(fu)
+    return min(l), max(u)
 
 
 def add(xl, xu, yl, yu):
@@ -39,12 +156,18 @@ def mul(xl, xu, yl, yu):
 
 
 def inv(xl, xu, feasibility_tol):
-    """
-    The case where xl is very slightly positive but should be very slightly negative (or xu is very slightly negative
-    but should be very slightly positive) should not be an issue. Suppose xu is 2 and xl is 1e-15 but should be -1e-15.
-    The bounds obtained from this function will be [0.5, 1e15] or [0.5, inf), depending on the value of
-    feasibility_tol. The true bounds are (-inf, -1e15] U [0.5, inf), where U is union. The exclusion of (-inf, -1e15]
-    should be acceptable. Additionally, it very important to return a non-negative interval when xl is non-negative.
+    """Compute the inverse of an interval
+
+    The case where xl is very slightly positive but should be very
+    slightly negative (or xu is very slightly negative but should be
+    very slightly positive) should not be an issue. Suppose xu is 2 and
+    xl is 1e-15 but should be -1e-15.  The bounds obtained from this
+    function will be [0.5, 1e15] or [0.5, inf), depending on the value
+    of feasibility_tol. The true bounds are (-inf, -1e15] U [0.5, inf),
+    where U is union. The exclusion of (-inf, -1e15] should be
+    acceptable. Additionally, it very important to return a non-negative
+    interval when xl is non-negative.
+
     """
     if xu - xl <= -feasibility_tol:
         raise InfeasibleConstraintException(
@@ -89,9 +212,8 @@ def power(xl, xu, yl, yu, feasibility_tol):
     Compute bounds on x**y.
     """
     if xl > 0:
-        """
-        If x is always positive, things are simple. We only need to worry about the sign of y.
-        """
+        # If x is always positive, things are simple. We only need to
+        # worry about the sign of y.
         if yl < 0 < yu:
             lb = min(xu**yl, xl**yu)
             ub = max(xl**yl, xu**yu)
@@ -181,14 +303,15 @@ def power(xl, xu, yl, yu, feasibility_tol):
 
 
 def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
-    """
-    z = x**y => compute bounds on x.
+    """z = x**y => compute bounds on x.
 
     First, start by computing bounds on x with
 
         x = exp(ln(z) / y)
 
-    However, if y is an integer, then x can be negative, so there are several special cases. See the docs below.
+    However, if y is an integer, then x can be negative, so there are
+    several special cases. See the docs below.
+
     """
     xl, xu = log(zl, zu)
     xl, xu = div(xl, xu, yl, yu, feasibility_tol)
@@ -199,22 +322,31 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
         y = yl
         if y == 0:
             # Anything to the power of 0 is 1, so if y is 0, then x can be anything
-            # (assuming zl <= 1 <= zu, which is enforced when traversing the tree in the other direction)
+            # (assuming zl <= 1 <= zu, which is enforced when traversing
+            # the tree in the other direction)
             xl = -inf
             xu = inf
         elif y % 2 == 0:
-            """
-            if y is even, then there are two primary cases (note that it is much easier to walk through these
-            while looking at plots):
+            """if y is even, then there are two primary cases (note that it is much
+            easier to walk through these while looking at plots):
+
             case 1: y is positive
-                x**y is convex, positive, and symmetric. The bounds on x depend on the lower bound of z. If zl <= 0,
-                then xl should simply be -xu. However, if zl > 0, then we may be able to say something better. For
-                example, if the original lower bound on x is positive, then we can keep xl computed from
-                x = exp(ln(z) / y). Furthermore, if the original lower bound on x is larger than -xl computed from
-                x = exp(ln(z) / y), then we can still keep the xl computed from x = exp(ln(z) / y). Similar logic
-                applies to the upper bound of x.
+
+                x**y is convex, positive, and symmetric. The bounds on x
+                depend on the lower bound of z. If zl <= 0, then xl
+                should simply be -xu. However, if zl > 0, then we may be
+                able to say something better. For example, if the
+                original lower bound on x is positive, then we can keep
+                xl computed from x = exp(ln(z) / y). Furthermore, if the
+                original lower bound on x is larger than -xl computed
+                from x = exp(ln(z) / y), then we can still keep the xl
+                computed from x = exp(ln(z) / y). Similar logic applies
+                to the upper bound of x.
+
             case 2: y is negative
+
                 The ideas are similar to case 1.
+
             """
             if zu + feasibility_tol < 0:
                 raise InfeasibleConstraintException(
@@ -262,16 +394,25 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
                 xl = _xl
                 xu = _xu
         else:  # y % 2 == 1
-            """
-            y is odd.
+            """y is odd.
+
             Case 1: y is positive
-                x**y is monotonically increasing. If y is positive, then we can can compute the bounds on x using
-                x = z**(1/y) and the signs on xl and xu depend on the signs of zl and zu.
+
+                x**y is monotonically increasing. If y is positive, then
+                we can can compute the bounds on x using x = z**(1/y)
+                and the signs on xl and xu depend on the signs of zl and
+                zu.
+
             Case 2: y is negative
-                Again, this is easier to visualize with a plot. x**y approaches zero when x approaches -inf or inf.
-                Thus, if zl < 0 < zu, then no bounds can be inferred for x. If z is positive (zl >=0 ) then we can
-                use the bounds computed from x = exp(ln(z) / y). If z is negative (zu <= 0), then we live in the
-                bottom left quadrant, xl depends on zu, and xu depends on zl.
+
+                Again, this is easier to visualize with a plot. x**y
+                approaches zero when x approaches -inf or inf.  Thus, if
+                zl < 0 < zu, then no bounds can be inferred for x. If z
+                is positive (zl >=0 ) then we can use the bounds
+                computed from x = exp(ln(z) / y). If z is negative (zu
+                <= 0), then we live in the bottom left quadrant, xl
+                depends on zu, and xu depends on zl.
+
             """
             if y > 0:
                 xl = abs(zl) ** (1.0 / y)
@@ -298,12 +439,13 @@ def _inverse_power1(zl, zu, yl, yu, orig_xl, orig_xu, feasibility_tol):
 
 
 def _inverse_power2(zl, zu, xl, xu, feasiblity_tol):
-    """
-    z = x**y => compute bounds on y
+    """z = x**y => compute bounds on y
     y = ln(z) / ln(x)
 
-    This function assumes the exponent can be fractional, so x must be positive. This method should not be called
-    if the exponent is an integer.
+    This function assumes the exponent can be fractional, so x must be
+    positive. This method should not be called if the exponent is an
+    integer.
+
     """
     if xu <= 0:
         raise IntervalException(
@@ -391,10 +533,12 @@ def sin(xl, xu):
     ub: float
     """
 
-    # if there is a minimum between xl and xu, then the lower bound is -1. Minimums occur at 2*pi*n - pi/2
-    # find the minimum value of i such that 2*pi*i - pi/2 >= xl. Then round i up. If 2*pi*i - pi/2 is still less
-    # than or equal to xu, then there is a minimum between xl and xu. Thus the lb is -1. Otherwise, the minimum
-    # occurs at either xl or xu
+    # if there is a minimum between xl and xu, then the lower bound is
+    # -1. Minimums occur at 2*pi*n - pi/2 find the minimum value of i
+    # such that 2*pi*i - pi/2 >= xl. Then round i up. If 2*pi*i - pi/2
+    # is still less than or equal to xu, then there is a minimum between
+    # xl and xu. Thus the lb is -1. Otherwise, the minimum occurs at
+    # either xl or xu
     if xl <= -inf or xu >= inf:
         return -1, 1
     pi = math.pi
@@ -406,7 +550,8 @@ def sin(xl, xu):
     else:
         lb = min(math.sin(xl), math.sin(xu))
 
-    # if there is a maximum between xl and xu, then the upper bound is 1. Maximums occur at 2*pi*n + pi/2
+    # if there is a maximum between xl and xu, then the upper bound is
+    # 1. Maximums occur at 2*pi*n + pi/2
     i = (xu - pi / 2) / (2 * pi)
     i = math.floor(i)
     x_at_max = 2 * pi * i + pi / 2
@@ -432,10 +577,12 @@ def cos(xl, xu):
     ub: float
     """
 
-    # if there is a minimum between xl and xu, then the lower bound is -1. Minimums occur at 2*pi*n - pi
-    # find the minimum value of i such that 2*pi*i - pi >= xl. Then round i up. If 2*pi*i - pi/2 is still less
-    # than or equal to xu, then there is a minimum between xl and xu. Thus the lb is -1. Otherwise, the minimum
-    # occurs at either xl or xu
+    # if there is a minimum between xl and xu, then the lower bound is
+    # -1. Minimums occur at 2*pi*n - pi find the minimum value of i such
+    # that 2*pi*i - pi >= xl. Then round i up. If 2*pi*i - pi/2 is still
+    # less than or equal to xu, then there is a minimum between xl and
+    # xu. Thus the lb is -1. Otherwise, the minimum occurs at either xl
+    # or xu
     if xl <= -inf or xu >= inf:
         return -1, 1
     pi = math.pi
@@ -447,7 +594,8 @@ def cos(xl, xu):
     else:
         lb = min(math.cos(xl), math.cos(xu))
 
-    # if there is a maximum between xl and xu, then the upper bound is 1. Maximums occur at 2*pi*n
+    # if there is a maximum between xl and xu, then the upper bound is
+    # 1. Maximums occur at 2*pi*n
     i = (xu) / (2 * pi)
     i = math.floor(i)
     x_at_max = 2 * pi * i
@@ -473,10 +621,12 @@ def tan(xl, xu):
     ub: float
     """
 
-    # tan goes to -inf and inf at every pi*i + pi/2 (integer i). If one of these values is between xl and xu, then
-    # the lb is -inf and the ub is inf. Otherwise the minimum occurs at xl and the maximum occurs at xu.
-    # find the minimum value of i such that pi*i + pi/2 >= xl. Then round i up. If pi*i + pi/2 is still less
-    # than or equal to xu, then there is an undefined point between xl and xu.
+    # tan goes to -inf and inf at every pi*i + pi/2 (integer i). If one
+    # of these values is between xl and xu, then the lb is -inf and the
+    # ub is inf. Otherwise the minimum occurs at xl and the maximum
+    # occurs at xu.  find the minimum value of i such that pi*i + pi/2
+    # >= xl. Then round i up. If pi*i + pi/2 is still less than or equal
+    # to xu, then there is an undefined point between xl and xu.
     if xl <= -inf or xu >= inf:
         return -inf, inf
     pi = math.pi
@@ -520,12 +670,12 @@ def asin(xl, xu, yl, yu, feasibility_tol):
     if yl <= -inf:
         lb = yl
     elif xl <= math.sin(yl) <= xu:
-        # if sin(yl) >= xl then yl satisfies the bounds on x, and the lower bound of y cannot be improved
+        # if sin(yl) >= xl then yl satisfies the bounds on x, and the
+        # lower bound of y cannot be improved
         lb = yl
     elif math.sin(yl) < xl:
-        """
-        we can only push yl up from its current value to the next lowest value such that xl = sin(y). In other words,
-        we need to
+        """we can only push yl up from its current value to the next lowest
+        value such that xl = sin(y). In other words, we need to
 
         min y
         s.t.
@@ -533,19 +683,21 @@ def asin(xl, xu, yl, yu, feasibility_tol):
             y >= yl
 
         globally.
+
         """
-        # first find the next minimum of x = sin(y). Minimums occur at y = 2*pi*n - pi/2 for integer n.
+        # first find the next minimum of x = sin(y). Minimums occur at y
+        # = 2*pi*n - pi/2 for integer n.
         i = (yl + pi / 2) / (2 * pi)
         i1 = math.floor(i)
         i2 = math.ceil(i)
         i1 = 2 * pi * i1 - pi / 2
         i2 = 2 * pi * i2 - pi / 2
-        # now find the next value of y such that xl = sin(y). This can be computed by a distance from the minimum (i).
+        # now find the next value of y such that xl = sin(y). This can
+        # be computed by a distance from the minimum (i).
         y_tmp = math.asin(xl)  # this will give me a value between -pi/2 and pi/2
-        dist = y_tmp - (
-            -pi / 2
-        )  # this is the distance between the minimum of the sin function and a value that
-        # satisfies xl = sin(y)
+        dist = y_tmp - (-pi / 2)
+        # this is the distance between the minimum of the sin function
+        # and a value that satisfies xl = sin(y)
         lb1 = i1 + dist
         lb2 = i2 + dist
         if lb1 >= yl - feasibility_tol:
@@ -633,12 +785,12 @@ def acos(xl, xu, yl, yu, feasibility_tol):
     if yl <= -inf:
         lb = yl
     elif xl <= math.cos(yl) <= xu:
-        # if xl <= cos(yl) <= xu then yl satisfies the bounds on x, and the lower bound of y cannot be improved
+        # if xl <= cos(yl) <= xu then yl satisfies the bounds on x, and
+        # the lower bound of y cannot be improved
         lb = yl
     elif math.cos(yl) < xl:
-        """
-        we can only push yl up from its current value to the next lowest value such that xl = cos(y). In other words,
-        we need to
+        """we can only push yl up from its current value to the next lowest
+        value such that xl = cos(y). In other words, we need to
 
         min y
         s.t.
@@ -646,19 +798,21 @@ def acos(xl, xu, yl, yu, feasibility_tol):
             y >= yl
 
         globally.
+
         """
-        # first find the next minimum of x = cos(y). Minimums occur at y = 2*pi*n - pi for integer n.
+        # first find the next minimum of x = cos(y). Minimums occur at y
+        # = 2*pi*n - pi for integer n.
         i = (yl + pi) / (2 * pi)
         i1 = math.floor(i)
         i2 = math.ceil(i)
         i1 = 2 * pi * i1 - pi
         i2 = 2 * pi * i2 - pi
-        # now find the next value of y such that xl = cos(y). This can be computed by a distance from the minimum (i).
+        # now find the next value of y such that xl = cos(y). This can
+        # be computed by a distance from the minimum (i).
         y_tmp = math.acos(xl)  # this will give me a value between 0 and pi
-        dist = (
-            pi - y_tmp
-        )  # this is the distance between the minimum of the sin function and a value that
-        # satisfies xl = sin(y)
+        dist = pi - y_tmp
+        # this is the distance between the minimum of the sin function
+        # and a value that satisfies xl = sin(y)
         lb1 = i1 + dist
         lb2 = i2 + dist
         if lb1 >= yl - feasibility_tol:

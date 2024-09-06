@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -85,7 +85,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
 
         Parameters
         ----------
-        con_seq: tuple/list of Constraint (scalar Constraint or single _ConstraintData)
+        con_seq: tuple/list of Constraint (scalar Constraint or single ConstraintData)
         """
         self._add_constraints(con_seq)
 
@@ -95,7 +95,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         This will keep any other model components intact.
         Parameters
         ----------
-        solver_var: Var (scalar Var or single _VarData)
+        solver_var: Var (scalar Var or single VarData)
         """
         self.remove_vars(solver_var)
 
@@ -106,7 +106,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         This will keep any other model components intact.
         Parameters
         ----------
-        *solver_var: Var (scalar Var or single _VarData)
+        *solver_var: Var (scalar Var or single VarData)
         """
         try:
             var_ids = []
@@ -137,7 +137,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         To remove a conic-domain, you should use the remove_block method.
         Parameters
         ----------
-        solver_con: Constraint (scalar Constraint or single _ConstraintData)
+        solver_con: Constraint (scalar Constraint or single ConstraintData)
         """
         self.remove_constraints(solver_con)
 
@@ -151,7 +151,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
 
         Parameters
         ----------
-        *solver_cons: Constraint (scalar Constraint or single _ConstraintData)
+        *solver_cons: Constraint (scalar Constraint or single ConstraintData)
         """
         lq_cons = tuple(
             itertools.filterfalse(lambda x: isinstance(x, _ConicBase), solver_cons)
@@ -205,7 +205,7 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
         changing variable types and bounds.
         Parameters
         ----------
-        *solver_var: Constraint (scalar Constraint or single _ConstraintData)
+        *solver_var: Constraint (scalar Constraint or single ConstraintData)
         """
         try:
             var_ids = []

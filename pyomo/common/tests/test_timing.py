@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -35,7 +35,7 @@ from pyomo.environ import (
     Any,
     TransformationFactory,
 )
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import VarData
 
 
 class _pseudo_component(Var):
@@ -62,7 +62,7 @@ class TestTiming(unittest.TestCase):
         )
         v = Var()
         v.construct()
-        a = ConstructionTimer(_VarData(v))
+        a = ConstructionTimer(VarData(v))
         self.assertRegex(
             str(a),
             r"ConstructionTimer object for Var ScalarVar\[NOTSET\]; "
@@ -107,7 +107,6 @@ class TestTiming(unittest.TestCase):
                 m.y = Var(Any, dense=False)
                 xfrm.apply_to(m)
             result = out.getvalue().strip()
-            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
         finally:
@@ -122,7 +121,6 @@ class TestTiming(unittest.TestCase):
             m.y = Var(Any, dense=False)
             xfrm.apply_to(m)
             result = os.getvalue().strip()
-            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
         finally:
@@ -135,7 +133,6 @@ class TestTiming(unittest.TestCase):
             m.y = Var(Any, dense=False)
             xfrm.apply_to(m)
             result = os.getvalue().strip()
-            self.maxDiff = None
             for l, r in zip(result.splitlines(), ref.splitlines()):
                 self.assertRegex(str(l.strip()), str(r.strip()))
             self.assertEqual(buf.getvalue().strip(), "")
@@ -172,7 +169,6 @@ class TestTiming(unittest.TestCase):
                     xfrm.apply_to(m)
                 self.assertEqual(OUT.getvalue(), "")
                 result = OS.getvalue().strip()
-                self.maxDiff = None
                 for l, r in zip_longest(result.splitlines(), ref.splitlines()):
                     self.assertRegex(str(l.strip()), str(r.strip()))
             # Active reporting is False: the previous log should not have changed

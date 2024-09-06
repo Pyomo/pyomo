@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,17 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ()
-
 import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
-from pyomo.core.base.var import IndexedVar, _VarData
-from pyomo.core.base.constraint import IndexedConstraint, _ConstraintData
-from pyomo.core.base.objective import IndexedObjective, _ObjectiveData
-from pyomo.core.base.expression import IndexedExpression, _ExpressionData
+from pyomo.core.base.var import IndexedVar, VarData
+from pyomo.core.base.constraint import IndexedConstraint, ConstraintData
+from pyomo.core.base.objective import IndexedObjective, ObjectiveData
+from pyomo.core.base.expression import IndexedExpression, ExpressionData
 
 from collections.abc import MutableMapping
 from collections.abc import Mapping
@@ -186,7 +184,7 @@ class VarDict(ComponentDict, IndexedVar):
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self, _VarData, *args, **kwds)
+        ComponentDict.__init__(self, VarData, *args, **kwds)
 
 
 class ConstraintDict(ComponentDict, IndexedConstraint):
@@ -195,7 +193,7 @@ class ConstraintDict(ComponentDict, IndexedConstraint):
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self, _ConstraintData, *args, **kwds)
+        ComponentDict.__init__(self, ConstraintData, *args, **kwds)
 
 
 class ObjectiveDict(ComponentDict, IndexedObjective):
@@ -204,7 +202,7 @@ class ObjectiveDict(ComponentDict, IndexedObjective):
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self, _ObjectiveData, *args, **kwds)
+        ComponentDict.__init__(self, ObjectiveData, *args, **kwds)
 
 
 class ExpressionDict(ComponentDict, IndexedExpression):
@@ -213,4 +211,4 @@ class ExpressionDict(ComponentDict, IndexedExpression):
         # Constructor for ComponentDict needs to
         # go last in order to handle any initialization
         # iterable as an argument
-        ComponentDict.__init__(self, _ExpressionData, *args, **kwds)
+        ComponentDict.__init__(self, ExpressionData, *args, **kwds)

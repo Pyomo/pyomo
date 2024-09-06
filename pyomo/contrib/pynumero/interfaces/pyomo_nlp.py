@@ -1,6 +1,6 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -22,13 +22,12 @@ from pyomo.opt import WriterFactory
 import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap
 from pyomo.common.env import CtypesEnviron
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
 from ..sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.core.base.suffix import SuffixFinder
 from .external_grey_box import ExternalGreyBoxBlock
-
-
-__all__ = ['PyomoNLP']
 
 
 # TODO: There are todos in the code below
@@ -95,15 +94,8 @@ class PyomoNLP(AslNLP):
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            amplfunc = "\n".join(
-                filter(
-                    None,
-                    (
-                        os.environ.get('AMPLFUNC', None),
-                        os.environ.get('PYOMO_AMPLFUNC', None),
-                    ),
-                )
-            )
+            amplfunc = amplfunc_merge(os.environ)
+
             with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 
@@ -306,35 +298,41 @@ class PyomoNLP(AslNLP):
 
     # overloaded from NLP
     def get_obj_scaling(self):
-        obj = self.get_pyomo_objective()
-        scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            if obj in scaling_suffix:
-                return scaling_suffix[obj]
-            return 1.0
-        return None
+        scaling_finder = SuffixFinder(
+            'scaling_factor', default=1.0, context=self._pyomo_model
+        )
+        val = scaling_finder.find(self.get_pyomo_objective())
+        if not scaling_finder.all_suffixes:
+            return None
+        return val
 
     # overloaded from NLP
     def get_primals_scaling(self):
-        scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            primals_scaling = np.ones(self.n_primals())
-            for i, v in enumerate(self.get_pyomo_variables()):
-                if v in scaling_suffix:
-                    primals_scaling[i] = scaling_suffix[v]
-            return primals_scaling
-        return None
+        scaling_finder = SuffixFinder(
+            'scaling_factor', default=1.0, context=self._pyomo_model
+        )
+        primals_scaling = np.fromiter(
+            (scaling_finder.find(v) for v in self.get_pyomo_variables()),
+            count=self.n_primals(),
+            dtype=float,
+        )
+        if not scaling_finder.all_suffixes:
+            return None
+        return primals_scaling
 
     # overloaded from NLP
     def get_constraints_scaling(self):
-        scaling_suffix = self._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            constraints_scaling = np.ones(self.n_constraints())
-            for i, c in enumerate(self.get_pyomo_constraints()):
-                if c in scaling_suffix:
-                    constraints_scaling[i] = scaling_suffix[c]
-            return constraints_scaling
-        return None
+        scaling_finder = SuffixFinder(
+            'scaling_factor', default=1.0, context=self._pyomo_model
+        )
+        constraints_scaling = np.fromiter(
+            (scaling_finder.find(v) for v in self.get_pyomo_constraints()),
+            count=self.n_constraints(),
+            dtype=float,
+        )
+        if not scaling_finder.all_suffixes:
+            return None
+        return constraints_scaling
 
     def extract_subvector_grad_objective(self, pyomo_variables):
         """Compute the gradient of the objective and return the entries
@@ -615,13 +613,15 @@ class PyomoGreyBoxNLP(NLP):
         else:
             need_scaling = True
 
-        self._primals_scaling = np.ones(self.n_primals())
-        scaling_suffix = self._pyomo_nlp._pyomo_model.component('scaling_factor')
-        if scaling_suffix and scaling_suffix.ctype is pyo.Suffix:
-            need_scaling = True
-            for i, v in enumerate(self.get_pyomo_variables()):
-                if v in scaling_suffix:
-                    self._primals_scaling[i] = scaling_suffix[v]
+        scaling_finder = SuffixFinder(
+            'scaling_factor', default=1.0, context=self._pyomo_model
+        )
+        self._primals_scaling = np.fromiter(
+            (scaling_finder.find(v) for v in self.get_pyomo_variables()),
+            count=self.n_primals(),
+            dtype=float,
+        )
+        need_scaling = bool(scaling_finder.all_suffixes)
 
         self._constraints_scaling = []
         pyomo_nlp_scaling = self._pyomo_nlp.get_constraints_scaling()

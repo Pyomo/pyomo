@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,6 @@
 from pyomo.contrib.cp.transform.logical_to_disjunctive_walker import (
     LogicalToDisjunctiveVisitor,
 )
-from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigDict, ConfigValue
 
@@ -26,7 +25,7 @@ from pyomo.core import (
     Transformation,
     NonNegativeIntegers,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.core.base import SortComponents
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction
@@ -73,7 +72,7 @@ class LogicalToDisjunctive(Transformation):
         transBlocks = {}
         visitor = LogicalToDisjunctiveVisitor()
         for t in targets:
-            if t.ctype is Block or isinstance(t, _BlockData):
+            if t.ctype is Block or isinstance(t, BlockData):
                 self._transform_block(t, model, visitor, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():

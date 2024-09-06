@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -33,7 +33,7 @@ _log = logging.getLogger(__name__)
 import pyomo.contrib.viewer.qt as myqt
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
-from pyomo.core.base.param import _ParamData
+from pyomo.core.base.param import ParamData
 from pyomo.environ import (
     Block,
     BooleanVar,
@@ -243,7 +243,7 @@ class ComponentDataItem(object):
             return None
 
     def _get_value_callback(self):
-        if isinstance(self.data, _ParamData):
+        if isinstance(self.data, ParamData):
             v = value_no_exception(self.data, div0="divide_by_0")
             # Check the param value for numpy float and int, sometimes numpy
             # values can sneak in especially if you set parameters from data
@@ -295,7 +295,7 @@ class ComponentDataItem(object):
     def _get_units_callback(self):
         if isinstance(self.data, (Var, Var._ComponentDataClass)):
             return str(units.get_units(self.data))
-        if isinstance(self.data, (Param, _ParamData)):
+        if isinstance(self.data, (Param, ParamData)):
             return str(units.get_units(self.data))
         return self._cache_units
 
@@ -320,7 +320,7 @@ class ComponentDataItem(object):
                     o.value = val
             except:
                 return
-        elif isinstance(self.data, _ParamData):
+        elif isinstance(self.data, ParamData):
             if not self.data.parent_component().mutable:
                 return
             try:

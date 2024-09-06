@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -174,15 +174,26 @@ class ToBaronVisitor(_ToStringVisitor):
                 return self.smap.getSymbol(var)
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
+    def _var_to_string(self, node):
+        if node.is_fixed():
+            return ftoa(node.value, True)
+        self.variables.add(id(node))
+        return self.smap.getSymbol(node)
+
     def _linear_to_string(self, node):
         values = [
             (
                 self._monomial_to_string(arg)
-                if (
-                    arg.__class__ is EXPR.MonomialTermExpression
-                    and not arg.arg(1).is_fixed()
+                if arg.__class__ is EXPR.MonomialTermExpression
+                else (
+                    ftoa(arg)
+                    if arg.__class__ in native_numeric_types
+                    else (
+                        self._var_to_string(arg)
+                        if arg.is_variable_type()
+                        else ftoa(value(arg), True)
+                    )
                 )
-                else ftoa(value(arg))
             )
             for arg in node.args
         ]
@@ -245,9 +256,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
             suffix_gen = (
                 lambda b: pyomo.core.base.suffix.active_export_suffix_generator(b)
             )
-        r_o_eqns = []
-        c_eqns = []
-        l_eqns = []
+        r_o_eqns = {}
+        c_eqns = {}
+        l_eqns = {}
         branching_priorities_suffixes = []
         for block in all_blocks_list:
             for name, suffix in suffix_gen(block):
@@ -255,13 +266,14 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     branching_priorities_suffixes.append(suffix)
                 elif name == 'constraint_types':
                     for constraint_data, constraint_type in suffix.items():
+                        info = constraint_data.to_bounded_expression(True)
                         if not _skip_trivial(constraint_data):
                             if constraint_type.lower() == 'relaxationonly':
-                                r_o_eqns.append(constraint_data)
+                                r_o_eqns[constraint_data] = info
                             elif constraint_type.lower() == 'convex':
-                                c_eqns.append(constraint_data)
+                                c_eqns[constraint_data] = info
                             elif constraint_type.lower() == 'local':
-                                l_eqns.append(constraint_data)
+                                l_eqns[constraint_data] = info
                             else:
                                 raise ValueError(
                                     "A suffix '%s' contained an invalid value: %s\n"
@@ -283,7 +295,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
                         % (name, _location)
                     )
 
-        non_standard_eqns = r_o_eqns + c_eqns + l_eqns
+        non_standard_eqns = set()
+        non_standard_eqns.update(r_o_eqns)
+        non_standard_eqns.update(c_eqns)
+        non_standard_eqns.update(l_eqns)
 
         #
         # EQUATIONS
@@ -293,7 +308,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         n_roeqns = len(r_o_eqns)
         n_ceqns = len(c_eqns)
         n_leqns = len(l_eqns)
-        eqns = []
+        eqns = {}
 
         # Alias the constraints by declaration order since Baron does not
         # include the constraint names in the solution file. It is important
@@ -310,14 +325,15 @@ class ProblemWriter_bar(AbstractProblemWriter):
             for constraint_data in block.component_data_objects(
                 Constraint, active=True, sort=sorter, descend_into=False
             ):
-                if (not constraint_data.has_lb()) and (not constraint_data.has_ub()):
+                lb, body, ub = constraint_data.to_bounded_expression(True)
+                if lb is None and ub is None:
                     assert not constraint_data.equality
                     continue  # non-binding, so skip
 
                 if (not _skip_trivial(constraint_data)) and (
                     constraint_data not in non_standard_eqns
                 ):
-                    eqns.append(constraint_data)
+                    eqns[constraint_data] = lb, body, ub
 
                     con_symbol = symbol_map.createSymbol(constraint_data, c_labeler)
                     assert not con_symbol.startswith('.')
@@ -396,12 +412,12 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         # Equation Definition
         output_file.write('c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;\n')
-        for constraint_data in itertools.chain(eqns, r_o_eqns, c_eqns, l_eqns):
+        for constraint_data, (lb, body, ub) in itertools.chain(
+            eqns.items(), r_o_eqns.items(), c_eqns.items(), l_eqns.items()
+        ):
             variables = OrderedSet()
             # print(symbol_map.byObject.keys())
-            eqn_body = expression_to_string(
-                constraint_data.body, variables, smap=symbol_map
-            )
+            eqn_body = expression_to_string(body, variables, smap=symbol_map)
             # print(symbol_map.byObject.keys())
             referenced_variable_ids.update(variables)
 
@@ -428,22 +444,22 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # Equality constraint
             if constraint_data.equality:
                 eqn_lhs = ''
-                eqn_rhs = ' == ' + ftoa(constraint_data.upper)
+                eqn_rhs = ' == ' + ftoa(ub)
 
             # Greater than constraint
-            elif not constraint_data.has_ub():
-                eqn_rhs = ' >= ' + ftoa(constraint_data.lower)
+            elif ub is None:
+                eqn_rhs = ' >= ' + ftoa(lb)
                 eqn_lhs = ''
 
             # Less than constraint
-            elif not constraint_data.has_lb():
-                eqn_rhs = ' <= ' + ftoa(constraint_data.upper)
+            elif lb is None:
+                eqn_rhs = ' <= ' + ftoa(ub)
                 eqn_lhs = ''
 
             # Double-sided constraint
-            elif constraint_data.has_lb() and constraint_data.has_ub():
-                eqn_lhs = ftoa(constraint_data.lower) + ' <= '
-                eqn_rhs = ' <= ' + ftoa(constraint_data.upper)
+            elif lb is not None and ub is not None:
+                eqn_lhs = ftoa(lb) + ' <= '
+                eqn_rhs = ' <= ' + ftoa(ub)
 
             eqn_string = eqn_lhs + eqn_body + eqn_rhs + ';\n'
             output_file.write(eqn_string)

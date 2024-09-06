@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,6 +12,7 @@
 from collections import defaultdict
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
+import pyomo.core.expr.relational_expr as relational_expr
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.expr.visitor import (
     ExpressionValueVisitor,
@@ -24,9 +25,10 @@ import pyomo.contrib.fbbt.interval as interval
 import math
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.expression import ExpressionData, ScalarExpression
+from pyomo.core.base.objective import ObjectiveData, ScalarObjective
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
-from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import (
@@ -77,6 +79,27 @@ improved on either x or y.
 
 class FBBTException(PyomoException):
     pass
+
+
+def _prop_bnds_leaf_to_root_equality(visitor, node, arg1, arg2):
+    bnds_dict = visitor.bnds_dict
+    bnds_dict[node] = interval.eq(
+        *bnds_dict[arg1], *bnds_dict[arg2], visitor.feasibility_tol
+    )
+
+
+def _prop_bnds_leaf_to_root_inequality(visitor, node, arg1, arg2):
+    bnds_dict = visitor.bnds_dict
+    bnds_dict[node] = interval.ineq(
+        *bnds_dict[arg1], *bnds_dict[arg2], visitor.feasibility_tol
+    )
+
+
+def _prop_bnds_leaf_to_root_ranged(visitor, node, arg1, arg2, arg3):
+    bnds_dict = visitor.bnds_dict
+    bnds_dict[node] = interval.ranged(
+        *bnds_dict[arg1], *bnds_dict[arg2], *bnds_dict[arg3], visitor.feasibility_tol
+    )
 
 
 def _prop_bnds_leaf_to_root_ProductExpression(visitor, node, arg1, arg2):
@@ -333,15 +356,15 @@ def _prop_bnds_leaf_to_root_UnaryFunctionExpression(visitor, node, arg):
     _unary_leaf_to_root_map[node.getname()](visitor, node, arg)
 
 
-def _prop_bnds_leaf_to_root_GeneralExpression(visitor, node, expr):
+def _prop_bnds_leaf_to_root_NamedExpression(visitor, node, expr):
     """
     Propagate bounds from children to parent
 
     Parameters
     ----------
     visitor: _FBBTVisitorLeafToRoot
-    node: pyomo.core.base.expression._GeneralExpressionData
-    expr: GeneralExpression arg
+    node: pyomo.core.base.expression.NamedExpressionData
+    expr: NamedExpressionData arg
     """
     bnds_dict = visitor.bnds_dict
     if node in bnds_dict:
@@ -366,10 +389,52 @@ _prop_bnds_leaf_to_root_map = defaultdict(
         numeric_expr.UnaryFunctionExpression: _prop_bnds_leaf_to_root_UnaryFunctionExpression,
         numeric_expr.LinearExpression: _prop_bnds_leaf_to_root_SumExpression,
         numeric_expr.AbsExpression: _prop_bnds_leaf_to_root_abs,
-        _GeneralExpressionData: _prop_bnds_leaf_to_root_GeneralExpression,
-        ScalarExpression: _prop_bnds_leaf_to_root_GeneralExpression,
+        relational_expr.EqualityExpression: _prop_bnds_leaf_to_root_equality,
+        relational_expr.InequalityExpression: _prop_bnds_leaf_to_root_inequality,
+        relational_expr.RangedExpression: _prop_bnds_leaf_to_root_ranged,
+        ExpressionData: _prop_bnds_leaf_to_root_NamedExpression,
+        ScalarExpression: _prop_bnds_leaf_to_root_NamedExpression,
+        ObjectiveData: _prop_bnds_leaf_to_root_NamedExpression,
+        ScalarObjective: _prop_bnds_leaf_to_root_NamedExpression,
     },
 )
+
+
+def _prop_bnds_root_to_leaf_equality(node, bnds_dict, feasibility_tol):
+    assert bnds_dict[node][1]  # This expression is feasible
+    arg1, arg2 = node.args
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = bnds_dict[arg2]
+    bnds_dict[arg1] = bnds_dict[arg2] = max(lb1, lb2), min(ub1, ub2)
+
+
+def _prop_bnds_root_to_leaf_inequality(node, bnds_dict, feasibility_tol):
+    assert bnds_dict[node][1]  # This expression is feasible
+    arg1, arg2 = node.args
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = bnds_dict[arg2]
+    if lb1 > lb2:
+        bnds_dict[arg2] = lb1, ub2
+    if ub1 > ub2:
+        bnds_dict[arg1] = lb1, ub2
+
+
+def _prop_bnds_root_to_leaf_ranged(node, bnds_dict, feasibility_tol):
+    assert bnds_dict[node][1]  # This expression is feasible
+    arg1, arg2, arg3 = node.args
+    lb1, ub1 = bnds_dict[arg1]
+    lb2, ub2 = bnds_dict[arg2]
+    lb3, ub3 = bnds_dict[arg3]
+    if lb1 > lb2:
+        bnds_dict[arg2] = lb1, ub2
+        lb2 = lb1
+    if lb2 > lb3:
+        bnds_dict[arg3] = lb2, ub3
+    if ub2 > ub3:
+        bnds_dict[arg2] = lb2, ub3
+        ub2 = ub3
+    if ub1 > ub2:
+        bnds_dict[arg1] = lb1, ub2
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
@@ -898,13 +963,13 @@ def _prop_bnds_root_to_leaf_UnaryFunctionExpression(node, bnds_dict, feasibility
         )
 
 
-def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
+def _prop_bnds_root_to_leaf_NamedExpression(node, bnds_dict, feasibility_tol):
     """
     Propagate bounds from parent to children.
 
     Parameters
     ----------
-    node: pyomo.core.base.expression._GeneralExpressionData
+    node: pyomo.core.base.expression.NamedExpressionData
     bnds_dict: ComponentMap
     feasibility_tol: float
         If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
@@ -945,11 +1010,19 @@ _prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = (
 )
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
-_prop_bnds_root_to_leaf_map[_GeneralExpressionData] = (
-    _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[ExpressionData] = _prop_bnds_root_to_leaf_NamedExpression
+_prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_NamedExpression
+_prop_bnds_root_to_leaf_map[ObjectiveData] = _prop_bnds_root_to_leaf_NamedExpression
+_prop_bnds_root_to_leaf_map[ScalarObjective] = _prop_bnds_root_to_leaf_NamedExpression
+
+_prop_bnds_root_to_leaf_map[relational_expr.EqualityExpression] = (
+    _prop_bnds_root_to_leaf_equality
 )
-_prop_bnds_root_to_leaf_map[ScalarExpression] = (
-    _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[relational_expr.InequalityExpression] = (
+    _prop_bnds_root_to_leaf_inequality
+)
+_prop_bnds_root_to_leaf_map[relational_expr.RangedExpression] = (
+    _prop_bnds_root_to_leaf_ranged
 )
 
 
@@ -1249,36 +1322,19 @@ def _fbbt_con(con, config):
 
     # a walker to propagate bounds from the variables to the root
     visitorA = _FBBTVisitorLeafToRoot(bnds_dict, feasibility_tol=config.feasibility_tol)
-    visitorA.walk_expression(con.body)
+    visitorA.walk_expression(con.expr)
 
-    # Now we need to replace the bounds in bnds_dict for the root
-    # node with the bounds on the constraint (if those bounds are
-    # better).
-    _lb = value(con.lower)
-    _ub = value(con.upper)
-    if _lb is None:
-        _lb = -interval.inf
-    if _ub is None:
-        _ub = interval.inf
-
-    lb, ub = bnds_dict[con.body]
+    always_feasible, possibly_feasible = bnds_dict[con.expr]
 
     # check if the constraint is infeasible
-    if lb > _ub + config.feasibility_tol or ub < _lb - config.feasibility_tol:
+    if not possibly_feasible:
         raise InfeasibleConstraintException(
             'Detected an infeasible constraint during FBBT: {0}'.format(str(con))
         )
 
     # check if the constraint is always satisfied
-    if config.deactivate_satisfied_constraints:
-        if lb >= _lb - config.feasibility_tol and ub <= _ub + config.feasibility_tol:
-            con.deactivate()
-
-    if _lb > lb:
-        lb = _lb
-    if _ub < ub:
-        ub = _ub
-    bnds_dict[con.body] = (lb, ub)
+    if config.deactivate_satisfied_constraints and always_feasible:
+        con.deactivate()
 
     # Now, propagate bounds back from the root to the variables
     visitorB = _FBBTVisitorRootToLeaf(
@@ -1286,7 +1342,7 @@ def _fbbt_con(con, config):
         integer_tol=config.integer_tol,
         feasibility_tol=config.feasibility_tol,
     )
-    visitorB.dfs_postorder_stack(con.body)
+    visitorB.dfs_postorder_stack(con.expr)
 
     new_var_bounds = ComponentMap()
     for _node, _bnds in bnds_dict.items():
@@ -1333,7 +1389,7 @@ def _fbbt_block(m, config):
     for c in m.component_data_objects(
         ctype=Constraint, active=True, descend_into=config.descend_into, sort=True
     ):
-        for v in identify_variables(c.body):
+        for v in identify_variables(c.expr):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
             if v.lb is None:
@@ -1520,14 +1576,14 @@ class BoundsManager(object):
         if comp.ctype == Constraint:
             if comp.is_indexed():
                 for c in comp.values():
-                    self._vars.update(identify_variables(c.body))
+                    self._vars.update(identify_variables(c.expr))
             else:
-                self._vars.update(identify_variables(comp.body))
+                self._vars.update(identify_variables(comp.expr))
         else:
             for c in comp.component_data_objects(
                 Constraint, descend_into=True, active=True, sort=True
             ):
-                self._vars.update(identify_variables(c.body))
+                self._vars.update(identify_variables(c.expr))
 
     def save_bounds(self):
         bnds = ComponentMap()

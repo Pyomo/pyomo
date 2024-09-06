@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,8 +12,6 @@
 #
 # AMPL Problem Writer Plugin
 #
-
-__all__ = ['ProblemWriter_nl']
 
 import itertools
 import logging
@@ -35,7 +33,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.base import (
     SymbolMap,
     NameLabeler,
-    _ExpressionData,
+    NamedExpressionData,
     SortComponents,
     var,
     param,
@@ -170,11 +168,11 @@ def _build_op_template():
     _op_template[EXPR.EqualityExpression] = "o24{C}\n"
     _op_comment[EXPR.EqualityExpression] = "\t#eq"
 
-    _op_template[var._VarData] = "v%d{C}\n"
-    _op_comment[var._VarData] = "\t#%s"
+    _op_template[var.VarData] = "v%d{C}\n"
+    _op_comment[var.VarData] = "\t#%s"
 
-    _op_template[param._ParamData] = "n%r{C}\n"
-    _op_comment[param._ParamData] = ""
+    _op_template[param.ParamData] = "n%r{C}\n"
+    _op_comment[param.ParamData] = ""
 
     _op_template[NumericConstant] = "n%r{C}\n"
     _op_comment[NumericConstant] = ""
@@ -726,7 +724,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
+            elif isinstance(exp, (NamedExpressionData, IIdentityExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
 
             else:
@@ -735,24 +733,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     % (exp_type)
                 )
 
-        elif isinstance(exp, (var._VarData, IVariable)) and (not exp.is_fixed()):
+        elif isinstance(exp, (var.VarData, IVariable)) and (not exp.is_fixed()):
             # (self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
                 OUTPUT.write(
-                    self._op_string[var._VarData]
+                    self._op_string[var.VarData]
                     % (self.ampl_var_id[self._varID_map[id(exp)]])
                 )
             else:
                 OUTPUT.write(
-                    self._op_string[var._VarData]
+                    self._op_string[var.VarData]
                     % (
                         self.ampl_var_id[self._varID_map[id(exp)]],
                         self._name_labeler(exp),
                     )
                 )
 
-        elif isinstance(exp, param._ParamData):
-            OUTPUT.write(self._op_string[param._ParamData] % (value(exp)))
+        elif isinstance(exp, param.ParamData):
+            OUTPUT.write(self._op_string[param.ParamData] % (value(exp)))
 
         elif isinstance(exp, NumericConstant) or exp.is_fixed():
             OUTPUT.write(self._op_string[NumericConstant] % (value(exp)))

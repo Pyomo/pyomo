@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -32,7 +32,6 @@ from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
-import pyomo.core.base.var
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -308,7 +307,7 @@ class GurobiDirect(DirectSolver):
 
         new_expr += repn.constant
 
-        return new_expr, referenced_vars
+        return new_expr, referenced_vars, degree
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
         if max_degree == 2:
@@ -317,7 +316,7 @@ class GurobiDirect(DirectSolver):
             repn = generate_standard_repn(expr, quadratic=False)
 
         try:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+            gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_repn(
                 repn, max_degree
             )
         except DegreeError as e:
@@ -325,7 +324,7 @@ class GurobiDirect(DirectSolver):
             msg += '\nexpr: {0}'.format(expr)
             raise DegreeError(msg)
 
-        return gurobi_expr, referenced_vars
+        return gurobi_expr, referenced_vars, degree
 
     def _gurobi_lb_ub_from_var(self, var):
         if var.is_fixed():
@@ -404,10 +403,12 @@ class GurobiDirect(DirectSolver):
         self._init_env()
         if self._solver_model is not None:
             self._solver_model.close()
-        if model.name is not None:
-            self._solver_model = gurobipy.Model(model.name, env=self._env)
-        else:
-            self._solver_model = gurobipy.Model(env=self._env)
+
+        self._solver_model = (
+            gurobipy.Model(model.name, env=self._env)
+            if model.name is not None
+            else gurobipy.Model(env=self._env)
+        )
 
     def close(self):
         """Frees local Gurobi resources used by this solver instance.
@@ -489,26 +490,28 @@ class GurobiDirect(DirectSolver):
     def _add_block(self, block):
         DirectOrPersistentSolver._add_block(self, block)
 
+    def _addConstr(self, degree, lhs, sense=None, rhs=None, name=""):
+        if degree == 2:
+            con = self._solver_model.addQConstr(lhs, sense, rhs, name)
+        else:
+            con = self._solver_model.addLConstr(lhs, sense, rhs, name)
+        return con
+
     def _add_constraint(self, con):
         if not con.active:
             return None
 
-        if is_fixed(con.body):
-            if self._skip_trivial_constraints:
-                return None
+        if self._skip_trivial_constraints and is_fixed(con.body):
+            return None
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
         if con._linear_canonical_form:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
+            gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_repn(
                 con.canonical_form(), self._max_constraint_degree
             )
-        # elif isinstance(con, LinearCanonicalRepn):
-        #    gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(
-        #        con,
-        #        self._max_constraint_degree)
         else:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+            gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
                 con.body, self._max_constraint_degree
             )
 
@@ -524,7 +527,8 @@ class GurobiDirect(DirectSolver):
                 )
 
         if con.equality:
-            gurobipy_con = self._solver_model.addConstr(
+            gurobipy_con = self._addConstr(
+                degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.EQUAL,
                 rhs=value(con.lower),
@@ -536,14 +540,16 @@ class GurobiDirect(DirectSolver):
             )
             self._range_constraints.add(con)
         elif con.has_lb():
-            gurobipy_con = self._solver_model.addConstr(
+            gurobipy_con = self._addConstr(
+                degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.GREATER_EQUAL,
                 rhs=value(con.lower),
                 name=conname,
             )
         elif con.has_ub():
-            gurobipy_con = self._solver_model.addConstr(
+            gurobipy_con = self._addConstr(
+                degree=degree,
                 lhs=gurobi_expr,
                 sense=gurobipy.GRB.LESS_EQUAL,
                 rhs=value(con.upper),
@@ -637,7 +643,7 @@ class GurobiDirect(DirectSolver):
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             obj.expr, self._max_obj_degree
         )
 

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -632,7 +632,7 @@ class primal_geomean(_ConicBase):
         b = block()
         b.r = variable_tuple([variable(lb=0) for i in range(len(r))])
         b.x = variable()
-        b.c = _build_linking_constraints(list(r) + [x], list(b.r) + [x])
+        b.c = _build_linking_constraints(list(r) + [x], list(b.r) + [b.x])
         b.q = cls(r=b.r, x=b.x)
         return b
 
@@ -934,7 +934,7 @@ class dual_geomean(_ConicBase):
         b = block()
         b.r = variable_tuple([variable(lb=0) for i in range(len(r))])
         b.x = variable()
-        b.c = _build_linking_constraints(list(r) + [x], list(b.r) + [x])
+        b.c = _build_linking_constraints(list(r) + [x], list(b.r) + [b.x])
         b.q = cls(r=b.r, x=b.x)
         return b
 

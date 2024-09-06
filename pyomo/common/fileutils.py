@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -38,6 +38,7 @@ import logging
 import os
 import platform
 import importlib.util
+import subprocess
 import sys
 
 from . import envvar
@@ -285,10 +286,17 @@ def find_dir(
     )
 
 
-_exeExt = {'linux': None, 'windows': '.exe', 'cygwin': '.exe', 'darwin': None}
+_exeExt = {
+    'linux': None,
+    'freebsd': None,
+    'windows': '.exe',
+    'cygwin': '.exe',
+    'darwin': None,
+}
 
 _libExt = {
     'linux': ('.so', '.so.*'),
+    'freebsd': ('.so', '.so.*'),
     'windows': ('.dll', '.pyd'),
     'cygwin': ('.dll', '.so', '.so.*'),
     'darwin': ('.dylib', '.so', '.so.*'),
@@ -375,9 +383,27 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     if libname_base.startswith('lib') and _system() != 'windows':
         libname_base = libname_base[3:]
     if ext.lower().startswith(('.so', '.dll', '.dylib')):
-        return ctypes.util.find_library(libname_base)
+        lib = ctypes.util.find_library(libname_base)
     else:
-        return ctypes.util.find_library(libname)
+        lib = ctypes.util.find_library(libname)
+    if lib and os.path.sep not in lib:
+        # work around https://github.com/python/cpython/issues/65241,
+        # where python does not return the absolute path on *nix
+        try:
+            libname = lib + ' '
+            with subprocess.Popen(
+                ['/sbin/ldconfig', '-p'],
+                stdin=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                env={'LC_ALL': 'C', 'LANG': 'C'},
+            ) as p:
+                for line in os.fsdecode(p.stdout.read()).splitlines():
+                    if line.lstrip().startswith(libname):
+                        return os.path.realpath(line.split()[-1])
+        except:
+            pass
+    return lib
 
 
 def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,6 +13,7 @@
 
 import logging
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.gc_manager import PauseGC
@@ -58,6 +59,26 @@ from weakref import ref as weakref_ref, ReferenceType
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 
+class _BigMData(AutoSlots.Mixin):
+    __slots__ = ('bigm_src',)
+
+    def __init__(self):
+        # we will keep a map of constraints (hashable, ha!) to a tuple to
+        # indicate what their M value is and where it came from, of the form:
+        # ((lower_value, lower_source, lower_key), (upper_value, upper_source,
+        # upper_key)), where the first tuple is the information for the lower M,
+        # the second tuple is the info for the upper M, source is the Suffix or
+        # argument dictionary and None if the value was calculated, and key is
+        # the key in the Suffix or argument dictionary, and None if it was
+        # calculated. (Note that it is possible the lower or upper is
+        # user-specified and the other is not, hence the need to store
+        # information for both.)
+        self.bigm_src = {}
+
+
+Block.register_private_data_initializer(_BigMData)
+
+
 @TransformationFactory.register(
     'gdp.bigm', doc="Relax disjunctive model using big-M terms."
 )
@@ -94,15 +115,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     name beginning "_pyomo_gdp_bigm_reformulation".  That Block will
     contain an indexed Block named "relaxedDisjuncts", which will hold
     the relaxed disjuncts.  This block is indexed by an integer
-    indicating the order in which the disjuncts were relaxed.
-    Each block has a dictionary "_constraintMap":
-
-        'srcConstraints': ComponentMap(<transformed constraint>:
-                                       <src constraint>)
-        'transformedConstraints': ComponentMap(<src constraint>:
-                                               <transformed constraint>)
-
-    All transformed Disjuncts will have a pointer to the block their transformed
+    indicating the order in which the disjuncts were relaxed. All
+    transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a
     pointer to the corresponding 'Or' or 'ExactlyOne' constraint.
 
@@ -199,21 +213,15 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         bigM = self._config.bigM
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
-                self._transform_disjunctionData(
-                    t,
-                    t.index(),
-                    bigM,
-                    parent_disjunct=gdp_tree.parent(t),
-                    root_disjunct=gdp_tree.root_disjunct(t),
-                )
+                self._transform_disjunctionData(t, t.index(), bigM, gdp_tree)
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
         _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
-    def _transform_disjunctionData(
-        self, obj, index, bigM, parent_disjunct=None, root_disjunct=None
-    ):
+    def _transform_disjunctionData(self, obj, index, bigM, gdp_tree):
+        parent_disjunct = gdp_tree.parent(obj)
+        root_disjunct = gdp_tree.root_disjunct(obj)
         (transBlock, xorConstraint) = self._setup_transform_disjunctionData(
             obj, root_disjunct
         )
@@ -222,13 +230,12 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.binary_indicator_var
-            self._transform_disjunct(disjunct, bigM, transBlock)
+            self._transform_disjunct(disjunct, bigM, transBlock, gdp_tree)
 
-        rhs = 1 if parent_disjunct is None else parent_disjunct.binary_indicator_var
         if obj.xor:
-            xorConstraint[index] = or_expr == rhs
+            xorConstraint[index] = or_expr == 1
         else:
-            xorConstraint[index] = or_expr >= rhs
+            xorConstraint[index] = or_expr >= 1
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
@@ -236,7 +243,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, bigM, transBlock):
+    def _transform_disjunct(self, obj, bigM, transBlock, gdp_tree):
         # We're not using the preprocessed list here, so this could be
         # inactive. We've already done the error checking in preprocessing, so
         # we just skip it here.
@@ -248,17 +255,11 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         relaxationBlock = self._get_disjunct_transformation_block(obj, transBlock)
 
-        # we will keep a map of constraints (hashable, ha!) to a tuple to
-        # indicate what their M value is and where it came from, of the form:
-        # ((lower_value, lower_source, lower_key), (upper_value, upper_source,
-        # upper_key)), where the first tuple is the information for the lower M,
-        # the second tuple is the info for the upper M, source is the Suffix or
-        # argument dictionary and None if the value was calculated, and key is
-        # the key in the Suffix or argument dictionary, and None if it was
-        # calculated. (Note that it is possible the lower or upper is
-        # user-specified and the other is not, hence the need to store
-        # information for both.)
-        relaxationBlock.bigm_src = {}
+        indicator_expression = 0
+        node = obj
+        while node is not None:
+            indicator_expression += 1 - node.binary_indicator_var
+            node = gdp_tree.parent_disjunct(node)
 
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big
@@ -269,18 +270,26 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # comparing the two relaxations.
         #
         # Transform each component within this disjunct
-        self._transform_block_components(obj, obj, bigM, arg_list, suffix_list)
+        self._transform_block_components(
+            obj, obj, bigM, arg_list, suffix_list, indicator_expression
+        )
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
     def _transform_constraint(
-        self, obj, disjunct, bigMargs, arg_list, disjunct_suffix_list
+        self,
+        obj,
+        disjunct,
+        bigMargs,
+        arg_list,
+        disjunct_suffix_list,
+        indicator_expression,
     ):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
-        bigm_src = transBlock.bigm_src
-        constraintMap = transBlock._constraintMap
+        bigm_src = transBlock.private_data().bigm_src
+        constraint_map = transBlock.private_data('pyomo.gdp')
 
         disjunctionRelaxationBlock = transBlock.parent_block()
 
@@ -347,7 +356,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             bigm_src[c] = (lower, upper)
 
             self._add_constraint_expressions(
-                c, i, M, disjunct.binary_indicator_var, newConstraint, constraintMap
+                c,
+                i,
+                M,
+                disjunct.binary_indicator_var,
+                newConstraint,
+                constraint_map,
+                indicator_expression=indicator_expression,
             )
 
             # deactivate because we relaxed
@@ -410,7 +425,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def get_m_value_src(self, constraint):
         transBlock = _get_constraint_transBlock(constraint)
         ((lower_val, lower_source, lower_key), (upper_val, upper_source, upper_key)) = (
-            transBlock.bigm_src[constraint]
+            transBlock.private_data().bigm_src[constraint]
         )
 
         if (
@@ -465,7 +480,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         transBlock = _get_constraint_transBlock(constraint)
         # This is a KeyError if it fails, but it is also my fault if it
         # fails... (That is, it's a bug in the mapping.)
-        return transBlock.bigm_src[constraint]
+        return transBlock.private_data().bigm_src[constraint]
 
     def get_M_value(self, constraint):
         """Returns the M values used to transform constraint. Return is a tuple:
@@ -480,7 +495,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         transBlock = _get_constraint_transBlock(constraint)
         # This is a KeyError if it fails, but it is also my fault if it
         # fails... (That is, it's a bug in the mapping.)
-        lower, upper = transBlock.bigm_src[constraint]
+        lower, upper = transBlock.private_data().bigm_src[constraint]
         return (lower[0], upper[0])
 
     def get_all_M_values_by_constraint(self, model):
@@ -500,9 +515,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             # First check if it was transformed at all.
             if transBlock is not None:
                 # If it was transformed with BigM, we get the M values.
-                if hasattr(transBlock, 'bigm_src'):
-                    for cons in transBlock.bigm_src:
-                        m_values[cons] = self.get_M_value(cons)
+                for cons in transBlock.private_data().bigm_src:
+                    m_values[cons] = self.get_M_value(cons)
         return m_values
 
     def get_largest_M_value(self, model):

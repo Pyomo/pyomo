@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,6 +12,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.piecewise.tests import models
 import pyomo.contrib.piecewise.tests.common_tests as ct
+import pyomo.contrib.piecewise.tests.common_inner_repn_tests as inner_repn_tests
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
@@ -22,67 +23,6 @@ from pyomo.environ import Constraint, SolverFactory, Var
 
 
 class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
-    def check_log_disjunct(self, d, pts, f, substitute_var, x):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 2)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(
-            self, d.convex_combo.expr, d.lambdas[0] + d.lambdas[1] == 1
-        )
-        self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(
-            self, d.set_substitute.expr, substitute_var == f(x), places=7
-        )
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 1)
-        assertExpressionsEqual(
-            self,
-            d.linear_combo[0].expr,
-            x == pts[0] * d.lambdas[0] + pts[1] * d.lambdas[1],
-        )
-
-    def check_paraboloid_disjunct(self, d, pts, f, substitute_var, x1, x2):
-        self.assertEqual(len(d.component_map(Constraint)), 3)
-        # lambdas and indicator_var
-        self.assertEqual(len(d.component_map(Var)), 2)
-        self.assertIsInstance(d.lambdas, Var)
-        self.assertEqual(len(d.lambdas), 3)
-        for lamb in d.lambdas.values():
-            self.assertEqual(lamb.lb, 0)
-            self.assertEqual(lamb.ub, 1)
-        self.assertIsInstance(d.convex_combo, Constraint)
-        assertExpressionsEqual(
-            self, d.convex_combo.expr, d.lambdas[0] + d.lambdas[1] + d.lambdas[2] == 1
-        )
-        self.assertIsInstance(d.set_substitute, Constraint)
-        assertExpressionsEqual(
-            self, d.set_substitute.expr, substitute_var == f(x1, x2), places=7
-        )
-        self.assertIsInstance(d.linear_combo, Constraint)
-        self.assertEqual(len(d.linear_combo), 2)
-        assertExpressionsEqual(
-            self,
-            d.linear_combo[0].expr,
-            x1
-            == pts[0][0] * d.lambdas[0]
-            + pts[1][0] * d.lambdas[1]
-            + pts[2][0] * d.lambdas[2],
-        )
-        assertExpressionsEqual(
-            self,
-            d.linear_combo[1].expr,
-            x2
-            == pts[0][1] * d.lambdas[0]
-            + pts[1][1] * d.lambdas[1]
-            + pts[2][1] * d.lambdas[2],
-        )
-
     def check_pw_log(self, m):
         ##
         # Check the transformation of the approximation of log(x)
@@ -101,7 +41,9 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             log_block.disjuncts[2]: ((6, 10), m.f3),
         }
         for d, (pts, f) in disjuncts_dict.items():
-            self.check_log_disjunct(d, pts, f, log_block.substitute_var, m.x)
+            inner_repn_tests.check_log_disjunct(
+                self, d, pts, f, log_block.substitute_var, m.x
+            )
 
         # Check the Disjunction
         self.assertIsInstance(log_block.pick_a_piece, Disjunction)
@@ -129,8 +71,8 @@ class TestTransformPiecewiseModelToInnerRepnGDP(unittest.TestCase):
             paraboloid_block.disjuncts[3]: ([(0, 7), (0, 4), (3, 4)], m.g2),
         }
         for d, (pts, f) in disjuncts_dict.items():
-            self.check_paraboloid_disjunct(
-                d, pts, f, paraboloid_block.substitute_var, m.x1, m.x2
+            inner_repn_tests.check_paraboloid_disjunct(
+                self, d, pts, f, paraboloid_block.substitute_var, m.x1, m.x2
             )
 
         # Check the Disjunction

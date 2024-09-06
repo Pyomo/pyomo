@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -46,6 +46,7 @@ if cyipopt_available:
     # We don't raise unittest.SkipTest if not cyipopt_available as there is a
     # test below that tests an exception when cyipopt is unavailable.
     cyipopt_ge_1_3 = hasattr(cyipopt, "CyIpoptEvaluationError")
+    ipopt_ge_3_14 = cyipopt.IPOPT_VERSION >= (3, 14, 0)
 
 
 def create_model1():
@@ -316,3 +317,101 @@ class TestCyIpoptSolver(unittest.TestCase):
         msg = "Error in AMPL evaluation"
         with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
             res = solver.solve(m, tee=True)
+
+    def test_solve_without_objective(self):
+        m = create_model1()
+        m.o.deactivate()
+        m.x[2].fix(0.0)
+        m.x[3].fix(4.0)
+        solver = pyo.SolverFactory("cyipopt")
+        res = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(res)
+        self.assertAlmostEqual(m.x[1].value, 9.0)
+
+    def test_solve_13arg_callback(self):
+        m = create_model1()
+
+        iterate_data = []
+
+        def intermediate(
+            nlp,
+            alg_mod,
+            iter_count,
+            obj_value,
+            inf_pr,
+            inf_du,
+            mu,
+            d_norm,
+            regularization_size,
+            alpha_du,
+            alpha_pr,
+            ls_trials,
+        ):
+            x = nlp.get_primals()
+            y = nlp.get_duals()
+            iterate_data.append((x, y))
+
+        x_sol = np.array([3.85958688, 4.67936007, 3.10358931])
+        y_sol = np.array([-1.0, 53.90357665])
+
+        solver = pyo.SolverFactory("cyipopt", intermediate_callback=intermediate)
+        res = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(res)
+
+        # Make sure iterate vectors have the right shape and that the final
+        # iterate contains the primal solution we expect.
+        for x, y in iterate_data:
+            self.assertEqual(x.shape, (3,))
+            self.assertEqual(y.shape, (2,))
+        x, y = iterate_data[-1]
+        self.assertTrue(np.allclose(x_sol, x))
+        # Note that we can't assert that dual variables in the NLP are those
+        # at the solution because, at this point in the algorithm, the NLP
+        # only has access to the *previous iteration's* dual values.
+
+    # The 13-arg callback works with cyipopt < 1.3, but we will use the
+    # get_current_iterate method, which is only available in 1.3+ and IPOPT 3.14+
+    @unittest.skipIf(
+        not cyipopt_available or not cyipopt_ge_1_3 or not ipopt_ge_3_14,
+        "cyipopt version < 1.3.0",
+    )
+    def test_solve_get_current_iterate(self):
+        m = create_model1()
+
+        iterate_data = []
+
+        def intermediate(
+            nlp,
+            problem,
+            alg_mod,
+            iter_count,
+            obj_value,
+            inf_pr,
+            inf_du,
+            mu,
+            d_norm,
+            regularization_size,
+            alpha_du,
+            alpha_pr,
+            ls_trials,
+        ):
+            iterate = problem.get_current_iterate()
+            x = iterate["x"]
+            y = iterate["mult_g"]
+            iterate_data.append((x, y))
+
+        x_sol = np.array([3.85958688, 4.67936007, 3.10358931])
+        y_sol = np.array([-1.0, 53.90357665])
+
+        solver = pyo.SolverFactory("cyipopt", intermediate_callback=intermediate)
+        res = solver.solve(m, tee=True)
+        pyo.assert_optimal_termination(res)
+
+        # Make sure iterate vectors have the right shape and that the final
+        # iterate contains the primal and dual solution we expect.
+        for x, y in iterate_data:
+            self.assertEqual(x.shape, (3,))
+            self.assertEqual(y.shape, (2,))
+        x, y = iterate_data[-1]
+        self.assertTrue(np.allclose(x_sol, x))
+        self.assertTrue(np.allclose(y_sol, y))

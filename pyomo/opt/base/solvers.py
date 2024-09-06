@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ('OptSolver', 'SolverFactory', 'UnknownSolver', 'check_available_solvers')
 
 import re
 import sys
@@ -18,12 +16,11 @@ import logging
 import shlex
 
 from pyomo.common import Factory
-from pyomo.common.config import ConfigDict
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 
 from pyomo.opt.base.convert import convert_problem
-from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
+from pyomo.opt.base.formats import ResultsFormat
 import pyomo.opt.base.results
 
 logger = logging.getLogger('pyomo.opt')
@@ -181,7 +178,11 @@ class SolverFactoryClass(Factory):
         return opt
 
 
+LegacySolverFactory = SolverFactoryClass('solver type')
+
 SolverFactory = SolverFactoryClass('solver type')
+SolverFactory._cls = LegacySolverFactory._cls
+SolverFactory._doc = LegacySolverFactory._doc
 
 
 #
@@ -469,8 +470,8 @@ class OptSolver(object):
         Set the current results format (if it's valid for the current
         problem format).
         """
-        if (self._problem_format in self._valid_results_formats) and (
-            format in self._valid_results_formats[self._problem_format]
+        if (self._problem_format in self._valid_result_formats) and (
+            format in self._valid_result_formats[self._problem_format]
         ):
             self._results_format = format
         else:
@@ -535,15 +536,15 @@ class OptSolver(object):
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
         #
-        from pyomo.core.base.block import _BlockData
+        from pyomo.core.base.block import BlockData
         import pyomo.core.base.suffix
         from pyomo.core.kernel.block import IBlock
         import pyomo.core.kernel.suffix
 
         _model = None
         for arg in args:
-            if isinstance(arg, (_BlockData, IBlock)):
-                if isinstance(arg, _BlockData):
+            if isinstance(arg, (BlockData, IBlock)):
+                if isinstance(arg, BlockData):
                     if not arg.is_constructed():
                         raise RuntimeError(
                             "Attempting to solve model=%s with unconstructed "
@@ -552,7 +553,7 @@ class OptSolver(object):
 
                 _model = arg
                 # import suffixes must be on the top-level model
-                if isinstance(arg, _BlockData):
+                if isinstance(arg, BlockData):
                     model_suffixes = list(
                         name
                         for (

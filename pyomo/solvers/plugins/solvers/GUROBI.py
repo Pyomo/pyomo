@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,6 +18,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.enums import maximize, minimize
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -28,7 +29,6 @@ from pyomo.opt.results import (
     SolverStatus,
     TerminationCondition,
     SolutionStatus,
-    ProblemSense,
     Solution,
 )
 from pyomo.opt.solver import ILMLicensedSystemCallSolver
@@ -472,7 +472,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                             soln.objective['__default_objective__'] = {
                                 'Value': float(tokens[1])
                             }
-                            if results.problem.sense == ProblemSense.minimize:
+                            if results.problem.sense == minimize:
                                 results.problem.upper_bound = float(tokens[1])
                             else:
                                 results.problem.lower_bound = float(tokens[1])
@@ -514,9 +514,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                 elif section == 1:
                     if tokens[0] == 'sense':
                         if tokens[1] == 'minimize':
-                            results.problem.sense = ProblemSense.minimize
+                            results.problem.sense = minimize
                         elif tokens[1] == 'maximize':
-                            results.problem.sense = ProblemSense.maximize
+                            results.problem.sense = maximize
                     else:
                         try:
                             val = eval(tokens[1])

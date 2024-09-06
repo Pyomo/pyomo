@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -115,7 +115,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
                 disjunct_component, Block
             )
             # HACK: activate the block, but do not activate the
-            # _BlockData objects
+            # BlockData objects
             super(ActiveIndexedComponent, disjunct_component).activate()
 
             # Deactivate all constraints.  Note that we only need to

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,10 +10,12 @@
 #  ___________________________________________________________________________
 #
 
+import io
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.opt.base.solvers import UnknownSolver
-from pyomo.core.plugins.transform.scaling import ScaleModel
+from pyomo.core.plugins.transform.scaling import ScaleModel, SuffixFinder
+from pyomo.common.log import LoggingIntercept
 
 
 class TestScaleModelTransformation(unittest.TestCase):
@@ -600,6 +602,13 @@ class TestScaleModelTransformation(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(model.zcon), -8, 4)
 
     def test_get_float_scaling_factor_top_level(self):
+        # Note: the transformation used to have a private method for
+        # finding suffix values (which this method tested).  The
+        # transformation now leverages the SuffixFinder.  To ensure that
+        # the SuffixFinder behaves in the same way as the original local
+        # method, we preserve these tests, but directly test the
+        # SuffixFinder
+
         m = pyo.ConcreteModel()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
@@ -616,17 +625,23 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.scaling_factor[m.v1] = 0.1
         m.scaling_factor[m.b1.v2] = 0.2
 
+        _finder = SuffixFinder('scaling_factor', 1.0, m)
+
         # SF should be 0.1 from top level
-        sf = ScaleModel()._get_float_scaling_factor(m.v1)
-        assert sf == float(0.1)
+        self.assertEqual(_finder.find(m.v1), 0.1)
         # SF should be 0.1 from top level, lower level ignored
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.v2)
-        assert sf == float(0.2)
+        self.assertEqual(_finder.find(m.b1.v2), 0.2)
         # No SF, should return 1
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.v3)
-        assert sf == 1.0
+        self.assertEqual(_finder.find(m.b1.b2.v3), 1.0)
 
     def test_get_float_scaling_factor_local_level(self):
+        # Note: the transformation used to have a private method for
+        # finding suffix values (which this method tested).  The
+        # transformation now leverages the SuffixFinder.  To ensure that
+        # the SuffixFinder behaves in the same way as the original local
+        # method, we preserve these tests, but directly test the
+        # SuffixFinder
+
         m = pyo.ConcreteModel()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
@@ -647,15 +662,21 @@ class TestScaleModelTransformation(unittest.TestCase):
         # Add an intermediate scaling factor - this should take priority
         m.b1.scaling_factor[m.b1.b2.v3] = 0.4
 
+        _finder = SuffixFinder('scaling_factor', 1.0, m)
+
         # Should get SF from local levels
-        sf = ScaleModel()._get_float_scaling_factor(m.v1)
-        assert sf == float(0.1)
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.v2)
-        assert sf == float(0.2)
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.v3)
-        assert sf == float(0.4)
+        self.assertEqual(_finder.find(m.v1), 0.1)
+        self.assertEqual(_finder.find(m.b1.v2), 0.2)
+        self.assertEqual(_finder.find(m.b1.b2.v3), 0.4)
 
     def test_get_float_scaling_factor_intermediate_level(self):
+        # Note: the transformation used to have a private method for
+        # finding suffix values (which this method tested).  The
+        # transformation now leverages the SuffixFinder.  To ensure that
+        # the SuffixFinder behaves in the same way as the original local
+        # method, we preserve these tests, but directly test the
+        # SuffixFinder
+
         m = pyo.ConcreteModel()
         m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
@@ -680,15 +701,39 @@ class TestScaleModelTransformation(unittest.TestCase):
 
         m.b1.b2.b3.scaling_factor[m.b1.b2.b3.v3] = 0.4
 
+        _finder = SuffixFinder('scaling_factor', 1.0, m)
+
         # v1 should be unscaled as SF set below variable level
-        sf = ScaleModel()._get_float_scaling_factor(m.v1)
-        assert sf == 1.0
+        self.assertEqual(_finder.find(m.v1), 1.0)
         # v2 should get SF from b1 level
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v2)
-        assert sf == float(0.2)
+        self.assertEqual(_finder.find(m.b1.b2.b3.v2), 0.2)
         # v2 should get SF from highest level, ignoring b3 level
-        sf = ScaleModel()._get_float_scaling_factor(m.b1.b2.b3.v3)
-        assert sf == float(0.3)
+        self.assertEqual(_finder.find(m.b1.b2.b3.v3), 0.3)
+
+    def test_propagate_solution_uninitialized_variable(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2], initialize=1.0)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.x[1]] = 10.0
+        m.scaling_factor[m.x[2]] = 10.0
+        scaled_model = pyo.TransformationFactory("core.scale_model").create_using(m)
+        scaled_model.scaled_x[1] = 20.0
+        scaled_model.scaled_x[2] = None
+
+        OUTPUT = io.StringIO()
+        with LoggingIntercept(OUTPUT, "pyomo.core.plugins.transform.scaling"):
+            pyo.TransformationFactory("core.scale_model").propagate_solution(
+                scaled_model, m
+            )
+        msg = (
+            "Variable with value None in the scaled model is replacing value of"
+            " variable x[2] in the original model with None (was 1.0).\n"
+        )
+        self.assertEqual(OUTPUT.getvalue(), msg)
+        self.assertAlmostEqual(m.x[1].value, 2.0, delta=1e-8)
+        # Note that value of x[2] in original model *has* been overridden to None.
+        # In this case, a warning has been raised.
+        self.assertIs(m.x[2].value, None)
 
 
 if __name__ == "__main__":

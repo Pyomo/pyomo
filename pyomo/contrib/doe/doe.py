@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -25,853 +25,743 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
+from enum import Enum
+from itertools import permutations, product
 
-from pyomo.common.dependencies import numpy as np, numpy_available
+import json
+import logging
+import math
+
+from pathlib import Path
+
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    matplotlib as plt,
+)
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import TicTocTimer
+
+from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
-from pyomo.opt import SolverFactory
-import pickle
-from itertools import permutations, product
-import logging
-from enum import Enum
-from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
-from pyomo.contrib.doe.scenario import ScenarioGenerator, FiniteDifferenceStep
-from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
-
-class CalculationMode(Enum):
-    sequential_finite = "sequential_finite"
-    direct_kaug = "direct_kaug"
+from pyomo.opt import SolverStatus
 
 
 class ObjectiveLib(Enum):
-    det = "det"
+    determinant = "determinant"
     trace = "trace"
+    minimum_eigenvalue = "minimum_eigenvalue"
     zero = "zero"
 
 
-class ModelOptionLib(Enum):
-    parmest = "parmest"
-    stage1 = "stage1"
-    stage2 = "stage2"
+class FiniteDifferenceStep(Enum):
+    forward = "forward"
+    central = "central"
+    backward = "backward"
 
 
 class DesignOfExperiments:
     def __init__(
         self,
-        param_init,
-        design_vars,
-        measurement_vars,
-        create_model,
-        solver=None,
+        experiment=None,
+        fd_formula="central",
+        step=1e-3,
+        objective_option="determinant",
+        scale_constant_value=1.0,
+        scale_nominal_param_value=False,
         prior_FIM=None,
-        discretize_model=None,
-        args=None,
+        jac_initial=None,
+        fim_initial=None,
+        L_diagonal_lower_bound=1e-7,
+        solver=None,
+        tee=False,
+        get_labeled_model_args=None,
+        logger_level=logging.WARNING,
+        _Cholesky_option=True,
+        _only_compute_fim_lower=True,
     ):
         """
         This package enables model-based design of experiments analysis with Pyomo.
         Both direct optimization and enumeration modes are supported.
-        NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
-        It can be applied to dynamic models, where design variables are controlled throughout the experiment.
+
+        The package has been refactored from its original form as of August 24. See
+        the documentation for more information.
 
         Parameters
         ----------
-        param_init:
-            A  ``dictionary`` of parameter names and values.
-            If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
-        design_vars:
-            A ``DesignVariables`` which contains the Pyomo variable names and their corresponding indices
-            and bounds for experiment degrees of freedom
-        measurement_vars:
-            A ``MeasurementVariables`` which contains the Pyomo variable names and their corresponding indices and
-            bounds for experimental measurements
-        create_model:
-            A Python ``function`` that returns a Concrete Pyomo model, similar to the interface for ``parmest``
-        solver:
-            A ``solver`` object that User specified, default=None.
-            If not specified, default solver is IPOPT MA57.
+        experiment:
+            Experiment object that holds the model and labels all the components. The object
+            should have a ``get_labeled_model`` where a model is returned with the following
+            labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
+        fd_formula:
+            Finite difference formula for computing the sensitivity matrix. Must be one of
+            [``central``, ``forward``, ``backward``], default: ``central``
+        step:
+            Relative step size for the finite difference formula.
+            default: 1e-3
+        objective_option:
+            String representation of the objective option. Current available options are:
+            ``determinant`` (for determinant, or D-optimality) and ``trace`` (for trace or
+            A-optimality)
+        scale_constant_value:
+            Constant scaling for the sensitivity matrix. Every element will be multiplied by this
+            scaling factor.
+            default: 1
+        scale_nominal_param_value:
+            Boolean for whether or not to scale the sensitivity matrix by the nominal parameter
+            values. Every column of the sensitivity matrix will be divided by the respective
+            nominal parameter value.
+            default: False
         prior_FIM:
-            A 2D numpy array containing Fisher information matrix (FIM) for prior experiments.
-            The default None means there is no prior information.
-        discretize_model:
-            A user-specified ``function`` that discretizes the model. Only use with Pyomo.DAE, default=None
-        args:
-            Additional arguments for the create_model function.
+            2D numpy array representing information from prior experiments. If no value is given,
+            the assumed prior will be a matrix of zeros. This matrix will be assumed to be scaled
+            as the user has specified (i.e., if scale_nominal_param_value is true, we will assume
+            the FIM provided here has been scaled by the parameter values)
+        jac_initial:
+            2D numpy array as the initial values for the sensitivity matrix.
+        fim_initial:
+            2D numpy array as the initial values for the FIM.
+        L_diagonal_lower_bound:
+            Lower bound for the values of the lower triangular Cholesky factorization matrix.
+            default: 1e-7
+        solver:
+            A ``solver`` object specified by the user, default=None.
+            If not specified, default solver is set to IPOPT with MA57.
+        tee:
+            Solver option to be passed for verbose output.
+        get_labeled_model_args:
+            Additional arguments for the ``get_labeled_model`` function on the Experiment object.
+        _Cholesky_option:
+            Boolean value of whether or not to use the cholesky factorization to compute the
+            determinant for the D-optimality criteria. This parameter should not be changed
+            unless the user intends to make performance worse (i.e., compare an existing tool
+            that uses the full FIM to this algorithm)
+        _only_compute_fim_lower:
+            If True, only the lower triangle of the FIM is computed. This parameter should not
+            be changed unless the user intends to make performance worse (i.e., compare an
+            existing tool that uses the full FIM to this algorithm)
+        logger_level:
+            Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
+        if experiment is None:
+            raise ValueError("Experiment object must be provided to perform DoE.")
 
-        # parameters
-        self.param = param_init
-        # design variable name
-        self.design_name = design_vars.variable_names
-        self.design_vars = design_vars
-        self.create_model = create_model
-        self.args = args
+        # Check if the Experiment object has callable ``get_labeled_model`` function
+        if not hasattr(experiment, "get_labeled_model"):
+            raise ValueError(
+                "The experiment object must have a ``get_labeled_model`` function"
+            )
 
-        # create the measurement information object
-        self.measurement_vars = measurement_vars
-        self.measure_name = self.measurement_vars.variable_names
+        # Set the experiment object from the user
+        self.experiment = experiment
+
+        # Set the finite difference and subsequent step size
+        self.fd_formula = FiniteDifferenceStep(fd_formula)
+        self.step = step
+
+        # Set the objective type and scaling options:
+        self.objective_option = ObjectiveLib(objective_option)
+
+        self.scale_constant_value = scale_constant_value
+        self.scale_nominal_param_value = scale_nominal_param_value
+
+        # Set the prior FIM (will be checked upon model construction)
+        self.prior_FIM = prior_FIM
+
+        # Set the initial values for the jacobian, fim, and L matrices
+        self.jac_initial = jac_initial
+        self.fim_initial = fim_initial
+
+        # Set the lower bound on the Cholesky lower triangular matrix
+        self.L_diagonal_lower_bound = L_diagonal_lower_bound
 
         # check if user-defined solver is given
         if solver:
             self.solver = solver
         # if not given, use default solver
         else:
-            self.solver = self._get_default_ipopt_solver()
+            solver = pyo.SolverFactory("ipopt")
+            solver.options["linear_solver"] = "ma57"
+            solver.options["halt_on_ampl_error"] = "yes"
+            solver.options["max_iter"] = 3000
+            self.solver = solver
 
-        # check if discretization is needed
-        self.discretize_model = discretize_model
+        self.tee = tee
 
-        # check if there is prior info
-        if prior_FIM is None:
-            self.prior_FIM = np.zeros((len(self.param), len(self.param)))
-        else:
-            self.prior_FIM = prior_FIM
-        self._check_inputs()
+        # Set get_labeled_model_args as an empty dict if no arguments are passed
+        if get_labeled_model_args is None:
+            get_labeled_model_args = {}
+        self.get_labeled_model_args = get_labeled_model_args
 
-        # if print statements
+        # Revtrieve logger and set logging level
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(level=logging.INFO)
+        self.logger.setLevel(level=logger_level)
 
-    def _check_inputs(self):
-        """
-        Check if the prior FIM is N*N matrix, where N is the number of parameter
-        """
-        if type(self.prior_FIM) != type(None):
-            if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
-                raise ValueError('Found wrong prior information matrix shape.')
-            elif np.shape(self.prior_FIM)[0] != len(self.param):
-                raise ValueError('Found wrong prior information matrix shape.')
+        # Set the private options if passed (only developers should pass these)
+        self.Cholesky_option = _Cholesky_option
+        self.only_compute_fim_lower = _only_compute_fim_lower
 
-    def stochastic_program(
-        self,
-        if_optimize=True,
-        objective_option="det",
-        scale_nominal_param_value=False,
-        scale_constant_value=1,
-        optimize_opt=None,
-        if_Cholesky=False,
-        L_LB=1e-7,
-        L_initial=None,
-        jac_initial=None,
-        fim_initial=None,
-        formula="central",
-        step=0.001,
-        tee_opt=True,
-    ):
+        # model attribute to avoid rebuilding models
+        self.model = pyo.ConcreteModel()  # Build empty model
+
+        # Empty results object
+        self.results = {}
+
+        # May need this attribute for more complicated structures?
+        # (i.e., no model rebuilding for large models with sequential)
+        self._built_scenarios = False
+
+    # Perform doe
+    def run_doe(self, model=None, results_file=None):
         """
-        Optimize DOE problem with design variables being the decisions.
-        The DOE model is formed invasively and all scenarios are computed simultaneously.
-        The function will first run a square problem with design variable being fixed at
-        the given initial points (Objective function being 0), then a square problem with
-        design variables being fixed at the given initial points (Objective function being Design optimality),
-        and then unfix the design variable and do the optimization.
+        Runs DoE for a single experiment estimation. Can save results in
+        a file based on the flag.
 
         Parameters
         ----------
-        if_optimize:
-            if true, continue to do optimization. else, just run square problem with given design variable values
-        objective_option:
-            choose from the ObjectiveLib enum,
-            "det": maximizing the determinant with ObjectiveLib.det,
-            "trace": or the trace of the FIM with ObjectiveLib.trace
-        scale_nominal_param_value:
-            if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value:
-            scale all elements in Jacobian matrix, default is 1.
-        optimize_opt:
-            A dictionary, keys are design variables, values are True or False deciding if this design variable will be optimized as DOF or not
-        if_Cholesky:
-            if True, Cholesky decomposition is used for Objective function for D-optimality.
-        L_LB:
-            L is the Cholesky decomposition matrix for FIM, i.e. FIM = L*L.T.
-            L_LB is the lower bound for every element in L.
-            if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
-        L_initial:
-            initialize the L
-        jac_initial:
-            a matrix used to initialize jacobian matrix
-        fim_initial:
-            a matrix used to initialize FIM matrix
-        formula:
-            choose from "central", "forward", "backward",
-            which refers to the Enum FiniteDifferenceStep.central, .forward, or .backward
-        step:
-            Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-        tee_opt:
-            if True, IPOPT console output is printed
-
-        Returns
-        -------
-        analysis_square: result summary of the square problem solved at the initial point
-        analysis_optimize: result summary of the optimization problem solved
+        model: model to run the DoE, default: None (self.model)
+        results_file: string name of the file path to save the results
+                      to in the form of a .json file
+                      default: None --> don't save
 
         """
-        # store inputs in object
-        self.design_values = self.design_vars.variable_names_value
-        self.optimize = if_optimize
-        self.objective_option = ObjectiveLib(objective_option)
-        self.scale_nominal_param_value = scale_nominal_param_value
-        self.scale_constant_value = scale_constant_value
-        self.Cholesky_option = if_Cholesky
-        self.L_LB = L_LB
-        self.L_initial = L_initial
-        self.jac_initial = jac_initial
-        self.fim_initial = fim_initial
-        self.formula = FiniteDifferenceStep(formula)
-        self.step = step
-        self.tee_opt = tee_opt
+        # Check results file name
+        if results_file is not None:
+            if type(results_file) not in [Path, str]:
+                raise ValueError(
+                    "``results_file`` must be either a Path object or a string."
+                )
 
-        # calculate how much the FIM element is scaled by a constant number
-        # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
-        self.fim_scale_constant_value = self.scale_constant_value**2
-
+        # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
+        self.logger.info("Beginning experimental optimization.")
 
-        # build the large DOE pyomo model
-        m = self._create_doe_model(no_obj=True)
-
-        # solve model, achieve results for square problem, and results for optimization problem
-        m, analysis_square = self._compute_stochastic_program(m, optimize_opt)
-
-        if self.optimize:
-            analysis_optimize = self._optimize_stochastic_program(m)
-            dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f" % dT)
-            return analysis_square, analysis_optimize
-
+        # Model is none, set it to self.model
+        if model is None:
+            model = self.model
         else:
-            dT = sp_timer.toc(msg=None)
-            self.logger.info("elapsed time: %0.1f" % dT)
-            return analysis_square
+            # TODO: Add safe naming when a model is passed by the user.
+            # doe_block = pyo.Block()
+            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # model.add_component(doe_block_name, doe_block)
+            pass
 
-    def _compute_stochastic_program(self, m, optimize_option):
-        """
-        Solve the stochastic program problem as a square problem.
-        """
+        # ToDo: potentially work with this for more complicated models
+        # Create the full DoE model (build scenarios for F.D. scheme)
+        if not self._built_scenarios:
+            self.create_doe_model(model=model)
 
-        # Solve square problem first
-        # result_square: solver result
-        result_square = self._solve_doe(m, fix=True, opt_option=optimize_option)
+        # Add the objective function to the model
+        self.create_objective_function(model=model)
 
-        # extract Jac
-        jac_square = self._extract_jac(m)
-
-        # create result object
-        analysis_square = FisherResults(
-            list(self.param.keys()),
-            self.measurement_vars,
-            jacobian_info=None,
-            all_jacobian_info=jac_square,
-            prior_FIM=self.prior_FIM,
-            scale_constant_value=self.scale_constant_value,
+        # Track time required to build the DoE model
+        build_time = sp_timer.toc(msg=None)
+        self.logger.info(
+            "Successfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
         )
-        # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
-        analysis_square.result_analysis(result=result_square)
 
-        analysis_square.model = m
+        # Solve the square problem first to initialize the fim and
+        # sensitivity constraints
+        # Deactivate objective expression and objective constraints (on a block), and fix design variables
+        model.objective.deactivate()
+        model.obj_cons.deactivate()
+        for comp in model.scenario_blocks[0].experiment_inputs:
+            comp.fix()
 
-        self.analysis_square = analysis_square
-        return m, analysis_square
+        # TODO: safeguard solver call to see if solver terminated successfully
+        # see below commented code:
+        # res = self.solver.solve(model, tee=self.tee, load_solutions=False)
+        # if pyo.check_optimal_termination(res):
+        #     model.load_solution(res)
+        # else:
+        #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
+        model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
+        self.solver.solve(model, tee=self.tee)
 
-    def _optimize_stochastic_program(self, m):
-        """
-        Solve the stochastic program problem as an optimization problem.
-        """
-
-        m = self._add_objective(m)
-
-        result_doe = self._solve_doe(m, fix=False)
-
-        # extract Jac
-        jac_optimize = self._extract_jac(m)
-
-        # create result object
-        analysis_optimize = FisherResults(
-            list(self.param.keys()),
-            self.measurement_vars,
-            jacobian_info=None,
-            all_jacobian_info=jac_optimize,
-            prior_FIM=self.prior_FIM,
+        # Track time to initialize the DoE model
+        initialization_time = sp_timer.toc(msg=None)
+        self.logger.info(
+            "Successfully initialized the DoE model.\nInitialization time: %0.1f seconds"
+            % initialization_time
         )
-        # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
-        analysis_optimize.result_analysis(result=result_doe)
-        analysis_optimize.model = m
 
-        return analysis_optimize
+        model.dummy_obj.deactivate()
 
-    def compute_FIM(
-        self,
-        mode="direct_kaug",
-        FIM_store_name=None,
-        specified_prior=None,
-        tee_opt=True,
-        scale_nominal_param_value=False,
-        scale_constant_value=1,
-        store_output=None,
-        read_output=None,
-        extract_single_model=None,
-        formula="central",
-        step=0.001,
-    ):
+        # Reactivate objective and unfix experimental design decisions
+        for comp in model.scenario_blocks[0].experiment_inputs:
+            comp.unfix()
+        model.objective.activate()
+        model.obj_cons.activate()
+
+        # If the model has L, initialize it with the solved FIM
+        if hasattr(model, "L"):
+            # Get the FIM values
+            fim_vals = [
+                pyo.value(model.fim[i, j])
+                for i in model.parameter_names
+                for j in model.parameter_names
+            ]
+            fim_np = np.array(fim_vals).reshape(
+                (len(model.parameter_names), len(model.parameter_names))
+            )
+
+            L_vals_sq = np.linalg.cholesky(fim_np)
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    model.L[c, d].value = L_vals_sq[i, j]
+
+        if hasattr(model, "determinant"):
+            model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
+
+        # Solve the full model, which has now been initialized with the square solve
+        res = self.solver.solve(model, tee=self.tee)
+
+        # Track time used to solve the DoE model
+        solve_time = sp_timer.toc(msg=None)
+
+        self.logger.info(
+            "Successfully optimized experiment.\nSolve time: %0.1f seconds" % solve_time
+        )
+        self.logger.info(
+            "Total time for build, initialization, and solve: %0.1f seconds"
+            % (build_time + initialization_time + solve_time)
+        )
+
+        #
+        fim_local = self.get_FIM()
+
+        # Make sure stale results don't follow the DoE object instance
+        self.results = {}
+
+        self.results["Solver Status"] = res.solver.status
+        self.results["Termination Condition"] = res.solver.termination_condition
+
+        # Important quantities for optimal design
+        self.results["FIM"] = fim_local
+        self.results["Sensitivity Matrix"] = self.get_sensitivity_matrix()
+        self.results["Experiment Design"] = self.get_experiment_input_values()
+        self.results["Experiment Design Names"] = [
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].experiment_inputs
+        ]
+        self.results["Experiment Outputs"] = self.get_experiment_output_values()
+        self.results["Experiment Output Names"] = [
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].experiment_outputs
+        ]
+        self.results["Unknown Parameters"] = self.get_unknown_parameter_values()
+        self.results["Unknown Parameter Names"] = [
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].unknown_parameters
+        ]
+        self.results["Measurement Error"] = self.get_measurement_error_values()
+        self.results["Measurement Error Names"] = [
+            str(pyo.ComponentUID(k, context=model.scenario_blocks[0]))
+            for k in model.scenario_blocks[0].measurement_error
+        ]
+
+        self.results["Prior FIM"] = [list(row) for row in list(self.prior_FIM)]
+
+        # Saving some stats on the FIM for convenience
+        self.results["Objective expression"] = str(self.objective_option).split(".")[-1]
+        self.results["log10 A-opt"] = np.log10(np.trace(fim_local))
+        self.results["log10 D-opt"] = np.log10(np.linalg.det(fim_local))
+        self.results["log10 E-opt"] = np.log10(min(np.linalg.eig(fim_local)[0]))
+        self.results["FIM Condition Number"] = np.linalg.cond(fim_local)
+
+        # Solve timing stats
+        self.results["Build Time"] = build_time
+        self.results["Initialization Time"] = initialization_time
+        self.results["Solve Time"] = solve_time
+        self.results["Wall-clock Time"] = build_time + initialization_time + solve_time
+
+        # Settings used to generate the optimal DoE
+        self.results["Finite Difference Scheme"] = str(self.fd_formula).split(".")[-1]
+        self.results["Finite Difference Step"] = self.step
+        self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
+
+        # ToDo: Add more useful fields to the results object?
+        # ToDo: Add MetaData from the user to the results object? Or leave to the user?
+
+        # If the user specifies to save the file, do it here as a json
+        if results_file is not None:
+            with open(results_file, "w") as file:
+                json.dump(self.results, file)
+
+    # Perform multi-experiment doe (sequential, or ``greedy`` approach)
+    def run_multi_doe_sequential(self, N_exp=1):
+        raise NotImplementedError("Multiple experiment optimization not yet supported.")
+
+    # Perform multi-experiment doe (simultaneous, optimal approach)
+    def run_multi_doe_simultaneous(self, N_exp=1):
+        raise NotImplementedError("Multiple experiment optimization not yet supported.")
+
+    # Compute FIM for the DoE object
+    def compute_FIM(self, model=None, method="sequential"):
         """
-        This function calculates the Fisher information matrix (FIM) using sensitivity information obtained
-        from two possible modes (defined by the CalculationMode Enum):
-
-            1.  sequential_finite: sequentially solve square problems and use finite difference approximation
-            2.  direct_kaug: solve a single square problem then extract derivatives using NLP sensitivity theory
+        Computes the FIM for the experimental design that is
+        initialized from the experiment`s ``get_labeled_model()``
+        function.
 
         Parameters
         ----------
-        mode:
-            supports CalculationMode.sequential_finite or CalculationMode.direct_kaug
-        FIM_store_name:
-            if storing the FIM in a .csv or .txt, give the file name here as a string.
-        specified_prior:
-            a 2D numpy array providing alternate prior matrix, default is no prior.
-        tee_opt:
-            if True, IPOPT console output is printed
-        scale_nominal_param_value:
-            if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value:
-            scale all elements in Jacobian matrix, default is 1.
-        store_output:
-            if storing the output (value stored in Var 'output_record') as a pickle file, give the file name here as a string.
-        read_output:
-            if reading the output (value for Var 'output_record') as a pickle file, give the file name here as a string.
-        extract_single_model:
-            if True, the solved model outputs for each scenario are all recorded as a .csv file.
-            The output file uses the name AB.csv, where string A is store_output input, B is the index of scenario.
-            scenario index is the number of the scenario outputs which is stored.
-        formula:
-            choose from the Enum FiniteDifferenceStep.central, .forward, or .backward.
-            This option is only used for CalculationMode.sequential_finite mode.
-        step:
-            Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        model: model to compute FIM, default: None, (self.compute_FIM_model)
+        method: string to specify which method should be used
+                options are ``kaug`` and ``sequential``
 
         Returns
         -------
-        FIM_analysis: result summary object of this solve
+        computed FIM: 2D numpy array of the FIM
         """
+        if model is None:
+            self.compute_FIM_model = self.experiment.get_labeled_model(
+                **self.get_labeled_model_args
+            ).clone()
+            model = self.compute_FIM_model
+        else:
+            # TODO: Add safe naming when a model is passed by the user.
+            # doe_block = pyo.Block()
+            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # model.add_component(doe_block_name, doe_block)
+            # self.compute_FIM_model = model
+            pass
 
-        # save inputs in object
-        self.design_values = self.design_vars.variable_names_value
-        self.scale_nominal_param_value = scale_nominal_param_value
-        self.scale_constant_value = scale_constant_value
-        self.formula = FiniteDifferenceStep(formula)
-        self.mode = CalculationMode(mode)
-        self.step = step
+        self.check_model_labels(model=model)
 
-        # This method only solves square problem
-        self.optimize = False
-        # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = ObjectiveLib.zero
-        self.tee_opt = tee_opt
+        # Set length values for the model features
+        self.n_parameters = len(model.unknown_parameters)
+        self.n_measurement_error = len(model.measurement_error)
+        self.n_experiment_inputs = len(model.experiment_inputs)
+        self.n_experiment_outputs = len(model.experiment_outputs)
 
-        self.FIM_store_name = FIM_store_name
-        self.specified_prior = specified_prior
+        # Check FIM input, if it exists. Otherwise, set the prior_FIM attribute
+        if self.prior_FIM is None:
+            self.prior_FIM = np.zeros(
+                (len(model.unknown_parameters), len(model.unknown_parameters))
+            )
+        else:
+            self.check_model_FIM(FIM=self.prior_FIM)
 
-        # calculate how much the FIM element is scaled by a constant number
-        # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
-        self.fim_scale_constant_value = self.scale_constant_value**2
+        # TODO: Add a check to see if the model has an objective and deactivate it.
+        #       This solve should only be a square solve without any obj function.
 
-        square_timer = TicTocTimer()
-        square_timer.tic(msg=None)
-        if self.mode == CalculationMode.sequential_finite:
-            FIM_analysis = self._sequential_finite(
-                read_output, extract_single_model, store_output
+        if method == "sequential":
+            self._sequential_FIM(model=model)
+            self._computed_FIM = self.seq_FIM
+        elif method == "kaug":
+            self._kaug_FIM(model=model)
+            self._computed_FIM = self.kaug_FIM
+        else:
+            raise ValueError(
+                "The method provided, {}, must be either `sequential` or `kaug`".format(
+                    method
+                )
             )
 
-        elif self.mode == CalculationMode.direct_kaug:
-            FIM_analysis = self._direct_kaug()
+        return self._computed_FIM
 
-        dT = square_timer.toc(msg=None)
-        self.logger.info("elapsed time: %0.1f" % dT)
+    # Use a sequential method to get the FIM
+    def _sequential_FIM(self, model=None):
+        """
+        Used to compute the FIM using a sequential approach,
+        solving the model consecutively under each of the
+        finite difference scenarios to build the sensitivity
+        matrix to subsequently compute the FIM.
 
-        return FIM_analysis
+        """
+        # Build a single model instance
+        if model is None:
+            self.compute_FIM_model = self.experiment.get_labeled_model(
+                **self.get_labeled_model_args
+            ).clone()
+            model = self.compute_FIM_model
 
-    def _sequential_finite(self, read_output, extract_single_model, store_output):
-        """Sequential_finite mode uses Pyomo Block to evaluate the sensitivity information."""
+        # Create suffix to keep track of parameter scenarios
+        if hasattr(model, "parameter_scenarios"):
+            model.del_component(model.parameter_scenarios)
+        model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
-        # if measurements are provided
-        if read_output:
-            with open(read_output, 'rb') as f:
-                output_record = pickle.load(f)
-                f.close()
-            jac = self._finite_calculation(output_record)
-
-        # if measurements are not provided
+        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        if self.fd_formula == FiniteDifferenceStep.central:
+            model.parameter_scenarios.update(
+                (2 * ind, k) for ind, k in enumerate(model.unknown_parameters.keys())
+            )
+            model.parameter_scenarios.update(
+                (2 * ind + 1, k)
+                for ind, k in enumerate(model.unknown_parameters.keys())
+            )
+            model.scenarios = range(len(model.unknown_parameters) * 2)
+        elif self.fd_formula in [
+            FiniteDifferenceStep.forward,
+            FiniteDifferenceStep.backward,
+        ]:
+            model.parameter_scenarios.update(
+                (ind + 1, k) for ind, k in enumerate(model.unknown_parameters.keys())
+            )
+            model.scenarios = range(len(model.unknown_parameters) + 1)
         else:
-            mod = self._create_block()
+            raise AttributeError(
+                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            )
 
-            # dict for storing model outputs
-            output_record = {}
+        # Fix design variables
+        for comp in model.experiment_inputs:
+            comp.fix()
 
-            # solve model
-            square_result = self._solve_doe(mod, fix=True)
+        measurement_vals = []
+        # In a loop.....
+        # Calculate measurement values for each scenario
+        for s in model.scenarios:
+            # Perturbation to be (1 + diff) * param_value
+            if self.fd_formula == FiniteDifferenceStep.central:
+                diff = self.step * (
+                    (-1) ** s
+                )  # Positive perturbation, even; negative, odd
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                diff = (
+                    self.step * -1 * (s != 0)
+                )  # Backward always negative perturbation; 0 at s = 0
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                diff = self.step * (s != 0)  # Forward always positive; 0 at s = 0
 
-            if extract_single_model:
-                mod_name = store_output + '.csv'
-                dataframe = extract_single_model(mod, square_result)
-                dataframe.to_csv(mod_name)
+            # If we are doing forward/backward, no change for s=0
+            skip_param_update = (
+                self.fd_formula
+                in [FiniteDifferenceStep.forward, FiniteDifferenceStep.backward]
+            ) and (s == 0)
+            if not skip_param_update:
+                param = model.parameter_scenarios[s]
+                # Update parameter values for the given finite difference scenario
+                param.set_value(model.unknown_parameters[param] * (1 + diff))
+            else:
+                continue
 
-            # loop over blocks for results
-            for s in range(len(self.scenario_list)):
-                # loop over measurement item and time to store model measurements
-                output_iter = []
+            # Simulate the model
+            try:
+                res = self.solver.solve(model)
+                pyo.assert_optimal_termination(res)
+            except:
+                # TODO: Make error message more verbose, i.e., add unknown parameter values so the
+                # user can try to solve the model instance outside of the pyomo.DoE framework.
+                raise RuntimeError(
+                    "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                )
 
-                # extract variable values
-                for r in self.measure_name:
-                    cuid = pyo.ComponentUID(r)
-                    try:
-                        var_up = cuid.find_component_on(mod.block[s])
-                    except:
-                        raise ValueError(
-                            f"measurement {r} cannot be found in the model."
-                        )
-                    output_iter.append(pyo.value(var_up))
+            # Extract the measurement values for the scenario and append
+            measurement_vals.append(
+                [pyo.value(k) for k, v in model.experiment_outputs.items()]
+            )
 
-                output_record[s] = output_iter
+        # Use the measurement outputs to make the Q matrix
+        measurement_vals_np = np.array(measurement_vals).T
 
-                output_record['design'] = self.design_values
-
-                if store_output:
-                    f = open(store_output, 'wb')
-                    pickle.dump(output_record, f)
-                    f.close()
-
-            # calculate jacobian
-            jac = self._finite_calculation(output_record)
-
-            # return all models formed
-            self.model = mod
-
-            # Store the Jacobian information for access by users, not necessarily call result object to achieve jacobian information
-            # It is the overall set of Jacobian information,
-            # while in the result object the jacobian can be cut to achieve part of the FIM information
-            self.jac = jac
-
-        # Assemble and analyze results
-        if self.specified_prior is None:
-            prior_in_use = self.prior_FIM
-        else:
-            prior_in_use = self.specified_prior
-
-        FIM_analysis = FisherResults(
-            list(self.param.keys()),
-            self.measurement_vars,
-            jacobian_info=None,
-            all_jacobian_info=jac,
-            prior_FIM=prior_in_use,
-            store_FIM=self.FIM_store_name,
-            scale_constant_value=self.scale_constant_value,
+        self.seq_jac = np.zeros(
+            (
+                len(model.experiment_outputs.items()),
+                len(model.unknown_parameters.items()),
+            )
         )
 
-        return FIM_analysis
+        # Counting variable for loop
+        i = 0
 
-    def _direct_kaug(self):
-        # create model
-        mod = self.create_model(model_option=ModelOptionLib.parmest)
+        # Loop over parameter values and grab correct columns for finite difference calculation
 
-        # discretize if needed
-        if self.discretize_model:
-            mod = self.discretize_model(mod, block=False)
+        for k, v in model.unknown_parameters.items():
+            curr_step = v * self.step
 
-        # add objective function
-        mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
+            if self.fd_formula == FiniteDifferenceStep.central:
+                col_1 = 2 * i
+                col_2 = 2 * i + 1
+                curr_step *= 2
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                col_1 = i
+                col_2 = 0
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                col_1 = 0
+                col_2 = i
 
-        # set ub and lb to parameters
-        for par in self.param.keys():
-            cuid = pyo.ComponentUID(par)
-            var = cuid.find_component_on(mod)
-            var.setlb(self.param[par])
-            var.setub(self.param[par])
+            # If scale_nominal_param_value is active, scale by nominal parameter value (v)
+            scale_factor = (1.0 / curr_step) * self.scale_constant_value
+            if self.scale_nominal_param_value:
+                scale_factor *= v
 
-        # generate parameter name list and value dictionary with index
-        var_name = list(self.param.keys())
+            # Calculate the column of the sensitivity matrix
+            self.seq_jac[:, i] = (
+                measurement_vals_np[:, col_1] - measurement_vals_np[:, col_2]
+            ) * scale_factor
 
-        # call k_aug get_dsdp function
-        square_result = self._solve_doe(mod, fix=True)
-        dsdp_re, col = get_dsdp(
-            mod, list(self.param.keys()), self.param, tee=self.tee_opt
-        )
+            # Increment the count
+            i += 1
+
+        # ToDo: As more complex measurement error schemes are put in place, this needs to change
+        # Add independent (non-correlated) measurement error for FIM calculation
+        cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
+        count = 0
+        for k, v in model.measurement_error.items():
+            cov_y[count, count] = 1 / v
+            count += 1
+
+        # Compute and record FIM
+        self.seq_FIM = self.seq_jac.T @ cov_y @ self.seq_jac + self.prior_FIM
+
+    # Use kaug to get FIM
+    def _kaug_FIM(self, model=None):
+        """
+        Used to compute the FIM using kaug, a sensitivity-based
+        approach that directly computes the FIM.
+
+        Parameters
+        ----------
+        model: model to compute FIM, default: None, (self.compute_FIM_model)
+
+        """
+        # Remake compute_FIM_model if model is None.
+        # compute_FIM_model needs to be the right version for function to work.
+        if model is None:
+            self.compute_FIM_model = self.experiment.get_labeled_model(
+                **self.get_labeled_model_args
+            ).clone()
+            model = self.compute_FIM_model
+
+        # add zero (dummy/placeholder) objective function
+        if not hasattr(model, "objective"):
+            model.objective = pyo.Objective(expr=0, sense=pyo.minimize)
+
+        # Fix design variables to make the problem square
+        for comp in model.experiment_inputs:
+            comp.fix()
+
+        self.solver.solve(model, tee=self.tee)
+
+        # Probe the solved model for dsdp results (sensitivities s.t. parameters)
+        params_dict = {k.name: v for k, v in model.unknown_parameters.items()}
+        params_names = list(params_dict.keys())
+
+        dsdp_re, col = get_dsdp(model, params_names, params_dict, tee=self.tee)
 
         # analyze result
         dsdp_array = dsdp_re.toarray().T
-        self.dsdp = dsdp_array
-        self.dsdp = col
+
         # store dsdp returned
         dsdp_extract = []
         # get right lines from results
         measurement_index = []
 
         # loop over measurement variables and their time points
-        for mname in self.measure_name:
+        for k, v in model.experiment_outputs.items():
+            name = k.name
             try:
-                kaug_no = col.index(mname)
+                kaug_no = col.index(name)
                 measurement_index.append(kaug_no)
                 # get right line of dsdp
                 dsdp_extract.append(dsdp_array[kaug_no])
             except:
                 # k_aug does not provide value for fixed variables
-                self.logger.debug('The variable is fixed:  %s', mname)
+                self.logger.debug("The variable is fixed:  %s", name)
                 # produce the sensitivity for fixed variables
-                zero_sens = np.zeros(len(self.param))
+                zero_sens = np.zeros(len(params_names))
                 # for fixed variables, the sensitivity are a zero vector
                 dsdp_extract.append(zero_sens)
 
         # Extract and calculate sensitivity if scaled by constants or parameters.
-        # Convert sensitivity to a dictionary
-        jac = {}
-        for par in self.param.keys():
-            jac[par] = []
+        jac = [[] for k in params_names]
 
         for d in range(len(dsdp_extract)):
-            for p, par in enumerate(self.param.keys()):
+            for k, v in model.unknown_parameters.items():
+                p = params_names.index(k.name)  # Index of parameter in np array
                 # if scaled by parameter value or constant value
                 sensi = dsdp_extract[d][p] * self.scale_constant_value
                 if self.scale_nominal_param_value:
-                    sensi *= self.param[par]
-                jac[par].append(sensi)
+                    sensi *= v
+                jac[p].append(sensi)
 
-        # check if another prior experiment FIM is provided other than the user-specified one
-        if self.specified_prior is None:
-            prior_in_use = self.prior_FIM
+        # record kaug jacobian
+        self.kaug_jac = np.array(jac).T
+
+        # Compute FIM
+        if self.prior_FIM is None:
+            self.prior_FIM = np.zeros((len(params_names), len(params_names)))
         else:
-            prior_in_use = self.specified_prior
+            self.check_model_FIM(FIM=self.prior_FIM)
 
-        # Assemble and analyze results
-        FIM_analysis = FisherResults(
-            list(self.param.keys()),
-            self.measurement_vars,
-            jacobian_info=None,
-            all_jacobian_info=jac,
-            prior_FIM=prior_in_use,
-            store_FIM=self.FIM_store_name,
-            scale_constant_value=self.scale_constant_value,
-        )
-
-        self.jac = jac
-        self.mod = mod
-
-        return FIM_analysis
-
-    def _create_block(self):
-        """
-        Create a pyomo Concrete model and add blocks with different parameter perturbation scenarios.
-
-        Returns
-        -------
-        mod: Concrete Pyomo model
-        """
-
-        # create scenario information for block scenarios
-        scena_gen = ScenarioGenerator(
-            parameter_dict=self.param, formula=self.formula, step=self.step
-        )
-
-        self.scenario_data = scena_gen.ScenarioData
-
-        # a list of dictionary, each one is a parameter dictionary with perturbed parameter values
-        self.scenario_list = self.scenario_data.scenario
-        # dictionary, keys are parameter name, values are a list of scenario index where this parameter is perturbed.
-        self.scenario_num = self.scenario_data.scena_num
-        # dictionary, keys are parameter name, values are the perturbation step
-        self.eps_abs = self.scenario_data.eps_abs
-        self.scena_gen = scena_gen
-
-        # Create a global model
-        mod = pyo.ConcreteModel()
-
-        # Set for block/scenarios
-        mod.scenario = pyo.Set(initialize=self.scenario_data.scenario_indices)
-
-        # Allow user to self-define complex design variables
-        self.create_model(mod=mod, model_option=ModelOptionLib.stage1)
-
-        def block_build(b, s):
-            # create block scenarios
-            self.create_model(mod=b, model_option=ModelOptionLib.stage2)
-
-            # fix parameter values to perturbed values
-            for par in self.param:
-                cuid = pyo.ComponentUID(par)
-                var = cuid.find_component_on(b)
-                var.fix(self.scenario_data.scenario[s][par])
-
-        mod.block = pyo.Block(mod.scenario, rule=block_build)
-
-        # discretize the model
-        if self.discretize_model:
-            mod = self.discretize_model(mod)
-
-        # force design variables in blocks to be equal to global design values
-        for name in self.design_name:
-
-            def fix1(mod, s):
-                cuid = pyo.ComponentUID(name)
-                design_var_global = cuid.find_component_on(mod)
-                design_var = cuid.find_component_on(mod.block[s])
-                return design_var == design_var_global
-
-            con_name = "con" + name
-            mod.add_component(con_name, pyo.Constraint(mod.scenario, expr=fix1))
-
-        return mod
-
-    def _finite_calculation(self, output_record):
-        """
-        Calculate Jacobian for sequential_finite mode
-
-        Parameters
-        ----------
-        output_record: a dict of outputs, keys are scenario names, values are a list of measurements values
-        scena_gen: an object generated by Scenario_creator class
-
-        Returns
-        -------
-        jac: Jacobian matrix, a dictionary, keys are parameter names, values are a list of jacobian values with respect to this parameter
-        """
-        # dictionary form of jacobian
-        jac = {}
-
-        # After collecting outputs from all scenarios, calculate sensitivity
-        for para in self.param.keys():
-            # extract involved scenario No. for each parameter from scenario class
-            involved_s = self.scenario_data.scena_num[para]
-
-            # each parameter has two involved scenarios
-            s1 = involved_s[0]  # positive perturbation
-            s2 = involved_s[1]  # negative perturbation
-            list_jac = []
-            for i in range(len(output_record[s1])):
-                sensi = (
-                    (output_record[s1][i] - output_record[s2][i])
-                    / self.scenario_data.eps_abs[para]
-                    * self.scale_constant_value
-                )
-                if self.scale_nominal_param_value:
-                    sensi *= self.param[para]
-                list_jac.append(sensi)
-            # get Jacobian dict, keys are parameter name, values are sensitivity info
-            jac[para] = list_jac
-
-        return jac
-
-    def _extract_jac(self, m):
-        """
-        Extract jacobian from the stochastic program
-
-        Parameters
-        ----------
-        m: solved stochastic program model
-
-        Returns
-        -------
-        JAC: the overall jacobian as a dictionary
-        """
-        # dictionary form of jacobian
-        jac = {}
-        # loop over parameters
-        for p in self.param.keys():
-            jac_para = []
-            for res in m.measured_variables:
-                jac_para.append(pyo.value(m.sensitivity_jacobian[p, res]))
-            jac[p] = jac_para
-        return jac
-
-    def run_grid_search(
-        self,
-        design_ranges,
-        mode="sequential_finite",
-        tee_option=False,
-        scale_nominal_param_value=False,
-        scale_constant_value=1,
-        store_name=None,
-        read_name=None,
-        store_optimality_as_csv=None,
-        formula="central",
-        step=0.001,
-    ):
-        """
-        Enumerate through full grid search for any number of design variables;
-        solve square problems sequentially to compute FIMs.
-        It calculates FIM with sensitivity information from two modes:
-
-            1. sequential_finite: Calculates a one scenario model multiple times for multiple scenarios.
-               Sensitivity info estimated by finite difference
-            2. direct_kaug: calculate sensitivity by k_aug with direct sensitivity
-
-        Parameters
-        ----------
-        design_ranges:
-            a ``dict``, keys are design variable names,
-            values are a list of design variable values to go over
-        mode:
-            choose from CalculationMode.sequential_finite, .direct_kaug.
-        tee_option:
-            if solver console output is made
-        scale_nominal_param_value:
-            if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value:
-            scale all elements in Jacobian matrix, default is 1.
-        store_name:
-            a string of file name. If not None, store results with this name.
-            It is a pickle file containing all measurement information after solving the
-            model with perturbations.
-            Since there are multiple experiments, results are numbered with a scalar number,
-            and the result for one grid is 'store_name(count).csv' (count is the number of count).
-        read_name:
-            a string of file name. If not None, read result files.
-            It should be a pickle file previously generated by store_name option.
-            Since there are multiple experiments, this string should be the common part of all files;
-            Real name of the file is "read_name(count)", where count is the number of the experiment.
-        store_optimality_as_csv:
-            if True, the design criterion values of grid search results stored with this file name as a csv
-        formula:
-            choose from FiniteDifferenceStep.central, .forward, or .backward.
-            This option is only used for CalculationMode.sequential_finite.
-        step:
-            Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-
-        Returns
-        -------
-        figure_draw_object: a combined result object of class Grid_search_result
-        """
-        # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = ObjectiveLib.zero
-        self.store_optimality_as_csv = store_optimality_as_csv
-
-        # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = scale_constant_value**2
-
-        # to store all FIM results
-        result_combine = {}
-
-        # all lists of values of each design variable to go over
-        design_ranges_list = list(design_ranges.values())
-        # design variable names to go over
-        design_dimension_names = list(design_ranges.keys())
-
-        # iteration 0
+        # Constructing the Covariance of the measurements for the FIM calculation
+        # The following assumes independent measurement error.
+        cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
         count = 0
-        failed_count = 0
-        # how many sets of design variables will be run
-        total_count = 1
-        for rng in design_ranges_list:
-            total_count *= len(rng)
+        for k, v in model.measurement_error.items():
+            cov_y[count, count] = 1 / v
+            count += 1
 
-        time_set = []  # record time for every iteration
+        # ToDo: need to add a covariance matrix for measurements (sigma inverse)
+        # i.e., cov_y = self.cov_y or model.cov_y
+        # Still deciding where this would be best.
 
-        # generate combinations of design variable values to go over
-        search_design_set = product(*design_ranges_list)
+        self.kaug_FIM = self.kaug_jac.T @ cov_y @ self.kaug_jac + self.prior_FIM
 
-        # loop over design value combinations
-        for design_set_iter in search_design_set:
-            # generate the design variable dictionary needed for running compute_FIM
-            # first copy value from design_values
-            design_iter = self.design_vars.variable_names_value.copy()
-            # update the controlled value of certain time points for certain design variables
-            for i, names in enumerate(design_dimension_names):
-                # if the element is a list, all design variables in this list share the same values
-                if type(names) is list or type(names) is tuple:
-                    for n in names:
-                        design_iter[n] = list(design_set_iter)[i]
-                else:
-                    design_iter[names] = list(design_set_iter)[i]
-
-            self.design_vars.variable_names_value = design_iter
-            iter_timer = TicTocTimer()
-            self.logger.info('=======Iteration Number: %s =====', count + 1)
-            self.logger.debug(
-                'Design variable values of this iteration: %s', design_iter
-            )
-            iter_timer.tic(msg=None)
-            # generate store name
-            if store_name is None:
-                store_output_name = None
-            else:
-                store_output_name = store_name + str(count)
-
-            if read_name:
-                read_input_name = read_name + str(count)
-            else:
-                read_input_name = None
-
-            # call compute_FIM to get FIM
-            try:
-                result_iter = self.compute_FIM(
-                    mode=mode,
-                    tee_opt=tee_option,
-                    scale_nominal_param_value=scale_nominal_param_value,
-                    scale_constant_value=scale_constant_value,
-                    store_output=store_output_name,
-                    read_output=read_input_name,
-                    formula=formula,
-                    step=step,
-                )
-
-                count += 1
-
-                result_iter.result_analysis()
-
-                # iteration time
-                iter_t = iter_timer.toc(msg=None)
-                time_set.append(iter_t)
-
-                # give run information at each iteration
-                self.logger.info('This is run %s out of %s.', count, total_count)
-                self.logger.info('The code has run  %s seconds.', sum(time_set))
-                self.logger.info(
-                    'Estimated remaining time:  %s seconds',
-                    (sum(time_set) / (count + 1) * (total_count - count - 1)),
-                )
-
-                # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
-                result_combine[tuple(design_set_iter)] = result_iter
-
-            except:
-                self.logger.warning(
-                    ':::::::::::Warning: Cannot converge this run.::::::::::::'
-                )
-                count += 1
-                failed_count += 1
-                self.logger.warning('failed count:', failed_count)
-                result_combine[tuple(design_set_iter)] = None
-
-        # For user's access
-        self.all_fim = result_combine
-
-        # Create figure drawing object
-        figure_draw_object = GridSearchResult(
-            design_ranges_list,
-            design_dimension_names,
-            result_combine,
-            store_optimality_name=store_optimality_as_csv,
-        )
-
-        self.logger.info('Overall wall clock time [s]:  %s', sum(time_set))
-
-        return figure_draw_object
-
-    def _create_doe_model(self, no_obj=True):
+    # Create the DoE model (with ``scenarios`` from finite differencing scheme)
+    def create_doe_model(self, model=None):
         """
         Add equations to compute sensitivities, FIM, and objective.
+        Builds the DoE model. Adds the scenarios, the sensitivity matrix
+        Q, the FIM, as well as the objective function to the model.
+
+        The function alters the ``model`` input.
+
+        In the single experiment case, ``model`` will be self.model. In the
+        multi-experiment case, ``model`` will be one experiment to be enumerated.
 
         Parameters
-        -----------
-        no_obj: if True, objective function is 0.
+        ----------
+        model: model to add finite difference scenarios
 
-        Return
-        -------
-        model: the DOE model
         """
-        model = self._create_block()
+        if model is None:
+            model = self.model
+        else:
+            # TODO: Add safe naming when a model is passed by the user.
+            # doe_block = pyo.Block()
+            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # model.add_component(doe_block_name, doe_block)
+            pass
 
-        # variables for jacobian and FIM
-        model.regression_parameters = pyo.Set(initialize=list(self.param.keys()))
-        model.measured_variables = pyo.Set(initialize=self.measure_name)
+        # Developer recommendation: use the Cholesky decomposition for D-optimality
+        # The explicit formula is available for benchmarking purposes and is NOT recommended
+        if (
+            self.only_compute_fim_lower
+            and self.objective_option == ObjectiveLib.determinant
+            and not self.Cholesky_option
+        ):
+            raise ValueError(
+                "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
+            )
+
+        # Generate scenarios for finite difference formulae
+        self._generate_scenario_blocks(model=model)
+
+        # Set names for indexing sensitivity matrix (jacobian) and FIM
+        scen_block_ind = min(
+            [
+                k.name.split(".").index("scenario_blocks[0]")
+                for k in model.scenario_blocks[0].unknown_parameters.keys()
+            ]
+        )
+        model.parameter_names = pyo.Set(
+            initialize=[
+                ".".join(k.name.split(".")[(scen_block_ind + 1) :])
+                for k in model.scenario_blocks[0].unknown_parameters.keys()
+            ]
+        )
+        model.output_names = pyo.Set(
+            initialize=[
+                ".".join(k.name.split(".")[(scen_block_ind + 1) :])
+                for k in model.scenario_blocks[0].experiment_outputs.keys()
+            ]
+        )
 
         def identity_matrix(m, i, j):
             if i == j:
@@ -879,165 +769,447 @@ class DesignOfExperiments:
             else:
                 return 0
 
+        ### Initialize the Jacobian if provided by the user
+
+        # If the user provides an initial Jacobian, convert it to a dictionary
+        if self.jac_initial is not None:
+            dict_jac_initialize = {}
+            for i, bu in enumerate(model.output_names):
+                for j, un in enumerate(model.parameter_names):
+                    # Jacobian is a numpy array, rows are experimental outputs, columns are unknown parameters
+                    dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
+
+        # Initialize the Jacobian matrix
+        def initialize_jac(m, i, j):
+            # If provided by the user, use the values now stored in the dictionary
+            if self.jac_initial is not None:
+                return dict_jac_initialize[(i, j)]
+            # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
+            else:
+                raise AttributeError(
+                    "Jacobian being initialized when the jac_initial attribute is None. Please contact the developers as you should not see this error."
+                )
+
         model.sensitivity_jacobian = pyo.Var(
-            model.regression_parameters, model.measured_variables, initialize=0.1
+            model.output_names, model.parameter_names, initialize=initialize_jac
         )
 
-        if self.fim_initial:
-            dict_fim_initialize = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.regression_parameters):
-                    dict_fim_initialize[(bu, un)] = self.fim_initial[i][j]
+        # Initialize the FIM
+        if self.fim_initial is not None:
+            dict_fim_initialize = {
+                (bu, un): self.fim_initial[i][j]
+                for i, bu in enumerate(model.parameter_names)
+                for j, un in enumerate(model.parameter_names)
+            }
 
         def initialize_fim(m, j, d):
             return dict_fim_initialize[(j, d)]
 
-        if self.fim_initial:
+        if self.fim_initial is not None:
             model.fim = pyo.Var(
-                model.regression_parameters,
-                model.regression_parameters,
-                initialize=initialize_fim,
+                model.parameter_names, model.parameter_names, initialize=initialize_fim
             )
         else:
             model.fim = pyo.Var(
-                model.regression_parameters,
-                model.regression_parameters,
-                initialize=identity_matrix,
+                model.parameter_names, model.parameter_names, initialize=identity_matrix
             )
 
-        # move the L matrix initial point to a dictionary
-        if type(self.L_initial) != type(None):
-            dict_cho = {}
-            for i, bu in enumerate(model.regression_parameters):
-                for j, un in enumerate(model.regression_parameters):
-                    dict_cho[(bu, un)] = self.L_initial[i][j]
-
-        # use the L dictionary to initialize L matrix
-        def init_cho(m, i, j):
-            return dict_cho[(i, j)]
-
+        # To-Do: Look into this functionality.....
         # if cholesky, define L elements as variables
-        if self.Cholesky_option:
-            # Define elements of Cholesky decomposition matrix as Pyomo variables and either
-            # Initialize with L in L_initial
-            if type(self.L_initial) != type(None):
-                model.L_ele = pyo.Var(
-                    model.regression_parameters,
-                    model.regression_parameters,
-                    initialize=init_cho,
-                )
-            # or initialize with the identity matrix
-            else:
-                model.L_ele = pyo.Var(
-                    model.regression_parameters,
-                    model.regression_parameters,
-                    initialize=identity_matrix,
-                )
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+            model.L = pyo.Var(
+                model.parameter_names, model.parameter_names, initialize=identity_matrix
+            )
 
             # loop over parameter name
-            for i, c in enumerate(model.regression_parameters):
-                for j, d in enumerate(model.regression_parameters):
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
                     # fix the 0 half of L matrix to be 0.0
                     if i < j:
-                        model.L_ele[c, d].fix(0.0)
+                        model.L[c, d].fix(0.0)
                     # Give LB to the diagonal entries
-                    if self.L_LB:
+                    if self.L_diagonal_lower_bound:
                         if c == d:
-                            model.L_ele[c, d].setlb(self.L_LB)
+                            model.L[c, d].setlb(self.L_diagonal_lower_bound)
 
         # jacobian rule
-        def jacobian_rule(m, p, n):
+        def jacobian_rule(m, n, p):
             """
             m: Pyomo model
-            p: parameter
-            n: response
+            n: experimental output
+            p: unknown parameter
             """
+            fd_step_mult = 1
             cuid = pyo.ComponentUID(n)
-            var_up = cuid.find_component_on(m.block[self.scenario_num[p][0]])
-            var_lo = cuid.find_component_on(m.block[self.scenario_num[p][1]])
+            param_ind = m.parameter_names.data().index(p)
+
+            # Different FD schemes lead to different scenarios for the computation
+            if self.fd_formula == FiniteDifferenceStep.central:
+                s1 = param_ind * 2
+                s2 = param_ind * 2 + 1
+                fd_step_mult = 2
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                s1 = param_ind + 1
+                s2 = 0
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                s1 = 0
+                s2 = param_ind + 1
+
+            var_up = cuid.find_component_on(m.scenario_blocks[s1])
+            var_lo = cuid.find_component_on(m.scenario_blocks[s2])
+
+            param = m.parameter_scenarios[max(s1, s2)]
+            param_loc = pyo.ComponentUID(param).find_component_on(m.scenario_blocks[0])
+            param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
+            param_diff = param_val * fd_step_mult * self.step
+
             if self.scale_nominal_param_value:
                 return (
-                    m.sensitivity_jacobian[p, n]
+                    m.sensitivity_jacobian[n, p]
                     == (var_up - var_lo)
-                    / self.eps_abs[p]
-                    * self.param[p]
+                    / param_diff
+                    * param_val
                     * self.scale_constant_value
                 )
             else:
                 return (
-                    m.sensitivity_jacobian[p, n]
-                    == (var_up - var_lo) / self.eps_abs[p] * self.scale_constant_value
+                    m.sensitivity_jacobian[n, p]
+                    == (var_up - var_lo) / param_diff * self.scale_constant_value
                 )
 
         # A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
-        fim_initial_dict = {}
-        for i, bu in enumerate(model.regression_parameters):
-            for j, un in enumerate(model.regression_parameters):
-                fim_initial_dict[(bu, un)] = self.prior_FIM[i][j]
+        fim_initial_dict = {
+            (bu, un): self.prior_FIM[i][j]
+            for i, bu in enumerate(model.parameter_names)
+            for j, un in enumerate(model.parameter_names)
+        }
 
         def read_prior(m, i, j):
             return fim_initial_dict[(i, j)]
 
-        model.priorFIM = pyo.Expression(
-            model.regression_parameters, model.regression_parameters, rule=read_prior
+        model.prior_FIM = pyo.Expression(
+            model.parameter_names, model.parameter_names, rule=read_prior
         )
 
+        # Off-diagonal elements are symmetric, so only half of the off-diagonal elements need to be specified.
         def fim_rule(m, p, q):
             """
             m: Pyomo model
-            p: parameter
-            q: parameter
+            p: unknown parameter
+            q: unknown parameter
             """
-            return (
-                m.fim[p, q]
-                == sum(
-                    1
-                    / self.measurement_vars.variance[n]
-                    * m.sensitivity_jacobian[p, n]
-                    * m.sensitivity_jacobian[q, n]
-                    for n in model.measured_variables
+            p_ind = list(m.parameter_names).index(p)
+            q_ind = list(m.parameter_names).index(q)
+
+            # If the row is less than the column, skip the constraint
+            # This logic is consistent with making the FIM a lower
+            # triangular matrix (as is done later in this function)
+            if p_ind < q_ind:
+                if self.only_compute_fim_lower:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.fim[p, q] == m.fim[q, p]
+            else:
+                return (
+                    m.fim[p, q]
+                    == sum(
+                        1
+                        / m.scenario_blocks[0].measurement_error[
+                            pyo.ComponentUID(n).find_component_on(m.scenario_blocks[0])
+                        ]
+                        * m.sensitivity_jacobian[n, p]
+                        * m.sensitivity_jacobian[n, q]
+                        for n in m.output_names
+                    )
+                    + m.prior_FIM[p, q]
                 )
-                + m.priorFIM[p, q] * self.fim_scale_constant_value
-            )
 
         model.jacobian_constraint = pyo.Constraint(
-            model.regression_parameters, model.measured_variables, rule=jacobian_rule
+            model.output_names, model.parameter_names, rule=jacobian_rule
         )
         model.fim_constraint = pyo.Constraint(
-            model.regression_parameters, model.regression_parameters, rule=fim_rule
+            model.parameter_names, model.parameter_names, rule=fim_rule
         )
 
-        return model
+        if self.only_compute_fim_lower:
+            # Fix the upper half of the FIM matrix elements to be 0.0.
+            # This eliminates extra variables and ensures the expected number of
+            # degrees of freedom in the optimization problem.
+            for ind_p, p in enumerate(model.parameter_names):
+                for ind_q, q in enumerate(model.parameter_names):
+                    if ind_p < ind_q:
+                        model.fim[p, q].fix(0.0)
 
-    def _add_objective(self, m):
-        def cholesky_imp(m, c, d):
+    # Create scenario block structure
+    def _generate_scenario_blocks(self, model=None):
+        """
+        Generates the modeling blocks corresponding to the scenarios for
+        the finite differencing scheme to compute the sensitivity jacobian
+        to compute the FIM.
+
+        The function alters the ``model`` input.
+
+        In the single experiment case, ``model`` will be self.model. In the
+        multi-experiment case, ``model`` will be one experiment to be enumerated.
+
+        Parameters
+        ----------
+        model: model to add finite difference scenarios
+        """
+        # If model is none, assume it is self.model
+        if model is None:
+            model = self.model
+
+        # Generate initial scenario to populate unknown parameter values
+        model.base_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
+
+        # Check the model that labels are correct
+        self.check_model_labels(model=model.base_model)
+
+        # Gather lengths of label structures for later use in the model build process
+        self.n_parameters = len(model.base_model.unknown_parameters)
+        self.n_measurement_error = len(model.base_model.measurement_error)
+        self.n_experiment_inputs = len(model.base_model.experiment_inputs)
+        self.n_experiment_outputs = len(model.base_model.experiment_outputs)
+
+        if self.n_measurement_error != self.n_experiment_outputs:
+            raise ValueError(
+                "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
+                    self.n_experiment_outputs, self.n_measurement_error
+                )
+            )
+
+        self.logger.info("Experiment output and measurement error lengths match.")
+
+        # Check that the user input FIM and Jacobian are the correct dimension
+        if self.prior_FIM is not None:
+            self.check_model_FIM(FIM=self.prior_FIM)
+        else:
+            self.prior_FIM = np.zeros((self.n_parameters, self.n_parameters))
+        if self.fim_initial is not None:
+            self.check_model_FIM(FIM=self.fim_initial)
+        else:
+            self.fim_initial = np.eye(self.n_parameters) + self.prior_FIM
+        if self.jac_initial is not None:
+            self.check_model_jac(self.jac_initial)
+        else:
+            self.jac_initial = np.eye(self.n_experiment_outputs, self.n_parameters)
+
+        # Make a new Suffix to hold which scenarios are associated with parameters
+        model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+
+        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        if self.fd_formula == FiniteDifferenceStep.central:
+            model.parameter_scenarios.update(
+                (2 * ind, k)
+                for ind, k in enumerate(model.base_model.unknown_parameters.keys())
+            )
+            model.parameter_scenarios.update(
+                (2 * ind + 1, k)
+                for ind, k in enumerate(model.base_model.unknown_parameters.keys())
+            )
+            model.scenarios = range(len(model.base_model.unknown_parameters) * 2)
+        elif self.fd_formula in [
+            FiniteDifferenceStep.forward,
+            FiniteDifferenceStep.backward,
+        ]:
+            model.parameter_scenarios.update(
+                (ind + 1, k)
+                for ind, k in enumerate(model.base_model.unknown_parameters.keys())
+            )
+            model.scenarios = range(len(model.base_model.unknown_parameters) + 1)
+        else:
+            raise AttributeError(
+                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+            )
+
+        # TODO: Allow Params for `unknown_parameters` and `experiment_inputs`
+        #       May need to make a new converter Param to Var that allows non-string names/references to be passed
+        #       Waiting on updates to the parmest params_to_vars utility function.....
+
+        # Run base model to get initialized model and check model function
+        for comp in model.base_model.experiment_inputs:
+            comp.fix()
+
+        try:
+            res = self.solver.solve(model.base_model, tee=self.tee)
+            assert res.solver.termination_condition == "optimal"
+            self.logger.info("Model from experiment solved.")
+        except:
+            raise RuntimeError(
+                "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+            )
+
+        for comp in model.base_model.experiment_inputs:
+            comp.unfix()
+
+        # Generate blocks for finite difference scenarios
+        def build_block_scenarios(b, s):
+            # Generate model for the finite difference scenario
+            m = b.model()
+            b.transfer_attributes_from(m.base_model.clone())
+
+            # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
+            if self.fd_formula in [
+                FiniteDifferenceStep.forward,
+                FiniteDifferenceStep.backward,
+            ]:
+                if s == 0:
+                    return
+
+            param = m.parameter_scenarios[s]
+
+            # Perturbation to be (1 + diff) * param_value
+            if self.fd_formula == FiniteDifferenceStep.central:
+                diff = self.step * (
+                    (-1) ** s
+                )  # Positive perturbation, even; negative, odd
+            elif self.fd_formula == FiniteDifferenceStep.backward:
+                diff = self.step * -1  # Backward always negative perturbation
+            elif self.fd_formula == FiniteDifferenceStep.forward:
+                diff = self.step  # Forward always positive
+            else:
+                # To-Do: add an error message for this as not being implemented yet
+                diff = 0
+                pass
+
+            # Update parameter values for the given finite difference scenario
+            pyo.ComponentUID(param, context=m.base_model).find_component_on(
+                b
+            ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
+            res = self.solver.solve(b, tee=self.tee)
+
+        model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
+
+        # To-Do: this might have to change if experiment inputs have
+        # a different value in the Suffix (currently it is the CUID)
+        design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
+
+        # Add constraints to equate block design with global design:
+        for ind, d in enumerate(design_vars):
+            con_name = "global_design_eq_con_" + str(ind)
+
+            # Constraint rule for global design constraints
+            def global_design_fixing(m, s):
+                if s == 0:
+                    return pyo.Constraint.Skip
+                block_design_var = pyo.ComponentUID(
+                    d, context=m.scenario_blocks[0]
+                ).find_component_on(m.scenario_blocks[s])
+                return d == block_design_var
+
+            model.add_component(
+                con_name, pyo.Constraint(model.scenarios, rule=global_design_fixing)
+            )
+
+        # Clean up the base model used to generate the scenarios
+        model.del_component(model.base_model)
+
+        # ToDo: consider this logic? Multi-block systems need something more fancy
+        self._built_scenarios = True
+
+    # Create objective function
+    def create_objective_function(self, model=None):
+        """
+        Generates the objective function as an expression and as a
+        Pyomo Objective object
+
+        The function alters the ``model`` input.
+
+        In the single experiment case, ``model`` will be self.model. In the
+        multi-experiment case, ``model`` will be one experiment to be enumerated.
+
+        Parameters
+        ----------
+        model: model to add finite difference scenarios
+        """
+        if model is None:
+            model = self.model
+
+        if self.objective_option not in [
+            ObjectiveLib.determinant,
+            ObjectiveLib.trace,
+            ObjectiveLib.zero,
+        ]:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
+
+        if not hasattr(model, "fim"):
+            raise RuntimeError(
+                "Model provided does not have variable `fim`. Please make sure the model is built properly before creating the objective."
+            )
+
+        small_number = 1e-10
+
+        # Make objective block for constraints connected to objective
+        model.obj_cons = pyo.Block()
+
+        # Assemble the FIM matrix. This is helpful for initialization!
+        fim_vals = [
+            model.fim[bu, un].value
+            for i, bu in enumerate(model.parameter_names)
+            for j, un in enumerate(model.parameter_names)
+        ]
+        fim = np.array(fim_vals).reshape(
+            len(model.parameter_names), len(model.parameter_names)
+        )
+
+        ### Initialize the Cholesky decomposition matrix
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+            # Calculate the eigenvalues of the FIM matrix
+            eig = np.linalg.eigvals(fim)
+
+            # If the smallest eigenvalue is (practically) negative, add a diagonal matrix to make it positive definite
+            small_number = 1e-10
+            if min(eig) < small_number:
+                fim = fim + np.eye(len(model.parameter_names)) * (
+                    small_number - min(eig)
+                )
+
+            # Compute the Cholesky decomposition of the FIM matrix
+            L = np.linalg.cholesky(fim)
+
+            # Initialize the Cholesky matrix
+            for i, c in enumerate(model.parameter_names):
+                for j, d in enumerate(model.parameter_names):
+                    model.L[c, d].value = L[i, j]
+
+        def cholesky_imp(b, c, d):
             """
             Calculate Cholesky L matrix using algebraic constraints
             """
-            # If it is the left bottom half of L
-            if list(self.param.keys()).index(c) >= list(self.param.keys()).index(d):
+            # If the row is greater than or equal to the column, we are in the
+            # lower triangle region of the L and FIM matrices.
+            # This region is where our equations are well-defined.
+            m = b.model()
+            if list(m.parameter_names).index(c) >= list(m.parameter_names).index(d):
                 return m.fim[c, d] == sum(
-                    m.L_ele[c, list(self.param.keys())[k]]
-                    * m.L_ele[d, list(self.param.keys())[k]]
-                    for k in range(list(self.param.keys()).index(d) + 1)
+                    m.L[c, m.parameter_names.at(k + 1)]
+                    * m.L[d, m.parameter_names.at(k + 1)]
+                    for k in range(list(m.parameter_names).index(d) + 1)
                 )
             else:
                 # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
 
-        def trace_calc(m):
+        def trace_calc(b):
             """
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
-            return m.trace == sum(m.fim[j, j] for j in m.regression_parameters)
+            m = b.model()
+            return m.trace == sum(m.fim[j, j] for j in m.parameter_names)
 
-        def det_general(m):
+        def determinant_general(b):
             r"""Calculate determinant. Can be applied to FIM of any size.
-            det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            det(A) = \sum_{\sigma in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
             """
-            r_list = list(range(len(m.regression_parameters)))
+            m = b.model()
+            r_list = list(range(len(m.parameter_names)))
             # get all permutations
             object_p = permutations(r_list)
             list_p = list(object_p)
@@ -1049,109 +1221,1012 @@ class DesignOfExperiments:
                 x_order = list_p[i]
                 # sigma_i is the value in the i-th position after the reordering \sigma
                 for x in range(len(x_order)):
-                    for y, element in enumerate(m.regression_parameters):
+                    for y, element in enumerate(m.parameter_names):
                         if x_order[x] == y:
                             name_order.append(element)
-
             # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
-                * sum(
-                    m.fim[each, name_order[b]]
-                    for b, each in enumerate(m.regression_parameters)
+                * math.prod(
+                    m.fim[m.parameter_names.at(val + 1), m.parameter_names.at(ind + 1)]
+                    for ind, val in enumerate(list_p[d])
                 )
                 for d in range(len(list_p))
             )
-            return m.det == det_perm
+            return m.determinant == det_perm
 
-        if self.Cholesky_option:
-            m.cholesky_cons = pyo.Constraint(
-                m.regression_parameters, m.regression_parameters, rule=cholesky_imp
+        if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
+            model.obj_cons.cholesky_cons = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=cholesky_imp
             )
-            m.Obj = pyo.Objective(
-                expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.regression_parameters),
+            model.objective = pyo.Objective(
+                expr=2 * sum(pyo.log10(model.L[j, j]) for j in model.parameter_names),
                 sense=pyo.maximize,
             )
-        # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-        elif self.objective_option == ObjectiveLib.det:
-            m.det_rule = pyo.Constraint(rule=det_general)
-            m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
-        # if not determinant or cholesky, calculating the OBJ with trace
+
+        elif self.objective_option == ObjectiveLib.determinant:
+            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            model.determinant = pyo.Var(
+                initialize=np.linalg.det(fim), bounds=(small_number, None)
+            )
+            model.obj_cons.determinant_rule = pyo.Constraint(rule=determinant_general)
+            model.objective = pyo.Objective(
+                expr=pyo.log10(model.determinant + 1e-6), sense=pyo.maximize
+            )
+
         elif self.objective_option == ObjectiveLib.trace:
-            m.trace_rule = pyo.Constraint(rule=trace_calc)
-            m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
+            # if not determinant or cholesky, calculating the OBJ with trace
+            model.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
+            model.obj_cons.trace_rule = pyo.Constraint(rule=trace_calc)
+            model.objective = pyo.Objective(
+                expr=pyo.log10(model.trace), sense=pyo.maximize
+            )
+
         elif self.objective_option == ObjectiveLib.zero:
-            m.Obj = pyo.Objective(expr=0)
+            # add dummy objective function
+            model.objective = pyo.Objective(expr=0)
 
-        return m
-
-    def _fix_design(self, m, design_val, fix_opt=True, optimize_option=None):
+    # Check to see if the model has all the required suffixes
+    def check_model_labels(self, model=None):
         """
-        Fix design variable
+        Checks if the model contains the necessary suffixes for the
+        DoE model to be constructed automatically.
 
         Parameters
         ----------
-        m: model
-        design_val: design variable values dict
-        fix_opt: if True, fix. Else, unfix
-        optimize: a dictionary, keys are design variable name, values are True or False, deciding if this design variable is optimized as DOF this time
+        model: model for suffix checking
 
-        Returns
-        -------
-        m: model
         """
-        for name in self.design_name:
-            cuid = pyo.ComponentUID(name)
-            var = cuid.find_component_on(m)
-            if fix_opt:
-                var.fix(design_val[name])
-            else:
-                if optimize_option is None:
-                    var.unfix()
-                else:
-                    if optimize_option[name]:
-                        var.unfix()
-        return m
+        # Check that experimental outputs exist
+        try:
+            outputs = [k.name for k, v in model.experiment_outputs.items()]
+        except:
+            raise RuntimeError(
+                "Experiment model does not have suffix " + '"experiment_outputs".'
+            )
 
-    def _get_default_ipopt_solver(self):
-        """Default solver"""
-        solver = SolverFactory('ipopt')
-        solver.options['linear_solver'] = 'ma57'
-        solver.options['halt_on_ampl_error'] = 'yes'
-        solver.options['max_iter'] = 3000
-        return solver
+        # Check that experimental inputs exist
+        try:
+            outputs = [k.name for k, v in model.experiment_inputs.items()]
+        except:
+            raise RuntimeError(
+                "Experiment model does not have suffix " + '"experiment_inputs".'
+            )
 
-    def _solve_doe(self, m, fix=False, opt_option=None):
-        """Solve DOE model.
-        If it's a square problem, fix design variable and solve.
-        Else, fix design variable and solve square problem firstly, then unfix them and solve the optimization problem
+        # Check that unknown parameters exist
+        try:
+            outputs = [k.name for k, v in model.unknown_parameters.items()]
+        except:
+            raise RuntimeError(
+                "Experiment model does not have suffix " + '"unknown_parameters".'
+            )
+
+        # Check that measurement errors exist
+        try:
+            outputs = [k.name for k, v in model.measurement_error.items()]
+        except:
+            raise RuntimeError(
+                "Experiment model does not have suffix " + '"measurement_error".'
+            )
+
+        self.logger.info("Model has expected labels.")
+
+    # Check the FIM shape against what is expected from the model.
+    def check_model_FIM(self, model=None, FIM=None):
+        """
+        Checks if the specified matrix, FIM, matches the shape expected
+        from the model. This method should only be called after the
+        model has been probed for the length of the unknown parameter,
+        experiment input, experiment output, and measurement error
+        has been stored to the object.
 
         Parameters
         ----------
-        m:model
-        fix: if true, solve two times (square first). Else, just solve the square problem
-        opt_option: a dictionary, keys are design variable name, values are True or False,
-            deciding if this design variable is optimized as DOF this time.
-            If None, all design variables are optimized as DOF this time.
-
-        Returns
-        -------
-        solver_results: solver results
+        model: model for suffix checking, Default: None, (self.model)
+        FIM: FIM value to check on the model
         """
-        ### Solve square problem
-        mod = self._fix_design(
-            m, self.design_values, fix_opt=fix, optimize_option=opt_option
+        if model is None:
+            model = self.model
+
+        if FIM.shape != (self.n_parameters, self.n_parameters):
+            raise ValueError(
+                "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+                    self.n_parameters, self.n_parameters, FIM.shape[0], FIM.shape[1]
+                )
+            )
+
+        self.logger.info("FIM provided matches expected dimensions from model.")
+
+    # Check the jacobian shape against what is expected from the model.
+    def check_model_jac(self, jac=None):
+        if jac.shape != (self.n_experiment_outputs, self.n_parameters):
+            raise ValueError(
+                "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
+                    self.n_experiment_outputs,
+                    self.n_parameters,
+                    jac.shape[0],
+                    jac.shape[1],
+                )
+            )
+
+        self.logger.info("Jacobian provided matches expected dimensions from model.")
+
+    # Update the FIM for the specified model
+    def update_FIM_prior(self, model=None, FIM=None):
+        """
+        Updates the prior FIM on the model object. This may be useful when
+        running a loop and the user doesn't want to rebuild the model
+        because it is expensive to build/initialize.
+
+        Parameters
+        ----------
+        model: model where FIM prior is to be updated, Default: None, (self.model)
+        FIM: 2D np array to be the new FIM prior, Default: None
+        """
+        if model is None:
+            model = self.model
+
+        # Check FIM input
+        if FIM is None:
+            raise ValueError(
+                "FIM input for update_FIM_prior must be a 2D, square numpy array."
+            )
+
+        if not hasattr(model, "fim"):
+            raise RuntimeError(
+                "``fim`` is not defined on the model provided. Please build the model first."
+            )
+
+        self.check_model_FIM(model=model, FIM=FIM)
+
+        # Update FIM prior
+        for ind1, p1 in enumerate(model.parameter_names):
+            for ind2, p2 in enumerate(model.parameter_names):
+                model.prior_FIM[p1, p2].set_value(FIM[ind1, ind2])
+
+        self.logger.info("FIM prior has been updated.")
+
+    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # Or leave this to the user?????
+    def update_unknown_parameter_values(self, model=None, param_vals=None):
+        raise NotImplementedError(
+            "Updating unknown parameter values not yet supported."
         )
 
-        # if user gives solver, use this solver. if not, use default IPOPT solver
-        solver_result = self.solver.solve(mod, tee=self.tee_opt)
+    # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
+    def compute_FIM_full_factorial(
+        self, model=None, design_ranges=None, method="sequential"
+    ):
+        """
+        Will run a simulation-based full factorial exploration of
+        the experimental input space (i.e., a ``grid search`` or
+        ``parameter sweep``) to understand how the FIM metrics
+        change as a function of the experimental design space.
 
-        return solver_result
+        Parameters
+        ----------
+        model: model to perform the full factorial exploration on
+        design_ranges: dict of lists, of the form {<var_name>: [start, stop, numsteps]}
+        method: string to specify which method should be used
+                options are ``kaug`` and ``sequential``
 
+        """
+        # Start timer
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info("Beginning Full Factorial Design.")
+
+        # Make new model for factorial design
+        self.factorial_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
+        model = self.factorial_model
+
+        # Permute the inputs to be aligned with the experiment input indices
+        design_ranges_enum = {k: np.linspace(*v) for k, v in design_ranges.items()}
+        design_map = {
+            ind: (k[0].name, k[0])
+            for ind, k in enumerate(model.experiment_inputs.items())
+        }
+
+        # Make the full space
+        try:
+            valid_inputs = 0
+            des_ranges = []
+            for k, v in design_map.items():
+                if v[0] in design_ranges_enum.keys():
+                    des_ranges.append(design_ranges_enum[v[0]])
+                    valid_inputs += 1
+            assert valid_inputs > 0
+
+            factorial_points = product(*des_ranges)
+        except:
+            raise ValueError(
+                "Design ranges keys must be a subset of experimental design names."
+            )
+
+        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # ToDo: Also, make this a result object, or more user friendly.
+        fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
+        fim_factorial_results.update(
+            {
+                "log10 D-opt": [],
+                "log10 A-opt": [],
+                "log10 E-opt": [],
+                "log10 ME-opt": [],
+                "solve_time": [],
+            }
+        )
+
+        succeses = 0
+        failures = 0
+        total_points = np.prod(
+            np.array([len(v) for k, v in design_ranges_enum.items()])
+        )
+        time_set = []
+        curr_point = 1  # Initial current point
+        for design_point in factorial_points:
+            # Fix design variables at fixed experimental design point
+            for i in range(len(design_point)):
+                design_map[i][1].fix(design_point[i])
+
+            # Timing and logging objects
+            self.logger.info("=======Iteration Number: %s =====", curr_point)
+            iter_timer = TicTocTimer()
+            iter_timer.tic(msg=None)
+
+            # Compute FIM with given options
+            try:
+                curr_point = succeses + failures + 1
+
+                # Logging information for each run
+                self.logger.info("This is run %s out of %s.", curr_point, total_points)
+
+                # Attempt the FIM computation
+                self.compute_FIM(model=model, method=method)
+                succeses += 1
+
+                # iteration time
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+                # More logging
+                self.logger.info(
+                    "The code has run for %s seconds.", round(sum(time_set), 2)
+                )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (curr_point) * (total_points - curr_point + 1),
+                        2,
+                    ),
+                )
+            except:
+                self.logger.warning(
+                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                )
+                failures += 1
+                self.logger.warning("failed count:", failures)
+
+                self._computed_FIM = np.zeros(self.prior_FIM.shape)
+
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+            FIM = self._computed_FIM
+
+            # Compute and record metrics on FIM
+            D_opt = np.log10(np.linalg.det(FIM))
+            A_opt = np.log10(np.trace(FIM))
+            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
+            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            # Warn the user if there is a ``large`` imaginary component (should not be)
+            if abs(E_vals.imag[E_ind]) > 1e-8:
+                self.logger.warning(
+                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
+                )
+
+            # If the real value is less than or equal to zero, set the E_opt value to nan
+            if E_vals.real[E_ind] <= 0:
+                E_opt = np.nan
+            else:
+                E_opt = np.log10(E_vals.real[E_ind])
+
+            ME_opt = np.log10(np.linalg.cond(FIM))
+
+            # Append the values for each of the experiment inputs
+            for k, v in model.experiment_inputs.items():
+                fim_factorial_results[k.name].append(pyo.value(k))
+
+            fim_factorial_results["log10 D-opt"].append(D_opt)
+            fim_factorial_results["log10 A-opt"].append(A_opt)
+            fim_factorial_results["log10 E-opt"].append(E_opt)
+            fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["solve_time"].append(time_set[-1])
+
+        self.fim_factorial_results = fim_factorial_results
+
+        return self.fim_factorial_results
+
+    # TODO: Overhaul plotting functions to not use strings
+    # TODO: Make the plotting functionalities work for >2 design features
+    def draw_factorial_figure(
+        self,
+        results=None,
+        sensitivity_design_variables=None,
+        fixed_design_variables=None,
+        full_design_variable_names=None,
+        title_text="",
+        xlabel_text="",
+        ylabel_text="",
+        figure_file_name=None,
+        font_axes=16,
+        font_tick=14,
+        log_scale=True,
+    ):
+        """
+        Extract results needed for drawing figures from the results dictionary provided by
+        the ``compute_FIM_full_factorial`` function.
+
+        Draw either the 1D sensitivity curve or 2D heatmap.
+
+        Parameters
+        ----------
+        results: dictionary, results dictionary from ``compute_FIM_full_factorial``, default: None (self.fim_factorial_results)
+        sensitivity_design_variables: a list, design variable names to draw sensitivity
+        fixed_design_variables: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
+        full_design_variable_names: a list, all the design variables in the problem.
+        title_text: a string, name for the figure
+        xlabel_text: a string, label for the x-axis of the figure (default: last design variable name)
+            In a 1D sensitivity curve, it should be design variable by which the curve is drawn.
+            In a 2D heatmap, it should be the second design variable in the design_ranges
+        ylabel_text: a string, label for the y-axis of the figure (default: None (1D); first design variable name (2D))
+            A 1D sensitivity curve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
+        figure_file_name: string or Path, path to save the figure as
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        """
+        if results is None:
+            if not hasattr(self, "fim_factorial_results"):
+                raise RuntimeError(
+                    "Results must be provided or the compute_FIM_full_factorial function must be run."
+                )
+            results = self.fim_factorial_results
+            full_design_variable_names = [
+                k.name for k, v in self.factorial_model.experiment_inputs.items()
+            ]
+        else:
+            if full_design_variable_names is None:
+                raise ValueError(
+                    "If results object is provided, you must include all the design variable names."
+                )
+
+        des_names = full_design_variable_names
+
+        # Inputs must exist for the function to do anything
+        # ToDo: Put in a default value function?????
+        if sensitivity_design_variables is None:
+            raise ValueError("``sensitivity_design_variables`` must be included.")
+
+        if fixed_design_variables is None:
+            raise ValueError("``fixed_design_variables`` must be included.")
+
+        # Check that the provided design variables are within the results object
+        check_des_vars = True
+        for k, v in fixed_design_variables.items():
+            check_des_vars *= k in ([k2 for k2, v2 in results.items()])
+        check_sens_vars = True
+        for k in sensitivity_design_variables:
+            check_sens_vars *= k in [k2 for k2, v2 in results.items()]
+
+        if not check_des_vars:
+            raise ValueError(
+                "Fixed design variables do not all appear in the results object keys."
+            )
+        if not check_sens_vars:
+            raise ValueError(
+                "Sensitivity design variables do not all appear in the results object keys."
+            )
+
+        # ToDo: Make it possible to plot pair-wise sensitivities for all variables
+        #       e.g. a curve like low-dimensional posterior distributions
+        if len(sensitivity_design_variables) > 2:
+            raise NotImplementedError(
+                "Currently, only 1D and 2D sensitivity plotting is supported."
+            )
+
+        if len(fixed_design_variables.keys()) + len(
+            sensitivity_design_variables
+        ) != len(des_names):
+            raise ValueError(
+                "Error: All design variables that are not used to generate sensitivity plots must be fixed."
+            )
+
+        if type(results) is dict:
+            results_pd = pd.DataFrame(results)
+        else:
+            results_pd = results
+
+        # generate a combination of logic sentences to filter the results of the DOF needed.
+        # an example filter: (self.store_all_results_dataframe["CA0"]==5).
+        if len(fixed_design_variables.keys()) != 0:
+            filter = ""
+            i = 0
+            for k, v in fixed_design_variables.items():
+                filter += "(results_pd['"
+                filter += str(k)
+                filter += "']=="
+                filter += str(v)
+                filter += ")"
+                if i < (len(fixed_design_variables.keys()) - 1):
+                    filter += "&"
+                i += 1
+            # extract results with other dimensions fixed
+            figure_result_data = results_pd.loc[eval(filter)]
+
+        # if there is no other fixed dimensions
+        else:
+            figure_result_data = results_pd
+
+        # Add attributes for drawing figures in later functions
+        self.figure_result_data = figure_result_data
+        self.figure_sens_des_vars = sensitivity_design_variables
+        self.figure_fixed_des_vars = fixed_design_variables
+
+        # if one design variable name is given as DOF, draw 1D sensitivity curve
+        if len(self.figure_sens_des_vars) == 1:
+            self._curve1D(
+                title_text,
+                xlabel_text,
+                font_axes=font_axes,
+                font_tick=font_tick,
+                log_scale=log_scale,
+                figure_file_name=figure_file_name,
+            )
+        # if two design variable names are given as DOF, draw 2D heatmaps
+        elif len(self.figure_sens_des_vars) == 2:
+            self._heatmap(
+                title_text,
+                xlabel_text,
+                ylabel_text,
+                font_axes=font_axes,
+                font_tick=font_tick,
+                log_scale=log_scale,
+                figure_file_name=figure_file_name,
+            )
+        # ToDo: Add the multidimensional plotting
+        else:
+            pass
+
+    def _curve1D(
+        self,
+        title_text,
+        xlabel_text,
+        font_axes=16,
+        font_tick=14,
+        figure_file_name=None,
+        log_scale=True,
+    ):
+        """
+        Draw 1D sensitivity curves for all design criteria
+
+        Parameters
+        ----------
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
+        font_axes: axes label font size
+        font_tick: tick label font size
+        figure_file_name: string or Path, path to save the figure as
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns
+        --------
+        4 Figures of 1D sensitivity curves for each criteria
+        """
+        if figure_file_name is not None:
+            show_fig = False
+        else:
+            show_fig = True
+
+        # extract the range of the DOF design variable
+        x_range = self.figure_result_data[self.figure_sens_des_vars[0]].values.tolist()
+
+        # decide if the results are log scaled
+        if log_scale:
+            y_range_A = np.log10(self.figure_result_data["log10 A-opt"].values.tolist())
+            y_range_D = np.log10(self.figure_result_data["log10 D-opt"].values.tolist())
+            y_range_E = np.log10(self.figure_result_data["log10 E-opt"].values.tolist())
+            y_range_ME = np.log10(
+                self.figure_result_data["log10 ME-opt"].values.tolist()
+            )
+        else:
+            y_range_A = self.figure_result_data["log10 A-opt"].values.tolist()
+            y_range_D = self.figure_result_data["log10 D-opt"].values.tolist()
+            y_range_E = self.figure_result_data["log10 E-opt"].values.tolist()
+            y_range_ME = self.figure_result_data["log10 ME-opt"].values.tolist()
+
+        # Draw A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_A)
+        ax.scatter(x_range, y_range_A)
+        ax.set_ylabel("$log_{10}$ Trace")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": A-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
+
+        # Draw D-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_D)
+        ax.scatter(x_range, y_range_D)
+        ax.set_ylabel("$log_{10}$ Determinant")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": D-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+            )
+
+        # Draw E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_E)
+        ax.scatter(x_range, y_range_E)
+        ax.set_ylabel("$log_{10}$ Minimal eigenvalue")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": E-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+            )
+
+        # Draw Modified E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_ME)
+        ax.scatter(x_range, y_range_ME)
+        ax.set_ylabel("$log_{10}$ Condition number")
+        ax.set_xlabel(xlabel_text)
+        plt.pyplot.title(title_text + ": Modified E-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+            )
+
+    def _heatmap(
+        self,
+        title_text,
+        xlabel_text,
+        ylabel_text,
+        font_axes=16,
+        font_tick=14,
+        figure_file_name=None,
+        log_scale=True,
+    ):
+        """
+        Draw 2D heatmaps for all design criteria
+
+        Parameters
+        ----------
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 2D heatmap, it should be the second design variable in the design_ranges
+        ylabel_text: y label title, a string.
+            In a 2D heatmap, it should be the first design variable in the dv_ranges
+        font_axes: axes label font size
+        font_tick: tick label font size
+        figure_file_name: string or Path, path to save the figure as
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns
+        --------
+        4 Figures of 2D heatmap for each criteria
+        """
+        if figure_file_name is not None:
+            show_fig = False
+        else:
+            show_fig = True
+
+        des_names = [k for k, v in self.figure_fixed_des_vars.items()]
+        sens_ranges = {}
+        for i in self.figure_sens_des_vars:
+            sens_ranges[i] = list(self.figure_result_data[i].unique())
+
+        x_range = sens_ranges[self.figure_sens_des_vars[0]]
+        y_range = sens_ranges[self.figure_sens_des_vars[1]]
+
+        # extract the design criteria values
+        A_range = self.figure_result_data["log10 A-opt"].values.tolist()
+        D_range = self.figure_result_data["log10 D-opt"].values.tolist()
+        E_range = self.figure_result_data["log10 E-opt"].values.tolist()
+        ME_range = self.figure_result_data["log10 ME-opt"].values.tolist()
+
+        # reshape the design criteria values for heatmaps
+        cri_a = np.asarray(A_range).reshape(len(x_range), len(y_range))
+        cri_d = np.asarray(D_range).reshape(len(x_range), len(y_range))
+        cri_e = np.asarray(E_range).reshape(len(x_range), len(y_range))
+        cri_e_cond = np.asarray(ME_range).reshape(len(x_range), len(y_range))
+
+        self.cri_a = cri_a
+        self.cri_d = cri_d
+        self.cri_e = cri_e
+        self.cri_e_cond = cri_e_cond
+
+        # decide if log scaled
+        if log_scale:
+            hes_a = np.log10(self.cri_a)
+            hes_e = np.log10(self.cri_e)
+            hes_d = np.log10(self.cri_d)
+            hes_e2 = np.log10(self.cri_e_cond)
+        else:
+            hes_a = self.cri_a
+            hes_e = self.cri_e
+            hes_d = self.cri_d
+            hes_e2 = self.cri_e_cond
+
+        # set heatmap x,y ranges
+        xLabel = x_range
+        yLabel = y_range
+
+        # A-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(trace(FIM))")
+        plt.pyplot.title(title_text + ": A-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+            )
+
+        # D-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_d.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(det(FIM))")
+        plt.pyplot.title(title_text + ": D-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+            )
+
+        # E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_e.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(minimal eig(FIM))")
+        plt.pyplot.title(title_text + ": E-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+            )
+
+        # Modified E-optimality
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc("axes", titlesize=font_axes)
+        plt.pyplot.rc("axes", labelsize=font_axes)
+        plt.pyplot.rc("xtick", labelsize=font_tick)
+        plt.pyplot.rc("ytick", labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {"mathtext.default": "regular"}
+        plt.pyplot.rcParams.update(params)
+        ax.set_yticks(range(len(yLabel)))
+        ax.set_yticklabels(yLabel)
+        ax.set_ylabel(ylabel_text)
+        ax.set_xticks(range(len(xLabel)))
+        ax.set_xticklabels(xLabel)
+        ax.set_xlabel(xlabel_text)
+        im = ax.imshow(hes_e2.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
+        ba.set_label("log10(cond(FIM))")
+        plt.pyplot.title(title_text + ": Modified E-optimality")
+        if show_fig:
+            plt.pyplot.show()
+        else:
+            plt.pyplot.savefig(
+                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+            )
+
+    # Gets the FIM from an existing model
+    def get_FIM(self, model=None):
+        """
+        Gets the FIM values from the model specified
+
+        Parameters
+        ----------
+        model: model to grab FIM from, Default: None, (self.model)
+
+        Returns
+        -------
+        FIM: 2D list representation of the FIM (can be cast to numpy)
+
+        """
+        if model is None:
+            model = self.model
+
+        if not hasattr(model, "fim"):
+            raise RuntimeError(
+                "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+            )
+
+        fim_vals = [
+            pyo.value(model.fim[i, j])
+            for i in model.parameter_names
+            for j in model.parameter_names
+        ]
+        fim_np = np.array(fim_vals).reshape(
+            (len(model.parameter_names), len(model.parameter_names))
+        )
+
+        # FIM is a lower triangular matrix for the optimal DoE problem.
+        # Exploit symmetry to fill in the zeros.
+        for i in range(len(model.parameter_names)):
+            for j in range(len(model.parameter_names)):
+                if j < i:
+                    fim_np[j, i] = fim_np[i, j]
+
+        return [list(row) for row in list(fim_np)]
+
+    # Gets the sensitivity matrix from an existing model
+    def get_sensitivity_matrix(self, model=None):
+        """
+        Gets the sensitivity matrix (Q) values from the model specified.
+
+        Parameters
+        ----------
+        model: model to grab Q from, Default: None, (self.model)
+
+        Returns
+        -------
+        Q: 2D list representation of the sensitivity matrix (can be cast to numpy)
+
+        """
+        if model is None:
+            model = self.model
+
+        if not hasattr(model, "sensitivity_jacobian"):
+            raise RuntimeError(
+                "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+            )
+
+        Q_vals = [
+            pyo.value(model.sensitivity_jacobian[i, j])
+            for i in model.output_names
+            for j in model.parameter_names
+        ]
+        Q_np = np.array(Q_vals).reshape(
+            (len(model.output_names), len(model.parameter_names))
+        )
+
+        return [list(row) for row in list(Q_np)]
+
+    # Gets the experiment input values from an existing model
+    def get_experiment_input_values(self, model=None):
+        """
+        Gets the experiment input values (experimental design)
+        from the model specified.
+
+        Parameters
+        ----------
+        model: model to grab the experimental design from,
+             default: None, (self.model)
+
+        Returns
+        -------
+        d: 1D list of experiment input values (optimal or specified design)
+
+        """
+        if model is None:
+            model = self.model
+
+        if not hasattr(model, "experiment_inputs"):
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
+
+            d_vals = [
+                pyo.value(k)
+                for k, v in model.scenario_blocks[0].experiment_inputs.items()
+            ]
+        else:
+            d_vals = [pyo.value(k) for k, v in model.experiment_inputs.items()]
+
+        return d_vals
+
+    # Gets the unknown parameter values from an existing model
+    def get_unknown_parameter_values(self, model=None):
+        """
+        Gets the unknown parameter values (theta)
+        from the model specified.
+
+        Parameters
+        ----------
+        model: model to grab theta from,
+             default: None, (self.model)
+
+        Returns
+        -------
+        theta: 1D list of unknown parameter values at which this experiment was designed
+
+        """
+        if model is None:
+            model = self.model
+
+        if not hasattr(model, "unknown_parameters"):
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
+
+            theta_vals = [
+                pyo.value(k)
+                for k, v in model.scenario_blocks[0].unknown_parameters.items()
+            ]
+        else:
+            theta_vals = [pyo.value(k) for k, v in model.unknown_parameters.items()]
+
+        return theta_vals
+
+    # Gets the experiment output values from an existing model
+    def get_experiment_output_values(self, model=None):
+        """
+        Gets the experiment output values (y hat)
+        from the model specified.
+
+        Parameters
+        ----------
+        model: model to grab y hat from,
+             default: None, (self.model)
+
+        Returns
+        -------
+        y_hat: 1D list of experiment output values from the design experiment
+
+        """
+        if model is None:
+            model = self.model
+
+        if not hasattr(model, "experiment_outputs"):
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
+
+            y_hat_vals = [
+                pyo.value(k)
+                for k, v in model.scenario_blocks[0].measurement_error.items()
+            ]
+        else:
+            y_hat_vals = [pyo.value(k) for k, v in model.measurement_error.items()]
+
+        return y_hat_vals
+
+    # ToDo: For more complicated error structures, this should become
+    #       get cov_y, or so, and this method will be deprecated
+    # Gets the measurement error values from an existing model
+    def get_measurement_error_values(self, model=None):
+        """
+        Gets the experiment output values (sigma)
+        from the model specified.
+
+        Parameters
+        ----------
+        model: model to grab sigma values from,
+             default: None, (self.model)
+
+        Returns
+        -------
+        sigma_diag: 1D list of measurement errors used to design the experiment
+
+        """
+        if model is None:
+            model = self.model
+
+        if not hasattr(model, "measurement_error"):
+            if not hasattr(model, "scenario_blocks"):
+                raise RuntimeError(
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                )
+
+            sigma_vals = [
+                pyo.value(k)
+                for k, v in model.scenario_blocks[0].measurement_error.items()
+            ]
+        else:
+            sigma_vals = [pyo.value(k) for k, v in model.measurement_error.items()]
+
+        return sigma_vals
+
+    # Helper function for determinant calculation
     def _sgn(self, p):
         """
-        This is a helper function for stochastic_program function to compute the determinant formula.
-        Give the signature of a permutation
+        This is a helper function for when constructing the determinant formula
+        without the Cholesky factorization.
 
         Parameters
         -----------

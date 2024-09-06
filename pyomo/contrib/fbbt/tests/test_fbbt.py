@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1335,3 +1335,31 @@ class FbbtTestBase(object):
 class TestFBBT(FbbtTestBase, unittest.TestCase):
     def setUp(self) -> None:
         self.tightener = fbbt
+
+    def test_ranged_expression(self):
+        # The python version of FBBT is slightly more flexible than
+        # APPSI's cmodel (it allows - and correctly handles -
+        # RangedExpressions with variable lower / upper bounds).  If we
+        # ever port that functionality into APPSI, then this test can be
+        # moved into the base class.
+        m = pyo.ConcreteModel()
+        m.l = pyo.Var(bounds=(2, None))
+        m.x = pyo.Var()
+        m.u = pyo.Var(bounds=(None, 8))
+        m.c = pyo.Constraint(expr=pyo.inequality(m.l, m.x, m.u))
+        self.tightener(m)
+        self.tightener(m)
+        self.assertEqual(m.l.bounds, (2, 8))
+        self.assertEqual(m.x.bounds, (2, 8))
+        self.assertEqual(m.u.bounds, (2, 8))
+
+        m = pyo.ConcreteModel()
+        m.l = pyo.Var(bounds=(2, None))
+        m.x = pyo.Var(bounds=(3, 7))
+        m.u = pyo.Var(bounds=(None, 8))
+        m.c = pyo.Constraint(expr=pyo.inequality(m.l, m.x, m.u))
+        self.tightener(m)
+        self.tightener(m)
+        self.assertEqual(m.l.bounds, (2, 7))
+        self.assertEqual(m.x.bounds, (3, 7))
+        self.assertEqual(m.u.bounds, (3, 8))

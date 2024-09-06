@@ -1,3 +1,15 @@
+/**___________________________________________________________________________
+ *
+ * Pyomo: Python Optimization Modeling Objects
+ * Copyright (c) 2008-2024
+ * National Technology and Engineering Solutions of Sandia, LLC
+ * Under the terms of Contract DE-NA0003525 with National Technology and
+ * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+ * rights in this software.
+ * This software is distributed under the 3-clause BSD License.
+ * ___________________________________________________________________________
+**/
+
 #include "lp_writer.hpp"
 
 void write_expr(std::ofstream &f, std::shared_ptr<LPBase> obj,
@@ -277,7 +289,7 @@ void process_lp_constraints(py::list cons, py::object writer) {
   py::object nonlinear_expr;
   PyomoExprTypes expr_types = PyomoExprTypes();
   for (py::handle c : cons) {
-    lower_body_upper = active_constraints[c];
+    lower_body_upper = c.attr("to_bounded_expression")();
     cname = getSymbol(c, labeler);
     repn = generate_standard_repn(
         lower_body_upper[1], "compute_values"_a = false, "quadratic"_a = true);

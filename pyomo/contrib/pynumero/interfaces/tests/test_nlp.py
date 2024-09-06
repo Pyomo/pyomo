@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -698,6 +698,42 @@ class TestPyomoNLP(unittest.TestCase):
         )
         dense_hess = hess.todense()
         self.assertTrue(np.array_equal(dense_hess, expected_hess))
+
+    def test_subblock_scaling(self):
+        m = pyo.ConcreteModel()
+        m.b = b = pyo.Block()
+        b.x = pyo.Var(bounds=(5e-17, 5e-16), initialize=1e-16)
+        b.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        b.scaling_factor[b.x] = 1e16
+
+        b.c = pyo.Constraint(rule=b.x == 1e-16)
+        b.scaling_factor[b.c] = 1e16
+
+        b.o = pyo.Objective(expr=b.x)
+        b.scaling_factor[b.o] = 1e16
+
+        nlp = PyomoNLP(m)
+
+        assert nlp.get_obj_scaling() == 1e16
+        assert nlp.get_primals_scaling()[0] == 1e16
+        assert nlp.get_constraints_scaling()[0] == 1e16
+
+    def test_subblock_no_scaling(self):
+        m = pyo.ConcreteModel()
+        m.b = pyo.Block()
+        m.b.x = pyo.Var([1, 2], initialize={1: 100, 2: 20})
+
+        # Components so we don't have an empty NLP
+        m.b.eq = pyo.Constraint(expr=m.b.x[1] * m.b.x[2] == 2000)
+        m.b.obj = pyo.Objective(expr=m.b.x[1] ** 2 + m.b.x[2] ** 2)
+
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        m.scaling_factor[m.b.x[1]] = 1e-2
+        m.scaling_factor[m.b.x[2]] = 1e-1
+
+        nlp = PyomoNLP(m.b)
+        scaling = nlp.get_primals_scaling()
+        assert scaling is None
 
     def test_no_objective(self):
         m = pyo.ConcreteModel()

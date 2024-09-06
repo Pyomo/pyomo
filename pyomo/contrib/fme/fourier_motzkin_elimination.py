@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -23,7 +23,7 @@ from pyomo.core import (
     value,
     ConstraintList,
 )
-from pyomo.core.base import TransformationFactory, _VarData
+from pyomo.core.base import TransformationFactory, VarData
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
 from pyomo.common.modeling import unique_component_name
@@ -58,7 +58,7 @@ def _check_var_bounds_filter(constraint):
 
 
 def vars_to_eliminate_list(x):
-    if isinstance(x, (Var, _VarData)):
+    if isinstance(x, (Var, VarData)):
         if not x.is_indexed():
             return ComponentSet([x])
         ans = ComponentSet()

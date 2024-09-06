@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,13 +12,11 @@
 import json
 from os.path import join, abspath, dirname
 import pyomo.contrib.parmest.parmest as parmest
-from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
+from pyomo.contrib.parmest.examples.semibatch.semibatch import SemiBatchExperiment
 import pyomo.contrib.parmest.scenariocreator as sc
 
 
 def main():
-    # Vars to estimate in parmest
-    theta_names = ['k1', 'k2', 'E1', 'E2']
 
     # Data: list of dictionaries
     data = []
@@ -29,7 +27,16 @@ def main():
             d = json.load(infile)
             data.append(d)
 
-    pest = parmest.Estimator(generate_model, data, theta_names)
+    # Create an experiment list
+    exp_list = []
+    for i in range(len(data)):
+        exp_list.append(SemiBatchExperiment(data[i]))
+
+    # View one model
+    # exp0_model = exp_list[0].get_labeled_model()
+    # exp0_model.pprint()
+
+    pest = parmest.Estimator(exp_list)
 
     scenmaker = sc.ScenarioCreator(pest, "ipopt")
 

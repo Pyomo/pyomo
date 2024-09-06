@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.contrib.appsi.base import (
     PersistentSolver,
@@ -11,11 +22,11 @@ import logging
 import math
 from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping, Dict
-from pyomo.core.base.var import _GeneralVarData
-from pyomo.core.base.constraint import _GeneralConstraintData
-from pyomo.core.base.block import _BlockData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.var import VarData
+from pyomo.core.base.constraint import ConstraintData
+from pyomo.core.base.block import BlockData
+from pyomo.core.base.param import ParamData
+from pyomo.core.base.objective import ObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 import sys
 import time
@@ -168,34 +179,34 @@ class Cplex(PersistentSolver):
     def set_instance(self, model):
         self._writer.set_instance(model)
 
-    def add_variables(self, variables: List[_GeneralVarData]):
+    def add_variables(self, variables: List[VarData]):
         self._writer.add_variables(variables)
 
-    def add_params(self, params: List[_ParamData]):
+    def add_params(self, params: List[ParamData]):
         self._writer.add_params(params)
 
-    def add_constraints(self, cons: List[_GeneralConstraintData]):
+    def add_constraints(self, cons: List[ConstraintData]):
         self._writer.add_constraints(cons)
 
-    def add_block(self, block: _BlockData):
+    def add_block(self, block: BlockData):
         self._writer.add_block(block)
 
-    def remove_variables(self, variables: List[_GeneralVarData]):
+    def remove_variables(self, variables: List[VarData]):
         self._writer.remove_variables(variables)
 
-    def remove_params(self, params: List[_ParamData]):
+    def remove_params(self, params: List[ParamData]):
         self._writer.remove_params(params)
 
-    def remove_constraints(self, cons: List[_GeneralConstraintData]):
+    def remove_constraints(self, cons: List[ConstraintData]):
         self._writer.remove_constraints(cons)
 
-    def remove_block(self, block: _BlockData):
+    def remove_block(self, block: BlockData):
         self._writer.remove_block(block)
 
-    def set_objective(self, obj: _GeneralObjectiveData):
+    def set_objective(self, obj: ObjectiveData):
         self._writer.set_objective(obj)
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def update_variables(self, variables: List[VarData]):
         self._writer.update_variables(variables)
 
     def update_params(self):
@@ -330,9 +341,11 @@ class Cplex(PersistentSolver):
         if config.load_solution:
             if cpxprob.solution.get_solution_type() == cpxprob.solution.type.none:
                 raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loades. '
-                    'Please set opt.config.load_solution=False and check '
-                    'results.termination_condition and '
+                    'A feasible solution was not found, so no solution can be loaded. '
+                    'If using the appsi.solvers.Cplex interface, you can '
+                    'set opt.config.load_solution=False. If using the environ.SolverFactory '
+                    'interface, you can set opt.solve(model, load_solutions = False). '
+                    'Then you can check results.termination_condition and '
                     'results.best_feasible_objective before loading a solution.'
                 )
             else:
@@ -349,8 +362,8 @@ class Cplex(PersistentSolver):
         return results
 
     def get_primals(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         if (
             self._cplex_model.solution.get_solution_type()
             == self._cplex_model.solution.type.none
@@ -376,8 +389,8 @@ class Cplex(PersistentSolver):
         return res
 
     def get_duals(
-        self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None
-    ) -> Dict[_GeneralConstraintData, float]:
+        self, cons_to_load: Optional[Sequence[ConstraintData]] = None
+    ) -> Dict[ConstraintData, float]:
         if (
             self._cplex_model.solution.get_solution_type()
             == self._cplex_model.solution.type.none
@@ -427,8 +440,8 @@ class Cplex(PersistentSolver):
         return res
 
     def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None
-    ) -> Mapping[_GeneralVarData, float]:
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
         if (
             self._cplex_model.solution.get_solution_type()
             == self._cplex_model.solution.type.none

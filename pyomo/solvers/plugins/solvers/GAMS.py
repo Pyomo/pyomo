@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -36,12 +36,11 @@ from pyomo.opt.results import (
     Solution,
     SolutionStatus,
     TerminationCondition,
-    ProblemSense,
 )
 
 from pyomo.common.dependencies import attempt_import
 
-gdxcc, gdxcc_available = attempt_import('gdxcc', defer_check=True)
+gdxcc, gdxcc_available = attempt_import('gdxcc')
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -198,8 +197,8 @@ class GAMSDirect(_GAMSSolver):
             return _extract_version('')
         from gams import GamsWorkspace
 
-        ws = GamsWorkspace()
-        version = tuple(int(i) for i in ws._version.split('.')[:4])
+        workspace = GamsWorkspace()
+        version = tuple(int(i) for i in workspace._version.split('.')[:4])
         while len(version) < 4:
             version += (0,)
         return version
@@ -209,8 +208,8 @@ class GAMSDirect(_GAMSSolver):
         try:
             from gams import GamsWorkspace, DebugLevel
 
-            ws = GamsWorkspace(debug=DebugLevel.Off, working_directory=tmpdir)
-            t1 = ws.add_job_from_string(self._simple_model(n))
+            workspace = GamsWorkspace(debug=DebugLevel.Off, working_directory=tmpdir)
+            t1 = workspace.add_job_from_string(self._simple_model(n))
             t1.run()
             return True
         except:
@@ -330,12 +329,12 @@ class GAMSDirect(_GAMSSolver):
         if tmpdir is not None and os.path.exists(tmpdir):
             newdir = False
 
-        ws = GamsWorkspace(
+        workspace = GamsWorkspace(
             debug=DebugLevel.KeepFiles if keepfiles else DebugLevel.Off,
             working_directory=tmpdir,
         )
 
-        t1 = ws.add_job_from_string(output_file.getvalue())
+        t1 = workspace.add_job_from_string(output_file.getvalue())
 
         try:
             with OutputStream(tee=tee, logfile=logfile) as output_stream:
@@ -349,7 +348,9 @@ class GAMSDirect(_GAMSSolver):
                 # Always name working directory or delete files,
                 # regardless of any errors.
                 if keepfiles:
-                    print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
+                    print(
+                        "\nGAMS WORKING DIRECTORY: %s\n" % workspace.working_directory
+                    )
                 elif tmpdir is not None:
                     # Garbage collect all references to t1.out_db
                     # So that .gdx file can be deleted
@@ -359,7 +360,7 @@ class GAMSDirect(_GAMSSolver):
         except:
             # Catch other errors and remove files first
             if keepfiles:
-                print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
+                print("\nGAMS WORKING DIRECTORY: %s\n" % workspace.working_directory)
             elif tmpdir is not None:
                 # Garbage collect all references to t1.out_db
                 # So that .gdx file can be deleted
@@ -398,7 +399,9 @@ class GAMSDirect(_GAMSSolver):
         extract_rc = 'rc' in model_suffixes
 
         results = SolverResults()
-        results.problem.name = os.path.join(ws.working_directory, t1.name + '.gms')
+        results.problem.name = os.path.join(
+            workspace.working_directory, t1.name + '.gms'
+        )
         results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.number_of_variables = t1.out_db["NUMVAR"].find_record().value
@@ -418,11 +421,10 @@ class GAMSDirect(_GAMSSolver):
         assert len(obj) == 1, 'Only one objective is allowed.'
         obj = obj[0]
         objctvval = t1.out_db["OBJVAL"].find_record().value
+        results.problem.sense = obj.sense
         if obj.is_minimizing():
-            results.problem.sense = ProblemSense.minimize
             results.problem.upper_bound = objctvval
         else:
-            results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = objctvval
 
         results.solver.name = "GAMS " + str(self.version())
@@ -587,7 +589,7 @@ class GAMSDirect(_GAMSSolver):
         results.solution.insert(soln)
 
         if keepfiles:
-            print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
+            print("\nGAMS WORKING DIRECTORY: %s\n" % workspace.working_directory)
         elif tmpdir is not None:
             # Garbage collect all references to t1.out_db
             # So that .gdx file can be deleted
@@ -980,11 +982,10 @@ class GAMSShell(_GAMSSolver):
         assert len(obj) == 1, 'Only one objective is allowed.'
         obj = obj[0]
         objctvval = stat_vars["OBJVAL"]
+        results.problem.sense = obj.sense
         if obj.is_minimizing():
-            results.problem.sense = ProblemSense.minimize
             results.problem.upper_bound = objctvval
         else:
-            results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = objctvval
 
         results.solver.name = "GAMS " + str(self.version())

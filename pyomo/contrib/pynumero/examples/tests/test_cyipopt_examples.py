@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -35,7 +35,7 @@ pandas, pandas_available = attempt_import(
     'One of the tests below requires a recent version of pandas for'
     ' comparing with a tolerance.',
     minimum_version='1.1.0',
-    defer_check=False,
+    defer_import=False,
 )
 
 from pyomo.contrib.pynumero.asl import AmplInterface
@@ -44,10 +44,12 @@ if not AmplInterface.available():
     raise unittest.SkipTest("Pynumero needs the ASL extension to run CyIpopt tests")
 
 import pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver as cyipopt_solver
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import cyipopt_available
 
-if not cyipopt_solver.cyipopt_available:
+if not cyipopt_available:
     raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
+
 
 example_dir = os.path.join(this_file_dir(), '..')
 
@@ -266,6 +268,11 @@ class TestExamples(unittest.TestCase):
         s = df['ca_bal']
         self.assertAlmostEqual(s.iloc[6], 0, places=3)
 
+    @unittest.skipIf(
+        cyipopt_solver.PyomoCyIpoptSolver().version() == (1, 4, 0),
+        "Terminating Ipopt through a user callback is broken in CyIpopt 1.4.0 "
+        "(see mechmotum/cyipopt#249)",
+    )
     def test_cyipopt_callback_halt(self):
         ex = import_file(
             os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py')

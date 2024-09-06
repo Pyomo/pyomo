@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,7 +13,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.core import ConcreteModel, Var, Expression, Block, RangeSet, Any
 import pyomo.core.expr as EXPR
-from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.base.expression import NamedExpressionData
 from pyomo.gdp.util import (
     clone_without_expression_components,
     is_child_of,
@@ -40,7 +40,7 @@ class TestGDPUtils(unittest.TestCase):
         test = clone_without_expression_components(base, {})
         self.assertIsNot(base, test)
         self.assertEqual(base(), test())
-        self.assertIsInstance(base, _ExpressionData)
+        self.assertIsInstance(base, NamedExpressionData)
         self.assertIsInstance(test, EXPR.SumExpression)
         test = clone_without_expression_components(base, {id(m.x): m.y})
         self.assertEqual(3**2 + 3 - 1, test())
@@ -51,7 +51,7 @@ class TestGDPUtils(unittest.TestCase):
         self.assertEqual(base(), test())
         self.assertIsInstance(base, EXPR.SumExpression)
         self.assertIsInstance(test, EXPR.SumExpression)
-        self.assertIsInstance(base.arg(0), _ExpressionData)
+        self.assertIsInstance(base.arg(0), NamedExpressionData)
         self.assertIsInstance(test.arg(0), EXPR.SumExpression)
         test = clone_without_expression_components(base, {id(m.x): m.y})
         self.assertEqual(3**2 + 3 - 1 + 3, test())

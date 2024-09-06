@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,6 +11,7 @@
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.pyomo_typing import overload
+from pyomo.contrib.cp.scheduling_expr.scheduling_logic import SpanExpression
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
     AtExpression,
@@ -18,12 +19,13 @@ from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
 
 from pyomo.core import Integers, value
 from pyomo.core.base import Any, ScalarVar, ScalarBooleanVar
-from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.block import BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.initializer import BoundInitializer, Initializer
 from pyomo.core.expr import GetItemExpression
+from pyomo.core.expr.logical_expr import _flattened
 
 
 class IntervalVarTimePoint(ScalarVar):
@@ -49,7 +51,7 @@ class IntervalVarStartTime(IntervalVarTimePoint):
     """This class defines a single variable denoting a start time point
     of an IntervalVar"""
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
         super().__init__(domain=Integers, ctype=IntervalVarStartTime)
 
 
@@ -57,7 +59,7 @@ class IntervalVarEndTime(IntervalVarTimePoint):
     """This class defines a single variable denoting an end time point
     of an IntervalVar"""
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
         super().__init__(domain=Integers, ctype=IntervalVarEndTime)
 
 
@@ -67,7 +69,7 @@ class IntervalVarLength(ScalarVar):
 
     __slots__ = ()
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
         super().__init__(domain=Integers, ctype=IntervalVarLength)
 
     def get_associated_interval_var(self):
@@ -80,21 +82,23 @@ class IntervalVarPresence(ScalarBooleanVar):
 
     __slots__ = ()
 
-    def __init__(self):
+    def __init__(self, *args, **kwd):
+        # TODO: adding args and kwd above made Reference work, but we
+        # probably shouldn't just swallow them, right?
         super().__init__(ctype=IntervalVarPresence)
 
     def get_associated_interval_var(self):
         return self.parent_block()
 
 
-class IntervalVarData(_BlockData):
+class IntervalVarData(BlockData):
     """This class defines the abstract interface for a single interval variable."""
 
     # We will put our four variables on this, and everything else is off limits.
     _Block_reserved_words = Any
 
     def __init__(self, component=None):
-        _BlockData.__init__(self, component)
+        BlockData.__init__(self, component)
 
         with self._declare_reserved_components():
             self.is_present = IntervalVarPresence()
@@ -121,6 +125,9 @@ class IntervalVarData(_BlockData):
             self.is_present.unfix()
         else:
             self.is_present.fix(True)
+
+    def spans(self, *args):
+        return SpanExpression([self] + list(_flattened(args)))
 
 
 @ModelComponentFactory.register("Interval variables for scheduling.")
@@ -199,8 +206,6 @@ class IntervalVar(Block):
 
 class ScalarIntervalVar(IntervalVarData, IntervalVar):
     def __init__(self, *args, **kwds):
-        self._suppress_ctypes = set()
-
         IntervalVarData.__init__(self, self)
         IntervalVar.__init__(self, *args, **kwds)
         self._data[None] = self

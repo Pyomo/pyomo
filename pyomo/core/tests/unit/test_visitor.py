@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -72,7 +72,7 @@ from pyomo.core.expr.visitor import (
     RECURSION_LIMIT,
     get_stack_depth,
 )
-from pyomo.core.base.param import _ParamData, ScalarParam
+from pyomo.core.base.param import ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.common.collections import ComponentSet
 from pyomo.common.errors import TemplateExpressionError
@@ -145,7 +145,8 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual(list(identify_variables(m.a + m.b[1])), [m.a, m.b[1]])
         self.assertEqual(list(identify_variables(m.a ** m.b[1])), [m.a, m.b[1]])
         self.assertEqual(
-            list(identify_variables(m.a ** m.b[1] + m.b[2])), [m.b[2], m.a, m.b[1]]
+            ComponentSet(identify_variables(m.a ** m.b[1] + m.b[2])),
+            ComponentSet([m.b[2], m.a, m.b[1]]),
         )
         self.assertEqual(
             list(identify_variables(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])),
@@ -159,14 +160,20 @@ class TestExpressionUtilities(unittest.TestCase):
         # Identify variables in the arguments to functions
         #
         self.assertEqual(
-            list(identify_variables(m.x(m.a, 'string_param', 1, []) * m.b[1])),
-            [m.b[1], m.a],
+            ComponentSet(identify_variables(m.x(m.a, 'string_param', 1, []) * m.b[1])),
+            ComponentSet([m.b[1], m.a]),
         )
         self.assertEqual(
             list(identify_variables(m.x(m.p, 'string_param', 1, []) * m.b[1])), [m.b[1]]
         )
-        self.assertEqual(list(identify_variables(tanh(m.a) * m.b[1])), [m.b[1], m.a])
-        self.assertEqual(list(identify_variables(abs(m.a) * m.b[1])), [m.b[1], m.a])
+        self.assertEqual(
+            ComponentSet(identify_variables(tanh(m.a) * m.b[1])),
+            ComponentSet([m.b[1], m.a]),
+        )
+        self.assertEqual(
+            ComponentSet(identify_variables(abs(m.a) * m.b[1])),
+            ComponentSet([m.b[1], m.a]),
+        )
         #
         # Check logic for allowing duplicates
         #
@@ -405,7 +412,6 @@ class WalkerTests(unittest.TestCase):
         )
 
         del M.w
-        del M.w_index
         M.w = VarList()
         e = 2 * sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)
@@ -438,9 +444,7 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = 5
         e2 = replace_expressions(e, sub_map)
-        assertExpressionsEqual(
-            self, e2, LinearExpression([10, MonomialTermExpression((1, m.y))])
-        )
+        assertExpressionsEqual(self, e2, LinearExpression([10, m.y]))
 
         e = LinearExpression(linear_coefs=[2, 3], linear_vars=[m.x, m.y])
         sub_map = dict()
@@ -688,7 +692,7 @@ class ReplacementWalkerTest3(ExpressionReplacementVisitor):
         self.model = model
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in (_ParamData, ScalarParam):
+        if node.__class__ in (ParamData, ScalarParam):
             if id(node) in self.substitute:
                 return True, self.substitute[id(node)]
             self.substitute[id(node)] = 2 * self.model.w.add()
@@ -887,20 +891,7 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
         assertExpressionsEqual(
             self,
             SumExpression(
-                [
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.y[1])),
-                            MonomialTermExpression((1, m.y[2])),
-                        ]
-                    ),
-                    LinearExpression(
-                        [
-                            MonomialTermExpression((1, m.y[2])),
-                            MonomialTermExpression((1, m.y[3])),
-                        ]
-                    ),
-                ]
+                [LinearExpression([m.y[1], m.y[2]]), LinearExpression([m.y[2], m.y[3]])]
             )
             == 0,
             f,
@@ -931,9 +922,7 @@ class TestReplacementWithNPV(unittest.TestCase):
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
         assertExpressionsEqual(self, e2, m.p2 + 2)
-        assertExpressionsEqual(
-            self, e3, LinearExpression([MonomialTermExpression((1, m.x)), 2])
-        )
+        assertExpressionsEqual(self, e3, LinearExpression([m.x, 2]))
 
     def test_npv_negation(self):
         m = ConcreteModel()

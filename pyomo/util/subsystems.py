@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -14,19 +14,36 @@ from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.modeling import unique_component_name
-
+from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.expression import Expression
+from pyomo.core.base.objective import Objective
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.expr.numvalue import native_types, NumericValue
 
 
 class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
+    def __init__(self, descend_into_named_expressions=True):
+        super().__init__()
+        self._descend_into_named_expressions = descend_into_named_expressions
+        self.named_expressions = []
+
     def initializeWalker(self, expr):
         self._functions = []
         self._seen = set()
+        return True, None
+
+    def beforeChild(self, parent, child, index):
+        if child.__class__ in native_types:
+            return False, None
+        elif (
+            not self._descend_into_named_expressions
+            and child.is_named_expression_type()
+        ):
+            self.named_expressions.append(child)
+            return False, None
         return True, None
 
     def exitNode(self, node, data):
@@ -38,17 +55,6 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
     def finalizeResult(self, result):
         return self._functions
 
-    def enterNode(self, node):
-        pass
-
-    def acceptChildResult(self, node, data, child_result, child_idx):
-        pass
-
-    def acceptChildResult(self, node, data, child_result, child_idx):
-        if child_result.__class__ in native_types:
-            return False, None
-        return child_result.is_expression_type(), None
-
 
 def identify_external_functions(expr):
     yield from _ExternalFunctionVisitor().walk_expression(expr)
@@ -56,8 +62,28 @@ def identify_external_functions(expr):
 
 def add_local_external_functions(block):
     ef_exprs = []
-    for comp in block.component_data_objects((Constraint, Expression), active=True):
-        ef_exprs.extend(identify_external_functions(comp.expr))
+    named_expressions = []
+    visitor = _ExternalFunctionVisitor(descend_into_named_expressions=False)
+    for comp in block.component_data_objects(
+        (Constraint, Expression, Objective), active=True
+    ):
+        ef_exprs.extend(visitor.walk_expression(comp.expr))
+    named_expr_set = ComponentSet(visitor.named_expressions)
+    # List of unique named expressions
+    named_expressions = list(named_expr_set)
+    while named_expressions:
+        expr = named_expressions.pop()
+        # Clear named expression cache so we don't re-check named expressions
+        # we've seen before.
+        visitor.named_expressions.clear()
+        ef_exprs.extend(visitor.walk_expression(expr))
+        # Only add to the stack named expressions that we have
+        # not encountered yet.
+        for local_expr in visitor.named_expressions:
+            if local_expr not in named_expr_set:
+                named_expressions.append(local_expr)
+                named_expr_set.add(local_expr)
+
     unique_functions = []
     fcn_set = set()
     for expr in ef_exprs:
@@ -106,11 +132,9 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     block.cons = Reference(constraints)
     var_set = ComponentSet(variables)
     input_vars = []
-    for con in constraints:
-        for var in identify_variables(con.expr, include_fixed=include_fixed):
-            if var not in var_set:
-                input_vars.append(var)
-                var_set.add(var)
+    for var in get_vars_from_components(block, Constraint, include_fixed=include_fixed):
+        if var not in var_set:
+            input_vars.append(var)
     block.input_vars = Reference(input_vars)
     add_local_external_functions(block)
     return block
@@ -148,7 +172,14 @@ class TemporarySubsystemManager(object):
 
     """
 
-    def __init__(self, to_fix=None, to_deactivate=None, to_reset=None, to_unfix=None):
+    def __init__(
+        self,
+        to_fix=None,
+        to_deactivate=None,
+        to_reset=None,
+        to_unfix=None,
+        remove_bounds_on_fix=False,
+    ):
         """
         Arguments
         ---------
@@ -168,6 +199,8 @@ class TemporarySubsystemManager(object):
             List of var data objects to be temporarily unfixed. These are
             restored to their original status on exit from this object's
             context manager.
+        remove_bounds_on_fix: Bool
+            Whether bounds should be removed temporarily for fixed variables
 
         """
         if to_fix is None:
@@ -194,6 +227,8 @@ class TemporarySubsystemManager(object):
         self._con_was_active = None
         self._comp_original_value = None
         self._var_was_unfixed = None
+        self._remove_bounds_on_fix = remove_bounds_on_fix
+        self._fixed_var_bounds = None
 
     def __enter__(self):
         to_fix = self._vars_to_fix
@@ -203,8 +238,13 @@ class TemporarySubsystemManager(object):
         self._var_was_fixed = [(var, var.fixed) for var in to_fix + to_unfix]
         self._con_was_active = [(con, con.active) for con in to_deactivate]
         self._comp_original_value = [(comp, comp.value) for comp in to_set]
+        self._fixed_var_bounds = [(var.lb, var.ub) for var in to_fix]
 
         for var in self._vars_to_fix:
+            if self._remove_bounds_on_fix:
+                # TODO: Potentially override var.domain as well?
+                var.setlb(None)
+                var.setub(None)
             var.fix()
 
         for con in self._cons_to_deactivate:
@@ -223,6 +263,11 @@ class TemporarySubsystemManager(object):
                 var.fix()
             else:
                 var.unfix()
+        if self._remove_bounds_on_fix:
+            for var, (lb, ub) in zip(self._vars_to_fix, self._fixed_var_bounds):
+                var.setlb(lb)
+                var.setub(ub)
+
         for con, was_active in self._con_was_active:
             if was_active:
                 con.activate()

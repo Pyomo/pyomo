@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -20,12 +20,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import (
-    SolverStatus,
-    TerminationCondition,
-    SolutionStatus,
-    ProblemSense,
-)
+from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus
 from pyomo.opt.solver import SystemCallSolver
 
 import logging
@@ -103,7 +98,7 @@ class SCIPAMPL(SystemCallSolver):
                 return _extract_version('')
         results = subprocess.run(
             [solver_exec, "--version"],
-            timeout=1,
+            timeout=self._version_timeout,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -374,9 +369,11 @@ class SCIPAMPL(SystemCallSolver):
             if len(results.solution) > 0:
                 results.solution(0).status = SolutionStatus.optimal
             try:
-                if results.problem.sense == ProblemSense.minimize:
+                if results.solver.primal_bound < results.solver.dual_bound:
                     results.problem.lower_bound = results.solver.primal_bound
+                    results.problem.upper_bound = results.solver.dual_bound
                 else:
+                    results.problem.lower_bound = results.solver.dual_bound
                     results.problem.upper_bound = results.solver.primal_bound
             except AttributeError:
                 """
@@ -455,7 +452,7 @@ class SCIPAMPL(SystemCallSolver):
         solver_status = scip_lines[0][colon_position + 2 : scip_lines[0].index('\n')]
 
         solving_time = float(
-            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')]
+            scip_lines[1][colon_position + 2 : scip_lines[1].index('\n')].split(' ')[0]
         )
 
         try:

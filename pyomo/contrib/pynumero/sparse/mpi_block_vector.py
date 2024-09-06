@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,8 +16,6 @@ from .block_vector import NotFullyDefinedBlockVectorError
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 import numpy as np
 import operator
-
-__all__ = ['MPIBlockVector']
 
 
 def assert_block_structure(vec):

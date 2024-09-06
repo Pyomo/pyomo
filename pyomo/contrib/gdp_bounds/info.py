@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Provides functions for retrieving disjunctive variable bound information stored on a model."""
 
 from pyomo.common.collections import ComponentMap
@@ -24,10 +35,10 @@ def disjunctive_bound(var, scope):
     """Compute the disjunctive bounds for a variable in a given scope.
 
     Args:
-        var (_VarData): Variable for which to compute bound
+        var (VarData): Variable for which to compute bound
         scope (Component): The scope in which to compute the bound. If not a
-            _DisjunctData, it will walk up the tree and use the scope of the
-            most immediate enclosing _DisjunctData.
+            DisjunctData, it will walk up the tree and use the scope of the
+            most immediate enclosing DisjunctData.
 
     Returns:
         numeric: the tighter of either the disjunctive lower bound, the

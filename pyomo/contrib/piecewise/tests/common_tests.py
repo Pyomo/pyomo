@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -34,8 +34,9 @@ def check_log_x_model_soln(test, m):
     test.assertAlmostEqual(value(m.obj), m.f2(4))
 
 
-def check_transformation_do_not_descend(test, transformation):
-    m = models.make_log_x_model()
+def check_transformation_do_not_descend(test, transformation, m=None):
+    if m is None:
+        m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
     transform.apply_to(m)
 
@@ -43,8 +44,9 @@ def check_transformation_do_not_descend(test, transformation):
     test.check_pw_paraboloid(m)
 
 
-def check_transformation_PiecewiseLinearFunction_targets(test, transformation):
-    m = models.make_log_x_model()
+def check_transformation_PiecewiseLinearFunction_targets(test, transformation, m=None):
+    if m is None:
+        m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
     transform.apply_to(m, targets=[m.pw_log])
 
@@ -54,8 +56,9 @@ def check_transformation_PiecewiseLinearFunction_targets(test, transformation):
     test.assertIsNone(m.pw_paraboloid.get_transformation_var(m.paraboloid_expr))
 
 
-def check_descend_into_expressions(test, transformation):
-    m = models.make_log_x_model()
+def check_descend_into_expressions(test, transformation, m=None):
+    if m is None:
+        m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
     transform.apply_to(m, descend_into_expressions=True)
 
@@ -64,8 +67,9 @@ def check_descend_into_expressions(test, transformation):
     test.check_pw_paraboloid(m)
 
 
-def check_descend_into_expressions_constraint_target(test, transformation):
-    m = models.make_log_x_model()
+def check_descend_into_expressions_constraint_target(test, transformation, m=None):
+    if m is None:
+        m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
     transform.apply_to(m, descend_into_expressions=True, targets=[m.indexed_c])
 
@@ -74,8 +78,9 @@ def check_descend_into_expressions_constraint_target(test, transformation):
     test.assertIsNone(m.pw_log.get_transformation_var(m.log_expr))
 
 
-def check_descend_into_expressions_objective_target(test, transformation):
-    m = models.make_log_x_model()
+def check_descend_into_expressions_objective_target(test, transformation, m=None):
+    if m is None:
+        m = models.make_log_x_model()
     transform = TransformationFactory(transformation)
     transform.apply_to(m, descend_into_expressions=True, targets=[m.obj])
 

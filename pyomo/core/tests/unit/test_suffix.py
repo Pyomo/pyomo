@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1795,47 +1795,77 @@ class TestSuffixFinder(unittest.TestCase):
         m.b1.b2 = Block()
         m.b1.b2.v3 = Var([0])
 
-        _suffix_finder = SuffixFinder('suffix')
-
         # Add Suffixes
         m.suffix = Suffix(direction=Suffix.EXPORT)
         # No suffix on b1 - make sure we can handle missing suffixes
         m.b1.b2.suffix = Suffix(direction=Suffix.EXPORT)
 
+        _suffix_finder = SuffixFinder('suffix')
+        _suffix_b1_finder = SuffixFinder('suffix', context=m.b1)
+        _suffix_b2_finder = SuffixFinder('suffix', context=m.b1.b2)
+
         # Check for no suffix value
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == None
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), None)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), None)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), None)
 
         # Check finding default values
         # Add a default at the top level
         m.suffix[None] = 1
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == 1
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), 1)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), None)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), None)
 
         # Add a default suffix at a lower level
         m.b1.b2.suffix[None] = 2
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == 2
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), 2)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), 2)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), 2)
 
         # Check for container at lowest level
         m.b1.b2.suffix[m.b1.b2.v3] = 3
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == 3
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), 3)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), 3)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), 3)
 
         # Check for container at top level
         m.suffix[m.b1.b2.v3] = 4
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == 4
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), 4)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), 3)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), 3)
 
         # Check for specific values at lowest level
         m.b1.b2.suffix[m.b1.b2.v3[0]] = 5
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == 5
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), 5)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), 5)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), 5)
 
         # Check for specific values at top level
         m.suffix[m.b1.b2.v3[0]] = 6
-        assert _suffix_finder.find(m.b1.b2.v3[0]) == 6
+        self.assertEqual(_suffix_finder.find(m.b1.b2.v3[0]), 6)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2.v3[0]), 5)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2.v3[0]), 5)
 
         # Make sure we don't find default suffixes at lower levels
-        assert _suffix_finder.find(m.b1.v2) == 1
+        self.assertEqual(_suffix_finder.find(m.b1.v2), 1)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.v2), None)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.v2), None)
 
         # Make sure we don't find specific suffixes at lower levels
         m.b1.b2.suffix[m.v1] = 5
-        assert _suffix_finder.find(m.v1) == 1
+        self.assertEqual(_suffix_finder.find(m.v1), 1)
+        self.assertEqual(_suffix_b1_finder.find(m.v1), None)
+        self.assertEqual(_suffix_b2_finder.find(m.v1), None)
+
+        # Make sure we can look up Blocks and that they will match
+        # suffixes that they hold
+        self.assertEqual(_suffix_finder.find(m.b1.b2), 2)
+        self.assertEqual(_suffix_b1_finder.find(m.b1.b2), 2)
+        self.assertEqual(_suffix_b2_finder.find(m.b1.b2), 2)
+
+        self.assertEqual(_suffix_finder.find(m.b1), 1)
+        self.assertEqual(_suffix_b1_finder.find(m.b1), None)
+        self.assertEqual(_suffix_b2_finder.find(m.b1), None)
 
 
 if __name__ == "__main__":

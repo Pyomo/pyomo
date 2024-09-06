@@ -1,13 +1,14 @@
-# ______________________________________________________________________________
+#  ___________________________________________________________________________
 #
-# Pyomo: Python Optimization Modeling Objects
-# Copyright (c) 2008-2022
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
-# Under the terms of Contract DE-NA0003525 with National Technology and
-# Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-# rights in this software.
-# This software is distributed under the 3-clause BSD License
-# ______________________________________________________________________________
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.environ import (
     Param,
     Var,
@@ -23,8 +24,10 @@ from pyomo.environ import (
 
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr import ExpressionReplacementVisitor
+from pyomo.core.expr.numvalue import is_potentially_variable
 
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.dependencies import numpy as np, scipy
 from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
@@ -33,8 +36,6 @@ import logging
 import os
 import io
 import shutil
-from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy, scipy_available
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
@@ -673,25 +674,29 @@ class SensitivityInterface(object):
         )
         last_idx = 0
         for con in old_con_list:
-            if con.equality or con.lower is None or con.upper is None:
-                new_expr = param_replacer.walk_expression(con.expr)
-                block.constList.add(expr=new_expr)
+            new_expr = param_replacer.walk_expression(con.expr)
+            # TODO: We could only create new constraints for expressions
+            # where substitution actually happened, but that breaks some
+            # current tests:
+            #
+            # if new_expr is con.expr:
+            #     # No params were substituted.  We can ignore this constraint
+            #     continue
+            if new_expr.nargs() == 3 and (
+                is_potentially_variable(new_expr.arg(0))
+                or is_potentially_variable(new_expr.arg(2))
+            ):
+                # This is a potentially "invalid" range constraint: it
+                # may now have variables in the bounds.  For safety, we
+                # will split it into two simple inequalities.
+                block.constList.add(expr=(new_expr.arg(0) <= new_expr.arg(1)))
+                last_idx += 1
+                new_old_comp_map[block.constList[last_idx]] = con
+                block.constList.add(expr=(new_expr.arg(1) <= new_expr.arg(2)))
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
             else:
-                # Constraint must be a ranged inequality, break into
-                # separate constraints
-                new_body = param_replacer.walk_expression(con.body)
-                new_lower = param_replacer.walk_expression(con.lower)
-                new_upper = param_replacer.walk_expression(con.upper)
-
-                # Add constraint for lower bound
-                block.constList.add(expr=(new_lower <= new_body))
-                last_idx += 1
-                new_old_comp_map[block.constList[last_idx]] = con
-
-                # Add constraint for upper bound
-                block.constList.add(expr=(new_body <= new_upper))
+                block.constList.add(expr=new_expr)
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
             con.deactivate()

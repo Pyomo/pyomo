@@ -1,3 +1,15 @@
+/**___________________________________________________________________________
+ *
+ * Pyomo: Python Optimization Modeling Objects
+ * Copyright (c) 2008-2024
+ * National Technology and Engineering Solutions of Sandia, LLC
+ * Under the terms of Contract DE-NA0003525 with National Technology and
+ * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+ * rights in this software.
+ * This software is distributed under the 3-clause BSD License.
+ * ___________________________________________________________________________
+**/
+
 #include "fbbt_model.hpp"
 
 FBBTObjective::FBBTObjective(std::shared_ptr<ExpressionBase> _expr)
@@ -193,7 +205,7 @@ void process_fbbt_constraints(FBBTModel *model, PyomoExprTypes &expr_types,
   py::handle con_body;
 
   for (py::handle c : cons) {
-    lower_body_upper = active_constraints[c];
+    lower_body_upper = c.attr("to_bounded_expression")();
     con_lb = lower_body_upper[0];
     con_body = lower_body_upper[1];
     con_ub = lower_body_upper[2];

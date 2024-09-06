@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -33,7 +33,7 @@ from pyomo.environ import (
     cos,
     SolverFactory,
 )
-from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.base.var import VarData
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.contrib.trustregion.interface import TRFInterface
@@ -158,7 +158,7 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertIsInstance(k, ExternalFunctionExpression)
             self.assertIn(str(self.interface.model.x[0]), str(k))
             self.assertIn(str(self.interface.model.x[1]), str(k))
-            self.assertIsInstance(i, _GeneralVarData)
+            self.assertIsInstance(i, VarData)
             self.assertEqual(i, self.interface.data.ef_outputs[1])
         for i, k in self.interface.data.basis_expressions.items():
             self.assertEqual(k, 0)
@@ -234,7 +234,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         for key, val in self.interface.data.grad_basis_model_output.items():
             self.assertEqual(value(val), 0)
         for key, val in self.interface.data.truth_model_output.items():
-            self.assertEqual(value(val), 0.8414709848078965)
+            self.assertAlmostEqual(value(val), 0.8414709848078965)
         # The truth gradients should equal the output of [cos(2-1), -cos(2-1)]
         truth_grads = []
         for key, val in self.interface.data.grad_truth_model_output.items():
@@ -332,7 +332,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Check after a solve is completed
         self.interface.data.basis_constraint.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(feasibility, 0.09569982275514467)
+        self.assertAlmostEqual(feasibility, 0.09569982275514467)
         self.interface.data.basis_constraint.deactivate()
 
     @unittest.skipIf(
@@ -361,7 +361,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Check after a solve is completed
         self.interface.data.basis_constraint.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(step_norm, 3.393437471478297)
+        self.assertAlmostEqual(step_norm, 3.393437471478297)
         self.interface.data.basis_constraint.deactivate()
 
     @unittest.skipIf(

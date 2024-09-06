@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,6 @@
 import logging
 import sys
 
-from pyomo.common.dependencies import numpy_available
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.errors import TemplateExpressionError
 
@@ -50,7 +49,6 @@ native_numeric_types = {int, float}
 native_integer_types = {int}
 native_logical_types = {bool}
 native_complex_types = {complex}
-pyomo_constant_types = set()  # includes NumericConstant
 
 _native_boolean_types = {int, bool, str, bytes}
 relocated_module_attribute(
@@ -61,6 +59,16 @@ relocated_module_attribute(
     "contains types that were convertible to bool, and not types that should "
     "be treated as if they were bool (as was the case for the other "
     "native_*_types sets).  Users likely should use native_logical_types.",
+)
+_pyomo_constant_types = set()  # includes NumericConstant, _PythonCallbackFunctionID
+relocated_module_attribute(
+    'pyomo_constant_types',
+    'pyomo.common.numeric_types._pyomo_constant_types',
+    version='6.7.2',
+    msg="The pyomo_constant_types set will be removed in the future: the set "
+    "contained only NumericConstant and _PythonCallbackFunctionID, and provided "
+    "no meaningful value to clients or walkers.  Users should likely handle "
+    "these types in the same manner as immutable Params.",
 )
 
 
@@ -194,6 +202,67 @@ def RegisterLogicalType(new_type: type):
     nonpyomo_leaf_types.add(new_type)
 
 
+def check_if_native_type(obj):
+    if isinstance(obj, (str, bytes)):
+        native_types.add(obj.__class__)
+        return True
+    if check_if_logical_type(obj):
+        return True
+    if check_if_numeric_type(obj):
+        return True
+    return False
+
+
+def check_if_logical_type(obj):
+    """Test if the argument behaves like a logical type.
+
+    We check for "logical types" by checking if the type returns sane
+    results for Boolean operators (``^``, ``|``, ``&``) and if it maps
+    ``1`` and ``2`` both to the same equivalent instance.  If that
+    works, then we register the type in :py:attr:`native_logical_types`.
+
+    """
+    obj_class = obj.__class__
+    # Do not re-evaluate known native types
+    if obj_class in native_types:
+        return obj_class in native_logical_types
+
+    try:
+        # It is not an error if you can't initialize the type from an
+        # int, but if you can, it should map !0 to True
+        if obj_class(1) != obj_class(2):
+            return False
+    except:
+        pass
+
+    try:
+        # Native logical types *must* be hashable
+        hash(obj)
+        # Native logical types must honor standard Boolean operators
+        if all(
+            (
+                obj_class(False) != obj_class(True),
+                obj_class(False) ^ obj_class(False) == obj_class(False),
+                obj_class(False) ^ obj_class(True) == obj_class(True),
+                obj_class(True) ^ obj_class(False) == obj_class(True),
+                obj_class(True) ^ obj_class(True) == obj_class(False),
+                obj_class(False) | obj_class(False) == obj_class(False),
+                obj_class(False) | obj_class(True) == obj_class(True),
+                obj_class(True) | obj_class(False) == obj_class(True),
+                obj_class(True) | obj_class(True) == obj_class(True),
+                obj_class(False) & obj_class(False) == obj_class(False),
+                obj_class(False) & obj_class(True) == obj_class(False),
+                obj_class(True) & obj_class(False) == obj_class(False),
+                obj_class(True) & obj_class(True) == obj_class(True),
+            )
+        ):
+            RegisterLogicalType(obj_class)
+            return True
+    except:
+        pass
+    return False
+
+
 def check_if_numeric_type(obj):
     """Test if the argument behaves like a numeric type.
 
@@ -208,46 +277,55 @@ def check_if_numeric_type(obj):
     if obj_class in native_types:
         return obj_class in native_numeric_types
 
-    if 'numpy' in obj_class.__module__:
-        # trigger the resolution of numpy_available and check if this
-        # type was automatically registered
-        bool(numpy_available)
-        if obj_class in native_types:
-            return obj_class in native_numeric_types
-
     try:
         obj_plus_0 = obj + 0
         obj_p0_class = obj_plus_0.__class__
-        # ensure that the object is comparable to 0 in a meaningful way
-        # (among other things, this prevents numpy.ndarray objects from
-        # being added to native_numeric_types)
-        if not ((obj < 0) ^ (obj >= 0)):
-            return False
-        # Native types *must* be hashable
+        # Native numeric types *must* be hashable
         hash(obj)
     except:
         return False
-    if obj_p0_class is obj_class or obj_p0_class in native_numeric_types:
-        #
-        # If we get here, this is a reasonably well-behaving
-        # numeric type: add it to the native numeric types
-        # so that future lookups will be faster.
-        #
-        RegisterNumericType(obj_class)
-        #
-        # Generate a warning, since Pyomo's management of third-party
-        # numeric types is more robust when registering explicitly.
-        #
-        logger.warning(
-            f"""Dynamically registering the following numeric type:
+    if obj_p0_class is not obj_class and obj_p0_class not in native_numeric_types:
+        return False
+    #
+    # Check if the numeric type behaves like a complex type
+    #
+    try:
+        if 1.41 < abs(obj_class(1j + 1)) < 1.42:
+            RegisterComplexType(obj_class)
+            return False
+    except:
+        pass
+    #
+    # Ensure that the object is comparable to 0 in a meaningful way
+    #
+    try:
+        if not ((obj < 0) ^ (obj >= 0)):
+            return False
+    except:
+        return False
+    #
+    # If we get here, this is a reasonably well-behaving
+    # numeric type: add it to the native numeric types
+    # so that future lookups will be faster.
+    #
+    RegisterNumericType(obj_class)
+    try:
+        if obj_class(0.4) == obj_class(0):
+            RegisterIntegerType(obj_class)
+    except:
+        pass
+    #
+    # Generate a warning, since Pyomo's management of third-party
+    # numeric types is more robust when registering explicitly.
+    #
+    logger.warning(
+        f"""Dynamically registering the following numeric type:
     {obj_class.__module__}.{obj_class.__name__}
 Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
 numeric types using RegisterNumericType() or RegisterIntegerType()."""
-        )
-        return True
-    else:
-        return False
+    )
+    return True
 
 
 def value(obj, exception=True):
@@ -274,22 +352,10 @@ def value(obj, exception=True):
     """
     if obj.__class__ in native_types:
         return obj
-    if obj.__class__ in pyomo_constant_types:
-        #
-        # I'm commenting this out for now, but I think we should never expect
-        # to see a numeric constant with value None.
-        #
-        # if exception and obj.value is None:
-        #    raise ValueError(
-        #        "No value for uninitialized NumericConstant object %s"
-        #        % (obj.name,))
-        return obj.value
     #
     # Test if we have a duck typed Pyomo expression
     #
-    try:
-        obj.is_numeric_type()
-    except AttributeError:
+    if not hasattr(obj, 'is_numeric_type'):
         #
         # TODO: Historically we checked for new *numeric* types and
         # raised exceptions for anything else.  That is inconsistent
@@ -304,7 +370,7 @@ def value(obj, exception=True):
                 return None
             raise TypeError(
                 "Cannot evaluate object with unknown type: %s" % obj.__class__.__name__
-            ) from None
+            )
     #
     # Evaluate the expression object
     #

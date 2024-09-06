@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -25,18 +25,12 @@ ipopt_available = SolverFactory("ipopt").available()
 )
 @unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 class TestUtils(unittest.TestCase):
-    @classmethod
-    def setUpClass(self):
-        pass
 
-    @classmethod
-    def tearDownClass(self):
-        pass
-
-    @unittest.pytest.mark.expensive
     def test_convert_param_to_var(self):
+        # TODO: Check that this works for different structured models (indexed, blocks, etc)
+
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
-            reactor_design_model,
+            ReactorDesignExperiment,
         )
 
         data = pd.DataFrame(
@@ -48,20 +42,23 @@ class TestUtils(unittest.TestCase):
             columns=["sv", "caf", "ca", "cb", "cc", "cd"],
         )
 
-        theta_names = ["k1", "k2", "k3"]
+        # make model
+        exp = ReactorDesignExperiment(data, 0)
+        instance = exp.get_labeled_model()
 
-        instance = reactor_design_model(data.loc[0])
-        solver = pyo.SolverFactory("ipopt")
-        solver.solve(instance)
-
-        instance_vars = parmest.utils.convert_params_to_vars(
+        theta_names = ['k1', 'k2', 'k3']
+        m_vars = parmest.utils.convert_params_to_vars(
             instance, theta_names, fix_vars=True
         )
-        solver.solve(instance_vars)
 
-        assert instance.k1() == instance_vars.k1()
-        assert instance.k2() == instance_vars.k2()
-        assert instance.k3() == instance_vars.k3()
+        for v in theta_names:
+            self.assertTrue(hasattr(m_vars, v))
+            c = m_vars.find_component(v)
+            self.assertIsInstance(c, pyo.Var)
+            self.assertTrue(c.fixed)
+            c_old = instance.find_component(v)
+            self.assertEqual(pyo.value(c), pyo.value(c_old))
+            self.assertTrue(c in m_vars.unknown_parameters)
 
 
 if __name__ == "__main__":

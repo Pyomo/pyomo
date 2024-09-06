@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -200,6 +200,41 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
 
         assertExpressionsEqual(self, m.cons[10].expr, m.z[5] >= 1)
 
+    def test_equivalent_to_True(self):
+        m = self.make_model()
+        e = m.a.equivalent_to(True)
+
+        visitor = LogicalToDisjunctiveVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        visitor.walk_expression(e)
+
+        self.assertIs(m.a.get_associated_binary(), m.z[1])
+        self.assertEqual(len(m.z), 4)
+        self.assertEqual(len(m.cons), 10)
+
+        # z[2] == !a v True
+        assertExpressionsEqual(
+            self, m.cons[1].expr, (1 - m.z[2]) + (1 - m.z[1]) + 1 >= 1
+        )
+        assertExpressionsEqual(self, m.cons[2].expr, 1 - (1 - m.z[1]) + m.z[2] >= 1)
+        assertExpressionsEqual(self, m.cons[3].expr, m.z[2] + (1 - 1) >= 1)
+
+        # z[3] == a v ! c
+        assertExpressionsEqual(self, m.cons[4].expr, (1 - m.z[3]) + m.z[1] >= 1)
+        assertExpressionsEqual(self, m.cons[5].expr, m.z[3] + (1 - m.z[1]) >= 1)
+        assertExpressionsEqual(self, m.cons[6].expr, m.z[3] + 1 >= 1)
+
+        # z[4] == z[2] ^ z[3]
+        assertExpressionsEqual(self, m.cons[7].expr, m.z[4] <= m.z[2])
+        assertExpressionsEqual(self, m.cons[8].expr, m.z[4] <= m.z[3])
+        assertExpressionsEqual(
+            self, m.cons[9].expr, 1 - m.z[4] <= 2 - (m.z[2] + m.z[3])
+        )
+
+        assertExpressionsEqual(self, m.cons[10].expr, m.z[4] >= 1)
+
     def test_xor(self):
         m = self.make_model()
         e = m.a.xor(m.b)
@@ -263,8 +298,6 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         # z3 = a ^ b
         assertExpressionsEqual(self, m.cons[1].expr, m.z[3] <= a)
         assertExpressionsEqual(self, m.cons[2].expr, m.z[3] <= b)
-        m.cons.pprint()
-        print(m.cons[3].expr)
         assertExpressionsEqual(self, m.cons[3].expr, 1 - m.z[3] <= 2 - sum([a, b]))
 
         # atmost in disjunctive form

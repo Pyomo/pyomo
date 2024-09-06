@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,10 +10,9 @@
 #  ___________________________________________________________________________
 
 from pyomo.gdp import GDP_Error, Disjunction
-from pyomo.gdp.disjunct import _DisjunctData, Disjunct
+from pyomo.gdp.disjunct import DisjunctData, Disjunct
 
 import pyomo.core.expr as EXPR
-from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
     Block,
     Suffix,
@@ -22,7 +21,7 @@ from pyomo.core import (
     LogicalConstraint,
     value,
 )
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
@@ -144,13 +143,13 @@ class GDPTree:
         Arg:
             u : A node in the tree
         """
+        if u in self._parent:
+            return self._parent[u]
         if u not in self._vertices:
             raise ValueError(
                 "'%s' is not a vertex in the GDP tree. Cannot "
                 "retrieve its parent." % u
             )
-        if u in self._parent:
-            return self._parent[u]
         else:
             return None
 
@@ -169,7 +168,10 @@ class GDPTree:
         Arg:
             u : A node in the forest
         """
-        return self.parent(self.parent(u))
+        if u.ctype is Disjunct:
+            return self.parent(self.parent(u))
+        else:
+            return self.parent(u)
 
     def root_disjunct(self, u):
         """Returns the highest parent Disjunct in the hierarchy, or None if
@@ -183,7 +185,7 @@ class GDPTree:
         while True:
             if parent is None:
                 return rootmost_disjunct
-            if isinstance(parent, _DisjunctData) or parent.ctype is Disjunct:
+            if parent.ctype is Disjunct:
                 rootmost_disjunct = parent
             parent = self.parent(parent)
 
@@ -243,7 +245,7 @@ class GDPTree:
     @property
     def disjunct_nodes(self):
         for v in self._vertices:
-            if isinstance(v, _DisjunctData) or v.ctype is Disjunct:
+            if v.ctype is Disjunct:
                 yield v
 
 
@@ -327,7 +329,7 @@ def get_gdp_tree(targets, instance, knownBlocks=None):
                 "Target '%s' is not a component on instance "
                 "'%s'!" % (t.name, instance.name)
             )
-        if t.ctype is Block or isinstance(t, _BlockData):
+        if t.ctype is Block or isinstance(t, BlockData):
             _blocks = t.values() if t.is_indexed() else (t,)
             for block in _blocks:
                 if not block.active:
@@ -384,7 +386,7 @@ def is_child_of(parent, child, knownBlocks=None):
     if knownBlocks is None:
         knownBlocks = {}
     tmp = set()
-    node = child if isinstance(child, (Block, _BlockData)) else child.parent_block()
+    node = child if isinstance(child, (Block, BlockData)) else child.parent_block()
     while True:
         known = knownBlocks.get(node)
         if known:
@@ -449,7 +451,7 @@ def get_src_disjunct(transBlock):
 
     Parameters
     ----------
-    transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
+    transBlock: BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
     if (
@@ -474,22 +476,23 @@ def get_src_constraint(transformedConstraint):
     a transformation block
     """
     transBlock = transformedConstraint.parent_block()
+    src_constraints = transBlock.private_data('pyomo.gdp').src_constraint
     # This should be our block, so if it's not, the user messed up and gave
     # us the wrong thing. If they happen to also have a _constraintMap then
     # the world is really against us.
-    if not hasattr(transBlock, "_constraintMap"):
+    if transformedConstraint not in src_constraints:
         raise GDP_Error(
             "Constraint '%s' is not a transformed constraint"
             % transformedConstraint.name
         )
     # if something goes wrong here, it's a bug in the mappings.
-    return transBlock._constraintMap['srcConstraints'][transformedConstraint]
+    return src_constraints[transformedConstraint]
 
 
 def _find_parent_disjunct(constraint):
     # traverse up until we find the disjunct this constraint lives on
     parent_disjunct = constraint.parent_block()
-    while not isinstance(parent_disjunct, _DisjunctData):
+    while not isinstance(parent_disjunct, DisjunctData):
         if parent_disjunct is None:
             raise GDP_Error(
                 "Constraint '%s' is not on a disjunct and so was not "
@@ -521,24 +524,28 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: ScalarConstraint or _ConstraintData, which must be in
+    srcConstraint: ScalarConstraint or ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
         raise GDP_Error(
             "Argument to get_transformed_constraint should be "
-            "a ScalarConstraint or _ConstraintData. (If you "
+            "a ScalarConstraint or ConstraintData. (If you "
             "want the container for all transformed constraints "
             "from an IndexedDisjunction, this is the parent "
             "component of a transformed constraint originating "
-            "from any of its _ComponentDatas.)"
+            "from any of its ComponentDatas.)"
         )
     transBlock = _get_constraint_transBlock(srcConstraint)
-    try:
-        return transBlock._constraintMap['transformedConstraints'][srcConstraint]
-    except:
-        logger.error("Constraint '%s' has not been transformed." % srcConstraint.name)
-        raise
+    transformed_constraints = transBlock.private_data(
+        'pyomo.gdp'
+    ).transformed_constraints
+    if srcConstraint in transformed_constraints:
+        return transformed_constraints[srcConstraint]
+    else:
+        raise GDP_Error(
+            "Constraint '%s' has not been transformed." % srcConstraint.name
+        )
 
 
 def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):

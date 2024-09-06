@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -109,7 +109,7 @@ class OptSolverDebug(unittest.TestCase):
     def test_set_results_format(self):
         opt = pyomo.opt.SolverFactory("stest1")
         opt._valid_problem_formats = ['a']
-        opt._valid_results_formats = {'a': 'b'}
+        opt._valid_result_formats = {'a': 'b'}
         self.assertEqual(opt.problem_format(), None)
         try:
             opt.set_results_format('b')

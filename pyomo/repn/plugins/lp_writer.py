@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -408,10 +408,10 @@ class _LPWriter_impl(object):
             if with_debug_timing and con.parent_component() is not last_parent:
                 timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
                 last_parent = con.parent_component()
-            # Note: Constraint.lb/ub guarantee a return value that is
-            # either a (finite) native_numeric_type, or None
-            lb = con.lb
-            ub = con.ub
+            # Note: Constraint.to_bounded_expression(evaluate_bounds=True)
+            # guarantee a return value that is either a (finite)
+            # native_numeric_type, or None
+            lb, body, ub = con.to_bounded_expression(True)
 
             if lb is None and ub is None:
                 # Note: you *cannot* output trivial (unbounded)
@@ -419,7 +419,7 @@ class _LPWriter_impl(object):
                 # slack variable if skip_trivial_constraints is False,
                 # but that seems rather silly.
                 continue
-            repn = constraint_visitor.walk_expression(con.body)
+            repn = constraint_visitor.walk_expression(body)
             if repn.nonlinear is not None:
                 raise ValueError(
                     f"Model constraint ({con.name}) contains nonlinear terms that "
@@ -458,13 +458,13 @@ class _LPWriter_impl(object):
                     addSymbol(con, label)
                     ostream.write(f'\n{label}:\n')
                     self.write_expression(ostream, repn, False)
-                    ostream.write(f'>= {(lb - offset)!r}\n')
+                    ostream.write(f'>= {(lb - offset)!s}\n')
                 elif lb == ub:
                     label = f'c_e_{symbol}_'
                     addSymbol(con, label)
                     ostream.write(f'\n{label}:\n')
                     self.write_expression(ostream, repn, False)
-                    ostream.write(f'= {(lb - offset)!r}\n')
+                    ostream.write(f'= {(lb - offset)!s}\n')
                 else:
                     # We will need the constraint body twice.  Generate
                     # in a buffer so we only have to do that once.
@@ -476,18 +476,18 @@ class _LPWriter_impl(object):
                     addSymbol(con, label)
                     ostream.write(f'\n{label}:\n')
                     ostream.write(buf)
-                    ostream.write(f'>= {(lb - offset)!r}\n')
+                    ostream.write(f'>= {(lb - offset)!s}\n')
                     label = f'r_u_{symbol}_'
                     aliasSymbol(con, label)
                     ostream.write(f'\n{label}:\n')
                     ostream.write(buf)
-                    ostream.write(f'<= {(ub - offset)!r}\n')
+                    ostream.write(f'<= {(ub - offset)!s}\n')
             elif ub is not None:
                 label = f'c_u_{symbol}_'
                 addSymbol(con, label)
                 ostream.write(f'\n{label}:\n')
                 self.write_expression(ostream, repn, False)
-                ostream.write(f'<= {(ub - offset)!r}\n')
+                ostream.write(f'<= {(ub - offset)!s}\n')
 
         if with_debug_timing:
             # report the last constraint
@@ -527,8 +527,8 @@ class _LPWriter_impl(object):
             # Note: Var.bounds guarantees the values are either (finite)
             # native_numeric_types or None
             lb, ub = v.bounds
-            lb = '-inf' if lb is None else repr(lb)
-            ub = '+inf' if ub is None else repr(ub)
+            lb = '-inf' if lb is None else str(lb)
+            ub = '+inf' if ub is None else str(ub)
             ostream.write(f"\n   {lb} <= {v_symbol} <= {ub}")
 
         if integer_vars:
@@ -565,7 +565,7 @@ class _LPWriter_impl(object):
                 for v, w in getattr(soscon, 'get_items', soscon.items)():
                     if w.__class__ not in int_float:
                         w = float(f)
-                    ostream.write(f"  {getSymbol(v)}:{w!r}\n")
+                    ostream.write(f"  {getSymbol(v)}:{w!s}\n")
 
         ostream.write("\nend\n")
 
@@ -584,9 +584,9 @@ class _LPWriter_impl(object):
                 expr.linear.items(), key=lambda x: getVarOrder(x[0])
             ):
                 if coef < 0:
-                    ostream.write(f'{coef!r} {getSymbol(getVar(vid))}\n')
+                    ostream.write(f'{coef!s} {getSymbol(getVar(vid))}\n')
                 else:
-                    ostream.write(f'+{coef!r} {getSymbol(getVar(vid))}\n')
+                    ostream.write(f'+{coef!s} {getSymbol(getVar(vid))}\n')
 
         quadratic = getattr(expr, 'quadratic', None)
         if quadratic:
@@ -605,9 +605,9 @@ class _LPWriter_impl(object):
                     col = c1, c2
                     sym = f' {getSymbol(getVar(vid1))} * {getSymbol(getVar(vid2))}\n'
                 if coef < 0:
-                    return col, repr(coef) + sym
+                    return col, str(coef) + sym
                 else:
-                    return col, '+' + repr(coef) + sym
+                    return col, f'+{coef!s}{sym}'
 
             if is_objective:
                 #

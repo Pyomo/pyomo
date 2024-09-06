@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -21,6 +21,7 @@ classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
 import abc
+import inspect
 
 from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
 from pyomo.contrib.pynumero.exceptions import PyNumeroEvaluationError
@@ -309,6 +310,49 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         # cyipopt.Problem.__init__
         super(CyIpoptNLP, self).__init__()
 
+        # Pre-Pyomo 6.8.0, we had no way to pass the cyipopt.Problem object
+        # to the user in an intermediate callback. This prevented them from calling
+        # the useful get_current_iterate and get_current_violations methods. Now,
+        # we support this by adding the Problem object to the args we pass to a user's
+        # callback. To preserve backwards compatibility, we inspect the user's
+        # callback to infer whether they want this argument. To preserve backwards
+        # compatibility if the user asked for variable-length *args, we do not pass
+        # the Problem object as an argument in this case.
+        # A more maintainable solution may be to force users to accept **kwds if they
+        # want "extra info." If we find ourselves continuing to augment this callback,
+        # this may be worth considering. -RBP
+        self._use_13arg_callback = None
+        if self._intermediate_callback is not None:
+            signature = inspect.signature(self._intermediate_callback)
+            positional_kinds = {
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.POSITIONAL_ONLY,
+            }
+            positional = [
+                param
+                for param in signature.parameters.values()
+                if param.kind in positional_kinds
+            ]
+            has_var_args = any(
+                p.kind is inspect.Parameter.VAR_POSITIONAL
+                for p in signature.parameters.values()
+            )
+
+            if len(positional) == 13 and not has_var_args:
+                # If *args is expected, we do not use the new callback
+                # signature.
+                self._use_13arg_callback = True
+            elif len(positional) == 12 or has_var_args:
+                # If *args is expected, we use the old callback signature
+                # for backwards compatibility.
+                self._use_13arg_callback = False
+            else:
+                raise ValueError(
+                    "Invalid intermediate callback. A function with either 12 or 13"
+                    " positional arguments, or a variable number of arguments, is"
+                    " expected."
+                )
+
     def _set_primals_if_necessary(self, x):
         if not np.array_equal(x, self._cached_x):
             self._nlp.set_primals(x)
@@ -436,19 +480,53 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         alpha_pr,
         ls_trials,
     ):
+        """Calls user's intermediate callback
+
+        This method has the call signature expected by CyIpopt. We then extend
+        this call signature to provide users of this interface class additional
+        functionality. Additional arguments are:
+
+        - The ``NLP`` object that was used to construct this class instance.
+          This is useful for querying the variables, constraints, and
+          derivatives during the callback.
+        - The class instance itself. This is useful for calling the
+          ``get_current_iterate`` and ``get_current_violations`` methods, which
+          query Ipopt's internal data structures to provide this information.
+
+        """
         if self._intermediate_callback is not None:
-            return self._intermediate_callback(
-                self._nlp,
-                alg_mod,
-                iter_count,
-                obj_value,
-                inf_pr,
-                inf_du,
-                mu,
-                d_norm,
-                regularization_size,
-                alpha_du,
-                alpha_pr,
-                ls_trials,
-            )
+            if self._use_13arg_callback:
+                # This is the callback signature expected as of Pyomo 6.8.0
+                return self._intermediate_callback(
+                    self._nlp,
+                    self,
+                    alg_mod,
+                    iter_count,
+                    obj_value,
+                    inf_pr,
+                    inf_du,
+                    mu,
+                    d_norm,
+                    regularization_size,
+                    alpha_du,
+                    alpha_pr,
+                    ls_trials,
+                )
+            else:
+                # This is the callback signature expected pre-Pyomo 6.8.0 and
+                # is supported for backwards compatibility.
+                return self._intermediate_callback(
+                    self._nlp,
+                    alg_mod,
+                    iter_count,
+                    obj_value,
+                    inf_pr,
+                    inf_du,
+                    mu,
+                    d_norm,
+                    regularization_size,
+                    alpha_du,
+                    alpha_pr,
+                    ls_trials,
+                )
         return True

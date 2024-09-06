@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,13 +13,11 @@ from pyomo.common.dependencies import numpy as np, pandas as pd
 from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
-    rooney_biegler_model,
+    RooneyBieglerExperiment,
 )
 
 
 def main():
-    # Vars to estimate
-    theta_names = ['asymptote', 'rate_constant']
 
     # Data
     data = pd.DataFrame(
@@ -28,14 +26,24 @@ def main():
     )
 
     # Sum of squared error function
-    def SSE(model, data):
-        expr = sum(
-            (data.y[i] - model.response_function[data.hour[i]]) ** 2 for i in data.index
-        )
+    def SSE(model):
+        expr = (
+            model.experiment_outputs[model.y]
+            - model.response_function[model.experiment_outputs[model.hour]]
+        ) ** 2
         return expr
 
+    # Create an experiment list
+    exp_list = []
+    for i in range(data.shape[0]):
+        exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
+
+    # View one model
+    # exp0_model = exp_list[0].get_labeled_model()
+    # exp0_model.pprint()
+
     # Create an instance of the parmest estimator
-    pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
+    pest = parmest.Estimator(exp_list, obj_function=SSE)
 
     # Parameter estimation
     obj, theta = pest.theta_est()

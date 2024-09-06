@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 '''
 Utility functions for the PyROS solver
 '''
@@ -5,7 +16,9 @@ Utility functions for the PyROS solver
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.errors import ApplicationError
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import TicTocTimer
 from pyomo.core.base import (
     Constraint,
     Var,
@@ -25,6 +38,8 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
+import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
+import pyomo.repn.ampl as pyomo_ampl_repn
 from pyomo.core.expr.visitor import (
     identify_variables,
     identify_mutable_parameters,
@@ -219,15 +234,15 @@ def get_main_elapsed_time(timing_data_obj):
 
 def adjust_solver_time_settings(timing_data_obj, solver, config):
     """
-    Adjust solver max time setting based on current PyROS elapsed
-    time.
+    Adjust maximum time allowed for subordinate solver, based
+    on total PyROS solver elapsed time up to this point.
 
     Parameters
     ----------
     timing_data_obj : Bunch
         PyROS timekeeper.
     solver : solver type
-        Solver for which to adjust the max time setting.
+        Subordinate solver for which to adjust the max time setting.
     config : ConfigDict
         PyROS solver config.
 
@@ -249,26 +264,37 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
     ----
     (1) Adjustment only supported for GAMS, BARON, and IPOPT
         interfaces. This routine can be generalized to other solvers
-        after a generic interface to the time limit setting
+        after a generic Pyomo interface to the time limit setting
         is introduced.
-    (2) For IPOPT, and probably also BARON, the CPU time limit
-        rather than the wallclock time limit, is adjusted, as
-        no interface to wallclock limit available.
-        For this reason, extra 30s is added to time remaining
-        for subsolver time limit.
-        (The extra 30s is large enough to ensure solver
-        elapsed time is not beneath elapsed time - user time limit,
-        but not so large as to overshoot the user-specified time limit
-        by an inordinate margin.)
+    (2) For IPOPT and BARON, the CPU time limit,
+        rather than the wallclock time limit, may be adjusted,
+        as there may be no means by which to specify the wall time
+        limit explicitly.
+    (3) For GAMS, we adjust the time limit through the GAMS Reslim
+        option. However, this may be overridden by any user
+        specifications included in a GAMS optfile, which may be
+        difficult to track down.
+    (4) To ensure the time limit is specified to a strictly
+        positive value, the time limit is adjusted to a value of
+        at least 1 second.
     """
+    # in case there is no time remaining: we set time limit
+    # to a minimum of 1s, as some solvers require a strictly
+    # positive time limit
+    time_limit_buffer = 1
+
     if config.time_limit is not None:
         time_remaining = config.time_limit - get_main_elapsed_time(timing_data_obj)
         if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
             original_max_time_setting = solver.options["add_options"]
             custom_setting_present = "add_options" in solver.options
 
-            # adjust GAMS solver time
-            reslim_str = f"option reslim={max(30, 30 + time_remaining)};"
+            # note: our time limit will be overridden by any
+            #       time limits specified by the user through a
+            #       GAMS optfile, but tracking down the optfile
+            #       and/or the GAMS subsolver specific option
+            #       is more difficult
+            reslim_str = "option reslim=" f"{max(time_limit_buffer, time_remaining)};"
             if isinstance(solver.options["add_options"], list):
                 solver.options["add_options"].append(reslim_str)
             else:
@@ -278,7 +304,16 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
             if isinstance(solver, SolverFactory.get_class("baron")):
                 options_key = "MaxTime"
             elif isinstance(solver, SolverFactory.get_class("ipopt")):
-                options_key = "max_cpu_time"
+                options_key = (
+                    # IPOPT 3.14.0+ added support for specifying
+                    # wall time limit explicitly; this is preferred
+                    # over CPU time limit
+                    "max_wall_time"
+                    if solver.version() >= (3, 14, 0, 0)
+                    else "max_cpu_time"
+                )
+            elif isinstance(solver, SolverFactory.get_class("scip")):
+                options_key = "limits/time"
             else:
                 options_key = None
 
@@ -286,8 +321,19 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
                 custom_setting_present = options_key in solver.options
                 original_max_time_setting = solver.options[options_key]
 
-                # ensure positive value assigned to avoid application error
-                solver.options[options_key] = max(30, 30 + time_remaining)
+                # account for elapsed time remaining and
+                # original time limit setting.
+                # if no original time limit is set, then we assume
+                # there is no time limit, rather than tracking
+                # down the solver-specific default
+                orig_max_time = (
+                    float("inf")
+                    if original_max_time_setting is None
+                    else original_max_time_setting
+                )
+                solver.options[options_key] = min(
+                    max(time_limit_buffer, time_remaining), orig_max_time
+                )
             else:
                 custom_setting_present = False
                 original_max_time_setting = None
@@ -333,7 +379,16 @@ def revert_solver_max_time_adjustment(
         elif isinstance(solver, SolverFactory.get_class("baron")):
             options_key = "MaxTime"
         elif isinstance(solver, SolverFactory.get_class("ipopt")):
-            options_key = "max_cpu_time"
+            options_key = (
+                # IPOPT 3.14.0+ added support for specifying
+                # wall time limit explicitly; this is preferred
+                # over CPU time limit
+                "max_wall_time"
+                if solver.version() >= (3, 14, 0, 0)
+                else "max_cpu_time"
+            )
+        elif isinstance(solver, SolverFactory.get_class("scip")):
+            options_key = "limits/time"
         else:
             options_key = None
 
@@ -348,12 +403,7 @@ def revert_solver_max_time_adjustment(
                 if isinstance(solver, type(SolverFactory("gams", solver_io="shell"))):
                     solver.options[options_key].pop()
             else:
-                # remove the max time specification introduced.
-                # All lines are needed here to completely remove the option
-                # from access through getattr and dictionary reference.
                 delattr(solver.options, options_key)
-                if options_key in solver.options.keys():
-                    del solver.options[options_key]
 
 
 class PreformattedLogger(logging.Logger):
@@ -434,51 +484,6 @@ def setup_pyros_logger(name=DEFAULT_LOGGER_NAME):
     return logger
 
 
-def a_logger(str_or_logger):
-    """
-    Standardize a string or logger object to a logger object.
-
-    Parameters
-    ----------
-    str_or_logger : str or logging.Logger
-        String or logger object to normalize.
-
-    Returns
-    -------
-    logging.Logger
-        If `str_or_logger` is of type `logging.Logger`,then
-        `str_or_logger` is returned.
-        Otherwise, ``logging.getLogger(str_or_logger)``
-        is returned. In the event `str_or_logger` is
-        the name of the default PyROS logger, the logger level
-        is set to `logging.INFO`, and a `PreformattedLogger`
-        instance is returned in lieu of a standard `Logger`
-        instance.
-    """
-    if isinstance(str_or_logger, logging.Logger):
-        return logging.getLogger(str_or_logger.name)
-    else:
-        return logging.getLogger(str_or_logger)
-
-
-def ValidEnum(enum_class):
-    '''
-    Python 3 dependent format string
-    '''
-
-    def fcn(obj):
-        if obj not in enum_class:
-            raise ValueError(
-                "Expected an {0} object, "
-                "instead received {1}".format(
-                    enum_class.__name__, obj.__class__.__name__
-                )
-            )
-        return obj
-
-    return fcn
-
-
 class pyrosTerminationCondition(Enum):
     """Enumeration of all possible PyROS termination conditions."""
 
@@ -555,14 +560,6 @@ def recast_to_min_obj(model, obj):
         else:
             obj.expr = -obj.expr
         obj.sense = minimize
-
-
-def model_is_valid(model):
-    """
-    Assess whether model is valid on basis of the number of active
-    Objectives. A valid model must contain exactly one active Objective.
-    """
-    return len(list(model.component_data_objects(Objective, active=True))) == 1
 
 
 def turn_bounds_to_constraints(variable, model, config=None):
@@ -646,41 +643,6 @@ def get_time_from_solver(results):
             break
 
     return float("nan") if solve_time is None else solve_time
-
-
-def validate_uncertainty_set(config):
-    '''
-    Confirm expression output from uncertainty set function references all q in q.
-    Typecheck the uncertainty_set.q is Params referenced inside of m.
-    Give warning that the nominal point (default value in the model) is not in the specified uncertainty set.
-    :param config: solver config
-    '''
-    # === Check that q in UncertaintySet object constraint expression is referencing q in model.uncertain_params
-    uncertain_params = config.uncertain_params
-
-    # === Non-zero number of uncertain parameters
-    if len(uncertain_params) == 0:
-        raise AttributeError(
-            "Must provide uncertain params, uncertain_params list length is 0."
-        )
-    # === No duplicate parameters
-    if len(uncertain_params) != len(ComponentSet(uncertain_params)):
-        raise AttributeError("No duplicates allowed for uncertain param objects.")
-    # === Ensure nominal point is in the set
-    if not config.uncertainty_set.point_in_set(
-        point=config.nominal_uncertain_param_vals
-    ):
-        raise AttributeError(
-            "Nominal point for uncertain parameters must be in the uncertainty set."
-        )
-    # === Check set validity via boundedness and non-emptiness
-    if not config.uncertainty_set.is_valid(config=config):
-        raise AttributeError(
-            "Invalid uncertainty set detected. Check the uncertainty set object to "
-            "ensure non-emptiness and boundedness."
-        )
-
-    return
 
 
 def add_bounds_for_uncertain_parameters(model, config):
@@ -862,98 +824,345 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
             v.setlb(None)
 
 
-def validate_kwarg_inputs(model, config):
-    '''
-    Confirm kwarg inputs satisfy PyROS requirements.
-    :param model: the deterministic model
-    :param config: the config for this PyROS instance
-    :return:
-    '''
+def check_components_descended_from_model(model, components, components_name, config):
+    """
+    Check all members in a provided sequence of Pyomo component
+    objects are descended from a given ConcreteModel object.
 
-    # === Check if model is ConcreteModel object
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model from which components should all be descended.
+    components : Iterable of Component
+        Components of interest.
+    components_name : str
+        Brief description or name for the sequence of components.
+        Used for constructing error messages.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one entry of `components` is not descended
+        from `model`.
+    """
+    components_not_in_model = [comp for comp in components if comp.model() is not model]
+    if components_not_in_model:
+        comp_names_str = "\n ".join(
+            f"{comp.name!r}, from model with name {comp.model().name!r}"
+            for comp in components_not_in_model
+        )
+        config.progress_logger.error(
+            f"The following {components_name} "
+            "are not descended from the "
+            f"input deterministic model with name {model.name!r}:\n "
+            f"{comp_names_str}"
+        )
+        raise ValueError(
+            f"Found entries of {components_name} "
+            "not descended from input model. "
+            "Check logger output messages."
+        )
+
+
+def get_state_vars(blk, first_stage_variables, second_stage_variables):
+    """
+    Get state variables of a modeling block.
+
+    The state variables with respect to `blk` are the unfixed
+    `VarData` objects participating in the active objective
+    or constraints descended from `blk` which are not
+    first-stage variables or second-stage variables.
+
+    Parameters
+    ----------
+    blk : ScalarBlock
+        Block of interest.
+    first_stage_variables : Iterable of VarData
+        First-stage variables.
+    second_stage_variables : Iterable of VarData
+        Second-stage variables.
+
+    Yields
+    ------
+    VarData
+        State variable.
+    """
+    dof_var_set = ComponentSet(first_stage_variables) | ComponentSet(
+        second_stage_variables
+    )
+    for var in get_vars_from_component(blk, (Objective, Constraint)):
+        is_state_var = not var.fixed and var not in dof_var_set
+        if is_state_var:
+            yield var
+
+
+def check_variables_continuous(model, vars, config):
+    """
+    Check that all DOF and state variables of the model
+    are continuous.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one variable is found to not be continuous.
+
+    Note
+    ----
+    A variable is considered continuous if the `is_continuous()`
+    method returns True.
+    """
+    non_continuous_vars = [var for var in vars if not var.is_continuous()]
+    if non_continuous_vars:
+        non_continuous_vars_str = "\n ".join(
+            f"{var.name!r}" for var in non_continuous_vars
+        )
+        config.progress_logger.error(
+            f"The following Vars of model with name {model.name!r} "
+            f"are non-continuous:\n {non_continuous_vars_str}\n"
+            "Ensure all model variables passed to PyROS solver are continuous."
+        )
+        raise ValueError(
+            f"Model with name {model.name!r} contains non-continuous Vars."
+        )
+
+
+def validate_model(model, config):
+    """
+    Validate deterministic model passed to PyROS solver.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Deterministic model. Should have only one active Objective.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    ComponentSet
+        The variables participating in the active Objective
+        and Constraint expressions of `model`.
+
+    Raises
+    ------
+    TypeError
+        If model is not of type ConcreteModel.
+    ValueError
+        If model does not have exactly one active Objective
+        component.
+    """
+    # note: only support ConcreteModel. no support for Blocks
     if not isinstance(model, ConcreteModel):
-        raise ValueError("Model passed to PyROS solver must be a ConcreteModel object.")
+        raise TypeError(
+            f"Model should be of type {ConcreteModel.__name__}, "
+            f"but is of type {type(model).__name__}."
+        )
 
-    first_stage_variables = config.first_stage_variables
-    second_stage_variables = config.second_stage_variables
-    uncertain_params = config.uncertain_params
+    # active objectives check
+    active_objs_list = list(
+        model.component_data_objects(Objective, active=True, descend_into=True)
+    )
+    if len(active_objs_list) != 1:
+        raise ValueError(
+            "Expected model with exactly 1 active objective, but "
+            f"model provided has {len(active_objs_list)}."
+        )
 
+
+def validate_variable_partitioning(model, config):
+    """
+    Check that partitioning of the first-stage variables,
+    second-stage variables, and uncertain parameters
+    is valid.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Returns
+    -------
+    list of VarData
+        State variables of the model.
+
+    Raises
+    ------
+    ValueError
+        If first-stage variables and second-stage variables
+        overlap, or there are no first-stage variables
+        and no second-stage variables.
+    """
+    # at least one DOF required
     if not config.first_stage_variables and not config.second_stage_variables:
-        # Must have non-zero DOF
         raise ValueError(
-            "first_stage_variables and "
-            "second_stage_variables cannot both be empty lists."
+            "Arguments `first_stage_variables` and "
+            "`second_stage_variables` are both empty lists."
         )
 
-    if ComponentSet(first_stage_variables) != ComponentSet(
-        config.first_stage_variables
-    ):
-        raise ValueError(
-            "All elements in first_stage_variables must be Var members of the model object."
-        )
-
-    if ComponentSet(second_stage_variables) != ComponentSet(
+    # ensure no overlap between DOF var sets
+    overlapping_vars = ComponentSet(config.first_stage_variables) & ComponentSet(
         config.second_stage_variables
-    ):
+    )
+    if overlapping_vars:
+        overlapping_var_list = "\n ".join(f"{var.name!r}" for var in overlapping_vars)
+        config.progress_logger.error(
+            "The following Vars were found in both `first_stage_variables`"
+            f"and `second_stage_variables`:\n {overlapping_var_list}"
+            "\nEnsure no Vars are included in both arguments."
+        )
         raise ValueError(
-            "All elements in second_stage_variables must be Var members of the model object."
+            "Arguments `first_stage_variables` and `second_stage_variables` "
+            "contain at least one common Var object."
         )
 
-    if any(
-        v in ComponentSet(second_stage_variables)
-        for v in ComponentSet(first_stage_variables)
-    ):
-        raise ValueError(
-            "No common elements allowed between first_stage_variables and second_stage_variables."
+    state_vars = list(
+        get_state_vars(
+            model,
+            first_stage_variables=config.first_stage_variables,
+            second_stage_variables=config.second_stage_variables,
+        )
+    )
+    var_type_list_map = {
+        "first-stage variables": config.first_stage_variables,
+        "second-stage variables": config.second_stage_variables,
+        "state variables": state_vars,
+    }
+    for desc, vars in var_type_list_map.items():
+        check_components_descended_from_model(
+            model=model, components=vars, components_name=desc, config=config
         )
 
-    if ComponentSet(uncertain_params) != ComponentSet(config.uncertain_params):
+    all_vars = config.first_stage_variables + config.second_stage_variables + state_vars
+    check_variables_continuous(model, all_vars, config)
+
+    return state_vars
+
+
+def validate_uncertainty_specification(model, config):
+    """
+    Validate specification of uncertain parameters and uncertainty
+    set.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If at least one of the following holds:
+
+        - dimension of uncertainty set does not equal number of
+          uncertain parameters
+        - uncertainty set `is_valid()` method does not return
+          true.
+        - nominal parameter realization is not in the uncertainty set.
+    """
+    check_components_descended_from_model(
+        model=model,
+        components=config.uncertain_params,
+        components_name="uncertain parameters",
+        config=config,
+    )
+
+    if len(config.uncertain_params) != config.uncertainty_set.dim:
         raise ValueError(
-            "uncertain_params must be mutable Param members of the model object."
+            "Length of argument `uncertain_params` does not match dimension "
+            "of argument `uncertainty_set` "
+            f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    if not config.uncertainty_set:
+    # validate uncertainty set
+    if not config.uncertainty_set.is_valid(config=config):
         raise ValueError(
-            "An UncertaintySet object must be provided to the PyROS solver."
+            f"Uncertainty set {config.uncertainty_set} is invalid, "
+            "as it is either empty or unbounded."
         )
 
-    non_mutable_params = []
-    for p in config.uncertain_params:
-        if not (
-            not p.is_constant() and p.is_fixed() and not p.is_potentially_variable()
-        ):
-            non_mutable_params.append(p)
-        if non_mutable_params:
-            raise ValueError(
-                "Param objects which are uncertain must have attribute mutable=True. "
-                "Offending Params: %s" % [p.name for p in non_mutable_params]
-            )
-
-    # === Solvers provided check
-    if not config.local_solver or not config.global_solver:
+    # fill-in nominal point as necessary, if not provided.
+    # otherwise, check length matches uncertainty dimension
+    if not config.nominal_uncertain_param_vals:
+        config.nominal_uncertain_param_vals = [
+            value(param, exception=True) for param in config.uncertain_params
+        ]
+    elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(
-            "User must designate both a local and global optimization solver via the local_solver"
-            " and global_solver options."
+            "Lengths of arguments `uncertain_params` and "
+            "`nominal_uncertain_param_vals` "
+            "do not match "
+            f"({len(config.uncertain_params)} != "
+            f"{len(config.nominal_uncertain_param_vals)})."
         )
 
+    # uncertainty set should contain nominal point
+    nominal_point_in_set = config.uncertainty_set.point_in_set(
+        point=config.nominal_uncertain_param_vals
+    )
+    if not nominal_point_in_set:
+        raise ValueError(
+            "Nominal uncertain parameter realization "
+            f"{config.nominal_uncertain_param_vals} "
+            "is not a point in the uncertainty set "
+            f"{config.uncertainty_set!r}."
+        )
+
+
+def validate_separation_problem_options(model, config):
+    """
+    Validate separation problem arguments to the PyROS solver.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+
+    Raises
+    ------
+    ValueError
+        If options `bypass_local_separation` and
+        `bypass_global_separation` are set to False.
+    """
     if config.bypass_local_separation and config.bypass_global_separation:
         raise ValueError(
-            "User cannot simultaneously enable options "
-            "'bypass_local_separation' and "
-            "'bypass_global_separation'."
+            "Arguments `bypass_local_separation` "
+            "and `bypass_global_separation` "
+            "cannot both be True."
         )
 
-    # === Degrees of freedom provided check
-    if len(config.first_stage_variables) + len(config.second_stage_variables) == 0:
-        raise ValueError(
-            "User must designate at least one first- and/or second-stage variable."
-        )
 
-    # === Uncertain params provided check
-    if len(config.uncertain_params) == 0:
-        raise ValueError("User must designate at least one uncertain parameter.")
+def validate_pyros_inputs(model, config):
+    """
+    Perform advanced validation of PyROS solver arguments.
 
-    return
+    Parameters
+    ----------
+    model : ConcreteModel
+        Input deterministic model.
+    config : ConfigDict
+        PyROS solver options.
+    """
+    validate_model(model, config)
+    state_vars = validate_variable_partitioning(model, config)
+    validate_uncertainty_specification(model, config)
+    validate_separation_problem_options(model, config)
+
+    return state_vars
 
 
 def substitute_ssv_in_dr_constraints(model, constraint):
@@ -1559,6 +1768,93 @@ def process_termination_condition_master_problem(config, results):
                 "This solver return termination condition (%s) "
                 "is currently not supported by PyROS." % termination_condition
             )
+
+
+def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
+    """
+    Solve a model with a given optimizer, keeping track of
+    wall time requirements.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model of interest.
+    solver : Pyomo solver type
+        Subordinate optimizer.
+    config : ConfigDict
+        PyROS solver settings.
+    timing_obj : TimingData
+        PyROS solver timing data object.
+    timer_name : str
+        Name of sub timer under the hierarchical timer contained in
+        ``timing_obj`` to start/stop for keeping track of solve
+        time requirements.
+    err_msg : str
+        Message to log through ``config.progress_logger.exception()``
+        in event an ApplicationError is raised while attempting to
+        solve the model.
+
+    Returns
+    -------
+    SolverResults
+        Solve results. Note that ``results.solver`` contains
+        an additional attribute, named after
+        ``TIC_TOC_SOLVE_TIME_ATTR``, of which the value is set to the
+        recorded solver wall time.
+
+    Raises
+    ------
+    ApplicationError
+        If ApplicationError is raised by the solver.
+        In this case, `err_msg` is logged through
+        ``config.progress_logger.exception()`` before
+        the exception is raised.
+    """
+    tt_timer = TicTocTimer()
+
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        timing_obj, solver, config
+    )
+    timing_obj.start_timer(timer_name)
+    tt_timer.tic(msg=None)
+
+    # tentative: reduce risk of InfeasibleConstraintException
+    # occurring due to discrepancies between Pyomo NL writer
+    # tolerance and (default) subordinate solver (e.g. IPOPT)
+    # feasibility tolerances.
+    # e.g., a Var fixed outside bounds beyond the Pyomo NL writer
+    # tolerance, but still within the default IPOPT feasibility
+    # tolerance
+    current_nl_writer_tol = pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL
+    pyomo_nl_writer.TOL = 1e-4
+    pyomo_ampl_repn.TOL = 1e-4
+
+    try:
+        results = solver.solve(
+            model,
+            tee=config.tee,
+            load_solutions=False,
+            symbolic_solver_labels=config.symbolic_solver_labels,
+        )
+    except ApplicationError:
+        # account for possible external subsolver errors
+        # (such as segmentation faults, function evaluation
+        # errors, etc.)
+        config.progress_logger.error(err_msg)
+        raise
+    else:
+        setattr(
+            results.solver, TIC_TOC_SOLVE_TIME_ATTR, tt_timer.toc(msg=None, delta=True)
+        )
+    finally:
+        pyomo_nl_writer.TOL, pyomo_ampl_repn.TOL = current_nl_writer_tol
+
+        timing_obj.stop_timer(timer_name)
+        revert_solver_max_time_adjustment(
+            solver, orig_setting, custom_setting_present, config
+        )
+
+    return results
 
 
 class IterationLogRecord:

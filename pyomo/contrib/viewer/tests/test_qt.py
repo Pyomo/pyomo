@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -103,7 +103,7 @@ def get_model():
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_get_mainwindow(qtbot):
     m = get_model()
-    mw, m = get_mainwindow(model=m, testing=True)
+    mw = get_mainwindow(model=m, testing=True)
     assert hasattr(mw, "menuBar")
     assert isinstance(mw.variables, ModelBrowser)
     assert isinstance(mw.constraints, ModelBrowser)
@@ -113,13 +113,13 @@ def test_get_mainwindow(qtbot):
 
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_close_mainwindow(qtbot):
-    mw, m = get_mainwindow(model=None, testing=True)
+    mw = get_mainwindow(model=None, testing=True)
     mw.exit_action()
 
 
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_show_model_select_no_models(qtbot):
-    mw, m = get_mainwindow(model=None, testing=True)
+    mw = get_mainwindow(model=None, testing=True)
     ms = mw.show_model_select()
     ms.update_models()
     ms.select_model()
@@ -128,7 +128,7 @@ def test_show_model_select_no_models(qtbot):
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_model_information(qtbot):
     m = get_model()
-    mw, m = get_mainwindow(model=m, testing=True)
+    mw = get_mainwindow(model=m, testing=True)
     mw.model_information()
     assert isinstance(mw._dialog, QMessageBox)
     text = mw._dialog.text()
@@ -149,7 +149,7 @@ def test_model_information(qtbot):
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_tree_expand_collapse(qtbot):
     m = get_model()
-    mw, m = get_mainwindow(model=m, testing=True)
+    mw = get_mainwindow(model=m, testing=True)
     mw.variables.treeView.expandAll()
     mw.variables.treeView.collapseAll()
 
@@ -157,7 +157,7 @@ def test_tree_expand_collapse(qtbot):
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_residual_table(qtbot):
     m = get_model()
-    mw, m = get_mainwindow(model=m, testing=True)
+    mw = get_mainwindow(model=m, testing=True)
     mw.residuals_restart()
     mw.ui_data.calculate_expressions()
     mw.residuals.calculate()
@@ -184,7 +184,7 @@ def test_residual_table(qtbot):
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_var_tree(qtbot):
     m = get_model()
-    mw, m = get_mainwindow(model=m, testing=True)
+    mw = get_mainwindow(model=m, testing=True)
     qtbot.addWidget(mw)
     mw.variables.treeView.expandAll()
     root_index = mw.variables.datmodel.index(0, 0)
@@ -218,7 +218,7 @@ def test_var_tree(qtbot):
 @unittest.skipIf(not available, "Qt packages are not available.")
 def test_bad_view(qtbot):
     m = get_model()
-    mw, m = get_mainwindow(model=m, testing=True)
+    mw = get_mainwindow(model=m, testing=True)
     err = None
     try:
         mw.badTree = mw._tree_restart(

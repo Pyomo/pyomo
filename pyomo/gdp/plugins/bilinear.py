@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -77,9 +77,10 @@ class Bilinear_Transformation(Transformation):
         for component in block.component_data_objects(
             Constraint, active=True, descend_into=False
         ):
-            expr = self._transformExpression(component.body, instance)
-            instance.bilinear_data_.c_body[id(component)] = component.body
-            component._body = expr
+            lb, body, ub = component.to_bounded_expression()
+            expr = self._transformExpression(body, instance)
+            instance.bilinear_data_.c_body[id(component)] = body
+            component.set_value((lb, expr, ub))
 
     def _transformExpression(self, expr, instance):
         if expr.polynomial_degree() > 2:

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,8 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.contrib.piecewise.transform.piecewise_to_gdp_transformation import (
-    PiecewiseLinearToGDP,
+from pyomo.contrib.piecewise.transform.piecewise_linear_transformation_base import (
+    PiecewiseLinearTransformationBase,
 )
 from pyomo.core import Constraint, NonNegativeIntegers, Var
 from pyomo.core.base import TransformationFactory
@@ -25,7 +25,7 @@ from pyomo.gdp import Disjunct, Disjunction
     "simplices that are the domains of the linear "
     "functions.",
 )
-class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
+class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearTransformationBase):
     """
     Convert a model involving piecewise linear expressions into a GDP by
     representing the piecewise linear functions as Disjunctions where the
@@ -51,7 +51,7 @@ class ReducedInnerRepresentationGDPTransformation(PiecewiseLinearToGDP):
            this mode, targets must be Blocks, Constraints, and/or Objectives.
     """
 
-    CONFIG = PiecewiseLinearToGDP.CONFIG()
+    CONFIG = PiecewiseLinearTransformationBase.CONFIG()
     _transformation_name = 'pw_linear_reduced_inner_repn'
 
     def _transform_pw_linear_expr(self, pw_expr, pw_linear_func, transformation_block):

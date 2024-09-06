@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -498,6 +498,10 @@ class TestCase(_unittest.TestCase):
 
     __doc__ += _unittest.TestCase.__doc__
 
+    # By default, we always want to spend the time to create the full
+    # diff of the test reault and the baseline
+    maxDiff = None
+
     def assertStructuredAlmostEqual(
         self,
         first,
@@ -631,7 +635,7 @@ class BaselineTestDriver(object):
         cls.package_modules = {}
         packages_used = set(sum(list(cls.package_dependencies.values()), []))
         for package_ in packages_used:
-            pack, pack_avail = attempt_import(package_, defer_check=False)
+            pack, pack_avail = attempt_import(package_, defer_import=False)
             cls.package_available[package_] = pack_avail
             cls.package_modules[package_] = pack
 
@@ -779,6 +783,7 @@ class BaselineTestDriver(object):
         return False
 
     def filter_file_contents(self, lines, abstol=None):
+        _numpy_scalar_re = re.compile(r'np.(int|float)\d+\(([^\)]+)\)')
         filtered = []
         deprecated = None
         for line in lines:
@@ -803,6 +808,15 @@ class BaselineTestDriver(object):
             item_list = []
             items = line.strip().split()
             for i in items:
+                # Split up lists, dicts, and sets
+                while i and i[0] in '[{':
+                    item_list.append(i[0])
+                    i = i[1:]
+                tail = []
+                while i and i[-1] in ',:]}':
+                    tail.append(i[-1])
+                    i = i[:-1]
+
                 # A few substitutions to get tests passing on pypy3
                 if ".inf" in i:
                     i = i.replace(".inf", "inf")
@@ -810,9 +824,19 @@ class BaselineTestDriver(object):
                     i = i.replace("null", "None")
 
                 try:
-                    item_list.append(float(i))
+                    # Numpy 2.x changed the repr for scalars.  Convert
+                    # the new scalar reprs back to the original (which
+                    # were indistinguishable from python floats/ints)
+                    np_match = _numpy_scalar_re.match(i)
+                    if np_match:
+                        item_list.append(float(np_match.group(2)))
+                    else:
+                        item_list.append(float(i))
                 except:
                     item_list.append(i)
+                if tail:
+                    tail.reverse()
+                    item_list.extend(tail)
 
             # We can get printed results objects where the baseline is
             # exactly 0 (and omitted) and the test is slightly non-zero.
@@ -820,12 +844,13 @@ class BaselineTestDriver(object):
             # results objects and remote them if they are within
             # tolerance of 0
             if (
-                len(item_list) == 2
-                and item_list[0] == 'Value:'
-                and type(item_list[1]) is float
-                and abs(item_list[1]) < (abstol or 0)
-                and len(filtered[-1]) == 1
-                and filtered[-1][0][-1] == ':'
+                len(item_list) == 3
+                and item_list[0] == 'Value'
+                and item_list[1] == ':'
+                and type(item_list[2]) is float
+                and abs(item_list[2]) < (abstol or 0)
+                and len(filtered[-1]) == 2
+                and filtered[-1][1] == ':'
             ):
                 filtered.pop()
             else:
@@ -833,7 +858,7 @@ class BaselineTestDriver(object):
 
         return filtered
 
-    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=None):
+    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=1e-8):
         # Filter files independently and then compare filtered contents
         out_filtered = self.filter_file_contents(
             test_output.strip().split('\n'), abstol

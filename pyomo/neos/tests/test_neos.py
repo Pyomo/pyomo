@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -79,6 +79,9 @@ class TestKestrel(unittest.TestCase):
         doc = pyomo.neos.doc
         dockeys = set(doc.keys())
 
+        # Octeract interface is disabled, see #3321
+        amplsolvers.remove('octeract')
+
         self.assertEqual(amplsolvers, dockeys)
 
         # gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
@@ -149,8 +152,11 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
-    def test_octeract(self):
-        self._run('octeract')
+    # [16 Jul 24] Octeract is erroring.  We will disable the interface
+    # (and testing) until we have time to resolve #3321
+    #
+    # def test_octeract(self):
+    #     self._run('octeract')
 
     def test_ooqp(self):
         if self.sense == pyo.maximize:

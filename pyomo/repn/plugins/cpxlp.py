@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -60,7 +60,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # The LP writer tracks which variables are
         # referenced in constraints, so that a user does not end up with a
         # zillion "unreferenced variables" warning messages.
-        # This dictionary maps id(_VarData) -> _VarData.
+        # This dictionary maps id(VarData) -> VarData.
         self._referenced_variable_ids = {}
 
         # Per ticket #4319, we are using %.17g, which mocks the
@@ -374,7 +374,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
     def printSOS(self, symbol_map, labeler, variable_symbol_map, soscondata, output):
         """
-        Prints the SOS constraint associated with the _SOSConstraintData object
+        Prints the SOS constraint associated with the SOSConstraintData object
         """
         sos_template_string = self.sos_template_string
 

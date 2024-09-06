@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -358,9 +358,9 @@ class FOQUSGraph(object):
         done = False
         for i in range(len(sccNodes)):
             for j in range(len(sccNodes)):
-                for ine in ie[i]:
-                    for oute in oe[j]:
-                        if ine == oute:
+                for in_e in ie[i]:
+                    for out_e in oe[j]:
+                        if in_e == out_e:
                             adj[j].append(i)
                             adjR[i].append(j)
                             done = True

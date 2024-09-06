@@ -1,16 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-
-__all__ = ['StandardRepn', 'generate_standard_repn']
 
 
 import sys
@@ -22,11 +19,15 @@ from pyomo.core.base import Constraint, Objective, ComponentMap
 
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import NumericConstant
-from pyomo.core.base.objective import _GeneralObjectiveData, ScalarObjective
-from pyomo.core.base import _ExpressionData, Expression
-from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.var import ScalarVar, Var, _GeneralVarData, value
-from pyomo.core.base.param import ScalarParam, _ParamData
+from pyomo.core.base.objective import ObjectiveData, ScalarObjective
+from pyomo.core.base import Expression
+from pyomo.core.base.expression import (
+    ScalarExpression,
+    NamedExpressionData,
+    ExpressionData,
+)
+from pyomo.core.base.var import ScalarVar, Var, VarData, value
+from pyomo.core.base.param import ScalarParam, ParamData
 from pyomo.core.kernel.expression import expression, noclone
 from pyomo.core.kernel.variable import IVariable, variable
 from pyomo.core.kernel.objective import objective
@@ -324,6 +325,16 @@ def generate_standard_repn(
                             linear_vars[id_] = v
                     elif arg.__class__ in native_numeric_types:
                         C_ += arg
+                    elif arg.is_variable_type():
+                        if arg.fixed:
+                            C_ += arg.value
+                            continue
+                        id_ = id(arg)
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += 1
+                        else:
+                            linear_coefs[id_] = 1
+                            linear_vars[id_] = arg
                     else:
                         C_ += EXPR.evaluate_expression(arg)
             else:  # compute_values == False
@@ -339,6 +350,18 @@ def generate_standard_repn(
                         else:
                             linear_coefs[id_] = c
                             linear_vars[id_] = v
+                    elif arg.__class__ in native_numeric_types:
+                        C_ += arg
+                    elif arg.is_variable_type():
+                        if arg.fixed:
+                            C_ += arg
+                            continue
+                        id_ = id(arg)
+                        if id_ in linear_coefs:
+                            linear_coefs[id_] += 1
+                        else:
+                            linear_coefs[id_] = 1
+                            linear_vars[id_] = arg
                     else:
                         C_ += arg
 
@@ -1117,25 +1140,25 @@ _repn_collectors = {
     EXPR.RangedExpression: _collect_comparison,
     EXPR.EqualityExpression: _collect_comparison,
     EXPR.ExternalFunctionExpression: _collect_external_fn,
-    # _ConnectorData          : _collect_linear_connector,
+    # ConnectorData          : _collect_linear_connector,
     # ScalarConnector         : _collect_linear_connector,
-    _ParamData: _collect_const,
+    ParamData: _collect_const,
     ScalarParam: _collect_const,
     # param.Param             : _collect_linear_const,
     # parameter               : _collect_linear_const,
     NumericConstant: _collect_const,
-    _GeneralVarData: _collect_var,
+    VarData: _collect_var,
     ScalarVar: _collect_var,
     Var: _collect_var,
     variable: _collect_var,
     IVariable: _collect_var,
-    _GeneralExpressionData: _collect_identity,
+    ExpressionData: _collect_identity,
     ScalarExpression: _collect_identity,
     expression: _collect_identity,
     noclone: _collect_identity,
-    _ExpressionData: _collect_identity,
+    NamedExpressionData: _collect_identity,
     Expression: _collect_identity,
-    _GeneralObjectiveData: _collect_identity,
+    ObjectiveData: _collect_identity,
     ScalarObjective: _collect_identity,
     objective: _collect_identity,
 }
@@ -1517,24 +1540,24 @@ _linear_repn_collectors = {
     #EXPR.EqualityExpression                     : _linear_collect_comparison,
     #EXPR.ExternalFunctionExpression             : _linear_collect_external_fn,
     ##EXPR.LinearSumExpression               : _collect_linear_sum,
-    ##_ConnectorData          : _collect_linear_connector,
+    ##ConnectorData          : _collect_linear_connector,
     ##ScalarConnector         : _collect_linear_connector,
-    ##param._ParamData        : _collect_linear_const,
+    ##param.ParamData        : _collect_linear_const,
     ##param.ScalarParam       : _collect_linear_const,
     ##param.Param             : _collect_linear_const,
     ##parameter               : _collect_linear_const,
-    _GeneralVarData                             : _linear_collect_var,
+    VarData                             : _linear_collect_var,
     ScalarVar                                   : _linear_collect_var,
     Var                                         : _linear_collect_var,
     variable                                    : _linear_collect_var,
     IVariable                                   : _linear_collect_var,
-    _GeneralExpressionData                      : _linear_collect_identity,
+    ExpressionData                      : _linear_collect_identity,
     ScalarExpression                            : _linear_collect_identity,
     expression                                  : _linear_collect_identity,
     noclone                                     : _linear_collect_identity,
-    _ExpressionData                             : _linear_collect_identity,
+    NamedExpressionData                             : _linear_collect_identity,
     Expression                                  : _linear_collect_identity,
-    _GeneralObjectiveData                       : _linear_collect_identity,
+    ObjectiveData                       : _linear_collect_identity,
     ScalarObjective                             : _linear_collect_identity,
     objective                                   : _linear_collect_identity,
     }

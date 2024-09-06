@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,19 +9,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import os
 import platform
 import re
 import shutil
-import tempfile
 import subprocess
+import tarfile
+import tempfile
 
 import pyomo.common.unittest as unittest
 import pyomo.common.envvar as envvar
 
 from pyomo.common import DeveloperError
-from pyomo.common.fileutils import this_file
+from pyomo.common.fileutils import this_file, Executable
 from pyomo.common.download import FileDownloader, distro_available
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 
 
@@ -170,7 +173,8 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertTrue(v.replace('.', '').startswith(dist_ver))
 
             if (
-                subprocess.run(
+                Executable('lsb_release').available()
+                and subprocess.run(
                     ['lsb_release'],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
@@ -203,7 +207,7 @@ class Test_FileDownloader(unittest.TestCase):
             self.assertEqual(_os, 'win')
             self.assertEqual(_norm, _os + ''.join(_ver.split('.')[:2]))
         else:
-            self.assertEqual(ans, '')
+            self.assertEqual(_os, '')
 
         self.assertEqual((_os, _ver), FileDownloader._os_version)
         # Exercise the fetch from CACHE
@@ -242,7 +246,7 @@ class Test_FileDownloader(unittest.TestCase):
         ):
             f.get_gzipped_binary_file('bogus')
 
-    def test_get_test_binary_file(self):
+    def test_get_text_binary_file(self):
         tmpdir = tempfile.mkdtemp()
         try:
             f = FileDownloader()
@@ -261,5 +265,68 @@ class Test_FileDownloader(unittest.TestCase):
             f.set_destination_filename(target)
             f.get_text_file(None)
             self.assertEqual(os.path.getsize(target), len(os.linesep))
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_get_tar_archive(self):
+        tmpdir = tempfile.mkdtemp()
+        try:
+            f = FileDownloader()
+
+            # Mock retrieve_url so network connections are not necessary
+            buf = io.BytesIO()
+            with tarfile.open(mode="w:gz", fileobj=buf) as TAR:
+                info = tarfile.TarInfo('b/lnk')
+                info.size = 0
+                info.type = tarfile.SYMTYPE
+                info.linkname = envvar.PYOMO_CONFIG_DIR
+                TAR.addfile(info)
+                for fname in ('a', 'b/c', 'b/d', '/root', 'b/lnk/test'):
+                    info = tarfile.TarInfo(fname)
+                    info.size = 0
+                    info.type = tarfile.REGTYPE
+                    info.mode = 0o644
+                    info.mtime = info.uid = info.gid = 0
+                    info.uname = info.gname = 'root'
+                    TAR.addfile(info)
+            f.retrieve_url = lambda url: buf.getvalue()
+
+            with self.assertRaisesRegex(
+                DeveloperError,
+                r"(?s)target file name has not been initialized "
+                r"with set_destination_filename".replace(' ', r'\s+'),
+            ):
+                f.get_tar_archive(None, 1)
+
+            _tmp = os.path.join(tmpdir, 'a_file')
+            with open(_tmp, 'w'):
+                pass
+            f.set_destination_filename(_tmp)
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"Target directory \(.*a_file\) exists, but is not a directory",
+            ):
+                f.get_tar_archive(None, 1)
+
+            f.set_destination_filename(tmpdir)
+            with LoggingIntercept() as LOG:
+                f.get_tar_archive(None, 1)
+
+            self.assertEqual(
+                LOG.getvalue().strip(),
+                """
+Skipping file (a) in tar archive due to dirOffset.
+malformed or potentially insecure filename (/root).  Skipping file.
+potentially insecure filename (lnk/test) resolves outside target directory.  Skipping file.
+""".strip(),
+            )
+            for f in ('c', 'd'):
+                fname = os.path.join(tmpdir, f)
+                self.assertTrue(os.path.exists(fname))
+                self.assertTrue(os.path.isfile(fname))
+            for f in ('lnk',):
+                fname = os.path.join(tmpdir, f)
+                self.assertTrue(os.path.exists(fname))
+                self.assertTrue(os.path.islink(fname))
         finally:
             shutil.rmtree(tmpdir)

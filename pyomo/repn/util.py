@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -25,6 +25,7 @@ from pyomo.common.numeric_types import (
     native_types,
     native_numeric_types,
     native_complex_types,
+    native_logical_types,
 )
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base import (
@@ -39,7 +40,7 @@ from pyomo.core.base import (
     SortComponents,
 )
 from pyomo.core.base.component import ActiveComponent
-from pyomo.core.base.expression import _ExpressionData
+from pyomo.core.base.expression import NamedExpressionData
 from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
@@ -54,7 +55,7 @@ sum_like_expression_types = {
     EXPR.NPV_SumExpression,
 }
 _named_subexpression_types = (
-    _ExpressionData,
+    NamedExpressionData,
     kernel.expression.expression,
     kernel.objective.objective,
 )
@@ -66,6 +67,7 @@ int_float = {int, float}
 
 class ExprType(enum.IntEnum):
     CONSTANT = 0
+    FIXED = 5
     MONOMIAL = 10
     LINEAR = 20
     QUADRATIC = 30
@@ -265,7 +267,9 @@ class BeforeChildDispatcher(collections.defaultdict):
     def register_dispatcher(self, visitor, child):
         child_type = type(child)
         if child_type in native_numeric_types:
-            self[child_type] = self._before_native
+            self[child_type] = self._before_native_numeric
+        elif child_type in native_logical_types:
+            self[child_type] = self._before_native_logical
         elif issubclass(child_type, str):
             self[child_type] = self._before_string
         elif child_type in native_types:
@@ -275,7 +279,7 @@ class BeforeChildDispatcher(collections.defaultdict):
                 self[child_type] = self._before_invalid
         elif not hasattr(child, 'is_expression_type'):
             if check_if_numeric_type(child):
-                self[child_type] = self._before_native
+                self[child_type] = self._before_native_numeric
             else:
                 self[child_type] = self._before_invalid
         elif not child.is_expression_type():
@@ -306,8 +310,17 @@ class BeforeChildDispatcher(collections.defaultdict):
         return True, None
 
     @staticmethod
-    def _before_native(visitor, child):
+    def _before_native_numeric(visitor, child):
         return False, (_CONSTANT, child)
+
+    @staticmethod
+    def _before_native_logical(visitor, child):
+        return False, (
+            _CONSTANT,
+            InvalidNumber(
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+            ),
+        )
 
     @staticmethod
     def _before_complex(visitor, child):
@@ -318,7 +331,7 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (
             _CONSTANT,
             InvalidNumber(
-                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
             ),
         )
 
@@ -327,7 +340,7 @@ class BeforeChildDispatcher(collections.defaultdict):
         return False, (
             _CONSTANT,
             InvalidNumber(
-                child, f"{child!r} ({type(child)}) is not a valid numeric type"
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
             ),
         )
 
@@ -366,18 +379,16 @@ class ExitNodeDispatcher(collections.defaultdict):
     `exitNode` callback
 
     This dispatcher implements a specialization of :py:`defaultdict`
-    that supports automatic type registration.  Any missing types will
-    return the :py:meth:`register_dispatcher` method, which (when called
-    as a callback) will interrogate the type, identify the appropriate
-    callback, add the callback to the dict, and return the result of
-    calling the callback.  As the callback is added to the dict, no type
-    will incur the overhead of `register_dispatcher` more than once.
+    that supports automatic type registration.  As the identified
+    callback is added to the dict, no type will incur the overhead of
+    `register_dispatcher` more than once.
 
     Note that in this case, the client is expected to register all
     non-NPV expression types.  The auto-registration is designed to only
     handle two cases:
     - Auto-detection of user-defined Named Expression types
     - Automatic mappimg of NPV expressions to their equivalent non-NPV handlers
+    - Automatic registration of derived expression types
 
     """
 
@@ -387,42 +398,56 @@ class ExitNodeDispatcher(collections.defaultdict):
         super().__init__(None, *args, **kwargs)
 
     def __missing__(self, key):
-        return functools.partial(self.register_dispatcher, key=key)
-
-    def register_dispatcher(self, visitor, node, *data, key=None):
+        if type(key) is tuple:
+            # Only lookup/cache argument-specific handlers for unary,
+            # binary and ternary operators
+            if len(key) <= 3:
+                node_class = key[0]
+                node_args = key[1:]
+            else:
+                node_class = key = key[0]
+                if node_class in self:
+                    return self[node_class]
+        else:
+            node_class = key
+        bases = node_class.__mro__
+        # Note: if we add an `etype`, then this special-case can be removed
         if (
-            isinstance(node, _named_subexpression_types)
-            or type(node) is kernel.expression.noclone
+            issubclass(node_class, _named_subexpression_types)
+            or node_class is kernel.expression.noclone
         ):
-            base_type = Expression
-        elif not node.is_potentially_variable():
-            base_type = node.potentially_variable_base_class()
-        else:
-            base_type = node.__class__
-        if isinstance(key, tuple):
-            base_key = (base_type,) + key[1:]
-            # Only cache handlers for unary, binary and ternary operators
-            cache = len(key) <= 4
-        else:
-            base_key = base_type
-            cache = True
-        if base_key in self:
-            fcn = self[base_key]
-        elif base_type in self:
-            fcn = self[base_type]
-        elif any((k[0] if k.__class__ is tuple else k) is base_type for k in self):
-            raise DeveloperError(
-                f"Base expression key '{base_key}' not found when inserting dispatcher"
-                f" for node '{type(node).__name__}' while walking expression tree."
+            bases = [Expression]
+        fcn = None
+        for base_type in bases:
+            if key is not node_class:
+                if (base_type,) + node_args in self:
+                    fcn = self[(base_type,) + node_args]
+                    break
+            if base_type in self:
+                fcn = self[base_type]
+                break
+        if fcn is None:
+            partial_matches = set(
+                k[0] for k in self if type(k) is tuple and issubclass(node_class, k[0])
             )
-        else:
-            raise DeveloperError(
-                f"Unexpected expression node type '{type(node).__name__}' "
-                "found while walking expression tree."
-            )
-        if cache:
-            self[key] = fcn
-        return fcn(visitor, node, *data)
+            for base_type in node_class.__mro__:
+                if node_class is not key:
+                    key = (base_type,) + node_args
+                if base_type in partial_matches:
+                    raise DeveloperError(
+                        f"Base expression key '{key}' not found when inserting "
+                        f"dispatcher for node '{node_class.__name__}' while walking "
+                        "expression tree."
+                    )
+            return self.unexpected_expression_type
+        self[key] = fcn
+        return fcn
+
+    def unexpected_expression_type(self, visitor, node, *args):
+        raise DeveloperError(
+            f"Unexpected expression node type '{type(node).__name__}' "
+            f"found while walking expression tree in {type(visitor).__name__}."
+        )
 
 
 def apply_node_operation(node, args):
@@ -469,7 +494,7 @@ def categorize_valid_components(
 
     Parameters
     ----------
-    model: _BlockData
+    model: BlockData
         The model tree to walk
 
     active: True or None
@@ -490,7 +515,7 @@ def categorize_valid_components(
 
     Returns
     -------
-    component_map: Dict[type, List[_BlockData]]
+    component_map: Dict[type, List[BlockData]]
         A dict mapping component type to a list of block data
         objects that contain declared component of that type.
 

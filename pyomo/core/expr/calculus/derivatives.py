@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -39,11 +39,11 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
     ----------
     expr: pyomo.core.expr.numeric_expr.NumericExpression
         The expression to differentiate
-    wrt: pyomo.core.base.var._GeneralVarData
+    wrt: pyomo.core.base.var.VarData
         If specified, this function will return the derivative with
-        respect to wrt. wrt is normally a _GeneralVarData, but could
-        also be a _ParamData. wrt and wrt_list cannot both be specified.
-    wrt_list: list of pyomo.core.base.var._GeneralVarData
+        respect to wrt. wrt is normally a VarData, but could
+        also be a ParamData. wrt and wrt_list cannot both be specified.
+    wrt_list: list of pyomo.core.base.var.VarData
         If specified, this function will return the derivative with
         respect to each element in wrt_list.  A list will be returned
         where the values are the derivatives with respect to the

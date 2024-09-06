@@ -2,7 +2,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -159,7 +159,7 @@ def log_infeasible_constraints(
         if log_variables:
             line += ''.join(
                 f"\n  - VAR {v.name}: {v.value}"
-                for v in identify_variables(constr.body, include_fixed=True)
+                for v in identify_variables(constr.expr, include_fixed=True)
             )
 
         logger.info(line)

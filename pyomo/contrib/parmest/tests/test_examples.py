@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,9 +12,11 @@
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.graphics import matplotlib_available, seaborn_available
+from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+pynumero_ASL_available = AmplInterface.available()
 
 
 @unittest.skipIf(
@@ -43,6 +45,7 @@ class TestRooneyBieglerExamples(unittest.TestCase):
 
         rooney_biegler_with_constraint.main()
 
+    @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import (
@@ -66,11 +69,11 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         likelihood_ratio_example.main()
 
 
-@unittest.skipIf(
-    not parmest.parmest_available,
-    "Cannot test parmest: required dependencies are missing",
+@unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
+@unittest.skipUnless(ipopt_available, "The 'ipopt' solver is not available")
+@unittest.skipUnless(
+    parmest.parmest_available, "Cannot test parmest: required dependencies are missing"
 )
-@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 class TestReactionKineticsExamples(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -140,6 +143,7 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         reactor_design.main()
 
+    @unittest.skipUnless(pynumero_ASL_available, "test requires libpynumero_ASL")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import (
             parameter_estimation_example,
@@ -181,7 +185,10 @@ class TestReactorDesignExamples(unittest.TestCase):
 
         multisensor_data_example.main()
 
-    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
+    @unittest.skipUnless(
+        matplotlib_available and seaborn_available,
+        "test requires matplotlib and seaborn",
+    )
     def test_datarec_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import datarec_example
 

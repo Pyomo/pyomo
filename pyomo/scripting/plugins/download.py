@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -38,9 +38,9 @@ class GroupDownloader(object):
         self.downloader.cacert = args.cacert
         self.downloader.insecure = args.insecure
         logger.info(
-            "As of February 9, 2023, AMPL GSL can no longer be downloaded\
-                    through download-extensions. Visit https://portal.ampl.com/\
-                    to download the AMPL GSL binaries."
+            "As of February 9, 2023, AMPL GSL can no longer be downloaded \
+            through download-extensions. Visit https://portal.ampl.com/ \
+            to download the AMPL GSL binaries."
         )
         for target in DownloadFactory:
             try:

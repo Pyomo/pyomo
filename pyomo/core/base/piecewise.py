@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -32,9 +32,6 @@ Possible Extensions
 *) piecewise for functions of the form y = f(x1,x2,...)
 """
 
-
-__all__ = ['Piecewise']
-
 import logging
 import math
 import itertools
@@ -43,14 +40,14 @@ import types
 import enum
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import RenamedClass, deprecation_warning
 from pyomo.common.numeric_types import value
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.block import Block, _BlockData
+from pyomo.core.base.block import Block, BlockData
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.base.var import Var, _VarData, IndexedVar
+from pyomo.core.base.var import Var, VarData, IndexedVar
 from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
 from pyomo.core.base.util import flatten_tuple
 
@@ -217,14 +214,14 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     return 0, values, False
 
 
-class _PiecewiseData(_BlockData):
+class PiecewiseData(BlockData):
     """
     This class defines the base class for all linearization
     and piecewise constraint generators..
     """
 
     def __init__(self, parent):
-        _BlockData.__init__(self, parent)
+        BlockData.__init__(self, parent)
         self._constructed = True
         self._bound_type = None
         self._domain_pts = None
@@ -273,6 +270,11 @@ class _PiecewiseData(_BlockData):
             "point range is [%s,%s]."
             % (x, self.name, min(self._domain_pts), max(self._domain_pts))
         )
+
+
+class _PiecewiseData(metaclass=RenamedClass):
+    __renamed__new_class__ = PiecewiseData
+    __renamed__version__ = '6.7.2'
 
 
 class _SimpleSinglePiecewise(object):
@@ -1128,7 +1130,7 @@ class Piecewise(Block):
                       not be modified.
     """
 
-    _ComponentDataClass = _PiecewiseData
+    _ComponentDataClass = PiecewiseData
 
     def __new__(cls, *args, **kwds):
         if cls != Piecewise:
@@ -1238,7 +1240,7 @@ class Piecewise(Block):
 
         # Check that the variables args are actually Pyomo Vars
         if not (
-            isinstance(self._domain_var, _VarData)
+            isinstance(self._domain_var, VarData)
             or isinstance(self._domain_var, IndexedVar)
         ):
             msg = (
@@ -1247,7 +1249,7 @@ class Piecewise(Block):
             )
             raise TypeError(msg % (repr(self._domain_var),))
         if not (
-            isinstance(self._range_var, _VarData)
+            isinstance(self._range_var, VarData)
             or isinstance(self._range_var, IndexedVar)
         ):
             msg = (
@@ -1357,22 +1359,22 @@ class Piecewise(Block):
         _self_yvar = None
         _self_domain_pts_index = None
         if not _is_indexed:
-            # allows one to mix Var and _VarData as input to
+            # allows one to mix Var and VarData as input to
             # non-indexed Piecewise, index would be None in this case
-            # so for Var elements Var[None] is Var, but _VarData[None] would fail
+            # so for Var elements Var[None] is Var, but VarData[None] would fail
             _self_xvar = self._domain_var
             _self_yvar = self._range_var
             _self_domain_pts_index = self._domain_points[index]
         else:
-            # The following allows one to specify a Var or _VarData
+            # The following allows one to specify a Var or VarData
             # object even with an indexed Piecewise component.
             # The most common situation will most likely be a VarArray,
             # so we try this first.
-            if not isinstance(self._domain_var, _VarData):
+            if not isinstance(self._domain_var, VarData):
                 _self_xvar = self._domain_var[index]
             else:
                 _self_xvar = self._domain_var
-            if not isinstance(self._range_var, _VarData):
+            if not isinstance(self._range_var, VarData):
                 _self_yvar = self._range_var[index]
             else:
                 _self_yvar = self._range_var
@@ -1544,7 +1546,7 @@ class Piecewise(Block):
                     raise ValueError(msg % (self.name, index, self._pw_rep))
 
         if _is_indexed:
-            comp = _PiecewiseData(self)
+            comp = PiecewiseData(self)
         else:
             comp = self
         self._data[index] = comp
@@ -1554,9 +1556,9 @@ class Piecewise(Block):
         comp.build_constraints(func, _self_xvar, _self_yvar)
 
 
-class SimplePiecewise(_PiecewiseData, Piecewise):
+class SimplePiecewise(PiecewiseData, Piecewise):
     def __init__(self, *args, **kwds):
-        _PiecewiseData.__init__(self, self)
+        PiecewiseData.__init__(self, self)
         Piecewise.__init__(self, *args, **kwds)
 
 

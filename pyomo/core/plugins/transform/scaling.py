@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,22 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 from pyomo.common.collections import ComponentMap
-from pyomo.core.base import (
-    Block,
-    Var,
-    Constraint,
-    Objective,
-    _ConstraintData,
-    _ObjectiveData,
-    Suffix,
-    value,
-)
+from pyomo.core.base import Block, Var, Constraint, Objective, Suffix, value
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.expr import replace_expressions
 from pyomo.util.components import rename_components
+
+logger = logging.getLogger("pyomo.core.plugins.transform.scaling")
 
 
 @TransformationFactory.register(
@@ -35,7 +29,7 @@ class ScaleModel(Transformation):
     Transformation to scale a model.
 
     This plugin performs variable, constraint, and objective scaling on
-    a model based on the scaling factors in the suffix 'scaling_parameter'
+    a model based on the scaling factors in the suffix 'scaling_factor'
     set for the variables, constraints, and/or objective. This is typically
     done to scale the problem for improved numerical properties.
 
@@ -43,6 +37,10 @@ class ScaleModel(Transformation):
         * :py:meth:`apply_to <pyomo.core.plugins.transform.scaling.ScaleModel.apply_to>`
         * :py:meth:`create_using <pyomo.core.plugins.transform.scaling.ScaleModel.create_using>`
         * :py:meth:`propagate_solution <pyomo.core.plugins.transform.scaling.ScaleModel.propagate_solution>`
+
+    By default, scaling components are renamed with the prefix ``scaled_``. To disable
+    this behavior and scale variables in-place (or keep the same names in a new model),
+    use the ``rename=False`` argument to ``apply_to`` or ``create_using``.
 
 
     Examples
@@ -76,8 +74,6 @@ class ScaleModel(Transformation):
         >>> print(value(scaled_model.scaled_obj))
         101.0
 
-    .. todo:: Implement an option to change the variables names or not
-
     """
 
     def __init__(self, **kwds):
@@ -91,15 +87,10 @@ class ScaleModel(Transformation):
         self._apply_to(scaled_model, **kwds)
         return scaled_model
 
-    def _get_float_scaling_factor(self, component):
-        if self._suffix_finder is None:
-            self._suffix_finder = SuffixFinder('scaling_factor', 1.0)
-        return self._suffix_finder.find(component)
-
     def _apply_to(self, model, rename=True):
         # create a map of component to scaling factor
         component_scaling_factor_map = ComponentMap()
-        self._suffix_finder = SuffixFinder('scaling_factor', 1.0)
+        self._suffix_finder = SuffixFinder('scaling_factor', 1.0, model)
 
         # if the scaling_method is 'user', get the scaling parameters from the suffixes
         if self._scaling_method == 'user':
@@ -197,7 +188,7 @@ class ScaleModel(Transformation):
                 already_scaled.add(id(c))
                 # perform the constraint/objective scaling and variable sub
                 scaling_factor = component_scaling_factor_map[c]
-                if isinstance(c, _ConstraintData):
+                if c.ctype is Constraint:
                     body = scaling_factor * replace_expressions(
                         expr=c.body,
                         substitution_map=variable_substitution_dict,
@@ -226,7 +217,7 @@ class ScaleModel(Transformation):
                     else:
                         c.set_value((lower, body, upper))
 
-                elif isinstance(c, _ObjectiveData):
+                elif c.ctype is Objective:
                     c.expr = scaling_factor * replace_expressions(
                         expr=c.expr,
                         substitution_map=variable_substitution_dict,
@@ -322,10 +313,18 @@ class ScaleModel(Transformation):
             original_v = original_model.find_component(original_v_path)
 
             for k in scaled_v:
-                original_v[k].set_value(
-                    value(scaled_v[k]) / component_scaling_factor_map[scaled_v[k]],
-                    skip_validation=True,
-                )
+                if scaled_v[k].value is None and original_v[k].value is not None:
+                    logger.warning(
+                        "Variable with value None in the scaled model is replacing"
+                        f" value of variable {original_v[k].name} in the original"
+                        f" model with None (was {original_v[k].value})."
+                    )
+                    original_v[k].set_value(None, skip_validation=True)
+                elif scaled_v[k].value is not None:
+                    original_v[k].set_value(
+                        value(scaled_v[k]) / component_scaling_factor_map[scaled_v[k]],
+                        skip_validation=True,
+                    )
                 if check_reduced_costs and scaled_v[k] in scaled_model.rc:
                     original_model.rc[original_v[k]] = (
                         scaled_model.rc[scaled_v[k]]

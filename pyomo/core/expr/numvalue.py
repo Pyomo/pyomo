@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,21 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = (
-    'value',
-    'is_constant',
-    'is_fixed',
-    'is_variable_type',
-    'is_potentially_variable',
-    'NumericValue',
-    'ZeroConstant',
-    'native_numeric_types',
-    'native_types',
-    'nonpyomo_leaf_types',
-    'polynomial_degree',
-)
-
-import collections
 import sys
 import logging
 
@@ -34,7 +19,6 @@ from pyomo.common.deprecation import (
 )
 from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.numeric_expr import NumericValue
-import pyomo.common.numeric_types as _numeric_types
 
 # TODO: update Pyomo to import these objects from common.numeric_types
 #   (and not from here)
@@ -44,7 +28,7 @@ from pyomo.common.numeric_types import (
     native_numeric_types,
     native_integer_types,
     native_logical_types,
-    pyomo_constant_types,
+    _pyomo_constant_types,
     check_if_numeric_type,
     value,
 )
@@ -59,6 +43,16 @@ relocated_module_attribute(
     "contains types that were convertible to bool, and not types that should "
     "be treated as if they were bool (as was the case for the other "
     "native_*_types sets).  Users likely should use native_logical_types.",
+)
+relocated_module_attribute(
+    'pyomo_constant_types',
+    'pyomo.common.numeric_types._pyomo_constant_types',
+    version='6.7.2',
+    f_globals=globals(),
+    msg="The pyomo_constant_types set will be removed in the future: the set "
+    "contained only NumericConstant and _PythonCallbackFunctionID, and provided "
+    "no meaningful value to clients or walkers.  Users should likely handle "
+    "these types in the same manner as immutable Params.",
 )
 relocated_module_attribute(
     'RegisterNumericType',
@@ -101,7 +95,7 @@ logger = logging.getLogger('pyomo.core')
 ##------------------------------------------------------------------------
 
 
-class NonNumericValue(object):
+class NonNumericValue(PyomoObject):
     """An object that contains a non-numeric value
 
     Constructor Arguments:
@@ -115,6 +109,9 @@ class NonNumericValue(object):
 
     def __str__(self):
         return str(self.value)
+
+    def __call__(self, exception=None):
+        return self.value
 
 
 nonpyomo_leaf_types.add(NonNumericValue)
@@ -426,7 +423,7 @@ class NumericConstant(NumericValue):
         ostream.write(str(self))
 
 
-pyomo_constant_types.add(NumericConstant)
+_pyomo_constant_types.add(NumericConstant)
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)

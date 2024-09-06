@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -159,6 +159,17 @@ class IConstraint(ICategorizedObject):
         :const:`None` or positive infinity"""
         ub = self.ub
         return (ub is not None) and (value(ub) != float('inf'))
+
+    def to_bounded_expression(self, evaluate_bounds=False):
+        if evaluate_bounds:
+            lb = self.lb
+            if lb == -float('inf'):
+                lb = None
+            ub = self.ub
+            if ub == float('inf'):
+                ub = None
+            return lb, self.body, ub
+        return self.lower, self.body, self.upper
 
 
 class _MutableBoundsConstraintMixin(object):

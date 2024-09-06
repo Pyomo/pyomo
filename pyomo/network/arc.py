@@ -1,15 +1,13 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
-__all__ = ['Arc']
 
 from pyomo.network.port import Port
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
@@ -54,7 +52,7 @@ def _iterable_to_dict(vals, directed, name):
     return vals
 
 
-class _ArcData(ActiveComponentData):
+class ArcData(ActiveComponentData):
     """
     This class defines the data for a single Arc
 
@@ -248,6 +246,11 @@ class _ArcData(ActiveComponentData):
                     )
 
 
+class _ArcData(metaclass=RenamedClass):
+    __renamed__new_class__ = ArcData
+    __renamed__version__ = '6.7.2'
+
+
 @ModelComponentFactory.register("Component used for connecting two Ports.")
 class Arc(ActiveIndexedComponent):
     """
@@ -269,7 +272,7 @@ class Arc(ActiveIndexedComponent):
             or a two-member iterable of ports
     """
 
-    _ComponentDataClass = _ArcData
+    _ComponentDataClass = ArcData
 
     def __new__(cls, *args, **kwds):
         if cls != Arc:
@@ -296,14 +299,18 @@ class Arc(ActiveIndexedComponent):
 
     def construct(self, data=None):
         """Initialize the Arc"""
+        if self._constructed:
+            return
+        self._constructed = True
+
         if is_debug_set(logger):
             logger.debug("Constructing Arc %s" % self.name)
 
-        if self._constructed:
-            return
-
         timer = ConstructionTimer(self)
-        self._constructed = True
+
+        if self._anonymous_sets is not None:
+            for _set in self._anonymous_sets:
+                _set.construct()
 
         if self._rule is None and self._init_vals is None:
             # No construction rule or values specified
@@ -371,9 +378,9 @@ class Arc(ActiveIndexedComponent):
         )
 
 
-class ScalarArc(_ArcData, Arc):
+class ScalarArc(ArcData, Arc):
     def __init__(self, *args, **kwds):
-        _ArcData.__init__(self, self)
+        ArcData.__init__(self, self)
         Arc.__init__(self, *args, **kwds)
         self.index = UnindexedComponent_index
 

@@ -7,6 +7,11 @@ on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
   workflow_dispatch:
     inputs:
       git-ref:
@@ -24,8 +29,8 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
+  PYPI_ONLY: z3-solver linear-tree
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
@@ -34,16 +39,19 @@ jobs:
   lint:
     name: lint/style-and-typos
     runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.title, '[WIP]') != true && !github.event.pull_request.draft
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     - name: Black Formatting Check
       run: |
-        pip install black
+        # Note v24.4.1 fails due to a bug in the parser
+        pip install 'black!=24.4.1'
         black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
     - name: Spell Check
       uses: crate-ci/typos@master
@@ -59,24 +67,29 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, windows-latest]
         python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
         other: [""]
         category: [""]
 
+        # win/3.8 conda builds no longer work due to environment not being able
+        # to resolve. We are skipping it now.
+        exclude:
+        - os: windows-latest
+          python: 3.8
         include:
         - os: ubuntu-latest
           TARGET: linux
           PYENV: pip
 
-        - os: macos-latest
+        - os: macos-13
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk pytest-qt
+          PACKAGES: glpk pytest-qt filelock
 
         - os: ubuntu-latest
           python: '3.11'
@@ -87,13 +100,13 @@ jobs:
           PACKAGES: pytest-qt
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.10'
           other: /mpi
           mpi: 3
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py
+          PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
           python: '3.11'
@@ -164,7 +177,7 @@ jobs:
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     #- name: Pip package cache
-    #  uses: actions/cache@v3
+    #  uses: actions/cache@v4
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -172,7 +185,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v3
+    #  uses: actions/cache@v4
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -180,7 +193,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
@@ -210,7 +223,7 @@ jobs:
         # Notes:
         #  - install glpk
         #  - pyodbc needs: gcc pkg-config unixodbc freetds
-        for pkg in bash pkg-config unixodbc freetds glpk; do
+        for pkg in bash pkg-config unixodbc freetds glpk ginac; do
             brew list $pkg || brew install $pkg
         done
 
@@ -222,7 +235,8 @@ jobs:
         #  - install glpk
         #  - ipopt needs: libopenblas-dev gfortran liblapack-dev
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
-            install libopenblas-dev gfortran liblapack-dev glpk-utils
+            install libopenblas-dev gfortran liblapack-dev glpk-utils \
+            libginac-dev
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
     - name: Update Windows
@@ -232,13 +246,13 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
 
     - name: Set up Miniconda Python ${{ matrix.python }}
       if: matrix.PYENV == 'conda'
-      uses: conda-incubator/setup-miniconda@v2
+      uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: false
         python-version: ${{ matrix.python }}
@@ -293,11 +307,12 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            python -m pip install --cache-dir cache/pip \
-                -i https://pypi.gurobi.com gurobipy==10.0.3 \
+            python -m pip install --cache-dir cache/pip gurobipy==10.0.3 \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
+            python -m pip install --cache-dir cache/pip maingopy \
+                || echo "WARNING: MAiNGO is not available"
             if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
@@ -363,6 +378,7 @@ jobs:
                 CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
             fi
         done
+        echo ""
         echo "*** Install Pyomo dependencies ***"
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
@@ -531,7 +547,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $URL = "https://www.minlp.com/downloads/xecs/baron/current/"
+        $URL = "https://minlp.com/downloads/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
@@ -605,7 +621,8 @@ jobs:
       if: ${{ ! matrix.slim }}
       shell: bash
       run: |
-        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
+        echo "NOTE: temporarily pinning to highspy pre-release for testing"
+        $PYTHON_EXE -m pip install --cache-dir cache/pip "highspy>=1.7.1.dev1" \
             || echo "WARNING: highspy is not available"
 
     - name: Set up coverage tracking
@@ -661,7 +678,7 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
         # Note: if we are testing with openmpi, add '--oversubscribe'
-        mpirun -np ${{matrix.mpi}} pytest -v \
+        mpirun -np ${{matrix.mpi}} -oversubscribe pytest -v \
             --junit-xml=TEST-pyomo-mpi.xml \
             -m "mpi" -W ignore::Warning \
             pyomo `pwd`/pyomo-model-libraries
@@ -678,7 +695,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         path: |
@@ -699,7 +716,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
 
@@ -733,18 +750,18 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: always() # run even if a build job fails
+    if: success() || failure() # run even if a build job fails, but not if cancelled
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-13, windows-latest]
 
         include:
         - os: ubuntu-latest
           TARGET: linux
-        - os: macos-latest
+        - os: macos-13
           TARGET: osx
         - os: windows-latest
           TARGET: win
@@ -755,19 +772,19 @@ jobs:
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v3
+    #  uses: actions/cache@v4
     #  id: pip-cache
     #  with:
     #    path: cache/pip
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: artifacts
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
 
@@ -862,7 +879,7 @@ jobs:
 
     - name: Upload codecov reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -874,7 +891,7 @@ jobs:
       if: |
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}

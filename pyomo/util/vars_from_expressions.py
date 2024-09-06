@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -43,6 +43,7 @@ def get_vars_from_components(
         descent_order: Traversal strategy for finding the objects of type ctype
     """
     seen = set()
+    named_expression_cache = {}
     for constraint in block.component_data_objects(
         ctype,
         active=active,
@@ -51,7 +52,9 @@ def get_vars_from_components(
         descent_order=descent_order,
     ):
         for var in EXPR.identify_variables(
-            constraint.expr, include_fixed=include_fixed
+            constraint.expr,
+            include_fixed=include_fixed,
+            named_expression_cache=named_expression_cache,
         ):
             if id(var) not in seen:
                 seen.add(id(var))

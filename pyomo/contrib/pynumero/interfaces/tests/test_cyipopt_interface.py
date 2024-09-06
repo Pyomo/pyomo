@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -96,13 +96,17 @@ class TestSubclassCyIpoptInterface(unittest.TestCase):
             problem.solve(x0)
 
 
-def _get_model_nlp_interface(halt_on_evaluation_error=None):
+def _get_model_nlp_interface(halt_on_evaluation_error=None, intermediate_callback=None):
     m = pyo.ConcreteModel()
     m.x = pyo.Var([1, 2, 3], initialize=1.0)
     m.obj = pyo.Objective(expr=m.x[1] * pyo.sqrt(m.x[2]) + m.x[1] * m.x[3])
     m.eq1 = pyo.Constraint(expr=m.x[1] * pyo.sqrt(m.x[2]) == 1.0)
     nlp = PyomoNLP(m)
-    interface = CyIpoptNLP(nlp, halt_on_evaluation_error=halt_on_evaluation_error)
+    interface = CyIpoptNLP(
+        nlp,
+        halt_on_evaluation_error=halt_on_evaluation_error,
+        intermediate_callback=intermediate_callback,
+    )
     bad_primals = np.array([1.0, -2.0, 3.0])
     indices = nlp.get_primal_indices([m.x[1], m.x[2], m.x[3]])
     bad_primals = bad_primals[indices]
@@ -218,6 +222,64 @@ class TestCyIpoptEvaluationErrors(unittest.TestCase):
         msg = "Error in AMPL evaluation"
         with self.assertRaisesRegex(PyNumeroEvaluationError, msg):
             interface.hessian(bad_x, [1.0], 0.0)
+
+    def test_intermediate_12arg(self):
+        iterate_data = []
+
+        def intermediate(
+            nlp,
+            alg_mod,
+            iter_count,
+            obj_value,
+            inf_pr,
+            inf_du,
+            mu,
+            d_norm,
+            regularization_size,
+            alpha_du,
+            alpha_pr,
+            ls_trials,
+        ):
+            self.assertIsInstance(nlp, PyomoNLP)
+            iterate_data.append((inf_pr, inf_du))
+
+        m, nlp, interface, bad_x = _get_model_nlp_interface(
+            intermediate_callback=intermediate
+        )
+        # The interface's callback is always called with 11 arguments (by CyIpopt/Ipopt)
+        # but we add the NLP object to the arguments.
+        interface.intermediate(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+        self.assertEqual(iterate_data, [(4, 5)])
+
+    def test_intermediate_13arg(self):
+        iterate_data = []
+
+        def intermediate(
+            nlp,
+            problem,
+            alg_mod,
+            iter_count,
+            obj_value,
+            inf_pr,
+            inf_du,
+            mu,
+            d_norm,
+            regularization_size,
+            alpha_du,
+            alpha_pr,
+            ls_trials,
+        ):
+            self.assertIsInstance(nlp, PyomoNLP)
+            self.assertIsInstance(problem, cyipopt.Problem)
+            iterate_data.append((inf_pr, inf_du))
+
+        m, nlp, interface, bad_x = _get_model_nlp_interface(
+            intermediate_callback=intermediate
+        )
+        # The interface's callback is always called with 11 arguments (by CyIpopt/Ipopt)
+        # but we add the NLP object *and the cyipopt.Problem object* to the arguments.
+        interface.intermediate(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+        self.assertEqual(iterate_data, [(4, 5)])
 
 
 if __name__ == "__main__":

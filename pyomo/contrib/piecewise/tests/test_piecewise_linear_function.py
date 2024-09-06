@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,7 +16,7 @@ import pickle
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
-from pyomo.contrib.piecewise import PiecewiseLinearFunction
+from pyomo.contrib.piecewise import PiecewiseLinearFunction, Triangulation
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
     assertExpressionsStructurallyEqual,
@@ -117,6 +117,23 @@ class TestPiecewiseLinearFunction2D(unittest.TestCase):
             tabular_data={1: 0, 3: log(3), 6: log(6), 10: log(10)}
         )
         self.check_ln_x_approx(m.pw, m.x)
+
+    def test_pw_linear_approx_of_ln_x_j1(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            points=[1, 3, 6, 10], triangulation=Triangulation.J1, function=m.f
+        )
+        self.check_ln_x_approx(m.pw, m.x)
+        # we disregard their request because it's 1D
+        self.assertEqual(m.pw.triangulation, Triangulation.AssumeValid)
+
+    def test_pw_linear_approx_of_ln_x_user_defined_segments(self):
+        m = self.make_ln_x_model()
+        m.pw = PiecewiseLinearFunction(
+            simplices=[[1, 3], [3, 6], [6, 10]], function=m.f
+        )
+        self.check_ln_x_approx(m.pw, m.x)
+        self.assertEqual(m.pw.triangulation, Triangulation.Unknown)
 
     def test_use_pw_function_in_constraint(self):
         m = self.make_ln_x_model()
@@ -301,6 +318,27 @@ class TestPiecewiseLinearFunction3D(unittest.TestCase):
             points=[(0, 1), (0, 4), (0, 7), (3, 1), (3, 4), (3, 7)], function=m.g
         )
         self.check_pw_linear_approximation(m)
+
+    @unittest.skipUnless(numpy_available, "numpy is not available")
+    def test_pw_linear_approx_of_paraboloid_j1(self):
+        m = self.make_model()
+        m.pw = PiecewiseLinearFunction(
+            points=[
+                (0, 1),
+                (0, 4),
+                (0, 7),
+                (3, 1),
+                (3, 4),
+                (3, 7),
+                (4, 1),
+                (4, 4),
+                (4, 7),
+            ],
+            function=m.g,
+            triangulation=Triangulation.OrderedJ1,
+        )
+        self.assertEqual(len(m.pw._simplices), 8)
+        self.assertEqual(m.pw.triangulation, Triangulation.OrderedJ1)
 
     @unittest.skipUnless(scipy_available, "scipy is not available")
     def test_pw_linear_approx_tabular_data(self):

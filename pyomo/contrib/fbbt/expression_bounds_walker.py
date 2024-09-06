@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,9 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
 from math import pi
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.fbbt.interval import (
+    BoolFlag,
+    eq,
+    ineq,
+    ranged,
+    if_,
     add,
     acos,
     asin,
@@ -30,6 +36,7 @@ from pyomo.contrib.fbbt.interval import (
 )
 from pyomo.core.base.expression import Expression
 from pyomo.core.expr.numeric_expr import (
+    NumericExpression,
     NegationExpression,
     ProductExpression,
     DivisionExpression,
@@ -40,12 +47,20 @@ from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     SumExpression,
     ExternalFunctionExpression,
+    Expr_ifExpression,
+)
+from pyomo.core.expr.logical_expr import BooleanExpression
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
 )
 from pyomo.core.expr.numvalue import native_numeric_types, native_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.repn.util import BeforeChildDispatcher, ExitNodeDispatcher
 
 inf = float('inf')
+logger = logging.getLogger(__name__)
 
 
 class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
@@ -61,18 +76,29 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
         return False, (-inf, inf)
 
     @staticmethod
+    def _before_native_numeric(visitor, child):
+        return False, (child, child)
+
+    @staticmethod
+    def _before_native_logical(visitor, child):
+        return False, (BoolFlag(child), BoolFlag(child))
+
+    @staticmethod
     def _before_var(visitor, child):
         leaf_bounds = visitor.leaf_bounds
         if child in leaf_bounds:
             pass
         elif child.is_fixed() and visitor.use_fixed_var_values_as_bounds:
             val = child.value
-            if val is None:
+            try:
+                ans = visitor._before_child_handlers[val.__class__](visitor, val)
+            except ValueError:
                 raise ValueError(
                     "Var '%s' is fixed to None. This value cannot be used to "
                     "calculate bounds." % child.name
-                )
-            leaf_bounds[child] = (child.value, child.value)
+                ) from None
+            leaf_bounds[child] = ans[1]
+            return ans
         else:
             lb = child.lb
             ub = child.ub
@@ -93,23 +119,20 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
 
     @staticmethod
     def _before_param(visitor, child):
-        return False, (child.value, child.value)
-
-    @staticmethod
-    def _before_native(visitor, child):
-        return False, (child, child)
+        val = child.value
+        return visitor._before_child_handlers[val.__class__](visitor, val)
 
     @staticmethod
     def _before_string(visitor, child):
         raise ValueError(
-            f"{child!r} ({type(child)}) is not a valid numeric type. "
+            f"{child!r} ({type(child).__name__}) is not a valid numeric type. "
             f"Cannot compute bounds on expression."
         )
 
     @staticmethod
     def _before_invalid(visitor, child):
         raise ValueError(
-            f"{child!r} ({type(child)}) is not a valid numeric type. "
+            f"{child!r} ({type(child).__name__}) is not a valid numeric type. "
             f"Cannot compute bounds on expression."
         )
 
@@ -123,10 +146,7 @@ class ExpressionBoundsBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_npv(visitor, child):
         val = value(child)
-        return False, (val, val)
-
-
-_before_child_handlers = ExpressionBoundsBeforeChildDispatcher()
+        return visitor._before_child_handlers[val.__class__](visitor, val)
 
 
 def _handle_ProductExpression(visitor, node, arg1, arg2):
@@ -207,6 +227,26 @@ def _handle_named_expression(visitor, node, arg):
     return arg
 
 
+def _handle_unknowable_bounds(visitor, node, arg):
+    return -inf, inf
+
+
+def _handle_equality(visitor, node, arg1, arg2):
+    return eq(*arg1, *arg2, feasibility_tol=visitor.feasibility_tol)
+
+
+def _handle_inequality(visitor, node, arg1, arg2):
+    return ineq(*arg1, *arg2, feasibility_tol=visitor.feasibility_tol)
+
+
+def _handle_ranged(visitor, node, arg1, arg2, arg3):
+    return ranged(*arg1, *arg2, *arg3, feasibility_tol=visitor.feasibility_tol)
+
+
+def _handle_expr_if(visitor, node, arg1, arg2, arg3):
+    return if_(*arg1, *arg2, *arg3)
+
+
 _unary_function_dispatcher = {
     'exp': _handle_exp,
     'log': _handle_log,
@@ -221,20 +261,20 @@ _unary_function_dispatcher = {
 }
 
 
-_operator_dispatcher = ExitNodeDispatcher(
-    {
-        ProductExpression: _handle_ProductExpression,
-        DivisionExpression: _handle_DivisionExpression,
-        PowExpression: _handle_PowExpression,
-        AbsExpression: _handle_AbsExpression,
-        SumExpression: _handle_SumExpression,
-        MonomialTermExpression: _handle_ProductExpression,
-        NegationExpression: _handle_NegationExpression,
-        UnaryFunctionExpression: _handle_UnaryFunctionExpression,
-        LinearExpression: _handle_SumExpression,
-        Expression: _handle_named_expression,
-    }
-)
+class ExpressionBoundsExitNodeDispatcher(ExitNodeDispatcher):
+    def unexpected_expression_type(self, visitor, node, *args):
+        if isinstance(node, NumericExpression):
+            ans = -inf, inf
+        elif isinstance(node, BooleanExpression):
+            ans = BoolFlag(False), BoolFlag(True)
+        else:
+            super().unexpected_expression_type(visitor, node, *args)
+        logger.warning(
+            f"Unexpected expression node type '{type(node).__name__}' "
+            f"found while walking expression tree; returning {ans} "
+            "for the expression bounds."
+        )
+        return ans
 
 
 class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
@@ -259,6 +299,27 @@ class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
         the computed bounds should be valid.
     """
 
+    _before_child_handlers = ExpressionBoundsBeforeChildDispatcher()
+    _operator_dispatcher = ExpressionBoundsExitNodeDispatcher(
+        {
+            ProductExpression: _handle_ProductExpression,
+            DivisionExpression: _handle_DivisionExpression,
+            PowExpression: _handle_PowExpression,
+            AbsExpression: _handle_AbsExpression,
+            SumExpression: _handle_SumExpression,
+            MonomialTermExpression: _handle_ProductExpression,
+            NegationExpression: _handle_NegationExpression,
+            UnaryFunctionExpression: _handle_UnaryFunctionExpression,
+            LinearExpression: _handle_SumExpression,
+            Expression: _handle_named_expression,
+            ExternalFunctionExpression: _handle_unknowable_bounds,
+            EqualityExpression: _handle_equality,
+            InequalityExpression: _handle_inequality,
+            RangedExpression: _handle_ranged,
+            Expr_ifExpression: _handle_expr_if,
+        }
+    )
+
     def __init__(
         self,
         leaf_bounds=None,
@@ -277,7 +338,7 @@ class ExpressionBoundsVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        return _before_child_handlers[child.__class__](self, child)
+        return self._before_child_handlers[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        return _operator_dispatcher[node.__class__](self, node, *data)
+        return self._operator_dispatcher[node.__class__](self, node, *data)

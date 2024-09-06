@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression,
     AtExpression,
 )
-from pyomo.environ import ConcreteModel, LogicalConstraint
+from pyomo.environ import ConcreteModel, LogicalConstraint, Param
 
 
 class TestPrecedenceRelationships(unittest.TestCase):
@@ -173,3 +173,17 @@ class TestPrecedenceRelationships(unittest.TestCase):
         self.assertEqual(m.c.expr.delay, 0)
 
         self.assertEqual(str(m.c.expr), "b.end_time <= a.end_time")
+
+    def test_end_before_start_param_delay(self):
+        m = self.get_model()
+        m.PrepTime = Param(initialize=5)
+        m.c = LogicalConstraint(
+            expr=m.a.end_time.before(m.b.start_time, delay=m.PrepTime)
+        )
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 3)
+        self.assertIs(m.c.expr.args[0], m.a.end_time)
+        self.assertIs(m.c.expr.args[1], m.b.start_time)
+        self.assertIs(m.c.expr.delay, m.PrepTime)
+
+        self.assertEqual(str(m.c.expr), "a.end_time + PrepTime <= b.start_time")

@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2024
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Model Graph Generator Code"""
 
 from pyomo.common.dependencies import networkx as nx
@@ -112,7 +123,7 @@ def generate_model_graph(
         # Create a list of the variable numbers that occur in the given constraint equation
         numbered_variables_in_constraint_equation = [
             component_number_map[constraint_variable]
-            for constraint_variable in identify_variables(model_constraint.body)
+            for constraint_variable in identify_variables(model_constraint.expr)
         ]
 
         # Update constraint_variable_map

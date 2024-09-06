@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,7 @@
 from pyomo.common.errors import IterationLimitError
 from pyomo.common.numeric_types import native_numeric_types, native_complex_types, value
 from pyomo.core.expr.calculus.derivatives import differentiate
-from pyomo.core.base.constraint import Constraint, _ConstraintData
+from pyomo.core.base.constraint import Constraint
 
 import logging
 
@@ -53,9 +53,9 @@ def calculate_variable_from_constraint(
 
     Parameters:
     -----------
-    variable: :py:class:`_VarData`
+    variable: :py:class:`VarData`
         The variable to solve for
-    constraint: :py:class:`_ConstraintData` or relational expression or `tuple`
+    constraint: :py:class:`ConstraintData` or relational expression or `tuple`
         The equality constraint to use to solve for the variable value.
         May be a `ConstraintData` object or any valid argument for
         ``Constraint(expr=<>)`` (i.e., a relational expression or 2- or
@@ -81,9 +81,16 @@ def calculate_variable_from_constraint(
 
     """
     # Leverage all the Constraint logic to process the incoming tuple/expression
-    if not isinstance(constraint, _ConstraintData):
+    if not getattr(constraint, 'ctype', None) is Constraint:
         constraint = Constraint(expr=constraint, name=type(constraint).__name__)
         constraint.construct()
+
+    if constraint.is_indexed():
+        raise ValueError(
+            'calculate_variable_from_constraint(): constraint must be a '
+            'scalar constraint or a single ConstraintData.  Received '
+            f'{constraint.__class__.__name__} ("{constraint.name}")'
+        )
 
     body = constraint.body
     lower = constraint.lb

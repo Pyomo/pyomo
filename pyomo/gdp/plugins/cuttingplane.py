@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -400,7 +400,8 @@ def back_off_constraint_with_calculated_cut_violation(
     val = value(transBlock_rHull.infeasibility_objective) - TOL
     if val <= 0:
         logger.info("\tBacking off cut by %s" % val)
-        cut._body += abs(val)
+        lb, body, ub = cut.to_bounded_expression()
+        cut.set_value((lb, body + abs(val), ub))
     # else there is nothing to do: restore the objective
     transBlock_rHull.del_component(transBlock_rHull.infeasibility_objective)
     transBlock_rHull.separation_objective.activate()
@@ -424,7 +425,8 @@ def back_off_constraint_by_fixed_tolerance(
                    this callback
     TOL: An absolute tolerance to be added to make cut more conservative.
     """
-    cut._body += TOL
+    lb, body, ub = cut.to_bounded_expression()
+    cut.set_value((lb, body + TOL, ub))
 
 
 @TransformationFactory.register(

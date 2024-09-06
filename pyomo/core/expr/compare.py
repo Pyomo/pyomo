@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -196,7 +196,7 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
     )
     try:
         res = pn1 == pn2
-    except PyomoException:
+    except (PyomoException, AttributeError):
         res = False
     return res
 
@@ -230,10 +230,14 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True, places=None):
         test.assertEqual(len(prefix_a), len(prefix_b))
         for _a, _b in zip(prefix_a, prefix_b):
             test.assertIs(_a.__class__, _b.__class__)
-            if places is None:
-                test.assertEqual(_a, _b)
+            # If _a is nan, check _b is nan
+            if _a != _a:
+                test.assertTrue(_b != _b)
             else:
-                test.assertAlmostEqual(_a, _b, places=places)
+                if places is None:
+                    test.assertEqual(_a, _b)
+                else:
+                    test.assertAlmostEqual(_a, _b, places=places)
     except (PyomoException, AssertionError):
         test.fail(
             f"Expressions not equal:\n\t"
@@ -292,10 +296,13 @@ def assertExpressionsStructurallyEqual(
         for _a, _b in zip(prefix_a, prefix_b):
             if _a.__class__ not in native_types and _b.__class__ not in native_types:
                 test.assertIs(_a.__class__, _b.__class__)
-            if places is None:
-                test.assertEqual(_a, _b)
+            if _a != _a:
+                test.assertTrue(_b != _b)
             else:
-                test.assertAlmostEqual(_a, _b, places=places)
+                if places is None:
+                    test.assertEqual(_a, _b)
+                else:
+                    test.assertAlmostEqual(_a, _b, places=places)
     except (PyomoException, AssertionError):
         test.fail(
             f"Expressions not structurally equal:\n\t"

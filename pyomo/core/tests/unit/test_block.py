@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,6 +13,7 @@
 #
 
 from io import StringIO
+import logging
 import os
 import sys
 import types
@@ -54,7 +55,7 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import (
     ScalarBlock,
     SubclassOf,
-    _BlockData,
+    BlockData,
     declare_custom_block,
 )
 import pyomo.core.expr as EXPR
@@ -851,7 +852,7 @@ class TestBlock(unittest.TestCase):
             _Block_reserved_words = None
 
         DerivedBlock._Block_reserved_words = (
-            set(['a', 'b', 'c']) | _BlockData._Block_reserved_words
+            set(['a', 'b', 'c']) | BlockData._Block_reserved_words
         )
 
         m = ConcreteModel()
@@ -965,7 +966,7 @@ class TestBlock(unittest.TestCase):
         b.c.d.e = Block()
         with self.assertRaisesRegex(
             ValueError,
-            r'_BlockData.transfer_attributes_from\(\): '
+            r'BlockData.transfer_attributes_from\(\): '
             r'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):',
         ):
             b.c.d.e.transfer_attributes_from(b.c)
@@ -974,7 +975,7 @@ class TestBlock(unittest.TestCase):
         b = Block(concrete=True)
         with self.assertRaisesRegex(
             ValueError,
-            r'_BlockData.transfer_attributes_from\(\): expected a Block '
+            r'BlockData.transfer_attributes_from\(\): expected a Block '
             'or dict; received str',
         ):
             b.transfer_attributes_from('foo')
@@ -2626,19 +2627,16 @@ class TestBlock(unittest.TestCase):
         m = HierarchicalModel().model
         buf = StringIO()
         m.pprint(ostream=buf)
-        ref = """3 Set Declarations
+        ref = """2 Set Declarations
     a1_IDX : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {5, 4}
     a3_IDX : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {6, 7}
-    a_index : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain : Size : Members
-        None :     1 :    Any :    3 : {1, 2, 3}
 
 3 Block Declarations
-    a : Size=3, Index=a_index, Active=True
+    a : Size=3, Index={1, 2, 3}, Active=True
         a[1] : Active=True
             2 Block Declarations
                 c : Size=2, Index=a1_IDX, Active=True
@@ -2668,9 +2666,8 @@ class TestBlock(unittest.TestCase):
     c : Size=1, Index=None, Active=True
         0 Declarations: 
 
-6 Declarations: a1_IDX a3_IDX c a_index a b
+5 Declarations: a1_IDX a3_IDX c a b
 """
-        print(buf.getvalue())
         self.assertEqual(ref, buf.getvalue())
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
@@ -2979,9 +2976,70 @@ class TestBlock(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
 
-    def test_override_pprint(self):
+    def test_custom_block(self):
+        @declare_custom_block('TestingBlock')
+        class TestingBlockData(BlockData):
+            def __init__(self, component):
+                BlockData.__init__(self, component)
+                logging.getLogger(__name__).warning("TestingBlockData.__init__")
+
+        self.assertIn('TestingBlock', globals())
+        self.assertIn('ScalarTestingBlock', globals())
+        self.assertIn('IndexedTestingBlock', globals())
+        self.assertIs(TestingBlock.__module__, __name__)
+        self.assertIs(ScalarTestingBlock.__module__, __name__)
+        self.assertIs(IndexedTestingBlock.__module__, __name__)
+
+        with LoggingIntercept() as LOG:
+            obj = TestingBlock()
+        self.assertIs(type(obj), ScalarTestingBlock)
+        self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
+
+        with LoggingIntercept() as LOG:
+            obj = TestingBlock([1, 2])
+        self.assertIs(type(obj), IndexedTestingBlock)
+        self.assertEqual(LOG.getvalue(), "")
+
+        # Test that we can derive from a ScalarCustomBlock
+        class DerivedScalarTestingBlock(ScalarTestingBlock):
+            pass
+
+        with LoggingIntercept() as LOG:
+            obj = DerivedScalarTestingBlock()
+        self.assertIs(type(obj), DerivedScalarTestingBlock)
+        self.assertEqual(LOG.getvalue().strip(), "TestingBlockData.__init__")
+
+    def test_custom_block_ctypes(self):
+        @declare_custom_block('TestingBlock')
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, Block)
+
+        @declare_custom_block('TestingBlock', True)
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, TestingBlock)
+
+        @declare_custom_block('TestingBlock', Constraint)
+        class TestingBlockData(BlockData):
+            pass
+
+        self.assertIs(TestingBlock().ctype, Constraint)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Expected new_ctype to be either type or 'True'; received: \[\]",
+        ):
+
+            @declare_custom_block('TestingBlock', [])
+            class TestingBlockData(BlockData):
+                pass
+
+    def test_custom_block_override_pprint(self):
         @declare_custom_block('TempBlock')
-        class TempBlockData(_BlockData):
+        class TempBlockData(BlockData):
             def pprint(self, ostream=None, verbose=False, prefix=""):
                 ostream.write('Testing pprint of a custom block.')
 
@@ -3056,9 +3114,9 @@ class TestBlock(unittest.TestCase):
         class ConcreteBlock(Block):
             pass
 
-        class ScalarConcreteBlock(_BlockData, ConcreteBlock):
+        class ScalarConcreteBlock(BlockData, ConcreteBlock):
             def __init__(self, *args, **kwds):
-                _BlockData.__init__(self, component=self)
+                BlockData.__init__(self, component=self)
                 ConcreteBlock.__init__(self, *args, **kwds)
 
         _buf = []
@@ -3406,6 +3464,97 @@ class TestBlock(unittest.TestCase):
                 (('A', (0, 3)), m.c[2].A[0, 3]),
             ],
         )
+
+    def test_private_data(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.b = Block([1, 2])
+
+        mfe = m.private_data()
+        self.assertIsInstance(mfe, dict)
+        self.assertEqual(len(mfe), 0)
+        self.assertEqual(len(m._private_data), 1)
+        self.assertIn('pyomo.core.tests.unit.test_block', m._private_data)
+        self.assertIs(mfe, m._private_data['pyomo.core.tests.unit.test_block'])
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "All keys in the 'private_data' dictionary must "
+            "be substrings of the caller's module name. "
+            "Received 'no mice here' when calling private_data on Block "
+            "'b'.",
+        ):
+            mfe2 = m.b.private_data('no mice here')
+
+        mfe3 = m.b.b[1].private_data('pyomo.core.tests')
+        self.assertIsInstance(mfe3, dict)
+        self.assertEqual(len(mfe3), 0)
+        self.assertIsInstance(m.b.b[1]._private_data, dict)
+        self.assertEqual(len(m.b.b[1]._private_data), 1)
+        self.assertIn('pyomo.core.tests', m.b.b[1]._private_data)
+        self.assertIs(mfe3, m.b.b[1]._private_data['pyomo.core.tests'])
+        mfe3['there are cookies'] = 'but no mice'
+
+        mfe4 = m.b.b[1].private_data('pyomo.core.tests')
+        self.assertIs(mfe4, mfe3)
+
+    def test_register_private_data(self):
+        _save = Block._private_data_initializers
+
+        Block._private_data_initializers = pdi = _save.copy()
+        pdi.clear()
+        try:
+            self.assertEqual(len(pdi), 0)
+            b = Block(concrete=True)
+            ps = b.private_data()
+            self.assertEqual(ps, {})
+            self.assertEqual(len(pdi), 1)
+        finally:
+            Block._private_data_initializers = _save
+
+        def init():
+            return {'a': None, 'b': 1}
+
+        Block._private_data_initializers = pdi = _save.copy()
+        pdi.clear()
+        try:
+            self.assertEqual(len(pdi), 0)
+            Block.register_private_data_initializer(init)
+            self.assertEqual(len(pdi), 1)
+
+            b = Block(concrete=True)
+            ps = b.private_data()
+            self.assertEqual(ps, {'a': None, 'b': 1})
+            self.assertEqual(len(pdi), 1)
+        finally:
+            Block._private_data_initializers = _save
+
+        Block._private_data_initializers = pdi = _save.copy()
+        pdi.clear()
+        try:
+            Block.register_private_data_initializer(init)
+            self.assertEqual(len(pdi), 1)
+            Block.register_private_data_initializer(init, 'pyomo')
+            self.assertEqual(len(pdi), 2)
+
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"Duplicate initializer registration for 'private_data' "
+                r"dictionary \(scope=pyomo.core.tests.unit.test_block\)",
+            ):
+                Block.register_private_data_initializer(init)
+
+            with self.assertRaisesRegex(
+                ValueError,
+                r"'private_data' scope must be substrings of the caller's "
+                r"module name. Received 'invalid' when calling "
+                r"register_private_data_initializer\(\).",
+            ):
+                Block.register_private_data_initializer(init, 'invalid')
+
+            self.assertEqual(len(pdi), 2)
+        finally:
+            Block._private_data_initializers = _save
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,21 +9,49 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections.abc import MutableMapping as collections_MutableMapping
+import collections
 from collections.abc import Mapping as collections_Mapping
 from pyomo.common.autoslots import AutoSlots
 
 
-def _rebuild_ids(encode, val):
+def _rehash_keys(encode, val):
     if encode:
         return val
     else:
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
-        return {id(obj): (obj, v) for obj, v in val.values()}
+        return {_hasher[obj.__class__](obj): (obj, v) for obj, v in val.values()}
 
 
-class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
+class _Hasher(collections.defaultdict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(lambda: self._missing_impl, *args, **kwargs)
+        self[tuple] = self._tuple
+
+    def _missing_impl(self, val):
+        try:
+            hash(val)
+            self[val.__class__] = self._hashable
+        except:
+            self[val.__class__] = self._unhashable
+        return self[val.__class__](val)
+
+    @staticmethod
+    def _hashable(val):
+        return val
+
+    @staticmethod
+    def _unhashable(val):
+        return id(val)
+
+    def _tuple(self, val):
+        return tuple(self[i.__class__](i) for i in val)
+
+
+_hasher = _Hasher()
+
+
+class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
     """
     This class is a replacement for dict that allows Pyomo
     modeling components to be used as entry keys. The
@@ -49,18 +77,18 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     """
 
     __slots__ = ("_dict",)
-    __autoslot_mappers__ = {'_dict': _rebuild_ids}
+    __autoslot_mappers__ = {'_dict': _rehash_keys}
 
     def __init__(self, *args, **kwds):
-        # maps id(obj) -> (obj,val)
+        # maps id_hash(obj) -> (obj,val)
         self._dict = {}
         # handle the dict-style initialization scenarios
         self.update(*args, **kwds)
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = {str(c) + " (id=" + str(id(c)) + ")": v for c, v in self.items()}
-        return "ComponentMap(" + str(tmp) + ")"
+        tmp = {f"{v[0]} (key={k})": v[1] for k, v in self._dict.items()}
+        return f"ComponentMap({tmp})"
 
     #
     # Implement MutableMapping abstract methods
@@ -68,18 +96,20 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
 
     def __getitem__(self, obj):
         try:
-            return self._dict[id(obj)][1]
+            return self._dict[_hasher[obj.__class__](obj)][1]
         except KeyError:
-            raise KeyError("Component with id '%s': %s" % (id(obj), str(obj)))
+            _id = _hasher[obj.__class__](obj)
+            raise KeyError(f"{obj} (key={_id})") from None
 
     def __setitem__(self, obj, val):
-        self._dict[id(obj)] = (obj, val)
+        self._dict[_hasher[obj.__class__](obj)] = (obj, val)
 
     def __delitem__(self, obj):
         try:
-            del self._dict[id(obj)]
+            del self._dict[_hasher[obj.__class__](obj)]
         except KeyError:
-            raise KeyError("Component with id '%s': %s" % (id(obj), str(obj)))
+            _id = _hasher[obj.__class__](obj)
+            raise KeyError(f"{obj} (key={_id})") from None
 
     def __iter__(self):
         return (obj for obj, val in self._dict.values())
@@ -107,7 +137,7 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
             return False
         # Note we have already verified the dicts are the same size
         for key, val in other.items():
-            other_id = id(key)
+            other_id = _hasher[key.__class__](key)
             if other_id not in self._dict:
                 return False
             self_val = self._dict[other_id][1]
@@ -130,7 +160,7 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     #
 
     def __contains__(self, obj):
-        return id(obj) in self._dict
+        return _hasher[obj.__class__](obj) in self._dict
 
     def clear(self):
         'D.clear() -> None.  Remove all items from D.'
@@ -149,3 +179,32 @@ class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
         else:
             self[key] = default
         return default
+
+
+class DefaultComponentMap(ComponentMap):
+    """A :py:class:`defaultdict` admitting Pyomo Components as keys
+
+    This class is a replacement for defaultdict that allows Pyomo
+    modeling components to be used as entry keys. The base
+    implementation builds on :py:class:`ComponentMap`.
+
+    """
+
+    __slots__ = ('default_factory',)
+
+    def __init__(self, default_factory=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.default_factory = default_factory
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        self[key] = ans = self.default_factory()
+        return ans
+
+    def __getitem__(self, obj):
+        _key = _hasher[obj.__class__](obj)
+        if _key in self._dict:
+            return self._dict[_key][1]
+        else:
+            return self.__missing__(obj)

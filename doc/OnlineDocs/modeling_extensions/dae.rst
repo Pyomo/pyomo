@@ -738,7 +738,7 @@ supported by CasADi. A list of available integrators for each package is
 given below. Please refer to the `SciPy
 <https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html>`_
 and `CasADi
-<http://casadi.sourceforge.net/api/html/db/d3d/classcasadi_1_1Integrator.html>`_ documentation directly for the most up-to-date information about
+<https://web.casadi.org/python-api/#integrator>`_ documentation directly for the most up-to-date information about
 these packages and for more information about the various integrators and
 options.
 

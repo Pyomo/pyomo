@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -30,7 +30,7 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.base import constraint, ComponentUID
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import BlockData
 from pyomo.repn import generate_standard_repn
 import pyomo.core.expr as EXPR
 import pyomo.gdp.tests.models as models
@@ -56,6 +56,24 @@ def check_linear_coef(self, repn, var, coef):
             var_id = i
     self.assertIsNotNone(var_id)
     self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
+
+
+def check_quadratic_coef(self, repn, v1, v2, coef):
+    if isinstance(v1, BooleanVar):
+        v1 = v1.get_associated_binary()
+    if isinstance(v2, BooleanVar):
+        v2 = v2.get_associated_binary()
+
+    v1id = id(v1)
+    v2id = id(v2)
+
+    qcoef_map = dict()
+    for (_v1, _v2), _coef in zip(repn.quadratic_vars, repn.quadratic_coefs):
+        qcoef_map[id(_v1), id(_v2)] = _coef
+        qcoef_map[id(_v2), id(_v1)] = _coef
+
+    self.assertIn((v1id, v2id), qcoef_map)
+    self.assertAlmostEqual(qcoef_map[v1id, v2id], coef)
 
 
 def check_squared_term_coef(self, repn, var, coef):
@@ -407,12 +425,7 @@ def check_two_term_disjunction_xor(self, xor, disj1, disj2):
     assertExpressionsEqual(
         self,
         xor.body,
-        EXPR.LinearExpression(
-            [
-                EXPR.MonomialTermExpression((1, disj1.binary_indicator_var)),
-                EXPR.MonomialTermExpression((1, disj2.binary_indicator_var)),
-            ]
-        ),
+        EXPR.LinearExpression([disj1.binary_indicator_var, disj2.binary_indicator_var]),
     )
     self.assertEqual(xor.lower, 1)
     self.assertEqual(xor.upper, 1)
@@ -679,32 +692,29 @@ def check_indexedDisj_only_targets_transformed(self, transformation):
             trans.get_transformed_constraints(m.disjunct1[1, 0].c)[0]
             .parent_block()
             .parent_block(),
-            disjBlock[2],
+            disjBlock[0],
         )
         self.assertIs(
             trans.get_transformed_constraints(m.disjunct1[1, 1].c)[0].parent_block(),
-            disjBlock[3],
+            disjBlock[1],
         )
         # In the disaggregated var bounds
         self.assertIs(
             trans.get_transformed_constraints(m.disjunct1[2, 0].c)[0]
             .parent_block()
             .parent_block(),
-            disjBlock[0],
+            disjBlock[2],
         )
         self.assertIs(
             trans.get_transformed_constraints(m.disjunct1[2, 1].c)[0].parent_block(),
-            disjBlock[1],
+            disjBlock[3],
         )
 
     # This relies on the disjunctions being transformed in the same order
     # every time. These are the mappings between the indices of the original
     # disjuncts and the indices on the indexed block on the transformation
     # block.
-    if transformation == 'bigm':
-        pairs = [((1, 0), 0), ((1, 1), 1), ((2, 0), 2), ((2, 1), 3)]
-    elif transformation == 'hull':
-        pairs = [((2, 0), 0), ((2, 1), 1), ((1, 0), 2), ((1, 1), 3)]
+    pairs = [((1, 0), 0), ((1, 1), 1), ((2, 0), 2), ((2, 1), 3)]
 
     for i, j in pairs:
         self.assertIs(trans.get_src_disjunct(disjBlock[j]), m.disjunct1[i])
@@ -942,9 +952,7 @@ def check_disjunction_data_target(self, transformation):
     transBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation)
     self.assertIsInstance(transBlock, Block)
     self.assertIsInstance(transBlock.component("disjunction_xor"), Constraint)
-    self.assertIsInstance(
-        transBlock.disjunction_xor[2], constraint._GeneralConstraintData
-    )
+    self.assertIsInstance(transBlock.disjunction_xor[2], constraint.ConstraintData)
     self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
     self.assertEqual(len(transBlock.relaxedDisjuncts), 3)
 
@@ -953,7 +961,7 @@ def check_disjunction_data_target(self, transformation):
         m, targets=[m.disjunction[1]]
     )
     self.assertIsInstance(
-        m.disjunction[1].algebraic_constraint, constraint._GeneralConstraintData
+        m.disjunction[1].algebraic_constraint, constraint.ConstraintData
     )
     transBlock = m.component("_pyomo_gdp_%s_reformulation_4" % transformation)
     self.assertIsInstance(transBlock, Block)
@@ -1694,26 +1702,78 @@ def check_all_components_transformed(self, m):
     # makeNestedDisjunctions_NestedDisjuncts model.
     self.assertIsInstance(m.disj.algebraic_constraint, Constraint)
     self.assertIsInstance(m.d1.disj2.algebraic_constraint, Constraint)
-    self.assertIsInstance(m.d1.transformation_block, _BlockData)
-    self.assertIsInstance(m.d2.transformation_block, _BlockData)
-    self.assertIsInstance(m.d1.d3.transformation_block, _BlockData)
-    self.assertIsInstance(m.d1.d4.transformation_block, _BlockData)
+    self.assertIsInstance(m.d1.transformation_block, BlockData)
+    self.assertIsInstance(m.d2.transformation_block, BlockData)
+    self.assertIsInstance(m.d1.d3.transformation_block, BlockData)
+    self.assertIsInstance(m.d1.d4.transformation_block, BlockData)
 
 
 def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
     disjunctionTransBlock = m.disj.algebraic_constraint.parent_block()
     transBlocks = disjunctionTransBlock.relaxedDisjuncts
-    self.assertEqual(len(transBlocks), 4)
     if transformation == 'bigm':
+        self.assertEqual(len(transBlocks), 4)
         self.assertIs(transBlocks[0], m.d1.d3.transformation_block)
         self.assertIs(transBlocks[1], m.d1.d4.transformation_block)
         self.assertIs(transBlocks[2], m.d1.transformation_block)
         self.assertIs(transBlocks[3], m.d2.transformation_block)
     if transformation == 'hull':
-        self.assertIs(transBlocks[2], m.d1.d3.transformation_block)
-        self.assertIs(transBlocks[3], m.d1.d4.transformation_block)
-        self.assertIs(transBlocks[0], m.d1.transformation_block)
-        self.assertIs(transBlocks[1], m.d2.transformation_block)
+        # This is a much more comprehensive test that doesn't depend on
+        # transformation Block structure, so just reuse it:
+        hull = TransformationFactory('gdp.hull')
+        d3 = hull.get_disaggregated_var(m.d1.d3.binary_indicator_var, m.d1)
+        d4 = hull.get_disaggregated_var(m.d1.d4.binary_indicator_var, m.d1)
+        self.check_transformed_model_nestedDisjuncts(m, d3, d4)
+
+        # Check the 4 constraints that are unique to the case where we didn't
+        # declare d1.d3 and d1.d4 as local
+        d32 = hull.get_disaggregated_var(m.d1.d3.binary_indicator_var, m.d2)
+        d42 = hull.get_disaggregated_var(m.d1.d4.binary_indicator_var, m.d2)
+        # check the additional disaggregated indicator var bound constraints
+        cons = hull.get_var_bounds_constraint(d32)
+        self.assertEqual(len(cons), 1)
+        check_obj_in_active_tree(self, cons['ub'])
+        cons_expr = self.simplify_leq_cons(cons['ub'])
+        # Note that this comes out as d32 <= 1 - d1.ind_var because it's the
+        # "extra" disaggregated var that gets created when it need to be
+        # disaggregated for d1, but it's not used in d2
+        assertExpressionsEqual(
+            self, cons_expr, d32 + m.d1.binary_indicator_var - 1 <= 0.0
+        )
+
+        cons = hull.get_var_bounds_constraint(d42)
+        self.assertEqual(len(cons), 1)
+        check_obj_in_active_tree(self, cons['ub'])
+        cons_expr = self.simplify_leq_cons(cons['ub'])
+        # Note that this comes out as d42 <= 1 - d1.ind_var because it's the
+        # "extra" disaggregated var that gets created when it need to be
+        # disaggregated for d1, but it's not used in d2
+        assertExpressionsEqual(
+            self, cons_expr, d42 + m.d1.binary_indicator_var - 1 <= 0.0
+        )
+        # check the aggregation constraints for the disaggregated indicator vars
+        cons = hull.get_disaggregation_constraint(m.d1.d3.binary_indicator_var, m.disj)
+        check_obj_in_active_tree(self, cons)
+        cons_expr = self.simplify_cons(cons)
+        assertExpressionsEqual(
+            self, cons_expr, m.d1.d3.binary_indicator_var - d32 - d3 == 0.0
+        )
+        cons = hull.get_disaggregation_constraint(m.d1.d4.binary_indicator_var, m.disj)
+        check_obj_in_active_tree(self, cons)
+        cons_expr = self.simplify_cons(cons)
+        assertExpressionsEqual(
+            self, cons_expr, m.d1.d4.binary_indicator_var - d42 - d4 == 0.0
+        )
+
+        num_cons = len(
+            list(m.component_data_objects(Constraint, active=True, descend_into=Block))
+        )
+        # 30 total constraints in transformed model minus 10 trivial bounds
+        # (lower bounds of 0) gives us 20 constraints total:
+        self.assertEqual(num_cons, 20)
+        # (And this is 4 more than we test in
+        # self.check_transformed_model_nestedDisjuncts, so that's comforting
+        # too.)
 
 
 def check_nested_disjunction_target(self, transformation):
@@ -1877,3 +1937,17 @@ def check_nested_disjuncts_in_flat_gdp(self, transformation):
     for t in m.T:
         self.assertTrue(value(m.disj1[t].indicator_var))
         self.assertTrue(value(m.disj1[t].sub1.indicator_var))
+
+
+def check_do_not_assume_nested_indicators_local(self, transformation):
+    m = models.why_indicator_vars_are_not_always_local()
+    TransformationFactory(transformation).apply_to(m)
+
+    results = SolverFactory('gurobi').solve(m)
+    self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal)
+    self.assertAlmostEqual(value(m.obj), 9)
+    self.assertAlmostEqual(value(m.x), 9)
+    self.assertTrue(value(m.Y2.indicator_var))
+    self.assertFalse(value(m.Y1.indicator_var))
+    self.assertTrue(value(m.Z1.indicator_var))
+    self.assertTrue(value(m.Z1.indicator_var))

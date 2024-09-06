@@ -3,6 +3,24 @@ PyROS CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+PyROS 1.2.11    17 Mar 2024
+-------------------------------------------------------------------------------
+- Standardize calls to subordinate solvers across all PyROS subproblem types
+- Account for user-specified subsolver time limits when automatically
+  adjusting subsolver time limits
+- Add support for automatic adjustment of SCIP subsolver time limit
+- Move start point of main PyROS solver timer to just before argument
+  validation begins
+
+
+-------------------------------------------------------------------------------
+PyROS 1.2.10    07 Feb 2024
+-------------------------------------------------------------------------------
+- Update argument resolution and validation routines of `PyROS.solve()`
+- Use methods of `common.config` for docstring of `PyROS.solve()`
+
+
+-------------------------------------------------------------------------------
 PyROS 1.2.9    15 Dec 2023
 -------------------------------------------------------------------------------
 - Fix DR polishing optimality constraint for case of nominal objective focus
@@ -13,6 +31,7 @@ PyROS 1.2.9    15 Dec 2023
 - Refactor DR variable and constraint declaration routines.
 - Refactor DR polishing routine; initialize auxiliary variables
   to values they are meant to represent
+
 
 -------------------------------------------------------------------------------
 PyROS 1.2.8    12 Oct 2023

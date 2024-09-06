@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2024
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -111,7 +111,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
 
         """
         # see PR #366 for discussion about handling indexed
@@ -157,7 +157,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be modified.
         attr: str
@@ -192,7 +192,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.var._GeneralVarData
+        con: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be modified.
         attr: str
@@ -342,7 +342,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: pyomo.core.base.var._GeneralVarData
+        var: pyomo.core.base.var.VarData
             The pyomo var for which the corresponding gurobi var attribute
             should be retrieved.
         attr: str
@@ -384,7 +384,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -413,7 +413,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.sos._SOSConstraintData
+        con: pyomo.core.base.sos.SOSConstraintData
             The pyomo SOS constraint for which the corresponding gurobi SOS constraint attribute
             should be retrieved.
         attr: str
@@ -431,7 +431,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The pyomo constraint for which the corresponding gurobi constraint attribute
             should be retrieved.
         attr: str
@@ -569,7 +569,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The cut to add
         """
         if not con.active:
@@ -578,7 +578,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if is_fixed(con.body):
             raise ValueError('cbCut expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
         )
 
@@ -647,7 +647,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """
         Parameters
         ----------
-        con: pyomo.core.base.constraint._GeneralConstraintData
+        con: pyomo.core.base.constraint.ConstraintData
             The lazy constraint to add
         """
         if not con.active:
@@ -656,7 +656,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if is_fixed(con.body):
             raise ValueError('cbLazy expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
         )
 
@@ -710,7 +710,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         Parameters
         ----------
-        var: Var (scalar Var or single _VarData)
+        var: Var (scalar Var or single VarData)
         obj_coef: float
         constraints: list of solver constraints
         coefficients: list of coefficients to put on var in the associated constraint

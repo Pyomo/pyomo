@@ -1,15 +1,12 @@
-28 Set Declarations
+25 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
     B : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    4 : {2, 3, 4, 5}
-    C : Size=0, Index=C_index, Ordered=Insertion
+    C : Size=0, Index=A*B, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
-    C_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     D : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
         None :     1 :  A | B :    5 : {1, 2, 3, 4, 5}
@@ -26,15 +23,9 @@
         Key  : Dimen : Domain : Size : Members
         None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     Hsub : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain      : Size : Members
-        None :     2 : Hsub_domain :    3 : {(1, 2), (1, 3), (3, 3)}
-    Hsub_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
+        None :     2 :    A*B :    3 : {(1, 2), (1, 3), (3, 3)}
     I : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain   : Size : Members
-        None :     2 : I_domain :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
-    I_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
         None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
     J : Size=1, Index=None, Ordered=Insertion
@@ -53,15 +44,12 @@
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    2 : {1, 3}
     N : Size=1, Index=None, Ordered=Insertion
-        Key  : Dimen : Domain   : Size : Members
-        None :     2 : N_domain :    0 :      {}
-    N_domain : Size=1, Index=None, Ordered=True
         Key  : Dimen : Domain : Size : Members
-        None :     2 :    A*B :   12 : {(1, 2), (1, 3), (1, 4), (1, 5), (2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5)}
+        None :     2 :    A*B :    0 :      {}
     O : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :    -- :    Any :    0 :      {}
-    P : Size=16, Index=P_index, Ordered=Insertion
+    P : Size=16, Index=B*B, Ordered=Insertion
         Key    : Dimen : Domain : Size : Members
         (2, 2) :     1 :    Any :    4 : {0, 1, 2, 3}
         (2, 3) :     1 :    Any :    6 : {0, 1, 2, 3, 4, 5}
@@ -79,9 +67,6 @@
         (5, 3) :     1 :    Any :   15 : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
         (5, 4) :     1 :    Any :   20 : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
         (5, 5) :     1 :    Any :   25 : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
-    P_index : Size=1, Index=None, Ordered=True
-        Key  : Dimen : Domain : Size : Members
-        None :     2 :    B*B :   16 : {(2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 3), (3, 4), (3, 5), (4, 2), (4, 3), (4, 4), (4, 5), (5, 2), (5, 3), (5, 4), (5, 5)}
     R : Size=3, Index=B, Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           2 :     1 :    Any :    3 : {1, 3, 5}
@@ -95,19 +80,23 @@
         Key : Dimen : Domain : Size : Members
           2 :     1 :    Any :    2 : {1, 3}
           5 :     1 :    Any :    2 : {2, 3}
+    T_indexed_validate : Size=3, Index=B, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+          2 :     1 :    Any :    1 : {1,}
+          3 :     1 :    Any :    2 : {1, 2}
+          4 :     1 :    Any :    3 : {1, 2, 3}
     U : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    5 : {1, 2, 6, 24, 120}
-    V : Size=4, Index=V_index, Ordered=Insertion
+    V : Size=4, Index=[1:4], Ordered=Insertion
         Key : Dimen : Domain : Size : Members
           1 :     1 :    Any :    5 : {1, 2, 3, 4, 5}
           2 :     1 :    Any :    5 : {1, 3, 5, 7, 9}
           3 :     1 :    Any :    5 : {1, 4, 7, 10, 13}
           4 :     1 :    Any :    5 : {1, 5, 9, 13, 17}
+    X : Size=2, Index=B, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+          2 :     1 :   S[2] :    1 : {1,}
+          5 :     1 :   S[5] :    2 : {2, 3}
 
-1 RangeSet Declarations
-    V_index : Dimen=1, Size=4, Bounds=(1, 4)
-        Key  : Finite : Members
-        None :   True :   [1:4]
-
-29 Declarations: A B C_index C D E F G H Hsub_domain Hsub I_domain I J K K_2 L M N_domain N O P_index P R S T U V_index V
+25 Declarations: A B C D E F G H Hsub I J K K_2 L M N O P R S X T T_indexed_validate U V
