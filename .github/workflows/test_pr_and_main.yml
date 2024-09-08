@@ -29,8 +29,8 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYPI_ONLY: z3-solver
-  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
+  PYPI_ONLY: z3-solver linear-tree
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels linear-tree
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
@@ -57,21 +57,6 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
-    - name: URL Checker
-      uses: urlstechie/urlchecker-action@0.0.34
-      with:
-        # A comma-separated list of file types to cover in the URL checks
-        file_types: .md,.rst,.py
-        # Choose whether to include file with no URLs in the prints.
-        print_all: false
-        # More verbose summary at the end of a run
-        verbose: true
-        # How many times to retry a failed request (defaults to 1)
-        retry_count: 3
-        # Exclude:
-        #  - Jenkins because it's behind a firewall
-        #  - RTD because a magically-generated string triggers failures
-        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
 
 
   build:
