@@ -178,6 +178,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         try:
             with SuppressInfeasibleWarning():
                 try:
+                    TransformationFactory('gdp.bigm').apply_to(subproblem)
                     fbbt(subproblem, integer_tol=config.integer_tolerance)
                     TransformationFactory('contrib.detect_fixed_vars').apply_to(
                         subproblem
@@ -188,7 +189,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                     TransformationFactory(
                         'contrib.deactivate_trivial_constraints'
                     ).apply_to(subproblem, tmp=False, ignore_infeasible=False)
-                    TransformationFactory('gdp.bigm').apply_to(subproblem)
                 except InfeasibleConstraintException:
                     return False
                 minlp_args = dict(config.minlp_solver_args)
