@@ -11,6 +11,7 @@
 
 import abc
 import logging
+import numpy as np
 from scipy.sparse import coo_matrix
 from pyomo.common.dependencies import numpy as np
 
@@ -129,6 +130,9 @@ class ExternalGreyBoxModel(object):
         function that computes the vector of outputs at the values for
         the input variables. This method must return
         H_o^k = sum_i (y_o^k)_i * grad^2_{uu} w_o(u^k)
+
+    def evaluate_hessian_objective(self):
+        Compute the hessian of the objective
 
     Examples that show Hessian support are also found in:
     pyomo/contrib/pynumero/examples/external_grey_box/react-example/
@@ -318,6 +322,29 @@ class ExternalGreyBoxModel(object):
     # def evaluate_hessian_equality_constraints(self):
     # def evaluate_hessian_outputs(self):
     #
+
+    # Support for objectives
+    def has_objective(self):
+        return False
+
+    def evaluate_objective(self) -> float:
+        """
+        Compute the objective from the  values set in
+        input_values
+        """
+        raise NotImplementedError(
+            'evaluate_objective called but not ' 'implemented in the derived class.'
+        )
+
+    def evaluate_grad_objective(self, out=None):
+        """
+        Compute the gradient of the objective from the
+        values set in input_values
+        """
+        raise NotImplementedError(
+            'evaluate_grad_objective called but not '
+            'implemented in the derived class.'
+        )
 
 
 class ExternalGreyBoxBlockData(BlockData):
