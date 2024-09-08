@@ -817,7 +817,7 @@ class _ExternalGreyBoxAsNLP(NLP):
                 if obj_hess.shape != expected_shape:
                     raise ValueError(
                         'ExternalGreyBoxModel objective hessian shape'
-                        'shoule be (n_inputs, n_inputs)'
+                        'should be (n_inputs, n_inputs)'
                     )
                 # let's check that it is lower triangular
                 if np.any(obj_hess.row < obj_hess.col):
@@ -835,7 +835,7 @@ class _ExternalGreyBoxAsNLP(NLP):
                 if eq_hess.shape != expected_shape:
                     raise ValueError(
                         'ExternalGreyBoxModel equality constraint hessian shape'
-                        'shoule be (n_inputs, n_inputs)'
+                        'should be (n_inputs, n_inputs)'
                     )
                 # let's check that it is lower triangular
                 if np.any(eq_hess.row < eq_hess.col):
@@ -853,7 +853,7 @@ class _ExternalGreyBoxAsNLP(NLP):
                 if output_hess.shape != expected_shape:
                     raise ValueError(
                         'ExternalGreyBoxModel output hessian shape'
-                        'shoule be (n_inputs, n_inputs)'
+                        'should be (n_inputs, n_inputs)'
                     )
                 # let's check that it is lower triangular
                 if np.any(output_hess.row < output_hess.col):
