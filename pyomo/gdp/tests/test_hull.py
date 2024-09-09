@@ -547,6 +547,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 # themselves might not be the same object. The ConstraintDatas
                 # are though:
                 for key, constraintData in cons.items():
+                    if type(key) is tuple:
+                        key = key[1]
                     self.assertIs(returned_cons[key], constraintData)
 
     def test_create_using_nonlinear(self):
