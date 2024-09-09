@@ -20,7 +20,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet, DefaultComponen
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr as EXPR
-from pyomo.core.base import TransformationFactory, Reference
+from pyomo.core.base import TransformationFactory
 from pyomo.core import (
     Block,
     BooleanVar,
@@ -451,15 +451,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     ub_idx=(idx, 'ub'),
                     var_free_indicator=var_free,
                 )
-                # Update mappings:
-                var_info = var.parent_block().private_data()
-                disaggregated_var_map = var_info.disaggregated_var_map
-                dis_var_info = disaggregated_var.parent_block().private_data()
-
-                dis_var_info.bigm_constraint_map[disaggregated_var][obj] = Reference(
-                    disaggregated_var_bounds[idx, :]
-                )
-                dis_var_info.original_var_map[disaggregated_var] = var
+                original_var_info = var.parent_block().private_data()
+                disaggregated_var_map = original_var_info.disaggregated_var_map
 
                 # For every Disjunct the Var does not appear in, we want to map
                 # that this new variable is its disaggreggated variable.
@@ -611,6 +604,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         ub_idx,
         var_free_indicator,
     ):
+        # For updating mappings:
+        original_var_info = original_var.parent_block().private_data()
+        disaggregated_var_map = original_var_info.disaggregated_var_map
+        disaggregated_var_info = disaggregatedVar.parent_block().private_data()
+
+        disaggregated_var_info.bigm_constraint_map[disaggregatedVar][disjunct] = {}
+
         lb = original_var.lb
         ub = original_var.ub
         if lb is None or ub is None:
@@ -625,12 +625,12 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         if lb:
             bigmConstraint.add(lb_idx, var_free_indicator * lb <= disaggregatedVar)
+            disaggregated_var_info.bigm_constraint_map[
+                disaggregatedVar][disjunct][lb_idx] = bigmConstraint[lb_idx]
         if ub:
             bigmConstraint.add(ub_idx, disaggregatedVar <= ub * var_free_indicator)
-
-        original_var_info = original_var.parent_block().private_data()
-        disaggregated_var_map = original_var_info.disaggregated_var_map
-        disaggregated_var_info = disaggregatedVar.parent_block().private_data()
+            disaggregated_var_info.bigm_constraint_map[
+                disaggregatedVar][disjunct][ub_idx] = bigmConstraint[ub_idx]
 
         # store the mappings from variables to their disaggregated selves on
         # the transformation block
