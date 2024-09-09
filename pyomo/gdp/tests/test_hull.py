@@ -531,14 +531,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             if i == 1:  # this disjunct has x, w, and no y
                 mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].w_bounds
                 mappings[transBlock._disaggregatedVars[0]] = {
-                    key: val for key, val in transBlock._boundsConstraints.items() if
-                    key[0] == 0
+                    key: val
+                    for key, val in transBlock._boundsConstraints.items()
+                    if key[0] == 0
                 }
             elif i == 0:  # this disjunct has x, y, and no w
                 mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].y_bounds
                 mappings[transBlock._disaggregatedVars[1]] = {
-                    key: val for key, val in transBlock._boundsConstraints.items() if
-                    key[0] == 1
+                    key: val
+                    for key, val in transBlock._boundsConstraints.items()
+                    if key[0] == 1
                 }
             for var, cons in mappings.items():
                 returned_cons = hull.get_var_bounds_constraint(var)

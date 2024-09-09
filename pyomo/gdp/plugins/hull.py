@@ -448,7 +448,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     disjunct=obj,
                     bigmConstraint=disaggregated_var_bounds,
                     var_free_indicator=var_free,
-                    var_idx=idx
+                    var_idx=idx,
                 )
                 original_var_info = var.parent_block().private_data()
                 disaggregated_var_map = original_var_info.disaggregated_var_map
@@ -622,15 +622,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             if var_idx is not None:
                 lb_idx = (var_idx, 'lb')
             bigmConstraint.add(lb_idx, var_free_indicator * lb <= disaggregatedVar)
-            disaggregated_var_info.bigm_constraint_map[
-                disaggregatedVar][disjunct]['lb'] = bigmConstraint[lb_idx]
+            disaggregated_var_info.bigm_constraint_map[disaggregatedVar][disjunct][
+                'lb'
+            ] = bigmConstraint[lb_idx]
         if ub:
             ub_idx = 'ub'
             if var_idx is not None:
                 ub_idx = (var_idx, 'ub')
             bigmConstraint.add(ub_idx, disaggregatedVar <= ub * var_free_indicator)
-            disaggregated_var_info.bigm_constraint_map[
-                disaggregatedVar][disjunct]['ub'] = bigmConstraint[ub_idx]
+            disaggregated_var_info.bigm_constraint_map[disaggregatedVar][disjunct][
+                'ub'
+            ] = bigmConstraint[ub_idx]
 
         # store the mappings from variables to their disaggregated selves on
         # the transformation block
