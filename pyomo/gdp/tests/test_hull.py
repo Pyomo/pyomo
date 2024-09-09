@@ -32,7 +32,6 @@ from pyomo.environ import (
     Param,
     Objective,
     TerminationCondition,
-    Reference,
 )
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
