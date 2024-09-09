@@ -930,10 +930,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     def get_var_bounds_constraint(self, v, disjunct=None):
         """
-        Returns the IndexedConstraint which sets a disaggregated
-        variable to be within its bounds when its Disjunct is active and to
-        be 0 otherwise. (It is always an IndexedConstraint because each
-        bound becomes a separate constraint.)
+        Returns a dictionary mapping keys 'lb' and/or 'ub' to the Constraints that
+        set a disaggregated variable to be within its lower and upper bounds
+        (respectively) when its Disjunct is active and to be 0 otherwise.
 
         Parameters
         ----------
