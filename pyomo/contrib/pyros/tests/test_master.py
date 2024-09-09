@@ -479,6 +479,7 @@ class TestHigherOrderDecisionRuleEfficiency(unittest.TestCase):
     """
     Test efficiency for decision rules.
     """
+
     def test_higher_order_decision_rule_efficiency(self):
         """
         Test higher-order decision rule efficiency.
@@ -488,9 +489,9 @@ class TestHigherOrderDecisionRuleEfficiency(unittest.TestCase):
         master_data = Bunch(
             master_model=master_model, iteration=0, config=model_data.config
         )
-        decision_rule_vars = (
-            master_data.master_model.scenarios[0, 0].first_stage.decision_rule_vars[0]
-        )
+        decision_rule_vars = master_data.master_model.scenarios[
+            0, 0
+        ].first_stage.decision_rule_vars[0]
 
         for iter_num in range(4):
             master_data.iteration = iter_num
