@@ -667,6 +667,7 @@ jobs:
       run: |
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
+            pyomo `pwd`/pyomo-model-libraries \
             `pwd`/examples `pwd`/doc --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
@@ -692,12 +693,12 @@ jobs:
         coverage combine
         coverage report -i
         coverage xml -i
-        ls -la
 
     - name: Record build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
+        include-hidden-files: true
         path: |
           .coverage
           coverage.xml
@@ -852,7 +853,6 @@ jobs:
         fi
         for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
             NAME=`echo $ARTIFACT | cut -d/ -f2`
-            ls -la $ARTIFACT
             cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
         rm -vf .coverage coverage.xml
