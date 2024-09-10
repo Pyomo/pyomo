@@ -692,6 +692,7 @@ jobs:
         coverage combine
         coverage report -i
         coverage xml -i
+        ls -la
 
     - name: Record build artifacts
       uses: actions/upload-artifact@v4
