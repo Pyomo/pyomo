@@ -519,7 +519,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $URL = "https://minlp.com/downloads/xecs/baron/current/"
+        $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
