@@ -42,7 +42,7 @@ The following functions are defined in the alternative-solutions library:
     * Calculates the bounds on each variable by solving a series of min and max optimization problems where each variable is used as the objective function. This can be applied to any class of problem supported by the selected solver.
 
 
-Usage Example
+Basic Usage Example
 -------------
 
 Many of functions in the alternative-solutions library have similar options, so we simply illustrate the ``enumerate_binary_solutions`` function.  We define a simple knapsack example whose alternative solutions have integer objective values ranging from 0 to 90.
@@ -87,6 +87,53 @@ Each ``Solution`` object contains information about the objective and variables,
        }
    }
 
+
+Gap Usage Example
+-------------
+When we only want some of the solutions based off a tolerance away from optimal, this can be done using the ``abs_opt_gap`` parameter. This is shown in the following simple knapsack examples where the weights and values are the same.
+
+.. doctest::
+   :skipif: not glpk_available
+   
+   >>> import pyomo.environ as pyo
+   >>> import pyomo.contrib.alternative_solutions as aos
+
+   >>> values = [10,9,2,1,1]
+   >>> weights = [10,9,2,1,1]
+ 
+   >>> K = len(values)
+   >>> capacity = 12
+ 
+   >>> m = pyo.ConcreteModel()
+   >>> m.x = pyo.Var(range(K), within=pyo.Binary)
+   >>> m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in range(K)), sense=pyo.maximize)
+   >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(K)) <= capacity) 
+ 
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=10, solver="glpk", abs_opt_gap = 0.0)
+   >>> assert(len(solns) == 4)
+
+In this example, we only get the four ``Solution`` objects that have an ``objective_value`` of 12.
+Note that while we wanted only those four solutions with no optimality gap, using a gap of half the smallest value (in this case .5) will return the same solutions and avoids any machine precision issues.
+
+.. doctest::
+   :skipif: not glpk_available
+   
+   >>> import pyomo.environ as pyo
+   >>> import pyomo.contrib.alternative_solutions as aos
+
+   >>> values = [10,9,2,1,1]
+   >>> weights = [10,9,2,1,1]
+ 
+   >>> K = len(values)
+   >>> capacity = 12
+ 
+   >>> m = pyo.ConcreteModel()
+   >>> m.x = pyo.Var(range(K), within=pyo.Binary)
+   >>> m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in range(K)), sense=pyo.maximize)
+   >>> m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in range(K)) <= capacity) 
+ 
+   >>> solns = aos.enumerate_binary_solutions(m, num_solutions=10, solver="glpk", abs_opt_gap = 0.5)
+   >>> assert(len(solns) == 4)
 
 Interface Documentation
 -----------------------
