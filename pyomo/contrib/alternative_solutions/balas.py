@@ -42,7 +42,7 @@ def enumerate_binary_solutions(
     “Canonical Cuts on the Unit Hypercube.” 
     SIAM Journal on Applied Mathematics 23, no. 1 (1972): 61–69. 
     http://www.jstor.org/stable/2099623.
-    
+
     Parameters
     ----------
     model : ConcreteModel
