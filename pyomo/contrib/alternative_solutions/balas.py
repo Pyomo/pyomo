@@ -35,12 +35,12 @@ def enumerate_binary_solutions(
     """
     Finds alternative optimal solutions for a binary problem using no-good
     cuts.
-    
+
     This function implements a no-good cuts technique inheriting from Balas's work on Cannonical Cuts:
 
-    Balas, Egon, and Robert Jeroslow. 
-    “Canonical Cuts on the Unit Hypercube.” 
-    SIAM Journal on Applied Mathematics 23, no. 1 (1972): 61–69. 
+    Balas, Egon, and Robert Jeroslow.
+    “Canonical Cuts on the Unit Hypercube.”
+    SIAM Journal on Applied Mathematics 23, no. 1 (1972): 61–69.
     http://www.jstor.org/stable/2099623.
 
     Parameters
