@@ -248,8 +248,7 @@ class TestPyROSSolveAxisAlignedEllipsoidalSet(unittest.TestCase):
     """
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid,
-        "SCIP is not available and licensed",
+        scip_available and scip_license_is_valid, "SCIP is not available and licensed"
     )
     def test_two_stg_mod_with_axis_aligned_set(self):
         """
@@ -1455,8 +1454,7 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid,
-        "SCIP is not available and licensed.",
+        scip_available and scip_license_is_valid, "SCIP is not available and licensed."
     )
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
@@ -1643,8 +1641,7 @@ class RegressionTest(unittest.TestCase):
             )
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid,
-        "SCIP is not available and licensed.",
+        scip_available and scip_license_is_valid, "SCIP is not available and licensed."
     )
     def test_coefficient_matching_partitioning_insensitive(self):
         """
@@ -1750,8 +1747,7 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid,
-        "SCIP not available and licensed.",
+        scip_available and scip_license_is_valid, "SCIP not available and licensed."
     )
     def test_coefficient_matching_nonlinear_expr(self):
         """
@@ -2066,8 +2062,7 @@ class TestMasterFeasibilityUnitConsistency(unittest.TestCase):
     """
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid,
-        "SCIP is not available and licensed.",
+        scip_available and scip_license_is_valid, "SCIP is not available and licensed."
     )
     def test_two_stg_mod_with_axis_aligned_set(self):
         """
@@ -2260,8 +2255,7 @@ class TestSubsolverTiming(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid,
-        "SCIP is not available and licensed.",
+        scip_available and scip_license_is_valid, "SCIP is not available and licensed."
     )
     def test_two_stg_mod_with_intersection_set(self):
         """

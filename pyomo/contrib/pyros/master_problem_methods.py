@@ -760,8 +760,7 @@ def solver_call_master(master_data):
     config = master_data.config
     master_model = master_data.master_model
     master_soln = MasterResults(
-        master_model=master_model,
-        pyros_termination_condition=None,
+        master_model=master_model, pyros_termination_condition=None
     )
 
     if config.solve_master_globally:
@@ -796,10 +795,7 @@ def solver_call_master(master_data):
 
         master_soln.master_results_list.append(results)
         optimality_acceptable, infeasible = (
-            process_termination_condition_master_problem(
-                config=config,
-                results=results,
-            )
+            process_termination_condition_master_problem(config=config, results=results)
         )
         time_out = check_time_limit_reached(master_data.timing, config)
 
@@ -807,9 +803,7 @@ def solver_call_master(master_data):
             master_model.solutions.load_from(results)
             log_master_solve_results(master_model, config, results)
         if time_out:
-            master_soln.pyros_termination_condition = (
-                pyrosTerminationCondition.time_out
-            )
+            master_soln.pyros_termination_condition = pyrosTerminationCondition.time_out
         if infeasible:
             master_soln.pyros_termination_condition = (
                 pyrosTerminationCondition.robust_infeasible
@@ -861,8 +855,7 @@ def solver_call_master(master_data):
 
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
     subsolver_termination_conditions = [
-        res.solver.termination_condition
-        for res in master_soln.master_results_list
+        res.solver.termination_condition for res in master_soln.master_results_list
     ]
     config.progress_logger.warning(
         f"Could not successfully solve master problem of iteration "
@@ -891,8 +884,7 @@ def solve_master(master_data):
     if master_data.iteration > 0:
         feasibility_problem_results = solve_master_feasibility_problem(master_data)
         time_out_after_feasibility = check_time_limit_reached(
-            master_data.timing,
-            master_data.config,
+            master_data.timing, master_data.config
         )
 
     if time_out_after_feasibility:

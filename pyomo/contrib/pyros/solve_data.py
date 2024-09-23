@@ -108,9 +108,7 @@ class MasterResults:
         master_results_list=None,
         pyros_termination_condition=None,
     ):
-        """Initialize self (see class docstring).
-
-        """
+        """Initialize self (see class docstring)."""
         self.master_model = master_model
         self.feasibility_problem_results = feasibility_problem_results
         if master_results_list is None:
