@@ -2,9 +2,7 @@ Solvers
 =======
 
 .. automodule:: pyomo.contrib.appsi.solvers
-    :members:
-    :show-inheritance:
-    :undoc-members:
+   :noindex:
 
 .. toctree::
 

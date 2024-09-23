@@ -70,6 +70,7 @@ also be created, as described in :ref:`gdp-advanced-examples`.
 Following solution of the GDP model, values of the Boolean variables may be updated from their algebraic binary counterparts using the ``update_boolean_vars_from_binary()`` function.
 
 .. autofunction:: pyomo.core.plugins.transform.logical_to_linear.update_boolean_vars_from_binary
+   :noindex:
 
 Factorable Programming
 ^^^^^^^^^^^^^^^^^^^^^^

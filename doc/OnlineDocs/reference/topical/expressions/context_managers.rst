@@ -2,9 +2,8 @@
 Context Managers
 ================
 
-.. autoclass:: pyomo.core.expr.nonlinear_expression
-    :members:
+.. autosummary::
 
-.. autoclass:: pyomo.core.expr.linear_expression
-    :members:
+   pyomo.core.expr.nonlinear_expression
+   pyomo.core.expr.linear_expression
 

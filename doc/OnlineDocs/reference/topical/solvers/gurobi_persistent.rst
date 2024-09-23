@@ -3,6 +3,13 @@ GurobiPersistent
 
 .. currentmodule:: pyomo.solvers.plugins.solvers.gurobi_persistent
 
+Interface
+---------
+
+.. autosummary::
+
+   GurobiPersistent
+
 Methods
 -------
 
@@ -32,8 +39,3 @@ Methods
    GurobiPersistent.update_var
    GurobiPersistent.version
    GurobiPersistent.write
-
-.. autoclass:: GurobiPersistent
-   :members:
-   :inherited-members:
-   :show-inheritance:

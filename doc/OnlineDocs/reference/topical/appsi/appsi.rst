@@ -6,6 +6,7 @@ APPSI
 Auto-Persistent Pyomo Solver Interfaces
 
 .. automodule:: pyomo.contrib.appsi
+    :noindex:
     :members:
     :show-inheritance:
 

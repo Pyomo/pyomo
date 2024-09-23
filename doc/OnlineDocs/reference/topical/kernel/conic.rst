@@ -19,24 +19,3 @@ Summary
    pyomo.core.kernel.conic.primal_power
    pyomo.core.kernel.conic.dual_exponential
    pyomo.core.kernel.conic.dual_power
-
-Member Documentation
-~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: pyomo.core.kernel.conic.quadratic
-   :show-inheritance:
-   :members:
-.. autoclass:: pyomo.core.kernel.conic.rotated_quadratic
-   :show-inheritance:
-   :members:
-.. autoclass:: pyomo.core.kernel.conic.primal_exponential
-   :show-inheritance:
-   :members:
-.. autoclass:: pyomo.core.kernel.conic.primal_power
-   :show-inheritance:
-   :members:
-.. autoclass:: pyomo.core.kernel.conic.dual_exponential
-   :show-inheritance:
-   :members:
-.. autoclass:: pyomo.core.kernel.conic.dual_power
-   :show-inheritance:
-   :members:

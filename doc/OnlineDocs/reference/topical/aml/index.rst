@@ -3,83 +3,20 @@ AML Library Reference
 
 The following modeling components make up the core of the Pyomo
 Algebraic Modeling Language (AML).  These classes are all available
-through the `pyomo.environ` namespace.
-
-.. currentmodule:: pyomo.environ
+through the :mod:`pyomo.environ` namespace.
 
 .. autosummary::
 
-   ConcreteModel
-   AbstractModel
-   Block
-   Set
-   RangeSet
-   Param
-   Var
-   Objective
-   Constraint
-   ExternalFunction
-   Reference
-   SOSConstraint
-
-
-AML Component Documentation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. autoclass:: ConcreteModel
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: AbstractModel
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: Block
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: Constraint
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: ExternalFunction
-   :show-inheritance:
-   :special-members: __init__
-   :members:
-   :inherited-members:
-
-.. autoclass:: Objective
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: Param
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: RangeSet
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autofunction:: Reference
-
-.. autoclass:: Set
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: Var
-   :show-inheritance:
-   :members:
-   :inherited-members:
-
-.. autoclass:: SOSConstraint
-   :show-inheritance:
-   :members:
-   :inherited-members:
+   ~pyomo.core.base.PyomoModel.ConcreteModel
+   ~pyomo.core.base.PyomoModel.AbstractModel
+   ~pyomo.core.base.block.Block
+   ~pyomo.core.base.set.Set
+   ~pyomo.core.base.rangeset.RangeSet
+   ~pyomo.core.base.param.Param
+   ~pyomo.core.base.var.Var
+   ~pyomo.core.base.objective.Objective
+   ~pyomo.core.base.constraint.Constraint
+   ~pyomo.core.base.external.ExternalFunction
+   ~pyomo.core.base.reference.Reference
+   ~pyomo.core.base.sos.SOSConstraint
 

@@ -1,7 +1,6 @@
 XpressPersistent
 ================
 
-.. autoclass:: pyomo.solvers.plugins.solvers.xpress_persistent.XpressPersistent
-   :members:
-   :inherited-members:
-   :show-inheritance:
+.. autosummary::
+
+   pyomo.solvers.plugins.solvers.xpress_persistent.XpressPersistent

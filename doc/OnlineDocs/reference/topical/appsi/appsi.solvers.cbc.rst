@@ -1,15 +1,7 @@
 Cbc
 ===
 
-.. autoclass:: pyomo.contrib.appsi.solvers.cbc.CbcConfig
-  :members:
-  :inherited-members:
-  :undoc-members:
-  :show-inheritance:
-  :exclude-members: NoArgument
+.. autosummary::
 
-.. autoclass:: pyomo.contrib.appsi.solvers.cbc.Cbc
-  :members:
-  :inherited-members:
-  :undoc-members:
-  :show-inheritance:
+   pyomo.contrib.appsi.solvers.cbc.CbcConfig
+   pyomo.contrib.appsi.solvers.cbc.Cbc

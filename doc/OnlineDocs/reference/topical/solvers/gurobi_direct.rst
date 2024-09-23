@@ -3,6 +3,14 @@ GurobiDirect
 
 .. currentmodule:: pyomo.solvers.plugins.solvers.gurobi_direct
 
+
+Interface
+---------
+
+.. autosummary::
+
+   GurobiDirect
+
 Methods
 -------
 
@@ -14,5 +22,3 @@ Methods
    GurobiDirect.solve
    GurobiDirect.version
 
-.. autoclass:: GurobiDirect
-   :members: available, close, close_global, solve, version

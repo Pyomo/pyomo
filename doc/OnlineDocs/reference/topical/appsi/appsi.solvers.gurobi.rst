@@ -42,14 +42,7 @@ calls to
 to unexpected errors.
 
 
-.. autoclass:: pyomo.contrib.appsi.solvers.gurobi.GurobiResults
-  :members:
-  :inherited-members:
-  :undoc-members:
-  :show-inheritance:
+.. autosummary::
 
-.. autoclass:: pyomo.contrib.appsi.solvers.gurobi.Gurobi
-  :members:
-  :inherited-members:
-  :undoc-members:
-  :show-inheritance:
+   pyomo.contrib.appsi.solvers.gurobi.GurobiResults
+   pyomo.contrib.appsi.solvers.gurobi.Gurobi

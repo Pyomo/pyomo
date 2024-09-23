@@ -16,8 +16,10 @@ Infeasible Irreducible System (IIS) Tool
 ========================================
 
 .. automodule:: pyomo.contrib.iis.iis
+   :noindex:
 
 .. autofunction:: pyomo.contrib.iis.write_iis
+   :noindex:
 
 Minimal Intractable System finder (MIS) Tool
 ============================================

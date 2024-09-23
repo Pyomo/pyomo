@@ -12,8 +12,13 @@ PyNumero. For more details, see the API documentation (:ref:`pynumero_api`).
 
    installation.rst
    tutorial.rst
-   api.rst
    backward_compatibility.rst
+
+
+PyNumero API
+------------
+
+:mod:`pyomo.contrib.pynumero`
 
 
 Developers

@@ -1,14 +1,7 @@
 MAiNGO
 ======
 
-.. autoclass:: pyomo.contrib.appsi.solvers.maingo.MAiNGOConfig
-  :members:
-  :inherited-members:
-  :undoc-members:
-  :show-inheritance:
+.. autosummary::
 
-.. autoclass:: pyomo.contrib.appsi.solvers.maingo.MAiNGO
-  :members:
-  :inherited-members:
-  :undoc-members:
-  :show-inheritance:
+   pyomo.contrib.appsi.solvers.maingo.MAiNGOConfig
+   pyomo.contrib.appsi.solvers.maingo.MAiNGO
