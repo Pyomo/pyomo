@@ -1189,7 +1189,7 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         with LoggingIntercept(level=logging.ERROR) as LOG:
-            with self.assertRaises(ApplicationError):
+            with self.assertRaises(InvalidValueError):
                 pyros_solver.solve(
                     model=m,
                     first_stage_variables=[m.x1],
