@@ -83,12 +83,41 @@ class ROSolveResults(object):
         return "\n".join(lines)
 
 
-class MasterResults(object):
+class MasterResults:
     """
-    Container for master problem solve results.
+    Result of solving the master problem in a single PyROS iteration.
 
-    TODO: Formalize this class.
+    Attributes
+    ----------
+    master_model : ConcreteModel
+        Master model.
+    feasibility_problem_results : SolverResults
+        Feasibility problem subsolver results.
+    master_results_list : list of SolverResults
+        List of subsolver results for the master problem.
+    pyros_termination_condition : None or pyrosTerminationCondition
+        PyROS termination status established via solution of
+        the master problem.
+        If `None`, then no termination status has been established.
     """
+
+    def __init__(
+        self,
+        master_model=None,
+        feasibility_problem_results=None,
+        master_results_list=None,
+        pyros_termination_condition=None,
+    ):
+        """Initialize self (see class docstring).
+
+        """
+        self.master_model = master_model
+        self.feasibility_problem_results = feasibility_problem_results
+        if master_results_list is None:
+            self.master_results_list = []
+        else:
+            self.master_results_list = list(master_results_list)
+        self.pyros_termination_condition = pyros_termination_condition
 
 
 class SeparationSolveCallResults:

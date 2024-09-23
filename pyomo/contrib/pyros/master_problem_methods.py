@@ -22,11 +22,7 @@ from pyomo.core.base import ConcreteModel, Block, Var, Objective, Constraint
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
 from pyomo.core.expr import identify_variables, value
 from pyomo.core.util import prod
-from pyomo.opt import (
-    check_optimal_termination,
-    SolverResults,
-    TerminationCondition as tc,
-)
+from pyomo.opt import TerminationCondition as tc
 from pyomo.repn.standard_repn import generate_standard_repn
 
 from pyomo.contrib.pyros.solve_data import MasterResults
@@ -38,7 +34,6 @@ from pyomo.contrib.pyros.util import (
     check_time_limit_reached,
     generate_all_decision_rule_var_data_objects,
     ObjectiveType,
-    process_termination_condition_master_problem,
     pyrosTerminationCondition,
     TIC_TOC_SOLVE_TIME_ATTR,
 )
@@ -177,7 +172,6 @@ def construct_master_feasibility_problem(master_data):
 
     slack_model = master_data.master_model.clone()
 
-    # construct the variable mapping
     master_data.feasibility_problem_varmap = list(
         zip(
             getattr(master_data.master_model, varmap_name),
@@ -226,8 +220,6 @@ def construct_master_feasibility_problem(master_data):
             if var in slack_vars:
                 slack_var_coef_map[var] = repn.linear_coefs[idx]
 
-        # use this dict if we elect custom scaling in future
-        # slack_substitution_map = dict()
         for slack_var in slack_var_coef_map:
             # coefficient determines whether the slack
             # is a +ve or -ve slack
@@ -236,23 +228,7 @@ def construct_master_feasibility_problem(master_data):
             else:
                 con_slack = max(0, -value(pre_slack_con_exprs[con]))
 
-            # initialize slack variable, evaluate scaling coefficient
             slack_var.set_value(con_slack)
-
-            # (we will probably want to change scaling later)
-            # # update expression replacement map for slack scaling
-            # scaling_coeff = 1  # we may want to change scaling later
-            # slack_substitution_map[id(slack_var)] = scaling_coeff * slack_var
-            # slack_substitution_map[id(slack_var)] = slack_var
-
-        # # finally, scale slack(s)
-        # con.set_value(
-        #     (
-        #         replace_expressions(con.lower, slack_substitution_map),
-        #         replace_expressions(con.body, slack_substitution_map),
-        #         replace_expressions(con.upper, slack_substitution_map),
-        #     )
-        # )
 
     return slack_model
 
@@ -695,7 +671,78 @@ def log_master_solve_results(master_model, config, results, desc="Optimized"):
     )
 
 
-def solver_call_master(master_data, master_soln):
+def process_termination_condition_master_problem(config, results):
+    """
+    Process master problem solve termination condition.
+
+    Parameters
+    ----------
+    config : ConfigDict
+        PyROS solver options.
+    results : SolverResults
+        Solver results.
+
+    Returns
+    -------
+    optimality_acceptable : bool
+        True if problem was solved to an acceptable optimality target,
+        False otherwise.
+    infeasible : bool
+        True if problem was found to be infeasible, False otherwise.
+
+    Raises
+    ------
+    NotImplementedError
+        If a particular solver termination is not supported by
+        PyROS.
+    """
+    locally_acceptable = [tc.optimal, tc.locallyOptimal, tc.globallyOptimal]
+    globally_acceptable = [tc.optimal, tc.globallyOptimal]
+    robust_infeasible = [tc.infeasible]
+    try_backups = [
+        tc.feasible,
+        tc.maxTimeLimit,
+        tc.maxIterations,
+        tc.maxEvaluations,
+        tc.minStepLength,
+        tc.minFunctionValue,
+        tc.other,
+        tc.solverFailure,
+        tc.internalSolverError,
+        tc.error,
+        tc.unbounded,
+        tc.infeasibleOrUnbounded,
+        tc.invalidProblem,
+        tc.intermediateNonInteger,
+        tc.noSolution,
+        tc.unknown,
+    ]
+
+    termination_condition = results.solver.termination_condition
+    optimality_acceptable = (
+        (termination_condition in globally_acceptable)
+        if config.solve_master_globally
+        else (termination_condition in locally_acceptable)
+    )
+    infeasible = termination_condition in robust_infeasible
+    try_backup_solver = termination_condition in try_backups
+
+    unsupported_termination = not (
+        optimality_acceptable or try_backup_solver or infeasible
+    )
+    if unsupported_termination:
+        solve_type = "global" if config.solve_master_globally else "local"
+        raise NotImplementedError(
+            f"Processing of termination condition {termination_condition} "
+            f"for attempt at {solve_type} solution of master problem "
+            "is currently not supported by PyROS. "
+            "Please report this issue to the PyROS developers."
+        )
+
+    return optimality_acceptable, infeasible
+
+
+def solver_call_master(master_data):
     """
     Invoke subsolver(s) on PyROS master problem,
     and update the MasterResults object accordingly.
@@ -704,13 +751,18 @@ def solver_call_master(master_data, master_soln):
     ----------
     master_data : MasterProblemData
         Container for current master problem and related data.
+
+    Returns
+    -------
     master_soln : MasterResults
-        Master problem results object. May be empty or contain
-        master feasibility problem results.
+        Master solution results object.
     """
     config = master_data.config
     master_model = master_data.master_model
-    solver_term_cond_dict = {}
+    master_soln = MasterResults(
+        master_model=master_model,
+        pyros_termination_condition=None,
+    )
 
     if config.solve_master_globally:
         solvers = [config.global_solver] + config.backup_global_solvers
@@ -720,7 +772,6 @@ def solver_call_master(master_data, master_soln):
     solve_mode = "global" if config.solve_master_globally else "local"
     config.progress_logger.debug("Solving master problem")
 
-    nominal_block = master_model.scenarios[0, 0]
     higher_order_decision_rule_efficiency(master_data)
 
     for idx, opt in enumerate(solvers):
@@ -743,52 +794,30 @@ def solver_call_master(master_data, master_soln):
             ),
         )
 
-        optimal_termination = check_optimal_termination(results)
-        infeasible = results.solver.termination_condition == tc.infeasible
-
-        if optimal_termination:
-            master_model.solutions.load_from(results)
-
-        # record master problem termination conditions
-        # for this particular subsolver
-        # pyros termination condition is determined later in the
-        # algorithm
-        solver_term_cond_dict[str(opt)] = str(results.solver.termination_condition)
-        master_soln.termination_condition = results.solver.termination_condition
-        master_soln.pyros_termination_condition = None
-        (try_backup, _) = master_soln.master_subsolver_results = (
-            process_termination_condition_master_problem(config=config, results=results)
-        )
-
-        master_soln.nominal_block = nominal_block
-        master_soln.results = results
-        master_soln.master_model = master_model
-
-        # if model was solved successfully, update/record the results
-        # (nominal block DOF variable and objective values)
-        if not try_backup and not infeasible:
-            # debugging: log breakdown of master objective
-            log_master_solve_results(master_model, config, results)
-
-            master_soln.nominal_block = master_model.scenarios[0, 0]
-            master_soln.results = results
-            master_soln.master_model = master_model
-
-        # if PyROS time limit exceeded, exit loop and return solution
-        if check_time_limit_reached(master_data.timing, config):
-            try_backup = False
-            master_soln.master_subsolver_results = (
-                None,
-                pyrosTerminationCondition.time_out,
+        master_soln.master_results_list.append(results)
+        optimality_acceptable, infeasible = (
+            process_termination_condition_master_problem(
+                config=config,
+                results=results,
             )
-            master_soln.pyros_termination_condition = pyrosTerminationCondition.time_out
+        )
+        time_out = check_time_limit_reached(master_data.timing, config)
 
-        if not try_backup:
-            if infeasible:
-                master_soln.pyros_termination_condition = (
-                    pyrosTerminationCondition.robust_infeasible
-                )
-            return
+        if optimality_acceptable:
+            master_model.solutions.load_from(results)
+            log_master_solve_results(master_model, config, results)
+        if time_out:
+            master_soln.pyros_termination_condition = (
+                pyrosTerminationCondition.time_out
+            )
+        if infeasible:
+            master_soln.pyros_termination_condition = (
+                pyrosTerminationCondition.robust_infeasible
+            )
+
+        final_result_established = optimality_acceptable or time_out or infeasible
+        if final_result_established:
+            return master_soln
 
     # all solvers have failed to return an acceptable status.
     # we will terminate PyROS with subsolver error status.
@@ -829,49 +858,53 @@ def solver_call_master(master_data, master_soln):
         if master_data.iteration == 0
         else ""
     )
+
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
+    subsolver_termination_conditions = [
+        res.solver.termination_condition
+        for res in master_soln.master_results_list
+    ]
     config.progress_logger.warning(
         f"Could not successfully solve master problem of iteration "
         f"{master_data.iteration}{deterministic_model_qual} with any of the "
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
-        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.)"
+        f"{[term_cond for term_cond in subsolver_termination_conditions]}.)"
         f"{deterministic_msg}"
         f"{serialization_msg}"
     )
 
+    return master_soln
+
 
 def solve_master(master_data):
     """
-    Solve the master problem
+    Solve the master problem.
+
+    Returns
+    -------
+    master_soln : MasterResults
+        Master problem solve results.
     """
-    master_soln = MasterResults()
-
-    # no master feas problem for iteration 0
+    feasibility_problem_results = None
+    time_out_after_feasibility = False
     if master_data.iteration > 0:
-        results = solve_master_feasibility_problem(master_data)
-        master_soln.feasibility_problem_results = results
+        feasibility_problem_results = solve_master_feasibility_problem(master_data)
+        time_out_after_feasibility = check_time_limit_reached(
+            master_data.timing,
+            master_data.config,
+        )
 
-        # if pyros time limit reached, load time out status
-        # to master results and return to caller
-        if check_time_limit_reached(master_data.timing, master_data.config):
-            # load master model
-            master_soln.master_model = master_data.master_model
-            master_soln.nominal_block = master_data.master_model.scenarios[0, 0]
-
-            # empty results object, with master solve time of zero
-            master_soln.results = SolverResults()
-            setattr(master_soln.results.solver, TIC_TOC_SOLVE_TIME_ATTR, 0)
-
-            # PyROS time out status
-            master_soln.pyros_termination_condition = pyrosTerminationCondition.time_out
-            master_soln.master_subsolver_results = (
-                None,
-                pyrosTerminationCondition.time_out,
-            )
-            return master_soln
-
-    solver_call_master(master_data=master_data, master_soln=master_soln)
+    if time_out_after_feasibility:
+        master_soln = MasterResults(
+            master_model=master_data.master_model,
+            feasibility_problem_results=feasibility_problem_results,
+            master_results_list=None,
+            pyros_termination_condition=pyrosTerminationCondition.time_out,
+        )
+    else:
+        master_soln = solver_call_master(master_data)
+        master_soln.feasibility_problem_results = feasibility_problem_results
 
     return master_soln
 

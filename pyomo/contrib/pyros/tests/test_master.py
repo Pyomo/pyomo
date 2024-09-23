@@ -572,8 +572,12 @@ class TestSolveMaster(unittest.TestCase):
         master_data = MasterProblemData(model_data)
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = master_data.solve_master()
+            self.assertEqual(len(master_soln.master_results_list), 1)
+            self.assertIsNone(master_soln.feasibility_problem_results)
+            self.assertIsNone(master_soln.pyros_termination_condition)
+            self.assertIs(master_soln.master_model, master_data.master_model)
             self.assertEqual(
-                master_soln.termination_condition,
+                master_soln.master_results_list[0].solver.termination_condition,
                 TerminationCondition.optimal,
                 msg=(
                     "Could not solve simple master problem with solve_master "
@@ -604,8 +608,11 @@ class TestSolveMaster(unittest.TestCase):
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
             master_soln = master_data.solve_master()
+            self.assertIsNone(master_soln.feasibility_problem_results)
+            self.assertEqual(master_soln.master_model, master_data.master_model)
+            self.assertEqual(len(master_soln.master_results_list), 1)
             self.assertEqual(
-                master_soln.termination_condition,
+                master_soln.master_results_list[0].solver.termination_condition,
                 TerminationCondition.optimal,
                 msg=(
                     "Could not solve simple master problem with solve_master "
@@ -613,8 +620,8 @@ class TestSolveMaster(unittest.TestCase):
                 ),
             )
             self.assertEqual(
-                master_soln.master_subsolver_results,
-                (None, pyrosTerminationCondition.time_out),
+                master_soln.pyros_termination_condition,
+                pyrosTerminationCondition.time_out,
             )
 
     @unittest.skipUnless(baron_available, "Global NLP solver is not available")
@@ -648,13 +655,12 @@ class TestSolveMaster(unittest.TestCase):
         with time_code(master_data.timing, "main", is_main_timer=True):
             time.sleep(1)
             master_soln = master_data.solve_master()
+            self.assertIsNotNone(master_soln.feasibility_problem_results)
+            self.assertFalse(master_soln.master_results_list)
+            self.assertIs(master_soln.master_model, master_data.master_model)
             self.assertEqual(
                 master_soln.pyros_termination_condition,
                 pyrosTerminationCondition.time_out,
-            )
-            self.assertEqual(
-                master_soln.master_subsolver_results,
-                (None, pyrosTerminationCondition.time_out),
             )
 
 
@@ -693,7 +699,8 @@ class TestPolishDRVars(unittest.TestCase):
         with time_code(master_data.timing, "main", is_main_timer=True):
             master_soln = master_data.solve_master()
             self.assertEqual(
-                master_soln.termination_condition, TerminationCondition.optimal
+                master_soln.master_results_list[0].solver.termination_condition,
+                TerminationCondition.optimal,
             )
 
             results, success = master_data.solve_dr_polishing()

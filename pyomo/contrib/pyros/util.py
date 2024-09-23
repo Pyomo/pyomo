@@ -51,7 +51,7 @@ from pyomo.core.expr.visitor import (
     replace_expressions,
 )
 from pyomo.core.util import prod
-from pyomo.opt import SolverFactory, TerminationCondition as tc
+from pyomo.opt import SolverFactory
 from pyomo.repn.parameterized_quadratic import ParameterizedQuadraticRepnVisitor
 import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
 import pyomo.repn.ampl as pyomo_ampl_repn
@@ -2617,7 +2617,7 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
 
     Parameters
     ----------
-    master_soln : master solution object
+    master_soln : MasterResults
         Master solution object, containing the master model.
     original_user_var_partitioning : VariablePartitioning
         User partitioning of the variables of the original
@@ -2625,7 +2625,7 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
     """
     config = model_data.config
     if config.objective_focus == ObjectiveType.nominal:
-        soln_master_blk = master_soln.nominal_block
+        soln_master_blk = master_soln.master_model.scenarios[0, 0]
     elif config.objective_focus == ObjectiveType.worst_case:
         soln_master_blk = max(
             master_soln.master_model.scenarios.values(),
@@ -2644,62 +2644,6 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
     )
     for orig_var, master_blk_var in zip(original_model_vars, master_soln_vars):
         orig_var.set_value(master_blk_var.value, skip_validation=True)
-
-
-def process_termination_condition_master_problem(config, results):
-    '''
-    :param config: pyros config
-    :param results: solver results object
-    :return: tuple (try_backups (True/False)
-                  pyros_return_code (default NONE or robust_infeasible or subsolver_error))
-    '''
-    locally_acceptable = [tc.optimal, tc.locallyOptimal, tc.globallyOptimal]
-    globally_acceptable = [tc.optimal, tc.globallyOptimal]
-    robust_infeasible = [tc.infeasible]
-    try_backups = [
-        tc.feasible,
-        tc.maxTimeLimit,
-        tc.maxIterations,
-        tc.maxEvaluations,
-        tc.minStepLength,
-        tc.minFunctionValue,
-        tc.other,
-        tc.solverFailure,
-        tc.internalSolverError,
-        tc.error,
-        tc.unbounded,
-        tc.infeasibleOrUnbounded,
-        tc.invalidProblem,
-        tc.intermediateNonInteger,
-        tc.noSolution,
-        tc.unknown,
-    ]
-
-    termination_condition = results.solver.termination_condition
-    if config.solve_master_globally == False:
-        if termination_condition in locally_acceptable:
-            return (False, None)
-        elif termination_condition in robust_infeasible:
-            return (False, pyrosTerminationCondition.robust_infeasible)
-        elif termination_condition in try_backups:
-            return (True, None)
-        else:
-            raise NotImplementedError(
-                "This solver return termination condition (%s) "
-                "is currently not supported by PyROS." % termination_condition
-            )
-    else:
-        if termination_condition in globally_acceptable:
-            return (False, None)
-        elif termination_condition in robust_infeasible:
-            return (False, pyrosTerminationCondition.robust_infeasible)
-        elif termination_condition in try_backups:
-            return (True, None)
-        else:
-            raise NotImplementedError(
-                "This solver return termination condition (%s) "
-                "is currently not supported by PyROS." % termination_condition
-            )
 
 
 def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
