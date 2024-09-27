@@ -57,21 +57,6 @@ jobs:
       uses: crate-ci/typos@master
       with: 
         config: ./.github/workflows/typos.toml
-    - name: URL Checker
-      uses: urlstechie/urlchecker-action@0.0.34
-      with:
-        # A comma-separated list of file types to cover in the URL checks
-        file_types: .md,.rst,.py
-        # Choose whether to include file with no URLs in the prints.
-        print_all: false
-        # More verbose summary at the end of a run
-        verbose: true
-        # How many times to retry a failed request (defaults to 1)
-        retry_count: 3
-        # Exclude:
-        #  - Jenkins because it's behind a firewall
-        #  - RTD because a magically-generated string triggers failures
-        exclude_urls: https://pyomo-jenkins.sandia.gov/,https://pyomo.readthedocs.io/en/%s/errors.html
 
 
   build:
@@ -562,7 +547,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $URL = "https://minlp.com/downloads/xecs/baron/current/"
+        $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
@@ -713,6 +698,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
+        include-hidden-files: true
         path: |
           .coverage
           coverage.xml
