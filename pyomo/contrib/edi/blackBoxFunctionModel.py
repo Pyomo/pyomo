@@ -844,7 +844,13 @@ class BlackBoxFunctionModel(ExternalGreyBoxModel):
         # first = []
         # second = []
         for rc in runCases:
-            ipt = rc | extras
+            try:
+                ipt = rc | extras
+            except:
+                # Allow for python 3.8 compatibility
+                ipt = copy.deepcopy(rc)
+                ipt.update(extras)
+
             opt = self.BlackBox_Standardized(**ipt)
             outputList.append(opt)
             # values.append(opt[0])
