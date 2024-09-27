@@ -44,14 +44,14 @@ from pyomo.common.dependencies import scipy, scipy_available
 
 
 if numpy_available:
-    import numpy as np
+    np = numpy
 else:
     raise ImportError(
         "pyomo.contrib.edi requires numpy to enable black box capability, fix with 'pip install numpy' "
     )
 
 if scipy_available:
-    import scipy.sparse as sps
+    sps = scipy.sparse
 else:
     raise ImportError(
         "pyomo.contrib.edi requires scipy to enable black box capability, fix with 'pip install scipy' "
