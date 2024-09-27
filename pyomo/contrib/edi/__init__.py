@@ -49,6 +49,7 @@ from pyomo.core.expr.numeric_expr import NPV_ProductExpression, NPV_DivisionExpr
 from collections import namedtuple
 
 from pyomo.common.dependencies import numpy, numpy_available
+
 if numpy_available:
     np = numpy
 
@@ -70,7 +71,6 @@ if numpy_available:
             else:
                 x[i] = recursive_sub(list(x[i]))
         return x
-
 
     def ediprint(x):
         print(recursive_sub(x))
