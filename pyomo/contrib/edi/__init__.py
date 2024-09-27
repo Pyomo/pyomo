@@ -36,15 +36,7 @@ except:
 # Import the black box modeling tools
 try:
     from pyomo.contrib.edi.blackBoxFunctionModel import BlackBoxFunctionModel
-    from pyomo.contrib.edi.blackBoxFunctionModel import (
-        BlackBoxFunctionModel_Variable as BlackBoxVariable,
-    )
-    from pyomo.contrib.edi.blackBoxFunctionModel import (
-        BlackBoxFunctionModel_Variable as BBVariable,
-    )
-    from pyomo.contrib.edi.blackBoxFunctionModel import (
-        BlackBoxFunctionModel_Variable as BBV,
-    )
+
 except:
     pass
     # in this case, the dependencies are not installed, nothing will work
