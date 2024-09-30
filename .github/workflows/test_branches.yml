@@ -87,7 +87,7 @@ jobs:
           TARGET: linux
           PYENV: pip
 
-        - os: macos-13
+        - os: macos-latest
           python: '3.10'
           TARGET: osx
           PYENV: pip
