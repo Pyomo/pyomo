@@ -361,7 +361,7 @@ jobs:
         echo "*** Install Pyomo dependencies ***"
         # For windows, cannot use newer setuptools because of APPSI compilation issues
         if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES = "$CONDA_DEPENDENCIES setuptools<74.0.0"
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
