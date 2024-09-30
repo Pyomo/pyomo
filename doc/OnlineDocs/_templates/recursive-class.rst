@@ -1,4 +1,6 @@
-{{ fullname | escape | underline}}
+{{ name | escape | underline}}
+
+(class from :py:mod:`{{ module }}`)
 
 .. currentmodule:: {{ module }}
 
