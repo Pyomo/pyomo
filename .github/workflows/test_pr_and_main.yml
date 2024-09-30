@@ -244,7 +244,6 @@ jobs:
       if: matrix.TARGET == 'win'
       run: |
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
-      run: |
         choco install pkgconfiglite
 
     - name: Set up Python ${{ matrix.python }}
