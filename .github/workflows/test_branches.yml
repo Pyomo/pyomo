@@ -75,6 +75,12 @@ jobs:
         other: [""]
         category: [""]
 
+        # win/3.8 conda builds no longer work due to environment not being able
+        # to resolve. We are skipping it now.
+        exclude:
+        - os: windows-latest
+          python: 3.8
+
         include:
         - os: ubuntu-latest
           python: '3.12'
