@@ -15,8 +15,9 @@ single-variate piecewise linear function using a
 mixed-integer problem formulation. Reference::
 
   Mixed-Integer Models for Non-separable Piecewise Linear
-Optimization: Unifying framework and Extensions (Vielma,
-Nemhauser 2008)
+  Optimization: Unifying framework and Extensions (Vielma,
+  Nemhauser 2008)
+
 """
 
 import logging

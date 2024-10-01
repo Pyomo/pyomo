@@ -97,6 +97,9 @@ class TerminationCondition(enum.Enum):
 
 class SolverConfig(ConfigDict):
     """
+    Common configuration options for all APPSI solver interfaces
+
+
     Attributes
     ----------
     time_limit: float
@@ -146,6 +149,8 @@ class SolverConfig(ConfigDict):
 
 class MIPSolverConfig(SolverConfig):
     """
+    Configuration options common to all MIP solvers
+
     Attributes
     ----------
     mip_gap: float
@@ -370,6 +375,8 @@ class SolutionLoader(SolutionLoaderBase):
 
 class Results(object):
     """
+    Base class for all APPSI solver results
+
     Attributes
     ----------
     termination_condition: TerminationCondition
@@ -385,6 +392,8 @@ class Results(object):
         For solvers that do not provide an objective bound, this should be -inf
         (minimization) or inf (maximization)
 
+    Example
+    -------
     Here is an example workflow:
 
         >>> import pyomo.environ as pe
@@ -427,6 +436,8 @@ class Results(object):
 
 class UpdateConfig(ConfigDict):
     """
+    Config options common to all persistent solvers
+
     Attributes
     ----------
     check_for_new_or_removed_constraints: bool
@@ -632,7 +643,7 @@ class Solver(abc.ABC):
 
         Returns
         -------
-        results: Results
+        results: ~pyomo.contrib.appsi.base.Results
             A results object
         """
         pass
@@ -681,7 +692,7 @@ class Solver(abc.ABC):
 
         Returns
         -------
-        SolverConfig
+        ~pyomo.contrib.appsi.base.SolverConfig
             An object for configuring pyomo solve options such as the time limit.
             These options are mostly independent of the solver.
         """

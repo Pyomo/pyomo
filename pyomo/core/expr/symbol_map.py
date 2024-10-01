@@ -27,11 +27,16 @@ class SymbolMap(object):
     Note:
         We should change the API to not use camelcase.
 
-    Attributes:
-        byObject (dict):  maps (object id) to (string label)
-        bySymbol (dict):  maps (string label) to (object)
-        alias (dict):  maps (string label) to (object)
-        default_labeler: used to compute a string label from an object
+    Attributes
+    ----------
+    byObject : dict
+        maps (object id) to (string label)
+    bySymbol : dict
+        maps (string label) to (object)
+    aliases : dict
+        maps (string label) to (object)
+    default_labeler:
+        used to compute a string label from an object
     """
 
     def __init__(self, labeler=None):

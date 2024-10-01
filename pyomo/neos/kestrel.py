@@ -210,9 +210,12 @@ class kestrelAMPL(object):
     def getSolverName(self):
         """
         Read in the kestrel_options to pick out the solver name.
+
         The tricky parts:
-          we don't want to be case sensitive, but NEOS is.
-          we need to read in options variable
+
+          - we don't want to be case sensitive, but NEOS is.
+          - we need to read in options variable
+
         """
         # Get a list of available kestrel solvers from NEOS
         allKestrelSolvers = self.neos.listSolversInCategory("kestrel")

@@ -53,7 +53,7 @@ class NOTSET(object, metaclass=FlagType):
 def in_testing_environment(state=NOTSET):
     """Return True if we are currently running in a "testing" environment
 
-    This currently includes if nose, nose2, pytest, or Sphinx are
+    This currently includes if ``nose``, ``nose2``, or ``pytest`` are
     running (imported).
 
     Parameters
