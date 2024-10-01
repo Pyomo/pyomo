@@ -11,7 +11,7 @@ through the :mod:`pyomo.environ` namespace.
    ~pyomo.core.base.PyomoModel.AbstractModel
    ~pyomo.core.base.block.Block
    ~pyomo.core.base.set.Set
-   ~pyomo.core.base.rangeset.RangeSet
+   ~pyomo.core.base.set.RangeSet
    ~pyomo.core.base.param.Param
    ~pyomo.core.base.var.Var
    ~pyomo.core.base.objective.Objective

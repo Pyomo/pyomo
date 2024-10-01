@@ -40,13 +40,14 @@ Other Public Classes
 .. autosummary::
 
    NegationExpression
-   ExternalFunctionExpression
+   AbsExpression
+   UnaryFunctionExpression
    ProductExpression
    DivisionExpression
-   InequalityExpression
-   EqualityExpression
    SumExpression
-   GetItemExpression
    Expr_ifExpression
-   UnaryFunctionExpression
-   AbsExpression
+   ExternalFunctionExpression
+   pyomo.core.expr.relational_expr.EqualityExpression
+   pyomo.core.expr.relational_expr.InequalityExpression
+   pyomo.core.expr.relational_expr.RangedExpression
+   pyomo.core.expr.template_expr.GetItemExpression
