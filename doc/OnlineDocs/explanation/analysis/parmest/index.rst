@@ -26,10 +26,3 @@ Index of parmest documentation
    examples.rst
    parallel.rst
    api.rst
-
-Indices and Tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

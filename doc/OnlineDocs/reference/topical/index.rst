@@ -10,7 +10,6 @@ Python scripts using Pyomo.
 .. toctree::
    :maxdepth: 1
 
-   common/index.rst
    aml/index.rst
    expressions/index.rst
    solvers/index.rst
