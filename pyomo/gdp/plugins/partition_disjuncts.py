@@ -10,10 +10,8 @@
 #  ___________________________________________________________________________
 
 """
-Between Steps (P-Split) reformulation for GDPs from:
+Between Steps (P-Split) reformulation for GDPs from [KMT21]_.
 
-J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
-Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
 
 
@@ -209,7 +207,7 @@ class PartitionDisjuncts_Transformation(Transformation):
     """
     Transform disjunctive model to equivalent disjunctive model (with
     potentially tighter hull relaxation) by taking the "P-split" formulation
-    from Kronqvist et al. 2021 [1]. In each Disjunct, convex and additively
+    from Kronqvist et al. 2021 [KMT21]_. In each Disjunct, convex and additively
     separable constraints are split into separate constraints by introducing
     auxiliary variables that upperbound the subexpressions created by the split.
     Increasing the number of partitions can result in tighter hull relaxations,
@@ -228,8 +226,7 @@ class PartitionDisjuncts_Transformation(Transformation):
 
     References
     ----------
-        [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate
-            Relaxations between big-M and Convex Hull Reformulations," 2021.
+    See [KMT21]_.
 
     """
 

@@ -54,7 +54,7 @@ Pyomo has facilities to add piecewise constraints of the form y=f(x) for
 a variety of forms of the function f.
 
 The piecewise types other than SOS2, BIGM_SOS1, BIGM_BIN are implement
-as described in the paper [Vielma_et_al]_.
+as described in the paper [VAN10]_.
 
 There are two basic forms for the declaration of the constraint:
 

@@ -33,9 +33,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-"""
-It is easier to understand this code after reading "A note on feasibility in Benders Decomposition" by 
-Grothey et al.
+# Note: because of the LaTeX math, it is critical that this is a raw string.
+__doc__ = r"""General purpose Benders Cut Generator.
+
+It is easier to understand this code after reading Grothey, Leyffer,
+and McKinnon "A note on feasibility in Benders Decomposition" [GLM99]_
 
 Original problem:
 

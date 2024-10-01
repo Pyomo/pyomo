@@ -101,7 +101,7 @@ Based on the above notation, the form of the robust counterpart addressed by PyR
     \end{array}
 
 PyROS solves problems of this form using the
-Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
+Generalized Robust Cutting-Set algorithm developed in [IAE+21]_.
 
 When using PyROS, please consider citing the above paper.
 

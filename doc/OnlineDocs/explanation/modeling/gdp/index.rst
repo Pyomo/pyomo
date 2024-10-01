@@ -9,7 +9,11 @@ Generalized Disjunctive Programming
    :align: right
    :class: no-scaled-link
 
-The Pyomo.GDP modeling extension\ [#gdp-main-paper]_ provides support for Generalized Disjunctive Programming (GDP)\ [#gdp]_, an extension of Disjunctive Programming\ [#dp]_ from the operations research community to include nonlinear relationships. The classic form for a GDP is given by:
+The Pyomo.GDP modeling extension [PyomoGDP-pse-paper]_
+[PyomoGDP-paper]_ provides support for Generalized Disjunctive
+Programming (GDP) [RG94]_, an extension of Disjunctive Programming
+[Bal85]_ from the operations research community to include nonlinear
+relationships. The classic form for a GDP is given by:
 
 .. math::
 
@@ -32,9 +36,12 @@ Here, we have the minimization of an objective :math:`obj` subject to global lin
 These conditional constraints are collected into disjuncts :math:`D_k`, organized into disjunctions :math:`K`. Finally, there are logical propositions :math:`\Omega(Y) = True`.
 Decision/state variables can be continuous :math:`x`, Boolean :math:`Y`, and/or integer :math:`z`.
 
-GDP is useful to model discrete decisions that have implications on the system behavior\ [#gdpreview]_.
-For example, in process design, a disjunction may model the choice between processes A and B.
-If A is selected, then its associated equations and inequalities will apply; otherwise, if B is selected, then its respective constraints should be enforced.
+GDP is useful to model discrete decisions that have implications on the
+system behavior [GT13]_.  For example, in process design, a
+disjunction may model the choice between processes A and B.  If A is
+selected, then its associated equations and inequalities will apply;
+otherwise, if B is selected, then its respective constraints should be
+enforced.
 
 Modelers often ask to model if-then-else relationships.
 These can be expressed as a disjunction as follows:
@@ -68,12 +75,3 @@ The following sections describe the key concepts, modeling, and solution approac
     modeling
     solving
 
-Literature References
-=====================
-.. [#gdp-main-paper] Chen, Q., Johnson, E. S., Bernal, D. E., Valentin, R., Kale, S., Bates, J., Siirola, J. D. and Grossmann, I. E. (2021). Pyomo.GDP: an ecosystem for logic based modeling and optimization development, *Optimization and Engineering* (pp. 1-36).https://doi.org/10.1007/s11081-021-09601-7 
-
-.. [#gdp] Raman, R., & Grossmann, I. E. (1994). Modelling and computational techniques for logic based integer programming. *Computers & Chemical Engineering*, 18(7), 563–578. https://doi.org/10.1016/0098-1354(93)E0010-7
-
-.. [#dp] Balas, E. (1985). Disjunctive Programming and a Hierarchy of Relaxations for Discrete Optimization Problems. *SIAM Journal on Algebraic Discrete Methods*, 6(3), 466–486. https://doi.org/10.1137/0606047
-
-.. [#gdpreview] Grossmann, I. E., & Trespalacios, F. (2013). Systematic modeling of discrete-continuous optimization models through generalized disjunctive programming. *AIChE Journal*, 59(9), 3276–3295. https://doi.org/10.1002/aic.14088
