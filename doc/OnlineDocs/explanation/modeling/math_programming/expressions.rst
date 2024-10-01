@@ -178,7 +178,7 @@ piecewise constraint must have bounds.
 .. literalinclude:: /src/scripting/abstract2piece.py
    :language: python
 
-A more advanced example is provided in abstract2piecebuild.py in
+A more advanced example is provided in ``abstract2piecebuild.py`` in
 :ref:`BuildAction`.
 
 ``Expression`` Objects
