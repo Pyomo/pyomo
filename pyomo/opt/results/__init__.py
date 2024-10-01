@@ -10,17 +10,13 @@
 #  ___________________________________________________________________________
 
 from pyomo.opt.results.container import (
-    ScalarData,
-    ScalarType,
-    default_print_options,
-    strict,
     ListContainer,
     MapContainer,
     UndefinedData,
     undefined,
     ignore,
 )
-import pyomo.opt.results.problem
+
 from pyomo.opt.results.solver import (
     SolverStatus,
     TerminationCondition,

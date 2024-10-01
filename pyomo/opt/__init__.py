@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.opt.base.opt_config
-import pyomo.opt.solver
 
 from pyomo.opt.base import (
     check_available_solvers,
