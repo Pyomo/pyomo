@@ -269,4 +269,4 @@ Nested blocks:
 
 Nested `BlockMatrix` applications work similarly.
 
-For more information, see the API documentation (:ref:`pynumero_api`).
+For more information, see the :mod:`API documentation <pyomo.contrib.pynumero>`.

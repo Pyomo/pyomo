@@ -5,7 +5,7 @@ PyNumero
 
 PyNumero is a package for developing parallel algorithms for nonlinear
 programs (NLPs). This documentation provides a brief introduction to
-PyNumero. For more details, see the API documentation (:ref:`pynumero_api`).
+PyNumero. For more details, see the :mod:`API documentation <pyomo.contrib.pynumero>`).
 
 .. toctree::
    :maxdepth: 2

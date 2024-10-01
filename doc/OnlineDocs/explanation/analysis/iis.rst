@@ -3,14 +3,16 @@ Infeasibility Diagnostics
 
 There are two closely related tools for infeasibility diagnosis:
 
-  - :ref:`Infeasible Irreducible System (IIS) Tool`
-  - :ref:`Minimal Intractable System finder (MIS) Tool`
+  - :ref:`iis`
+  - :ref:`mis`
 
 The first simply provides a conduit for solvers that compute an
 infeasible irreducible system (e.g., Cplex, Gurobi, or Xpress).  The
 second provides similar functionality, but uses the ``mis`` package
 contributed to Pyomo.
 
+
+.. _iis:
 
 Infeasible Irreducible System (IIS) Tool
 ========================================
@@ -20,6 +22,8 @@ Infeasible Irreducible System (IIS) Tool
 
 .. autofunction:: pyomo.contrib.iis.write_iis
    :noindex:
+
+.. _mis:
 
 Minimal Intractable System finder (MIS) Tool
 ============================================

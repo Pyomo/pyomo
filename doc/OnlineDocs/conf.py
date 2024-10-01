@@ -84,7 +84,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_copybutton',
     'enum_tools.autoenum',
-    'sphinx.ext.autosectionlabel',
+    #'sphinx.ext.autosectionlabel',
     #'sphinx.ext.githubpages',
 ]
 
