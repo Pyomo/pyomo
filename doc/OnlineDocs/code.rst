@@ -1,3 +1,5 @@
+:orphan:
+
 .. autosummary::
    :toctree: api
    :caption: Library Reference
