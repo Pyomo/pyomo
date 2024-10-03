@@ -36,9 +36,6 @@ from pyomo.opt.results import (
     container,
     problem,
     solution,
-    ScalarData,
-    ScalarType,
-    default_print_options,
     ListContainer,
     MapContainer,
     UndefinedData,
@@ -64,3 +61,12 @@ from pyomo.opt.parallel import (
     SolverManagerFactory,
     AsynchronousSolverManager,
 )
+
+from pyomo.common.deprecation import relocated_module_attribute
+
+for _attr in ('ScalarData', 'ScalarType', 'default_print_options'):
+    relocated_module_attribute(
+        _attr, 'pyomo.opt.results.container.' + _attr, version='6.0'
+    )
+del _attr
+del relocated_module_attribute
