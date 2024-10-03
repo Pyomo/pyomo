@@ -167,7 +167,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {'navigation_depth': 6, 'titles_only': True}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -233,6 +233,9 @@ texinfo_documents = [
 
 # autodoc_member_order = 'bysource'
 # autodoc_member_order = 'groupwise'
+
+autosummary_generate = True
+autosummary_ignore_module_all = True
 
 # -- Check which conditional dependencies are available ------------------
 # Used for skipping certain doctests
