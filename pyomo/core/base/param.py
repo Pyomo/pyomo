@@ -157,7 +157,7 @@ class ParamData(ComponentData, NumericValue):
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
     def set_value(self, value, idx=NOTSET):
-        """Set the value of this ParamData object, performing unit convertion
+        """Set the value of this ParamData object, performing unit conversion
         and validation as necessary.
 
         """

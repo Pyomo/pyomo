@@ -140,7 +140,7 @@ class ConstraintData(ActiveComponentData):
     expr : ExpressionBase
         The Pyomo expression stored in this constraint.
 
-    component : Constriant
+    component : Constraint
         The Constraint object that owns this data.
 
     """

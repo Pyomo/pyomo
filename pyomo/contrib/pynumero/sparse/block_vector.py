@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""Implimentation of a general "block vector"
+"""Implementation of a general "block vector"
 
 
 The `pyomo.contrib.pynumero.sparse.block_vector` module includes methods
