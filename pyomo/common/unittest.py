@@ -501,14 +501,31 @@ class TestCase(_unittest.TestCase):
 
     This class derives from unittest.TestCase and provides the following
     additional functionality:
-      - additional assertions:
-        * :py:meth:`assertStructuredAlmostEqual`
 
-    unittest.TestCase documentation
-    -------------------------------
+    * additional assertions:
+       - :py:meth:`~TestCase.assertStructuredAlmostEqual`
+       - :py:meth:`assertExpressionsEqual`
+       - :py:meth:`assertExpressionsStructurallyEqual`
+
+    * updated assertions:
+       - :py:meth:`assertRaisesRegex`
+
+    :py:class:`unittest.TestCase` documentation
+    -------------------------------------------
     """
 
-    __doc__ += _unittest.TestCase.__doc__
+    # Note that the current unittest.TestCase documentation generates
+    # sphinx warnings.  We will clean up that documentation to suppress
+    # the warnings.
+    __doc__ += (
+        re.sub(
+            r'^( +)(\* +[^:]+:) *',
+            r'\n\1\2\n\1    ',
+            _unittest.TestCase.__doc__.rstrip(),
+            flags=re.M,
+        )
+        + "\n\n"
+    )
 
     # By default, we always want to spend the time to create the full
     # diff of the test reault and the baseline
@@ -643,6 +660,11 @@ class TestCase(_unittest.TestCase):
         return assertExpressionsStructurallyEqual(
             self, a, b, include_named_exprs, places
         )
+
+
+TestCase.assertStructuredAlmostEqual.__doc__ = re.sub(
+    'exception :.*', '', assertStructuredAlmostEqual.__doc__, flags=re.S
+)
 
 
 class BaselineTestDriver(object):
