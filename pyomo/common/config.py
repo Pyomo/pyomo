@@ -40,6 +40,7 @@ from pyomo.common.deprecation import (
     relocated_module_attribute,
 )
 from pyomo.common.fileutils import import_file
+from pyomo.common.flags import building_documentation
 from pyomo.common.formatting import wrap_reStructuredText
 from pyomo.common.modeling import NOTSET
 
@@ -298,7 +299,7 @@ class InEnum(object):
         raise ValueError("%r is not a valid %s" % (value, self._domain.__name__))
 
     def domain_name(self):
-        return f'InEnum[{self._domain.__name__}]'
+        return f'InEnum[{_domain_name(self._domain)}]'
 
 
 class IsInstance(object):
@@ -361,8 +362,8 @@ class IsInstance(object):
         raise ValueError(msg)
 
     def domain_name(self):
-        class_names = (self._get_class_name(kls) for kls in self.baseClasses)
-        return f"IsInstance({', '.join(class_names)})"
+        class_names = (_domain_name(kls) for kls in self.baseClasses)
+        return f"IsInstance[{', '.join(class_names)}]"
 
 
 class ListOf(object):
@@ -558,7 +559,7 @@ class Path(object):
         return ans
 
     def domain_name(self):
-        return type(self).__name__
+        return _domain_name(type(self))
 
 
 class PathList(Path):
@@ -1133,16 +1134,26 @@ def _munge_name(name, space_to_dash=True):
 def _domain_name(domain):
     if domain is None:
         return ""
-    elif hasattr(domain, 'domain_name'):
+    if hasattr(domain, 'domain_name') and not isinstance(domain, type):
         dn = domain.domain_name
         if hasattr(dn, '__call__'):
             return dn()
         else:
             return dn
-    elif domain.__class__ is type:
-        return domain.__name__
+    if domain.__module__ == 'builtins':
+        module = ""
+    else:
+        module = "~" + domain.__module__ + '.'
+    if isinstance(domain, type):
+        if building_documentation():
+            return module + domain.__qualname__
+        else:
+            return domain.__name__
     elif inspect.isfunction(domain):
-        return domain.__name__
+        if building_documentation():
+            return module + domain.__qualname__
+        else:
+            return domain.__name__
     else:
         return None
 

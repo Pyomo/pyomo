@@ -78,16 +78,15 @@ def in_testing_environment(state=NOTSET):
 in_testing_environment.state = None
 
 
-def building_documentation(ignore_testing_flag=False):
-    """Return True if we are building the Sphinx documentation
+def building_documentation():
+    """True if we are building the Sphinx documentation
+
+    We detect if we are building the documentation by looking if the
+    ``sphnx`` or ``Sphinx`` modules are imported.
 
     Returns
     -------
     bool
 
     """
-    import sys
-
-    return (ignore_testing_flag or not in_testing_environment()) and (
-        'sphinx' in sys.modules or 'Sphinx' in sys.modules
-    )
+    return 'sphinx' in sys.modules or 'Sphinx' in sys.modules

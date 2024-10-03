@@ -31,7 +31,7 @@ class TestModeling(unittest.TestCase):
             for i in sorted(sys.modules.items()):
                 print(i)
             self.assertTrue(in_testing_environment())
-            self.assertFalse(building_documentation())
+            self.assertTrue(building_documentation())
             self.assertEqual(repr(NOTSET), 'pyomo.common.flags.NOTSET')
 
             in_testing_environment(False)
