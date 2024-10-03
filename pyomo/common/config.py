@@ -1510,7 +1510,7 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
         # space before the colon at the top level (which at lower levels
         # causes nested definition lists to NOT omit the colon), we will
         # generate non-standard ReST and omit the preceding space:
-        self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n')
+        self.out.write(f'\n{indent}{obj.name()}: {typeinfo}\n\n')
         self.wrapper.initial_indent = indent + ' ' * self.indent_spacing
         self.wrapper.subsequent_indent = indent + ' ' * self.indent_spacing
         vis = ""
