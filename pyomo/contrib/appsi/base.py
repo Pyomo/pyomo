@@ -11,6 +11,10 @@
 
 import abc
 import enum
+import os
+import re
+import weakref
+
 from typing import (
     Sequence,
     Dict,
@@ -21,7 +25,12 @@ from typing import (
     Tuple,
     MutableMapping,
 )
+
+from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
+from pyomo.common.errors import ApplicationError
 from pyomo.common.enums import IntEnum
+from pyomo.common.factory import Factory
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData, Var
@@ -31,12 +40,7 @@ from pyomo.core.base.objective import ObjectiveData
 from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
 from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
-from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
-from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
-from pyomo.common.factory import Factory
-import os
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import (
     Solution as LegacySolution,
@@ -48,7 +52,6 @@ from pyomo.opt.results.solver import (
 )
 from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
-import weakref
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant

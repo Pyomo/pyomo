@@ -310,8 +310,6 @@ class DiscreteSeparationSolveCallResults:
     scenario_indexes
     solver_call_results
     performance_constraint
-    time_out
-    subsolver_error
     """
 
     def __init__(
@@ -396,12 +394,6 @@ class SeparationLoopResults:
     solved_globally
     worst_case_perf_con
     all_discrete_scenarios_exhausted
-    found_violation
-    violating_param_realization
-    scaled_violations
-    violating_separation_variable_values
-    subsolver_error
-    time_out
     """
 
     def __init__(
@@ -554,16 +546,6 @@ class SeparationResults:
     ----------
     local_separation_loop_results
     global_separation_loop_results
-    main_loop_results
-    subsolver_error
-    time_out
-    solved_locally
-    solved_globally
-    found_violation
-    violating_param_realization
-    scaled_violations
-    violating_separation_variable_values
-    robustness_certified
     """
 
     def __init__(self, local_separation_loop_results, global_separation_loop_results):
