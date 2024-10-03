@@ -4313,6 +4313,17 @@ class TestCloneExpression(unittest.TestCase):
             total = counter.count - start
             self.assertEqual(total, 1)
 
+    def test_create_node_with_local_data(self):
+        e = self.m.p * self.m.a
+        self.assertIs(type(e), MonomialTermExpression)
+
+        f = e.create_node_with_local_data([self.m.b, self.m.p])
+        self.assertIs(type(f), MonomialTermExpression)
+        self.assertStructuredAlmostEqual(f._args_, [self.m.p, self.m.b])
+
+        g = e.create_node_with_local_data([self.m.b, self.m.p], ProductExpression)
+        self.assertIs(type(g), ProductExpression)
+        self.assertStructuredAlmostEqual(g._args_, [self.m.b, self.m.p])
 
 #
 # Fixed               - Expr has a fixed value
