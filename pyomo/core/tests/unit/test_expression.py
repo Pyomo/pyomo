@@ -321,6 +321,7 @@ class TestExpressionData(unittest.TestCase):
         self.assertIs(type(hh), ObjectiveData)
         self.assertEqual(hh._args_, [5])
 
+
 class TestExpression(unittest.TestCase):
     def setUp(self):
         TestExpression._save = expr_common.TO_STRING_VERBOSE

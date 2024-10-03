@@ -4325,6 +4325,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertIs(type(g), ProductExpression)
         self.assertStructuredAlmostEqual(g._args_, [self.m.b, self.m.p])
 
+
 #
 # Fixed               - Expr has a fixed value
 # Constant            - Expr only contains constants and immutable parameters
