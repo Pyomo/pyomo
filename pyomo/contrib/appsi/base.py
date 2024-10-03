@@ -21,6 +21,7 @@ from typing import (
     Tuple,
     MutableMapping,
 )
+from pyomo.common.enums import IntEnum
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData, Var
@@ -605,7 +606,7 @@ class UpdateConfig(ConfigDict):
 
 
 class Solver(abc.ABC):
-    class Availability(enum.IntEnum):
+    class Availability(IntEnum):
         NotFound = 0
         BadVersion = -1
         BadLicense = -2
