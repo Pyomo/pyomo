@@ -1495,11 +1495,7 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
                 None,
                 [
                     'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
-                    (
-                        'optional'
-                        if obj._default is None
-                        else f'default={repr(obj._default)}'
-                    ),
+                    ('optional' if obj._default is None else f'default={obj._default}'),
                 ],
             )
         )
