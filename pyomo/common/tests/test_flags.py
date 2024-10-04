@@ -19,20 +19,19 @@ from pyomo.common.flags import NOTSET, in_testing_environment, building_document
 class TestModeling(unittest.TestCase):
 
     def test_NOTSET(self):
+        self.assertTrue(in_testing_environment())
+        self.assertFalse(building_documentation())
+
         self.assertEqual(str(NOTSET), 'NOTSET')
         self.assertNotIn('sphinx', sys.modules)
         self.assertEqual(repr(NOTSET), 'pyomo.common.flags.NOTSET')
         self.assertIsNone(in_testing_environment.state)
 
-        self.assertTrue(in_testing_environment())
-        self.assertFalse(building_documentation())
         try:
             sys.modules['sphinx'] = sys.modules[__name__]
-            for i in sorted(sys.modules.items()):
-                print(i)
             self.assertTrue(in_testing_environment())
             self.assertTrue(building_documentation())
-            self.assertEqual(repr(NOTSET), 'pyomo.common.flags.NOTSET')
+            self.assertEqual(repr(NOTSET), 'NOTSET')
 
             in_testing_environment(False)
             self.assertFalse(in_testing_environment())
