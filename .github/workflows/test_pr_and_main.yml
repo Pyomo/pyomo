@@ -67,7 +67,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-13, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
         other: [""]
         category: [""]
@@ -77,12 +77,13 @@ jobs:
         exclude:
         - os: windows-latest
           python: 3.8
+
         include:
         - os: ubuntu-latest
           TARGET: linux
           PYENV: pip
 
-        - os: macos-13
+        - os: macos-latest
           TARGET: osx
           PYENV: pip
 
@@ -109,14 +110,6 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.11'
-          other: /singletest
-          category: "-m 'neos or importtest'"
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
           python: '3.10'
           other: /cython
           setup_options: --with-cython
@@ -130,6 +123,14 @@ jobs:
           other: /pip
           skip_doctest: 1
           TARGET: win
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: '3.11'
+          other: /singletest
+          category: "-m 'neos or importtest'"
+          skip_doctest: 1
+          TARGET: linux
           PYENV: pip
 
         - os: ubuntu-latest
@@ -243,6 +244,7 @@ jobs:
       if: matrix.TARGET == 'win'
       run: |
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
+        choco install pkgconfiglite
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
@@ -380,6 +382,10 @@ jobs:
         done
         echo ""
         echo "*** Install Pyomo dependencies ***"
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
+        fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
