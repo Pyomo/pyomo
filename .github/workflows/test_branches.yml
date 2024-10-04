@@ -75,13 +75,19 @@ jobs:
         other: [""]
         category: [""]
 
+        # win/3.8 conda builds no longer work due to environment not being able
+        # to resolve. We are skipping it now.
+        exclude:
+        - os: windows-latest
+          python: 3.8
+
         include:
         - os: ubuntu-latest
           python: '3.12'
           TARGET: linux
           PYENV: pip
 
-        - os: macos-13
+        - os: macos-latest
           python: '3.10'
           TARGET: osx
           PYENV: pip
@@ -215,6 +221,7 @@ jobs:
       if: matrix.TARGET == 'win'
       run: |
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
+        choco install pkgconfiglite
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
@@ -352,6 +359,10 @@ jobs:
         done
         echo ""
         echo "*** Install Pyomo dependencies ***"
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
+        fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
