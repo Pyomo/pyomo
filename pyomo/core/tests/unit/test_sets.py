@@ -2979,7 +2979,7 @@ class TestSetsInPython3(unittest.TestCase):
         #
         # While deepcopying a model is generally not supported, this is
         # an easy way to ensure that this simple model is cleanly
-        # clonable.
+        # able to be cloned.
         ref = """1 Set Declarations
     INDEX : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
