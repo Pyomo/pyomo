@@ -156,7 +156,7 @@ class ICategorizedObject(AutoSlots.Mixin):
 
         Args:
             fully_qualified (bool): Generate a full name by
-                iterating through all anscestor containers.
+                iterating through all ancestor containers.
                 Default is :const:`False`.
             convert (function): A function that converts a
                 storage key into a string
