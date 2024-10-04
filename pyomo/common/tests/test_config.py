@@ -3120,16 +3120,19 @@ c: 1.0
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_1: float, default=1
+
         [DEVELOPER option]
 
         The first solver configuration option
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly
@@ -3138,6 +3141,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing
@@ -3149,6 +3153,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
@@ -3159,11 +3164,13 @@ option_2: int, default=5
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly
@@ -3172,6 +3179,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing
@@ -3183,6 +3191,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
@@ -3192,11 +3201,13 @@ option_2: int, default=5
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly paragraph with little actual information.
@@ -3204,6 +3215,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing wrappable text in a long, silly paragraph with little actual information.
@@ -3213,6 +3225,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line containing wrappable text in a long, silly paragraph with little actual information."""
         with LoggingIntercept() as LOG:
             self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)
