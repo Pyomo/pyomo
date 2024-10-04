@@ -481,9 +481,7 @@ class TestConfigDomains(unittest.TestCase):
                 None, IsInstance(int, TestClass, document_full_base_names=True)
             ),
         )
-        self.assertRegex(
-            c.get("val3").domain_name(), r"IsInstance\[int, TestClass\]"
-        )
+        self.assertRegex(c.get("val3").domain_name(), r"IsInstance\[int, TestClass\]")
         c.val3 = 2
         self.assertEqual(c.val3, 2)
         exc_str = (
