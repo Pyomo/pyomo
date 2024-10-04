@@ -562,7 +562,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         fme.apply_to(m, vars_to_eliminate=disaggregatedVars, do_integer_arithmetic=True)
         # post-process
-        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        fme.post_process_fme_constraints(m, SolverFactory('glpk'), tolerance=-1e-6)
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         self.assertEqual(len(constraints), 11)
