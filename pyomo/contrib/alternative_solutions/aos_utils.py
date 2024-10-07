@@ -37,8 +37,9 @@ def logcontext(level):
     Examples
     --------
     >>> with logcontext(logging.INFO):
-    >>>    logging.debug("This will not be printed")
-    >>>    logging.info("This will be printed")
+    ...    logging.debug("This will not be printed")
+    ...    logging.info("This will be printed")
+
     """
     logger = logging.getLogger()
     current_level = logger.getEffectiveLevel()
