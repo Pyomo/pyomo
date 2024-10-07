@@ -10,10 +10,17 @@
 
 .. currentmodule:: {{ module }}
 
+{# Note that numpy.ndarray examples fail doctest; disable documentation
+   of inherited members for classes derived from ndarray #}
+
 .. autoclass:: {{ objname }}
    :members:
-   :inherited-members:
    :show-inheritance:
+   {{ '' if (module + '.' + name) in (
+         'pyomo.contrib.pynumero.sparse.block_vector.BlockVector',
+         'pyomo.contrib.pynumero.sparse.mpi_block_vector.MPIBlockVector',
+         'pyomo.core.expr.ndarray.NumericNDArray',
+      ) else ':inherited-members:' }}
 
    {% block methods %}
    .. automethod:: __init__
