@@ -405,7 +405,6 @@ class CtypesEnviron(object):
        :hide:
 
        import os
-       from pyomo.common.env import TemporaryEnv
        orig_env_val = os.environ.get('TEMP_ENV_VAR', None)
 
     .. doctest::
