@@ -4,7 +4,8 @@ Using Standard Data Types
 Defining Constant Values
 ------------------------
 
-In many cases, Pyomo models can be constructed without :class:`~pyomo.environ.Set` and :class:`~pyomo.environ.Param` data components.  Native Python data types
+In many cases, Pyomo models can be constructed without :class:`Set` and
+:class:`~Param` data components.  Native Python data types
 class can be simply used to define constant values in Pyomo expressions.
 Consequently, Python sets, lists and dictionaries can be used to
 construct Pyomo models, as well as a wide range of other Python classes.
@@ -63,8 +64,8 @@ dictionary values are iterable data:
 Parameter Components
 ^^^^^^^^^^^^^^^^^^^^
 
-When a parameter is a single value, then a :class:`~pyomo.environ.Param` component can be simply initialized with a
-value:
+When a parameter is a single value, then a :class:`~pyomo.environ.Param`
+component can be simply initialized with a value:
 
 .. literalinclude:: /src/dataportal/param_initialization_decl1.spy
     :language: python

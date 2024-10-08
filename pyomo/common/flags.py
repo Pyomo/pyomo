@@ -84,7 +84,7 @@ def building_documentation(state=NOTSET):
     """True if we are building the Sphinx documentation
 
     We detect if we are building the documentation by looking if the
-    ``sphnx`` or ``Sphinx`` modules are imported.
+    ``sphinx`` or ``Sphinx`` modules are imported.
 
     Parameters
     ----------

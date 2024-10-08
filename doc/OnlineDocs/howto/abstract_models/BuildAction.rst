@@ -54,7 +54,7 @@ The full model is:
 .. literalinclude:: /src/scripting/Isinglebuild.py
    :language: python
 
-for this model, the same data file can be used as for Isinglecomm.py in
+For this model, the same data file can be used as for Isinglecomm.py in
 :ref:`Isinglecomm.py` such as the toy data file:
 
 .. literalinclude:: /src/scripting/Isinglecomm.dat
