@@ -6,6 +6,10 @@ Reference Guides
 
    topical/index
    Library Reference <../api/pyomo>
+
+.. toctree::
+   :maxdepth: 1
+
    future
    ../errors
    ../related_packages
