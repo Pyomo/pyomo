@@ -100,24 +100,25 @@ class TempfileManagerClass(object):
     def shutdown(self, remove=True):
         if not self._context_stack:
             return
-        if any(ctx.tempfiles for ctx in self._context_stack):
-            logger.error(
-                "Temporary files created through TempfileManager "
-                "contexts have not been deleted (observed during "
-                "TempfileManager instance shutdown).\n"
-                "Undeleted entries:\n\t"
-                + "\n\t".join(
-                    fname if isinstance(fname, str) else fname.decode()
-                    for ctx in self._context_stack
-                    for fd, fname in ctx.tempfiles
+        if logger is not None:
+            if any(ctx.tempfiles for ctx in self._context_stack):
+                logger.error(
+                    "Temporary files created through TempfileManager "
+                    "contexts have not been deleted (observed during "
+                    "TempfileManager instance shutdown).\n"
+                    "Undeleted entries:\n\t"
+                    + "\n\t".join(
+                        fname if isinstance(fname, str) else fname.decode()
+                        for ctx in self._context_stack
+                        for fd, fname in ctx.tempfiles
+                    )
                 )
-            )
-        if self._context_stack:
-            logger.warning(
-                "TempfileManagerClass instance: un-popped tempfile "
-                "contexts still exist during TempfileManager instance "
-                "shutdown"
-            )
+            if self._context_stack:
+                logger.warning(
+                    "TempfileManagerClass instance: un-popped tempfile "
+                    "contexts still exist during TempfileManager instance "
+                    "shutdown"
+                )
         self.clear_tempfiles(remove)
         # Delete the stack so that subsequent operations generate an
         # exception
