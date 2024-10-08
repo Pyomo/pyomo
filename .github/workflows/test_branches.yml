@@ -83,7 +83,7 @@ jobs:
 
         include:
         - os: ubuntu-latest
-          python: '3.12'
+          python: '3.13'
           TARGET: linux
           PYENV: pip
 
@@ -116,7 +116,7 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: '3.12'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
