@@ -277,7 +277,7 @@ from pyomo.common.dependencies import (
 pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
-import pyomo.environ as _pe # (trigger all plugin registrations)
+import pyomo.environ as pyo  # (register plugins, make environ available to tests)
 import pyomo.opt as _opt
 
 # Not using SolverFactory to check solver availability because
@@ -304,6 +304,11 @@ else:
     ma27_available = False
     mumps_available = False
 
+# Mark that we are testing code (in this case, testing the documentation)
 from pyomo.common.flags import in_testing_environment
 in_testing_environment(True)
+
+# Prevent any Pyomo logs from propagating up to the doctest logger
+import logging
+logging.getLogger('pyomo').propagate = False
 '''
