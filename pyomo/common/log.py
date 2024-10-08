@@ -28,7 +28,7 @@ import textwrap
 from pyomo.version.info import releaselevel
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
-from pyomo.common.flags import in_testing_environment
+from pyomo.common.flags import in_testing_environment, building_documentation
 from pyomo.common.formatting import wrap_reStructuredText
 
 _indentation_re = re.compile(r'\s*')
@@ -234,7 +234,12 @@ class _GlobalLogFilter(object):
         self.logger = logging.getLogger()
 
     def filter(self, record):
-        return not self.logger.handlers
+        # We will not emit messages using the default Pyomo log handler
+        # if someone has registered a global handler.  However, we will
+        # ignore this if we are building documentation
+        # (sphinx.ext.doctest adds a handler, but we want to ignore that
+        # handler when we are testing our documentation!)
+        return not self.logger.handlers or building_documentation()
 
 
 # This mocks up the historical Pyomo logging system, which uses a
