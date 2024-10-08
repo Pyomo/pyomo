@@ -2,6 +2,9 @@
 
 Publications
 ============
+..
+   Note to developers: For these references, we will use the package
+   name followed by a description of the publication type.
 
 These publications describe various Pyomo capabilitites or subpackages:
 
@@ -54,6 +57,24 @@ These publications describe various Pyomo capabilitites or subpackages:
 
 Bibliography
 ============
+
+..
+   Note to developers: We are using BiBTeX's `alpha` format for naming
+   bibliographic references:
+
+   - single Author references use the 1st 3 characters (CamelCase) from
+     the last name plus the two digit publication year (e.g., [Aut00])
+
+   - 2- and 3-author references use the 1st character (capitalized)
+     from each last name plus the two digit publication year (e.g., [HWW11])
+
+   - 4+ author references use the 1st character (capitalized) from the
+     first 3 authors last names, plus a "+", plus the two digit
+     publication year (e.g., [BHH+21])
+
+   Reference collisions are resolved by adding a lower case character
+   (beginning with 'a', ordered in the same order that the references
+   appear in this Bibliography list) to *all* colliding references.
 
 .. [AIMMS] http://www.aimms.com/
 
