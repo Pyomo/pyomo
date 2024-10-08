@@ -2225,14 +2225,48 @@ class MarkImmutable(object):
 
     Examples
     --------
-    >>> config = ConfigDict()
-    >>> config.declare('a', ConfigValue(default=1, domain=int))
-    >>> config.declare('b', ConfigValue(default=1, domain=int))
-    >>> locker = MarkImmutable(config.get('a'), config.get('b'))
+    .. testcode::
 
-    Now, config.a and config.b cannot be changed. To make them mutable again,
+       config = ConfigDict()
+       config.declare('a', ConfigValue(default=1, domain=int))
+       config.declare('b', ConfigValue(default=1, domain=int))
+       locker = MarkImmutable(config.get('a'), config.get('b'))
 
-    >>> locker.release_lock()
+    Now, config.a and config.b cannot be changed:
+
+    .. doctest::
+
+       >>> config.a = 5
+       Traceback (most recent call last):
+          ...
+       RuntimeError: ConfigValue 'a' is currently immutable
+       >>> print(config.a)
+       1
+
+    To make them mutable again,
+
+    .. doctest::
+
+       >>> locker.release_lock()
+       >>> config.a = 5
+       >>> print(config.a)
+       5
+
+    Note that this can be used as a context manager as well:
+
+    .. doctest::
+
+       >>> with MarkImmutable(config.get('a'), config.get('b')):
+       ...     config.a = 10
+       Traceback (most recent call last):
+          ...
+       RuntimeError: ConfigValue 'a' is currently immutable
+       >>> print(config.a)
+       5
+       >>> config.a = 10
+       >>> print(config.a)
+       10
+
     """
 
     def __init__(self, *args):

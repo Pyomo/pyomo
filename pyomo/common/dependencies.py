@@ -227,6 +227,13 @@ def UnavailableClass(unavailable_module):
 
     As does attempting to access class attributes on the derived class:
 
+    .. testcode::
+       :hide:
+
+       # We suppress this exception when building the documentation
+       # from pyomo.common.flags import building_documentation
+       building_documentation(False)
+
     .. doctest::
 
        >>> MyPlugin.create_instance()
@@ -236,6 +243,11 @@ def UnavailableClass(unavailable_module):
        'MyPlugin.create_instance' is not available because a needed optional
        dependency was not found (import raised ModuleNotFoundError: No module
        named 'bogus_unavailable_class')
+
+    .. testcode::
+       :hide:
+
+       building_documentation(None)
 
     """
 

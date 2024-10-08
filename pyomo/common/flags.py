@@ -41,9 +41,11 @@ class NOTSET(object, metaclass=FlagType):
     Class to be used to indicate that an optional argument
     was not specified, if `None` may be ambiguous. Usage:
 
-      >>> def foo(value=NOTSET):
-      >>>     if value is NOTSET:
-      >>>         pass  # no argument was provided to `value`
+    Examples
+    --------
+    >>> def foo(value=NOTSET):
+    ...     if value is NOTSET:
+    ...         pass  # no argument was provided to `value`
 
     """
 

@@ -414,7 +414,7 @@ class CtypesEnviron(object):
        original value
 
        >>> with CtypesEnviron(TEMP_ENV_VAR='temporary value'):
-       ...    print(os.envion['TEMP_ENV_VAR'])
+       ...    print(os.environ['TEMP_ENV_VAR'])
        temporary value
 
        >>> print(os.environ['TEMP_ENV_VAR'])

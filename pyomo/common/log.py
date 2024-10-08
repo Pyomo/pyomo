@@ -289,13 +289,15 @@ class LoggingIntercept(object):
         the formatter to use when rendering the log messages.  If not
         specified, uses `'%(message)s'`
 
-    Examples:
-        >>> import io, logging
-        >>> from pyomo.common.log import LoggingIntercept
-        >>> buf = io.StringIO()
-        >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
-        ...     logging.getLogger('pyomo.core').warning('a simple message')
-        >>> buf.getvalue()
+    Examples
+    --------
+    >>> import io, logging
+    >>> from pyomo.common.log import LoggingIntercept
+    >>> buf = io.StringIO()
+    >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
+    ...     logging.getLogger('pyomo.core').warning('a simple message')
+    >>> buf.getvalue()
+    'a simple message\n'
 
     """
 
