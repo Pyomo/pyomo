@@ -5,7 +5,7 @@ Examples
 
 Examples can be found in `pyomo/contrib/parmest/examples` and include:
 
-* Reactor design example [PyomoBookII]_
+* Reactor design example [PyomoBookIII]_
 * Semibatch example [AM00]_
 * Rooney Biegler example [RB01]_
 

@@ -72,7 +72,7 @@ solvers to analyze a model introduces additional complexities.
 
 
 Pyomo is an AML that extends Python to include objects for mathematical
-modeling. [PyomoBookI]_, [PyomoBookII]_, [PyomoBookIII]_, and [PyomoJournal]_ 
+modeling. [PyomoBookI]_, [PyomoBookII]_, [PyomoBookIII]_, and [Pyomo-paper]_
 compare Pyomo with other AMLs.  Although many good AMLs have been developed for
 optimization models, the following are motivating factors for the
 development of Pyomo:

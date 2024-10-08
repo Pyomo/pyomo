@@ -2,13 +2,13 @@ Parameter Estimation with ``parmest``
 =====================================
 
 ``parmest`` is a Python package built on the Pyomo optimization modeling
-language ([PyomoJournal]_, [PyomoBookII]_) to support parameter estimation using experimental data along with
+language ([Pyomo-paper]_, [PyomoBookIII]_) to support parameter estimation using experimental data along with
 confidence regions and subsequent creation of scenarios for stochastic programming.
 
 Citation for parmest
 ^^^^^^^^^^^^^^^^^^^^
 
-If you use parmest, please cite [ParmestPaper]_
+If you use parmest, please cite [Parmest-paper]_
 
 Index of parmest documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -5,7 +5,7 @@ Publications
 
 These publications describe various Pyomo capabilitites or subpackages:
 
-.. [PyomoJournal] William E. Hart, Jean-Paul Watson, David L. Woodruff.
+.. [Pyomo-paper] William E. Hart, Jean-Paul Watson, David L. Woodruff.
    "Pyomo: modeling and solving mathematical programs in Python,"
    Mathematical Programming Computation, 3(3), August 2011
 
@@ -26,13 +26,13 @@ These publications describe various Pyomo capabilitites or subpackages:
    Vol. 67. Springer, 2021.  doi: `10.1007/978-3-030-68928-5
    <https://doi.org/10.1007/978-3-030-68928-5>`_
 
-.. [PyomoDAE] Bethany Nicholson, John D. Siirola, Jean-Paul Watson,
+.. [PyomoDAE-paper] Bethany Nicholson, John D. Siirola, Jean-Paul Watson,
    Victor M. Zavala, and Lorenz T. Biegler. "pyomo.dae: a modeling and
    automatic discretization framework for optimization with differential
    and algebraic equations."  Mathematical Programming Computation 10(2)
    187-223. 2018.
 
-.. [ParmestPaper] Katherine A. Klise, Bethany L. Nicholson, Andrea
+.. [Parmest-paper] Katherine A. Klise, Bethany L. Nicholson, Andrea
    Staid, David L.Woodruff.  "Parmest: Parameter Estimation Via Pyomo."
    *Computer Aided Chemical Engineering*, 47: 41-46. 2019.
 
@@ -43,7 +43,7 @@ These publications describe various Pyomo capabilitites or subpackages:
    Engineering* pp. 1-36. 2021. DOI `10.1007/s11081-021-09601-7
    <https://doi.org/10.1007/s11081-021-09601-7>`_
 
-.. [PyomoGDP-pse-paper] Qi Chen, Emma S. Johnson, John D. Siirola, and
+.. [PyomoGDP-proceedings] Qi Chen, Emma S. Johnson, John D. Siirola, and
    Ignacio E. Grossmann. "Pyomo.GDP: Disjunctive Models in Python."
    In M. R. Eden, M. G. Ierapetritou, and G. P. Towler (Eds.),
    *Proceedings of the 13th International Symposium on Process Systems

@@ -9,7 +9,7 @@ Generalized Disjunctive Programming
    :align: right
    :class: no-scaled-link
 
-The Pyomo.GDP modeling extension [PyomoGDP-pse-paper]_
+The Pyomo.GDP modeling extension [PyomoGDP-proceedings]_
 [PyomoGDP-paper]_ provides support for Generalized Disjunctive
 Programming (GDP) [RG94]_, an extension of Disjunctive Programming
 [Bal85]_ from the operations research community to include nonlinear
