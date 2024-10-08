@@ -340,8 +340,8 @@ class LoggingIntercept(object):
         self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
-        for h in self._save[2]:
-            logger.handlers.append(h)
+        assert not logger.handlers
+        logger.handlers.extend(self._save[2])
 
 
 class LogStream(io.TextIOBase):
