@@ -15,6 +15,7 @@ from pyomo.contrib.interior_point.interface import InteriorPointInterface
 from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
 import logging
 
+
 def solve_qcqp_example():
     logging.basicConfig(level=logging.INFO)
     # Supposedly this sets the root logger's level to INFO.

@@ -11,7 +11,7 @@
 
 
 def load():
-    from pyomo.contrib.preprocessing.plugins import  (
+    from pyomo.contrib.preprocessing.plugins import (
         deactivate_trivial_constraints,
         detect_fixed_vars,
         init_vars,
