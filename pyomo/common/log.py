@@ -272,7 +272,7 @@ class LogHandler(logging.StreamHandler):
 
 
 class LoggingIntercept(object):
-    """Context manager for intercepting messages sent to a log stream
+    r"""Context manager for intercepting messages sent to a log stream
 
     This class is designed to enable easy testing of log messages.
 
