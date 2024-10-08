@@ -11,7 +11,7 @@
 
 
 def load():
-    from . import (
+    from pyomo.gdp.plugins import (
         bigm,
         hull,
         bilinear,

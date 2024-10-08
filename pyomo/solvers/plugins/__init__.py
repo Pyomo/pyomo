@@ -11,4 +11,4 @@
 
 
 def load():
-    from . import converter, solvers
+    from pyomo.solvers.plugins import converter, solvers

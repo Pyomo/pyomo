@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import util, transforms, transforms_nd
+from pyomo.core.kernel.piecewise_library import util, transforms, transforms_nd

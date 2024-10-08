@@ -11,7 +11,7 @@
 
 
 def load():
-    from . import (
+    from pyomo.repn.plugins import (
         cpxlp,
         ampl,
         baron_writer,

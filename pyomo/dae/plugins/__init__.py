@@ -11,4 +11,4 @@
 
 
 def load():
-    from . import colloc, finitedifference
+    from pyomo.dae.plugins import colloc, finitedifference

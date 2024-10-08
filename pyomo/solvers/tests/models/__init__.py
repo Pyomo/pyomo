@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import (
+from pyomo.solvers.tests.models import (
     base,
     LP_block,
     LP_compiled,

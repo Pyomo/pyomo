@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import pyomo_command, util
+from pyomo.scripting import pyomo_command, util

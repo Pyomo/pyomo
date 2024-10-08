@@ -11,4 +11,4 @@
 
 
 def load():
-    from . import driver, res, sol
+    from pyomo.opt.plugins import driver, res, sol

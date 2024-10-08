@@ -11,4 +11,4 @@
 
 
 def load():
-    from . import convert, solve, download, build_ext, extras
+    from pyomo.scripting.plugins import convert, solve, download, build_ext, extras

@@ -59,7 +59,7 @@ from pyomo.core.expr import (
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-from . import (
+from pyomo.core.kernel import (
     base,
     homogeneous_container,
     heterogeneous_container,

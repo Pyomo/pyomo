@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import (
+from pyomo.core.plugins.transform import (
     relax_integrality,
     # eliminate_fixed_vars,
     # standard_form,

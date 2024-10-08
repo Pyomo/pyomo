@@ -11,4 +11,4 @@
 
 
 def load():
-    from . import mpec1, mpec2, mpec3, mpec4, solver1, solver2, pathampl
+    from pyomo.mpec.plugins import mpec1, mpec2, mpec3, mpec4, solver1, solver2, pathampl

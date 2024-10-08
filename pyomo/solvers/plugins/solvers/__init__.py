@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # TODO: Disabled until we can confirm application to Pyomo models
-from . import (
+from pyomo.solvers.plugins.solvers import (
     CBCplugin,
     GLPK,
     CPLEX,

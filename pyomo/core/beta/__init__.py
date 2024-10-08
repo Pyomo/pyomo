@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from . import dict_objects, list_objects
+from pyomo.core.beta import dict_objects, list_objects

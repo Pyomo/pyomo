@@ -11,4 +11,4 @@
 
 
 def load():
-    from . import NEOS, kestrel_plugin
+    from pyomo.neos.plugins import NEOS, kestrel_plugin
