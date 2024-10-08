@@ -290,13 +290,16 @@ class TRFInterface(object):
         return decision_values
 
     def updateDecisionVariableBounds(self, radius):
-        """
-        Update the TRSP_k decision variable bounds
+        """Update the TRSP_k decision variable bounds
 
         This corresponds to:
+
+        .. math::
             || E^{-1} (u - u_k) || <= trust_radius
-        We omit E^{-1} because we assume that the users have correctly scaled
-        their variables.
+
+        We omit :math:`E^{-1}` because we assume that the users have
+        correctly scaled their variables.
+
         """
         for var in self.decision_variables:
             var.setlb(

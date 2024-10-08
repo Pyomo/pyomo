@@ -19,9 +19,10 @@ from collections.abc import Mapping
 from types import ModuleType
 from typing import List
 
-from .deprecation import deprecated, deprecation_warning, in_testing_environment
+import pyomo
+from .deprecation import deprecated, deprecation_warning
 from .errors import DeferredImportError
-
+from .flags import in_testing_environment, building_documentation
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
 
@@ -226,6 +227,13 @@ def UnavailableClass(unavailable_module):
 
     As does attempting to access class attributes on the derived class:
 
+    .. testcode::
+       :hide:
+
+       # We suppress this exception when building the documentation
+       # from pyomo.common.flags import building_documentation
+       building_documentation(False)
+
     .. doctest::
 
        >>> MyPlugin.create_instance()
@@ -236,10 +244,21 @@ def UnavailableClass(unavailable_module):
        dependency was not found (import raised ModuleNotFoundError: No module
        named 'bogus_unavailable_class')
 
+    .. testcode::
+       :hide:
+
+       building_documentation(None)
+
     """
 
     class UnavailableMeta(type):
         def __getattr__(cls, name):
+            if building_documentation():
+                # If we are building documentation, avoid the
+                # DeferredImportError (we will still raise one if
+                # someone attempts to *create* an instance of this
+                # class)
+                return getattr(super(), name)
             raise DeferredImportError(
                 unavailable_module._moduleunavailable_message(
                     f"The class attribute '{cls.__name__}.{name}' is not available "

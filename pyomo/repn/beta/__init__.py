@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.repn.beta.matrix
+from pyomo.repn.beta import matrix

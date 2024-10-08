@@ -44,7 +44,7 @@ try:
 
     generate_spy_files(os.path.abspath('src'))
     generate_spy_files(
-        os.path.abspath(os.path.join('library_reference', 'kernel', 'examples'))
+        os.path.abspath(os.path.join('explanation', 'experimental', 'kernel'))
     )
 finally:
     sys.path.pop(0)
@@ -58,7 +58,6 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'scikit-learn': ('https://scikit-learn.org/stable/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/', None),
-    'Sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
 
 # -- General configuration ------------------------------------------------
@@ -84,8 +83,6 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx_copybutton',
     'enum_tools.autoenum',
-    'sphinx.ext.autosectionlabel',
-    #'sphinx.ext.githubpages',
 ]
 
 viewcode_follow_imported_members = True
@@ -108,7 +105,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Pyomo'
-copyright = u'2008-2023, Sandia National Laboratories'
+copyright = u'2008-2024, Sandia National Laboratories'
 author = u'Pyomo Developers'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -132,7 +129,7 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', '*.tests', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -168,7 +165,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {'navigation_depth': 6, 'titles_only': True}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -235,6 +232,9 @@ texinfo_documents = [
 # autodoc_member_order = 'bysource'
 # autodoc_member_order = 'groupwise'
 
+autosummary_generate = True
+autosummary_ignore_module_all = True
+
 # -- Check which conditional dependencies are available ------------------
 # Used for skipping certain doctests
 from sphinx.ext.doctest import doctest
@@ -275,7 +275,7 @@ from pyomo.common.dependencies import (
 pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
-import pyomo.environ as _pe # (trigger all plugin registrations)
+import pyomo.environ as pyo  # (register plugins, make environ available to tests)
 import pyomo.opt as _opt
 
 # Not using SolverFactory to check solver availability because
@@ -301,4 +301,12 @@ else:
     asl_available = False
     ma27_available = False
     mumps_available = False
+
+# Mark that we are testing code (in this case, testing the documentation)
+from pyomo.common.flags import in_testing_environment
+in_testing_environment(True)
+
+# Prevent any Pyomo logs from propagating up to the doctest logger
+import logging
+logging.getLogger('pyomo').propagate = False
 '''

@@ -861,13 +861,22 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
     and substituting all occurrences of IndexTemplate and
     GetItemExpression nodes.
 
-    Args:
-        substituter: method taking (expression, *args) and returning
-           the new object
-        *args: these are passed directly to the substituter
+    Parameters
+    ----------
+    expr : NumericExpression
+        the source template expression
 
-    Returns:
+    substituter: Callable
+        method taking ``(expression, *args)`` and returning the new object
+
+    \*args:
+        positional arguments passed directly to the substituter
+
+    Returns
+    -------
+    NumericExpression :
         a new expression tree with all substitutions done
+
     """
     visitor = ReplaceTemplateExpression(substituter, *args, **kwargs)
     return visitor.walk_expression(expr)
