@@ -4181,6 +4181,19 @@ class TestSet(unittest.TestCase):
         self.assertIs(type(m.I[3]), InsertionOrderSetData)
         self.assertEqual(m.I.data(), {1: (4, 2, 5), 2: (4, 2, 5), 3: (4, 2, 5)})
 
+        # Explicit (constant dict) construction
+        m = ConcreteModel()
+        m.I = Set([1, 2], initialize={1: (4, 2, 5), 2: (7, 6)})
+        self.assertEqual(len(m.I), 2)
+        self.assertEqual(list(m.I[1]), [4, 2, 5])
+        self.assertEqual(list(m.I[2]), [7, 6])
+        self.assertIsNot(m.I[1], m.I[2])
+        self.assertTrue(m.I[1].isordered())
+        self.assertTrue(m.I[2].isordered())
+        self.assertIs(type(m.I[1]), InsertionOrderSetData)
+        self.assertIs(type(m.I[2]), InsertionOrderSetData)
+        self.assertEqual(m.I.data(), {1: (4, 2, 5), 2: (7, 6)})
+
         # Explicit (constant) construction
         m = ConcreteModel()
         m.I = Set([1, 2, 3], initialize=(4, 2, 5), ordered=Set.SortedOrder)
@@ -4255,7 +4268,7 @@ class TestSet(unittest.TestCase):
     def test_add_filter_validate(self):
         m = ConcreteModel()
         m.I = Set(domain=Integers)
-        self.assertIs(m.I.filter, None)
+        self.assertIs(m.I._filter, None)
         with self.assertRaisesRegex(
             ValueError,
             r"Cannot add value 1.5 to Set I.\n"
@@ -4302,7 +4315,7 @@ class TestSet(unittest.TestCase):
             return i >= j
 
         m.K = Set(initialize=RangeSet(3) * RangeSet(3), filter=_l_tri)
-        self.assertIsInstance(m.K.filter, ParameterizedScalarCallInitializer)
+        self.assertIsInstance(m.K._filter, ParameterizedScalarCallInitializer)
         self.assertEqual(list(m.K), [(1, 1), (2, 1), (2, 2), (3, 1), (3, 2), (3, 3)])
 
         output = StringIO()
@@ -4333,6 +4346,18 @@ class TestSet(unittest.TestCase):
             self.assertFalse(m.L[2].add((100)))
         self.assertEqual(output.getvalue(), "")
         self.assertEqual(list(m.L[2]), [1, 2, 0])
+
+        # This tests that the deprecation path works correctly in the
+        # case that the callback doesn't raise an error or ever return
+        # False
+
+        def _l_off_diag(model, i, j):
+            self.assertIs(model, m)
+            return i != j
+
+        m.M = Set(initialize=RangeSet(3) * RangeSet(3), filter=_l_off_diag)
+        self.assertIsInstance(m.M._filter, ParameterizedScalarCallInitializer)
+        self.assertEqual(list(m.M), [(1, 2), (1, 3), (2, 1), (2, 3), (3, 1), (3, 2)])
 
         m = ConcreteModel()
 
@@ -4374,12 +4399,15 @@ class TestSet(unittest.TestCase):
         m.I2 = Set(validate=_validate)
         with LoggingIntercept(module='pyomo.core') as output:
             self.assertTrue(m.I2.add((0, 1)))
-            self.assertRegex(
-                output.getvalue().replace('\n', ' '),
-                r"DEPRECATED: OrderedScalarSet I2: 'validate=' callback "
-                r"signature matched \(block, \*value\).  Please update the "
-                r"callback to match the signature \(block, value\)",
-            )
+            # Note that we are not emitting a deprecation warning (yet)
+            # for scalar sets
+            # self.assertEqual(output.getvalue(), "")
+            #     output.getvalue().replace('\n', ' '),
+            #     r"DEPRECATED: OrderedScalarSet I2: 'validate=' callback "
+            #     r"signature matched \(block, \*value\).  Please update the "
+            #     r"callback to match the signature \(block, value\)",
+            # )
+            self.assertEqual(output.getvalue(), "")
         with LoggingIntercept(module='pyomo.core') as output:
             with self.assertRaisesRegex(
                 ValueError,

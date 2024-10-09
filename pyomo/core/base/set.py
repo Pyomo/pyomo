@@ -1484,18 +1484,7 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                 try:
                     flag = fcn(block, (), *vstar)
                     if flag:
-                        deprecation_warning(
-                            f"{self.__class__.__name__} {self.name}: '{mode}=' "
-                            "callback signature matched (block, *value).  "
-                            "Please update the callback to match the signature "
-                            f"(block, value{', *index' if comp.is_indexed() else ''}).",
-                            version='6.8.0',
-                        )
-                        orig_fcn = fcn._fcn
-                        fcn = ParameterizedScalarCallInitializer(
-                            lambda m, v: orig_fcn(m, *v), True
-                        )
-                        setattr(comp, '_' + mode, fcn)
+                        self._filter_validate_scalar_api_deprecation(mode, warning=True)
                         yield value
                         continue
                 except TypeError:
@@ -1535,6 +1524,21 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                 "for Set %s" % (value, self.name)
             )
             raise exc from None
+
+    def _filter_validate_scalar_api_deprecation(self, mode, warning):
+        comp = self.parent_component()
+        fcn = getattr(comp, '_' + mode)
+        if warning:
+            deprecation_warning(
+                f"{self.__class__.__name__} {self.name}: '{mode}=' "
+                "callback signature matched (block, *value).  "
+                "Please update the callback to match the signature "
+                f"(block, value{', *index' if comp.is_indexed() else ''}).",
+                version='6.8.0',
+            )
+        orig_fcn = fcn._fcn
+        fcn = ParameterizedScalarCallInitializer(lambda m, v: orig_fcn(m, *v), True)
+        setattr(comp, '_' + mode, fcn)
 
     def _cb_normalized_dimen_verifier(self, dimen, val_iter):
         for value in val_iter:
@@ -2256,13 +2260,19 @@ class Set(IndexedComponent):
             self._init_values._init = CountedCallInitializer(
                 self, self._init_values._init
             )
-        # HACK: the DAT parser needs to know the domain of a set in
-        # order to correctly parse the data stream.
+
         if not self.is_indexed():
+            # HACK: the DAT parser needs to know the domain of a set in
+            # order to correctly parse the data stream.
             if self._init_domain.constant():
                 self._domain = self._init_domain(self.parent_block(), None, self)
             if self._init_dimen.constant():
                 self._dimen = self._init_dimen(self.parent_block(), None)
+
+            if self._filter.__class__ is ParameterizedIndexedCallInitializer:
+                self._filter_validate_scalar_api_deprecation('filter', warning=False)
+            if self._validate.__class__ is ParameterizedIndexedCallInitializer:
+                self._filter_validate_scalar_api_deprecation('validate', warning=False)
 
     @deprecated(
         "check_values() is deprecated: Sets only contain valid members", version='5.7'
