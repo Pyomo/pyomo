@@ -271,6 +271,7 @@ from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
     pympler_available, dill_available,
+    numpy as np,
 )
 pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
@@ -290,6 +291,11 @@ glpk_available = bool(_opt.check_available_solvers('glpk'))
 gurobipy_available = bool(_opt.check_available_solvers('gurobi_direct'))
 
 baron = _opt.SolverFactory('baron')
+
+if numpy_available:
+    # Recent changes on GHA seem to have dropped the default precision
+    # from 8 to 4; restore the default.
+    np.set_printoptions(precision=8)
 
 if numpy_available and scipy_available:
     import pyomo.contrib.pynumero.asl as _asl
