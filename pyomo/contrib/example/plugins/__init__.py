@@ -14,4 +14,4 @@
 
 
 def load():
-    import pyomo.contrib.example.plugins.ex_plugin
+    from pyomo.contrib.example.plugins import ex_plugin
