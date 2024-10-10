@@ -281,6 +281,9 @@ system_info = (
     platform.python_implementation()
 )
 
+# (register plugins, make environ available to tests)
+import pyomo.environ as pyo
+
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
@@ -290,12 +293,10 @@ from pyomo.common.dependencies import (
 pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
-import pyomo.environ as pyo  # (register plugins, make environ available to tests)
-import pyomo.opt as _opt
-
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to suppress warnings when 
 # solvers are not available
+import pyomo.opt as _opt
 ipopt_available = bool(_opt.check_available_solvers('ipopt'))
 sipopt_available = bool(_opt.check_available_solvers('ipopt_sens'))
 k_aug_available = bool(_opt.check_available_solvers('k_aug'))
