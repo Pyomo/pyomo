@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import inspect
 import sys
 
 
@@ -106,3 +107,22 @@ def building_documentation(state=NOTSET):
 
 
 building_documentation.state = None
+
+
+def serializing():
+    """True if it looks like we are serializing objects
+
+    This looks through the call stack and returns True if it finds a
+    `dump` function anywhere in the call stack.  While not foolproof,
+    this should reliably catch most serializers, including ``pickle``
+    and `yaml``.
+
+    """
+    # Start by skipping this function
+    frame = inspect.currentframe().f_back
+    while frame is not None:
+        print(frame.f_code.co_name, frame.f_code.co_filename)
+        if frame.f_code.co_name == 'dump':
+            return True
+        frame = frame.f_back
+    return False
