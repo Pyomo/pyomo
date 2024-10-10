@@ -855,7 +855,7 @@ class ReplaceTemplateExpression(ExpressionReplacementVisitor):
 
 
 def substitute_template_expression(expr, substituter, *args, **kwargs):
-    """Substitute IndexTemplates in an expression tree.
+    r"""Substitute IndexTemplates in an expression tree.
 
     This is a general utility function for walking the expression tree
     and substituting all occurrences of IndexTemplate and

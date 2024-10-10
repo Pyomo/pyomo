@@ -1023,7 +1023,7 @@ class _BIGMPiecewise(object):
     "Constraints that contain piecewise linear expressions."
 )
 class Piecewise(Block):
-    """Adds piecewise constraints to a Pyomo model for functions of the
+    r"""Adds piecewise constraints to a Pyomo model for functions of the
     form, y = f(x).
 
     Examples
