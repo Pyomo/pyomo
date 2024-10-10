@@ -86,18 +86,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     This transformation accepts the following keyword arguments:
 
-    Parameters
-    ----------
-    perspective_function : str
-        The perspective function used for the disaggregated variables.
-        Must be one of 'FurmanSawayaGrossmann' (default),
-        'LeeGrossmann', or 'GrossmannLee'
-    EPS : float
-        The value to use for epsilon [default: 1e-4]
-    targets : (block, disjunction, or list of those types)
-        The targets to transform. This can be a block, disjunction, or a
-        list of blocks and Disjunctions [default: the instance]
-
     The transformation will create a new Block with a unique
     name beginning "_pyomo_gdp_hull_reformulation". It will contain an
     indexed Block named "relaxedDisjuncts" that will hold the relaxed
@@ -106,6 +94,18 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     have a pointer to the block their transformed constraints are on,
     and all transformed Disjunctions will have a pointer to the
     corresponding OR or XOR constraint.
+
+    Parameters
+    ----------
+    perspective_function : str
+        The perspective function used for the disaggregated variables.
+        Must be one of 'FurmanSawayaGrossmann' (default),
+        'LeeGrossmann', or 'GrossmannLee'
+    EPS : float
+        The value to use for epsilon [default: 1e-4]
+    targets : block, disjunction, or list of those types
+        The targets to transform. This can be a block, disjunction, or a
+        list of blocks and Disjunctions [default: the instance]
     """
 
     CONFIG = cfg.ConfigDict('gdp.hull')

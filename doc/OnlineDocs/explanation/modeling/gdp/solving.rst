@@ -70,6 +70,7 @@ also be created, as described in :ref:`gdp-advanced-examples`.
 Following solution of the GDP model, values of the Boolean variables may be updated from their algebraic binary counterparts using the ``update_boolean_vars_from_binary()`` function.
 
 .. autofunction:: pyomo.core.plugins.transform.logical_to_linear.update_boolean_vars_from_binary
+   :noindex:
 
 Factorable Programming
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -105,11 +106,16 @@ doing so are the (included) Big-M and Hull reformulations.
 Big-M (BM) Reformulation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The Big-M reformulation\ [#gdp-bm]_ results in a smaller transformed model, avoiding the need to add extra variables; however, it yields a looser continuous relaxation.
-By default, the BM transformation will estimate reasonably tight M values for you if variables are bounded.
-For nonlinear models where finite expression bounds may be inferred from variable bounds, the BM transformation may also be able to automatically compute M values for you.
-For all other models, you will need to provide the M values through a "BigM" Suffix, or through the `bigM` argument to the transformation.
-We will raise a ``GDP_Error`` for missing M values.
+The Big-M reformulation\ [NW88]_ results in a smaller transformed
+model, avoiding the need to add extra variables; however, it yields a
+looser continuous relaxation.  By default, the BM transformation will
+estimate reasonably tight M values for you if variables are bounded.
+For nonlinear models where finite expression bounds may be inferred from
+variable bounds, the BM transformation may also be able to automatically
+compute M values for you.  For all other models, you will need to
+provide the M values through a "BigM" Suffix, or through the `bigM`
+argument to the transformation.  We will raise a ``GDP_Error`` for
+missing M values.
 
 To apply the BM reformulation within a python script, use:
 
@@ -122,9 +128,12 @@ From the Pyomo command line, include the ``--transform pyomo.gdp.bigm`` option.
 Multiple Big-M (MBM) Reformulation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We also implement the multiple-parameter Big-M (MBM) approach described in literature\ [#gdp-mbm]_.
-By default, the MBM transformation will solve continuous subproblems in order to calculate M values.
-This process can be time-consuming, so the transformation also provides a method to export the M values used as a dictionary and allows for M values to be provided through the `bigM` argument.
+We also implement the multiple-parameter Big-M (MBM) approach described
+in literature\ [TG15]_.  By default, the MBM transformation will solve
+continuous subproblems in order to calculate M values.  This process can
+be time-consuming, so the transformation also provides a method to
+export the M values used as a dictionary and allows for M values to be
+provided through the `bigM` argument.
 
 For example, to apply the transformation and store the M values, use:
 
@@ -168,9 +177,12 @@ From the Pyomo command line, include the ``--transform pyomo.gdp.hull`` option.
 Hybrid BM/HR Reformulation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-An experimental (for now) implementation of the cutting plane approach described in literature\ [#gdp-cuttingplanes]_ is provided for linear GDP models.
-The transformation augments the BM reformulation by a set of cutting planes generated from the HR model by solving separation problems.
-This gives a model that is not as large as the HR, but with a stronger continuous relaxation than the BM.
+An experimental (for now) implementation of the cutting plane approach
+described in literature\ [SG03]_ is provided for linear GDP models.
+The transformation augments the BM reformulation by a set of cutting
+planes generated from the HR model by solving separation problems.  This
+gives a model that is not as large as the HR, but with a stronger
+continuous relaxation than the BM.
 
 This transformation is accessible via:
 
@@ -185,17 +197,4 @@ Pyomo includes the contributed GDPopt solver, which can directly solve
 GDP models.  Its usage is described within the :ref:`contributed
 packages documentation <gdpopt-main-page>`.
 
-References
-==========
 
-.. [#gdp-pse-paper] Chen, Q., Johnson, E. S., Siirola, J. D., & Grossmann, I. E. (2018). Pyomo.GDP: Disjunctive Models in Python. In M. R. Eden, M. G. Ierapetritou, & G. P. Towler (Eds.), *Proceedings of the 13th International Symposium on Process Systems Engineering* (pp. 889–894). San Diego: Elsevier B.V. https://doi.org/10.1016/B978-0-444-64241-7.50143-9
-
-.. [#gdp-main-paper] Chen, Q., Johnson, E. S., Bernal, D. E., Valentin, R., Kale, S., Bates, J., Siirola, J. D. and Grossmann, I. E. (2021). Pyomo.GDP: an ecosystem for logic based modeling and optimization development, *Optimization and Engineering* (pp. 1-36).https://doi.org/10.1007/s11081-021-09601-7 
-
-.. [#gdp-review-2013] Grossmann, I. E., & Trespalacios, F. (2013). Systematic modeling of discrete-continuous optimization models through generalized disjunctive programming. *AIChE Journal*, 59(9), 3276–3295. https://doi.org/10.1002/aic.14088
-
-.. [#gdp-mbm] Trespalacios, F., & Grossmann, I. E. (2015). Improved Big-M reformulation for generalized disjunctive programs. *Computers and Chemical Engineering*, 76, 98–103. https://doi.org/10.1016/j.compchemeng.2015.02.013
-
-.. [#gdp-bm] Nemhauser, G. L., & Wolsey, L. A. (1988). *Integer and combinatorial optimization*. New York: Wiley.
-
-.. [#gdp-cuttingplanes] Sawaya, N. W., & Grossmann, I. E. (2003). A cutting plane method for solving linear generalized disjunctive programming problems. *Computer Aided Chemical Engineering*, 15(C), 1032–1037. https://doi.org/10.1016/S1570-7946(03)80444-3

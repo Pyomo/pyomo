@@ -102,6 +102,7 @@ TRF Solver Interface
     The keyword arguments can be updated at solver instantiation or later when the ``solve`` method is called.
 
 .. autoclass:: pyomo.contrib.trustregion.TRF.TrustRegionSolver
+    :noindex:
     :members: solve
 
 TRF Usage Example

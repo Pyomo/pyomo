@@ -5,7 +5,8 @@ Dynamic Optimization with pyomo.DAE
    :scale: 35%
    :align: right
 
-The pyomo.DAE modeling extension [PyomoDAE]_ allows users to incorporate systems of
+The pyomo.DAE modeling extension [PyomoDAE-paper]_ allows users to
+incorporate systems of
 differential algebraic equations (DAE)s in a Pyomo model. The modeling
 components in this extension are able to represent ordinary or partial
 differential equations. The differential equations do not have to be
@@ -58,7 +59,8 @@ bounds of the continuous domain. A user may also specify additional points in
 the domain to be used as finite element points in the discretization.
 
 .. autoclass:: pyomo.dae.ContinuousSet
-    :members:
+   :noindex:
+   :members:
 
 The following code snippet shows examples of declaring a
 :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` component on a
@@ -135,7 +137,8 @@ DerivativeVar
 *************
 
 .. autoclass:: pyomo.dae.DerivativeVar
-    :members:
+   :noindex:
+   :members:
 
 The code snippet below shows examples of declaring
 :py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` components on a
@@ -287,6 +290,7 @@ Declaring Integrals
    equations.
 
 .. autoclass:: pyomo.dae.Integral
+   :noindex:
    :members:
 
 Declaring an :py:class:`Integral<pyomo.dae.Integral>` component is similar to
@@ -556,7 +560,8 @@ transformation to reduce the number of free collocation points within a finite
 element for a particular variable.
 
 .. autoclass:: pyomo.dae.plugins.colloc.Collocation_Discretization_Transformation
-    :members: reduce_collocation_points
+   :noindex:
+   :members: reduce_collocation_points
 
 An example of using this function is shown below:
 
@@ -722,7 +727,8 @@ packages.
     order to use this class.
 
 .. autoclass:: pyomo.dae.Simulator
-    :members:
+   :noindex:
+   :members:
 
 .. note::
     Any keyword options supported by the integrator may be specified as

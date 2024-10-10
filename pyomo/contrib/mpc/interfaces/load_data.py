@@ -25,7 +25,7 @@ def load_data_from_scalar(data, model, time):
 
     Arguments
     ---------
-    data: ScalarData
+    data: ~scalar_data.ScalarData
     model: BlockData
     time: Iterable
 

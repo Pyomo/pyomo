@@ -4,6 +4,7 @@ Latex Printing
 Pyomo models can be printed to a LaTeX compatible format using the ``pyomo.contrib.latex_printer.latex_printer`` function:
 
 .. autofunction::  pyomo.contrib.latex_printer.latex_printer.latex_printer
+   :noindex:
 
 .. note::
 

@@ -94,14 +94,20 @@ Interface Documentation
 .. currentmodule:: pyomo.contrib.alternative_solutions
 
 .. autofunction:: enumerate_binary_solutions
+   :noindex:
 
 .. autofunction:: enumerate_linear_solutions
+   :noindex:
 
 .. autofunction:: pyomo.contrib.alternative_solutions.lp_enum_solnpool.enumerate_linear_solutions_soln_pool
+   :noindex:
 
 .. autofunction:: gurobi_generate_solutions
+   :noindex:
 
 .. autofunction:: obbt_analysis_bounds_and_solutions
+   :noindex:
 
 .. autoclass:: Solution
+   :noindex:
 

@@ -101,7 +101,7 @@ Based on the above notation, the form of the robust counterpart addressed by PyR
     \end{array}
 
 PyROS solves problems of this form using the
-Generalized Robust Cutting-Set algorithm developed in [Isenberg_et_al]_.
+Generalized Robust Cutting-Set algorithm developed in [IAE+21]_.
 
 When using PyROS, please consider citing the above paper.
 
@@ -128,8 +128,7 @@ These are more elaborately presented in the
 PyROS Solver Interface
 -----------------------------
 
-.. autoclass:: pyomo.contrib.pyros.PyROS
-    :members: solve
+The PyROS solver is invoked through the :py:meth:`PyROS.solve` method.
 
 .. note::
     Upon successful convergence of PyROS, the solution returned is
@@ -211,45 +210,18 @@ the various abstract and pre-implemented
 PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
-    :show-inheritance:
-    :special-members: bounds, type, parameter_bounds, dim, point_in_set
+.. autosummary::
 
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-    :show-inheritance:
-    :special-members: origin, positive_deviation, gamma, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :show-inheritance:
-    :special-members: coefficients_mat, rhs_vec, origin, budget_membership_mat, budget_rhs_vec, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-    :show-inheritance:
-    :special-members: origin, number_of_factors, psi_mat, beta, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-    :show-inheritance:
-    :special-members: coefficients_mat, rhs_vec, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-    :show-inheritance:
-    :special-members: center, half_lengths, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-    :show-inheritance:
-    :special-members: center, shape_matrix, scale, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-    :show-inheritance:
-    :special-members: parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
-    :show-inheritance:
-    :special-members: scenarios, type, parameter_bounds, dim, point_in_set
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
-    :show-inheritance:
-    :special-members: all_sets, type, parameter_bounds, dim, point_in_set
+   pyomo.contrib.pyros.uncertainty_sets.BoxSet
+   pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
+   pyomo.contrib.pyros.uncertainty_sets.BudgetSet
+   pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
+   pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
+   pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
+   pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
+   pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
+   pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
+   pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
 
 
 PyROS Usage Example

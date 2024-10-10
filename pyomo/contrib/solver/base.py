@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import abc
-import enum
 from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 import os
 
@@ -20,6 +19,7 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.base.block import BlockData
 from pyomo.core.base.objective import Objective, ObjectiveData
 from pyomo.common.config import document_kwargs_from_configdict, ConfigValue
+from pyomo.common.enums import IntEnum
 from pyomo.common.errors import ApplicationError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NOTSET
@@ -79,7 +79,7 @@ class SolverBase(abc.ABC):
     def __exit__(self, t, v, traceback):
         """Exit statement - enables `with` statements."""
 
-    class Availability(enum.IntEnum):
+    class Availability(IntEnum):
         """
         Class to capture different statuses in which a solver can exist in
         order to record its availability for use.

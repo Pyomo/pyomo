@@ -31,4 +31,5 @@ Multistart wrapper implementation and optional arguments
 --------------------------------------------------------
 
 .. autoclass:: pyomo.contrib.multistart.multi.MultiStart
+    :noindex:
     :members:

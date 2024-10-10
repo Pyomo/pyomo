@@ -301,6 +301,7 @@ MindtPy Implementation and Optional Arguments
    subject to change.
 
 .. autoclass:: pyomo.contrib.mindtpy.MindtPy.MindtPySolver
+    :noindex:
     :members:
 
 Get Help

@@ -6,7 +6,7 @@ Modeling Objects.  A more complete description is contained in the
 [PyomoBookIII]_ book. Pyomo supports the formulation and analysis of
 mathematical models for complex optimization applications.  This
 capability is commonly associated with commercially available algebraic
-modeling languages (AMLs) such as [AMPL]_, [AIMMS]_, and [GAMS]_.
+modeling languages (AMLs) such as [FGK02]_, [AIMMS]_, and [GAMS]_.
 Pyomo's modeling objects are embedded within Python, a full-featured,
 high-level programming language that contains a rich set of supporting
 libraries.
@@ -72,7 +72,7 @@ solvers to analyze a model introduces additional complexities.
 
 
 Pyomo is an AML that extends Python to include objects for mathematical
-modeling. [PyomoBookI]_, [PyomoBookII]_, [PyomoBookIII]_, and [PyomoJournal]_ 
+modeling. [PyomoBookI]_, [PyomoBookII]_, [PyomoBookIII]_, and [Pyomo-paper]_
 compare Pyomo with other AMLs.  Although many good AMLs have been developed for
 optimization models, the following are motivating factors for the
 development of Pyomo:

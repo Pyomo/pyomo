@@ -24,7 +24,7 @@ detection. Thus, this package provides the user with a lot of control over the c
 function we use for this community detection is shown below:
 
 .. autofunction:: pyomo.contrib.community_detection.detection.detect_communities
-  :noindex:
+   :noindex:
 
 As stated above, the characteristics of the NetworkX graph of the Pyomo model are very important to the
 community detection. The main graph features the user can specify are the type of community map,
@@ -383,7 +383,9 @@ We can see an example for the three separate graphs created by these three funct
 Functions in this Package
 -------------------------
 .. automodule:: pyomo.contrib.community_detection.detection
+    :noindex:
     :members:
 
 .. automodule:: pyomo.contrib.community_detection.community_graph
+    :noindex:
     :members:

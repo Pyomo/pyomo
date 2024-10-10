@@ -41,9 +41,11 @@ class NOTSET(object, metaclass=FlagType):
     Class to be used to indicate that an optional argument
     was not specified, if `None` may be ambiguous. Usage:
 
-      >>> def foo(value=NOTSET):
-      >>>     if value is NOTSET:
-      >>>         pass  # no argument was provided to `value`
+    Examples
+    --------
+    >>> def foo(value=NOTSET):
+    ...     if value is NOTSET:
+    ...         pass  # no argument was provided to `value`
 
     """
 
@@ -53,7 +55,7 @@ class NOTSET(object, metaclass=FlagType):
 def in_testing_environment(state=NOTSET):
     """Return True if we are currently running in a "testing" environment
 
-    This currently includes if nose, nose2, pytest, or Sphinx are
+    This currently includes if ``nose``, ``nose2``, or ``pytest`` are
     running (imported).
 
     Parameters
@@ -78,16 +80,29 @@ def in_testing_environment(state=NOTSET):
 in_testing_environment.state = None
 
 
-def building_documentation(ignore_testing_flag=False):
-    """Return True if we are building the Sphinx documentation
+def building_documentation(state=NOTSET):
+    """True if we are building the Sphinx documentation
+
+    We detect if we are building the documentation by looking if the
+    ``sphinx`` or ``Sphinx`` modules are imported.
+
+    Parameters
+    ----------
+    state : bool or None
+        If provided, sets the current state of the building environment
+        flag (Setting to None reverts to the normal interrogation of
+        ``sys.modules``)
 
     Returns
     -------
     bool
 
     """
-    import sys
+    if state is not NOTSET:
+        building_documentation.state = state
+    if building_documentation.state is not None:
+        return bool(building_documentation.state)
+    return 'sphinx' in sys.modules or 'Sphinx' in sys.modules
 
-    return (ignore_testing_flag or not in_testing_environment()) and (
-        'sphinx' in sys.modules or 'Sphinx' in sys.modules
-    )
+
+building_documentation.state = None

@@ -87,10 +87,10 @@ def get_penalty_at_time(
         List of time-indexed variables that will be penalized
     t: Float
         Time point at which to apply the penalty
-    target_data: ScalarData
+    target_data: ~scalar_data.ScalarData
         ScalarData object containing the target for (at least) the variables
         to be penalized
-    weight_data: ScalarData (optional)
+    weight_data: ~scalar_data.ScalarData (optional)
         ScalarData object containing the penalty weights for (at least) the
         variables to be penalized
     time_set: Set (optional)
@@ -135,10 +135,10 @@ def get_terminal_penalty(
     time_set: Set
         Time set that indexes the provided variables. Penalties are applied
         at the last point in this set.
-    target_data: ScalarData
+    target_data: ~scalar_data.ScalarData
         ScalarData object containing the target for (at least) the variables
         to be penalized
-    weight_data: ScalarData (optional)
+    weight_data: ~scalar_data.ScalarData (optional)
         ScalarData object containing the penalty weights for (at least) the
         variables to be penalized
     variable_set: Set (optional)

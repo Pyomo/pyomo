@@ -5,8 +5,8 @@ Parameter Estimation
 
 Parameter Estimation using parmest requires a Pyomo model, experimental
 data which defines multiple scenarios, and parameters
-(thetas) to estimate.  parmest uses Pyomo [PyomoBookII]_ and (optionally) 
-mpi-sppy [mpisppy]_ to solve a
+(thetas) to estimate.  parmest uses Pyomo [PyomoBookIII]_ and (optionally)
+mpi-sppy [KMM+23]_ to solve a
 two-stage stochastic programming problem, where the experimental data is
 used to create a scenario tree.  The objective function needs to be
 written with the Pyomo Expression for first stage cost

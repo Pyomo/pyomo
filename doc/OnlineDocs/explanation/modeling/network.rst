@@ -29,10 +29,12 @@ Port
 ****
 
 .. autoclass:: pyomo.network.Port
+    :noindex:
     :members:
     :exclude-members: construct, display
 
 .. autoclass:: pyomo.network.port._PortData
+    :noindex:
     :members:
     :special-members: __getattr__
     :exclude-members: set_value
@@ -62,10 +64,12 @@ Arc
 ***
 
 .. autoclass:: pyomo.network.Arc
+    :noindex:
     :members:
     :exclude-members: construct
 
 .. autoclass:: pyomo.network.arc._ArcData
+    :noindex:
     :members:
     :special-members: __getattr__
 
@@ -326,6 +330,7 @@ class:
     >>> seq.run(m, initialize)
 
 .. autoclass:: pyomo.network.SequentialDecomposition
+    :noindex:
     :members: set_guesses_for, set_tear_set, tear_set_arcs, indexes_to_arcs,
         run, create_graph, select_tear_mip, select_tear_mip_model,
         select_tear_heuristic, calculation_order, tree_order

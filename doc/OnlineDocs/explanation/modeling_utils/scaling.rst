@@ -3,8 +3,10 @@ Model Scaling Transformation
 
 Good scaling of models can greatly improve the numerical properties of a problem and thus increase reliability and convergence. The ``core.scale_model`` transformation allows users to separate scaling of a model from the declaration of the model variables and constraints which allows for models to be written in more natural forms and to be scaled and rescaled as required without having to rewrite the model code.
 
-.. autoclass:: pyomo.core.plugins.transform.scaling.ScaleModel
-    :members:
+.. autosummary::
+
+   pyomo.core.plugins.transform.scaling.ScaleModel
+
 
 Setting Scaling Factors
 -----------------------

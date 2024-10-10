@@ -24,9 +24,11 @@ class StandardForm(IsomorphicTransformation):
     the coefficient matrix (A), the cost vector (c), and the
     constraint vector (b), where the 'standard form' problem is
 
-    min/max c'x
-    s.t.    Ax = b
-            x >= 0
+    .. math::
+
+        \min/\max\ & c'x \\
+        s.t.\      &  Ax = b \\
+                   & x >= 0
 
     Options
         slack_names         Default auxiliary_slack
@@ -35,6 +37,7 @@ class StandardForm(IsomorphicTransformation):
         up_names            Default _upper_bound
         pos_suffix          Default _plus
         neg_suffix          Default _neg
+
     """
 
     def __init__(self, **kwds):

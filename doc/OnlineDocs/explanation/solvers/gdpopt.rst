@@ -197,17 +197,11 @@ GDPopt implementation and optional arguments
    GDPopt optional arguments should be considered beta code and are
    subject to change.
 
-.. autoclass:: pyomo.contrib.gdpopt.GDPopt.GDPoptSolver
-    :members:
+.. autosummary::
 
-.. autoclass:: pyomo.contrib.gdpopt.loa.GDP_LOA_Solver
-    :members:
+   ~pyomo.contrib.gdpopt.GDPopt.GDPoptSolver
+   ~pyomo.contrib.gdpopt.loa.GDP_LOA_Solver
+   ~pyomo.contrib.gdpopt.gloa.GDP_GLOA_Solver
+   ~pyomo.contrib.gdpopt.ric.GDP_RIC_Solver
+   ~pyomo.contrib.gdpopt.branch_and_bound.GDP_LBB_Solver
 
-.. autoclass:: pyomo.contrib.gdpopt.gloa.GDP_GLOA_Solver
-    :members:
-
-.. autoclass:: pyomo.contrib.gdpopt.ric.GDP_RIC_Solver
-    :members:
-
-.. autoclass:: pyomo.contrib.gdpopt.branch_and_bound.GDP_LBB_Solver
-    :members:

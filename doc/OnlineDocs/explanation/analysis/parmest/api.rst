@@ -6,6 +6,7 @@ API
 parmest
 ---------
 .. automodule:: pyomo.contrib.parmest.parmest
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -13,6 +14,7 @@ parmest
 scenariocreator
 ------------------
 .. automodule:: pyomo.contrib.parmest.scenariocreator
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:
@@ -20,6 +22,7 @@ scenariocreator
 graphics
 ---------
 .. automodule:: pyomo.contrib.parmest.graphics
+    :noindex:
     :members:
     :undoc-members:
     :show-inheritance:

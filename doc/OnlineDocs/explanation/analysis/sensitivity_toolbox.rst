@@ -183,3 +183,4 @@ Sensitivity Toolbox Interface
 -----------------------------
 
 .. autofunction:: pyomo.contrib.sensitivity_toolbox.sens.sensitivity_calculation
+   :noindex:

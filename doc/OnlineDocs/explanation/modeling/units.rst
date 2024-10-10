@@ -2,12 +2,11 @@ Units Handling in Pyomo
 =======================
 
 .. automodule:: pyomo.core.base.units_container
+   :noindex:
 
-.. autoclass:: PyomoUnitsContainer
-   :show-inheritance:
-   :members:
+.. autosummary::
 
-.. autoclass:: UnitsError
-
-.. autoclass:: InconsistentUnitsError
+   PyomoUnitsContainer
+   UnitsError
+   InconsistentUnitsError
 

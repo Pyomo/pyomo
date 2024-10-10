@@ -227,6 +227,13 @@ def UnavailableClass(unavailable_module):
 
     As does attempting to access class attributes on the derived class:
 
+    .. testcode::
+       :hide:
+
+       # We suppress this exception when building the documentation
+       # from pyomo.common.flags import building_documentation
+       building_documentation(False)
+
     .. doctest::
 
        >>> MyPlugin.create_instance()
@@ -237,11 +244,16 @@ def UnavailableClass(unavailable_module):
        dependency was not found (import raised ModuleNotFoundError: No module
        named 'bogus_unavailable_class')
 
+    .. testcode::
+       :hide:
+
+       building_documentation(None)
+
     """
 
     class UnavailableMeta(type):
         def __getattr__(cls, name):
-            if building_documentation(ignore_testing_flag=True):
+            if building_documentation():
                 # If we are building documentation, avoid the
                 # DeferredImportError (we will still raise one if
                 # someone attempts to *create* an instance of this
@@ -1061,6 +1073,11 @@ with declare_modules_as_importable(globals()):
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')
+    pint, pint_available = attempt_import(
+        'pint',
+        # TypeError for pint<=0.24.3 and python>=3.13
+        catch_exceptions=(ImportError, TypeError),
+    )
     plotly, plotly_available = attempt_import('plotly')
     pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
     pyutilib, pyutilib_available = attempt_import(

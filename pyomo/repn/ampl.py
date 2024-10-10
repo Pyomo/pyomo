@@ -223,11 +223,14 @@ class AMPLRepn(object):
 
         The general nonlinear portion of the compiled expression as a
         tuple of two parts:
-          - the nl template string: this is the NL string with
-            placeholders (`%s`) for all the variables that appear in
-            the expression.
-          - an iterable if the `VarData` IDs that correspond to the
-            placeholders in the nl template string
+
+           - the nl template string: this is the NL string with
+             placeholders (``%s``) for all the variables that appear in
+             the expression.
+
+           - an iterable if the :class:`VarData` IDs that correspond to the
+             placeholders in the nl template string
+
         This is `None` if there is no general nonlinear part of the
         expression.  Note that this can be a list of tuple fragments
         within AMPLRepnVisitor, but that list is concatenated to a

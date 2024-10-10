@@ -23,7 +23,7 @@ Suffix Notation and the Pyomo NL File Interface
 -----------------------------------------------
 
 The Suffix component used in Pyomo has been adapted from the suffix
-notation used in the modeling language AMPL [AMPL]_. Therefore, it
+notation used in the modeling language AMPL [FGK02]_. Therefore, it
 follows naturally that AMPL style suffix functionality is fully
 available using Pyomo's NL file interface. For information on AMPL style
 suffixes the reader is referred to the AMPL website:

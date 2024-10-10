@@ -481,9 +481,7 @@ class TestConfigDomains(unittest.TestCase):
                 None, IsInstance(int, TestClass, document_full_base_names=True)
             ),
         )
-        self.assertRegex(
-            c.get("val3").domain_name(), r"IsInstance\(int, .*\.TestClass\)"
-        )
+        self.assertRegex(c.get("val3").domain_name(), r"IsInstance\[int, TestClass\]")
         c.val3 = 2
         self.assertEqual(c.val3, 2)
         exc_str = (
@@ -499,7 +497,7 @@ class TestConfigDomains(unittest.TestCase):
                 None, IsInstance(int, TestClass, document_full_base_names=False)
             ),
         )
-        self.assertEqual(c.get("val4").domain_name(), "IsInstance(int, TestClass)")
+        self.assertEqual(c.get("val4").domain_name(), "IsInstance[int, TestClass]")
         c.val4 = 2
         self.assertEqual(c.val4, 2)
         exc_str = (
@@ -3120,16 +3118,19 @@ c: 1.0
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_1: float, default=1
+
         [DEVELOPER option]
 
         The first solver configuration option
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly
@@ -3138,6 +3139,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing
@@ -3149,6 +3151,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
@@ -3159,11 +3162,13 @@ option_2: int, default=5
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly
@@ -3172,6 +3177,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing
@@ -3183,6 +3189,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
@@ -3192,11 +3199,13 @@ option_2: int, default=5
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly paragraph with little actual information.
@@ -3204,6 +3213,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing wrappable text in a long, silly paragraph with little actual information.
@@ -3213,6 +3223,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line containing wrappable text in a long, silly paragraph with little actual information."""
         with LoggingIntercept() as LOG:
             self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)

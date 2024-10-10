@@ -4,16 +4,14 @@ Reference Guides
 .. toctree::
    :maxdepth: 2
 
-   library_reference/index
-   ../errors
+   topical/index
+   Library Reference <../api/pyomo>
+
+.. toctree::
+   :maxdepth: 1
+
    future
+   ../errors
    ../related_packages
    bibliography
 
-..
-   autosummary::
-   :toctree: API
-   :template: pyomo-autosummary-module.rst
-   :recursive:
-
-   pyomo
