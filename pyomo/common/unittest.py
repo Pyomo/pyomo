@@ -383,21 +383,27 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
 
     Examples
     --------
-    >>> import pyomo.common.unittest as unittest
-    >>> @unittest.timeout(1)
-    ... def test_function():
-    ...     return 42
-    >>> test_function()
-    42
+    .. doctest::
+       :skipif: multiprocessing.get_start_method() != 'fork'
 
-    >>> @unittest.timeout(0.01)
-    ... def test_function():
-    ...     while 1:
-    ...         pass
-    >>> test_function()
-    Traceback (most recent call last):
-        ...
-    TimeoutError: test timed out after 0.01 seconds
+       >>> import pyomo.common.unittest as unittest
+       >>> @unittest.timeout(1)
+       ... def test_function():
+       ...     return 42
+       >>> test_function()
+       42
+
+    .. doctest::
+       :skipif: multiprocessing.get_start_method() != 'fork'
+
+       >>> @unittest.timeout(0.01)
+       ... def test_function():
+       ...     while 1:
+       ...         pass
+       >>> test_function()
+       Traceback (most recent call last):
+           ...
+       TimeoutError: test timed out after 0.01 seconds
 
     """
     import functools

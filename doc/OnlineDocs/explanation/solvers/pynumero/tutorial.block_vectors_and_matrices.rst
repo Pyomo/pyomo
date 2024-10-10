@@ -65,7 +65,7 @@ Once the dimensions of a block have been set, they cannot be changed:
 Properties:
 
 .. doctest::
-   :skipif: not numpy_available or not scipy_available
+   :skipif: not scipy_available or int(np.__version__[0]) >= 2
 
    >>> v.shape
    (5,)
@@ -85,7 +85,7 @@ Properties:
 Much of the `BlockVector` API matches that of NumPy arrays:
 
 .. doctest::
-   :skipif: not numpy_available or not scipy_available
+   :skipif: not scipy_available or int(np.__version__[0]) >= 2
 
    >>> v.sum()
    0.62846552
