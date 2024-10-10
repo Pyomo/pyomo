@@ -121,7 +121,6 @@ def serializing():
     # Start by skipping this function
     frame = inspect.currentframe().f_back
     while frame is not None:
-        print(frame.f_code.co_name, frame.f_code.co_filename)
         if frame.f_code.co_name == 'dump':
             return True
         frame = frame.f_back
