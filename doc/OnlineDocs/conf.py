@@ -129,7 +129,21 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', '*.tests', 'Thumbs.db', '.DS_Store']
+# Notes:
+#  - _build : this is the Sphinx build (output) dir
+#
+#  - api/*.tests.* : this matches autosummary RST files generated for
+#    test modules.  Note that the _templates/recursive-modules.rst
+#    should prevent these file from being generated, so this is not
+#    strictly necessary, but including it makes Sphinx throw warnings if
+#    the filter in the template ever "breaks"
+#
+#  - **/tests/** : this matches source files in any tests directory
+#    [JDS: I *believe* this is necessary, but am not 100% certain]
+#
+#  - 'Thumbs.db', '.DS_Store' : these have been included from the
+#    beginning.  Unclear if they are still necessary
+exclude_patterns = ['_build', 'api/*.tests.*', '**/tests/**', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -267,20 +281,22 @@ system_info = (
     platform.python_implementation()
 )
 
+# (register plugins, make environ available to tests)
+import pyomo.environ as pyo
+
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
     pympler_available, dill_available,
+    numpy as np,
 )
 pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
-import pyomo.environ as pyo  # (register plugins, make environ available to tests)
-import pyomo.opt as _opt
-
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to suppress warnings when 
 # solvers are not available
+import pyomo.opt as _opt
 ipopt_available = bool(_opt.check_available_solvers('ipopt'))
 sipopt_available = bool(_opt.check_available_solvers('ipopt_sens'))
 k_aug_available = bool(_opt.check_available_solvers('k_aug'))
@@ -290,6 +306,11 @@ glpk_available = bool(_opt.check_available_solvers('glpk'))
 gurobipy_available = bool(_opt.check_available_solvers('gurobi_direct'))
 
 baron = _opt.SolverFactory('baron')
+
+if numpy_available:
+    # Recent changes on GHA seem to have dropped the default precision
+    # from 8 to 4; restore the default.
+    np.set_printoptions(precision=8)
 
 if numpy_available and scipy_available:
     import pyomo.contrib.pynumero.asl as _asl

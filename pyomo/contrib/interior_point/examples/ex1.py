@@ -41,4 +41,4 @@ def solve_qcqp_example():
 
 
 if __name__ == '__main__':
-    return solve_qcqp_example()
+    solve_qcqp_example()

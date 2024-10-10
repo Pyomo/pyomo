@@ -230,7 +230,7 @@ def sensitivity_calculation(
 
 
 def get_dsdp(model, theta_names, theta, tee=False):
-    """This function calculates gradient vector of the variables with
+    r"""This function calculates gradient vector of the variables with
     respect to the parameters (theta_names).
 
     For example, given:
@@ -327,7 +327,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
 
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
-    """This function calculates gradient vector of the objective function
+    r"""This function calculates gradient vector of the objective function
     and constraints with respect to the variables and parameters.
 
     For example, given:
