@@ -133,7 +133,7 @@ language = "en"
 #  - _build : this is the Sphinx build (output) dir
 #
 #  - api/*.tests.* : this matches autosummary RST files generated for
-#    test modules.  Note that the _tempaltes/recursive-modules.rst
+#    test modules.  Note that the _templates/recursive-modules.rst
 #    should prevent these file from being generated, so this is not
 #    strictly necessary, but including it makes Sphinx throw warnings if
 #    the filter in the template ever "breaks"
