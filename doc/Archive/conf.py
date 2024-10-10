@@ -270,8 +270,9 @@ system_info = (
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
-    pympler_available, dill_available, pint_available,
+    pympler_available, dill_available,
 )
+pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
 import pyomo.environ as _pe # (trigger all plugin registrations)
