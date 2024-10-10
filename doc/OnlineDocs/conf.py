@@ -129,7 +129,21 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', '**/tests/**', '**.tests.**', 'Thumbs.db', '.DS_Store']
+# Notes:
+#  - _build : this is the Sphinx build (output) dir
+#
+#  - api/*.tests.* : this matches autosummary RST files generated for
+#    test modules.  Note that the _tempaltes/recursive-modules.rst
+#    should prevent these file from being generated, so this is not
+#    strictly necessary, but including it makes Sphinx throw warnings if
+#    the filter in the template ever "breaks"
+#
+#  - **/tests/** : this matches source files in any tests directory
+#    [JDS: I *believe* this is necessary, but am not 100% certain]
+#
+#  - 'Thumbs.db', '.DS_Store' : these have been included from the
+#    beginning.  Unclear if they are still necessary
+exclude_patterns = ['_build', 'api/*.tests.*', '**/tests/**', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
