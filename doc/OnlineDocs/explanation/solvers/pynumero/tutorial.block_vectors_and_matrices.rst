@@ -82,6 +82,25 @@ Properties:
    >>> m.nnz
    12
 
+   .. doctest::
+   :hide:
+   :skipif: not scipy_available or int(np.__version__[0]) < 2
+
+   >>> v.shape
+   (np.int64(5),)
+   >>> v.size
+   np.int64(5)
+   >>> v.nblocks
+   3
+   >>> v.bshape
+   (3,)
+   >>> m.shape
+   (np.int64(5), np.int64(5))
+   >>> m.bshape
+   (3, 3)
+   >>> m.nnz
+   12
+
 Much of the `BlockVector` API matches that of NumPy arrays:
 
 .. doctest::
@@ -99,6 +118,23 @@ Much of the `BlockVector` API matches that of NumPy arrays:
    array([-1.3405115 , -2.4       ,  0.2       ,  2.29744254,  2.5       ])
    >>> v.dot(v)
    4.781303326558476
+
+   .. doctest::
+   :hide:
+   :skipif: not scipy_available or int(np.__version__[0]) < 2
+
+   >>> v.sum()
+   np.float64(0.62846552)
+   >>> v.max()
+   np.float64(1.25)
+   >>> np.abs(v).flatten()
+   array([0.67025575, 1.2       , 0.1       , 1.14872127, 1.25      ])
+   >>> (2*v).flatten()
+   array([-1.3405115 , -2.4       ,  0.2       ,  2.29744254,  2.5       ])
+   >>> (v + v).flatten()
+   array([-1.3405115 , -2.4       ,  0.2       ,  2.29744254,  2.5       ])
+   >>> v.dot(v)
+   np.float64(4.781303326558476)
 
 Similarly, `BlockMatrix` behaves very similarly to SciPy sparse matrices:
 
