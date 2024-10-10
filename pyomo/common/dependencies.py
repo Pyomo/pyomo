@@ -1073,6 +1073,11 @@ with declare_modules_as_importable(globals()):
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')
+    pint, pint_available = attempt_import(
+        'pint',
+        # TypeError for pint<=0.24.3 and python>=3.13
+        catch_exceptions=(ImportError, TypeError),
+    )
     plotly, plotly_available = attempt_import('plotly')
     pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
     pyutilib, pyutilib_available = attempt_import(
