@@ -82,7 +82,7 @@ Properties:
    >>> m.nnz
    12
 
-   .. doctest::
+.. doctest::
    :hide:
    :skipif: not scipy_available or int(np.__version__[0]) < 2
 
@@ -119,7 +119,7 @@ Much of the `BlockVector` API matches that of NumPy arrays:
    >>> v.dot(v)
    4.781303326558476
 
-   .. doctest::
+.. doctest::
    :hide:
    :skipif: not scipy_available or int(np.__version__[0]) < 2
 
