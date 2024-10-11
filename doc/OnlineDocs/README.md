@@ -60,7 +60,7 @@ Documentation history
 ---------------------
 
 The Pyomo online documentation went through a significant overhaul in
-2024.  If you need to go back and look at the old documetation, the
+2024.  If you need to go back and look at the old documentation, the
 following git hashes might be relevant:
 
    - [23fb726ce](https://github.com/Pyomo/pyomo/commit/23fb726ce0e092412081bd70e8a0370af46f6d0f):
