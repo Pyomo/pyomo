@@ -19,10 +19,13 @@ from collections.abc import Mapping
 from types import ModuleType
 from typing import List
 
-import pyomo
-from .deprecation import deprecated, deprecation_warning
-from .errors import DeferredImportError
-from .flags import in_testing_environment, building_documentation
+from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.errors import DeferredImportError
+from pyomo.common.flags import (
+    in_testing_environment,
+    building_documentation,
+    serializing,
+)
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
 
@@ -71,10 +74,9 @@ class ModuleUnavailable(object):
         self._moduleunavailable_info_ = (message, version_error, import_error, package)
 
     def __getattr__(self, attr):
-        if attr in ModuleUnavailable._getattr_raises_attributeerror:
-            raise AttributeError(
-                "'%s' object has no attribute '%s'" % (type(self).__name__, attr)
-            )
+        if serializing() or attr in ModuleUnavailable._getattr_raises_attributeerror:
+            msg = "'%s' object has no attribute '%s'" % (type(self).__name__, attr)
+            raise AttributeError(msg)
         raise DeferredImportError(self._moduleunavailable_message())
 
     def __getstate__(self):

@@ -281,6 +281,10 @@ system_info = (
     platform.python_implementation()
 )
 
+# We need multiprocessing because some doctests must be skipped if the
+# start method is not "fork"
+import multiprocessing
+
 # (register plugins, make environ available to tests)
 import pyomo.environ as pyo
 
