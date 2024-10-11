@@ -157,6 +157,57 @@ precision issues.
 
    >>> solns = aos.enumerate_binary_solutions(m, num_solutions=10, solver="glpk", abs_opt_gap = 0.5)
    >>> assert(len(solns) == 4)
+   >>> for soln in sorted(solns, key=lambda s: str(s.get_variable_name_values())):
+   ...     print(soln)
+   {
+       "fixed_variables": [],
+       "objective": "o",
+       "objective_value": 12.0,
+       "solution": {
+           "x[0]": 0,
+           "x[1]": 1,
+           "x[2]": 1,
+           "x[3]": 0,
+           "x[4]": 1
+       }
+   }
+   {
+       "fixed_variables": [],
+       "objective": "o",
+       "objective_value": 12.0,
+       "solution": {
+           "x[0]": 0,
+           "x[1]": 1,
+           "x[2]": 1,
+           "x[3]": 1,
+           "x[4]": 0
+       }
+   }
+   {
+       "fixed_variables": [],
+       "objective": "o",
+       "objective_value": 12.0,
+       "solution": {
+           "x[0]": 1,
+           "x[1]": 0,
+           "x[2]": 0,
+           "x[3]": 1,
+           "x[4]": 1
+       }
+   }
+   {
+       "fixed_variables": [],
+       "objective": "o",
+       "objective_value": 12.0,
+       "solution": {
+           "x[0]": 1,
+           "x[1]": 0,
+           "x[2]": 1,
+           "x[3]": 0,
+           "x[4]": 0
+       }
+   }
+
 
 Interface Documentation
 -----------------------
