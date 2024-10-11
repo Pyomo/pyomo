@@ -137,15 +137,16 @@ class SolutionStatus(enum.Enum):
 
 
 class Results(ConfigDict):
-    """
+    """Base class for all solver results
+
     Attributes
     ----------
-    solution_loader: SolutionLoaderBase
+    solution_loader: .SolutionLoaderBase
         Object for loading the solution back into the model.
-    termination_condition: :class:`TerminationCondition<pyomo.contrib.solver.results.TerminationCondition>`
+    termination_condition: TerminationCondition
         The reason the solver exited. This is a member of the
         TerminationCondition enum.
-    solution_status: :class:`SolutionStatus<pyomo.contrib.solver.results.SolutionStatus>`
+    solution_status: SolutionStatus
         The result of the solve call. This is a member of the SolutionStatus
         enum.
     incumbent_objective: float
@@ -165,9 +166,11 @@ class Results(ConfigDict):
         The total number of iterations.
     timing_info: ConfigDict
         A ConfigDict containing three pieces of information:
-            - ``start_timestamp``: UTC timestamp of when run was initiated
-            - ``wall_time``: elapsed wall clock time for entire process
-            - ``timer``: a HierarchicalTimer object containing timing data about the solve
+
+          - ``start_timestamp``: UTC timestamp of when run was initiated
+          - ``wall_time``: elapsed wall clock time for entire process
+          - ``timer``: a HierarchicalTimer object containing timing data
+            about the solve
 
         Specific solvers may add other relevant timing information, as appropriate.
     extra_info: ConfigDict
@@ -176,6 +179,7 @@ class Results(ConfigDict):
         A copy of the SolverConfig ConfigDict, for later inspection/reproducibility.
     solver_log: str
         (ADVANCED OPTION) Any solver log messages.
+
     """
 
     def __init__(

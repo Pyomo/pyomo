@@ -41,9 +41,9 @@ def readgjh(fname=None):
     H : list
         Current objective Hessian.
     variableList : list
-        Variables as defined by *.col file.
+        Variables as defined by `*.col` file.
     constraintList : list
-        Constraints as defined by *.row file.
+        Constraints as defined by `*.row` file.
 
     """
     if fname is None:
