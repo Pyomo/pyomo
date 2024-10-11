@@ -58,7 +58,7 @@ if not building_documentation():
             os.path.join(mypath, "residual_table.ui")
         )
     except:
-        passss
+        pass
 
 
 class ResidualTable(_ResidualTable, _ResidualTableUI):
