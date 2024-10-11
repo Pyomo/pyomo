@@ -102,7 +102,7 @@ def _wrap_class(cls, msg, logger, version, remove_in):
     if msg is not None or _doc is None:
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
     if cls.__doc__:
-        _doc = cls.__doc__ + '\n\n' + _doc
+        _doc = inspect.cleandoc(cls.__doc__) + '\n\n' + _doc
     cls.__doc__ = 'DEPRECATED.\n\n' + _doc
 
     if _flagIdx < 0:
@@ -132,7 +132,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
-    _doc = func.__doc__ or ''
+    _doc = inspect.cleandoc(func.__doc__ or '')
     if _doc:
         wrapper.__doc__ += _doc + '\n\n'
     wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)

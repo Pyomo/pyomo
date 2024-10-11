@@ -5,11 +5,9 @@ Modeling Utilities
    :maxdepth: 2
 
    flattener/index
-   fme
    latex_printer
    preprocessing
    scaling
-   viewer
 
 
 
@@ -20,3 +18,7 @@ Modeling Utilities
     `FME`
     `Model Viewer`
     `Model Flattening`
+
+    Still missing:
+      - fme
+      - viewer

@@ -246,6 +246,7 @@ can control the NL writer in the new ``ipopt`` interface through the
 solver's ``writer_config`` configuration option:
 
 .. autoclass:: pyomo.contrib.solver.ipopt.Ipopt
+   :noindex:
    :members: solve
 
 .. testcode::
@@ -286,11 +287,13 @@ All new interfaces should be built upon one of two classes (currently):
 All solvers should have the following:
 
 .. autoclass:: pyomo.contrib.solver.base.SolverBase
+   :noindex:
    :members:
 
 Persistent solvers include additional members as well as other configuration options:
 
 .. autoclass:: pyomo.contrib.solver.base.PersistentSolverBase
+   :noindex:
    :show-inheritance:
    :members:
 
@@ -304,6 +307,7 @@ object.  This object is a :py:class:`pyomo.common.config.ConfigDict`,
 which can be manipulated similar to a standard ``dict`` in Python.
 
 .. autoclass:: pyomo.contrib.solver.results.Results
+   :noindex:
    :show-inheritance:
    :members:
    :undoc-members:
@@ -320,6 +324,7 @@ to inspect the :class:`Results<pyomo.contrib.solver.results.Results>`
 object or any returned solver messages or logs for more information.
 
 .. autoclass:: pyomo.contrib.solver.results.TerminationCondition
+   :noindex:
    :show-inheritance:
 
 
@@ -335,6 +340,7 @@ user is expected to inspect the
 returned solver messages or logs for more information.
 
 .. autoclass:: pyomo.contrib.solver.results.SolutionStatus
+   :noindex:
    :show-inheritance:
 
 
@@ -346,6 +352,7 @@ loader should be written for each unique case. Several have already been
 implemented. For example, for ``ipopt``:
 
 .. autoclass:: pyomo.contrib.solver.ipopt.IpoptSolutionLoader
-   :show-inheritance:
+   :noindex:
    :members:
+   :show-inheritance:
    :inherited-members:

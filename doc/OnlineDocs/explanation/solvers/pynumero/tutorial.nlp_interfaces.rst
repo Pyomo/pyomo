@@ -2,8 +2,8 @@ NLP Interfaces
 ==============
 
 Below are examples of using PyNumero's interfaces to ASL for function
-and derivative evaluation. More information can be found in the API
-documentation (:ref:`pynumero_api`).
+and derivative evaluation. More information can be found in the
+:mod:`API documentation <pyomo.contrib.pynumero>`.
 
 Relevant imports
 

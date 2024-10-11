@@ -5,9 +5,9 @@ Examples
 
 Examples can be found in `pyomo/contrib/parmest/examples` and include:
 
-* Reactor design example [PyomoBookII]_
-* Semibatch example [SemiBatch]_
-* Rooney Biegler example [RooneyBiegler]_
+* Reactor design example [PyomoBookIII]_
+* Semibatch example [AM00]_
+* Rooney Biegler example [RB01]_
 
 Each example includes a Python file that contains the Pyomo model and a
 Python file to run parameter estimation.

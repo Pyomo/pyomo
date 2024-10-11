@@ -58,6 +58,7 @@ To see the results of the transformation, you could then use the command
     >>> m.pprint()
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.var_aggregator.VariableAggregator
+    :noindex:
     :members: apply_to, create_using, update_variables
 
 
@@ -77,6 +78,7 @@ Explicit Constraints to Variable Bounds
     >>> TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
+    :noindex:
     :members: apply_to, create_using
 
 
@@ -84,6 +86,7 @@ Induced Linearity Reformulation
 -------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.induced_linearity.InducedLinearity
+    :noindex:
     :members: apply_to, create_using
 
 
@@ -94,58 +97,68 @@ This transformation was developed by `Sunjeev Kale
 <https://github.com/sjkale>`_ at Carnegie Mellon University.
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenConstraintFromVars
+    :noindex:
     :members: apply_to, create_using
 
 Trivial Constraint Deactivation
 -------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.TrivialConstraintDeactivator
+    :noindex:
     :members: apply_to, create_using, revert
 
 Fixed Variable Detection
 ------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.detect_fixed_vars.FixedVarDetector
+    :noindex:
     :members: apply_to, create_using, revert
 
 Fixed Variable Equality Propagator
 ----------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.equality_propagate.FixedVarPropagator
+    :noindex:
     :members: apply_to, create_using, revert
 
 Variable Bound Equality Propagator
 ----------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.equality_propagate.VarBoundPropagator
+    :noindex:
     :members: apply_to, create_using, revert
 
 Variable Midpoint Initializer
 -----------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.init_vars.InitMidpoint
+    :noindex:
     :members: apply_to, create_using
 
 Variable Zero Initializer
 -------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.init_vars.InitZero
+    :noindex:
     :members: apply_to, create_using
 
 Zero Term Remover
 -----------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.remove_zero_terms.RemoveZeroTerms
+    :noindex:
     :members: apply_to, create_using
 
 Variable Bound Remover
 ----------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.strip_bounds.VariableBoundStripper
+    :noindex:
     :members: apply_to, create_using, revert
 
 Zero Sum Propagator
 -------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.zero_sum_propagator.ZeroSumPropagator
+    :noindex:
     :members: apply_to, create_using

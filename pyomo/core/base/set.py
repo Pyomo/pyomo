@@ -257,7 +257,11 @@ def set_options(**kwds):
     decorator allows an arbitrary dictionary of values to passed
     through to the set constructor.
 
-    Examples:
+    Examples
+    --------
+
+    .. code::
+
         @set_options(dimen=3)
         def B_index(model):
             return [(i,i+1,i*i) for i in model.A]
@@ -265,6 +269,7 @@ def set_options(**kwds):
         @set_options(domain=Integers)
         def B_index(model):
             return range(10)
+
     """
 
     def decorator(func):
@@ -280,11 +285,15 @@ def simple_set_rule(rule):
     This supports a simpler syntax in set rules, though these can be
     more difficult to debug when errors occur.
 
-    Example:
+    Examples
+    --------
 
-    @simple_set_rule
-    def A_rule(model, i, j):
-        ...
+    .. code::
+
+        @simple_set_rule
+        def A_rule(model, i, j):
+            ...
+
     """
     return rule_wrapper(rule, {None: Set.End})
 

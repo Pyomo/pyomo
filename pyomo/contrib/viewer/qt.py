@@ -30,6 +30,8 @@ __author__ = "John Eslick"
 import enum
 import importlib
 
+from pyomo.common.flags import building_documentation
+
 # Supported Qt wrappers in preferred order
 supported = ["PySide6", "PyQt5"]
 # Import errors encountered, delay logging for testing reasons
@@ -127,3 +129,14 @@ else:
         from PyQt5.QtWidgets import QAction
         from PyQt5.QtCore import pyqtSignal as Signal
         from PyQt5 import uic
+
+    # Note that QAbstractTableModel and QAbstractItemModel have
+    # signatures that are not parsable by Sphinx, so we will hide them
+    # if we are building the API documentation.
+    if building_documentation():
+
+        class QAbstractItemModel(object):
+            pass
+
+        class QAbstractTableModel(object):
+            pass
