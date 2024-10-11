@@ -56,3 +56,16 @@ These steps can, of course, be combined into a single command:
    ```bash
    $ make -c doc/OnlineDocs clean html doctest
    ```
+
+Documentation history
+---------------------
+
+The Pyomo online documentation went through a significant overhaul in
+2024.  If you need to go back and look at the old documetation, the
+following git hashes might be relevant:
+
+   - [23fb726ce](https://github.com/Pyomo/pyomo/commit/23fb726ce0e092412081bd70e8a0370af46f6d0f):
+     main (close to just) before the reorg was merged
+
+   - [c157587fc](https://github.com/Pyomo/pyomo/commit/c157587fc9a03300b53879b99c1f350a26a9519f):
+     reorg branch just before the `Archive` subdirectory was removed
