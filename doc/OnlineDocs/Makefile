@@ -28,5 +28,4 @@ clean:
 	    if test -d "$$D"; then echo "Removing $$D"; rm -r "$$D"; fi \
 	 done
 
-rebuild:
-	@$(MAKE) clean
+rebuild: clean html
