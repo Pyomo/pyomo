@@ -45,7 +45,7 @@ from unittest import mock
 # We defer this import so that we don't add a hard dependence on pytest.
 # Note that importing test modules may cause this import to be resolved
 # (and then enforce a strict dependence on pytest)
-pytest = attempt_import('pytest')
+pytest, pytest_available = attempt_import('pytest')
 
 
 def _defaultFormatter(msg, default):
