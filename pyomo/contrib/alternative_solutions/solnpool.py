@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 from pyomo.common.dependencies import attempt_import
 
-gurobipy, gurobipy_available = attempt_import("gurobipy")
-
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
@@ -67,10 +65,7 @@ def gurobi_generate_solutions(
     #
     # Setup gurobi
     #
-    if not gurobipy_available:
-        raise pyomo.common.errors.ApplicationError("Solver (gurobi) not available")
     opt = appsi.solvers.Gurobi()
-
     if not opt.available():
         raise pyomo.common.errors.ApplicationError("Solver (gurobi) not available")
 
