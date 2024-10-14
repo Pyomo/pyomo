@@ -19,7 +19,7 @@ from pyomo.core.plugins.transform.equality_transform import EqualityTransform
     "core.standard_form", doc="Create an equivalent LP model in standard form."
 )
 class StandardForm(IsomorphicTransformation):
-    """
+    r"""
     Produces a standard-form representation of the model. This form has
     the coefficient matrix (A), the cost vector (c), and the
     constraint vector (b), where the 'standard form' problem is

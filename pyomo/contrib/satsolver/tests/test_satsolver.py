@@ -9,11 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from os.path import abspath, dirname, join, normpath
+from os.path import join
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.fileutils import import_file
+from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.satsolver.satsolver import satisfiable, z3_available
 from pyomo.core.base.set_types import PositiveIntegers, NonNegativeReals, Binary
 from pyomo.environ import (
@@ -33,8 +33,7 @@ from pyomo.environ import (
 )
 from pyomo.gdp import Disjunct, Disjunction
 
-currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
+exdir = join(PYOMO_ROOT_DIR, 'examples', 'gdp')
 
 
 @unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")

@@ -281,6 +281,10 @@ system_info = (
     platform.python_implementation()
 )
 
+# Mark that we are testing code (in this case, testing the documentation)
+from pyomo.common.flags import in_testing_environment
+in_testing_environment(True)
+
 # We need multiprocessing because some doctests must be skipped if the
 # start method is not "fork"
 import multiprocessing
@@ -295,6 +299,9 @@ from pyomo.common.dependencies import (
     numpy as np,
 )
 from pyomo.contrib.parmest.parmest import parmest_available
+
+# Ensure that the matplotlib import has been resolved (and the backend changed)
+bool(matplotlib_available)
 
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to suppress warnings when 
@@ -325,10 +332,6 @@ else:
     asl_available = False
     ma27_available = False
     mumps_available = False
-
-# Mark that we are testing code (in this case, testing the documentation)
-from pyomo.common.flags import in_testing_environment
-in_testing_environment(True)
 
 # Prevent any Pyomo logs from propagating up to the doctest logger
 import logging

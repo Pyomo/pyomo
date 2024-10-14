@@ -21,7 +21,7 @@ The :python:`pyomo.kernel` library is an experimental modeling interface designe
 
 Models built from :python:`pyomo.kernel` components are fully compatible with the standard solver interfaces included with Pyomo. A minimal example script that defines and solves a model is shown below.
 
-.. literalinclude:: examples/kernel_solving.py
+.. literalinclude:: /src/kernel/examples/kernel_solving.py
    :language: python
 
 Notable Improvements
@@ -32,7 +32,7 @@ More Control of Model Structure
 
 Containers in :python:`pyomo.kernel` are analogous to indexed components in :python:`pyomo.environ`. However, :python:`pyomo.kernel` containers allow for additional layers of structure as they can be nested within each other as long as they have compatible categories. The following example shows this using :python:`pyomo.kernel.variable` containers.
 
-.. literalinclude:: examples/kernel_containers_all.spy
+.. literalinclude:: /src/kernel/examples/kernel_containers_all.spy
    :language: python
 
 As the next section will show, the standard modeling component containers are also compatible with user-defined classes that derive from the existing modeling components.
@@ -58,21 +58,21 @@ The next series of examples goes into more detail on how to implement derived co
 
 The following code block shows a class definition for a non-negative variable, starting from :python:`pyomo.kernel.variable` as a base class.
 
-.. literalinclude:: examples/kernel_subclassing_Nonnegative.spy
+.. literalinclude:: /src/kernel/examples/kernel_subclassing_Nonnegative.spy
    :language: python
 
 The :python:`NonNegativeVariable` class prevents negative values from being stored into its lower bound during initialization or later on through assignment statements (e.g, :python:`x.lb = -1` fails). Note that the :python:`__slots__ == ()` line at the beginning of the class definition is optional, but it is recommended if no additional data members are necessary as it reduces the memory requirement of the new variable type.
 
 The next code block defines a custom variable container called :python:`Point` that represents a 3-dimensional point in Cartesian space. The new type derives from the :python:`pyomo.kernel.variable_tuple` container and uses the :python:`NonNegativeVariable` type we defined previously in the `z` coordinate.
 
-.. literalinclude:: examples/kernel_subclassing_Point.spy
+.. literalinclude:: /src/kernel/examples/kernel_subclassing_Point.spy
    :language: python
 
 The :python:`Point` class can be treated like a tuple storing three variables, and it can be placed inside of other variable containers or added as attributes to blocks. The property methods included in the class definition provide an additional syntax for accessing the three variables it stores, as the next code example will show.
 
 The following code defines a class for building a convex second-order cone constraint from a :python:`Point` object. It derives from the :python:`pyomo.kernel.constraint` class, overriding the constructor to build the constraint expression and utilizing the property methods on the point class to increase readability.
 
-.. literalinclude:: examples/kernel_subclassing_SOC.spy
+.. literalinclude:: /src/kernel/examples/kernel_subclassing_SOC.spy
    :language: python
 
 
@@ -81,12 +81,12 @@ Reduced Memory Usage
 
 The :python:`pyomo.kernel` library offers significant opportunities to reduce memory requirements for highly structured models. The situation where this is most apparent is when expressing a model in terms of many small blocks consisting of singleton components. As an example, consider expressing a model consisting of a large number of voltage transformers. One option for doing so might be to define a `Transformer` component as a subclass of :python:`pyomo.kernel.block`. The example below defines such a component, including some helper methods for connecting input and output voltage variables and updating the transformer ratio.
 
-.. literalinclude:: examples/transformer_kernel.spy
+.. literalinclude:: /src/kernel/examples/transformer_kernel.spy
    :language: python
 
 A simplified version of this using :python:`pyomo.environ` components might look like what is below.
 
-.. literalinclude:: examples/transformer_aml.spy
+.. literalinclude:: /src/kernel/examples/transformer_aml.spy
    :language: python
 
 The transformer expressed using :python:`pyomo.kernel` components requires roughly 2 KB of memory, whereas the :python:`pyomo.environ` version requires roughly 8.4 KB of memory (an increase of more than 4x). Additionally, the :python:`pyomo.kernel` transformer is fully compatible with all existing :python:`pyomo.kernel` block containers.
@@ -142,7 +142,7 @@ instantiation. The first method is to directly instantiate a
 conic constraint object, providing all necessary input
 variables:
 
-.. literalinclude:: examples/conic_Class.spy
+.. literalinclude:: /src/kernel/examples/conic_Class.spy
    :language: python
 
 This method may be limiting if utilizing the Mosek solver as
@@ -164,5 +164,5 @@ constraint, as well as auxiliary constraints that link the
 inputs (that are not :python:`None`) to the auxiliary
 variables. Example:
 
-.. literalinclude:: examples/conic_Domain.spy
+.. literalinclude:: /src/kernel/examples/conic_Domain.spy
    :language: python
