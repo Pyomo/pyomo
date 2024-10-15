@@ -234,7 +234,7 @@ class _GeneralExpressionData(metaclass=RenamedClass):
     "Named expressions that can be used in other expressions."
 )
 class Expression(IndexedComponent):
-    """A shared expression container, which may be defined over a index.
+    """A shared expression container, which may be defined over an index.
 
     Parameters
     ----------
