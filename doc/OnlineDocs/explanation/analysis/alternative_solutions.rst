@@ -54,7 +54,7 @@ The following functions are defined in the alternative-solutions library:
 Basic Usage Example
 -------------------
 
-Many of functions in the alternative-solutions library have similar
+Many of the functions in the alternative-solutions library have similar
 options, so we simply illustrate the ``enumerate_binary_solutions``
 function.  We define a simple knapsack example whose alternative
 solutions have integer objective values ranging from 0 to 90.
