@@ -85,9 +85,13 @@ Bibliography
    Algebraic Discrete Methods*, 6(3), 466–486, 1985. DOI
    `10.1137/0606047 <https://doi.org/10.1137/0606047>`_
 
+.. [BJ72] E. Balas and R. Jeroslow. "Canonical Cuts on the Unit Hypercube",
+   *SIAM Journal on Applied Mathematics* 23(1), 61-19, 1972.
+   DOI `10.1137/0123007 <https://doi.org/10.1137/0123007>`_
+
 .. [FGK02] R. Fourer, D. M. Gay, and B. W. Kernighan. *AMPL: A Modeling
-   Language for Mathematical Programming*, 2nd Edition.  Duxbury
-   Press. 2002.
+   Language for Mathematical Programming*, 2nd Edition, Duxbury
+   Press, 2002.
 
 .. [GAMS] http://www.gams.com
 
