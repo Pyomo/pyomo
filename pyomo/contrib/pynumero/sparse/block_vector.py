@@ -38,7 +38,7 @@ def assert_block_structure(vec):
         raise NotFullyDefinedBlockVectorError(msg)
 
 
-class BlockVector(np.ndarray, BaseBlockVector):
+class BlockVector(BaseBlockVector, np.ndarray):
     """
     Structured vector interface. This interface can be used to
     perform operations on vectors composed by vectors. For example,
@@ -1592,86 +1592,3 @@ class BlockVector(np.ndarray, BaseBlockVector):
             mpi_bv.set_block(bid, self.get_block(bid))
 
         return mpi_bv
-
-    # the following methods are not supported by blockvector
-
-    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.argpartition(self, kth, axis=axis, kind=kind, order=order)
-
-    def argsort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.argsort(self, axis=axis, kind=kind, order=order)
-
-    def byteswap(self, inplace=False):
-        BaseBlockVector.byteswap(self, inplace=inplace)
-
-    def choose(self, choices, out=None, mode='raise'):
-        BaseBlockVector.choose(self, choices, out=out, mode=mode)
-
-    def diagonal(self, offset=0, axis1=0, axis2=1):
-        BaseBlockVector.diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
-
-    def dump(self, file):
-        BaseBlockVector.dump(self, file)
-
-    def dumps(self):
-        BaseBlockVector.dumps(self)
-
-    def getfield(self, dtype, offset=0):
-        BaseBlockVector.getfield(self, dtype, offset=offset)
-
-    def item(self, *args):
-        BaseBlockVector.item(self, *args)
-
-    def itemset(self, *args):
-        BaseBlockVector.itemset(self, *args)
-
-    def newbyteorder(self, new_order='S'):
-        BaseBlockVector.newbyteorder(self, new_order=new_order)
-
-    def put(self, indices, values, mode='raise'):
-        BaseBlockVector.put(self, indices, values, mode=mode)
-
-    def partition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.partition(self, kth, axis=axis, kind=kind, order=order)
-
-    def repeat(self, repeats, axis=None):
-        BaseBlockVector.repeat(self, repeats, axis=axis)
-
-    def reshape(self, shape, order='C'):
-        BaseBlockVector.reshape(self, shape, order=order)
-
-    def resize(self, new_shape, refcheck=True):
-        BaseBlockVector.resize(self, new_shape, refcheck=refcheck)
-
-    def searchsorted(self, v, side='left', sorter=None):
-        BaseBlockVector.searchsorted(self, v, side=side, sorter=sorter)
-
-    def setfield(self, val, dtype, offset=0):
-        BaseBlockVector.setfield(self, val, dtype, offset=offset)
-
-    def setflags(self, write=None, align=None, uic=None):
-        BaseBlockVector.setflags(self, write=write, align=align, uic=uic)
-
-    def sort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.sort(self, axis=axis, kind=kind, order=order)
-
-    def squeeze(self, axis=None):
-        BaseBlockVector.squeeze(self, axis=axis)
-
-    def swapaxes(self, axis1, axis2):
-        BaseBlockVector.swapaxes(self, axis1, axis2)
-
-    def tobytes(self, order='C'):
-        BaseBlockVector.tobytes(self, order=order)
-
-    def take(self, indices, axis=None, out=None, mode='raise'):
-        BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)
-
-    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
-        raise NotImplementedError('trace not implemented for BlockVector')
-
-    def transpose(*axes):
-        BaseBlockVector.transpose(*axes)
-
-    def tostring(order='C'):
-        BaseBlockVector.tostring(order=order)
