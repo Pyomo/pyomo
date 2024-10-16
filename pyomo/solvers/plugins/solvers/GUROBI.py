@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import os
 import sys
 import re
@@ -20,7 +21,8 @@ from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.common.enums import maximize, minimize
 from pyomo.common.fileutils import this_file_dir
-from pyomo.common.tee import capture_output
+from pyomo.common.log import is_debug_set
+from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -35,8 +37,9 @@ from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import ConcreteModel, Var, Objective
 
-from .gurobi_direct import gurobipy_available
-from .ASL import ASL
+from pyomo.solvers.plugins.solvers import GUROBI_RUN
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy_available
+from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -51,9 +54,15 @@ class GUROBI(OptSolver):
             mode = 'lp'
         #
         if mode == 'lp':
-            return SolverFactory('_gurobi_shell', **kwds)
+            if gurobipy_available:
+                return SolverFactory('_gurobi_file', **kwds)
+            else:
+                return SolverFactory('_gurobi_shell', **kwds)
         if mode == 'mps':
-            opt = SolverFactory('_gurobi_shell', **kwds)
+            if gurobipy_available:
+                opt = SolverFactory('_gurobi_file', **kwds)
+            else:
+                opt = SolverFactory('_gurobi_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
         if mode in ['python', 'direct']:
@@ -587,3 +596,189 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         TempfileManager.pop(remove=not self._keepfiles)
 
         return results
+
+
+@SolverFactory.register(
+    '_gurobi_file', doc='LP/MPS file-based direct interface to the GUROBI LP/MIP solver'
+)
+class GUROBIFILE(GUROBISHELL):
+    """Direct LP/MPS file-based interface to the GUROBI LP/MIP solver"""
+
+    def create_command_line(self, executable, problem_files):
+        #
+        # Define log file
+        # The log file in CPLEX contains the solution trace, but the
+        # solver status can be found in the solution file.
+        #
+        if self._log_file is None:
+            self._log_file = TempfileManager.create_tempfile(suffix='.gurobi.log')
+
+        #
+        # Define command line
+        #
+        return Bunch(cmd=[], script="", log_file=self._log_file, env=None)
+
+    def _apply_solver(self):
+        #
+        # Execute the command
+        #
+        if is_debug_set(logger):
+            logger.debug("Running %s", self._command.cmd)
+
+        problem_filename = self._problem_files[0]
+        warmstart_filename = self._warm_start_file_name
+
+        # translate the options into a normal python dictionary, from a
+        # pyutilib SectionWrapper - the gurobi_run function doesn't know
+        # about pyomo, so the translation is necessary.
+        options_dict = {}
+        for key in self.options:
+            options_dict[key] = self.options[key]
+
+        # display the log/solver file names prior to execution. this is useful
+        # in case something crashes unexpectedly, which is not without precedent.
+        if self._keepfiles:
+            if self._log_file is not None:
+                print("Solver log file: '%s'" % self._log_file)
+            if self._problem_files != []:
+                print("Solver problem files: %s" % str(self._problem_files))
+
+        sys.stdout.flush()
+        ostreams = [io.StringIO()]
+        if self._tee:
+            ostreams.append(sys.stdout)
+        with TeeStream(*ostreams) as t:
+            self._soln = GUROBI_RUN.gurobi_run(
+                problem_filename, warmstart_filename, None, options_dict, self._suffixes
+            )
+        self._log = ostreams[0].getvalue()
+        self._rc = 0
+        sys.stdout.flush()
+        return Bunch(rc=self._rc, log=self._log)
+
+    def process_soln_file(self, results):
+        # the only suffixes that we extract from CPLEX are
+        # constraint duals, constraint slacks, and variable
+        # reduced-costs. scan through the solver suffix list
+        # and throw an exception if the user has specified
+        # any others.
+        extract_duals = False
+        extract_slacks = False
+        extract_rc = False
+        for suffix in self._suffixes:
+            flag = False
+            if re.match(suffix, "dual"):
+                extract_duals = True
+                flag = True
+            if re.match(suffix, "slack"):
+                extract_slacks = True
+                flag = True
+            if re.match(suffix, "rc"):
+                extract_rc = True
+                flag = True
+            if not flag:
+                raise RuntimeError(
+                    "***The GUROBI solver plugin cannot extract solution suffix="
+                    + suffix
+                )
+
+        soln = Solution()
+
+        # caching for efficiency
+        soln_variables = soln.variable
+        soln_constraints = soln.constraint
+
+        num_variables_read = 0
+
+        # string compares are too expensive, so simply introduce some
+        # section IDs.
+        # 0 - unknown
+        # 1 - problem
+        # 2 - solution
+        # 3 - solver
+
+        section = 0  # unknown
+
+        solution_seen = False
+
+        range_duals = {}
+        range_slacks = {}
+
+        # Copy over the problem info
+        for key, val in self._soln['problem'].items():
+            setattr(results.problem, key, val)
+        if results.problem.sense == 'minimize':
+            results.problem.sense = minimize
+        elif results.problem.sense == 'maximize':
+            results.problem.sense = maximize
+
+        # Copy over the solver info
+        for key, val in self._soln['solver'].items():
+            setattr(results.solver, key, val)
+        results.solver.status = getattr(SolverStatus, results.solver.status)
+        try:
+            results.solver.termination_condition = getattr(
+                TerminationCondition, results.solver.termination_condition
+            )
+        except AttributeError:
+            results.solver.termination_condition = TerminationCondition.unknown
+
+        # Copy over the solution information
+        sol = self._soln.get('solution', None)
+        if sol:
+            if 'status' in sol:
+                soln.status = sol['status']
+            if 'gap' in sol:
+                soln.gap = sol['gap']
+            obj = sol.get('objective', None)
+            if obj is not None:
+                soln.objective['__default_objective__'] = {'Value': obj}
+                if results.problem.sense == minimize:
+                    results.problem.upper_bound = obj
+                else:
+                    results.problem.lower_bound = obj
+            for name, val in sol.get('var', {}).items():
+                if name == "ONE_VAR_CONSTANT":
+                    continue
+                soln_variables[name] = {"Value": val}
+                num_variables_read += 1
+            for name, val in sol.get('varrc', {}).items():
+                if name == "ONE_VAR_CONSTANT":
+                    continue
+                soln_variables[name]["Rc"] = val
+            for name, val in sol.get('constraintdual', {}).items():
+                if name == "c_e_ONE_VAR_CONSTANT":
+                    continue
+                if name.startswith('c_'):
+                    soln_constraints.setdefault(name, {})["Dual"] = val
+                elif name.startswith('r_l_'):
+                    range_duals.setdefault(name[4:], [0, 0])[0] = val
+                elif name.startswith('r_u_'):
+                    range_duals.setdefault(name[4:], [0, 0])[1] = val
+            for name, val in sol.get('constraintslack', {}).items():
+                if name == "c_e_ONE_VAR_CONSTANT":
+                    continue
+                if name.startswith('c_'):
+                    soln_constraints.setdefault(name, {})["Slack"] = val
+                elif name.startswith('r_l_'):
+                    range_slacks.setdefault(name[4:], [0, 0])[0] = val
+                elif name.startswith('r_u_'):
+                    range_slacks.setdefault(name[4:], [0, 0])[1] = val
+
+            results.solution.insert(soln)
+
+        # For the range constraints, supply only the dual with the largest
+        # magnitude (at least one should always be numerically zero)
+        for key, (ld, ud) in range_duals.items():
+            if abs(ld) > abs(ud):
+                soln_constraints['r_l_' + key] = {"Dual": ld}
+            else:
+                # Use the same key
+                soln_constraints['r_l_' + key] = {"Dual": ud}
+        # slacks
+        for key, (ls, us) in range_slacks.items():
+            if abs(ls) > abs(us):
+                soln_constraints.setdefault('r_l_' + key, {})["Slack"] = ls
+            else:
+                # Use the same key
+                soln_constraints.setdefault('r_l_' + key, {})["Slack"] = us
