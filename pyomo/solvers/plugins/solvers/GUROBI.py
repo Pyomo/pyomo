@@ -38,7 +38,7 @@ from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import ConcreteModel, Var, Objective
 
-from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy_available
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy, gurobipy_available
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
@@ -604,6 +604,46 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 )
 class GUROBIFILE(GUROBISHELL):
     """Direct LP/MPS file-based interface to the GUROBI LP/MIP solver"""
+
+    def available(self, exception_flag=False):
+        if not gurobipy_available:  # this triggers the deferred import
+            if exception_flag:
+                raise ApplicationError("gurobipy module not importable")
+            return False
+        if getattr(self, '_available', None) is None:
+            self._check_license()
+        ans = self._available[0]
+        if exception_flag and not ans:
+            raise ApplicationError(msg % self.name)
+        return ans
+
+    def license_is_valid(self):
+        return self.available(False) and self._available[1]
+
+    def _check_license(self):
+        licensed = False
+        try:
+            # Gurobipy writes out license file information when creating
+            # the environment
+            with capture_output(capture_fd=True):
+                m = gurobipy.Model()
+            licensed = True
+        except gurobipy.GurobiError:
+            licensed = False
+
+        self._available = (True, licensed)
+
+    def _get_version(self):
+        return (
+            gurobipy.GRB.VERSION_MAJOR,
+            gurobipy.GRB.VERSION_MINOR,
+            gurobipy.GRB.VERSION_TECHNICAL,
+        )
+
+    def _default_executable(self):
+        # Bogus, but not None (because the test infrastructure disables
+        # solvers where the executable() is None
+        return ""
 
     def create_command_line(self, executable, problem_files):
         #
