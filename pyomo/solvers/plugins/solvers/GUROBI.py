@@ -19,6 +19,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import maximize, minimize
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.log import is_debug_set
@@ -37,12 +38,11 @@ from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import ConcreteModel, Var, Objective
 
-from pyomo.solvers.plugins.solvers import GUROBI_RUN
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy_available
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
-
+GUROBI_RUN = attempt_import('pyomo.solvers.plugins.solvers.GUROBI_RUN')[0]
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
 class GUROBI(OptSolver):
