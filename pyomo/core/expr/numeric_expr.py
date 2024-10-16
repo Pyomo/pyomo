@@ -216,14 +216,14 @@ class NumericValue(PyomoObject):
     # This is required because we define __eq__
     __hash__ = None
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, *args, **kwargs):
         """
         If this is a component, return the component's name on the owning
         block; otherwise return the value converted to a string
         """
         _base = super(NumericValue, self)
         if hasattr(_base, 'getname'):
-            return _base.getname(fully_qualified, name_buffer)
+            return _base.getname(*args, **kwargs)
         else:
             return str(type(self))
 

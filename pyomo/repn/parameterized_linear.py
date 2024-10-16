@@ -29,7 +29,7 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.repn.linear import (
     ExitNodeDispatcher,
-    _initialize_exit_node_dispatcher,
+    initialize_exit_node_dispatcher,
     LinearBeforeChildDispatcher,
     LinearRepn,
     LinearRepnVisitor,
@@ -199,7 +199,7 @@ class ParameterizedLinearBeforeChildDispatcher(LinearBeforeChildDispatcher):
                 # We aren't treating this Var as a Var for the purposes of this walker
                 return False, (_FIXED, child)
             # This is a normal situation
-            ParameterizedLinearBeforeChildDispatcher._record_var(visitor, child)
+            visitor.var_recorder.add(child)
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (ExprType.LINEAR, ans)
@@ -330,11 +330,21 @@ def define_exit_node_handlers(exit_node_handlers=None):
 class ParameterizedLinearRepnVisitor(LinearRepnVisitor):
     Result = ParameterizedLinearRepn
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(define_exit_node_handlers())
+        initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
-    def __init__(self, subexpression_cache, var_map, var_order, sorter, wrt):
-        super().__init__(subexpression_cache, var_map, var_order, sorter)
+    def __init__(
+        self,
+        subexpression_cache,
+        var_map=None,
+        var_order=None,
+        sorter=None,
+        wrt=None,
+        var_recorder=None,
+    ):
+        super().__init__(subexpression_cache, var_map, var_order, sorter, var_recorder)
+        if wrt is None:
+            raise ValueError("ParameterizedLinearRepn: wrt not specified")
         self.wrt = ComponentSet(_flattened(wrt))
 
     def beforeChild(self, node, child, child_idx):
