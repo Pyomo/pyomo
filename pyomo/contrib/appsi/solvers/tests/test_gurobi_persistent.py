@@ -240,9 +240,9 @@ class TestGurobiPersistent(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, -4)
         if opt.version() < (11, 0):
-            self.assertAlmostEqual(res.objective_bound, -6)
+            self.assertAlmostEqual(res.best_objective_bound, -6)
         else:
-            self.assertAlmostEqual(res.objective_bound, -4)
+            self.assertAlmostEqual(res.best_objective_bound, -4)
 
     def test_range_constraints(self):
         m = pe.ConcreteModel()
