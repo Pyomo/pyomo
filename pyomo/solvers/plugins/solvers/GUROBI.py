@@ -354,21 +354,20 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NOTE: The gurobi plugin (GUROBI.py) and GUROBI_RUN.py live in
         #       the same directory.
         script = "import sys\n"
-        script += "from gurobipy import *\n"
         script += "sys.path.append(%r)\n" % (this_file_dir(),)
-        script += "from GUROBI_RUN import *\n"
-        script += "gurobi_run("
+        script += "import GUROBI_RUN\n"
+        script += "soln = GUROBI_RUN.gurobi_run("
         mipgap = float(self.options.mipgap) if self.options.mipgap is not None else None
         for x in (
             problem_filename,
             warmstart_filename,
-            solution_filename,
             None,
             options_dict,
             self._suffixes,
         ):
             script += "%r," % x
         script += ")\n"
+        script += "GUROBI_RUN.write_result(soln, %r)\n" % solution_filename
         script += "quit()\n"
 
         # dump the script and warm-start file names for the
