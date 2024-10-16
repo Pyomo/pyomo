@@ -44,6 +44,7 @@ from pyomo.solvers.plugins.solvers.ASL import ASL
 logger = logging.getLogger('pyomo.solvers')
 GUROBI_RUN = attempt_import('pyomo.solvers.plugins.solvers.GUROBI_RUN')[0]
 
+
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
 class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver"""
