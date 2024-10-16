@@ -107,6 +107,7 @@ def gurobi_run(model_file, warmstart_file, mipgap, options, suffixes):
             # because the latter does not preserve the
             # Gurobi stack trace
             if not _is_numeric(value):
+                model.close()
                 raise
             model.setParam(key, float(value))
 
@@ -335,6 +336,8 @@ def gurobi_run(model_file, warmstart_file, mipgap, options, suffixes):
                 vals = model.getAttr("QCSlack", qcons)
                 solution['constraintslack'].update(zip(qcon_names, vals))
 
+    model.close()
+    model = None
     return result
 
 
