@@ -70,6 +70,7 @@ gurobipy, gurobipy_available = attempt_import(
     # exception!
     catch_exceptions=(Exception,),
     callback=_parse_gurobi_version,
+    defer_import=True,
 )
 
 
