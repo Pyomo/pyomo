@@ -213,9 +213,9 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.config.load_solution = False
         res = opt.solve(m)
         if opt.version() < (11, 0):
-            self.assertEqual(res.incumbent_objective, None)
+            self.assertEqual(res.best_feasible_objective, None)
         else:
-            self.assertEqual(res.incumbent_objective, -4)
+            self.assertEqual(res.best_feasible_objective, -4)
         self.assertAlmostEqual(res.best_objective_bound, -8)
 
     def test_nonconvex_qcp_objective_bound_2(self):
