@@ -323,7 +323,9 @@ def gurobi_run(model_file, warmstart_file, mipgap, options, suffixes):
         if extract_duals and not is_discrete:
             # Pi attributes in Gurobi are the constraint duals
             vals = model.getAttr("Pi", cons)
-            solution['constraintdual'] = {name: val for name, val in zip(con_names, vals)}
+            solution['constraintdual'] = {
+                name: val for name, val in zip(con_names, vals)
+            }
             if GUROBI_VERSION[0] >= 5:
                 # QCPI attributes in Gurobi are the constraint duals
                 vals = model.getAttr("QCPi", qcons)
@@ -331,7 +333,9 @@ def gurobi_run(model_file, warmstart_file, mipgap, options, suffixes):
 
         if extract_slacks:
             vals = model.getAttr("Slack", cons)
-            solution['constraintslack'] = {name: val for name, val in zip(con_names, vals)}
+            solution['constraintslack'] = {
+                name: val for name, val in zip(con_names, vals)
+            }
             if GUROBI_VERSION[0] >= 5:
                 vals = model.getAttr("QCSlack", qcons)
                 solution['constraintslack'].update(zip(qcon_names, vals))
