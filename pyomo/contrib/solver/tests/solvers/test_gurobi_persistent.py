@@ -192,8 +192,12 @@ class TestGurobiPersistent(unittest.TestCase):
         # for nonconvex but continuous problems even if a feasible solution
         # is not found
         #
-        # This is a fragile test because it could fail if Gurobi's algorithms improve
-        # (e.g., a heuristic solution is found before an objective bound of -8 is reached
+        # This is a fragile test because it could fail if Gurobi's
+        # algorithms improve (e.g., a heuristic solution is found before
+        # an objective bound of -8 is reached
+        #
+        # Update: as of Gurobi 11, this test no longer tests the
+        # intended behavior (the solver has improved)
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-5, 5))
         m.y = pe.Var(bounds=(-5, 5))
@@ -206,14 +210,22 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.config.load_solutions = False
         opt.config.raise_exception_on_nonoptimal_result = False
         res = opt.solve(m)
-        self.assertEqual(res.incumbent_objective, None)
+        if opt.version() < (11, 0):
+            self.assertEqual(res.incumbent_objective, None)
+        else:
+            self.assertEqual(res.incumbent_objective, -4)
         self.assertAlmostEqual(res.objective_bound, -8)
 
     def test_nonconvex_qcp_objective_bound_2(self):
-        # the goal of this test is to ensure we can objective_bound properly
-        # for nonconvex but continuous problems when the solver terminates with a nonzero gap
+        # the goal of this test is to ensure we can objective_bound
+        # properly for nonconvex but continuous problems when the solver
+        # terminates with a nonzero gap
         #
-        # This is a fragile test because it could fail if Gurobi's algorithms change
+        # This is a fragile test because it could fail if Gurobi's
+        # algorithms change
+        #
+        # Update: as of Gurobi 11, this test no longer tests the
+        # intended behavior (the solver has improved)
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-5, 5))
         m.y = pe.Var(bounds=(-5, 5))
@@ -225,7 +237,10 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.config.solver_options['MIPGap'] = 0.5
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, -4)
-        self.assertAlmostEqual(res.objective_bound, -6)
+        if opt.version() < (11, 0):
+            self.assertAlmostEqual(res.objective_bound, -6)
+        else:
+            self.assertAlmostEqual(res.objective_bound, -4)
 
     def test_range_constraints(self):
         m = pe.ConcreteModel()
