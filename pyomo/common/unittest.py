@@ -858,7 +858,7 @@ class BaselineTestDriver(object):
 
         return filtered
 
-    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=None):
+    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=1e-8):
         # Filter files independently and then compare filtered contents
         out_filtered = self.filter_file_contents(
             test_output.strip().split('\n'), abstol

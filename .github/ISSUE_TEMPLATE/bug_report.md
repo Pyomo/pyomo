@@ -4,6 +4,8 @@ about: Report a bug in Pyomo (command not working as expected, etc.)
 labels: "bug"
 ---
 
+<!-- DO NOT DELETE OR IGNORE THIS TEMPLATE.  Failing to adhere to this template and provide the necessary information may lead to your Issue being closed without consideration. -->
+
 ## Summary
 
 <!-- Explain, in a clear and concise way, the command you ran and the result you were trying to achieve.

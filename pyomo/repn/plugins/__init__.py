@@ -37,6 +37,23 @@ def load():
 
 def activate_writer_version(name, ver):
     """DEBUGGING TOOL to switch the "default" writer implementation"""
+    from pyomo.opt import WriterFactory
+
     doc = WriterFactory.doc(name)
     WriterFactory.unregister(name)
     WriterFactory.register(name, doc)(WriterFactory.get_class(f'{name}_v{ver}'))
+
+
+def active_writer_version(name):
+    """DEBUGGING TOOL to switch the "default" writer implementation"""
+    from pyomo.opt import WriterFactory
+
+    ref = WriterFactory.get_class(name)
+    ver = 1
+    try:
+        while 1:
+            if WriterFactory.get_class(f'{name}_v{ver}') is ref:
+                return ver
+            ver += 1
+    except KeyError:
+        return None
