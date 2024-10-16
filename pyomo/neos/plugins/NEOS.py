@@ -34,7 +34,7 @@ class NEOSRemoteSolver(SystemCallSolver):
 
     def create_command_line(self, executable, problem_files):
         """
-        Create the local *.sol and *.log files, which will be
+        Create the local ``*.sol`` and ``*.log`` files, which will be
         populated by NEOS.
         """
         if self._log_file is None:

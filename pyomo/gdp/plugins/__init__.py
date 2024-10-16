@@ -11,15 +11,17 @@
 
 
 def load():
-    import pyomo.gdp.plugins.bigm
-    import pyomo.gdp.plugins.hull
-    import pyomo.gdp.plugins.bilinear
-    import pyomo.gdp.plugins.gdp_var_mover
-    import pyomo.gdp.plugins.cuttingplane
-    import pyomo.gdp.plugins.fix_disjuncts
-    import pyomo.gdp.plugins.partition_disjuncts
-    import pyomo.gdp.plugins.between_steps
-    import pyomo.gdp.plugins.multiple_bigm
-    import pyomo.gdp.plugins.transform_current_disjunctive_state
-    import pyomo.gdp.plugins.bound_pretransformation
-    import pyomo.gdp.plugins.binary_multiplication
+    from pyomo.gdp.plugins import (
+        bigm,
+        hull,
+        bilinear,
+        gdp_var_mover,
+        cuttingplane,
+        fix_disjuncts,
+        partition_disjuncts,
+        between_steps,
+        multiple_bigm,
+        transform_current_disjunctive_state,
+        bound_pretransformation,
+        binary_multiplication,
+    )

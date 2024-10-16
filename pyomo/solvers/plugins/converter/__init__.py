@@ -9,6 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.solvers.plugins.converter.ampl
-import pyomo.solvers.plugins.converter.glpsol
-import pyomo.solvers.plugins.converter.model
+from pyomo.solvers.plugins.converter import ampl, glpsol, model

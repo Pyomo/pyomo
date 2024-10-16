@@ -39,28 +39,39 @@ except ImportError:
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pyo
 import pyomo.contrib.viewer.qt as myqt
+
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.flags import building_documentation
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 from pyomo.contrib.viewer.residual_table import ResidualTable
 from pyomo.contrib.viewer.model_select import ModelSelect
 from pyomo.contrib.viewer.ui_data import UIData
-from pyomo.common.fileutils import this_file_dir
 
 _log = logging.getLogger(__name__)
 
-_mypath = this_file_dir()
-try:
-    _MainWindowUI, _MainWindow = myqt.uic.loadUiType(os.path.join(_mypath, "main.ui"))
-except:
-    _log.exception("Failed to load UI files.")
 
-    # This lets the file still be imported, but you won't be able to use it
-    # Allowing this to be imported will let some basic tests pass without PyQt
-    class _MainWindowUI(object):
-        pass
+# This lets the file be imported when the Qt UI is not available (or
+# when building docs), but you won't be able to use it.  Allowing this
+# will let some basic tests run (and pass) without PyQt
+class _MainWindowUI(object):
+    pass
 
-    class _MainWindow(object):
-        pass
 
+class _MainWindow(object):
+    pass
+
+
+# Note that the classes loaded here have signatures that are not
+# parsable by Sphinx, so we won't attempt to import them if we are
+# building the API documentation.
+if not building_documentation():
+    _mypath = this_file_dir()
+    try:
+        _MainWindowUI, _MainWindow = myqt.uic.loadUiType(
+            os.path.join(_mypath, "main.ui")
+        )
+    except:
+        _log.exception("Failed to load UI files.")
 
 for _err in myqt.import_errors:
     _log.error(_err)

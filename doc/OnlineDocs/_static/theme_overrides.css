@@ -31,6 +31,27 @@ dl.py.method dt em span.n {
   }
 }
 
+.rst-content table.diataxis td {
+  vertical-align: top;
+}
+
+.rst-content table.diataxis li.toctree-l1 {
+  list-style-type: none;
+  font-weight: bold;
+  font-size: x-large;
+}
+
+.rst-content table.diataxis li ul li {
+  list-style-type: none;
+  font-weight: normal;
+  font-size: medium;
+}
+
+.rst-content table.diataxis li ul li ul li {
+  list-style-type: "- ";
+}
+
+
 /* Remove space after tables in definition lists (e.g., for function
    "Parameters" lists*/
 .rst-content dl div.wy-table-responsive {
