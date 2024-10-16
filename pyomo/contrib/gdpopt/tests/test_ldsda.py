@@ -1,7 +1,7 @@
 from pyomo.environ import SolverFactory, value, Var, Constraint, TransformationFactory
 from pyomo.gdp import Disjunct
 import pyomo.common.unittest as unittest
-from four_stage_dynamic_model import build_model
+from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
 
 
 class TestGDPoptLDSDA(unittest.TestCase):
