@@ -1747,7 +1747,8 @@ class RegressionTest(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        scip_available and scip_license_is_valid, "SCIP not available and licensed."
+        (baron_available and baron_license_is_valid and baron_version == (24, 5, 8, 0)),
+        "BARON 24.5.8 not available and licensed.",
     )
     def test_coefficient_matching_nonlinear_expr(self):
         """
@@ -1777,8 +1778,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory("scip")
-        global_subsolver = SolverFactory("scip")
+        local_subsolver = SolverFactory("baron")
+        global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
         with LoggingIntercept(module="pyomo.contrib.pyros", level=logging.DEBUG) as LOG:
