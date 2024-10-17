@@ -684,7 +684,7 @@ def moved_module(
     function).  Calls to :func:`moved_module` should be placed in any
     package above the removed module in the package hierarchy (or in any
     other location that is guaranteeded to be imported / executed before
-    any attemtps at importng the module through its old name.
+    any attempts at importng the module through its old name.
 
     Any import of the module through the old name will emit a
     deprecation warning unless the ``msg`` is ``None`` (see also
