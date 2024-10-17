@@ -10,23 +10,27 @@
 #  ___________________________________________________________________________
 #
 """Testing for deprecated function."""
+import logging
 import sys
 
+from importlib.machinery import ModuleSpec
+from io import StringIO
+
+import pyomo.common
 import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.deprecation import (
     deprecated,
     deprecation_warning,
+    moved_module,
     relocated_module_attribute,
+    MovedModuleFinder,
+    MovedModuleLoader,
     RenamedClass,
     _import_object,
 )
 from pyomo.common.log import LoggingIntercept
-
-from io import StringIO
-
-import logging
 
 logger = logging.getLogger('local')
 
@@ -658,6 +662,77 @@ class TestRenamedClass(unittest.TestCase):
 
             class DeprecatedClass(metaclass=RenamedClass):
                 __renamed__new_class__ = NewClass
+
+
+class TestMoved(unittest.TestCase):
+    def test_finder(self):
+        mod_name = 'pyomo.common.deprecation_tester'
+        finder = MovedModuleFinder()
+        self.assertNotIn(mod_name, finder.mapping)
+        self.assertIsNone(finder.find_spec(mod_name, pyomo.common.__path__))
+
+        moved_module(mod_name, __name__, version='1.2.3')
+        try:
+            self.assertIn(mod_name, finder.mapping)
+            spec = finder.find_spec(mod_name, pyomo.common.__path__)
+            self.assertIs(type(spec), ModuleSpec)
+            self.assertEqual(spec.name, mod_name)
+            self.assertIs(type(spec.loader), MovedModuleLoader)
+            self.assertEqual(spec.origin, __file__)
+        finally:
+            del finder.mapping[mod_name]
+
+    def test_loader(self):
+        mod_name = 'pyomo.common.deprecation_tester'
+        try:
+            moved_module(mod_name, __name__, version='1.2.3')
+            with LoggingIntercept() as LOG:
+                import pyomo.common.deprecation_tester
+            self.assertRegex(
+                LOG.getvalue().replace('\n', ' ').strip(),
+                "DEPRECATED: The 'pyomo.common.deprecation_tester' module has been "
+                "moved to 'pyomo.common.tests.test_deprecated'. Please update your "
+                r"import.  \(deprecated in 1.2.3\) \(called from [^)]+\)",
+            )
+            self.assertIs(pyomo.common.deprecation_tester.TestMoved, TestMoved)
+        finally:
+            del MovedModuleFinder.mapping[mod_name]
+
+        try:
+            moved_module(mod_name, __name__, msg=None, version='1.2.3')
+            with LoggingIntercept() as LOG:
+                import pyomo.common.deprecation_tester
+            self.assertEqual(LOG.getvalue(), "")
+            self.assertIs(pyomo.common.deprecation_tester.TestMoved, TestMoved)
+        finally:
+            del MovedModuleFinder.mapping[mod_name]
+
+        try:
+            moved_module(
+                'pyomo.common.tests.old_moved',
+                'pyomo.common.tests.moved',
+                version='1.2',
+            )
+            self.assertNotIn('pyomo.common.tests.moved', sys.modules)
+            self.assertNotIn('pyomo.common.tests.old_moved', sys.modules)
+            with LoggingIntercept() as LOG:
+                import pyomo.common.tests.old_moved
+            self.assertRegex(
+                LOG.getvalue().replace('\n', ' ').strip(),
+                "DEPRECATED: The 'pyomo.common.tests.old_moved' module has been "
+                "moved to 'pyomo.common.tests.moved'. Please update your "
+                r"import.  \(deprecated in 1.2\) \(called from [^)]+\)",
+            )
+            self.assertIn('pyomo.common.tests.moved', sys.modules)
+            self.assertIn('pyomo.common.tests.old_moved', sys.modules)
+            self.assertIs(
+                sys.modules['pyomo.common.tests.moved'],
+                sys.modules['pyomo.common.tests.old_moved'],
+            )
+        finally:
+            del MovedModuleFinder.mapping['pyomo.common.tests.old_moved']
+            del sys.modules['pyomo.common.tests.old_moved']
+            del sys.modules['pyomo.common.tests.moved']
 
 
 if __name__ == '__main__':
