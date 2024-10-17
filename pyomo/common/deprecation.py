@@ -305,14 +305,26 @@ def _import_object(name, target, version, remove_in, msg):
     return _object
 
 
+@deprecated(
+    "relocated_module() has been deprecated.  Please use moved_module()",
+    version='6.8.1.dev0',
+)
 def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=None):
     """Provide a deprecation path for moved / renamed modules
 
     Upon import, the old module (that called `relocated_module()`) will
-    be replaced in `sys.modules` by an alias that points directly to the
+    be replaced in :data:`sys.modules` by an alias that points directly to the
     new module.  As a result, the old module should have only two lines
     of executable Python code (the import of `relocated_module` and the
     call to it).
+
+    Note
+    ----
+    This method (which was placed in the old module that is
+    being removed) is deprecated and should be replaced by calls to
+    :func:`moved_module()`, which can be called in any parent scope of
+    the removed module and does not require that the old module continue
+    to exist in the project.
 
     Parameters
     ----------
@@ -339,7 +351,7 @@ def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=No
     -------
     >>> from pyomo.common.deprecation import relocated_module
     >>> relocated_module('pyomo.common.deprecation', version='1.2.3')
-    WARNING: DEPRECATED: The '...' module has been moved to
+    WARNING: DEPRECATED: ... The '...' module has been moved to
         'pyomo.common.deprecation'. Please update your import.
         (deprecated in 1.2.3) ...
 
@@ -347,7 +359,7 @@ def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=No
     new_module = importlib.import_module(new_name)
 
     # The relevant module (the one being deprecated) is the one that
-    # holds the function/method that called deprecated_module().  The
+    # holds the function/method that called relocated_module().  The
     # relevant calling frame for the deprecation warning is the first
     # frame in the stack that doesn't look like the importer (i.e., the
     # thing that imported the deprecated module).
