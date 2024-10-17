@@ -288,10 +288,8 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 
 
 def _import_object(name, target, version, remove_in, msg):
-    from importlib import import_module
-
     modname, targetname = target.rsplit('.', 1)
-    _object = getattr(import_module(modname), targetname)
+    _object = getattr(importlib.import_module(modname), targetname)
     if msg is None:
         if inspect.isclass(_object):
             _type = 'class'
@@ -346,9 +344,7 @@ def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=No
         (deprecated in 1.2.3) ...
 
     """
-    from importlib import import_module
-
-    new_module = import_module(new_name)
+    new_module = importlib.import_module(new_name)
 
     # The relevant module (the one being deprecated) is the one that
     # holds the function/method that called deprecated_module().  The
