@@ -9,12 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .set import RangeSet
+"This is the deprecated pyomo.gdp.plugins.chull module"
 
-from pyomo.common.deprecation import deprecation_warning
-
-deprecation_warning(
-    'The pyomo.core.base.rangeset module is deprecated.  '
-    'Import RangeSet objects from pyomo.core.base.set or pyomo.core.',
-    version='5.7',
-)
+from pyomo.gdp.plugins.hull import _Deprecated_Name_Hull as ConvexHull_Transformation

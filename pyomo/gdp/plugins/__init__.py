@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 def load():
     from pyomo.gdp.plugins import (
         bigm,
@@ -25,3 +24,17 @@ def load():
         bound_pretransformation,
         binary_multiplication,
     )
+
+#
+# declare deprecation paths for removed modules
+#
+from pyomo.common.deprecation import moved_module
+
+moved_module(
+    'pyomo.gdp.plugins.chull',
+    'pyomo._archive.chull',
+    msg='The pyomo.gdp.plugins.chull module is deprecated.  '
+    'Import the Hull reformulation objects from pyomo.gdp.plugins.hull.',
+    version='5.7',
+)
+del moved_module

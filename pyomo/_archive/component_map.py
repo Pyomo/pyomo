@@ -9,16 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.template_expr import (
-    IndexTemplate,
-    _GetItemIndexer,
-    TemplateExpressionError,
-)
+"This is the deprecated pyomo.core.kernel.component_map module"
 
-from pyomo.common.deprecation import deprecation_warning
-
-deprecation_warning(
-    'The pyomo.core.base.template_expr module is deprecated.  '
-    'Import expression template objects from pyomo.core.expr.template_expr.',
-    version='5.7',
-)
+from pyomo.common.collections import ComponentMap

@@ -9,11 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.collections import ComponentSet
-from pyomo.common.deprecation import deprecation_warning
+"This is the deprecated pyomo.core.kernel.component_set module"
 
-deprecation_warning(
-    'The pyomo.core.kernel.component_set module is deprecated.  '
-    'Import ComponentSet from pyomo.common.collections.',
-    version='5.7.1',
-)
+from pyomo.common.collections import ComponentSet

@@ -9,12 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import deprecation_warning
+"This is the deprecated pyomo.core.base.template_expr module"
 
-deprecation_warning(
-    'The pyomo.gdp.plugins.chull module is deprecated.  '
-    'Import the Hull reformulation objects from pyomo.gdp.plugins.hull.',
-    version='5.7',
+from pyomo.core.expr.template_expr import (
+    IndexTemplate,
+    _GetItemIndexer,
+    TemplateExpressionError,
 )
-
-from .hull import _Deprecated_Name_Hull as ConvexHull_Transformation
