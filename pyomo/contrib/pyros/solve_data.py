@@ -87,23 +87,41 @@ class MasterProblemData(object):
     """
     Container for the grcs master problem
 
-    Attributes:
-        :master_model: master problem model object
-        :base_model: block representing the original model object
-        :iteration: current iteration of the algorithm
+    Attributes
+    ----------
+    master_model : BlockData
+        master problem model object
+
+    base_model : BlockData
+        block representing the original model object
+
+    iteration : int
+        current iteration of the algorithm
+
     """
 
 
 class SeparationProblemData(object):
-    """
-    Container for the grcs separation problem
+    """Container for the grcs separation problem
 
-    Attributes:
-        :separation_model: separation problem model object
-        :points_added_to_master: list of parameter violations added to the master problem over the course of the algorithm
-        :separation_problem_subsolver_statuses: list of subordinate sub-solver statuses throughout separations
-        :total_global_separation_solvers: Counter for number of times global solvers were employed in separation
-        :constraint_violations: List of constraint violations identified in separation
+    Attributes
+    ----------
+    separation_model : BlockData
+        separation problem model object
+
+    points_added_to_master : List[]
+        list of parameter violations added to the master problem over
+        the course of the algorithm
+
+    separation_problem_subsolver_statuses : List[]
+        list of subordinate sub-solver statuses throughout separations
+
+    total_global_separation_solvers : int
+        Counter for number of times global solvers were employed in separation
+
+    constraint_violations : List[]
+        List of constraint violations identified in separation
+
     """
 
     pass
@@ -112,15 +130,29 @@ class SeparationProblemData(object):
 class MasterResult(object):
     """Data class for master problem results data.
 
-    Attributes:
-         - termination_condition: Solver termination condition
-         - fsv_values: list of design variable values
-         - ssv_values: list of control variable values
-         - first_stage_objective: objective contribution due to first-stage degrees of freedom
-         - second_stage_objective: objective contribution due to second-stage degrees of freedom
-         - grcs_termination_condition: the conditions under which the grcs terminated
-                                       (max_iter, robust_optimal, error)
-         - pyomo_results: results object from solve() statement
+    Attributes
+    ----------
+    termination_condition :
+        Solver termination condition
+
+    fsv_values : List[]
+        list of design variable values
+
+    ssv_values : List[]
+        list of control variable values
+
+    first_stage_objective : float
+        objective contribution due to first-stage degrees of freedom
+
+    second_stage_objective : float
+        objective contribution due to second-stage degrees of freedom
+
+    grcs_termination_condition :
+        the conditions under which the grcs terminated (max_iter,
+        robust_optimal, error)
+
+    pyomo_results :
+        results object from solve() statement
 
     """
 
@@ -278,8 +310,6 @@ class DiscreteSeparationSolveCallResults:
     scenario_indexes
     solver_call_results
     performance_constraint
-    time_out
-    subsolver_error
     """
 
     def __init__(
@@ -364,12 +394,6 @@ class SeparationLoopResults:
     solved_globally
     worst_case_perf_con
     all_discrete_scenarios_exhausted
-    found_violation
-    violating_param_realization
-    scaled_violations
-    violating_separation_variable_values
-    subsolver_error
-    time_out
     """
 
     def __init__(
@@ -522,16 +546,6 @@ class SeparationResults:
     ----------
     local_separation_loop_results
     global_separation_loop_results
-    main_loop_results
-    subsolver_error
-    time_out
-    solved_locally
-    solved_globally
-    found_violation
-    violating_param_realization
-    scaled_violations
-    violating_separation_variable_values
-    robustness_certified
     """
 
     def __init__(self, local_separation_loop_results, global_separation_loop_results):

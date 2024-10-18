@@ -55,11 +55,14 @@ def simple_objective_rule(rule):
 
     Example use:
 
-    @simple_objective_rule
-    def O_rule(model, i, j):
-        ...
+    .. code::
 
-    model.o = Objective(rule=simple_objective_rule(...))
+        @simple_objective_rule
+        def O_rule(model, i, j):
+            # ...
+
+        model.o = Objective(rule=simple_objective_rule(...))
+
     """
     return rule_wrapper(rule, {None: Objective.Skip})
 
@@ -72,36 +75,40 @@ def simple_objectivelist_rule(rule):
 
     Example use:
 
-    @simple_objectivelist_rule
-    def O_rule(model, i, j):
-        ...
+    .. code::
 
-    model.o = ObjectiveList(expr=simple_objectivelist_rule(...))
+        @simple_objectivelist_rule
+        def O_rule(model, i, j):
+            # ...
+
+        model.o = ObjectiveList(expr=simple_objectivelist_rule(...))
+
     """
     return rule_wrapper(rule, {None: ObjectiveList.End})
 
 
 class ObjectiveData(NamedExpressionData, ActiveComponentData):
-    """
-    This class defines the data for a single objective.
+    """This class defines the data for a single objective.
 
     Note that this is a subclass of NumericValue to allow
     objectives to be used as part of expressions.
 
-    Constructor arguments:
-        expr            The Pyomo expression stored in this objective.
-        sense           The direction for this objective.
-        component       The Objective object that owns this data.
+    Parameters
+    ----------
+    expr:
+        The Pyomo expression stored in this objective.
 
-    Public class attributes:
-        expr            The Pyomo expression for this objective
-        active          A boolean that is true if this objective is active
-                            in the model.
-        sense           The direction for this objective.
+    sense:
+        The direction for this objective.
 
-    Private class attributes:
-        _component      The objective component.
-        _active         A boolean that indicates whether this data is active
+    component: Objective
+        The Objective object that owns this data.
+
+    Attributes
+    ----------
+    expr:
+        The Pyomo expression for this objective
+
     """
 
     __slots__ = ("_args_", "_sense")

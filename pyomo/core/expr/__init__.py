@@ -202,3 +202,17 @@ from .visitor import (
 
 from .calculus.derivatives import differentiate
 from .taylor_series import taylor_series_expansion
+
+#
+# declare deprecation paths for removed modules and attributes
+#
+from pyomo.common.deprecation import moved_module
+
+moved_module(
+    "pyomo.core.expr.current",
+    "pyomo._archive.current",
+    msg="pyomo.core.expr.current is deprecated.  "
+    "Please import expression symbols from pyomo.core.expr",
+    version='6.6.2',
+)
+del moved_module

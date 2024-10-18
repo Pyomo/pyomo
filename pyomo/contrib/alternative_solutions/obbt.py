@@ -106,44 +106,44 @@ def obbt_analysis_bounds_and_solutions(
     This can be applied to any class of problem supported by the selected
     solver.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model.
-        variables: None or a collection of Pyomo _GeneralVarData variables
-            The variables for which bounds will be generated. None indicates
-            that all variables will be included. Alternatively, a collection of
-            _GenereralVarData variables can be provided.
-        rel_opt_gap : float or None
-            The relative optimality gap for the original objective for which
-            variable bounds will be found. None indicates that a relative gap
-            constraint will not be added to the model.
-        abs_opt_gap : float or None
-            The absolute optimality gap for the original objective for which
-            variable bounds will be found. None indicates that an absolute gap
-            constraint will not be added to the model.
-        refine_discrete_bounds : boolean
-            Boolean indicating that new constraints should be added to the
-            model at each iteration to tighten the bounds for discrete
-            variables.
-        warmstart : boolean
-            Boolean indicating that the solver should be warmstarted from the
-            best previously discovered solution.
-        solver : string
-            The solver to be used.
-        solver_options : dict
-            Solver option-value pairs to be passed to the solver.
-        tee : boolean
-            Boolean indicating that the solver output should be displayed.
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model.
+    variables: None or a collection of Pyomo _GeneralVarData variables
+        The variables for which bounds will be generated. None indicates
+        that all variables will be included. Alternatively, a collection of
+        _GenereralVarData variables can be provided.
+    rel_opt_gap : float or None
+        The relative optimality gap for the original objective for which
+        variable bounds will be found. None indicates that a relative gap
+        constraint will not be added to the model.
+    abs_opt_gap : float or None
+        The absolute optimality gap for the original objective for which
+        variable bounds will be found. None indicates that an absolute gap
+        constraint will not be added to the model.
+    refine_discrete_bounds : boolean
+        Boolean indicating that new constraints should be added to the
+        model at each iteration to tighten the bounds for discrete
+        variables.
+    warmstart : boolean
+        Boolean indicating that the solver should be warmstarted from the
+        best previously discovered solution.
+    solver : string
+        The solver to be used.
+    solver_options : dict
+        Solver option-value pairs to be passed to the solver.
+    tee : boolean
+        Boolean indicating that the solver output should be displayed.
 
-        Returns
-        -------
-        variable_ranges
-            A Pyomo ComponentMap containing the bounds for each variable.
-            {variable: (lower_bound, upper_bound)}. An exception is raised when
-            the solver encountered an issue.
-        solutions
-            [Solution]
+    Returns
+    -------
+    variable_ranges
+        A Pyomo ComponentMap containing the bounds for each variable.
+        {variable: (lower_bound, upper_bound)}. An exception is raised when
+        the solver encountered an issue.
+    solutions
+        [Solution]
     """
 
     # TODO - parallelization

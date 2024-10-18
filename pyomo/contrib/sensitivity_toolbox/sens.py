@@ -230,22 +230,27 @@ def sensitivity_calculation(
 
 
 def get_dsdp(model, theta_names, theta, tee=False):
-    """This function calculates gradient vector of the variables
-        with respect to the parameters (theta_names).
+    r"""This function calculates gradient vector of the variables with
+    respect to the parameters (theta_names).
 
-    e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
-         s.t  c1: x1 + x2 = p1
-              c2: x2 + x3 = p2
-              0 <= x1, x2, x3 <= 10
-              p1 = 10
-              p2 = 5
+    For example, given:
+
+    .. math::
+
+        \min f:\ & p1*x1 + p2*(x2^2) + p1*p2 \\
+        s.t.\ & c1: x1 + x2 = p1 \\
+              & c2: x2 + x3 = p2 \\
+              & 0 <= x1, x2, x3 <= 10 \\
+              & p1 = 10 \\
+              & p2 = 5
+
     the function returns dx/dp and dp/dp, and column orders.
 
     The following terms are used to define the output dimensions:
-    Ncon   = number of constraints
-    Nvar   = number of variables (Nx + Ntheta)
-    Nx     = number of decision (primal) variables
-    Ntheta = number of uncertain parameters.
+    - Ncon   = number of constraints
+    - Nvar   = number of variables (Nx + Ntheta)
+    - Nx     = number of decision (primal) variables
+    - Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
@@ -267,6 +272,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
         columns = len(col)
     col: list
         List of variable names
+
     """
     # Get parameters from names. In SensitivityInterface, we expect
     # these to be parameters on the original model.
@@ -321,54 +327,66 @@ def get_dsdp(model, theta_names, theta, tee=False):
 
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
-    """This function calculates gradient vector of the objective function
-       and constraints with respect to the variables and parameters.
+    r"""This function calculates gradient vector of the objective function
+    and constraints with respect to the variables and parameters.
 
-    e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
-         s.t  c1: x1 + x2 = p1
-              c2: x2 + x3 = p2
-              0 <= x1, x2, x3 <= 10
-              p1 = 10
-              p2 = 5
+    For example, given:
+
+    .. math::
+
+        \min f:\ & p1*x1 + p2*(x2^2) + p1*p2 \\
+        s.t.\ & c1: x1 + x2 = p1 \\
+              & c2: x2 + x3 = p2 \\
+              & 0 <= x1, x2, x3 <= 10 \\
+              & p1 = 10 \\
+              & p2 = 5
+
     - Variables = (x1, x2, x3, p1, p2)
     - Fix p1 and p2 with estimated values
 
     The following terms are used to define the output dimensions:
-    Ncon   = number of constraints
-    Nvar   = number of variables (Nx + Ntheta)
-    Nx     = number of decision (primal) variables
-    Ntheta = number of uncertain parameters.
+    - Ncon   = number of constraints
+    - Nvar   = number of variables (Nx + Ntheta)
+    - Nx     = number of decision (primal) variables
+    - Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
-    model: Pyomo ConcreteModel
+    model : Pyomo ConcreteModel
         model should include an objective function
-    theta_names: list of strings
+
+    theta_names : list of strings
         List of Var names
-    tee: bool, optional
+
+    tee : bool, optional
         Indicates that ef solver output should be teed
-    solver_options: dict, optional
+
+    solver_options : dict, optional
         Provides options to the solver (also the name of an attribute)
 
     Returns
     -------
-    gradient_f: numpy.ndarray
+    gradient_f : numpy.ndarray
         Length Nvar array. A gradient vector of the objective function
         with respect to the (decision variables, parameters) at the optimal
         solution
-    gradient_c: scipy.sparse.csr.csr_matrix
+
+    gradient_c : scipy.sparse.csr.csr_matrix
         Ncon by Nvar size sparse matrix. A Jacobian matrix of the
         constraints with respect to the (decision variables, parameters)
         at the optimal solution. Each row contains [row number,
         column number, and value], column order follows variable order in col
         and index starts from 0. Note that it follows k_aug.
         If no constraint exists, return []
-    col: list
+
+    col : list
         Size Nvar list of variable names
-    row: list
+
+    row : list
         Size Ncon+1 list of constraints and objective function names.
         The final element is the objective function name.
-    line_dic: dict
+
+    line_dic : dict
         column numbers of the theta_names in the model. Index starts from 1
 
     Raises

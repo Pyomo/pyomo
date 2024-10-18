@@ -216,13 +216,14 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True, places=None):
 
     b: ExpressionBase or native type
 
-    include_named_exprs: bool
-       If True (the default), the comparison expands all named
-       expressions when generating the prefix notation
+    include_named_exprs : bool
+        If True (the default), the comparison expands all named
+        expressions when generating the prefix notation
 
-    places: Number of decimal places required for equality of floating
-            point numbers in the expression. If None (the default), the
-            expressions must be exactly equal.
+    places : float
+        Number of decimal places required for equality of floating
+        point numbers in the expression. If None (the default), the
+        expressions must be exactly equal.
     """
     prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
     prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
@@ -265,10 +266,14 @@ def assertExpressionsStructurallyEqual(
 
     b: ExpressionBase or native type
 
-    include_named_exprs: bool
+    include_named_exprs : bool
        If True (the default), the comparison expands all named
        expressions when generating the prefix notation
 
+    places : float
+        Number of decimal places required for equality of floating
+        point numbers in the expression. If None (the default), the
+        expressions must be exactly equal.
     """
     prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
     prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)

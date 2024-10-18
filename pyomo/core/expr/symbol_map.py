@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from weakref import ref as weakref_ref
-
 
 class SymbolMap(object):
     """
@@ -27,11 +25,16 @@ class SymbolMap(object):
     Note:
         We should change the API to not use camelcase.
 
-    Attributes:
-        byObject (dict):  maps (object id) to (string label)
-        bySymbol (dict):  maps (string label) to (object)
-        alias (dict):  maps (string label) to (object)
-        default_labeler: used to compute a string label from an object
+    Attributes
+    ----------
+    byObject : dict
+        maps (object id) to (string label)
+    bySymbol : dict
+        maps (string label) to (object)
+    aliases : dict
+        maps (string label) to (object)
+    default_labeler:
+        used to compute a string label from an object
     """
 
     def __init__(self, labeler=None):
