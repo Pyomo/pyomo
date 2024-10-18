@@ -81,6 +81,7 @@ from pyomo.core.kernel import (
 # declare deprecation paths for removed modules and attributes
 #
 from pyomo.common.deprecation import relocated_module_attribute, moved_module
+
 relocated_module_attribute(
     'component_map',
     'pyomo.common.collections.component_map',

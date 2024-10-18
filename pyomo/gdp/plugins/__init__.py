@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
 def load():
     from pyomo.gdp.plugins import (
         bigm,
@@ -24,6 +25,7 @@ def load():
         bound_pretransformation,
         binary_multiplication,
     )
+
 
 #
 # declare deprecation paths for removed modules
