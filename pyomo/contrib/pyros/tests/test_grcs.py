@@ -1785,7 +1785,7 @@ class RegressionTest(unittest.TestCase):
                 options={
                     "objective_focus": ObjectiveType.worst_case,
                     "solve_master_globally": False,
-                    "bypass_local_separation": True,
+                    "bypass_global_separation": True,
                     "decision_rule_order": 1,
                 },
             )
