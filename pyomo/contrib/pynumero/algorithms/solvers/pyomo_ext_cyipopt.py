@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 import numpy as np
 import abc
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import (
     CyIpoptProblemInterface,
 )
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
