@@ -24,4 +24,6 @@ moved_module(
     "package.  Please see https://github.com/Pyomo/pysp for "
     "information on downloading and installing PySP",
 )
+# (*silently*) redirect 'pyomo.__future__' to 'pyomo.future'
+moved_module('pyomo.__future__', 'pyomo.future', msg=None)
 del moved_module
