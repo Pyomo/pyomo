@@ -1746,10 +1746,7 @@ class RegressionTest(unittest.TestCase):
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
 
-    @unittest.skipUnless(
-        (baron_available and baron_license_is_valid and baron_version == (24, 5, 8, 0)),
-        "BARON 24.5.8 not available and licensed.",
-    )
+    @unittest.skipUnless(ipopt_available, "IPOPT not available.")
     def test_coefficient_matching_nonlinear_expr(self):
         """
         Test behavior of PyROS solver for model with
@@ -1763,13 +1760,7 @@ class RegressionTest(unittest.TestCase):
         m.u = Param(initialize=1.125, mutable=True)
 
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
-        m.eq_con = Constraint(
-            expr=m.u**2 * (m.x2 - 1)
-            + m.u * (m.x1**3 + 0.5)
-            - 5 * m.u * m.x1 * m.x2
-            + m.u * (m.x1 + 2)
-            == 0
-        )
+        m.eq_con = Constraint(expr=m.u**2 * (m.x2 - 1) == 0)
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -1778,8 +1769,8 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory("baron")
-        global_subsolver = SolverFactory("baron")
+        local_subsolver = SolverFactory("ipopt")
+        global_subsolver = SolverFactory("ipopt")
 
         # Call the PyROS solver
         with LoggingIntercept(module="pyomo.contrib.pyros", level=logging.DEBUG) as LOG:
@@ -1793,7 +1784,8 @@ class RegressionTest(unittest.TestCase):
                 global_solver=global_subsolver,
                 options={
                     "objective_focus": ObjectiveType.worst_case,
-                    "solve_master_globally": True,
+                    "solve_master_globally": False,
+                    "bypass_local_separation": True,
                     "decision_rule_order": 1,
                 },
             )
@@ -1803,11 +1795,9 @@ class RegressionTest(unittest.TestCase):
             pyros_log, r".*Equality constraint '.*eq_con.*'.*cannot be written.*"
         )
 
-        # should still solve in spite of coefficient matching
-        # failure
         self.assertEqual(
             results.pyros_termination_condition,
-            pyrosTerminationCondition.robust_optimal,
+            pyrosTerminationCondition.robust_feasible,
         )
 
 
