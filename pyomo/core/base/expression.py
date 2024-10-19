@@ -62,7 +62,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
             return arg
         return arg(exception=exception)
 
-    def create_node_with_local_data(self, values):
+    def create_node_with_local_data(self, values, classtype=None):
         """
         Construct a simple expression after constructing the
         contained expression.
@@ -70,7 +70,9 @@ class NamedExpressionData(numeric_expr.NumericValue):
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
-        obj = self.__class__()
+        if classtype is None:
+            classtype = self.parent_component()._ComponentDataClass
+        obj = classtype()
         obj._args_ = values
         return obj
 

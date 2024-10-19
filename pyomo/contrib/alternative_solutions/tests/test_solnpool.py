@@ -9,21 +9,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as numpy, numpy_available
-
-if numpy_available:
-    from numpy.testing import assert_array_almost_equal
-from pyomo.common.dependencies import attempt_import
-
-gurobipy, gurobipy_available = attempt_import("gurobipy")
-
 from collections import Counter
 
-import pyomo.environ as pe
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common import unittest
-
 from pyomo.contrib.alternative_solutions import gurobi_generate_solutions
+from pyomo.contrib.appsi.solvers import Gurobi
+
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
+import pyomo.environ as pe
+
+gurobipy_available = Gurobi().available()
 
 
 @unittest.skipIf(not gurobipy_available, "Gurobi MIP solver not available")
@@ -51,7 +47,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_ip_num_solutions(self):
@@ -66,7 +62,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = [6, 2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_feasibility(self):
@@ -80,7 +76,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_rel_feasibility(self):
@@ -95,7 +91,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_rel_feasibility_options(self):
@@ -112,7 +108,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_abs_feasibility(self):
@@ -127,7 +123,7 @@ class TestSolnPoolUnit(unittest.TestCase):
         objectives = [round(result.objective[1], 2) for result in results]
         actual_solns_by_obj = m.num_ranked_solns[0:3]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
-        assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
+        np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
 
     @unittest.skipIf(True, "Ignoring fragile test for solver timeout.")
     def test_mip_no_time(self):
