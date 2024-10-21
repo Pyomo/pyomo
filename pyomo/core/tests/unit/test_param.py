@@ -1561,6 +1561,70 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
         m.p = 20
         self.assertEqual(m.x_p.bounds, (0, 20))
 
+    def test_nonfinite_pprint(self):
+        m = ConcreteModel()
+
+        # Test from #3379
+        m.p = Param(Any, default=1)
+        self.assertEqual(m.p['foo'], 1)
+        OUT = StringIO()
+        m.p.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "p : Size=inf, Index=Any, Domain=Any, Default=1, Mutable=False\n"
+            "    Key : Value\n",
+        )
+
+        # Other useful checks
+        m.q = Param(Any, default=1, initialize={1: 2, 'a': 3, 'bb': 4})
+        OUT = StringIO()
+        m.q.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "q : Size=inf, Index=Any, Domain=Any, Default=1, Mutable=False\n"
+            "    Key : Value\n"
+            "      1 :     2\n"
+            "      a :     3\n"
+            "     bb :     4\n",
+        )
+
+        m.r = Param(Any, initialize={1: 2, 'a': 3, 'bb': 4})
+        OUT = StringIO()
+        m.r.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "r : Size=3, Index=Any, Domain=Any, Default=None, Mutable=False\n"
+            "    Key : Value\n"
+            "      1 :     2\n"
+            "      a :     3\n"
+            "     bb :     4\n",
+        )
+
+        # Other useful (mutable) checks
+        m.q = Param(Any, default=1, mutable=True, initialize={1: 2, 'a': 3, 'bb': 4})
+        OUT = StringIO()
+        m.q.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "q : Size=inf, Index=Any, Domain=Any, Default=1, Mutable=True\n"
+            "    Key : Value\n"
+            "      1 :     2\n"
+            "      a :     3\n"
+            "     bb :     4\n",
+        )
+
+        m.r = Param(Any, mutable=True, initialize={1: 2, 'a': 3, 'bb': 4})
+        OUT = StringIO()
+        m.r.pprint(OUT)
+        self.assertEqual(
+            OUT.getvalue(),
+            "r : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True\n"
+            "    Key : Value\n"
+            "      1 :     2\n"
+            "      a :     3\n"
+            "     bb :     4\n",
+        )
+
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
     def testMethod(self):
