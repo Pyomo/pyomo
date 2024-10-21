@@ -1572,11 +1572,11 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
         self.assertEqual(
             OUT.getvalue(),
             "p : Size=inf, Index=Any, Domain=Any, Default=1, Mutable=False\n"
-            "    Key : Value\n"
+            "    Key : Value\n",
         )
 
         # Other useful checks
-        m.q = Param(Any, default=1, initialize={1:2, 'a':3, 'bb': 4})
+        m.q = Param(Any, default=1, initialize={1: 2, 'a': 3, 'bb': 4})
         OUT = StringIO()
         m.q.pprint(OUT)
         self.assertEqual(
@@ -1585,10 +1585,10 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "    Key : Value\n"
             "      1 :     2\n"
             "      a :     3\n"
-            "     bb :     4\n"
+            "     bb :     4\n",
         )
 
-        m.r = Param(Any, initialize={1:2, 'a':3, 'bb': 4})
+        m.r = Param(Any, initialize={1: 2, 'a': 3, 'bb': 4})
         OUT = StringIO()
         m.r.pprint(OUT)
         self.assertEqual(
@@ -1597,11 +1597,11 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "    Key : Value\n"
             "      1 :     2\n"
             "      a :     3\n"
-            "     bb :     4\n"
+            "     bb :     4\n",
         )
 
         # Other useful (mutable) checks
-        m.q = Param(Any, default=1, mutable=True, initialize={1:2, 'a':3, 'bb': 4})
+        m.q = Param(Any, default=1, mutable=True, initialize={1: 2, 'a': 3, 'bb': 4})
         OUT = StringIO()
         m.q.pprint(OUT)
         self.assertEqual(
@@ -1610,10 +1610,10 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "    Key : Value\n"
             "      1 :     2\n"
             "      a :     3\n"
-            "     bb :     4\n"
+            "     bb :     4\n",
         )
 
-        m.r = Param(Any, mutable=True, initialize={1:2, 'a':3, 'bb': 4})
+        m.r = Param(Any, mutable=True, initialize={1: 2, 'a': 3, 'bb': 4})
         OUT = StringIO()
         m.r.pprint(OUT)
         self.assertEqual(
@@ -1622,7 +1622,7 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "    Key : Value\n"
             "      1 :     2\n"
             "      a :     3\n"
-            "     bb :     4\n"
+            "     bb :     4\n",
         )
 
 
