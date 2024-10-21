@@ -28,14 +28,16 @@ import array
     remove_in='6.8.0',
 )
 def to_standard_form(self):
-    """
+    r"""
     Produces a standard-form representation of the model. Returns
     the coefficient matrix (A), the cost vector (c), and the
     constraint vector (b), where the 'standard form' problem is
 
-    min/max c'x
-    s.t.    Ax = b
-            x >= 0
+    .. math::
+
+        \min/\max\ & c'x \\
+        s.t.\      &  Ax = b \\
+                   & x >= 0
 
     All three returned values are instances of the array.array
     class, and store Python floats (C doubles).

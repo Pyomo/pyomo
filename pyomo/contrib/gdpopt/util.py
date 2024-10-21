@@ -499,15 +499,16 @@ def lower_logger_level_to(logger, level=None, tee=False):
             sh.setLevel(level)
         level_changed = True
 
-    yield
-
-    if tee:
-        logger.handlers.clear()
-        for h in handlers:
-            logger.addHandler(h)
-        logger.propagate = True
-    if level_changed:
-        logger.setLevel(old_logger_level)
+    try:
+        yield
+    finally:
+        if tee:
+            logger.handlers.clear()
+            for h in handlers:
+                logger.addHandler(h)
+            logger.propagate = True
+        if level_changed:
+            logger.setLevel(old_logger_level)
 
 
 def _add_bigm_constraint_to_transformed_model(m, constraint, block):

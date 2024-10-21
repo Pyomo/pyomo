@@ -616,9 +616,7 @@ class CommunityMap(object):
         subtitle_font_size = 11
         plt.title(subtitle_naming_dict[type_of_graph], fontsize=subtitle_font_size)
 
-        if filename is None:
-            plt.show()
-        else:
+        if filename is not None:
             plt.savefig(filename)
             plt.close()
 

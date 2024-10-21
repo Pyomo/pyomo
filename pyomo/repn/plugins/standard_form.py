@@ -66,7 +66,7 @@ class LinearStandardFormInfo(object):
 
         The objective coefficients.  Note that this is a sparse array
         and may contain multiple rows (for multiobjective problems).  The
-        objectives may be calculated by "c @ x"
+        objectives may be calculated by ``c @ x``
 
     c_offset : numpy.ndarray
 
@@ -75,7 +75,7 @@ class LinearStandardFormInfo(object):
     A : scipy.sparse.csc_array
 
         The constraint coefficients.  The constraint bodies may be
-        calculated by "A @ x"
+        calculated by ``A @ x``
 
     rhs : numpy.ndarray
 
@@ -122,18 +122,35 @@ class LinearStandardFormInfo(object):
 
     @property
     def x(self):
+        "Alias for :attr:`columns`"
         return self.columns
 
     @property
     def b(self):
+        "Alias for :attr:`rhs`"
         return self.rhs
 
 
 @WriterFactory.register(
-    'compile_standard_form', 'Compile an LP to standard form (`min cTx s.t. Ax <= b`)'
+    'compile_standard_form',
+    r'Compile an LP to standard form (:math:`\min c^Tx s.t. Ax \le b)`',
 )
 class LinearStandardFormCompiler(object):
+    r"""Compiler to convert an LP to the matrix representation of the
+    standard form:
+
+    .. math::
+
+        \min\ & c^Tx \\
+        s.t.\ & Ax \le b
+
+    and return the compiled representation as NumPy arrays and SciPy
+    sparse matrices.
+
+    """
+
     CONFIG = ConfigBlock('compile_standard_form')
+
     CONFIG.declare(
         'nonnegative_vars',
         ConfigValue(
@@ -147,7 +164,8 @@ class LinearStandardFormCompiler(object):
         ConfigValue(
             default=False,
             domain=bool,
-            description='Add slack variables and return `min cTx s.t. Ax == b`',
+            description='Add slack variables and return '
+            r':math:`\min c^Tx; s.t. Ax = b`',
         ),
     )
     CONFIG.declare(
@@ -184,10 +202,13 @@ class LinearStandardFormCompiler(object):
             doc="""
             How much effort do we want to put into ensuring the
             resulting matrices are produced deterministically:
-                NONE (0) : None
-                ORDERED (10): rely on underlying component ordering (default)
-                SORT_INDICES (20) : sort keys of indexed components
-                SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
+
+               - ``NONE`` (0): None
+               - ``ORDERED`` (10): rely on underlying component ordering (default)
+               - ``SORT_INDICES`` (20) : sort keys of indexed components
+               - ``SORT_SYMBOLS`` (30) : sort keys AND sort names (not
+                 declaration order)
+
             """,
         ),
     )
@@ -198,7 +219,7 @@ class LinearStandardFormCompiler(object):
             description='Preferred constraint ordering',
             doc="""
             List of constraints in the order that they should appear in
-            the resulting `A` matrix.  Unspecified constraints will
+            the resulting ``A`` matrix.  Unspecified constraints will
             appear at the end.""",
         ),
     )
@@ -219,7 +240,7 @@ class LinearStandardFormCompiler(object):
 
     @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream=None, **options):
-        """Convert a model to standard form (`min cTx s.t. Ax <= b`)
+        """Convert a model to standard form
 
         Returns
         -------
@@ -230,7 +251,7 @@ class LinearStandardFormCompiler(object):
         model: ConcreteModel
             The concrete Pyomo model to write out.
 
-        ostream: None
+        ostream:
             This is provided for API compatibility with other writers
             and is ignored here.
 

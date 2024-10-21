@@ -15,5 +15,4 @@ from pyomo.opt.parallel.async_solver import (
     SolverManagerFactory,
     AsynchronousSolverManager,
 )
-import pyomo.opt.parallel.manager
-import pyomo.opt.parallel.local
+from pyomo.opt.parallel import manager, local

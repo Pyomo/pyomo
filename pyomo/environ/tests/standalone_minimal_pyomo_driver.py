@@ -15,7 +15,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.repn.tests.lp_diff import lp_diff
 
-_baseline = """\\* Source Pyomo model name=unknown *\\
+_baseline = r"""\* Source Pyomo model name=unknown *\
 
 min
 x2:

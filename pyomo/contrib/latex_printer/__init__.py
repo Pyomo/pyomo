@@ -9,9 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Recommended just to build all of the appropriate things
-import pyomo.environ
-
 # Remove one layer of .latex_printer
 # import statement is now:
 #   from pyomo.contrib.latex_printer import latex_printer

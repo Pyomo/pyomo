@@ -92,18 +92,16 @@ def slice_component_along_sets(comp, sets, context=None):
 
     Parameters:
     -----------
-    comp: `pyomo.core.base.component.Component` or
-    `pyomo.core.base.component.ComponentData`
+    comp: :class:`Component` or :class:`ComponentData`
         Component whose parent structure to search and replace
-    sets: `pyomo.common.collections.ComponentSet`
+    sets: `~pyomo.common.collections.ComponentSet`
         Contains the sets to replace with slices
-    context: `pyomo.core.base.block.Block` or
-    `pyomo.core.base.block.BlockData`
+    context: :class:`Block` or :class:`BlockData`
         Block below which to search for sets
 
     Returns:
     --------
-    `pyomo.core.base.indexed_component_slice.IndexedComponent_slice`:
+    `~pyomo.core.base.indexed_component_slice.IndexedComponent_slice`:
         Slice of `comp` with wildcards replacing the indices of `sets`
 
     """

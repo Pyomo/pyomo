@@ -10,9 +10,7 @@
 #  ___________________________________________________________________________
 import numpy as np
 import abc
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptProblemInterface,
-)
+from pyomo.contrib.pynumero.interfaces.cyipopt_interface import CyIpoptProblemInterface
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.environ import Var, Constraint, value
