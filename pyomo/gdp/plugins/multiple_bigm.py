@@ -127,7 +127,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     CONFIG.declare(
         'solver',
         ConfigValue(
-            default=SolverFactory('gurobi'),
+            default=SolverFactory('_gurobi_file'),
             description="A solver to use to solve the continuous subproblems for "
             "calculating the M values",
         ),
