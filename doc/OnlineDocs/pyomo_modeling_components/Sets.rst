@@ -451,8 +451,9 @@ for this model, a toy data file (in AMPL "``.dat``" format) would be:
 
    >>> inst = model.create_instance('src/scripting/Isinglecomm.dat')
 
-This can also be done somewhat more efficiently, and perhaps more clearly,
-using a :class:`BuildAction` (for more information, see :ref:`BuildAction`):
+This can also be done much more efficiently using initialization functions
+that accept only a model block and return a ``dict`` with all the information
+needed for the indexed set:
 
 .. doctest::
    :hide:
@@ -463,8 +464,36 @@ using a :class:`BuildAction` (for more information, see :ref:`BuildAction`):
 
 .. testcode::
 
-   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
+    def NodesIn_init(m):
+        # Create a dict to show NodesIn list for every node
+        d = {i: [] for i in m.Nodes}
+        # loop over the arcs and record the end points
+        for i, j in model.Arcs:
+            d[j].append(i)
+        return d
+    model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
+
+    def NodesOut_init(m):
+        d = {i: [] for i in m.Nodes}
+        for i, j in model.Arcs:
+            d[i].append(j)
+        return d
+    model.NodesOut = pyo.Set(model.Nodes, initialize=NodesOut_init)
+
+This can also be done efficiently, and perhaps more clearly, using a
+:class:`BuildAction` (for more information, see :ref:`BuildAction`):
+
+.. doctest::
+   :hide:
+
+   >>> model = inst
+   >>> del model.NodesIn
+   >>> del model.NodesOut
+
+.. testcode::
+
    model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes)
+   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
 
    def Populate_In_and_Out(model):
        # loop over the arcs and record the end points
