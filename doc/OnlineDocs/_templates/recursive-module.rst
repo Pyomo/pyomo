@@ -21,14 +21,14 @@ Library Reference
    {% endif %}
    {%- endblock %}
 
-   {%- block functions %}
-   {%- if functions %}
-   .. rubric:: {{ _('Functions') }}
+   {% block enums %}
+   {%- if enums %}
+   .. rubric:: {{ _('Enums') }}
 
    .. autosummary::
       :toctree:
-      :template: recursive-base.rst
-   {% for item in functions %}
+      :template: recursive-enum.rst
+   {% for item in enums %}
       {{ item }}
    {%- endfor %}
    {% endif %}
@@ -55,6 +55,19 @@ Library Reference
       :toctree:
       :template: recursive-class.rst
    {% for item in exceptions %}
+      {{ item }}
+   {%- endfor %}
+   {% endif %}
+   {%- endblock %}
+
+   {%- block functions %}
+   {%- if functions %}
+   .. rubric:: {{ _('Functions') }}
+
+   .. autosummary::
+      :toctree:
+      :template: recursive-base.rst
+   {% for item in functions %}
       {{ item }}
    {%- endfor %}
    {% endif %}

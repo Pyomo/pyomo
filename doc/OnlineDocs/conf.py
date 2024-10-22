@@ -245,7 +245,7 @@ texinfo_documents = [
 ]
 
 # autodoc_member_order = 'bysource'
-# autodoc_member_order = 'groupwise'
+autodoc_member_order = 'groupwise'
 
 autosummary_generate = True
 autosummary_ignore_module_all = True

@@ -1,6 +1,6 @@
 {{ name | escape | underline}}
 
-(class from :py:mod:`{{ module }}`)
+(enum from :py:mod:`{{ module }}`)
 
 .. testsetup:: *
 
@@ -10,28 +10,33 @@
 
 .. currentmodule:: {{ module }}
 
-{# Note that numpy.ndarray examples fail doctest; disable documentation
-   of inherited members for classes derived from ndarray #}
-
-.. autoclass:: {{ module }}::{{ objname }}
+.. autoenum:: {{ module }}::{{ objname }}
    :members:
+   :inherited-members:
+   :undoc-members:
    :show-inheritance:
-   {{ '' if (module + '.' + name) in (
-         'pyomo.contrib.pynumero.sparse.block_vector.BlockVector',
-         'pyomo.contrib.pynumero.sparse.mpi_block_vector.MPIBlockVector',
-         'pyomo.core.expr.ndarray.NumericNDArray',
-      ) else ':inherited-members:' }}
+
+   {% block enum_members %}
+   {% if enum_members %}
+   .. rubric:: {{ _('Enum Members') }}
+
+   {{ member_type }}
+
+   .. autosummary::
+      {% for item in enum_members %}
+      ~{{ name }}.{{ item }}
+      {%- endfor %}
+   {% endif %}
+   {% endblock %}
 
    {% block methods %}
-   .. automethod:: __init__
-
    {% if methods %}
    .. rubric:: {{ _('Methods') }}
 
    .. autosummary::
-   {% for item in methods %}
+      {% for item in methods %}
       ~{{ name }}.{{ item }}
-   {%- endfor %}
+      {%- endfor %}
    {% endif %}
    {% endblock %}
 
@@ -40,9 +45,9 @@
    .. rubric:: {{ _('Attributes') }}
 
    .. autosummary::
-   {% for item in attributes %}
+      {% for item in attributes %}
       ~{{ name }}.{{ item }}
-   {%- endfor %}
+      {%- endfor %}
    {% endif %}
    {% endblock %}
 
