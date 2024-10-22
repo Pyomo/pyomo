@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.dataportal.parse_datacmds
+from pyomo.dataportal import parse_datacmds
 from pyomo.dataportal.TableData import TableData
 from pyomo.dataportal.DataPortal import DataPortal
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager

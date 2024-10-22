@@ -9,9 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
 from contextlib import nullcontext
 
+from pyomo.common import enums
 from pyomo.common.deprecation import deprecated
 
 TO_STRING_VERBOSE = False
@@ -32,7 +32,7 @@ _impl = 5
 #
 # Provide a global value that indicates which expression system is being used
 #
-class Mode(enum.IntEnum):
+class Mode(enums.IntEnum):
     # coopr: Original Coopr/Pyomo expression system
     coopr_trees = 1
     # coopr3: leverage reference counts to reduce the amount of required
@@ -60,7 +60,7 @@ _mode = Mode.CURRENT
 assert _mode == Mode.pyomo6_trees
 
 
-class OperatorAssociativity(enum.IntEnum):
+class OperatorAssociativity(enums.IntEnum):
     """Enum for indicating the associativity of an operator.
 
     LEFT_TO_RIGHT(1) if this operator is left-to-right associative or
@@ -76,7 +76,7 @@ class OperatorAssociativity(enum.IntEnum):
     LEFT_TO_RIGHT = 1
 
 
-class ExpressionType(enum.Enum):
+class ExpressionType(enums.Enum):
     NUMERIC = 0
     RELATIONAL = 1
     LOGICAL = 2

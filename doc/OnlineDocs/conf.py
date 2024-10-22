@@ -35,6 +35,8 @@ import sys
 sys.path.insert(0, os.path.abspath('../../../pyutilib'))
 # top-level pyomo source directory
 sys.path.insert(0, os.path.abspath('../..'))
+# our sphinx extensions
+sys.path.insert(0, os.path.abspath('ext'))
 
 # -- Rebuild SPY files ----------------------------------------------------
 sys.path.insert(0, os.path.abspath('src'))
@@ -44,7 +46,7 @@ try:
 
     generate_spy_files(os.path.abspath('src'))
     generate_spy_files(
-        os.path.abspath(os.path.join('library_reference', 'kernel', 'examples'))
+        os.path.abspath(os.path.join('explanation', 'experimental', 'kernel'))
     )
 finally:
     sys.path.pop(0)
@@ -58,7 +60,6 @@ intersphinx_mapping = {
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'scikit-learn': ('https://scikit-learn.org/stable/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/', None),
-    'Sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
 
 # -- General configuration ------------------------------------------------
@@ -72,20 +73,17 @@ needs_sphinx = '1.8'
 # ones.
 extensions = [
     'sphinx.ext.intersphinx',
-    'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
-    'sphinx.ext.ifconfig',
     'sphinx.ext.inheritance_diagram',
-    'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx_copybutton',
-    'enum_tools.autoenum',
-    'sphinx.ext.autosectionlabel',
-    #'sphinx.ext.githubpages',
+    # Our version of 'autoenum', designed to work with autosummary.
+    # This adds 'sphinx.ext.autosummary', and 'sphinx.ext.autodoc':
+    'pyomo_autosummary_autoenum',
 ]
 
 viewcode_follow_imported_members = True
@@ -108,7 +106,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Pyomo'
-copyright = u'2008-2023, Sandia National Laboratories'
+copyright = u'2008-2024, Sandia National Laboratories'
 author = u'Pyomo Developers'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -132,7 +130,21 @@ language = "en"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+# Notes:
+#  - _build : this is the Sphinx build (output) dir
+#
+#  - api/*.tests.* : this matches autosummary RST files generated for
+#    test modules.  Note that the _templates/recursive-modules.rst
+#    should prevent these file from being generated, so this is not
+#    strictly necessary, but including it makes Sphinx throw warnings if
+#    the filter in the template ever "breaks"
+#
+#  - **/tests/** : this matches source files in any tests directory
+#    [JDS: I *believe* this is necessary, but am not 100% certain]
+#
+#  - 'Thumbs.db', '.DS_Store' : these have been included from the
+#    beginning.  Unclear if they are still necessary
+exclude_patterns = ['_build', 'api/*.tests.*', '**/tests/**', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -168,7 +180,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {'navigation_depth': 6, 'titles_only': True}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -233,7 +245,10 @@ texinfo_documents = [
 ]
 
 # autodoc_member_order = 'bysource'
-# autodoc_member_order = 'groupwise'
+autodoc_member_order = 'groupwise'
+
+autosummary_generate = True
+autosummary_ignore_module_all = True
 
 # -- Check which conditional dependencies are available ------------------
 # Used for skipping certain doctests
@@ -267,20 +282,32 @@ system_info = (
     platform.python_implementation()
 )
 
+# Mark that we are testing code (in this case, testing the documentation)
+from pyomo.common.flags import in_testing_environment
+in_testing_environment(True)
+
+# We need multiprocessing because some doctests must be skipped if the
+# start method is not "fork"
+import multiprocessing
+
+# (register plugins, make environ available to tests)
+import pyomo.environ as pyo
+
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
-    pympler_available, dill_available,
+    pympler_available, dill_available, pint_available,
+    numpy as np,
 )
-pint_available = attempt_import('pint', defer_import=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
-import pyomo.environ as _pe # (trigger all plugin registrations)
-import pyomo.opt as _opt
+# Ensure that the matplotlib import has been resolved (and the backend changed)
+bool(matplotlib_available)
 
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to suppress warnings when 
 # solvers are not available
+import pyomo.opt as _opt
 ipopt_available = bool(_opt.check_available_solvers('ipopt'))
 sipopt_available = bool(_opt.check_available_solvers('ipopt_sens'))
 k_aug_available = bool(_opt.check_available_solvers('k_aug'))
@@ -290,6 +317,11 @@ glpk_available = bool(_opt.check_available_solvers('glpk'))
 gurobipy_available = bool(_opt.check_available_solvers('gurobi_direct'))
 
 baron = _opt.SolverFactory('baron')
+
+if numpy_available:
+    # Recent changes on GHA seem to have dropped the default precision
+    # from 8 to 4; restore the default.
+    np.set_printoptions(precision=8)
 
 if numpy_available and scipy_available:
     import pyomo.contrib.pynumero.asl as _asl
@@ -301,4 +333,8 @@ else:
     asl_available = False
     ma27_available = False
     mumps_available = False
+
+# Prevent any Pyomo logs from propagating up to the doctest logger
+import logging
+logging.getLogger('pyomo').propagate = False
 '''

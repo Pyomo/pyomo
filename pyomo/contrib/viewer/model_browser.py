@@ -28,11 +28,9 @@ __author__ = "John Eslick"
 import os
 import logging
 
-_log = logging.getLogger(__name__)
-
-import pyomo.contrib.viewer.qt as myqt
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.flags import building_documentation
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
-
 from pyomo.core.base.param import ParamData
 from pyomo.environ import (
     Block,
@@ -44,19 +42,34 @@ from pyomo.environ import (
     value,
     units,
 )
-from pyomo.common.fileutils import this_file_dir
 
-mypath = this_file_dir()
-try:
-    _ModelBrowserUI, _ModelBrowser = myqt.uic.loadUiType(
-        os.path.join(mypath, "model_browser.ui")
-    )
-except:
-    # This lets the file still be imported, but you won't be able to use it
-    class _ModelBrowserUI(object):
-        pass
+import pyomo.contrib.viewer.qt as myqt
 
-    class _ModelBrowser(object):
+_log = logging.getLogger(__name__)
+
+
+# This lets the file be imported when the Qt UI is not available (or
+# when building docs), but you won't be able to use it
+class _ModelBrowserUI(object):
+    pass
+
+
+class _ModelBrowser(object):
+    pass
+
+
+# Note that the classes loaded here have signatures that are not
+# parsable by Sphinx, so we won't attempt to import them if we are
+# building the API documentation.
+if not building_documentation():
+    import sys
+
+    mypath = this_file_dir()
+    try:
+        _ModelBrowserUI, _ModelBrowser = myqt.uic.loadUiType(
+            os.path.join(mypath, "model_browser.ui")
+        )
+    except:
         pass
 
 

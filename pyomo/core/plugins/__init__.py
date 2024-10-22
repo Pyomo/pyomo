@@ -11,4 +11,4 @@
 
 
 def load():
-    import pyomo.core.plugins.transform
+    from pyomo.core.plugins import transform

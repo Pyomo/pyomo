@@ -51,7 +51,7 @@ def TextIO_or_Logger(val):
 
 class SolverConfig(ConfigDict):
     """
-    Base config for all direct solver interfaces
+    Common configuration options for all solver interfaces
     """
 
     def __init__(

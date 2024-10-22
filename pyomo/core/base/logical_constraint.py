@@ -47,17 +47,24 @@ class LogicalConstraintData(ActiveComponentData):
     This class defines the data for a single general logical constraint.
 
     Constructor arguments:
-        component       The LogicalStatement object that owns this data.
-        expr            The Pyomo expression stored in this logical constraint.
+        component
+            The LogicalStatement object that owns this data.
+        expr
+            The Pyomo expression stored in this logical constraint.
 
     Public class attributes:
-        active          A boolean that is true if this logical constraint is
-                            active in the model.
-        expr            The Pyomo expression for this logical constraint
+        active
+            A boolean that is true if this logical constraint is
+            active in the model.
+        expr
+            The Pyomo expression for this logical constraint
 
     Private class attributes:
-        _component      The logical constraint component.
-        _active         A boolean that indicates whether this data is active
+        _component
+            The logical constraint component.
+        _active
+            A boolean that indicates whether this data is active
+
     """
 
     __slots__ = ('_expr',)

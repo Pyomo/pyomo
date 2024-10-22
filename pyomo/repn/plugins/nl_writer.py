@@ -190,10 +190,12 @@ class NLWriter(object):
             doc="""
         How much effort do we want to put into ensuring the
         NL file is written deterministically for a Pyomo model:
-            NONE (0) : None
-            ORDERED (10): rely on underlying component ordering (default)
-            SORT_INDICES (20) : sort keys of indexed components
-            SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
+
+           - NONE (0) : None
+           - ORDERED (10): rely on underlying component ordering (default)
+           - SORT_INDICES (20) : sort keys of indexed components
+           - SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
+
         """,
         ),
     )

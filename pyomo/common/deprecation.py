@@ -29,6 +29,7 @@ import textwrap
 import types
 
 from pyomo.common.errors import DeveloperError
+from pyomo.common.flags import in_testing_environment, building_documentation
 
 _doc_flag = '.. deprecated::'
 
@@ -101,7 +102,7 @@ def _wrap_class(cls, msg, logger, version, remove_in):
     if msg is not None or _doc is None:
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
     if cls.__doc__:
-        _doc = cls.__doc__ + '\n\n' + _doc
+        _doc = inspect.cleandoc(cls.__doc__) + '\n\n' + _doc
     cls.__doc__ = 'DEPRECATED.\n\n' + _doc
 
     if _flagIdx < 0:
@@ -131,7 +132,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
-    _doc = func.__doc__ or ''
+    _doc = inspect.cleandoc(func.__doc__ or '')
     if _doc:
         wrapper.__doc__ += _doc + '\n\n'
     wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
@@ -149,17 +150,6 @@ def _find_calling_frame(module_offset):
         else:
             break
     return calling_frame
-
-
-def in_testing_environment():
-    """Return True if we are currently running in a "testing" environment
-
-    This currently includes if nose, nose2, pytest, or Sphinx are
-    running (imported).
-
-    """
-
-    return any(mod in sys.modules for mod in ('nose', 'nose2', 'pytest', 'sphinx'))
 
 
 def deprecation_warning(
@@ -238,7 +228,11 @@ def deprecation_warning(
     logger.warning(msg)
 
 
-if in_testing_environment():
+# We do not want to cache / suppress repeated warnings when we are
+# testing or when we are building the documentation.  Note that doctest
+# doesn't set the "in_testing" flag until after pyomo.common is
+# imported.
+if in_testing_environment() or building_documentation():
     deprecation_warning.emitted_warnings = None
 else:
     deprecation_warning.emitted_warnings = set()

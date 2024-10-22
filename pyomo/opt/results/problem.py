@@ -9,13 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
+from pyomo.common.enums import ExtendedEnumType, IntEnum, ObjectiveSense
 from pyomo.opt.results.container import MapContainer
 
-from pyomo.common.enums import ExtendedEnumType, ObjectiveSense
 
-
-class ProblemSense(enum.IntEnum, metaclass=ExtendedEnumType):
+class ProblemSense(IntEnum, metaclass=ExtendedEnumType):
     __base_enum__ = ObjectiveSense
 
     unknown = 0
