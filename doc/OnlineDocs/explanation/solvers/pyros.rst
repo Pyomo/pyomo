@@ -130,6 +130,10 @@ PyROS Solver Interface
 
 The PyROS solver is invoked through the :py:meth:`PyROS.solve` method.
 
+.. autoclass:: pyomo.contrib.pyros.PyROS
+    :members: solve
+    :noindex:
+
 .. note::
     Upon successful convergence of PyROS, the solution returned is
     certified to be robust optimal only if:
