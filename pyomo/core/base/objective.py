@@ -164,7 +164,7 @@ class TemplateObjectiveData(ObjectiveData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - ConstraintData,
+        #   - ObjectiveData
         #   - ActiveComponentData
         #   - ComponentData
         self._component = component

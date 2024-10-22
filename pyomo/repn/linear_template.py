@@ -56,7 +56,7 @@ class LinearTemplateRepn(LinearRepn):
         return ans
 
     def append(self, other):
-        """Append a child result from acceptChildResult
+        """Append a child result from StreamBasedExpressionVisitor.acceptChildResult()
 
         Notes
         -----
@@ -122,6 +122,8 @@ class LinearTemplateRepn(LinearRepn):
                     elif not check_duplicates:
                         # Directly substitute the expression into the
                         # 'linear[vid] = coef below
+                        #
+                        # Remove the 'v = ' from the beginning of the last line:
                         k = ans.pop()[4:]
             if check_duplicates:
                 ans.append(indent + f'if {k} in linear:')

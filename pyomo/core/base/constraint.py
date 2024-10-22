@@ -165,7 +165,7 @@ class ConstraintData(ActiveComponentData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - ConstraintData,
+        #   - ConstraintData
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
