@@ -17,7 +17,7 @@ from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
 
 from pyomo.common.deprecation import RenamedClass
-from pyomo.common.errors import DeveloperError
+from pyomo.common.errors import DeveloperError, TemplateExpressionError
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -38,6 +38,7 @@ from pyomo.core.expr import (
     InequalityExpression,
     RangedExpression,
 )
+from pyomo.core.expr.template_expr import templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -56,6 +57,8 @@ from pyomo.core.base.initializer import (
 
 
 logger = logging.getLogger('pyomo.core')
+
+TEMPLATIZE_CONSTRAINTS = False
 
 _inf = float('inf')
 _nonfinite_values = {_inf, -_inf}
@@ -162,7 +165,7 @@ class ConstraintData(ActiveComponentData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - ConstraintData,
+        #   - ConstraintData
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) else None
@@ -527,6 +530,42 @@ class _GeneralConstraintData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
+class TemplateConstraintData(ConstraintData):
+    __slots__ = ()
+
+    def __init__(self, template_info, component, index):
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ConstraintData,
+        #   - ActiveComponentData
+        #   - ComponentData
+        self._component = component
+        self._active = True
+        self._index = index
+        self._expr = template_info
+
+    @property
+    def expr(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        return self.expr
+
+    def template_expr(self):
+        return self._expr
+
+    def set_value(self, expr):
+        self.__class__ = ConstraintData
+        return self.set_value(expr)
+
+    def to_bounded_expression(self):
+        tmp, self._expr = self._expr, self._expr[0]
+        try:
+            return super().to_bounded_expression()
+        finally:
+            self._expr = tmp
+
+
 @ModelComponentFactory.register("General constraint expressions.")
 class Constraint(ActiveIndexedComponent):
     """
@@ -657,6 +696,18 @@ class Constraint(ActiveIndexedComponent):
                 # indices to be created at a later time).
                 pass
             else:
+                if TEMPLATIZE_CONSTRAINTS:
+                    try:
+                        template_info = templatize_constraint(self)
+                        comp = weakref_ref(self)
+                        self._data = {
+                            idx: TemplateConstraintData(template_info, comp, idx)
+                            for idx in self.index_set()
+                        }
+                        return
+                    except TemplateExpressionError:
+                        pass
+
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     self._setitem_when_not_present(index, rule(block, index))

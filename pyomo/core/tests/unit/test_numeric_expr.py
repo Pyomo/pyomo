@@ -1943,7 +1943,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.x = ExternalFunction(library='foo.so', function='bar')
 
         expr = model.x(model.a, 1, "foo", [])
-        self.assertEqual("x(a, 1, 'foo', '[]')", str(expr))
+        self.assertEqual("x(a, 1, 'foo', [])", str(expr))
 
     def test_inequality(self):
         #

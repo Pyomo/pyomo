@@ -63,6 +63,8 @@ def normalize_index(x):
         # new object)
         x = tuple(x)
     else:
+        # Note: new Sequence types will be caught below and added to the
+        # sequence_types set
         x = (x,)
 
     x_len = len(x)
