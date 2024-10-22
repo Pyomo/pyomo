@@ -15,8 +15,8 @@ import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 from pyomo.contrib.alternative_solutions import Solution
 
-pyomo.opt.check_available_solvers("gurobi")
 mip_solver = "gurobi"
+mip_available = pyomo.opt.check_available_solvers(mip_solver)
 
 
 class TestSolutionUnit(unittest.TestCase):
@@ -40,10 +40,7 @@ class TestSolutionUnit(unittest.TestCase):
         m.con_z = pe.Constraint(expr=m.z <= 3)
         return m
 
-    @unittest.skipUnless(
-        pe.SolverFactory(mip_solver).available(exception_flag=False),
-        "MIP solver not available",
-    )
+    @unittest.skipUnless(mip_available, "MIP solver not available")
     def test_solution(self):
         """
         Create a Solution Object, call its functions, and ensure the correct

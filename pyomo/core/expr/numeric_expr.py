@@ -1094,7 +1094,7 @@ class MonomialTermExpression(ProductExpression):
             # types, the simplest / fastest thing to do is just defer to
             # the operator dispatcher.
             return operator.mul(*args)
-        return self.__class__(args)
+        return classtype(args)
 
 
 class DivisionExpression(NumericExpression):
