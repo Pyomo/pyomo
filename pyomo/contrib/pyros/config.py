@@ -212,7 +212,7 @@ class InputDataStandardizer(object):
         """Return str briefly describing domain encompassed by self."""
         cdt = _domain_name(self.cdatatype)
         ct = _domain_name(self.ctype)
-        return f"{cdt}, {ct}, or Iterable[{cdt}/{ct}"
+        return f"{cdt}, {ct}, or Iterable[{cdt}/{ct}]"
 
 
 class SolverNotResolvable(PyomoException):
