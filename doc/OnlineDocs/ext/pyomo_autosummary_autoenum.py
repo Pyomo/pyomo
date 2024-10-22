@@ -46,7 +46,7 @@ def _get_all_members(
 
 
 def _mangle_signature(sig: str, max_chars: int = 30) -> str:
-    """Override sphinx.ext.autosummary.mangle_signature() so we can expoit
+    """Override sphinx.ext.autosummary.mangle_signature() so we can exploit
     it to emit the enum member value using the sig field.  We overwrite
     mangle_signature to not return '({sig})' when the sig starts with
     ' = '
@@ -96,7 +96,7 @@ def _generate_autosummary_content(
             def render(self, name, ns):
                 # Overload render() so that we can intercept calls to it
                 # and add additional fields to the NS.  Note that we
-                # need valuables from teh generate_autosummary_content
+                # need valuables from the generate_autosummary_content
                 # context ... bue we know that context is the calling
                 # frame.  Seems like cheating, but it works.
                 if ns['objtype'] == 'module':
@@ -194,7 +194,7 @@ class EnumMemberDocumenter(autodoc.AttributeDocumenter):
 
     # Note that we want to flag these attributes as "special" (i.e., not
     # generic attributes, but we still want to emit regular py:attribute
-    # directives (so that we still refere to them with :pt:attr:
+    # directives (so that we still refer to them with :pt:attr:
     # references).
     objtype = "enum_member"
     directivetype = autodoc.AttributeDocumenter.objtype
