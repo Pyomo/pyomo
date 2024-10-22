@@ -11,7 +11,8 @@
 
 import logging
 import sys
-from pyomo.common.deprecation import deprecation_warning, in_testing_environment
+from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.flags import in_testing_environment
 
 try:
     # Warn the user

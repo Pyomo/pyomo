@@ -7,6 +7,7 @@ SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = Pyomo
 SOURCEDIR     = .
 BUILDDIR      = _build
+APIDIR        = api
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -19,8 +20,12 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-clean clean_tests:
+clean:
 	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@echo "Removing *.spy, *.out"
 	@find . -name \*.spy -delete
-	@find src -name \*.out -delete
+	@for D in $(BUILDDIR) $(SOURCEDIR)/$(APIDIR); do \
+	    if test -d "$$D"; then echo "Removing $$D"; rm -r "$$D"; fi \
+	 done
+
+rebuild: clean html

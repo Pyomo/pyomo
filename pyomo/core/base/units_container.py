@@ -111,7 +111,7 @@ information.
 import logging
 import sys
 
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import pint as pint_module, pint_available
 from pyomo.common.modeling import NOTSET
 from pyomo.core.expr.numvalue import (
     NumericValue,
@@ -123,14 +123,6 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 import pyomo.core.expr as EXPR
-
-pint_module, pint_available = attempt_import(
-    'pint',
-    error_message=(
-        'The "pint" package failed to import. '
-        'This package is necessary to use Pyomo units.'
-    ),
-)
 
 logger = logging.getLogger(__name__)
 

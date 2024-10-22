@@ -30,6 +30,8 @@ from pyomo.common.errors import InfeasibleConstraintException
 
 class IntervalConfig(ConfigDict):
     """
+    Configuration options for the FBBT IntervalTightener
+
     Attributes
     ----------
     feasibility_tol: float

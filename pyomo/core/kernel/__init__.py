@@ -59,20 +59,22 @@ from pyomo.core.expr import (
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-import pyomo.core.kernel.base
-import pyomo.core.kernel.homogeneous_container
-import pyomo.core.kernel.heterogeneous_container
-import pyomo.core.kernel.variable
-import pyomo.core.kernel.constraint
-import pyomo.core.kernel.matrix_constraint
-import pyomo.core.kernel.parameter
-import pyomo.core.kernel.expression
-import pyomo.core.kernel.objective
-import pyomo.core.kernel.sos
-import pyomo.core.kernel.suffix
-import pyomo.core.kernel.block
-import pyomo.core.kernel.piecewise_library
-import pyomo.core.kernel.set_types
+from pyomo.core.kernel import (
+    base,
+    homogeneous_container,
+    heterogeneous_container,
+    variable,
+    constraint,
+    matrix_constraint,
+    parameter,
+    expression,
+    objective,
+    sos,
+    suffix,
+    block,
+    piecewise_library,
+    set_types,
+)
 
 # TODO: These are included for backwards compatibility.  Accessing them
 # will result in a deprecation warning

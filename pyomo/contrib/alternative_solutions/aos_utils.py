@@ -37,8 +37,9 @@ def logcontext(level):
     Examples
     --------
     >>> with logcontext(logging.INFO):
-    >>>    logging.debug("This will not be printed")
-    >>>    logging.info("This will be printed")
+    ...    logging.debug("This will not be printed")
+    ...    logging.info("This will be printed")
+
     """
     logger = logging.getLogger()
     current_level = logger.getEffectiveLevel()
@@ -186,36 +187,36 @@ def get_model_variables(
     include_integer=True,
     include_fixed=False,
 ):
-    """
-    Gathers and returns all variables or a subset of variables from a Pyomo
-    model.
+    """Gathers and returns all variables or a subset of variables from a
+    Pyomo model.
 
-        Parameters
-        ----------
-        model : ConcreteModel
-            A concrete Pyomo model.
-        components: None or a collection of Pyomo components
-            The components from which variables should be collected. None
-            indicates that all variables will be included. Alternatively, a
-            collection of Pyomo Blocks, Constraints, or Variables (indexed or
-            non-indexed) from which variables will be gathered can be provided.
-            If a Block is provided, all variables associated with constraints
-            in that that block and its sub-blocks will be returned. To exclude
-            sub-blocks, a tuple element with the format (Block, False) can be
-            used.
-        include_continuous : boolean
-            Boolean indicating that continuous variables should be included.
-        include_binary : boolean
-            Boolean indicating that binary variables should be included.
-        include_integer : boolean
-            Boolean indicating that integer variables should be included.
-        include_fixed : boolean
-            Boolean indicating that fixed variables should be included.
+    Parameters
+    ----------
+    model : ConcreteModel
+        A concrete Pyomo model.
+    components: None or a collection of Pyomo components
+        The components from which variables should be collected. None
+        indicates that all variables will be included. Alternatively, a
+        collection of Pyomo Blocks, Constraints, or Variables (indexed or
+        non-indexed) from which variables will be gathered can be provided.
+        If a Block is provided, all variables associated with constraints
+        in that that block and its sub-blocks will be returned. To exclude
+        sub-blocks, a tuple element with the format (Block, False) can be
+        used.
+    include_continuous : boolean
+        Boolean indicating that continuous variables should be included.
+    include_binary : boolean
+        Boolean indicating that binary variables should be included.
+    include_integer : boolean
+        Boolean indicating that integer variables should be included.
+    include_fixed : boolean
+        Boolean indicating that fixed variables should be included.
 
-        Returns
-        -------
-        variable_set
-            A Pyomo ComponentSet containing _GeneralVarData variables.
+    Returns
+    -------
+    variable_set
+        A Pyomo ComponentSet containing _GeneralVarData variables.
+
     """
 
     component_list = (pe.Objective, pe.Constraint)

@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.opt.base.opt_config
 
 from pyomo.opt.base.error import ConverterError
 from pyomo.opt.base.convert import convert_problem

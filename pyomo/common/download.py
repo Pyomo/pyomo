@@ -177,6 +177,7 @@ class FileDownloader(object):
 
         This method was designed to help identify compatible binaries,
         and will return strings similar to:
+
           - rhel6
           - fedora24
           - ubuntu18.04

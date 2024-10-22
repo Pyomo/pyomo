@@ -11,4 +11,4 @@
 
 
 def load():
-    import pyomo.network.plugins.expand_arcs
+    from pyomo.network.plugins import expand_arcs
