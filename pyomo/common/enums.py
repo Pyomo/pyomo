@@ -32,6 +32,10 @@ import itertools
 import re
 import sys
 
+# A local alias for enum.Enum so that clients can use
+# :py:mod:`pyomo.common.enums` like they would :py:mod:`enum`.
+Enum = enum.Enum
+
 if sys.version_info[:2] < (3, 11):
     _EnumType = enum.EnumMeta
 else:

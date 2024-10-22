@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 
 import collections
-import enum
 import functools
 import itertools
 import logging
 import operator
 import sys
 
+from pyomo.common import enums
 from pyomo.common.collections import Sequence, ComponentMap, ComponentSet
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError, InvalidValueError
@@ -65,7 +65,7 @@ nan = float('nan')
 int_float = {int, float}
 
 
-class ExprType(enum.IntEnum):
+class ExprType(enums.IntEnum):
     CONSTANT = 0
     FIXED = 5
     MONOMIAL = 10
@@ -82,7 +82,7 @@ _FileDeterminism_deprecation = {
 }
 
 
-class FileDeterminism(enum.IntEnum):
+class FileDeterminism(enums.IntEnum):
     NONE = 0
     # DEPRECATED_KEYS = 1
     # DEPRECATED_KEYS_AND_NAMES = 2
@@ -94,11 +94,11 @@ class FileDeterminism(enum.IntEnum):
     # 3.11 is consistent with 3.7 - 3.10.
 
     def __str__(self):
-        return enum.Enum.__str__(self)
+        return enums.Enum.__str__(self)
 
     def __format__(self, spec):
         # Removal of Python 3.7 support allows us to use Enum.__format__
-        return enum.Enum.__format__(self, spec)
+        return enums.Enum.__format__(self, spec)
 
     @classmethod
     def _missing_(cls, value):
