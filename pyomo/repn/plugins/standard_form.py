@@ -524,11 +524,11 @@ class _LinearStandardFormCompiler_impl(object):
 
         # Get the variable list
         columns = list(var_map.values())
-        nCol = len(columns)
+        n_cols = len(columns)
 
         # Convert the compiled data to scipy sparse matrices
-        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, nCol)
-        A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, nCol)
+        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
@@ -547,8 +547,8 @@ class _LinearStandardFormCompiler_impl(object):
         # columns
         augmented_mask = np.concatenate((active_var_mask, [True]))
         reduced_A_indptr = A.indptr[augmented_mask]
-        nCol -= len(reduced_A_indptr) - 1
-        if nCol > 0:
+        n_cols -= len(reduced_A_indptr) - 1
+        if n_cols > 0:
             columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = self._csc_matrix(
                 (c.data, c.indices, c.indptr[augmented_mask]),
@@ -560,7 +560,7 @@ class _LinearStandardFormCompiler_impl(object):
             )
 
         if with_debug_timing:
-            timer.toc('Eliminated %s unused columns', nCol, level=logging.DEBUG)
+            timer.toc('Eliminated %s unused columns', n_cols, level=logging.DEBUG)
 
         if self.config.nonnegative_vars:
             c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(
@@ -575,22 +575,22 @@ class _LinearStandardFormCompiler_impl(object):
         timer.toc("Generated linear standard form representation", delta=False)
         return info
 
-    def _create_csc(self, data, index, index_ptr, nnz, nCol):
+    def _create_csc(self, data, index, index_ptr, nnz, n_cols):
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
             # the empty CSR on the python side and convert it to CSC on
             # the C (numpy) side, as opposed to creating the large [0] *
-            # (nCol + 1) array on the Python side and transfer it to C
+            # (n_cols + 1) array on the Python side and transfer it to C
             # (numpy)
             return self._csr_matrix(
-                (data, index, index_ptr), [len(index_ptr) - 1, nCol]
+                (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
         index_ptr = np.array(index_ptr, dtype=np.int32)
-        A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, nCol])
+        A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
         A.sum_duplicates()
         A.eliminate_zeros()
@@ -654,13 +654,13 @@ class _LinearStandardFormCompiler_impl(object):
                 new_c_indices.append(c.indices[s:e])
                 new_c_indptr.append(new_c_indptr[-1] + e - s)
 
-        nCol = len(new_columns)
+        n_cols = len(new_columns)
         c = self._csc_matrix(
             (np.concatenate(new_c_data), np.concatenate(new_c_indices), new_c_indptr),
-            [c.shape[0], nCol],
+            [c.shape[0], n_cols],
         )
         A = self._csc_matrix(
             (np.concatenate(new_A_data), np.concatenate(new_A_indices), new_A_indptr),
-            [A.shape[0], nCol],
+            [A.shape[0], n_cols],
         )
         return c, A, new_columns, eliminated_vars
