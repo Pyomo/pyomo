@@ -197,14 +197,21 @@ class InvalidNumber(PyomoObject):
         raise InvalidValueError(msg)
 
     def __str__(self):
-        # We will support simple conversion of InvalidNumber to strings
-        # (for reporting purposes)
+        # We want attempts to convert InvalidNumber to a string
+        # representation to raise a InvalidValueError, unless we are in
+        # the middle of processing an exception.  In that case, it is
+        # very likely that an exception handler is generating an error
+        # message.  We will play nice and return a reasonable string.
+        if sys.exc_info()[1] is None:
+            self._error(f'Cannot emit {self._str()} in compiled representation')
+        else:
+            return self._str()
+
+    def _str(self):
         return f'InvalidNumber({self.value!r})'
 
     def __repr__(self):
-        # We want attempts to convert InvalidNumber to a string
-        # representation to raise a InvalidValueError.
-        self._error(f'Cannot emit {str(self)} in compiled representation')
+        return str(self)
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
