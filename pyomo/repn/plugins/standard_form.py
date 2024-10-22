@@ -523,7 +523,6 @@ class _LinearStandardFormCompiler_impl(object):
             timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
 
         # Get the variable list
-        # var_order.update({_id: i for i, _id in enumerate(var_map)})
         columns = list(var_map.values())
         nCol = len(columns)
 
@@ -589,9 +588,7 @@ class _LinearStandardFormCompiler_impl(object):
             ).tocsc()
 
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
-        # data = list(itertools.chain(*data))
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
-        # index = list(itertools.chain(*index))
         index_ptr = np.array(index_ptr, dtype=np.int32)
         A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, nCol])
         A = A.tocsc()

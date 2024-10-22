@@ -254,7 +254,6 @@ class GurobiDirect(SolverBase):
         timer.start('prepare_matrices')
         inf = float('inf')
         ninf = -inf
-        nCols = len(repn.columns)
         bounds = list(map(operator.attrgetter('bounds'), repn.columns))
         lb = [ninf if _b is None else _b for _b in map(operator.itemgetter(0), bounds)]
         ub = [inf if _b is None else _b for _b in map(operator.itemgetter(1), bounds)]
