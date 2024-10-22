@@ -170,6 +170,10 @@ def _strip_template_comments(vars_, base_):
             vars_[k] = '\n'.join(v_lines)
 
 
+def _inv2str(val):
+    return f"{val._str() if hasattr(val, '_str') else val}"
+
+
 # The "standard" text mode template is the debugging template with the
 # comments removed
 class TextNLTemplate(TextNLDebugTemplate):
@@ -539,7 +543,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{str(arg2[1])} in expression tree.  "
+                        f"Encountered {mult}*{_inv2str(arg2[1])} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -568,7 +572,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {str(mult)}*{arg2[1]} in expression tree.  "
+                        f"Encountered {_inv2str(mult)}*{arg2[1]} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -976,7 +980,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 arg2 = visitor.fixed_vars[_id]
                 if arg2 != arg2:
                     deprecation_warning(
-                        f"Encountered {arg1}*{arg2} in expression tree.  "
+                        f"Encountered {arg1}*{_inv2str(arg2)} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -1016,7 +1020,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                         arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
-                                f"Encountered {arg1}*{str(arg2.value)} in expression "
+                                f"Encountered {arg1}*{_inv2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the nl_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",
