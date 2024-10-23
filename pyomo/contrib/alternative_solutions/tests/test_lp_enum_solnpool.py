@@ -9,25 +9,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ as pe
-import pyomo.opt
+from pyomo.common.dependencies import numpy_available
+from pyomo.common import unittest
 
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from pyomo.contrib.alternative_solutions import lp_enum
 from pyomo.contrib.alternative_solutions import lp_enum_solnpool
+from pyomo.opt import check_available_solvers
 
-from pyomo.common.dependencies import attempt_import
+import pyomo.environ as pe
 
-numpy, numpy_available = attempt_import("numpy")
-gurobipy, gurobi_available = attempt_import("gurobipy")
+# lp_enum_solnpool uses both 'gurobi' and 'appsi_gurobi'
+gurobi_available = len(check_available_solvers('gurobi', 'appsi_gurobi')) == 2
 
 #
 # TODO: Setup detailed tests here
 #
 
 
-def test_here():
-    if numpy_available:
+@unittest.skipUnless(gurobi_available, "Gurobi MIP solver not available")
+@unittest.skipUnless(numpy_available, "NumPy not found")
+class TestLPEnumSolnpool(unittest.TestCase):
+
+    def test_here(self):
         n = tc.get_pentagonal_pyramid_mip()
         n.x.domain = pe.Reals
         n.y.domain = pe.Reals

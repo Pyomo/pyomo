@@ -45,9 +45,7 @@ class NoGoodCutGenerator:
         self.num_solutions = num_solutions
 
     def cut_generator_callback(self, cb_m, cb_opt, cb_where):
-        from gurobipy import GRB
-
-        if cb_where == GRB.Callback.MIPSOL:
+        if cb_where == gurobipy.GRB.Callback.MIPSOL:
             cb_opt.cbGetSolution(vars=self.variables)
             logger.info("***FOUND SOLUTION***")
 
