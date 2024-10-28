@@ -75,6 +75,93 @@ def _finalize_xpress_import(xpress, avail):
     if not hasattr(xpress, 'rng'):
         xpress.rng = xpress.range
 
+    #
+    # Xpress 9.5 (44.1.1) changed the Python fairly significantly.  we will map
+    # between the two APIs based on the version.
+    #
+    if XpressDirect._version < (44,):
+
+        def _addConstraint(
+            self,
+            prob,
+            constraint=None,
+            body=None,
+            lb=None,
+            ub=None,
+            type=None,
+            rhs=None,
+            name='',
+        ):
+            # It's unclear what the acceptable "default" values are for
+            # lb, ub, etc. (putting in the values from the documentation
+            # generates errors).  We will instead use None and filter
+            # out any non-None fields.
+            args = {'sense': type, 'name': name}
+            for field in ('constraint', 'body', 'lb', 'ub', 'rhs'):
+                if locals()[field] is not None:
+                    args[field] = locals()[field]
+            con = xpress.constraint(**args)
+            prob.addConstraint(con)
+            return con
+
+        def _addVariable(self, prob, name, lb, ub, vartype):
+            var = xpress.var(name=name, lb=lb, ub=ub, vartype=vartype)
+            prob.addVariable(var)
+            return var
+
+        def _addSOS(self, prob, indices, weights, type, name):
+            con = xpress.sos(indices, weights, type, name)
+            prob.addSOS(con)
+            return con
+
+        XpressDirect._addConstraint = _addConstraint
+        XpressDirect._addVariable = _addVariable
+        XpressDirect._addSOS = _addSOS
+        XpressDirect._getSlacks = lambda self, prob, con: prob.getSlack(con)
+        XpressDirect._getDuals = lambda self, prob, con: prob.getDual(con)
+        XpressDirect._getRedCosts = lambda self, prob, con: prob.getRCost(con)
+    else:
+        # Note that rhsrange (the last argument) was not added until
+        # 9.5.  We will not include it here in the compatibility
+        # wrapper.
+        def _addConstraint(
+            self,
+            prob,
+            constraint=None,
+            body=None,
+            lb=None,
+            ub=None,
+            type=None,
+            rhs=None,
+            name='',
+        ):
+            con = xpress.constraint(
+                constraint=constraint,
+                body=body,
+                lb=lb,
+                ub=ub,
+                type=type,
+                rhs=rhs,
+                name=name,
+            )
+            prob.addConstraint(con)
+            return con
+
+        XpressDirect._addConstraint = _addConstraint
+        XpressDirect._addVariable = (
+            lambda self, prob, name, lb, ub, vartype: prob.addVariable(
+                name=name, lb=lb, ub=ub, vartype=vartype
+            )
+        )
+        XpressDirect._addSOS = (
+            lambda self, prob, indices, weights, type, name: prob.addSOS(
+                indices, weights, type, name
+            )
+        )
+        XpressDirect._getSlacks = lambda self, prob, con: prob.getSlacks(con)
+        XpressDirect._getDuals = lambda self, prob, con: prob.getDuals(con)
+        XpressDirect._getRedCosts = lambda self, prob, con: prob.getRedCosts(con)
+
 
 class _xpress_importer_class(object):
     # We want to be able to *update* the message that the deferred
@@ -621,8 +708,9 @@ class XpressDirect(DirectSolver):
         vartype = self._xpress_vartype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        xpress_var = xpress.var(name=varname, lb=lb, ub=ub, vartype=vartype)
-        self._solver_model.addVariable(xpress_var)
+        xpress_var = self._addVariable(
+            self._solver_model, name=varname, lb=lb, ub=ub, vartype=vartype
+        )
 
         ## bounds on binary variables don't seem to be set correctly
         ## by the method above
@@ -693,33 +781,44 @@ class XpressDirect(DirectSolver):
                 )
 
         if con.equality:
-            xpress_con = xpress.constraint(
-                body=xpress_expr, sense=xpress.eq, rhs=value(con.lower), name=conname
+            xpress_con = self._addConstraint(
+                self._solver_model,
+                body=xpress_expr,
+                type=xpress.eq,
+                rhs=value(con.lower),
+                name=conname,
             )
         elif con.has_lb() and con.has_ub():
-            xpress_con = xpress.constraint(
+            xpress_con = self._addConstraint(
+                self._solver_model,
                 body=xpress_expr,
-                sense=xpress.rng,
+                type=xpress.rng,
                 lb=value(con.lower),
                 ub=value(con.upper),
                 name=conname,
             )
             self._range_constraints.add(xpress_con)
         elif con.has_lb():
-            xpress_con = xpress.constraint(
-                body=xpress_expr, sense=xpress.geq, rhs=value(con.lower), name=conname
+            xpress_con = self._addConstraint(
+                self._solver_model,
+                body=xpress_expr,
+                type=xpress.geq,
+                rhs=value(con.lower),
+                name=conname,
             )
         elif con.has_ub():
-            xpress_con = xpress.constraint(
-                body=xpress_expr, sense=xpress.leq, rhs=value(con.upper), name=conname
+            xpress_con = self._addConstraint(
+                self._solver_model,
+                body=xpress_expr,
+                type=xpress.leq,
+                rhs=value(con.upper),
+                name=conname,
             )
         else:
             raise ValueError(
                 "Constraint does not have a lower "
                 "or an upper bound: {0} \n".format(con)
             )
-
-        self._solver_model.addConstraint(xpress_con)
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -756,8 +855,9 @@ class XpressDirect(DirectSolver):
             self._referenced_variables[v] += 1
             weights.append(w)
 
-        xpress_con = xpress.sos(xpress_vars, weights, level, conname)
-        self._solver_model.addSOS(xpress_con)
+        xpress_con = self._addSOS(
+            self._solver_model, xpress_vars, weights, level, conname
+        )
         self._pyomo_con_to_solver_con_map[con] = xpress_con
         self._solver_con_to_pyomo_con_map[xpress_con] = con
 
@@ -902,33 +1002,47 @@ class XpressDirect(DirectSolver):
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
+                if extract_duals or extract_slacks:
+                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
+                    for con in xpress_cons:
+                        soln_constraints[con.name] = {}
+
                 xpress_vars = list(self._solver_var_to_pyomo_var_map.keys())
-                var_vals = xprob.getSolution(xpress_vars)
+                # Xpress 9.5.0 has new behavior for unbounded problems
+                # that have mipsols > 0.  Previously getSolution would
+                # return a solution, but now raises a ModelError (even
+                # though the deprecated getmipsol() will return a
+                # solution.  We will try the "correct" (non-deprecated)
+                # interface and fall back on the deprecated interface if
+                # we hit this edge case.
+                try:
+                    var_vals = xprob.getSolution(xpress_vars)
+                    if extract_slacks:
+                        slacks = self._getSlacks(xprob, xpress_cons)
+                except xpress.ModelError:
+                    var_vals = []
+                    slacks = [] if extract_slacks else None
+                    xprob.getmipsol(var_vals, slacks)
+
                 for xpress_var, val in zip(xpress_vars, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
                     if self._referenced_variables[pyomo_var] > 0:
                         soln_variables[xpress_var.name] = {"Value": val}
 
                 if extract_reduced_costs:
-                    vals = xprob.getRCost(xpress_vars)
+                    vals = self._getRedCosts(xprob, xpress_vars)
                     for xpress_var, val in zip(xpress_vars, vals):
                         pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
                         if self._referenced_variables[pyomo_var] > 0:
                             soln_variables[xpress_var.name]["Rc"] = val
 
-                if extract_duals or extract_slacks:
-                    xpress_cons = list(self._solver_con_to_pyomo_con_map.keys())
-                    for con in xpress_cons:
-                        soln_constraints[con.name] = {}
-
                 if extract_duals:
-                    vals = xprob.getDual(xpress_cons)
+                    vals = self._getDuals(xprob, xpress_cons)
                     for val, con in zip(vals, xpress_cons):
                         soln_constraints[con.name]["Dual"] = val
 
                 if extract_slacks:
-                    vals = xprob.getSlack(xpress_cons)
-                    for con, val in zip(xpress_cons, vals):
+                    for con, val in zip(xpress_cons, slacks):
                         if con in self._range_constraints:
                             ## for xpress, the slack on a range constraint
                             ## is based on the upper bound
@@ -999,7 +1113,7 @@ class XpressDirect(DirectSolver):
             vars_to_load = var_map.keys()
 
         xpress_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
-        vals = self._solver_model.getRCost(xpress_vars_to_load)
+        vals = self._getRedCost(self._solver_model, xpress_vars_to_load)
 
         for var, val in zip(vars_to_load, vals):
             if ref_vars[var] > 0:
@@ -1015,7 +1129,7 @@ class XpressDirect(DirectSolver):
             cons_to_load = con_map.keys()
 
         xpress_cons_to_load = [con_map[pyomo_con] for pyomo_con in cons_to_load]
-        vals = self._solver_model.getDual(xpress_cons_to_load)
+        vals = self._getDuals(self._solver_model, xpress_cons_to_load)
 
         for pyomo_con, val in zip(cons_to_load, vals):
             dual[pyomo_con] = val
@@ -1030,7 +1144,7 @@ class XpressDirect(DirectSolver):
             cons_to_load = con_map.keys()
 
         xpress_cons_to_load = [con_map[pyomo_con] for pyomo_con in cons_to_load]
-        vals = self._solver_model.getSlack(xpress_cons_to_load)
+        vals = self._getSlacks(self._solver_model, xpress_cons_to_load)
 
         for pyomo_con, xpress_con, val in zip(cons_to_load, xpress_cons_to_load, vals):
             if xpress_con in self._range_constraints:
