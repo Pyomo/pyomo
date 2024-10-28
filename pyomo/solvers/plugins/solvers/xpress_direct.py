@@ -313,7 +313,8 @@ class XpressDirect(DirectSolver):
         if self._tee and XpressDirect._version[0] < 36:
             self._solver_model.removecbmessage(_print_message, None)
 
-        # FIXME: can we get a return code indicating if XPRESS had a significant failure?
+        # FIXME: can we get a return code indicating if XPRESS had a
+        # significant failure?
         return Bunch(rc=None, log=None)
 
     def _get_mip_results(self, results, soln):
@@ -333,7 +334,8 @@ class XpressDirect(DirectSolver):
             )
             results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.unknown
-            # no MIP solution, first LP did not solve, second LP did, third search started but incomplete
+            # no MIP solution, first LP did not solve, second LP did,
+            # third search started but incomplete
         elif (
             status == xp.mip_lp_not_optimal
             or status == xp.mip_lp_optimal
@@ -862,10 +864,12 @@ class XpressDirect(DirectSolver):
         self._solver_con_to_pyomo_con_map[xpress_con] = con
 
     def _xpress_vartype_from_var(self, var):
-        """
-        This function takes a pyomo variable and returns the appropriate xpress variable type
+        """This function takes a pyomo variable and returns the appropriate
+        xpress variable type
+
         :param var: pyomo.core.base.var.Var
         :return: xpress.continuous or xpress.binary or xpress.integer
+
         """
         if var.is_binary():
             vartype = xpress.binary
@@ -994,10 +998,9 @@ class XpressDirect(DirectSolver):
         # see if there is a solution available - this may not always
         # be the case, both in LP and MIP contexts.
         if self._save_results:
-            """
-            This code in this if statement is only needed for backwards compatibility. It is more efficient to set
-            _save_results to False and use load_vars, load_duals, etc.
-            """
+            # This code in this if statement is only needed for backwards
+            # compatibility. It is more efficient to set _save_results to
+            # False and use load_vars, load_duals, etc.
             if have_soln:
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
@@ -1163,32 +1166,34 @@ class XpressDirect(DirectSolver):
                 slack[pyomo_con] = val
 
     def load_duals(self, cons_to_load=None):
-        """
-        Load the duals into the 'dual' suffix. The 'dual' suffix must live on the parent model.
+        """Load the duals into the 'dual' suffix. The 'dual' suffix must live
+        on the parent model.
 
         Parameters
         ----------
         cons_to_load: list of Constraint
+
         """
         self._load_duals(cons_to_load)
 
     def load_rc(self, vars_to_load=None):
-        """
-        Load the reduced costs into the 'rc' suffix. The 'rc' suffix must live on the parent model.
+        """Load the reduced costs into the 'rc' suffix. The 'rc' suffix must
+        live on the parent model.
 
         Parameters
         ----------
         vars_to_load: list of Var
+
         """
         self._load_rc(vars_to_load)
 
     def load_slacks(self, cons_to_load=None):
-        """
-        Load the values of the slack variables into the 'slack' suffix. The 'slack' suffix must live on the parent
-        model.
+        """Load the values of the slack variables into the 'slack' suffix. The
+        'slack' suffix must live on the parent model.
 
         Parameters
         ----------
         cons_to_load: list of Constraint
+
         """
         self._load_slacks(cons_to_load)
