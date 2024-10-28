@@ -230,7 +230,8 @@ def setup(app: Sphinx) -> Dict[str, Any]:
     app.setup_extension('sphinx.ext.autodoc')
     app.setup_extension('sphinx.ext.autosummary')
     # Overwrite key parts of autosummary so that our version of autoenum
-    # plays nicely with it
+    # plays nicely with it.  We have tested this with Sphinx>7.2.
+    # Notably, 7.1.2 does NOT work (and cannot be easily made to work)
     autosummary.generate.generate_autosummary_content = _generate_autosummary_content
     autosummary.generate._get_all_members = _get_all_members
     autosummary.mangle_signature = _mangle_signature
