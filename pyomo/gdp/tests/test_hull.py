@@ -32,7 +32,6 @@ from pyomo.environ import (
     Param,
     Objective,
     TerminationCondition,
-    Reference,
 )
 from pyomo.core.expr.compare import (
     assertExpressionsEqual,
@@ -530,14 +529,18 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[disjBlock[i].disaggregatedVars.x] = disjBlock[i].x_bounds
             if i == 1:  # this disjunct has x, w, and no y
                 mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].w_bounds
-                mappings[transBlock._disaggregatedVars[0]] = Reference(
-                    transBlock._boundsConstraints[0, ...]
-                )
+                mappings[transBlock._disaggregatedVars[0]] = {
+                    key: val
+                    for key, val in transBlock._boundsConstraints.items()
+                    if key[0] == 0
+                }
             elif i == 0:  # this disjunct has x, y, and no w
                 mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].y_bounds
-                mappings[transBlock._disaggregatedVars[1]] = Reference(
-                    transBlock._boundsConstraints[1, ...]
-                )
+                mappings[transBlock._disaggregatedVars[1]] = {
+                    key: val
+                    for key, val in transBlock._boundsConstraints.items()
+                    if key[0] == 1
+                }
             for var, cons in mappings.items():
                 returned_cons = hull.get_var_bounds_constraint(var)
                 # This sometimes refers a reference to the right part of a
@@ -545,6 +548,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 # themselves might not be the same object. The ConstraintDatas
                 # are though:
                 for key, constraintData in cons.items():
+                    if type(key) is tuple:
+                        key = key[1]
                     self.assertIs(returned_cons[key], constraintData)
 
     def test_create_using_nonlinear(self):
