@@ -76,8 +76,8 @@ def _finalize_xpress_import(xpress, avail):
         xpress.rng = xpress.range
 
     #
-    # Xpress 9.5 (44.1.1) changed the Python fairly significantly.  we will map
-    # between the two APIs based on the version.
+    # Xpress 9.5 (44.1.1) changed the Python API fairly significantly.
+    # We will map between the two APIs based on the version.
     #
     if XpressDirect._version < (44,):
 
@@ -164,7 +164,7 @@ def _finalize_xpress_import(xpress, avail):
 
         # Note that as of 9.5, xpress.var raises an exception when
         # compared using '==' after it has been removed from the model.
-        # This can fould up ComponentMaps in the persistent interface,
+        # This can foul up ComponentMaps in the persistent interface,
         # so we will hard-code the `var` as not being hashable (so the
         # ComponentMap will use the id() as the key)
         ComponentMap.hasher.hashable(xpress.var, False)
