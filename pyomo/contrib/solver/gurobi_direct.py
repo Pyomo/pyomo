@@ -79,7 +79,6 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         # Free the associated model
         if self._grb_model is not None:
             self._grb_cons = None
-            self._grb_cons = None
             self._grb_vars = None
             self._pyo_cons = None
             self._pyo_vars = None

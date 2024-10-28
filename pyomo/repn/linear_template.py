@@ -12,6 +12,7 @@ from copy import deepcopy
 from itertools import chain
 
 from pyomo.common.collections import ComponentSet
+from pyomo.common.errors import MouseTrap
 from pyomo.common.numeric_types import native_types
 
 import pyomo.core.expr as expr
@@ -238,7 +239,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         return False, (_CONSTANT, child)
 
     def _before_named_expression(self, visitor, child):
-        raise NotImplementedError()
+        raise MouseTrap("We do not yet support Expression components")
 
 
 def _handle_getitem(visitor, node, comp, *args):
@@ -257,7 +258,7 @@ def _handle_getitem(visitor, node, comp, *args):
 
 def _handle_templatesum(visitor, node, comp, *args):
     ans = visitor.Result()
-    if comp[0] == _LINEAR:
+    if comp[0] is _LINEAR:
         ans.linear_sum.append((comp[1], node.template_iters(), [a[1] for a in args]))
         return _LINEAR, ans
     else:

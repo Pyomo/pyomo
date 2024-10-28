@@ -163,9 +163,6 @@ def _mul_linear_linear(visitor, linear1, linear2):
     vo = visitor.var_recorder.var_order
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
-            # Note that this is random.  If the client cares about
-            # determinism, it may need to reverse the keys based on
-            # something more deterministic than vid
             if vo[vid1] < vo[vid2]:
                 key = vid1, vid2
             else:
