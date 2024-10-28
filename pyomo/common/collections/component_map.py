@@ -47,6 +47,15 @@ class _Hasher(collections.defaultdict):
     def _tuple(self, val):
         return tuple(self[i.__class__](i) for i in val)
 
+    def hashable(self, obj, hashable=None):
+        if isinstance(obj, type):
+            cls = obj
+        else:
+            cls = type(cls)
+        if hashable is None:
+            return self.get(cls, None) is self._hashable
+        self[cls] = self._hashable if hashable else self._unhashable
+
 
 _hasher = _Hasher()
 
@@ -78,6 +87,8 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
 
     __slots__ = ("_dict",)
     __autoslot_mappers__ = {'_dict': _rehash_keys}
+    # A "public" interface to the global _hasher dict
+    hasher = _hasher
 
     def __init__(self, *args, **kwds):
         # maps id_hash(obj) -> (obj,val)

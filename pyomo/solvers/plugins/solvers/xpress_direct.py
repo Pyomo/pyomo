@@ -162,6 +162,13 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect._getDuals = lambda self, prob, con: prob.getDuals(con)
         XpressDirect._getRedCosts = lambda self, prob, con: prob.getRedCosts(con)
 
+        # Note that as of 9.5, xpress.var raises an exception when
+        # compared using '==' after it has been removed from the model.
+        # This can fould up ComponentMaps in the persistent interface,
+        # so we will hard-code the `var` as not being hashable (so the
+        # ComponentMap will use the id() as the key)
+        ComponentMap.hasher.hashable(xpress.var, False)
+
 
 class _xpress_importer_class(object):
     # We want to be able to *update* the message that the deferred
