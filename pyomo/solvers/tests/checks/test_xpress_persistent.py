@@ -291,6 +291,9 @@ class TestXpressPersistent(unittest.TestCase):
 
         opt = pe.SolverFactory('xpress_direct')
         opt.options['XSLP_SOLVER'] = 0
+        # xpress 9.5.0 now defaults to trying (and failing) to solve this problem
+        # using the global solver. This option forces the use of the local solver.
+        opt.options['NLPSOLVER'] = 1
 
         results = opt.solve(m)
         self.assertEqual(results.solver.status, SolverStatus.ok)
