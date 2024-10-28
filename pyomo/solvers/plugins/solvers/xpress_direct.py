@@ -1011,21 +1011,27 @@ class XpressDirect(DirectSolver):
                         soln_constraints[con.name] = {}
 
                 xpress_vars = list(self._solver_var_to_pyomo_var_map.keys())
-                # Xpress 9.5.0 has new behavior for unbounded problems
-                # that have mipsols > 0.  Previously getSolution would
-                # return a solution, but now raises a ModelError (even
-                # though the deprecated getmipsol() will return a
-                # solution.  We will try the "correct" (non-deprecated)
-                # interface and fall back on the deprecated interface if
-                # we hit this edge case.
                 try:
                     var_vals = xprob.getSolution(xpress_vars)
                     if extract_slacks:
                         slacks = self._getSlacks(xprob, xpress_cons)
                 except xpress.ModelError:
-                    var_vals = []
-                    slacks = [] if extract_slacks else None
-                    xprob.getmipsol(var_vals, slacks)
+                    # Xpress 9.5.0 has new behavior for unbounded
+                    # problems that have mipsols > 0.  Previously
+                    # getSolution() would return a solution, but now
+                    # raises a ModelError (even though the deprecated
+                    # getmipsol() will return a solution).  We will try
+                    # to fall back on the [deprecated] getmipsol(), but
+                    # if it fails, we will raise the original exception.
+                    try:
+                        var_vals = []
+                        slacks = [] if extract_slacks else None
+                        xprob.getmipsol(var_vals, slacks)
+                        fail = 0
+                    except:
+                        fail = 1
+                    if fail:
+                        raise
 
                 for xpress_var, val in zip(xpress_vars, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
