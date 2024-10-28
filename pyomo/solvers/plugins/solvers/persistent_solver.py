@@ -400,11 +400,15 @@ class PersistentSolver(DirectOrPersistentSolver):
                 + 'objective or one or more constraints'
             )
         solver_var = self._pyomo_var_to_solver_var_map[var]
-        self._remove_var(solver_var)
         self._symbol_map.removeSymbol(var)
         del self._referenced_variables[var]
         del self._pyomo_var_to_solver_var_map[var]
         del self._solver_var_to_pyomo_var_map[solver_var]
+        # Note: we want to remove the solver_var from all our internal
+        # mappings *before* removing it from the solver (the solver may
+        # invalidate teh object, leading to exceptions when looking it
+        # up in ComponentMaps)
+        self._remove_var(solver_var)
 
     """ This method should be implemented by subclasses."""
 
