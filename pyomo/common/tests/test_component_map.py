@@ -49,6 +49,27 @@ class TestComponentMap(unittest.TestCase):
         self.assertIn((1, (2, m.v)), m.cm)
         self.assertNotIn((1, (2, m.v)), i.cm)
 
+    def test_hasher(self):
+        m = ComponentMap()
+        a = 'str'
+        m[a] = 5
+        self.assertTrue(m.hasher.hashable(a))
+        self.assertTrue(m.hasher.hashable(str))
+        self.assertEqual(m._dict, {a: (a, 5)})
+        del m[a]
+
+        m.hasher.hashable(a, False)
+        m[a] = 5
+        self.assertFalse(m.hasher.hashable(a))
+        self.assertFalse(m.hasher.hashable(str))
+        self.assertEqual(m._dict, {id(a): (a, 5)})
+
+        class TMP:
+            pass
+
+        with self.assertRaises(KeyError):
+            m.hasher.hashable(TMP)
+
 
 class TestDefaultComponentMap(unittest.TestCase):
     def test_default_component_map(self):
