@@ -406,7 +406,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._solver_var_to_pyomo_var_map[solver_var]
         # Note: we want to remove the solver_var from all our internal
         # mappings *before* removing it from the solver (the solver may
-        # invalidate teh object, leading to exceptions when looking it
+        # invalidate the object, leading to exceptions when looking it
         # up in ComponentMaps)
         self._remove_var(solver_var)
 
