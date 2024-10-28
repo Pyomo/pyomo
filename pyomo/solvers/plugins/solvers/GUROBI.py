@@ -642,7 +642,7 @@ class GUROBIFILE(GUROBISHELL):
 
     def _default_executable(self):
         # Bogus, but not None (because the test infrastructure disables
-        # solvers where the executable() is None
+        # solvers where the executable() is None)
         return ""
 
     def create_command_line(self, executable, problem_files):
@@ -670,8 +670,10 @@ class GUROBIFILE(GUROBISHELL):
         warmstart_filename = self._warm_start_file_name
 
         # translate the options into a normal python dictionary, from a
-        # pyutilib SectionWrapper - the gurobi_run function doesn't know
-        # about pyomo, so the translation is necessary.
+        # pyutilib SectionWrapper - because the gurobi_run function was
+        # originally designed to run in the Python environment
+        # distributed in the Gurobi installation (which doesn't know
+        # about pyomo) the translation is necessary.
         options_dict = {}
         for key in self.options:
             options_dict[key] = self.options[key]
