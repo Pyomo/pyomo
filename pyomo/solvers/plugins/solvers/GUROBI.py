@@ -202,8 +202,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
-        # (and required, depending on other options), according to the
-        # CPLEX manual.
+        # (and required, depending on other options).
         #
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in
@@ -328,8 +327,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     def create_command_line(self, executable, problem_files):
         #
         # Define log file
-        # The log file in CPLEX contains the solution trace, but the
-        # solver status can be found in the solution file.
         #
         if self._log_file is None:
             self._log_file = TempfileManager.create_tempfile(suffix='.gurobi.log')
@@ -401,11 +398,10 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         return Bunch(cmd=cmd, script=script, log_file=self._log_file, env=None)
 
     def process_soln_file(self, results):
-        # the only suffixes that we extract from CPLEX are
-        # constraint duals, constraint slacks, and variable
-        # reduced-costs. scan through the solver suffix list
-        # and throw an exception if the user has specified
-        # any others.
+        # the only suffixes that we extract are constraint duals,
+        # constraint slacks, and variable reduced-costs. scan through
+        # the solver suffix list and throw an exception if the user has
+        # specified any others.
         extract_duals = False
         extract_slacks = False
         extract_rc = False
@@ -648,8 +644,6 @@ class GUROBIFILE(GUROBISHELL):
     def create_command_line(self, executable, problem_files):
         #
         # Define log file
-        # The log file in CPLEX contains the solution trace, but the
-        # solver status can be found in the solution file.
         #
         if self._log_file is None:
             self._log_file = TempfileManager.create_tempfile(suffix='.gurobi.log')
@@ -700,11 +694,10 @@ class GUROBIFILE(GUROBISHELL):
         return Bunch(rc=self._rc, log=self._log)
 
     def process_soln_file(self, results):
-        # the only suffixes that we extract from CPLEX are
-        # constraint duals, constraint slacks, and variable
-        # reduced-costs. scan through the solver suffix list
-        # and throw an exception if the user has specified
-        # any others.
+        # the only suffixes that we extract are constraint duals,
+        # constraint slacks, and variable reduced-costs. Scan through
+        # the solver suffix list and throw an exception if the user has
+        # specified any others.
         extract_duals = False
         extract_slacks = False
         extract_rc = False
