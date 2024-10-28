@@ -26,14 +26,14 @@ from sphinx.ext.autosummary import mangle_signature as _msig
 from sphinx.ext.autosummary.generate import generate_autosummary_content as _gac
 from sphinx.util.inspect import object_description
 from sphinx_toolbox.more_autodoc.typehints import format_annotation
-from typing import Any
+from typing import Type, Any, Dict, List, Tuple, Union
 
 _pre_re = re.compile(r'^( = )(.*)')
 
 
 def _get_all_members(
-    doc: type[autodoc.Documenter], app: Sphinx, obj: Any
-) -> dict[str, Any]:
+    doc: Type[autodoc.Documenter], app: Sphinx, obj: Any
+) -> Dict[str, Any]:
     """Override sphinx.ext.autosummary.generate._get_all_members to return
     members for objtype==enum
 
@@ -70,8 +70,8 @@ def _generate_autosummary_content(
     app: Any,
     recursive: bool,
     context: dict,
-    modname: str | None = None,
-    qualname: str | None = None,
+    modname: Union[str, None] = None,
+    qualname: Union[str, None] = None,
 ) -> str:
     """Override sphinx.ext.autosummary.generate.generate_autosummary_content()
     to provide additional fields to the namespace dictionary.
@@ -96,7 +96,7 @@ def _generate_autosummary_content(
             def render(self, name, ns):
                 # Overload render() so that we can intercept calls to it
                 # and add additional fields to the NS.  Note that we
-                # need valuables from the generate_autosummary_content
+                # need variables from the generate_autosummary_content
                 # context ... bue we know that context is the calling
                 # frame.  Seems like cheating, but it works.
                 if ns['objtype'] == 'module':
@@ -173,8 +173,8 @@ class EnumDocumenter(autodoc.ClassDocumenter):
         return "(value)"
 
     def sort_members(
-        self, documenters: list[tuple[autodoc.Documenter, bool]], order: str
-    ) -> list[tuple[autodoc.Documenter, bool]]:
+        self, documenters: List[Tuple[autodoc.Documenter, bool]], order: str
+    ) -> List[Tuple[autodoc.Documenter, bool]]:
         if order != 'groupwise':
             return super().sort_members(documenters, order)
         # If we are grouping the members, then we want the groups
@@ -226,7 +226,7 @@ class EnumMemberDocumenter(autodoc.AttributeDocumenter):
         super().add_directive_header(sig.split(" = ", 1)[0].strip())
 
 
-def setup(app: Sphinx) -> dict[str, Any]:
+def setup(app: Sphinx) -> Dict[str, Any]:
     app.setup_extension('sphinx.ext.autodoc')
     app.setup_extension('sphinx.ext.autosummary')
     # Overwrite key parts of autosummary so that our version of autoenum
