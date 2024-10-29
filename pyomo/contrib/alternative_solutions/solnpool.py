@@ -11,17 +11,12 @@
 
 import logging
 
-logger = logging.getLogger(__name__)
-
-from pyomo.common.dependencies import attempt_import
-from pyomo.common.errors import ApplicationError
-
-gurobipy, gurobipy_available = attempt_import("gurobipy")
-
 import pyomo.environ as pe
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 from pyomo.contrib.alternative_solutions import Solution
+
+logger = logging.getLogger(__name__)
 
 
 def gurobi_generate_solutions(
@@ -68,12 +63,9 @@ def gurobi_generate_solutions(
     #
     # Setup gurobi
     #
-    if not gurobipy_available:
-        raise ApplicationError("Solver (gurobi) not available")
     opt = appsi.solvers.Gurobi()
-
     if not opt.available():
-        raise ApplicationError("Solver (gurobi) not available")
+        raise pe.common.errors.ApplicationError("Solver (gurobi) not available")
 
     opt.config.stream_solver = tee
     opt.config.load_solution = False
@@ -91,7 +83,7 @@ def gurobi_generate_solutions(
     results = opt.solve(model)
     condition = results.termination_condition
     if not (condition == appsi.base.TerminationCondition.optimal):
-        raise ApplicationError(
+        raise pe.common.errors.ApplicationError(
             "Model cannot be solved, " "TerminationCondition = {}"
         ).format(condition.value)
     #

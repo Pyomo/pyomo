@@ -898,8 +898,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             dataGen = lambda k, v: [v._value]
         else:
             dataGen = lambda k, v: [v]
+        if self.index_set().isfinite() or self._default_val is Param.NoValue:
+            _len = len(self)
+        else:
+            _len = 'inf'
         headers = [
-            ("Size", len(self)),
+            ("Size", _len),
             ("Index", self._index_set if self.is_indexed() else None),
             ("Domain", self.domain.name),
             ("Default", default),
