@@ -1181,17 +1181,17 @@ def _value2string(prefix, value, obj):
     _str = prefix
     if value is not None:
         try:
-            _data = value._data if value is obj else value
-            if getattr(builtins, _data.__class__.__name__, None) is not None:
+            data = value.value(False) if value is obj else value
+            if getattr(builtins, data.__class__.__name__, None) is not None:
                 _str += _dump(
-                    _data, default_flow_style=True, allow_unicode=True
+                    data, default_flow_style=True, allow_unicode=True
                 ).rstrip()
                 if _str.endswith("..."):
                     _str = _str[:-3].rstrip()
             else:
-                _str += str(_data)
+                _str += str(data)
         except:
-            _str += str(type(_data))
+            _str += str(type(data))
     return _str.rstrip()
 
 
@@ -1199,12 +1199,12 @@ def _value2yaml(prefix, value, obj):
     _str = prefix
     if value is not None:
         try:
-            _data = value._data if value is obj else value
-            _str += _dump(_data, default_flow_style=True).rstrip()
+            data = value.value(False) if value is obj else value
+            _str += _dump(data, default_flow_style=True).rstrip()
             if _str.endswith("..."):
                 _str = _str[:-3].rstrip()
         except:
-            _str += str(type(_data))
+            _str += str(type(data))
     return _str.rstrip()
 
 
