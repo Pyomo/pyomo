@@ -40,9 +40,8 @@ from pyomo.common.deprecation import (
     relocated_module_attribute,
 )
 from pyomo.common.fileutils import import_file
-from pyomo.common.flags import building_documentation
+from pyomo.common.flags import building_documentation, NOTSET
 from pyomo.common.formatting import wrap_reStructuredText
-from pyomo.common.modeling import NOTSET
 
 logger = logging.getLogger(__name__)
 
