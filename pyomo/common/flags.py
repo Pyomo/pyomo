@@ -14,7 +14,13 @@ import sys
 
 
 class FlagType(type):
-    """Metaclass to simplify the repr(type) and str(type)
+    """Metaclass to help generate "Flag Types".
+
+    This is useful for defining "flag types" that are default arguments
+    in functions so that the Sphinx-generated documentation is
+    "cleaner".  These types are not constructable (attempts to construct
+    the class return the class) and simplify the repr(type) and
+    str(type).
 
     This metaclass redefines the ``str()`` and ``repr()`` of resulting
     classes.  The str() of the class returns only the class' ``__name__``,
@@ -22,10 +28,15 @@ class FlagType(type):
     (``__qualname__``) if Sphinx has been imported, or else the
     fully-qualified class name (``__module__ + '.' + __qualname__``).
 
-    This is useful for defining "flag types" that are default arguments
-    in functions so that the Sphinx-generated documentation is "cleaner"
-
     """
+    def __new__(mcs, name, bases, dct):
+        # Ensure that attempts to construct instances of a Flag type
+        # returnthe type.
+        def __new_flag__(cls, *args, **kwargs):
+            return cls
+
+        dct["__new__"] = __new_flag__
+        return type.__new__(mcs, name, bases, dct)
 
     def __repr__(cls):
         if building_documentation():
