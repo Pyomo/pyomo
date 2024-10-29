@@ -1672,12 +1672,12 @@ class document_kwargs_from_configdict(object):
 class ConfigBase(object):
     __slots__ = (
         '_parent',
+        '_domain',
         '_name',
         '_userSet',
         '_userAccessed',
         '_data',
         '_default',
-        '_domain',
         '_description',
         '_doc',
         '_visibility',
@@ -1723,17 +1723,20 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        state = {key: getattr(self, key) for key in ConfigBase.__slots__}
-        state['_domain'] = _picklable(state['_domain'], self)
-        state['_parent'] = None
+        state = [('_domain', _picklable(self._domain, self))]
+        # Note: [2:] skips _parent and _domain (intentionally): We just
+        # wrapped _domain in _picklable and will restore _parent in
+        # __setstate__
+        state.extend((key, getattr(self, key)) for key in ConfigBase.__slots__[2:] )
         return state
 
     def __setstate__(self, state):
-        for key, val in state.items():
+        for key, val in state:
             # Note: per the Python data model docs, we explicitly
             # set the attribute using object.__setattr__() instead
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
+        self._parent = None
 
     def __call__(
         self,
@@ -2508,7 +2511,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     content_filters = {None, 'all', 'userdata'}
 
-    __slots__ = ('_declared', '_implicit_declaration', '_implicit_domain')
+    __slots__ = ('_implicit_domain', '_declared', '_implicit_declaration')
     _all_slots = set(__slots__ + ConfigBase.__slots__)
 
     def __init__(
@@ -2536,13 +2539,15 @@ class ConfigDict(ConfigBase, Mapping):
         return _munge_name(self.name(), False)
 
     def __getstate__(self):
-        state = super(ConfigDict, self).__getstate__()
-        state.update((key, getattr(self, key)) for key in ConfigDict.__slots__)
-        state['_implicit_domain'] = _picklable(state['_implicit_domain'], self)
+        state = super().__getstate__()
+        state.append(('_implicit_domain', _picklable(self._implicit_domain, self)))
+        # Note: [1:] intentionally skips the _implicit_domain (which we
+        # just handled)
+        state.extend((key, getattr(self, key)) for key in ConfigDict.__slots__[1:])
         return state
 
     def __setstate__(self, state):
-        state = super(ConfigDict, self).__setstate__(state)
+        state = super().__setstate__(state)
         for x in self._data.values():
             x._parent = self
 
