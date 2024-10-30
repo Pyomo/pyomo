@@ -2479,8 +2479,8 @@ class ConfigList(ConfigBase, Sequence):
         val._parent = self
         val._name = f'[{len(_data)}]'
         # We need to reset the _userSet to False because the List domain
-        # is a ConfigValue and __call__ will trigger set_value() wich
-        # will set the _userSet flag.  as we get here during _default
+        # is a ConfigValue and __call__ will trigger set_value(), which
+        # will set the _userSet flag.  As we get here during _default
         # processing, we want to clear that flag.  If this is actually
         # getting triggeresd through set_value() / append(), then
         # append() will be responsible for setting _userSet.
