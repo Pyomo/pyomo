@@ -185,7 +185,7 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
-        RES = 0.02  # resolution (seconds): 1/5 the sleep
+        RES = 0.01  # resolution (seconds): 1/10 the sleep
 
         # Note: pypy on GHA occasionally has timing
         # differences of >0.04s
@@ -194,6 +194,11 @@ class TestTiming(unittest.TestCase):
         # Note: previously, OSX on GHA also had significantly nosier tests
         # if sys.platform == 'darwin':
         #     RES *= 2
+
+        # Note: the above RES heuristics were determined before the
+        # current handling of "now" within the tic/toc timer.  They are
+        # probably overly conservative now, but tightening them doesn't
+        # really improve the quality of the tests.
 
         abs_time = time.perf_counter()
         timer = TicTocTimer()
@@ -274,7 +279,12 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_context_manager(self):
         SLEEP = 0.1
-        RES = 0.05  # resolution (seconds): 1/2 the sleep
+        RES = 0.01  # resolution (seconds): 1/10 the sleep
+
+        # Note: the above RES heuristic was determined before the
+        # current handling of "now" within the tic/toc timer.  It is
+        # probably overly conservative now, but tightening them doesn't
+        # really improve the quality of the tests.
 
         abs_time = time.perf_counter()
         with TicTocTimer() as timer:
