@@ -1683,6 +1683,7 @@ class UninitializedMixin(object):
     without processing the ``_default__.
 
     """
+
     __slots__ = ()
 
     @property
