@@ -533,7 +533,7 @@ class Path(object):
             base = self.basePath
         else:
             base = Path.BasePath
-        if type(base) is ConfigValue:
+        if isinstance(base, ConfigValue):
             base = base.value()
         if base is None:
             base = ""
@@ -1492,7 +1492,11 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
                 None,
                 [
                     'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
-                    ('optional' if obj._default is None else f'default={obj._default}'),
+                    (
+                        'optional'
+                        if obj._default is None
+                        else f'default={obj._default!r}'
+                    ),
                 ],
             )
         )
@@ -1668,6 +1672,41 @@ class document_kwargs_from_configdict(object):
         return fcn
 
 
+class UninitializedMixin(object):
+    """Mixin class to support delayed data initialization.
+
+    This mixin can be used to create a derived Config class that hides
+    the (uninitialized) ``_data`` attribute behind a property.  Any
+    attempt to access the _data will trigger the initialization of the
+    Config object from its ``_default`` value.  Setting the ``_data``
+    attribute will also trigger resolution of the Config object, but
+    without processing the ``_default__.
+
+    """
+    __slots__ = ()
+
+    @property
+    def _data(self):
+        #
+        # This is a possibly dangerous construct: falling back on
+        # calling the _default can mask a real problem in the default
+        # type/value.
+        #
+        try:
+            self._setter(self._default)
+        except:
+            if hasattr(self._default, '__call__'):
+                self._setter(self._default())
+            else:
+                raise
+        return self._data
+
+    @_data.setter
+    def _data(self, value):
+        self.__class__ = self.__class__.__mro__[2]
+        self._data = value
+
+
 class ConfigBase(object):
     __slots__ = (
         '_parent',
@@ -1698,13 +1737,15 @@ class ConfigBase(object):
         self._userSet = False
         self._userAccessed = False
 
-        self._data = None
+        self._data = NOTSET
         self._default = default
         self._domain = domain
         self._description = _strip_indentation(description)
         self._doc = _strip_indentation(doc)
         self._visibility = visibility
         self._argparse = None
+        if self._UninitializedClass is not None:
+            self.__class__ = self._UninitializedClass
 
     def __getstate__(self):
         # Nominally, __getstate__() should return:
@@ -1726,7 +1767,7 @@ class ConfigBase(object):
         # Note: [2:] skips _parent and _domain (intentionally): We just
         # wrapped _domain in _picklable and will restore _parent in
         # __setstate__
-        state.extend((key, getattr(self, key)) for key in ConfigBase.__slots__[2:] )
+        state.extend((key, getattr(self, key)) for key in ConfigBase.__slots__[2:])
         return state
 
     def __setstate__(self, state):
@@ -1779,9 +1820,7 @@ class ConfigBase(object):
         # Initialize the new config object
         ans = self.__class__(**kwds)
 
-        if not isinstance(self, ConfigDict):
-            ans.reset()
-        else:
+        if isinstance(self, ConfigDict):
             # Copy over any Dict definitions
             for k, v in self._data.items():
                 if preserve_implicit or k in self._declared:
@@ -1847,17 +1886,9 @@ class ConfigBase(object):
             return value
 
     def reset(self):
-        #
-        # This is a dangerous construct, the failure in the first try block
-        # can mask a real problem.
-        #
-        try:
-            self.set_value(self._default)
-        except:
-            if hasattr(self._default, '__call__'):
-                self.set_value(self._default())
-            else:
-                raise
+        # Reset the object back to its default value and clear the
+        # userSet and userAccessed flags
+        self._UninitializedClass._data.fget(self)
         self._userAccessed = False
         self._userSet = False
 
@@ -2178,20 +2209,18 @@ class ConfigValue(ConfigBase):
 
     """
 
-    def __init__(self, *args, **kwds):
-        ConfigBase.__init__(self, *args, **kwds)
-        self.reset()
+    __slots__ = ()
 
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
         return self._data
 
-    def set_value(self, value):
-        # Trap self-assignment (useful for providing editor completion)
-        if value is self:
-            return
+    def _setter(self, value):
         self._data = self._cast(value)
+
+    def set_value(self, value):
+        self._setter(value)
         self._userSet = True
 
     def _data_collector(self, level, prefix, visibility=None, docMode=False):
@@ -2200,17 +2229,28 @@ class ConfigValue(ConfigBase):
         yield (level, prefix, self, self)
 
 
+ConfigValue._UninitializedClass = type(
+    'UninitializedConfigValue', (UninitializedMixin, ConfigValue), {'__slots__': ()}
+)
+
+
 class ImmutableConfigValue(ConfigValue):
+    __slots__ = ()
+
     def __new__(self, *args, **kwds):
         # ImmutableConfigValue objects are never directly created, and
         # any attempt to copy one will generate a mutable ConfigValue
         # object
         return ConfigValue(*args, **kwds)
 
-    def set_value(self, value):
-        if self._cast(value) != self._data:
-            raise RuntimeError(f"'{self.name(True)}' is currently immutable")
-        super(ImmutableConfigValue, self).set_value(value)
+    def _setter(self, value):
+        try:
+            _data = self._data
+            super()._setter(value)
+            if _data != self._data:
+                raise RuntimeError(f"'{self.name(True)}' is currently immutable")
+        finally:
+            self._data = _data
 
 
 class MarkImmutable(object):
@@ -2278,9 +2318,13 @@ class MarkImmutable(object):
         try:
             for cfg in self._targets:
                 if type(cfg) is not ConfigValue:
-                    raise ValueError(
-                        'Only ConfigValue instances can be marked immutable.'
-                    )
+                    if isinstance(cfg, ConfigValue):
+                        # Resolve any UninitializedConfigValue
+                        cfg._data
+                    else:
+                        raise ValueError(
+                            'Only ConfigValue instances can be marked immutable.'
+                        )
                 cfg.__class__ = ImmutableConfigValue
                 self._locked.append(cfg)
         except:
@@ -2340,15 +2384,25 @@ class ConfigList(ConfigBase, Sequence):
 
     """
 
-    def __init__(self, *args, **kwds):
-        ConfigBase.__init__(self, *args, **kwds)
-        if self._domain is None:
-            self._domain = ConfigValue()
-        elif isinstance(self._domain, ConfigBase):
+    __slots__ = ()
+
+    def __init__(
+        self, default=None, domain=None, description=None, doc=None, visibility=0
+    ):
+        if domain is None:
+            domain = ConfigValue()
+        elif isinstance(domain, ConfigBase):
             pass
         else:
-            self._domain = ConfigValue(None, domain=self._domain)
-        self.reset()
+            domain = ConfigValue(None, domain=domain)
+        ConfigBase.__init__(
+            self,
+            default=default,
+            domain=domain,
+            description=description,
+            doc=doc,
+            visibility=visibility,
+        )
 
     def __setstate__(self, state):
         state = super(ConfigList, self).__setstate__(state)
@@ -2397,43 +2451,43 @@ class ConfigList(ConfigBase, Sequence):
             self._userAccessed = True
         return [config.value(accessValue) for config in self._data]
 
-    def set_value(self, value):
-        # If the set_value fails part-way through the list values, we
+    def _setter(self, value):
+        # If the _setter fails part-way through the list values, we
         # want to restore a deterministic state.  That is, either
         # set_value succeeds completely, or else nothing happens.
-        _old = self._data
-        self._data = []
-        try:
-            if isinstance(value, str):
-                value = list(_default_string_list_lexer(value))
-            if (type(value) is list) or isinstance(value, ConfigList):
-                for val in value:
-                    self.append(val)
-            else:
-                self.append(value)
-        except:
-            self._data = _old
-            raise
+        _data = []
+        if isinstance(value, str):
+            value = list(_default_string_list_lexer(value))
+        if (type(value) is list) or isinstance(value, ConfigList):
+            for val in value:
+                self._append(_data, val)
+        else:
+            self._append(_data, value)
+        self._data = _data
+
+    def set_value(self, value):
+        self._setter(value)
         self._userSet = True
+        for _data in self._data:
+            _data._userSet = True
 
-    def reset(self):
-        ConfigBase.reset(self)
-        # Because the base reset() calls set_value, any deefault list
-        # entries will get their userSet flag set.  This is wrong, as
-        # reset() should conceptually reset the object to it's default
-        # state (e.g., before the user ever had a chance to mess with
-        # things).  As the list could contain a ConfigDict, this is a
-        # recursive operation to put the userSet values back.
-        for val in self.user_values():
-            val._userSet = False
-
-    def append(self, value=NOTSET):
+    def _append(self, _data, value):
         val = self._cast(value)
         if val is None:
             return
-        self._data.append(val)
-        self._data[-1]._parent = self
-        self._data[-1]._name = '[%s]' % (len(self._data) - 1,)
+        val._parent = self
+        val._name = f'[{len(_data)}]'
+        # We need to reset the _userSet to False because the List domain
+        # is a ConfigValue and __call__ will trigger set_value() wich
+        # will set the _userSet flag.  as we get here during _default
+        # processing, we want to clear that flag.  If this is actually
+        # getting triggeresd through set_value() / append(), then
+        # append() will be responsible for setting _userSet.
+        val._userSet = False
+        _data.append(val)
+
+    def append(self, value=NOTSET):
+        self._append(self._data, value)
         self._data[-1]._userSet = True
         # Adding something to the container should not change the
         # userSet on the container (see Pyomo/pyomo#352; now
@@ -2476,6 +2530,11 @@ class ConfigList(ConfigBase, Sequence):
                 yield v
 
 
+ConfigList._UninitializedClass = type(
+    'UninitializedConfigList', (UninitializedMixin, ConfigList), {'__slots__': ()}
+)
+
+
 class ConfigDict(ConfigBase, Mapping):
     """Store and manipulate a dictionary of configuration values.
 
@@ -2511,7 +2570,7 @@ class ConfigDict(ConfigBase, Mapping):
     content_filters = {None, 'all', 'userdata'}
 
     __slots__ = ('_implicit_domain', '_declared', '_implicit_declaration')
-    _all_slots = set(__slots__ + ConfigBase.__slots__)
+    _reserved_words = set()
 
     def __init__(
         self,
@@ -2592,8 +2651,11 @@ class ConfigDict(ConfigBase, Mapping):
         if _key not in self._data:
             self.add(key, val)
         else:
-            self._data[_key].set_value(val)
-        # self._userAccessed = True
+            cfg = self._data[_key]
+            # Trap self-assignment (useful for providing editor completion)
+            if cfg is val:
+                return
+            cfg.set_value(val)
 
     def __delitem__(self, key):
         # Note that this will produce a KeyError if the key is not valid
@@ -2617,16 +2679,14 @@ class ConfigDict(ConfigBase, Mapping):
         # Note: __getattr__ is only called after all "usual" attribute
         # lookup methods have failed.  So, if we get here, we already
         # know that key is not a __slot__ or a method, etc...
-        # if name in ConfigDict._all_slots:
-        #    return super(ConfigDict,self).__getattribute__(name)
         _name = name.replace(' ', '_')
         if _name not in self._data:
             raise AttributeError("Unknown attribute '%s'" % name)
         return ConfigDict.__getitem__(self, _name)
 
     def __setattr__(self, name, value):
-        if name in ConfigDict._all_slots:
-            super(ConfigDict, self).__setattr__(name, value)
+        if name in ConfigDict._reserved_words:
+            super().__setattr__(name, value)
         else:
             ConfigDict.__setitem__(self, name, value)
 
@@ -2810,6 +2870,9 @@ class ConfigDict(ConfigBase, Mapping):
         for cfg in self._data.values():
             yield from cfg._data_collector(level, cfg._name + ': ', visibility, docMode)
 
+
+ConfigDict._UninitializedClass = None
+ConfigDict._reserved_words.update(dir(ConfigDict))
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict

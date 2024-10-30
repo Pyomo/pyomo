@@ -1887,11 +1887,13 @@ scenarios[1].detection""",
         c.reset()
         self.assertEqual(c.value(), 10)
 
+        c = ConfigValue(default=lambda x: 10 * x, domain=int)
         with self.assertRaisesRegex(TypeError, r"<lambda>\(\) .* argument"):
-            c = ConfigValue(default=lambda x: 10 * x, domain=int)
+            c.value()
 
+        c = ConfigValue('a', domain=int)
         with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
-            c = ConfigValue('a', domain=int)
+            c.value()
 
     def test_set_default(self):
         c = ConfigValue()
@@ -3304,6 +3306,56 @@ option_2: int, default=5
 
         cfg.declare('type', ConfigValue(domain=int))
         self.assertEqual(cfg.get('type').domain_name(), 'int')
+
+    def test_deferred_initialization(self):
+        class Accumulator(object):
+            def __init__(self):
+                self.data = []
+
+            def __call__(self, val):
+                self.data.append(val)
+                return val
+
+        record = Accumulator()
+
+        cfg = ConfigDict()
+        cfg.declare('a', ConfigValue(5, record))
+        self.assertEqual(record.data, [])
+        self.assertEqual(cfg.a, 5)
+        self.assertEqual(record.data, [5])
+
+        # Test that assignment bypasses the default value
+        cfg.declare('b', ConfigValue(6, record))
+        self.assertEqual(record.data, [5])
+        cfg.b = 10
+        self.assertEqual(record.data, [5, 10])
+        self.assertEqual(cfg.b, 10)
+        self.assertEqual(record.data, [5, 10])
+
+        # But resetting it will trigger the default
+        cfg.get('b').reset()
+        self.assertEqual(record.data, [5, 10, 6])
+        self.assertEqual(cfg.b, 6)
+
+        record.data = []
+        cfg.declare('la', ConfigList(['a', 'b'], ConfigValue(7, record)))
+        self.assertEqual(record.data, [])
+        self.assertEqual(cfg.la.value(), ['a', 'b'])
+        self.assertEqual(record.data, [7, 'a', 'b'])
+
+        # Test that assignment bypasses the default value
+        record.data = []
+        cfg.declare('lb', ConfigList(['a', 'b'], record))
+        self.assertEqual(record.data, [])
+        cfg.lb = [10, 11]
+        self.assertEqual(record.data, [10, 11])
+        self.assertEqual(cfg.lb.value(), [10, 11])
+        self.assertEqual(record.data, [10, 11])
+
+        # But resetting it will trigger the default
+        cfg.get('lb').reset()
+        self.assertEqual(record.data, [10, 11, 'a', 'b'])
+        self.assertEqual(cfg.lb.value(), ['a', 'b'])
 
 
 if __name__ == "__main__":
