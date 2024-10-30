@@ -36,6 +36,7 @@ from pyomo.core.base import (
     Block,
     Constraint,
     Expression,
+    NumericLabeler,
     Suffix,
     SortComponents,
 )
@@ -67,7 +68,8 @@ int_float = {int, float}
 
 class ExprType(enum.IntEnum):
     CONSTANT = 0
-    FIXED = 5
+    FIXED = 3
+    VARIABLE = 5
     MONOMIAL = 10
     LINEAR = 20
     QUADRATIC = 30
@@ -186,7 +188,7 @@ class InvalidNumber(PyomoObject):
     def __repr__(self):
         # We want attempts to convert InvalidNumber to a string
         # representation to raise a InvalidValueError.
-        self._error(f'Cannot emit {str(self)} in compiled representation')
+        return self._error(f'Cannot emit {str(self)} in compiled representation')
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
@@ -194,12 +196,12 @@ class InvalidNumber(PyomoObject):
         # InvalidValueError.  However, at the moment, this breaks some
         # tests in PyROS.
         # return self.value.__format__(format_spec)
-        self._error(f'Cannot emit {str(self)} in compiled representation')
+        return self._error(f'Cannot emit {str(self)} in compiled representation')
 
     def __float__(self):
         # We want attempts to convert InvalidNumber to a float
         # representation to raise a InvalidValueError.
-        self._error(f'Cannot convert {str(self)} to float')
+        return self._error(f'Cannot convert {str(self)} to float')
 
     def __neg__(self):
         return self._op(operator.neg, self)
@@ -283,10 +285,26 @@ class BeforeChildDispatcher(collections.defaultdict):
             else:
                 self[child_type] = self._before_invalid
         elif not child.is_expression_type():
-            if child.is_potentially_variable():
-                self[child_type] = self._before_var
-            else:
-                self[child_type] = self._before_param
+            if child.is_indexed():
+                cdata = child._ComponentDataClass(child)
+                if cdata.is_expression_type():
+                    self[child_type] = self._before_indexed_expr
+                elif cdata.is_numeric_type() or child.is_logical_type():
+                    if cdata.is_potentially_variable():
+                        self[child_type] = self._before_indexed_var
+                    else:
+                        self[child_type] = self._before_indexed_param
+                elif child.is_component_type():
+                    self[child_type] = self._before_indexed_component
+            elif child.is_numeric_type() or child.is_logical_type():
+                if child.is_potentially_variable():
+                    self[child_type] = self._before_var
+                elif isinstance(child, EXPR.IndexTemplate):
+                    self[child_type] = self._before_index_template
+                else:
+                    self[child_type] = self._before_param
+            elif child.is_component_type():
+                self[child_type] = self._before_component
         elif not child.is_potentially_variable():
             self[child_type] = self._before_npv
             pv_base_type = child.potentially_variable_base_class()
@@ -358,6 +376,41 @@ class BeforeChildDispatcher(collections.defaultdict):
     def _before_param(visitor, child):
         return False, (_CONSTANT, visitor.check_constant(child.value, child))
 
+    @staticmethod
+    def _before_index_template(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_indexed_expr(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_indexed_param(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_indexed_var(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle expressions "
+            f"containing {child.__class__} nodes"
+        )
+
+    @staticmethod
+    def _before_component(visitor, child):
+        raise NotImplementedError(
+            f"{visitor.__class__.__name__} can not handle expressions "
+            f"containing {child.__class__} nodes"
+        )
+
     #
     # The following methods must be defined by derivative classes (along
     # with any other special-case handling they want to implement;
@@ -399,8 +452,8 @@ class ExitNodeDispatcher(collections.defaultdict):
 
     def __missing__(self, key):
         if type(key) is tuple:
-            # Only lookup/cache argument-specific handlers for unary,
-            # binary and ternary operators
+            # Only lookup/cache argument-specific handlers for unary or
+            # binary operators
             if len(key) <= 3:
                 node_class = key[0]
                 node_args = key[1:]
@@ -448,6 +501,17 @@ class ExitNodeDispatcher(collections.defaultdict):
             f"Unexpected expression node type '{type(node).__name__}' "
             f"found while walking expression tree in {type(visitor).__name__}."
         )
+
+
+def initialize_exit_node_dispatcher(exit_handlers):
+    exit_dispatcher = {}
+    for cls, handlers in exit_handlers.items():
+        for args, fcn in handlers.items():
+            if args is None:
+                exit_dispatcher[cls] = fcn
+            else:
+                exit_dispatcher[(cls, *args)] = fcn
+    return exit_dispatcher
 
 
 def apply_node_operation(node, args):
@@ -667,6 +731,107 @@ def ordered_active_constraints(model, config):
     _n = len(row_map)
     _row_getter = row_map.get
     return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
+
+
+class VarRecorder(object):
+    def __init__(self, var_map, sorter):
+        self.var_map = var_map
+        self.sorter = sorter
+
+    def add(self, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        try:
+            _iter = var.parent_component().values(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for v in _iter:
+            if not v.fixed:
+                vm[id(v)] = v
+
+
+class OrderedVarRecorder(object):
+    def __init__(self, var_map, var_order, sorter):
+        self.var_map = var_map
+        self.var_order = var_order
+        self.sorter = sorter
+
+    def add(self, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        vo = self.var_order
+        try:
+            _iter = var.parent_component().values(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for i, v in enumerate(_iter, start=len(vo)):
+            vid = id(v)
+            vo[vid] = i
+            if not v.fixed:
+                vm[vid] = v
+
+
+class TemplateVarRecorder(object):
+    def __init__(self, var_map, var_order, sorter):
+        self.var_map = var_map
+        self._var_order = var_order
+        self.sorter = sorter
+        self.env = {None: 0}
+        self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
+
+    @property
+    def var_order(self):
+        if self._var_order is None:
+            self._var_order = {vid: i for i, vid in enumerate(self.var_map)}
+        return self._var_order
+
+    def add(self, var):
+        # Note: the following is mostly a copy of
+        # LinearBeforeChildDispatcher.record_var, but with extra
+        # handling to update the env in the same loop
+        var_comp = var.parent_component()
+        # Double-check that the component has not already been processed
+        # (through an individual var data)
+        name = self.symbolmap.getSymbol(var_comp)
+        if name in self.env:
+            return
+
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        ve = self.env[name] = {}
+        vo = self._var_order
+        try:
+            _iter = var_comp.items(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        if vo is None:
+            for i, (idx, v) in enumerate(_iter, start=len(vm)):
+                vm[id(v)] = v
+                ve[idx] = i
+        else:
+            for i, (idx, v) in enumerate(_iter, start=len(vm)):
+                vid = id(v)
+                vm[vid] = v
+                ve[idx] = i
+                vo[vid] = i
 
 
 # Copied from cpxlp.py:
