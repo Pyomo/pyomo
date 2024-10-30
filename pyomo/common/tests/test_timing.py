@@ -47,8 +47,13 @@ class TestTiming(unittest.TestCase):
     def setUp(self):
         self.reenable_gc = gc.isenabled()
         gc.disable()
+        # Set a long switch interval to discourage context switches
+        # during these tests
+        self.switchinterval = sys.getswitchinterval()
+        sys.setswitchinterval(10)
 
     def tearDown(self):
+        sys.setswitchinterval(self.switchinterval)
         if self.reenable_gc:
             gc.enable()
             gc.collect()
