@@ -31,7 +31,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.x + m.y
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -48,7 +48,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.x + m.z * m.y + m.z
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -67,7 +67,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.x + m.x
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -84,7 +84,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = 0 * m.x + m.x - m.y
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
         self.assertIsNone(repn.nonlinear)
@@ -100,7 +100,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.y * m.x**2 + m.y * m.x - 3
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
         assertExpressionsEqual(self, repn.nonlinear, m.y * m.x**2)
@@ -118,7 +118,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.x**3 + 3 + m.x**2
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
         assertExpressionsEqual(self, repn.nonlinear, m.x**3 + m.x**2)
@@ -131,7 +131,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.x + m.y * (m.x + 5)
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
         self.assertEqual(len(repn.linear), 1)
@@ -147,7 +147,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.x * m.y
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -163,7 +163,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.y * (m.x + 7)
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -179,7 +179,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = 45 * m.y
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -195,7 +195,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = 45 * m.y
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -211,7 +211,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = (m.y**2) * (m.x + m.x**2)
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -226,7 +226,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = (m.y * log(m.x)) * (m.y + 2) / m.x
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z])
 
         repn = visitor.walk_expression(e)
 
@@ -244,7 +244,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.x + 2 * m.w**2 * m.y - m.x - m.w * m.z
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.w]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.w]).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y, id(m.z): m.z})
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1, id(m.z): 2})
@@ -260,7 +260,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e *= 5
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.w]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.w]).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y, id(m.z): m.z})
         self.assertEqual(cfg.var_order, {id(m.x): 0, id(m.y): 1, id(m.z): 2})
@@ -276,7 +276,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = 5 * (m.w * m.y + m.z**2 + 3 * m.w * m.y**3)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.w]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.w]).walk_expression(e)
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.y): m.y, id(m.z): m.z})
         self.assertEqual(cfg.var_order, {id(m.y): 0, id(m.z): 1})
@@ -299,7 +299,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z]).walk_expression(
             expr
         )
 
@@ -320,9 +320,9 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
         cfg = VisitorConfig()
         with LoggingIntercept() as LOG:
-            repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(
-                expr
-            )
+            repn = ParameterizedLinearRepnVisitor(
+                **cfg, wrt=[m.y, m.z]
+            ).walk_expression(expr)
         self.assertEqual(
             LOG.getvalue(),
             "Exception encountered evaluating expression 'div(3*z, 0)'\n"
@@ -338,7 +338,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         m.y.fix(None)
         expr = m.z * log(m.y) + 3
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z]).walk_expression(
             expr
         )
         self.assertEqual(repn.multiplier, 1)
@@ -352,7 +352,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = -(m.y * m.z + 17)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y, m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y, m.z]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -363,7 +363,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         m = self.make_model()
         e = (m.x**2) * (log(m.y) * m.z**4) * m.y
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -377,7 +377,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.x / 4 + m.y
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
@@ -388,7 +388,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         e = 4 / m.x + m.y
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
@@ -399,7 +399,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         e = m.z / m.x + m.y
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x, m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x, m.z]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 1)
         self.assertIn(id(m.y), repn.linear)
@@ -413,7 +413,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = (m.x + 3 * m.z) / m.y
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 2)
         self.assertIn(id(m.x), repn.linear)
@@ -429,7 +429,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = (1 + m.x) ** 2 + m.y
 
         cfg = VisitorConfig()
-        visitor = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y])
+        visitor = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y])
         visitor.max_exponential_expansion = 2
         repn = visitor.walk_expression(e)
 
@@ -443,7 +443,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = (m.x**2 + 3 * m.z) ** m.y
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -455,7 +455,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.y ** (m.x**2 + 3 * m.z)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -467,7 +467,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = (m.x + 3 * m.z) ** m.y
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -479,7 +479,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.y ** (m.x + 3 * m.z)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -493,7 +493,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.p * (m.y**2 + m.z)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.z]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -508,7 +508,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.p * (m.y**2 + m.x)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -523,7 +523,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.p * (m.y**2)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.y]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.y]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 0)
         self.assertEqual(repn.multiplier, 1)
@@ -539,7 +539,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         e = m.p * (3 * m.x * m.y + m.z)
 
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(*cfg, wrt=[m.x]).walk_expression(e)
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.x]).walk_expression(e)
 
         self.assertEqual(len(repn.linear), 2)
         self.assertIn(id(m.y), repn.linear)

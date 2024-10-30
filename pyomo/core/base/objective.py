@@ -15,6 +15,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.deprecation import RenamedClass
+from pyomo.common.errors import TemplateExpressionError
 from pyomo.common.enums import ObjectiveSense, minimize, maximize
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -22,6 +23,7 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.template_expr import templatize_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -38,6 +40,8 @@ from pyomo.core.base.initializer import (
 )
 
 logger = logging.getLogger('pyomo.core')
+
+TEMPLATIZE_OBJECTIVES = False
 
 _rule_returned_none_error = """Objective '%s': rule returned None.
 
@@ -151,6 +155,37 @@ class _ObjectiveData(metaclass=RenamedClass):
 class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__new_class__ = ObjectiveData
     __renamed__version__ = '6.7.2'
+
+
+class TemplateObjectiveData(ObjectiveData):
+    __slots__ = ()
+
+    def __init__(self, template_info, component, index, sense):
+        #
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ObjectiveData
+        #   - ActiveComponentData
+        #   - ComponentData
+        self._component = component
+        self._active = True
+        self._index = index
+        self._args_ = template_info
+        self._sense = sense
+
+    @property
+    def args(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        return self._args_
+
+    def template_expr(self):
+        return self._args_
+
+    def set_value(self, expr):
+        self.__class__ = ObjectiveData
+        return self.set_value(expr)
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -274,6 +309,20 @@ class Objective(ActiveIndexedComponent):
                 # indices to be created at a later time).
                 pass
             else:
+                if TEMPLATIZE_OBJECTIVES:
+                    try:
+                        template_info = templatize_rule(block, rule, self.index_set())
+                        comp = weakref_ref(self)
+                        self._data = {
+                            idx: TemplateObjectiveData(
+                                template_info, comp, idx, self._init_sense(block, index)
+                            )
+                            for idx in self.index_set()
+                        }
+                        return
+                    except TemplateExpressionError:
+                        pass
+
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     ans = self._setitem_when_not_present(index, rule(block, index))
