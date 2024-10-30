@@ -442,23 +442,22 @@ class Module(object):
     name, by module name, or by module object. Regardless of how the module is
     specified, what is stored in the configuration is a module object.
 
-    .. doctest::
+    .. testcode::
 
-        >>> from pyomo.common.config import (
-        ...     ConfigDict, ConfigValue, Module
-        ... )
-        >>> config = ConfigDict()
-        >>> config.declare('my_module', ConfigValue(
-        ...     domain=Module(),
-        ... ))
-        <pyomo.common.config.ConfigValue object at ...>
-        >>> # Set using file path
-        >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
-        >>> # Set using python module name, as a string
-        >>> config.my_module = 'os.path'
-        >>> # Set using an imported module object
-        >>> import os.path
-        >>> config.my_module = os.path
+        from pyomo.common.config import (
+            ConfigDict, ConfigValue, Module
+        )
+        config = ConfigDict()
+        config.declare('my_module', ConfigValue(
+            domain=Module(),
+        ))
+        # Set using file path
+        config.my_module = '../../pyomo/common/tests/config_plugin.py'
+        # Set using python module name, as a string
+        config.my_module = 'os.path'
+        # Set using an imported module object
+        import os.path
+        config.my_module = os.path
 
     """
 
@@ -613,18 +612,24 @@ class DynamicImplicitDomain(object):
        >>> import pyomo.common.fileutils
        >>> from pyomo.common.config import ConfigDict, DynamicImplicitDomain
 
-    .. doctest::
+    Then we can declare a `:class:``ConfigDict`` that imports the domain
+    for specific keys from a module that matches the key name:
 
-       >>> def _pluginImporter(name, config):
-       ...     mod = importlib.import_module(name)
-       ...     return mod.get_configuration(config)
-       >>> config = ConfigDict()
-       >>> config.declare('plugins', ConfigDict(
-       ...     implicit=True,
-       ...     implicit_domain=DynamicImplicitDomain(_pluginImporter)))
-       <pyomo.common.config.ConfigDict object at ...>
-       >>> config.plugins['pyomo.common.tests.config_plugin'] = {'key1': 5}
-       >>> config.display()
+    .. testcode::
+
+       def _pluginImporter(name, config):
+           mod = importlib.import_module(name)
+           return mod.get_configuration(config)
+       config = ConfigDict()
+       config.declare('plugins', ConfigDict(
+           implicit=True,
+           implicit_domain=DynamicImplicitDomain(_pluginImporter)))
+       config.plugins['pyomo.common.tests.config_plugin'] = {'key1': 5}
+       config.display()
+
+
+    .. testoutput::
+
        plugins:
          pyomo.common.tests.config_plugin:
            key1: 5
@@ -699,35 +704,37 @@ entry.  ConfigValue objects can be grouped using two containers
 Python's dict and list classes, respectively.
 
 At its simplest, the Config system allows for developers to specify a
-dictionary of documented configuration entries, allow users to provide
-values for those entries, and retrieve the current values:
+dictionary of documented configuration entries:
+
+.. testcode::
+
+    from pyomo.common.config import (
+        ConfigDict, ConfigList, ConfigValue
+    )
+    config = ConfigDict()
+    config.declare('filename', ConfigValue(
+        default=None,
+        domain=str,
+        description="Input file name",
+    ))
+    config.declare("bound tolerance", ConfigValue(
+        default=1E-5,
+        domain=float,
+        description="Bound tolerance",
+        doc="Relative tolerance for bound feasibility checks"
+    ))
+    config.declare("iteration limit", ConfigValue(
+        default=30,
+        domain=int,
+        description="Iteration limit",
+        doc="Number of maximum iterations in the decomposition methods"
+    ))
+
+Users can then to provide values for those entries, and retrieve the
+current values:
 
 .. doctest::
 
-    >>> from pyomo.common.config import (
-    ...     ConfigDict, ConfigList, ConfigValue
-    ... )
-    >>> config = ConfigDict()
-    >>> config.declare('filename', ConfigValue(
-    ...     default=None,
-    ...     domain=str,
-    ...     description="Input file name",
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare("bound tolerance", ConfigValue(
-    ...     default=1E-5,
-    ...     domain=float,
-    ...     description="Bound tolerance",
-    ...     doc="Relative tolerance for bound feasibility checks"
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare("iteration limit", ConfigValue(
-    ...     default=30,
-    ...     domain=int,
-    ...     description="Iteration limit",
-    ...     doc="Number of maximum iterations in the decomposition methods"
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
     >>> config['filename'] = 'tmp.txt'
     >>> print(config['filename'])
     tmp.txt
@@ -882,45 +889,40 @@ Config entries can be declared as argparse arguments using the
 simpler, the :py:meth:`declare` method returns the declared Config
 object so that the argument declaration can be done inline:
 
-.. doctest::
+.. testcode::
 
-    >>> import argparse
-    >>> config = ConfigDict()
-    >>> config.declare('iterlim', ConfigValue(
-    ...     domain=int,
-    ...     default=100,
-    ...     description="iteration limit",
-    ... )).declare_as_argument()
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('lbfgs', ConfigValue(
-    ...     domain=bool,
-    ...     description="use limited memory BFGS update",
-    ... )).declare_as_argument()
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('linesearch', ConfigValue(
-    ...     domain=bool,
-    ...     default=True,
-    ...     description="use line search",
-    ... )).declare_as_argument()
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('relative tolerance', ConfigValue(
-    ...     domain=float,
-    ...     description="relative convergence tolerance",
-    ... )).declare_as_argument('--reltol', '-r', group='Tolerances')
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('absolute tolerance', ConfigValue(
-    ...     domain=float,
-    ...     description="absolute convergence tolerance",
-    ... )).declare_as_argument('--abstol', '-a', group='Tolerances')
-    <pyomo.common.config.ConfigValue object at ...>
+    import argparse
+    config = ConfigDict()
+    config.declare('iterlim', ConfigValue(
+        domain=int,
+        default=100,
+        description="iteration limit",
+    )).declare_as_argument()
+    config.declare('lbfgs', ConfigValue(
+        domain=bool,
+        description="use limited memory BFGS update",
+    )).declare_as_argument()
+    config.declare('linesearch', ConfigValue(
+        domain=bool,
+        default=True,
+        description="use line search",
+    )).declare_as_argument()
+    config.declare('relative tolerance', ConfigValue(
+        domain=float,
+        description="relative convergence tolerance",
+    )).declare_as_argument('--reltol', '-r', group='Tolerances')
+    config.declare('absolute tolerance', ConfigValue(
+        domain=float,
+        description="absolute convergence tolerance",
+    )).declare_as_argument('--abstol', '-a', group='Tolerances')
 
 The ConfigDict can then be used to initialize (or augment) an argparse
 ArgumentParser object:
 
-.. doctest::
+.. testcode::
 
-    >>> parser = argparse.ArgumentParser("tester")
-    >>> config.initialize_argparse(parser)
+    parser = argparse.ArgumentParser("tester")
+    config.initialize_argparse(parser)
 
 
 Key information from the ConfigDict is automatically transferred over
@@ -998,30 +1000,30 @@ children).  :py:meth:`generate_yaml_template` is similar to
 :py:meth:`display`, but also includes the description fields as
 formatted comments.
 
+.. testcode::
+
+    solver_config = config
+    config = ConfigDict()
+    config.declare('output', ConfigValue(
+        default='results.yml',
+        domain=str,
+        description='output results filename'
+    ))
+    config.declare('verbose', ConfigValue(
+        default=0,
+        domain=int,
+        description='output verbosity',
+        doc='This sets the system verbosity.  The default (0) only logs '
+        'warnings and errors.  Larger integer values will produce '
+        'additional log messages.',
+    ))
+    config.declare('solvers', ConfigList(
+        domain=solver_config,
+        description='list of solvers to apply',
+    ))
+
 .. doctest::
 
-    >>> solver_config = config
-    >>> config = ConfigDict()
-    >>> config.declare('output', ConfigValue(
-    ...     default='results.yml',
-    ...     domain=str,
-    ...     description='output results filename'
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('verbose', ConfigValue(
-    ...     default=0,
-    ...     domain=int,
-    ...     description='output verbosity',
-    ...     doc='This sets the system verbosity.  The default (0) only logs '
-    ...     'warnings and errors.  Larger integer values will produce '
-    ...     'additional log messages.',
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('solvers', ConfigList(
-    ...     domain=solver_config,
-    ...     description='list of solvers to apply',
-    ... ))
-    <pyomo.common.config.ConfigList object at ...>
     >>> config.display()
     output: results.yml
     verbose: 0
