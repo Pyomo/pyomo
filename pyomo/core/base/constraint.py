@@ -286,7 +286,7 @@ class ConstraintData(ActiveComponentData):
         """The lower bound of a constraint expression.
 
         This is the fixed lower bound of a Constraint as a Pyomo
-        exprression.  This may be contain potentially variable terms
+        expression.  This may contain potentially variable terms
         that are currently fixed.  If there is no lower bound, this will
         return `None`.
 
@@ -307,7 +307,7 @@ class ConstraintData(ActiveComponentData):
         """Access the upper bound of a constraint expression.
 
         This is the fixed upper bound of a Constraint as a Pyomo
-        exprression.  This may be contain potentially variable terms
+        expression.  This may contain potentially variable terms
         that are currently fixed.  If there is no upper bound, this will
         return `None`.
 
@@ -772,7 +772,7 @@ class ScalarConstraint(ConstraintData, Constraint):
         """The lower bound of a constraint expression.
 
         This is the fixed lower bound of a Constraint as a Pyomo
-        exprression.  This may be contain potentially variable terms
+        expression.  This may contain potentially variable terms
         that are currently fixed.  If there is no lower bound, this will
         return `None`.
 
@@ -791,7 +791,7 @@ class ScalarConstraint(ConstraintData, Constraint):
         """Access the upper bound of a constraint expression.
 
         This is the fixed upper bound of a Constraint as a Pyomo
-        exprression.  This may be contain potentially variable terms
+        expression.  This may contain potentially variable terms
         that are currently fixed.  If there is no upper bound, this will
         return `None`.
 
