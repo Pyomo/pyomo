@@ -11,10 +11,12 @@
 
 
 def load():
-    import pyomo.mpec.plugins.mpec1
-    import pyomo.mpec.plugins.mpec2
-    import pyomo.mpec.plugins.mpec3
-    import pyomo.mpec.plugins.mpec4
-    import pyomo.mpec.plugins.solver1
-    import pyomo.mpec.plugins.solver2
-    import pyomo.mpec.plugins.pathampl
+    from pyomo.mpec.plugins import (
+        mpec1,
+        mpec2,
+        mpec3,
+        mpec4,
+        solver1,
+        solver2,
+        pathampl,
+    )

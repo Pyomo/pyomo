@@ -26,8 +26,6 @@ Currently supported ``__future__`` offerings include:
 
    solver_factory
 
-.. autofunction:: solver_factory
-
 """
 
 
