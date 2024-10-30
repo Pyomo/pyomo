@@ -3339,6 +3339,18 @@ class TestSetErrors(PyomoModel):
         model.Y = RangeSet(model.C)
         model.X = Param(model.C, default=0.0)
 
+    def test_setargs6(self):
+        # Test that we can create an indexed set from a function that returns
+        # a dict to define the set
+        model = ConcreteModel()
+        model.A = Set(initialize=[1, 2])
+        model.B = Set(model.A, initialize={1: [2, 3], 2: [3, 4]})
+        model.C = Set(model.A, initialize=lambda m: {x: [x + 1, x + 2] for x in m.A})
+        # convert to native data types for easier comparison
+        B = {k: v.ordered_data() for (k, v) in model.B.items()}
+        C = {k: v.ordered_data() for (k, v) in model.C.items()}
+        self.assertEqual(B, C)
+
     @unittest.skip("_verify was removed during the set rewrite")
     def test_verify(self):
         a = Set(initialize=[1, 2, 3])
