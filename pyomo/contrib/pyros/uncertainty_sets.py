@@ -339,7 +339,7 @@ def validate_dimensions(arr_name, arr, dim, display_value=False):
         Required dimension of the array.
     display_value : bool, optional
         True to include the array string representation
-        in exception messsages, False otherwise.
+        in exception messages, False otherwise.
 
     Raises
     ------
