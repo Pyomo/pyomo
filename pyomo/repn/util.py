@@ -159,19 +159,37 @@ class InvalidNumber(PyomoObject):
             return InvalidNumber(self.value, causes)
 
     def __eq__(self, other):
-        return self._cmp(operator.eq, other)
+        ans = self._cmp(operator.eq, other)
+        try:
+            return bool(ans)
+        except ValueError:
+            # ValueError can be raised by numpy.ndarray when two arrays
+            # are returned.  In that case, ndarray returns a new ndarray
+            # of bool values.  We will fall back on using `all` to
+            # reduce it to a single bool.
+            try:
+                return all(ans)
+            except:
+                pass
+            raise
 
     def __lt__(self, other):
-        return self._cmp(operator.lt, other)
+        # Note that as < is ambiguous for arrays, we will attempt to
+        # cast the result to bool and if it was an array, allow the
+        # exception to propagate
+        return bool(self._cmp(operator.lt, other))
 
     def __gt__(self, other):
-        return self._cmp(operator.gt, other)
+        # See the comment in __lt__() on the use of bool()
+        return bool(self._cmp(operator.gt, other))
 
     def __le__(self, other):
-        return self._cmp(operator.le, other)
+        # See the comment in __lt__() on the use of bool()
+        return bool(self._cmp(operator.le, other))
 
     def __ge__(self, other):
-        return self._cmp(operator.ge, other)
+        # See the comment in __lt__() on the use of bool()
+        return bool(self._cmp(operator.ge, other))
 
     def _error(self, msg):
         causes = list(filter(None, self.causes))
@@ -181,14 +199,21 @@ class InvalidNumber(PyomoObject):
         raise InvalidValueError(msg)
 
     def __str__(self):
-        # We will support simple conversion of InvalidNumber to strings
-        # (for reporting purposes)
+        # We want attempts to convert InvalidNumber to a string
+        # representation to raise a InvalidValueError, unless we are in
+        # the middle of processing an exception.  In that case, it is
+        # very likely that an exception handler is generating an error
+        # message.  We will play nice and return a reasonable string.
+        if sys.exc_info()[1] is None:
+            self._error(f'Cannot emit {self._str()} in compiled representation')
+        else:
+            return self._str()
+
+    def _str(self):
         return f'InvalidNumber({self.value!r})'
 
     def __repr__(self):
-        # We want attempts to convert InvalidNumber to a string
-        # representation to raise a InvalidValueError.
-        return self._error(f'Cannot emit {str(self)} in compiled representation')
+        return str(self)
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
