@@ -92,7 +92,7 @@ Contributing to Pyomo
 ---------------------
 
 Interested in contributing code or documentation to the project? Check out our
-:doc:`Contribution Guide <howto/contribution_guide>`
+:doc:`Contribution Guide <contribution_guide>`
 
 Related Packages
 ----------------
