@@ -730,7 +730,7 @@ dictionary of documented configuration entries:
         doc="Number of maximum iterations in the decomposition methods"
     ))
 
-Users can then to provide values for those entries, and retrieve the
+Users can then provide values for those entries, and retrieve the
 current values:
 
 .. doctest::
