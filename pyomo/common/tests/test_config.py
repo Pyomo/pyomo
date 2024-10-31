@@ -1425,6 +1425,18 @@ bar:
 """,
         )
 
+    def test_display_nondata_type(self):
+        class NOOP(object):
+            def __getattr__(self, attr):
+                def noop(*args, **kwargs):
+                    pass
+
+                return noop
+
+        cfg = ConfigDict()
+        cfg.declare('callback', ConfigValue(default=NOOP))
+        self.assertEqual(_display(cfg), "callback: <class 'type'>\n")
+
     def test_display_userdata_declare_block(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
         self.config.declare("bar", ConfigDict())
@@ -2870,6 +2882,18 @@ c: 1.0
         self.assertEqual(mod_copy._doc, "new doc")
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
+
+    def test_template_nondata(self):
+        class NOOP(object):
+            def __getattr__(self, attr):
+                def noop(*args, **kwargs):
+                    pass
+
+                return noop
+
+        cfg = ConfigDict()
+        cfg.declare('callback', ConfigValue(default=NOOP, description="docstr"))
+        self._validateTemplate(cfg, "callback: <class 'type'>  # docstr\n")
 
     def test_pickle(self):
         def anon_domain(domain):
