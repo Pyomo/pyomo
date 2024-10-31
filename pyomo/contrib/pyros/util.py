@@ -52,9 +52,10 @@ from pyomo.core.expr.visitor import (
 )
 from pyomo.core.util import prod
 from pyomo.opt import SolverFactory
+import pyomo.repn.ampl as pyomo_ampl_repn
 from pyomo.repn.parameterized_quadratic import ParameterizedQuadraticRepnVisitor
 import pyomo.repn.plugins.nl_writer as pyomo_nl_writer
-import pyomo.repn.ampl as pyomo_ampl_repn
+from pyomo.repn.util import OrderedVarRecorder
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
 
@@ -998,9 +999,11 @@ def setup_quadratic_expression_visitor(
     """Setup a parameterized quadratic expression walker."""
     visitor = ParameterizedQuadraticRepnVisitor(
         subexpression_cache={} if subexpression_cache is None else subexpression_cache,
-        var_map={} if var_map is None else var_map,
-        var_order={} if var_order is None else var_order,
-        sorter=sorter,
+        var_recorder=OrderedVarRecorder(
+            var_map={} if var_map is None else var_map,
+            var_order={} if var_order is None else var_order,
+            sorter=sorter,
+        ),
         wrt=wrt,
     )
     visitor.expand_nonlinear_products = True
