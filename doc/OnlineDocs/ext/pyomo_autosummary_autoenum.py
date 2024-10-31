@@ -31,20 +31,6 @@ from typing import Type, Any, Dict, List, Tuple, Union
 _pre_re = re.compile(r'^( = )(.*)')
 
 
-def _get_all_members(
-    doc: Type[autodoc.Documenter], app: Sphinx, obj: Any
-) -> Dict[str, Any]:
-    """Override sphinx.ext.autosummary.generate._get_all_members to return
-    members for objtype==enum
-
-    """
-    if doc.objtype == 'module':
-        return autosummary.generate._get_module_members(app, obj)
-    elif doc.objtype == 'class' or doc.objtype == 'enum':
-        return autosummary.generate._get_class_members(obj)
-    return {}
-
-
 def _mangle_signature(sig: str, max_chars: int = 30) -> str:
     """Override sphinx.ext.autosummary.mangle_signature() so we can exploit
     it to emit the enum member value using the sig field.  We overwrite
@@ -99,34 +85,45 @@ def _generate_autosummary_content(
                 # need variables from the generate_autosummary_content
                 # context ... bue we know that context is the calling
                 # frame.  Seems like cheating, but it works.
-                if ns['objtype'] == 'module':
-                    caller = inspect.currentframe().f_back
-                    l = caller.f_locals
-                    ns['enums'], ns['all_enums'] = caller.f_globals['_get_members'](
-                        l['doc'],
-                        l['app'],
-                        l['obj'],
-                        {'enum'},
-                        imported=l['imported_members'],
-                    )
-                if ns['objtype'] == 'enum':
-                    caller = inspect.currentframe().f_back
-                    l = caller.f_locals
-                    doc = l['doc']
-                    obj = l['obj']
-                    app = l['app']
+                if ns['objtype'] not in ('module', 'enum'):
+                    return super().render(name, ns)
+
+                caller = inspect.currentframe().f_back
+                l = caller.f_locals
+                doc = l['doc']
+                obj = l['obj']
+                args = {'obj': obj}
+                if '_get_members' in caller.f_globals:
+                    # Sphinx >= 7.2
                     _get_members = caller.f_globals['_get_members']
+                    args.update({'doc': doc, 'app': l['app']})
+                else:
+                    # Sphinx < 7.2
+                    _get_members = caller.f_locals['get_members']
+
+                if ns['objtype'] == 'module':
+                    ns['enums'], ns['all_enums'] = _get_members(
+                        types={'enum'}, imported=l['imported_members'], **args
+                    )
+                elif ns['objtype'] == 'enum':
                     ns['members'] = dir(obj)
                     ns['inherited_members'] = set(dir(obj)) - set(obj.__dict__.keys())
-                    ns['methods'], ns['all_methods'] = _get_members(
-                        doc, app, obj, {'method'}, include_public={'__init__'}
-                    )
-                    ns['attributes'], ns['all_attributes'] = _get_members(
-                        doc, app, obj, {'attribute', 'property'}
-                    )
-                    ns['enum_members'], ns['all_enum_members'] = _get_members(
-                        doc, app, obj, {'enum_member'}
-                    )
+                    try:
+                        # We need _get_members to eventually call
+                        # _get_class_members, so we will (temporarily)
+                        # set the doc.objtype back to "class"
+                        doc.objtype = 'class'
+                        ns['methods'], ns['all_methods'] = _get_members(
+                            types={'method'}, include_public={'__init__'}, **args
+                        )
+                        ns['attributes'], ns['all_attributes'] = _get_members(
+                            types={'attribute', 'property'}, **args
+                        )
+                        ns['enum_members'], ns['all_enum_members'] = _get_members(
+                            types={'enum_member'}, **args
+                        )
+                    finally:
+                        doc.objtype = 'enum'
 
                     mro = obj.__mro__
                     for _base in mro[: mro.index(enum.Enum)]:
@@ -232,12 +229,23 @@ def setup(app: Sphinx) -> Dict[str, Any]:
     # Overwrite key parts of autosummary so that our version of autoenum
     # plays nicely with it.  We have tested this with Sphinx>7.2.
     # Notably, 7.1.2 does NOT work (and cannot be easily made to work)
+    if 'generate_autosummary_content' not in dir(autosummary.generate):
+        raise RuntimeError(
+            "pyomo_sutosummary_autoenum: Could not locate "
+            "autosummary.generate.generate_autosummary_content() "
+            "(possible incompatible Sphinx version)."
+        )
     autosummary.generate.generate_autosummary_content = _generate_autosummary_content
-    autosummary.generate._get_all_members = _get_all_members
+    if 'mangle_signature' not in dir(autosummary):
+        raise RuntimeError(
+            "pyomo_sutosummary_autoenum: Could not locate "
+            "autosummary.mangle_signature() "
+            "(possible incompatible Sphinx version)."
+        )
     autosummary.mangle_signature = _mangle_signature
 
-    app.add_autodocumenter(EnumDocumenter)
     app.add_autodocumenter(EnumMemberDocumenter)
+    app.add_autodocumenter(EnumDocumenter)
 
     app.add_directive_to_domain("py", "enum", PyClasslike)
     app.add_role_to_domain("py", "enum", PyXRefRole())
