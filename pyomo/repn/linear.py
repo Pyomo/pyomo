@@ -66,6 +66,10 @@ _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 
 
+def _inv2str(val):
+    return f"{val._str() if hasattr(val, '_str') else val}"
+
+
 def _merge_dict(dest_dict, mult, src_dict):
     if mult == 1:
         for vid, coef in src_dict.items():
@@ -211,8 +215,10 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
     ans = arg1[1] * arg2[1]
     if ans != ans:
         if not arg1[1] or not arg2[1]:
+            a = _inv2str(arg1[1])
+            b = _inv2str(arg2[1])
             deprecation_warning(
-                f"Encountered {str(arg1[1])}*{str(arg2[1])} in expression tree.  "
+                f"Encountered {a}*{b} in expression tree.  "
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
@@ -580,7 +586,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 arg2 = visitor.check_constant(arg2.value, arg2)
                 if arg2 != arg2:
                     deprecation_warning(
-                        f"Encountered {arg1}*{str(arg2.value)} in expression "
+                        f"Encountered {arg1}*{_inv2str(arg2)} in expression "
                         "tree.  Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -613,7 +619,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
-                                f"Encountered {arg1}*{str(arg2.value)} in expression "
+                                f"Encountered {arg1}*{_inv2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the lp_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",
@@ -799,7 +805,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                     c != c for c in ans.linear.values()
                 ):
                     deprecation_warning(
-                        f"Encountered {str(mult)}*nan in expression tree.  "
+                        f"Encountered {mult}*nan in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
