@@ -21,6 +21,7 @@ from pyomo.common import Executable
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import maximize, minimize
+from pyomo.common.errors import ApplicationError
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.log import is_debug_set
 from pyomo.common.tee import capture_output, TeeStream
