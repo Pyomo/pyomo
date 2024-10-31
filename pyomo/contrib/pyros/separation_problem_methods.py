@@ -1174,6 +1174,43 @@ def discrete_solve(
 class SeparationProblemData:
     """
     Container for objects related to the PyROS separation problem.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        PyROS model data object, equipped with the
+        fully preprocessed working model.
+
+    Attributes
+    ----------
+    separation_model : BlockData
+        Separation problem model object.
+    timing : TimingData
+        Main timer for the current problem being solved.
+    config : ConfigDict
+        PyROS solver options.
+    separation_priority_order : dict
+        Standardized/preprocessed mapping from names of the
+        second-stage inequality constraint objects to integers
+        specifying their priorities.
+    iteration : int
+        Index of the current PyROS cutting set iteration.
+    points_added_to_master : dict
+        Maps each scenario index (2-tuple of ints) of the
+        master problem model object to the corresponding
+        uncertain parameter realization.
+    auxiliary_values_for_master_points : dict
+        Maps each scenario index (2-tuple of ints) of the
+        master problem model object to the auxiliary parameter
+        values corresponding to the associated uncertain parameter
+        realization.
+    idxs_of_master_scenarios : None or list of int
+        If ``config.uncertainty_set`` is of type
+        :class:`~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet`,
+        then this attribute is a list
+        of ints, each entry of which is a list index for
+        an entry in the ``scenarios`` attribute of the
+        uncertainty set. Otherwise, this attribute is set to None.
     """
 
     def __init__(self, model_data):

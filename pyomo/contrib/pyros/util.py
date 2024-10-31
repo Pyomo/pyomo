@@ -982,7 +982,7 @@ class ModelData:
         """
         Preprocess model data.
 
-        See `preprocess_model_data()`.
+        See :meth:`~preprocess_model_data`.
 
         Returns
         -------

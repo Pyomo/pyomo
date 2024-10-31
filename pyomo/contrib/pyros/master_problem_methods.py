@@ -904,6 +904,25 @@ def solve_master(master_data):
 class MasterProblemData:
     """
     Container for objects pertaining to the PyROS master problem.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        PyROS model data object, equipped with the
+        fully preprocessed working model.
+
+    Attributes
+    ----------
+    master_model : BlockData
+        Master problem model object.
+    original_model_name : str
+        Name of the user-provided deterministic model object.
+    iteration : int
+        Index of the current PyROS cutting set iteration.
+    timing : TimingData
+        Main timer for the current problem being solved.
+    config : ConfigDict
+        PyROS solver options.
     """
 
     def __init__(self, model_data):
