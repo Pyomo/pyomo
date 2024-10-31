@@ -1116,6 +1116,8 @@ def _dump(*args, **kwds):
         def dump(x, **args):
             if type(x) is bool:
                 return str(x).lower()
+            if type(x) is type:
+                return str(type(x))
             return str(x)
 
     assert '_dump' in globals()
