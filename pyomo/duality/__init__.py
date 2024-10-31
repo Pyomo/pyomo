@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.duality.collect
+from pyomo.duality import collect

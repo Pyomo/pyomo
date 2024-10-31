@@ -50,9 +50,12 @@ def global_option(function, name, value):
 
     Example use:
 
-    @global_option('config.foo.bar', 1)
-    def functor():
-        ...
+    .. code::
+
+       @global_option('config.foo.bar', 1)
+       def functor():
+           # ...
+
     """
     PyomoConfig._option[tuple(name.split('.'))] = value
 

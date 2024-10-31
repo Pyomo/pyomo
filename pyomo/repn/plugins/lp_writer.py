@@ -43,6 +43,7 @@ from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
+    OrderedVarRecorder,
     categorize_valid_components,
     initialize_var_map_from_column_order,
     int_float,
@@ -107,10 +108,12 @@ class LPWriter(object):
             doc="""
             How much effort do we want to put into ensuring the
             LP file is written deterministically for a Pyomo model:
-                NONE (0) : None
-                ORDERED (10): rely on underlying component ordering (default)
-                SORT_INDICES (20) : sort keys of indexed components
-                SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
+
+               - NONE (0) : None
+               - ORDERED (10): rely on underlying component ordering (default)
+               - SORT_INDICES (20) : sort keys of indexed components
+               - SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
+
             """,
         ),
     )
@@ -142,8 +145,6 @@ class LPWriter(object):
             default=None,
             description='Preferred variable ordering',
             doc="""
-
-
             List of variables in the order that they should appear in
             the LP file.  Note that this is only a suggestion, as the LP
             file format is row-major and the columns are inferred from
@@ -267,7 +268,9 @@ class _LPWriter_impl(object):
         aliasSymbol = self.symbol_map.alias
         getSymbol = self.symbol_map.getSymbol
 
-        sorter = FileDeterminism_to_SortComponents(self.config.file_determinism)
+        self.sorter = sorter = FileDeterminism_to_SortComponents(
+            self.config.file_determinism
+        )
         component_map, unknown = categorize_valid_components(
             model,
             active=True,
@@ -303,20 +306,19 @@ class _LPWriter_impl(object):
         ONE_VAR_CONSTANT = Var(name='ONE_VAR_CONSTANT', bounds=(1, 1))
         ONE_VAR_CONSTANT.construct()
 
-        self.var_map = var_map = {id(ONE_VAR_CONSTANT): ONE_VAR_CONSTANT}
-        initialize_var_map_from_column_order(model, self.config, var_map)
-        self.var_order = {_id: i for i, _id in enumerate(var_map)}
+        self.var_map = {id(ONE_VAR_CONSTANT): ONE_VAR_CONSTANT}
+        initialize_var_map_from_column_order(model, self.config, self.var_map)
+        self.var_order = {_id: i for i, _id in enumerate(self.var_map)}
+        self.var_recorder = OrderedVarRecorder(self.var_map, self.var_order, sorter)
 
         _qp = self.config.allow_quadratic_objective
         _qc = self.config.allow_quadratic_constraint
         objective_visitor = (QuadraticRepnVisitor if _qp else LinearRepnVisitor)(
-            {}, var_map, self.var_order, sorter
+            {}, var_recorder=self.var_recorder
         )
         constraint_visitor = (QuadraticRepnVisitor if _qc else LinearRepnVisitor)(
             objective_visitor.subexpression_cache if _qp == _qc else {},
-            var_map,
-            self.var_order,
-            sorter,
+            var_recorder=self.var_recorder,
         )
 
         timer.toc('Initialized column order', level=logging.DEBUG)
@@ -511,7 +513,7 @@ class _LPWriter_impl(object):
         integer_vars = []
         binary_vars = []
         getSymbolByObjectID = self.symbol_map.byObject.get
-        for vid, v in var_map.items():
+        for vid, v in self.var_map.items():
             # Some variables in the var_map may not actually have been
             # written out to the LP file (e.g., added from col_order, or
             # multiplied by 0 in the expressions).  Check to see that

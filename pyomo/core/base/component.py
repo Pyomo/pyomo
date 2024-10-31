@@ -484,19 +484,22 @@ class Component(ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
-    Constructor arguments:
-        ctype           The class type for the derived subclass
-        doc             A text string describing this component
-        name            A name for this component
+    Parameters
+    ----------
+    ctype : type
+        The class type for the derived subclass
 
-    Public class attributes:
-        doc             A text string describing this component
+    doc : str
+        A text string describing this component
 
-    Private class attributes:
-        _constructed    A boolean that is true if this component has been
-                            constructed
-        _parent         A weakref to the parent block that owns this component
-        _ctype          The class type for the derived subclass
+    name : str
+        A name for this component
+
+    Attributes
+    ----------
+    doc : str
+        A text string describing this component
+
     """
 
     __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
@@ -882,21 +885,24 @@ class ComponentData(ComponentBase):
         - for some unknown reason - this instance does not belong
         to the parent component's index set.
         """
+        try:
+            if self._component()[self._index] is self:
+                return self._index
+        except:
+            pass
+        if self._index is NOTSET:
+            return self._index
         parent = self.parent_component()
-        if (
-            parent is not None
-            and self._index is not NOTSET
-            and parent[self._index] is not self
-        ):
-            # This error message is a bit goofy, but we can't call self.name
-            # here--it's an infinite loop!
-            raise DeveloperError(
-                "The '_data' dictionary and '_index' attribute are out of "
-                "sync for indexed %s '%s': The %s entry in the '_data' "
-                "dictionary does not map back to this component data object."
-                % (parent.ctype.__name__, parent.name, self._index)
-            )
-        return self._index
+        if parent is None:
+            return self._index
+        # This error message is a bit goofy, but we can't call self.name
+        # here--it's an infinite loop!
+        raise DeveloperError(
+            "The '_data' dictionary and '_index' attribute are out of "
+            "sync for indexed %s '%s': The %s entry in the '_data' "
+            "dictionary does not map back to this component data object."
+            % (parent.ctype.__name__, parent.name, self._index)
+        )
 
     def __str__(self):
         """Return a string with the component name and index"""

@@ -29,9 +29,12 @@ def pyomo_callback(name):
 
     Example:
 
-    @pyomo_callback('cut-callback')
-    def my_cut_generator(solver, model):
-        ...
+    .. code::
+
+        @pyomo_callback('cut-callback')
+        def my_cut_generator(solver, model):
+            ...
+
     """
 
     def fn(f):
