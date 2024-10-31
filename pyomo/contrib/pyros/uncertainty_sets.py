@@ -553,9 +553,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             parameters. If `None` is passed, then
             new variable objects are constructed.
         block : BlockData or None, optional
-            Block on which to declare the constraints and any auxiliary
-            variables. If `None` is passed, then a new block is
-            constructed.
+            Block on which to declare the constraints and any
+            new variable objects. If `None` is passed, then a new
+            block is constructed.
 
         Returns
         -------
