@@ -33,15 +33,19 @@ class ROSolveResults(object):
 
     Attributes
     ----------
-    config : ConfigDict, optional
+    config : ConfigDict
         User-specified solver settings.
-    iterations : int, optional
+    iterations : int
         Number of iterations required by PyROS.
-    time : float, optional
+    time : float
         Total elapsed time (or wall time), in seconds.
-    final_objective_value : float, optional
+    final_objective_value : float
         Final objective function value to report.
-    pyros_termination_condition : pyros.util.pyrosTerminationStatus
+        If a nominal objective focus was elected, then the
+        value of the nominal objective function is reported.
+        If a worst-case objective focus was elected, then
+        the value of the worst-case objective function is reported.
+    pyros_termination_condition : pyrosTerminationCondition
         Indicator of the manner of termination.
     """
 
