@@ -52,9 +52,22 @@ valid_num_types = tuple(native_numeric_types)
 
 def standardize_uncertain_param_vars(obj, dim):
     """
-    Standardize uncertain param vars argument,
+    Standardize an object castable to a list of VarData objects
+    representing uncertain model parameters,
     and check that the length of the resulting list is equal
     to the specified dimension.
+
+    Parameters
+    ----------
+    obj : Var, VarData, or iterable of Var/VarData
+        Object to standardize.
+    dim : int
+        Specified dimension.
+
+    Returns
+    -------
+    var_data_list : list of VarData
+        Standard variable list.
     """
     var_data_list = standardize_component_data(
         obj=obj,
@@ -81,6 +94,35 @@ def _setup_standard_uncertainty_set_constraint_block(
     """
     Set up block to prepare for declaration of uncertainty
     set constraints.
+
+    Parameters
+    ----------
+    block : BlockData or None
+        Block to be prepared. If `None`, a new concrete block
+        is instantiated.
+    uncertain_param_vars : list of VarData or None
+        Variables representing the main uncertain parameters.
+        If `None`, then a new IndexedVar object consisting of
+        `dim` members is declared on `block`.
+    dim : int
+        Dimension of the uncertainty set of interest.
+    num_auxiliary_vars : int
+        Number of variables representing auxiliary uncertain
+        parameters to be declared.
+
+    Returns
+    -------
+    block : BlockData
+        Prepared block.
+    param_var_data_list : list of VarData
+        Variable data objects representing the main uncertain
+        parameters.
+    conlist : ConstraintList
+        Empty ConstraintList, to which the uncertainty set constraints
+        should be added later.
+    auxiliary_var_list : list of VarData
+        Variable data objects representing the auxiliary uncertain
+        parameters.
     """
     if block is None:
         block = Block(concrete=True)
@@ -123,8 +165,10 @@ UncertaintyQuantification.__doc__ = """
     an uncertainty set object.
 
     The UncertaintyQuantification class was generated using
-    the builtin `namedtuple()` factory function, so the standard
-    `namedtuple()` attributes and methods (e.g., `_asdict`)
+    the Python :py:func:`~collections.namedtuple` factory function,
+    so the standard :py:func:`~collections.namedtuple`
+    attributes and methods
+    (e.g., :py:meth:`~collections.somenamedtuple._asdict`)
     are available.
 
     Parameters
@@ -138,11 +182,19 @@ UncertaintyQuantification.__doc__ = """
         Variables representing the (main) uncertain parameters.
     auxiliary_vars : list of VarData
         Variables representing the auxiliary uncertain parameters.
-
-    Attributes
-    ----------
-    Same as Parameters.
 """
+UncertaintyQuantification.block.__doc__ = (
+    "Block on which the uncertainty set constraints were added."
+)
+UncertaintyQuantification.uncertainty_cons.__doc__ = (
+    "The added uncertainty set constraints."
+)
+UncertaintyQuantification.uncertain_param_vars.__doc__ = (
+    "Variables representing the (main) uncertain parameters."
+)
+UncertaintyQuantification.auxiliary_vars.__doc__ = (
+    "Variables representing the auxiliary uncertain parameters."
+)
 
 
 def validate_arg_type(
@@ -228,11 +280,24 @@ def validate_arg_type(
 
 def is_ragged(arr, arr_types=None):
     """
-    Determine whether an array-like (such as a list or Numpy ndarray)
-    is ragged.
+    Return True if the array-like `arr` is ragged, False otherwise.
 
     NOTE: if Numpy ndarrays are considered to be arr types,
     then zero-dimensional arrays are not considered to be as such.
+
+    Parameters
+    ----------
+    arr : array_like
+        Array to check.
+    arr_types : None or iterable of type
+        Types of entries of `arr` to be considered subarrays.
+        If `None` is specified, then this is set to
+        ``(list, numpy.ndarray, tuple)``.
+
+    Returns
+    -------
+    bool
+        True if ragged, False otherwise.
     """
     arr_types = (list, np.ndarray, tuple) if arr_types is None else arr_types
 
@@ -263,7 +328,23 @@ def is_ragged(arr, arr_types=None):
 def validate_dimensions(arr_name, arr, dim, display_value=False):
     """
     Validate dimension of an array-like object.
-    Raise Exception if validation fails.
+
+    Parameters
+    ----------
+    arr_name : str
+        Name of the array to validate.
+    arr : array_like
+        Array to validate.
+    dim : int
+        Required dimension of the array.
+    display_value : bool, optional
+        True to include the array string representation
+        in exception messsages, False otherwise.
+
+    Raises
+    ------
+    ValueError
+        If `arr` is ragged or not of the required dimension `dim`.
     """
     if is_ragged(arr):
         raise ValueError(
@@ -324,6 +405,12 @@ def validate_array(
     required_shape_qual : str, optional
         Clause/phrase expressing reason `arr` should be of shape
         `required_shape`, e.g. "to match the set dimension".
+
+    Raises
+    ------
+    ValueError
+        If the Numpy array to which `arr` is cast is not of shape
+        `required_shape`.
     """
     np_arr = np.array(arr, dtype=object)
     validate_dimensions(arr_name, np_arr, dim, display_value=False)
