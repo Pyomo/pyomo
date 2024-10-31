@@ -43,7 +43,7 @@ class TestFlags(unittest.TestCase):
         self.assertIsNone(in_testing_environment.state)
 
     def test_singleton(self):
-        # This tests that the type is a "singleton", and attempts to
-        # construct an instance will return the class
+        # This tests that the type is a "singleton", and that any
+        # attempts to construct an instance will return the class
         self.assertIs(NOTSET(), NOTSET)
         self.assertIs(NOTSET(), NOTSET())

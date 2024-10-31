@@ -32,7 +32,7 @@ class FlagType(type):
 
     def __new__(mcs, name, bases, dct):
         # Ensure that attempts to construct instances of a Flag type
-        # returnthe type.
+        # return the type.
         def __new_flag__(cls, *args, **kwargs):
             return cls
 

@@ -1681,10 +1681,10 @@ class UninitializedMixin(object):
 
     This mixin can be used to create a derived Config class that hides
     the (uninitialized) ``_data`` attribute behind a property.  Any
-    attempt to access the _data will trigger the initialization of the
+    attempt to access the ``_data`` will trigger the initialization of the
     Config object from its ``_default`` value.  Setting the ``_data``
     attribute will also trigger resolution of the Config object, but
-    without processing the ``_default__.
+    without processing the ``_default__``.
 
     """
 
@@ -2486,7 +2486,7 @@ class ConfigList(ConfigBase, Sequence):
         # is a ConfigValue and __call__ will trigger set_value(), which
         # will set the _userSet flag.  As we get here during _default
         # processing, we want to clear that flag.  If this is actually
-        # getting triggeresd through set_value() / append(), then
+        # getting triggered through set_value() / append(), then
         # append() will be responsible for setting _userSet.
         val._userSet = False
         _data.append(val)
