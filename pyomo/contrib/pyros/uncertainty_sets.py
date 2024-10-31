@@ -898,7 +898,7 @@ class UncertaintySetList(MutableSequence):
 
 class BoxSet(UncertaintySet):
     """
-    A hyper-rectangle (a.k.a. "box").
+    A hyper-rectangle (i.e., "box").
 
     Parameters
     ----------
@@ -1034,7 +1034,7 @@ class BoxSet(UncertaintySet):
 
 class CardinalitySet(UncertaintySet):
     """
-    A cardinality-constrained (a.k.a. "gamma") set.
+    A cardinality-constrained (i.e., "gamma") set.
 
     Parameters
     ----------
@@ -1795,7 +1795,7 @@ class BudgetSet(UncertaintySet):
 
 class FactorModelSet(UncertaintySet):
     """
-    A factor model (a.k.a. "net-alpha" model) set.
+    A factor model (i.e., "net-alpha" model) set.
 
     Parameters
     ----------

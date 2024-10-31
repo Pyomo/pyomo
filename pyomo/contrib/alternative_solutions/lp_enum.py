@@ -319,9 +319,9 @@ def enumerate_linear_solutions(
             )
             break
         if logger.isEnabledFor(logging.DEBUG):
-            logging.debug("")
-            logging.debug("=" * 80)
-            logging.debug("")
+            logger.debug("")
+            logger.debug("=" * 80)
+            logger.debug("")
 
     model.del_component("aos_block")
 

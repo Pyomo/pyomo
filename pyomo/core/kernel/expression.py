@@ -92,7 +92,7 @@ class IIdentityExpression(NumericValue):
     @property
     def args(self):
         """A tuple of subexpressions involved in this expressions operation."""
-        yield self._expr
+        return (self._expr,)
 
     def nargs(self):
         """Length of self._nargs()"""

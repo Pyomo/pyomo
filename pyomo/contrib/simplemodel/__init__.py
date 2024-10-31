@@ -9,7 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import deprecation_warning, in_testing_environment
+from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.flags import in_testing_environment
 
 try:
     deprecation_warning(

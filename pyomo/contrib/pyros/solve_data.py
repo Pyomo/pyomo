@@ -249,11 +249,8 @@ class DiscreteSeparationSolveCallResults:
     Attributes
     ----------
     solved_globally
-    scenario_indexes
     solver_call_results
     second_stage_ineq_con
-    time_out
-    subsolver_error
     """
 
     def __init__(
@@ -310,17 +307,17 @@ class SeparationLoopResults:
 
     Attributes
     ----------
-    solver_call_results
-    solved_globally
-    worst_case_ss_ineq_con
-    all_discrete_scenarios_exhausted
-    found_violation
-    violating_param_realization
-    auxiliary_param_values
-    scaled_violations
-    violating_separation_variable_values
-    subsolver_error
-    time_out
+    solved_globally : bool
+        True if global solver was used, False otherwise.
+    solver_call_results : ComponentMap
+        Mapping from second-stage inequality constraints to corresponding
+        ``SeparationSolveCallResults`` objects.
+    worst_case_ss_ineq_con : None or ConstraintData
+        Worst-case second-stage inequality constraint.
+    all_discrete_scenarios_exhausted : bool
+        True if all scenarios of the discrete set were exhausted
+        already explicitly accounted for in the master problems,
+        False otherwise.
     """
 
     def __init__(
@@ -462,19 +459,14 @@ class SeparationResults:
 
     Attributes
     ----------
-    local_separation_loop_results
-    global_separation_loop_results
-    main_loop_results
-    subsolver_error
-    time_out
-    solved_locally
-    solved_globally
-    found_violation
-    violating_param_realization
-    auxiliary_param_values
-    scaled_violations
-    violating_separation_variable_values
-    robustness_certified
+    local_separation_loop_results : None or SeparationLoopResults
+        Local separation results. If separation problems
+        were not solved locally, then this attribute is set
+        to None.
+    global_separation_loop_results : None or SeparationLoopResults
+        Global separation results. If separation problems
+        were not solved globally, then this attribute is set
+        to None.
     """
 
     def __init__(self, local_separation_loop_results, global_separation_loop_results):

@@ -43,18 +43,22 @@ def get_shifted_linear_model(model, block=None):
     are non-negative reals and all constraints are equalities. For a pure LP of
     the form,
 
-    min/max cx
-    s.t.
-        A_1 * x  =  b_1
-        A_2 * x <= b_2
-        l <= x <= u
+    .. math::
+
+       min/max cx
+       s.t.
+           A_1 * x  =  b_1
+           A_2 * x <= b_2
+           l <= x <= u
 
     a problem of the form,
 
-    min/max c'z
-    s.t.
-        Bz = q
-        z >= 0
+    .. math::
+
+       min/max c'z
+       s.t.
+           Bz = q
+           z >= 0
 
     will be created and added to the returned block. z consists of var_lower
     and var_upper variables that are substituted into the original x variables,

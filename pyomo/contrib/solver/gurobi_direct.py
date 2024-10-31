@@ -12,12 +12,14 @@
 import datetime
 import io
 import math
+import operator
 import os
 
 from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
+from pyomo.common.errors import MouseTrap
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -72,10 +74,24 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         GurobiDirect._num_instances += 1
 
     def __del__(self):
-        if not python_is_shutting_down():
-            GurobiDirect._num_instances -= 1
-            if GurobiDirect._num_instances == 0:
-                GurobiDirect.release_license()
+        if python_is_shutting_down():
+            return
+        # Free the associated model
+        if self._grb_model is not None:
+            self._grb_cons = None
+            self._grb_vars = None
+            self._pyo_cons = None
+            self._pyo_vars = None
+            self._pyo_obj = None
+            # explicitly release the model
+            self._grb_model.dispose()
+            self._grb_model = None
+        # Release the gurobi license if this is the last reference to
+        # the environment (either through a results object or solver
+        # interface)
+        GurobiDirect._num_instances -= 1
+        if GurobiDirect._num_instances == 0:
+            GurobiDirect.release_license()
 
     def load_vars(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
@@ -237,16 +253,9 @@ class GurobiDirect(SolverBase):
         timer.start('prepare_matrices')
         inf = float('inf')
         ninf = -inf
-        lb = []
-        ub = []
-        for v in repn.columns:
-            _l, _u = v.bounds
-            if _l is None:
-                _l = ninf
-            if _u is None:
-                _u = inf
-            lb.append(_l)
-            ub.append(_u)
+        bounds = list(map(operator.attrgetter('bounds'), repn.columns))
+        lb = [ninf if _b is None else _b for _b in map(operator.itemgetter(0), bounds)]
+        ub = [inf if _b is None else _b for _b in map(operator.itemgetter(1), bounds)]
         CON = gurobipy.GRB.CONTINUOUS
         BIN = gurobipy.GRB.BINARY
         INT = gurobipy.GRB.INTEGER
@@ -254,15 +263,16 @@ class GurobiDirect(SolverBase):
             (
                 CON
                 if v.is_continuous()
-                else (BIN if v.is_binary() else INT if v.is_integer() else '?')
+                else BIN if v.is_binary() else INT if v.is_integer() else '?'
             )
             for v in repn.columns
         ]
-        sense_type = '=<>'  # Note: ordering matches 0, 1, -1
+        sense_type = list('=<>')  # Note: ordering matches 0, 1, -1
         sense = [sense_type[r[1]] for r in repn.rows]
         timer.stop('prepare_matrices')
 
         ostreams = [io.StringIO()] + config.tee
+        res = Results()
 
         try:
             orig_cwd = os.getcwd()
@@ -284,7 +294,8 @@ class GurobiDirect(SolverBase):
                     gurobi_model.setAttr('ObjCon', repn.c_offset[0])
                     gurobi_model.setAttr('ModelSense', int(repn.objectives[0].sense))
                 # Note: calling gurobi_model.update() here is not
-                # necessary (it will happen as part of optimize())
+                # necessary (it will happen as part of optimize()):
+                # gurobi_model.update()
                 timer.stop('transfer_model')
 
                 options = config.solver_options
@@ -319,6 +330,7 @@ class GurobiDirect(SolverBase):
                 gurobi_model, A, x, repn.rows, repn.columns, repn.objectives
             ),
         )
+
         res.solver_configuration = config
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()

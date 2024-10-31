@@ -14,6 +14,7 @@ from pyomo.common.config import (
     NonNegativeFloat,
     InEnum,
     Path,
+    _domain_name,
 )
 from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.core.base import Var, VarData
@@ -170,10 +171,9 @@ class InputDataStandardizer(object):
 
     def domain_name(self):
         """Return str briefly describing domain encompassed by self."""
-        return (
-            f"{self.cdatatype.__name__}, {self.ctype.__name__}, "
-            f"or Iterable of {self.cdatatype.__name__}/{self.ctype.__name__}"
-        )
+        cdt = _domain_name(self.cdatatype)
+        ct = _domain_name(self.ctype)
+        return f"{cdt}, {ct}, or Iterable[{cdt}/{ct}]"
 
 
 class SolverNotResolvable(PyomoException):

@@ -206,19 +206,22 @@ class TimingData:
 
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
-    """
-    Starts timer at entry, stores elapsed time at exit.
+    """Starts timer at entry, stores elapsed time at exit.
 
     Parameters
     ----------
     timing_data_obj : TimingData
         Timing data object.
+
     code_block_name : str
         Name of code block being timed.
 
-    If `is_main_timer=True`, the start time is stored in the timing_data_obj,
-    allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
-    a time limit) using `get_main_elapsed_time(timing_data_obj)`.
+    is_main_timer : bool
+        If ``is_main_timer=True``, the start time is stored in the
+        timing_data_obj, allowing calculation of total elapsed time 'on
+        the fly' (e.g. to enforce a time limit) using
+        ``get_main_elapsed_time(timing_data_obj)``.
+
     """
     # initialize tic toc timer
     timing_data_obj.start_timer(code_block_name)
