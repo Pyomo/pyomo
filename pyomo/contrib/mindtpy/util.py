@@ -146,7 +146,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     r"""This function generates objective (FP-NLP subproblem) for minimum
     euclidean distance to setpoint_model.
 
-    L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
+    L2 distance of :math:`(x,y) = \sqrt{\sum_i (x_i - y_i)^2}`.
 
     Parameters
     ----------
@@ -202,7 +202,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     r"""This function generates objective (PF-OA main problem) for minimum
     Norm1 distance to setpoint_model.
 
-    Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
+    Norm1 distance of :math:`(x,y) = \sum_i |x_i - y_i|`.
 
     Parameters
     ----------
@@ -257,7 +257,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
     r"""This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
-    Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
+    Norm-Infinity distance of :math:`(x,y) = \max_i |x_i - y_i|`.
 
     Parameters
     ----------
@@ -447,7 +447,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     Norm constraint is used to guarantees the monotonicity of the norm
     objective value sequence of all iterations.
 
-    Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
+    Norm1 distance of :math:`(x,y) = \sum_i |x_i - y_i|`.
     Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16).
 
     Parameters
@@ -701,11 +701,7 @@ def copy_var_list_values_from_solution_pool(
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
-    """A new persistent interface to Gurobi.
-
-    Args:
-        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to Gurobi.
-    """
+    """A new persistent interface to Gurobi."""
 
     def _intermediate_callback(self):
         def f(gurobi_model, where):

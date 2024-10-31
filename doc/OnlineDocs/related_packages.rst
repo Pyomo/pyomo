@@ -16,6 +16,9 @@ Modeling Extensions
 |  PAO                     | https://github.com/or-fusion/pao                        |  Formulation and solution of multilevel     |
 |                          |                                                         |  optimization problems                      |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
+|  OMLT                    | https://github.com/cog-imperial/OMLT                    |  Represent machine learning models within   |
+|                          |                                                         |  an optimization formulation                |
++--------------------------+---------------------------------------------------------+---------------------------------------------+
 
 
 Solvers and Solution Strategies

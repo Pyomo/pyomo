@@ -244,12 +244,12 @@ _CONSTANT = ExprType.CONSTANT
 
 
 class BeforeChildDispatcher(collections.defaultdict):
-    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    """Dispatcher for handling the :class:`StreamBasedExpressionVisitor`
     `beforeChild` callback
 
-    This dispatcher implements a specialization of :py:`defaultdict`
+    This dispatcher implements a specialization of :class:`defaultdict`
     that supports automatic type registration.  Any missing types will
-    return the :py:meth:`register_dispatcher` method, which (when called
+    return the :meth:`register_dispatcher` method, which (when called
     as a callback) will interrogate the type, identify the appropriate
     callback, add the callback to the dict, and return the result of
     calling the callback.  As the callback is added to the dict, no type
@@ -428,10 +428,10 @@ class BeforeChildDispatcher(collections.defaultdict):
 
 
 class ExitNodeDispatcher(collections.defaultdict):
-    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    """Dispatcher for handling the :class:`StreamBasedExpressionVisitor`
     `exitNode` callback
 
-    This dispatcher implements a specialization of :py:`defaultdict`
+    This dispatcher implements a specialization of :class:`defaultdict`
     that supports automatic type registration.  As the identified
     callback is added to the dict, no type will incur the overhead of
     `register_dispatcher` more than once.

@@ -42,22 +42,18 @@ class PyomoDataCommands(object):
         pass
 
     def read(self):
-        """
-        This function does nothing, since executing Pyomo data commands
-        both reads and processes the data all at once.
+        """This function does nothing, since executing Pyomo data commands both
+        reads and processes the data all at once.
+
         """
         pass
 
     def write(self, data):  # pragma:nocover
-        """
-        This function does nothing, because we cannot write to a *.dat file.
-        """
+        """This function does nothing, because we cannot write to a ``*.dat`` file."""
         pass
 
     def process(self, model, data, default):
-        """
-        Read Pyomo data commands and process the data.
-        """
+        """Read Pyomo data commands and process the data."""
         _process_include(['include', self.filename], model, data, default, self.options)
 
     def clear(self):

@@ -43,9 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 class IpoptSolverError(PyomoException):
-    """
-    General exception to catch solver system errors
-    """
+    """General exception to catch solver system errors"""
 
 
 class IpoptConfig(SolverConfig):
@@ -290,6 +288,7 @@ class Ipopt(SolverBase):
 
     @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
+        "Solve a model using Ipopt"
         # Begin time tracking
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         # Update configuration options, based on keywords passed to solve

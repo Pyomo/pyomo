@@ -484,19 +484,22 @@ class Component(ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
-    Constructor arguments:
-        ctype           The class type for the derived subclass
-        doc             A text string describing this component
-        name            A name for this component
+    Parameters
+    ----------
+    ctype : type
+        The class type for the derived subclass
 
-    Public class attributes:
-        doc             A text string describing this component
+    doc : str
+        A text string describing this component
 
-    Private class attributes:
-        _constructed    A boolean that is true if this component has been
-                            constructed
-        _parent         A weakref to the parent block that owns this component
-        _ctype          The class type for the derived subclass
+    name : str
+        A name for this component
+
+    Attributes
+    ----------
+    doc : str
+        A text string describing this component
+
     """
 
     __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
