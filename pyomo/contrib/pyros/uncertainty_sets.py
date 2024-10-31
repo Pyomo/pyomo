@@ -10,49 +10,12 @@
 #  ___________________________________________________________________________
 
 """
-Abstract and pre-defined classes for representing uncertainty sets (or
-uncertain parameter spaces) of two-stage nonlinear robust optimization
-models.
-
-Along with a ``ConcreteModel`` object representing a deterministic model
-formulation, an uncertainty set object may be passed to the PyROS solver
-to obtain a solution to the model's two-stage robust optimization
-counterpart.
-
-Classes
--------
-``UncertaintySet``
-    Abstract base class for a generic uncertainty set. All other set
-    types defined in this module are subclasses.  A user may implement
-    their own uncertainty set type as a custom-written subclass.
-
-``EllipsoidalSet``
-    A hyperellipsoid.
-
-``AxisAlignedEllipsoidalSet``
-    An axis-aligned hyperellipsoid.
-
-``PolyhedralSet``
-    A bounded convex polyhedron/polytope.
-
-``BoxSet``
-    A hyperrectangle.
-
-``BudgetSet``
-    A budget set.
-
-``CardinalitySet``
-    A cardinality set (or gamma set).
-
-``DiscreteScenarioSet``
-    A discrete set of finitely many points.
-
-``FactorModelSet``
-    A factor model set (or net-alpha model set).
-
-``IntersectionSet``
-    An intersection of two or more sets, each represented by an
-    ``UncertaintySet`` object.
+This module defines the :class:`~UncertaintySet` abstract base class,
+used for representing the uncertainty set of a robust
+optimization problem to be solved with PyROS,
+and a suite of pre-implemented concrete subclasses,
+based on uncertainty sets often used in the robust optimization
+literature.
 """
 
 import abc
