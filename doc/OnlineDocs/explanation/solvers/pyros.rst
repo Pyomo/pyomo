@@ -175,7 +175,8 @@ These are more elaborately presented in the
 PyROS Solver Interface
 -----------------------------
 
-The PyROS solver is invoked through the :py:meth:`PyROS.solve` method.
+The PyROS solver is invoked through the
+:py:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 
 .. autoclass:: pyomo.contrib.pyros.PyROS
     :members: solve
@@ -489,7 +490,7 @@ global NLP solver:
 .. note::
     Additional NLP optimizers can be automatically used in the event the primary
     subordinate local or global optimizer passed
-    to the PyROS :meth:`~pyomo.contrib.pyros.PyROS.solve` method
+    to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
     does not successfully solve a subproblem to an appropriate termination
     condition. These alternative solvers are provided through the optional
     keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
@@ -598,7 +599,7 @@ The :ref:`preceding code snippet <single-stage-problem>`
 demonstrates how to retrieve this information.
 
 If we pass ``load_solution=True`` (the default setting)
-to the :meth:`~pyomo.contrib.pyros.PyROS.solve` method,
+to the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method,
 then the solution at which PyROS terminates will be loaded to
 the variables of the original deterministic model.
 Note that in the :ref:`preceding code snippet <single-stage-problem>`,
@@ -628,7 +629,7 @@ freedom are in fact second-stage degrees of freedom.
 PyROS handles second-stage degrees of freedom via the use of polynomial
 decision rules, of which the degree is controlled through the
 optional keyword argument ``decision_rule_order`` to the PyROS
-:meth:`~pyomo.contrib.pyros.PyROS.solve` method.
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 In this example, we select affine decision rules by setting
 ``decision_rule_order=1``:
 
@@ -685,10 +686,10 @@ to an affine decision rule.
 Specifying Arguments Indirectly Through ``options``
 """""""""""""""""""""""""""""""""""""""""""""""""""
 Like other Pyomo solver interface methods,
-:meth:`~pyomo.contrib.pyros.PyROS.solve`
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 provides support for specifying options indirectly by passing
 a keyword argument ``options``, whose value must be a :class:`dict`
-mapping names of arguments to :meth:`~pyomo.contrib.pyros.PyROS.solve`
+mapping names of arguments to :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 to their desired values.
 For example, the ``solve()`` statement in the
 :ref:`two-stage problem snippet <example-two-stg>`
@@ -822,7 +823,7 @@ PyROS Solver Log Output
 The PyROS solver log output is controlled through the optional
 ``progress_logger`` argument, itself cast to
 a standard Python logger (:py:class:`logging.Logger`) object
-at the outset of a :meth:`~pyomo.contrib.pyros.PyROS.solve` call.
+at the outset of a :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` call.
 The level of detail of the solver log output
 can be adjusted by adjusting the level of the
 logger object; see :ref:`the following table <table-logging-levels>`.
