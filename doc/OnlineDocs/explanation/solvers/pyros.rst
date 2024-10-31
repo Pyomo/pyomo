@@ -935,10 +935,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.2.11.
-          Pyomo version: 6.7.4
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.0.
+          Pyomo version: 6.8.1
           Commit hash: unknown
-          Invoked at UTC 2024-09-01T00:00:00.000000
+          Invoked at UTC 2024-11-01T00:00:00.000000
    
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
