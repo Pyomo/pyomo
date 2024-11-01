@@ -137,6 +137,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'ast',  # Imported on Windows
             'backports_abc',  # Imported by cython on Linux
             'base64',  # Imported on Windows
+            'bisect',  # Imported by dae, dataportal, contrib/mpc
             'cPickle',
             'csv',
             'ctypes',  # mandatory import in core/base/external.py; TODO: fix this
