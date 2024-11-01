@@ -3477,7 +3477,7 @@ class TestPolynomialDegree(unittest.TestCase):
     def test_Expr_if(self):
         m = self.instance
         #
-        # When IF conditional is constant, then polynomial degree is propigated
+        # When IF conditional is constant, then polynomial degree is propagated
         #
         expr = Expr_if(1, m.a**3, m.a**2)
         self.assertEqual(expr.polynomial_degree(), 3)
