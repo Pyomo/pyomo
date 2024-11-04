@@ -12,6 +12,7 @@
 import logging
 
 import pyomo.environ as pe
+from pyomo.common.errors import ApplicationError
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 from pyomo.contrib.alternative_solutions import Solution
@@ -65,7 +66,7 @@ def gurobi_generate_solutions(
     #
     opt = appsi.solvers.Gurobi()
     if not opt.available():
-        raise pe.common.errors.ApplicationError("Solver (gurobi) not available")
+        raise ApplicationError("Solver (gurobi) not available")
 
     opt.config.stream_solver = tee
     opt.config.load_solution = False
@@ -83,7 +84,7 @@ def gurobi_generate_solutions(
     results = opt.solve(model)
     condition = results.termination_condition
     if not (condition == appsi.base.TerminationCondition.optimal):
-        raise pe.common.errors.ApplicationError(
+        raise ApplicationError(
             "Model cannot be solved, " "TerminationCondition = {}"
         ).format(condition.value)
     #
