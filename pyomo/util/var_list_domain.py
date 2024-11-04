@@ -12,6 +12,7 @@
 from pyomo.common.collections import ComponentSet
 from pyomo.core import Var
 
+
 def var_component_set(x):
     """
     For domain validation in ConfigDicts: Takes singletone or iterable argument 'x'
