@@ -181,7 +181,7 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         )
 
         self.assertTrue(np.all(repn.c == np.array([0, 0, 0])))
-        # m.c gets interpretted as a <= Constraint, and you can't really blame
+        # m.c gets interpreted as a <= Constraint, and you can't really blame
         # pyomo for that because it's not parameterized yet. So that's why this
         # differs from the test in test_standard_form.py
         assertExpressionArraysEqual(
@@ -242,7 +242,7 @@ class TestParameterizedStandardFormCompiler(unittest.TestCase):
         m.more_data = Var()
         if do_not_flip_c:
             # [ESJ: 06/24]: I should have done this sooner, but if you write c
-            # this way, it gets interpretted as a >= constraint, which matches
+            # this way, it gets interpreted as a >= constraint, which matches
             # the standard_form tests and makes life much easier. Unforuntately
             # I wrote a lot of tests before I thought of this, so I'm leaving in
             # both variations for the moment.
