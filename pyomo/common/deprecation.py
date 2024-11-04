@@ -734,10 +734,13 @@ def moved_module(
 
     """
     if old_name in MovedModuleFinder.mapping:
-        if new_name == MovedModuleFinder.mapping[old_name].new_name:
+        _current = MovedModuleFinder.mapping[old_name].new_name
+        if new_name == _current:
             return
         raise RuntimeError(
-            f"Duplicate module alias declaration {new_name} -> {old_name}"
+            "Duplicate module alias declaration.\n"
+            f"\toriginal: {old_name} -> {_current}\n"
+            f"\tconflict: {old_name} -> {new_name}\n"
         )
     MovedModuleFinder.mapping[old_name] = MovedModuleInfo(
         old_name, new_name, msg, logger, version, remove_in

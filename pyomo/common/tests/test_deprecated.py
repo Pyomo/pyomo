@@ -682,6 +682,33 @@ class TestMoved(unittest.TestCase):
         finally:
             del finder.mapping[mod_name]
 
+    def test_declaration(self):
+        try:
+            _old = 'pyomo.common.tests.old_moved'
+            _new = 'pyomo.common.tests.moved'
+            # 1st registration is OK
+            N = len(MovedModuleFinder.mapping)
+            self.assertNotIn(_old, MovedModuleFinder.mapping)
+            moved_module(_old, _new, version='1.2')
+            self.assertIn(_old, MovedModuleFinder.mapping)
+            self.assertEqual(N + 1, len(MovedModuleFinder.mapping))
+            # duplicate registration is OK
+            moved_module(_old, _new, version='1.2')
+            self.assertIn(_old, MovedModuleFinder.mapping)
+            self.assertEqual(N + 1, len(MovedModuleFinder.mapping))
+            _conflict = 'pyomo.something.else'
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "(?s)Duplicate module alias declaration.\n"
+                f"\toriginal: {_old} -> {_new}\n"
+                f"\tconflict: {_old} -> {_conflict}\n",
+            ):
+                moved_module(_old, _conflict, version='1.2')
+            self.assertIn(_old, MovedModuleFinder.mapping)
+            self.assertEqual(N + 1, len(MovedModuleFinder.mapping))
+        finally:
+            del MovedModuleFinder.mapping[_old]
+
     def test_loader(self):
         mod_name = 'pyomo.common.deprecation_tester'
         try:
