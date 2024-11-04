@@ -162,7 +162,7 @@ that the expression be greater than or equal to one:
 .. literalinclude:: /src/scripting/iterative1_Add_expression_constraint.spy
    :language: python
 
-The proof that this precludes the last solution is left as an exerise
+The proof that this precludes the last solution is left as an exercise
 for the reader.
 
 The final lines in the outer for loop find a solution and display it:
