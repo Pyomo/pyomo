@@ -28,21 +28,21 @@ import textwrap
 from pyomo.version.info import releaselevel
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
+from pyomo.common.flags import in_testing_environment, building_documentation
 from pyomo.common.formatting import wrap_reStructuredText
 
 _indentation_re = re.compile(r'\s*')
 
-_RTD_URL = "https://pyomo.readthedocs.io/en/%s/errors.html" % (
-    'stable'
-    if (releaselevel == 'final' or 'sphinx' in sys.modules or 'Sphinx' in sys.modules)
-    else 'latest'
-)
+_RTD_URL = "https://pyomo.readthedocs.io/en/%s/errors.html"
 
 
 def RTD(_id):
     _id = str(_id).lower()
+    _release = (
+        'stable' if releaselevel == 'final' or in_testing_environment() else 'latest'
+    )
     assert _id[0] in 'wex'
-    return f"{_RTD_URL}#{_id}"
+    return (_RTD_URL % (_release,)) + f"#{_id}"
 
 
 _DEBUG = logging.DEBUG
@@ -234,7 +234,12 @@ class _GlobalLogFilter(object):
         self.logger = logging.getLogger()
 
     def filter(self, record):
-        return not self.logger.handlers
+        # We will not emit messages using the default Pyomo log handler
+        # if someone has registered a global handler.  However, we will
+        # ignore this if we are building documentation
+        # (sphinx.ext.doctest adds a handler, but we want to ignore that
+        # handler when we are testing our documentation!)
+        return not self.logger.handlers or building_documentation()
 
 
 # This mocks up the historical Pyomo logging system, which uses a
@@ -267,7 +272,7 @@ class LogHandler(logging.StreamHandler):
 
 
 class LoggingIntercept(object):
-    """Context manager for intercepting messages sent to a log stream
+    r"""Context manager for intercepting messages sent to a log stream
 
     This class is designed to enable easy testing of log messages.
 
@@ -289,13 +294,15 @@ class LoggingIntercept(object):
         the formatter to use when rendering the log messages.  If not
         specified, uses `'%(message)s'`
 
-    Examples:
-        >>> import io, logging
-        >>> from pyomo.common.log import LoggingIntercept
-        >>> buf = io.StringIO()
-        >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
-        ...     logging.getLogger('pyomo.core').warning('a simple message')
-        >>> buf.getvalue()
+    Examples
+    --------
+    >>> import io, logging
+    >>> from pyomo.common.log import LoggingIntercept
+    >>> buf = io.StringIO()
+    >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
+    ...     logging.getLogger('pyomo.core').warning('a simple message')
+    >>> buf.getvalue()
+    'a simple message\n'
 
     """
 
@@ -333,8 +340,8 @@ class LoggingIntercept(object):
         self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
-        for h in self._save[2]:
-            logger.handlers.append(h)
+        assert not logger.handlers
+        logger.handlers.extend(self._save[2])
 
 
 class LogStream(io.TextIOBase):
