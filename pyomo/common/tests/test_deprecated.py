@@ -13,6 +13,7 @@
 import logging
 import sys
 
+from importlib import import_module
 from importlib.machinery import ModuleSpec
 from io import StringIO
 
@@ -760,6 +761,20 @@ class TestMoved(unittest.TestCase):
             del MovedModuleFinder.mapping['pyomo.common.tests.old_moved']
             del sys.modules['pyomo.common.tests.old_moved']
             del sys.modules['pyomo.common.tests.moved']
+
+    def test_archive_importable(self):
+        import pyomo.environ
+
+        # Check that all modules in the _archive directory are importable.
+        for old_name, info in MovedModuleFinder.mapping.items():
+            if '._archive.' in info.new_name:
+                with LoggingIntercept() as LOG:
+                    m = import_module(info.old_name)
+                self.assertIn('DEPRECATED', LOG.getvalue())
+                # We expect every module in _archive to be depracated
+                # (and to state that in the module docstring):
+                self.assertIn('deprecated', m.__doc__)
+                self.assertEqual(m.__name__, info.new_name)
 
 
 if __name__ == '__main__':
