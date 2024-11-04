@@ -36,26 +36,10 @@ from pyomo.opt import SolverFactory, WriterFactory
 
 @unittest.skipUnless(scipy_available, "Scipy not available")
 class TestLPDual(unittest.TestCase):
-    @unittest.skipUnless(
-        SolverFactory('gurobi').available(exception_flag=False)
-        and SolverFactory('gurobi').license_is_valid(),
-        "Gurobi is not available",
-    )
-    def test_lp_dual_solve(self):
-        m = ConcreteModel()
-        m.x = Var(domain=NonNegativeReals)
-        m.y = Var(domain=NonPositiveReals)
-        m.z = Var(domain=Reals)
-
-        m.obj = Objective(expr=m.x + 2 * m.y - 3 * m.z)
-        m.c1 = Constraint(expr=-4 * m.x - 2 * m.y - m.z <= -5)
-        m.c2 = Constraint(expr=m.x + m.y <= 3)
-        m.c3 = Constraint(expr=-m.y - m.z <= -4.2)
-        m.c4 = Constraint(expr=m.z <= 42)
-        m.dual = Suffix(direction=Suffix.IMPORT)
-
+    def check_primal_dual_solns(self, m, dual):
         lp_dual = TransformationFactory('core.lp_dual')
-        dual = lp_dual.create_using(m)
+
+        m.dual = Suffix(direction=Suffix.IMPORT)
         dual.dual = Suffix(direction=Suffix.IMPORT)
 
         opt = SolverFactory('gurobi')
@@ -77,6 +61,28 @@ class TestLPDual(unittest.TestCase):
             self.assertAlmostEqual(
                 value(v), value(dual.dual[lp_dual.get_dual_constraint(dual, v)])
             )
+
+    @unittest.skipUnless(
+        SolverFactory('gurobi').available(exception_flag=False)
+        and SolverFactory('gurobi').license_is_valid(),
+        "Gurobi is not available",
+    )
+    def test_lp_dual_solve(self):
+        m = ConcreteModel()
+        m.x = Var(domain=NonNegativeReals)
+        m.y = Var(domain=NonPositiveReals)
+        m.z = Var(domain=Reals)
+
+        m.obj = Objective(expr=m.x + 2 * m.y - 3 * m.z)
+        m.c1 = Constraint(expr=-4 * m.x - 2 * m.y - m.z <= -5)
+        m.c2 = Constraint(expr=m.x + m.y <= 3)
+        m.c3 = Constraint(expr=-m.y - m.z <= -4.2)
+        m.c4 = Constraint(expr=m.z <= 42)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m)
+
+        self.check_primal_dual_solns(m, dual)
 
     def test_lp_dual(self):
         m = ConcreteModel()
@@ -201,8 +207,8 @@ class TestLPDual(unittest.TestCase):
         self.assertEqual(primal_obj.sense, minimize)
         assertExpressionsEqual(self, primal_obj.expr, x + 2.0 * y - 3.0 * z)
 
-    def test_parameterized_linear_dual(self):
-        m = ConcreteModel()
+    def get_bilevel_model(self):
+        m = ConcreteModel(name='primal')
 
         m.outer1 = Var(domain=Binary)
         m.outer = Var([2, 3], domain=Binary)
@@ -216,6 +222,11 @@ class TestLPDual(unittest.TestCase):
         m.c2 = Constraint(expr=m.x + m.outer[2] * m.y >= 3)
         m.c3 = Constraint(expr=-m.y - m.z == -4.2)
         m.c4 = Constraint(expr=m.z <= 42)
+
+        return m
+
+    def test_parameterized_linear_dual(self):
+        m = self.get_bilevel_model()
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
@@ -273,3 +284,117 @@ class TestLPDual(unittest.TestCase):
         assertExpressionsEqual(
             self, dual_obj.expr, -5 * m.outer1 * alpha + 3 * beta - 4.2 * lamb + 42 * mu
         )
+
+    @unittest.skipUnless(
+        SolverFactory('gurobi').available(exception_flag=False)
+        and SolverFactory('gurobi').license_is_valid(),
+        "Gurobi is not available",
+    )
+    def test_solve_parameterized_lp_dual(self):
+        m = self.get_bilevel_model()
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+
+        # We just check half of the possible permutations since we're calling a
+        # solver twice for all of these:
+        m.outer1.fix(1)
+        m.outer[2].fix(1)
+        m.outer[3].fix(1)
+
+        self.check_primal_dual_solns(m, dual)
+
+        m.outer1.fix(0)
+        m.outer[2].fix(1)
+        m.outer[3].fix(0)
+
+        self.check_primal_dual_solns(m, dual)
+
+        m.outer1.fix(0)
+        m.outer[2].fix(0)
+        m.outer[3].fix(0)
+
+        self.check_primal_dual_solns(m, dual)
+
+        m.outer1.fix(1)
+        m.outer[2].fix(1)
+        m.outer[3].fix(0)
+
+        self.check_primal_dual_solns(m, dual)
+
+    def test_multiple_obj_error(self):
+        m = self.get_bilevel_model()
+        m.obj.deactivate()
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        
+        with self.assertRaisesRegex(
+                ValueError,
+                "Model 'primal' has no objective or multiple active objectives. "
+                "Cannot take dual with more than one objective!"
+        ):
+            dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+
+        m.obj.activate()
+        m.obj2 = Objective(expr=m.outer1 + m.outer[3])
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "Model 'primal' has no objective or multiple active objectives. "
+                "Cannot take dual with more than one objective!"
+        ):
+            dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+
+    def test_primal_constraint_map_error(self):
+        m = self.get_bilevel_model()
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+        
+        with self.assertRaisesRegex(
+                ValueError,
+                "It does not appear that Var 'x' is a dual variable on model "
+                "'primal dual'"
+        ):
+            thing = lp_dual.get_primal_constraint(dual, m.x)
+
+    def test_dual_constraint_map_error(self):
+        m = self.get_bilevel_model()
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+        
+        with self.assertRaisesRegex(
+                ValueError,
+                "It does not appear that Var 'outer1' is a primal variable on model "
+                "'primal'"
+        ):
+            thing = lp_dual.get_dual_constraint(m, m.outer1)
+        
+    def test_primal_var_map_error(self):
+        m = self.get_bilevel_model()
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+        
+        with self.assertRaisesRegex(
+                ValueError,
+                "It does not appear that Constraint 'c1' is a dual constraint "
+                "on model 'primal dual'"
+        ):
+            thing = lp_dual.get_primal_var(dual, m.c1)
+
+    def test_dual_var_map_error(self):
+        m = self.get_bilevel_model()
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
+
+        m.c_new = Constraint(expr=m.x + m.y <= 35)
+        
+        with self.assertRaisesRegex(
+                ValueError,
+                "It does not appear that Constraint 'c_new' is a primal constraint "
+                "on model 'primal'"
+        ):
+            thing = lp_dual.get_dual_var(m, m.c_new)
