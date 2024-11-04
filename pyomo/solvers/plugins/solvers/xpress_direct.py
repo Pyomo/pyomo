@@ -257,12 +257,24 @@ class XpressDirect(DirectSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
 
-        if exception_flag and not xpress_available:
-            xpress.log_import_warning(logger=__name__)
-            raise ApplicationError(
-                "No Python bindings available for %s solver plugin" % (type(self),)
-            )
-        return bool(xpress_available)
+        if not xpress_available:
+            if exception_flag:
+                xpress.log_import_warning(logger=__name__)
+                raise ApplicationError(
+                    "No Python bindings available for %s solver plugin" % (type(self),)
+                )
+            return False
+
+        # Check that there is a valid license
+        try:
+            xpress.init()
+            return True
+        except:
+            if exception_flag:
+                raise
+            return False
+        finally:
+            xpress.free()
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
