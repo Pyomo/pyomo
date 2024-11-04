@@ -680,7 +680,7 @@ def moved_module(
 
     Because :func:`moved_module()` works through the Python
     :mod:`importlib` system, the old module file can be completely
-    deleted (in contrast tot he [deprecated] :func:`relocated_module()`
+    deleted (in contrast to the [deprecated] :func:`relocated_module()`
     function).  Calls to :func:`moved_module` should be placed in any
     package above the removed module in the package hierarchy (or in any
     other location that is guaranteeded to be imported / executed before
