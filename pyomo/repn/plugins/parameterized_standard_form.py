@@ -76,8 +76,7 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
         # representation generates (and disposes of) a large number of
         # small objects.
         with PauseGC():
-            return _ParameterizedLinearStandardFormCompiler_impl(config).write(
-                model)
+            return _ParameterizedLinearStandardFormCompiler_impl(config).write(model)
 
 
 class _SparseMatrixBase(object):
