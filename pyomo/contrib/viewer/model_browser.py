@@ -64,7 +64,6 @@ class _ModelBrowser(object):
 if not building_documentation():
     import sys
 
-    print("\n".join(map(str, sorted(sys.modules))))
     mypath = this_file_dir()
     try:
         _ModelBrowserUI, _ModelBrowser = myqt.uic.loadUiType(

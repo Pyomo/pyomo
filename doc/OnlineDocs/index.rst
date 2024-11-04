@@ -9,8 +9,14 @@ About Pyomo
    :scale: 10%
    :align: right
 
-Pyomo is a Python-based, open-source optimization modeling language
-with a diverse set of optimization capabilities.
+Pyomo is a Python-based open-source software package that supports a
+diverse set of optimization capabilities for formulating, solving, and
+analyzing optimization models.
+
+A core capability of Pyomo is modeling structured optimization
+applications.  Pyomo can be used to define general symbolic problems,
+create specific problem instances, and solve these instances using
+commercial and open-source solvers.
 
 
 Contents
@@ -61,7 +67,7 @@ See the Pyomo Forum for online discussions of Pyomo or to ask a question:
 
 * http://groups.google.com/group/pyomo-forum/
 
-Ask a question on StackOverflow using the `#pyomo` tag:
+Ask a question on StackOverflow using the ``#pyomo`` tag:
 
 * https://stackoverflow.com/questions/ask?tags=pyomo 
 
@@ -86,7 +92,7 @@ Contributing to Pyomo
 ---------------------
 
 Interested in contributing code or documentation to the project? Check out our
-:doc:`Contribution Guide <howto/contribution_guide>`
+:doc:`Contribution Guide <contribution_guide>`
 
 Related Packages
 ----------------

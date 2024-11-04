@@ -52,7 +52,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
 
     def __call__(self, exception=True):
         """Compute the value of this expression."""
-        (arg,) = self._args_
+        (arg,) = self.args
         if arg.__class__ in native_types:
             # Note: native_types includes NoneType
             return arg
@@ -83,7 +83,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
     def arg(self, index):
         if index != 0:
             raise KeyError("Invalid index for expression argument: %d" % index)
-        return self._args_[0]
+        return self.args[0]
 
     @property
     def args(self):
@@ -95,7 +95,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
     def _to_string(self, values, verbose, smap):
         if verbose:
             return "%s{%s}" % (str(self), values[0])
-        if self._args_[0] is None:
+        if self.args[0] is None:
             return "%s{None}" % str(self)
         return values[0]
 
@@ -110,7 +110,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
 
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
-        if self._args_[0] is None:
+        if self.args[0] is None:
             return None
         return self.expr.polynomial_degree()
 
@@ -127,7 +127,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
 
     @property
     def expr(self):
-        (arg,) = self._args_
+        (arg,) = self.args
         if arg is None:
             return None
         return as_numeric(arg)
@@ -163,7 +163,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        (e,) = self._args_
+        (e,) = self.args
         return e.__class__ in native_types or e.is_fixed()
 
     # Override the in-place operators here so that we can redirect the
@@ -171,26 +171,26 @@ class NamedExpressionData(numeric_expr.NumericValue):
     # this Expression object (which would map to "other")
 
     def __iadd__(self, other):
-        (e,) = self._args_
+        (e,) = self.args
         return numeric_expr._add_dispatcher[e.__class__, other.__class__](e, other)
 
     # Note: the default implementation of __isub__ leverages __iadd__
     # and doesn't need to be reimplemented here
 
     def __imul__(self, other):
-        (e,) = self._args_
+        (e,) = self.args
         return numeric_expr._mul_dispatcher[e.__class__, other.__class__](e, other)
 
     def __idiv__(self, other):
-        (e,) = self._args_
+        (e,) = self.args
         return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
 
     def __itruediv__(self, other):
-        (e,) = self._args_
+        (e,) = self.args
         return numeric_expr._div_dispatcher[e.__class__, other.__class__](e, other)
 
     def __ipow__(self, other):
-        (e,) = self._args_
+        (e,) = self.args
         return numeric_expr._pow_dispatcher[e.__class__, other.__class__](e, other)
 
 
@@ -234,7 +234,7 @@ class _GeneralExpressionData(metaclass=RenamedClass):
     "Named expressions that can be used in other expressions."
 )
 class Expression(IndexedComponent):
-    """A shared expression container, which may be defined over a index.
+    """A shared expression container, which may be defined over an index.
 
     Parameters
     ----------

@@ -32,7 +32,6 @@ from io import StringIO
 # specifically later
 from unittest import *
 import unittest as _unittest
-import pytest as pytest
 
 from pyomo.common.collections import Mapping, Sequence
 from pyomo.common.dependencies import attempt_import, check_min_version
@@ -42,6 +41,11 @@ from pyomo.common.log import LoggingIntercept, pyomo_formatter
 from pyomo.common.tee import capture_output
 
 from unittest import mock
+
+# We defer this import so that we don't add a hard dependence on pytest.
+# Note that importing test modules may cause this import to be resolved
+# (and then enforce a strict dependence on pytest)
+pytest, pytest_available = attempt_import('pytest')
 
 
 def _defaultFormatter(msg, default):

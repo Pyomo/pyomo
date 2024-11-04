@@ -130,6 +130,10 @@ PyROS Solver Interface
 
 The PyROS solver is invoked through the :py:meth:`PyROS.solve` method.
 
+.. autoclass:: pyomo.contrib.pyros.PyROS
+    :members: solve
+    :noindex:
+
 .. note::
     Upon successful convergence of PyROS, the solution returned is
     certified to be robust optimal only if:
@@ -212,16 +216,16 @@ PyROS Uncertainty Set Classes
 
 .. autosummary::
 
-   pyomo.contrib.pyros.uncertainty_sets.BoxSet
-   pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-   pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-   pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-   pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-   pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-   pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-   pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-   pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
-   pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
+   ~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
+   ~pyomo.contrib.pyros.uncertainty_sets.BoxSet
+   ~pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
+   ~pyomo.contrib.pyros.uncertainty_sets.BudgetSet
+   ~pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
+   ~pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
+   ~pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
+   ~pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
+   ~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
+   ~pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
 
 
 PyROS Usage Example

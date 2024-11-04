@@ -278,9 +278,11 @@ community_map attribute or the `repr()` function can be used:
 
         Generate a matplotlib figure (left_figure) - a constraint graph of the community map
         >>> left_figure, _ = cmo.visualize_model_graph(type_of_graph='constraint')
+        >>> left_figure.show()  # doctest: +SKIP
 
         Now, we will generate the figure on the right (a bipartite graph of the community map)
         >>> right_figure, _ = cmo.visualize_model_graph(type_of_graph='bipartite')
+        >>> right_figure.show()  # doctest: +SKIP
 
 An example of the two separate graphs created for these two function calls is shown below:
     .. image:: communities_decode_1.png
@@ -312,13 +314,16 @@ An example of the two separate graphs created for these two function calls is sh
         Now, we follow steps similar to the example above (see above for explanations)
         >>> community_map_object = cmo = detect_communities(model, type_of_community_map='constraint', random_seed=seed)
         >>> left_fig, pos = cmo.visualize_model_graph(type_of_graph='variable')
+        >>> left_fig.show()  # doctest: +SKIP
 
         As we did before, we will use the returned 'pos' to create a consistent graph layout
         >>> community_map_object = cmo = detect_communities(model, type_of_community_map='bipartite')
         >>> middle_fig, _ = cmo.visualize_model_graph(type_of_graph='variable', pos=pos)
+        >>> middle_fig.show()  # doctest: +SKIP
 
         >>> community_map_object = cmo = detect_communities(model, type_of_community_map='variable')
         >>> right_fig, _ = cmo.visualize_model_graph(type_of_graph='variable', pos=pos)
+        >>> right_fig.show()  # doctest: +SKIP
 
 We can see an example for the three separate graphs created by these three function calls below:
     .. image:: communities_8pp.png

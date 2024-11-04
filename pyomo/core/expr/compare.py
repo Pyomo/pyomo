@@ -220,7 +220,7 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True, places=None):
         If True (the default), the comparison expands all named
         expressions when generating the prefix notation
 
-    places : float
+    places : int
         Number of decimal places required for equality of floating
         point numbers in the expression. If None (the default), the
         expressions must be exactly equal.
@@ -270,7 +270,7 @@ def assertExpressionsStructurallyEqual(
        If True (the default), the comparison expands all named
        expressions when generating the prefix notation
 
-    places : float
+    places : int
         Number of decimal places required for equality of floating
         point numbers in the expression. If None (the default), the
         expressions must be exactly equal.

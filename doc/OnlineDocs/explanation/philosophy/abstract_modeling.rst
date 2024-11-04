@@ -3,7 +3,7 @@ Abstract Models
 
 .. note::
 
-   TODO: this is a copy of "Abstractvs Concrete" from Getting Started.
+   TODO: this is a copy of "Abstract vs Concrete" from Getting Started.
    This should be expanded here.
 
 
