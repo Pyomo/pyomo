@@ -177,7 +177,7 @@ class LinearProgrammingDual(object):
             A dual model returned from the 'core.lp_dual' transformation
         dual_var: Var
             A dual variable on 'model'
-        
+
         """
         primal_constraint = model.private_data().primal_constraint
         if dual_var in primal_constraint:
@@ -201,7 +201,7 @@ class LinearProgrammingDual(object):
             A primal model passed as an argument to the 'core.lp_dual' transformation
         primal_var: Var
             A primal variable on 'model'
-        
+
         """
         dual_constraint = model.private_data().dual_constraint
         if primal_var in dual_constraint:
@@ -225,7 +225,7 @@ class LinearProgrammingDual(object):
             A dual model returned from the 'core.lp_dual' transformation
         dual_constraint: Constraint
             A constraint on 'model'
-        
+
         """
         primal_var = model.private_data().primal_var
         if dual_constraint in primal_var:
@@ -249,7 +249,7 @@ class LinearProgrammingDual(object):
             A primal model passed as an argument to the 'core.lp_dual' transformation
         primal_constraint: Constraint
             A constraint on 'model'
-        
+
         """
         dual_var = model.private_data().dual_var
         if primal_constraint in dual_var:

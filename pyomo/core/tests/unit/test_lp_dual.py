@@ -327,11 +327,11 @@ class TestLPDual(unittest.TestCase):
         m.obj.deactivate()
 
         lp_dual = TransformationFactory('core.lp_dual')
-        
+
         with self.assertRaisesRegex(
-                ValueError,
-                "Model 'primal' has no objective or multiple active objectives. "
-                "Cannot take dual with more than one objective!"
+            ValueError,
+            "Model 'primal' has no objective or multiple active objectives. "
+            "Cannot take dual with more than one objective!",
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
 
@@ -339,9 +339,9 @@ class TestLPDual(unittest.TestCase):
         m.obj2 = Objective(expr=m.outer1 + m.outer[3])
 
         with self.assertRaisesRegex(
-                ValueError,
-                "Model 'primal' has no objective or multiple active objectives. "
-                "Cannot take dual with more than one objective!"
+            ValueError,
+            "Model 'primal' has no objective or multiple active objectives. "
+            "Cannot take dual with more than one objective!",
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
 
@@ -350,11 +350,11 @@ class TestLPDual(unittest.TestCase):
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
-        
+
         with self.assertRaisesRegex(
-                ValueError,
-                "It does not appear that Var 'x' is a dual variable on model "
-                "'primal dual'"
+            ValueError,
+            "It does not appear that Var 'x' is a dual variable on model "
+            "'primal dual'",
         ):
             thing = lp_dual.get_primal_constraint(dual, m.x)
 
@@ -363,24 +363,24 @@ class TestLPDual(unittest.TestCase):
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
-        
+
         with self.assertRaisesRegex(
-                ValueError,
-                "It does not appear that Var 'outer1' is a primal variable on model "
-                "'primal'"
+            ValueError,
+            "It does not appear that Var 'outer1' is a primal variable on model "
+            "'primal'",
         ):
             thing = lp_dual.get_dual_constraint(m, m.outer1)
-        
+
     def test_primal_var_map_error(self):
         m = self.get_bilevel_model()
 
         lp_dual = TransformationFactory('core.lp_dual')
         dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
-        
+
         with self.assertRaisesRegex(
-                ValueError,
-                "It does not appear that Constraint 'c1' is a dual constraint "
-                "on model 'primal dual'"
+            ValueError,
+            "It does not appear that Constraint 'c1' is a dual constraint "
+            "on model 'primal dual'",
         ):
             thing = lp_dual.get_primal_var(dual, m.c1)
 
@@ -391,10 +391,10 @@ class TestLPDual(unittest.TestCase):
         dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
 
         m.c_new = Constraint(expr=m.x + m.y <= 35)
-        
+
         with self.assertRaisesRegex(
-                ValueError,
-                "It does not appear that Constraint 'c_new' is a primal constraint "
-                "on model 'primal'"
+            ValueError,
+            "It does not appear that Constraint 'c_new' is a primal constraint "
+            "on model 'primal'",
         ):
             thing = lp_dual.get_dual_var(m, m.c_new)
