@@ -42,11 +42,16 @@ jobs:
         - wheel-version: 'cp312*'
           TARGET: 'py312'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp313*'
+          TARGET: 'py313'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
 
         exclude:
         - wheel-version: 'cp311*'
           os: windows-latest
         - wheel-version: 'cp312*'
+          os: windows-latest
+        - wheel-version: 'cp313*'
           os: windows-latest
 
     steps:
@@ -94,6 +99,9 @@ jobs:
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
         - wheel-version: 'cp312*'
           TARGET: 'py312'
+          GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
+        - wheel-version: 'cp313*'
+          TARGET: 'py313'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
     steps:
       - uses: actions/checkout@v4
