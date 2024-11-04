@@ -775,6 +775,11 @@ class TestMoved(unittest.TestCase):
                 # (and to state that in the module docstring):
                 self.assertIn('deprecated', m.__doc__)
                 self.assertEqual(m.__name__, info.new_name)
+                # Remove these modules from sys.modules (some other
+                # modules have tests for deprecation paths that rely on
+                # these modules not having already been imported)
+                del sys.modules[info.old_name]
+                del sys.modules[info.new_name]
 
 
 if __name__ == '__main__':
