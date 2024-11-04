@@ -241,6 +241,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
     def _before_named_expression(self, visitor, child):
         raise MouseTrap("We do not yet support Expression components")
 
+
 def _handle_getitem(visitor, node, comp, *args):
     expr = comp[1][tuple(arg[1] for arg in args)]
     if comp[0] is _CONSTANT:

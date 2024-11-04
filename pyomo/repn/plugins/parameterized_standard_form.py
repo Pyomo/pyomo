@@ -76,7 +76,8 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
         # representation generates (and disposes of) a large number of
         # small objects.
         with PauseGC():
-            return _ParameterizedLinearStandardFormCompiler_impl(config).write(model)
+            return _ParameterizedLinearStandardFormCompiler_impl(config).write(
+                model)
 
 
 class _SparseMatrixBase(object):
@@ -219,12 +220,12 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
     _csc_matrix = _CSCMatrix
     _csr_matrix = _CSRMatrix
 
-    def _get_visitor(self, subexpression_cache, var_map, var_order, sorter):
+    def _get_visitor(self, subexpression_cache, var_recorder):
         wrt = self.config.wrt
         if wrt is None:
             wrt = []
         return ParameterizedLinearRepnVisitor(
-            subexpression_cache, var_map, var_order, sorter, wrt=wrt
+            subexpression_cache, wrt=wrt, var_recorder=var_recorder
         )
 
     def _to_vector(self, data, N, vector_type):
