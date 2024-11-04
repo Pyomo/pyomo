@@ -65,7 +65,7 @@ def _generate_autosummary_content(
     This allows us to create templates that itemize Enums separately
     from attributes.  Because we want to insert ourselves into the
     *middle* of the original function (between the point where the
-    template namespace (``ns``) is set up and when it is rentered, we
+    template namespace (``ns``) is set up and when it is rendered, we
     will actually overload the template.render() method and pass the
     modified template into the original generate_autosummary_content
     function.
@@ -83,7 +83,7 @@ def _generate_autosummary_content(
                 # Overload render() so that we can intercept calls to it
                 # and add additional fields to the NS.  Note that we
                 # need variables from the generate_autosummary_content
-                # context ... bue we know that context is the calling
+                # context ... but we know that context is the calling
                 # frame.  Seems like cheating, but it works.
                 if ns['objtype'] not in ('module', 'enum'):
                     return super().render(name, ns)
@@ -231,14 +231,14 @@ def setup(app: Sphinx) -> Dict[str, Any]:
     # Notably, 7.1.2 does NOT work (and cannot be easily made to work)
     if 'generate_autosummary_content' not in dir(autosummary.generate):
         raise RuntimeError(
-            "pyomo_sutosummary_autoenum: Could not locate "
+            "pyomo_autosummary_autoenum: Could not locate "
             "autosummary.generate.generate_autosummary_content() "
             "(possible incompatible Sphinx version)."
         )
     autosummary.generate.generate_autosummary_content = _generate_autosummary_content
     if 'mangle_signature' not in dir(autosummary):
         raise RuntimeError(
-            "pyomo_sutosummary_autoenum: Could not locate "
+            "pyomo_autosummary_autoenum: Could not locate "
             "autosummary.mangle_signature() "
             "(possible incompatible Sphinx version)."
         )
