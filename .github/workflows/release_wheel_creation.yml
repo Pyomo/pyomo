@@ -24,7 +24,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [all]
-        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
 
         include:
         - wheel-version: 'cp38*'
@@ -77,7 +77,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         arch: [all]
-        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*']
+        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
 
         include:
         - wheel-version: 'cp38*'
