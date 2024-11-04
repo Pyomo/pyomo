@@ -11,13 +11,15 @@
 
 import logging
 
-import pyomo.environ as pe
+logger = logging.getLogger(__name__)
+
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
+
+import pyomo.environ as pe
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 from pyomo.contrib.alternative_solutions import Solution
-
-logger = logging.getLogger(__name__)
 
 
 def gurobi_generate_solutions(
