@@ -39,12 +39,8 @@ logger = logging.getLogger('pyomo.core')
 class NamedExpressionData(numeric_expr.NumericValue):
     """An object that defines a generic "named expression".
 
-    This is the base class for both :py:class:`ExpressionData` and
-    :py:class:`ObjectiveData`.
-
-    Public Class Attributes
-        expr       The expression owned by this data.
-
+    This is the base class for both :class:`ExpressionData` and
+    :class:`ObjectiveData`.
     """
 
     # Note: derived classes are expected to declare the _args_ slot
@@ -62,7 +58,7 @@ class NamedExpressionData(numeric_expr.NumericValue):
             return arg
         return arg(exception=exception)
 
-    def create_node_with_local_data(self, values):
+    def create_node_with_local_data(self, values, classtype=None):
         """
         Construct a simple expression after constructing the
         contained expression.
@@ -70,7 +66,9 @@ class NamedExpressionData(numeric_expr.NumericValue):
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
-        obj = self.__class__()
+        if classtype is None:
+            classtype = self.parent_component()._ComponentDataClass
+        obj = classtype()
         obj._args_ = values
         return obj
 
@@ -207,18 +205,16 @@ class _GeneralExpressionDataImpl(metaclass=RenamedClass):
 
 
 class ExpressionData(NamedExpressionData, ComponentData):
-    """
-    An object that defines an expression that is never cloned
+    """An object that defines an expression that is never cloned
 
-    Constructor Arguments
-        expr        The Pyomo expression stored in this expression.
-        component   The Expression object that owns this data.
+    Parameters
+    ----------
+    expr : NumericValue
+        The Pyomo expression stored in this expression.
 
-    Public Class Attributes
-        expr        The expression owned by this data.
+    component : Expression
+        The Expression object that owns this data.
 
-    Private class attributes:
-        _component  The expression component.
     """
 
     __slots__ = ('_args_',)
@@ -238,16 +234,28 @@ class _GeneralExpressionData(metaclass=RenamedClass):
     "Named expressions that can be used in other expressions."
 )
 class Expression(IndexedComponent):
-    """
-    A shared expression container, which may be defined over a index.
+    """A shared expression container, which may be defined over an index.
 
-    Constructor Arguments:
-        initialize  A Pyomo expression or dictionary of expressions
-                        used to initialize this object.
-        expr        A synonym for initialize.
-        rule        A rule function used to initialize this object.
-        name        Name for this component.
-        doc         Text describing this component.
+    Parameters
+    ----------
+    rule : ~.Initializer
+
+        The source to use to initialize the expression(s) in this
+        component.  See :func:`.Initializer` for accepted argument types.
+
+    initialize :
+        A synonym for `rule`
+
+    expr :
+        A synonym for `rule`
+
+    name : str
+        Name of this component; will be overridden if this is assigned
+        to a Block.
+
+    doc : str
+        Text describing this component.
+
     """
 
     _ComponentDataClass = ExpressionData

@@ -12,13 +12,13 @@ from copy import deepcopy
 from itertools import chain
 
 from pyomo.common.collections import ComponentSet
+from pyomo.common.errors import MouseTrap
 from pyomo.common.numeric_types import native_types
 
 import pyomo.core.expr as expr
 import pyomo.repn.linear as linear
 import pyomo.repn.util as util
 
-from pyomo.core.base import NumericLabeler
 from pyomo.core.expr import ExpressionType
 from pyomo.repn.linear import LinearRepn
 
@@ -57,7 +57,7 @@ class LinearTemplateRepn(LinearRepn):
         return ans
 
     def append(self, other):
-        """Append a child result from acceptChildResult
+        """Append a child result from StreamBasedExpressionVisitor.acceptChildResult()
 
         Notes
         -----
@@ -123,6 +123,8 @@ class LinearTemplateRepn(LinearRepn):
                     elif not check_duplicates:
                         # Directly substitute the expression into the
                         # 'linear[vid] = coef below
+                        #
+                        # Remove the 'v = ' from the beginning of the last line:
                         k = ans.pop()[4:]
             if check_duplicates:
                 ans.append(indent + f'if {k} in linear:')
@@ -208,36 +210,10 @@ class LinearTemplateRepn(LinearRepn):
 
 
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
-    def record_var(self, visitor, var):
-        # Note: the following is mostly a copy of
-        # LinearBeforeChildDispatcher.record_var, but with extra
-        # hanlding to update the env in the same loop
-        var_comp = var.parent_component()
-        # Double-check that the component has not already been processed
-        # (through an individual var data)
-        name = visitor.symbolmap.getSymbol(var_comp)
-        if name in visitor.env:
-            return
-        ve = visitor.env[name] = {}
-
-        # We always add all indices to the var_map at once so that
-        # we can honor deterministic ordering of unordered sets
-        # (because the user could have iterated over an unordered
-        # set when constructing an expression, thereby altering the
-        # order in which we would see the variables)
-        vm = visitor.var_map
-        _iter = var_comp.items(visitor.sorter)
-        for idx, v in _iter:
-            # if v.fixed:
-            #    ve[idx] = (v.value,)
-            #    continue
-            vid = id(v)
-            vm[vid] = v
-            ve[idx] = vid
 
     def _before_indexed_var(self, visitor, child):
         if child not in visitor.indexed_vars:
-            visitor.before_child_dispatcher.record_var(visitor, child)
+            visitor.var_recorder.add(child)
             visitor.indexed_vars.add(child)
         return False, (_VARIABLE, child)
 
@@ -263,8 +239,7 @@ class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
         return False, (_CONSTANT, child)
 
     def _before_named_expression(self, visitor, child):
-        raise NotImplementedError()
-
+        raise MouseTrap("We do not yet support Expression components")
 
 def _handle_getitem(visitor, node, comp, *args):
     expr = comp[1][tuple(arg[1] for arg in args)]
@@ -282,7 +257,7 @@ def _handle_getitem(visitor, node, comp, *args):
 
 def _handle_templatesum(visitor, node, comp, *args):
     ans = visitor.Result()
-    if comp[0] == _LINEAR:
+    if comp[0] is _LINEAR:
         ans.linear_sum.append((comp[1], node.template_iters(), [a[1] for a in args]))
         return _LINEAR, ans
     else:
@@ -307,15 +282,13 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
         util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
 
-    def __init__(
-        self, subexpression_cache, var_map, var_order, sorter, remove_fixed_vars=False
-    ):
-        super().__init__(subexpression_cache, var_map, var_order, sorter)
+    def __init__(self, subexpression_cache, var_recorder, remove_fixed_vars=False):
+        super().__init__(subexpression_cache, var_recorder=var_recorder)
         self.indexed_vars = set()
         self.indexed_params = set()
         self.expr_cache = {}
-        self.env = {}
-        self.symbolmap = expr.SymbolMap(NumericLabeler('x'))
+        self.env = var_recorder.env
+        self.symbolmap = var_recorder.symbolmap
         self.expanded_templates = {}
         self.remove_fixed_vars = remove_fixed_vars
 
@@ -338,7 +311,7 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             expr, indices = template_info
             args = [smap.getSymbol(i) for i in indices]
             if expr.is_expression_type(ExpressionType.RELATIONAL):
-                lb, body, ub = obj.normalize_constraint()
+                lb, body, ub = obj.to_bounded_expression()
                 if body is not None:
                     body = self.walk_expression(body).compile(
                         env, smap, self.expr_cache, args, False
@@ -383,117 +356,3 @@ class LinearTemplateRepnVisitor(linear.LinearRepnVisitor):
             lb,
             ub,
         )
-
-
-def pyomo_create_model(N, M, P):
-    import random
-
-    random.seed(1000)
-
-    model = ConcreteModel()
-    model.N = Param(within=PositiveIntegers, initialize=N)
-    model.M = Param(within=PositiveIntegers, initialize=M)
-    model.P = Param(within=RangeSet(1, model.N), initialize=P)
-    model.Locations = RangeSet(1, model.N)
-    model.Customers = RangeSet(1, model.M)
-    model.d = Param(
-        model.Locations,
-        model.Customers,
-        initialize=lambda n, m, model: random.uniform(1.0, 2.0),
-        within=Reals,
-    )
-    model.x = Var(model.Locations, model.Customers, bounds=(0.0, 1.0))
-    model.y = Var(model.Locations, within=Binary)
-
-    @model.Objective()
-    def obj(model):
-        return sum(
-            model.d[n, m] * model.x[n, m]
-            for n in model.Locations
-            for m in model.Customers
-        )
-
-    @model.Constraint(model.Customers)
-    def single_x(model, m):
-        return sum(model.x[n, m] for n in model.Locations) == 1.0
-
-    @model.Constraint(model.Locations, model.Customers)
-    def bound_y(model, n, m):
-        return model.x[n, m] <= model.y[n]
-
-    @model.Constraint()
-    def num_facilities(model):
-        return sum(model.y[n] for n in model.Locations) - model.P == 0.0
-
-    return model
-
-
-if __name__ == '__main__':
-    import logging
-    import gc
-    import cProfile
-    import pstats
-    from pyomo.common.timing import report_timing, TicTocTimer
-    from pyomo.environ import *
-    import pyomo.core.base.constraint as _c
-    import pyomo.core.base.objective as _o
-
-    import gurobipy
-    import scipy.sparse
-
-    report_timing(level=logging.DEBUG)
-
-    timing_logger = logging.getLogger('pyomo.common.timing.create_model')
-    timer = TicTocTimer(logger=timing_logger)
-
-    gc.disable()
-
-    pr = cProfile.Profile()
-    profile_count = 0
-
-    if 1:
-        _c.TEMPLATIZE_CONSTRAINTS = True
-        _o.TEMPLATIZE_OBJECTIVES = True
-
-    m = pyomo_create_model(640, 640, 1)
-    timer.toc("Created model")
-
-    if False:
-        comps = []
-        if _c.TEMPLATIZE_CONSTRAINTS:
-            comps.extend((m.bound_y, m.single_x, m.num_facilities))
-        if _o.TEMPLATIZE_OBJECTIVES:
-            comps.append(m.obj)
-        if comps:
-            visitor = LinearTemplateRepnVisitor({}, {}, {}, None)
-
-            for comp in comps:
-                e, i = next(iter(comp._data.values())).template_expr()
-                print(comp.name, e)
-                if e.is_expression_type(ExpressionType.RELATIONAL):
-                    for arg in e.args:
-                        print(visitor.walk_expression(arg))
-                else:
-                    print(visitor.walk_expression(e))
-
-    # print(SolverFactory('gurobi_direct_v2').solve(m, tee=True))
-    import pyomo.contrib.solver.factory
-
-    if profile_count:
-        pr.enable()
-    # r = SolverFactory('gurobi').solve(m, tee=True)
-    r = pyomo.contrib.solver.factory.SolverFactory('gurobi_direct').solve(m, tee=True)
-    if profile_count:
-        pr.disable()
-
-    timer.toc("Solved model")
-    r.display()
-
-    if profile_count:
-        profile_count = abs(profile_count)
-        ps = pstats.Stats(pr)
-        # ps = ps.sort_stats('time','calls')
-        ps = ps.sort_stats('cumtime', 'calls')
-        ps.print_stats(profile_count)
-        ps.print_callers(profile_count)
-        ps.print_callees(profile_count)

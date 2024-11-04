@@ -32,7 +32,6 @@ from io import StringIO
 # specifically later
 from unittest import *
 import unittest as _unittest
-import pytest as pytest
 
 from pyomo.common.collections import Mapping, Sequence
 from pyomo.common.dependencies import attempt_import, check_min_version
@@ -42,6 +41,11 @@ from pyomo.common.log import LoggingIntercept, pyomo_formatter
 from pyomo.common.tee import capture_output
 
 from unittest import mock
+
+# We defer this import so that we don't add a hard dependence on pytest.
+# Note that importing test modules may cause this import to be resolved
+# (and then enforce a strict dependence on pytest)
+pytest, pytest_available = attempt_import('pytest')
 
 
 def _defaultFormatter(msg, default):
@@ -111,8 +115,10 @@ def assertStructuredAlmostEqual(
         values)
 
     The relative error is computed for numerical values as
-        `abs(first - second) / max(abs(first), abs(second))`,
-    only when first != second (thereby avoiding divide-by-zero errors).
+
+        `abs(first - second) / max(abs(first), abs(second))`
+
+    only when `first != second` (thereby avoiding divide-by-zero errors).
 
     Items (entries other than Sequence / Mapping containers, matching
     strings, and items that satisfy `first is second`) are passed to the
@@ -123,37 +129,47 @@ def assertStructuredAlmostEqual(
 
     Parameters
     ----------
-    first:
+    first :
         the first value to compare
-    second:
+
+    second :
         the second value to compare
-    places: int
+
+    places : int
         `first` and `second` are considered equivalent if their
         difference is between `places` decimal places; equivalent to
         `abstol = 10**-places` (included for compatibility with
         assertAlmostEqual)
-    msg: str
+
+    msg : str
         the message to raise on failure
-    delta: float
+
+    delta : float
         alias for `abstol`
-    abstol: float
+
+    abstol : float
         the absolute tolerance.  `first` and `second` are considered
         equivalent if their absolute difference is less than `abstol`
-    reltol: float
+
+    reltol : float
         the relative tolerance.  `first` and `second` are considered
         equivalent if their absolute difference divided by the
         largest of `first` and `second` is less than `reltol`
-    allow_second_superset: bool
+
+    allow_second_superset : bool
         If True, then extra entries in containers found on second
         will not trigger a failure.
-    item_callback: function
+
+    item_callback : function
         items (other than Sequence / Mapping containers, matching
         strings, and items satisfying `is`) are passed to this callback
         to generate the (nominally floating point) value to use for
         comparison.
-    exception: Exception
+
+    exception : Exception
         exception to raise when `first` is not 'almost equal' to `second`.
-    formatter: function
+
+    formatter : function
         callback for generating the final failure message (for
         compatibility with unittest)
 
@@ -349,7 +365,7 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
     using multiprocessing to execute the function in a forked process.
     If the wrapped function raises an exception, then the exception will
     be re-raised in this process.  If the function times out, a
-    :python:`TimeoutError` will be raised.
+    :class:`TimeoutError` will be raised.
 
     Note that as this method uses multiprocessing, the wrapped function
     should NOT spawn any subprocesses.  The timeout is implemented using
@@ -371,21 +387,27 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
 
     Examples
     --------
-    >>> import pyomo.common.unittest as unittest
-    >>> @unittest.timeout(1)
-    ... def test_function():
-    ...     return 42
-    >>> test_function()
-    42
+    .. doctest::
+       :skipif: multiprocessing.get_start_method() != 'fork'
 
-    >>> @unittest.timeout(0.01)
-    ... def test_function():
-    ...     while 1:
-    ...         pass
-    >>> test_function()
-    Traceback (most recent call last):
-        ...
-    TimeoutError: test timed out after 0.01 seconds
+       >>> import pyomo.common.unittest as unittest
+       >>> @unittest.timeout(1)
+       ... def test_function():
+       ...     return 42
+       >>> test_function()
+       42
+
+    .. doctest::
+       :skipif: multiprocessing.get_start_method() != 'fork'
+
+       >>> @unittest.timeout(0.01)
+       ... def test_function():
+       ...     while 1:
+       ...         pass
+       >>> test_function()
+       Traceback (most recent call last):
+           ...
+       TimeoutError: test timed out after 0.01 seconds
 
     """
     import functools
@@ -489,14 +511,31 @@ class TestCase(_unittest.TestCase):
 
     This class derives from unittest.TestCase and provides the following
     additional functionality:
-      - additional assertions:
-        * :py:meth:`assertStructuredAlmostEqual`
 
-    unittest.TestCase documentation
-    -------------------------------
+    * additional assertions:
+       - :py:meth:`~TestCase.assertStructuredAlmostEqual`
+       - :py:meth:`assertExpressionsEqual`
+       - :py:meth:`assertExpressionsStructurallyEqual`
+
+    * updated assertions:
+       - :py:meth:`assertRaisesRegex`
+
+    :py:class:`unittest.TestCase` documentation
+    -------------------------------------------
     """
 
-    __doc__ += _unittest.TestCase.__doc__
+    # Note that the current unittest.TestCase documentation generates
+    # sphinx warnings.  We will clean up that documentation to suppress
+    # the warnings.
+    __doc__ += (
+        re.sub(
+            r'^( +)(\* +[^:]+:) *',
+            r'\n\1\2\n\1    ',
+            _unittest.TestCase.__doc__.rstrip(),
+            flags=re.M,
+        )
+        + "\n\n"
+    )
 
     # By default, we always want to spend the time to create the full
     # diff of the test reault and the baseline
@@ -514,6 +553,8 @@ class TestCase(_unittest.TestCase):
         allow_second_superset=False,
         item_callback=_floatOrCall,
     ):
+        # Note: __doc__ copied from assertStructuredAlmostEqual below
+        #
         assertStructuredAlmostEqual(
             first=first,
             second=second,
@@ -537,18 +578,28 @@ class TestCase(_unittest.TestCase):
         normalizes all consecutive whitespace in the exception message
         to a single space before checking the regular expression.
 
-        Args:
-            expected_exception: Exception class expected to be raised.
-            expected_regex: Regex (re.Pattern object or string) expected
-                    to be found in error message.
-            args: Function to be called and extra positional args.
-            kwargs: Extra kwargs.
-            msg: Optional message used in case of failure. Can only be used
-                    when assertRaisesRegex is used as a context manager.
-            normalize_whitespace: Optional bool that, if True, collapses
-                    consecutive whitespace (including newlines) into a
-                    single space before checking against the regular
-                    expression
+        Parameters
+        ----------
+        expected_exception : Exception
+            Exception class expected to be raised.
+
+        expected_regex : `re.Pattern` or str
+            Regular expression expected to be found in error message.
+
+        *args :
+            Function to be called and extra positional args.
+
+        **kwargs :
+            Extra keyword args.
+
+        msg : str
+            Optional message used in case of failure. Can only be used
+            when assertRaisesRegex is used as a context manager.
+
+        normalize_whitespace : bool, default=False
+            If True, collapses consecutive whitespace (including
+            newlines) into a single space before checking against the
+            regular expression
 
         """
         normalize_whitespace = kwargs.pop('normalize_whitespace', False)
@@ -560,6 +611,29 @@ class TestCase(_unittest.TestCase):
         return context.handle('assertRaisesRegex', args, kwargs)
 
     def assertExpressionsEqual(self, a, b, include_named_exprs=True, places=None):
+        """Assert that two Pyomo expressions are equal.
+
+        This converts the expressions `a` and `b` into prefix notation
+        and then compares the resulting lists.  All nodes in the tree
+        are compared using py:meth:`assertEqual` (or
+        py:meth:`assertAlmostEqual`)
+
+        Parameters
+        ----------
+        a: ExpressionBase or native type
+
+        b: ExpressionBase or native type
+
+        include_named_exprs : bool
+            If True (the default), the comparison expands all named
+            expressions when generating the prefix notation
+
+        places : float
+            Number of decimal places required for equality of floating
+            point numbers in the expression. If None (the default), the
+            expressions must be exactly equal.
+
+        """
         from pyomo.core.expr.compare import assertExpressionsEqual
 
         return assertExpressionsEqual(self, a, b, include_named_exprs, places)
@@ -567,11 +641,40 @@ class TestCase(_unittest.TestCase):
     def assertExpressionsStructurallyEqual(
         self, a, b, include_named_exprs=True, places=None
     ):
+        """Assert that two Pyomo expressions are structurally equal.
+
+        This converts the expressions `a` and `b` into prefix notation
+        and then compares the resulting lists.  Operators and
+        (non-native type) leaf nodes in the prefix representation are
+        converted to strings before comparing (so that things like
+        variables can be compared across clones or pickles)
+
+        Parameters
+        ----------
+        a: ExpressionBase or native type
+
+        b: ExpressionBase or native type
+
+        include_named_exprs: bool
+            If True (the default), the comparison expands all named
+            expressions when generating the prefix notation
+
+        places: float
+            Number of decimal places required for equality of floating
+            point numbers in the expression. If None (the default), the
+            expressions must be exactly equal.
+
+        """
         from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
 
         return assertExpressionsStructurallyEqual(
             self, a, b, include_named_exprs, places
         )
+
+
+TestCase.assertStructuredAlmostEqual.__doc__ = re.sub(
+    'exception :.*', '', assertStructuredAlmostEqual.__doc__, flags=re.S
+)
 
 
 class BaselineTestDriver(object):
@@ -858,7 +961,7 @@ class BaselineTestDriver(object):
 
         return filtered
 
-    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=None):
+    def compare_baseline(self, test_output, baseline, abstol=1e-6, reltol=1e-8):
         # Filter files independently and then compare filtered contents
         out_filtered = self.filter_file_contents(
             test_output.strip().split('\n'), abstol

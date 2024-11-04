@@ -48,15 +48,11 @@ from pyomo.environ import (
 )
 import pyomo.environ as pyo
 
-_invalid_1j = r'InvalidNumber\((\([-+0-9.e]+\+)?1j\)?\)'
+nan = float('nan')
 
 
 class INFO(object):
     def __init__(self, symbolic=False):
-        if symbolic:
-            self.template = nl_writer.text_nl_debug_template
-        else:
-            self.template = nl_writer.text_nl_template
         self.subexpression_cache = {}
         self.external_functions = {}
         self.var_map = {}
@@ -64,7 +60,6 @@ class INFO(object):
         self.symbolic_solver_labels = symbolic
 
         self.visitor = nl_writer.AMPLRepnVisitor(
-            self.template,
             self.subexpression_cache,
             self.external_functions,
             self.var_map,
@@ -73,15 +68,13 @@ class INFO(object):
             True,
             None,
         )
+        self.template = self.visitor.template
 
     def __enter__(self):
-        assert nl_writer.AMPLRepn.ActiveVisitor is None
-        nl_writer.AMPLRepn.ActiveVisitor = self.visitor
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        assert nl_writer.AMPLRepn.ActiveVisitor is self.visitor
-        nl_writer.AMPLRepn.ActiveVisitor = None
+        pass
 
 
 class Test_AMPLRepnVisitor(unittest.TestCase):
@@ -178,7 +171,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -193,7 +186,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -208,7 +201,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -223,7 +216,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -238,7 +231,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -431,7 +424,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertRegex(str(repn.const), _invalid_1j)
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(1j))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -447,7 +440,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertRegex(str(repn.const), _invalid_1j)
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(1j))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -467,7 +460,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -491,7 +484,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -501,7 +494,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
             repn = info.visitor.walk_expression((expr, None, None, 1))
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
-        self.assertEqual(str(repn.const), 'InvalidNumber(nan)')
+        self.assertStructuredAlmostEqual(repn.const, InvalidNumber(nan))
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.nonlinear, None)
 
@@ -2703,3 +2696,104 @@ J0 1	#con3
             r"\(fixed body value 5.0 outside bounds \[10, None\]\)\.",
         ):
             nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+
+    def test_nested_external_expressions(self):
+        # This tests nested external functions in a single expression
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.p = Param(initialize=1, mutable=True)
+        m.x = Var(bounds=(None, 3))
+        m.y = Var(bounds=(3, None))
+        m.z = Var(initialize=1)
+        m.o = Objective(expr=m.z**2 * m.hypot(m.z, m.hypot(m.x, m.y)) ** 2)
+        m.c = Constraint(expr=m.x == m.y)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=False
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 3 1 1 0 1	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 3 0	#nonlinear vars in constraints, objectives, both
+ 0 1 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3	#nonzeros in Jacobian, obj. gradient
+ 1 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+C0	#c
+n0
+O0 0	#o
+o2	#*
+o5	#^
+v0	#z
+n2
+o5	#^
+f0 2	#hypot
+v0	#z
+f0 2	#hypot
+v1	#x
+v2	#y
+n2
+x1	#initial guess
+0 1	#z
+r	#1 ranges (rhs's)
+4 0	#c
+b	#3 bounds (on variables)
+3	#z
+1 3	#x
+2 3	#y
+k2	#intermediate Jacobian column lengths
+0
+1
+J0 2	#c
+1 1
+2 -1
+G0 3	#o
+0 0
+1 0
+2 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    @unittest.skipUnless(numpy_available, "test requires numpy")
+    def test_objective_numpy_const(self):
+        # This tests issue #3352
+        m = ConcreteModel()
+        m.e = Expression(expr=numpy.float64(0))
+        m.obj = Objective(expr=m.e)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(m, OUT, linear_presolve=False, scale_model=True)
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 0 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 0 0 #nonlinear vars in constraints, objectives, both
+ 0 0 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 0   #nonzeros in Jacobian, obj. gradient
+ 0 0   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+O0 0
+n0
+x0
+r
+b
+k-1
+""",
+                OUT.getvalue(),
+            )
+        )

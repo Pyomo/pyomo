@@ -47,7 +47,11 @@ from pyomo.repn.util import (
     BeforeChildDispatcher,
     ExitNodeDispatcher,
     ExprType,
+    FileDeterminism,
+    FileDeterminism_to_SortComponents,
     InvalidNumber,
+    OrderedVarRecorder,
+    VarRecorder,
     apply_node_operation,
     complex_number_error,
     initialize_exit_node_dispatcher,
@@ -60,6 +64,10 @@ logger = logging.getLogger(__name__)
 _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
+
+
+def _inv2str(val):
+    return f"{val._str() if hasattr(val, '_str') else val}"
 
 
 def _merge_dict(dest_dict, mult, src_dict):
@@ -207,8 +215,10 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
     ans = arg1[1] * arg2[1]
     if ans != ans:
         if not arg1[1] or not arg2[1]:
+            a = _inv2str(arg1[1])
+            b = _inv2str(arg2[1])
             deprecation_warning(
-                f"Encountered {str(arg1[1])}*{str(arg2[1])} in expression tree.  "
+                f"Encountered {a}*{b} in expression tree.  "
                 "Mapping the NaN result to 0 for compatibility "
                 "with the lp_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
@@ -533,36 +543,13 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         self[LinearExpression] = self._before_linear
         self[SumExpression] = self._before_general_expression
 
-    def record_var(self, visitor, var):
-        # We always add all indices to the var_map at once so that
-        # we can honor deterministic ordering of unordered sets
-        # (because the user could have iterated over an unordered
-        # set when constructing an expression, thereby altering the
-        # order in which we would see the variables)
-        vm = visitor.var_map
-        vo = visitor.var_order
-        l = len(vo)
-        try:
-            _iter = var.parent_component().values(visitor.sorter)
-        except AttributeError:
-            # Note that this only works for the AML, as kernel does not
-            # provide a parent_component()
-            _iter = (var,)
-        for v in _iter:
-            if v.fixed:
-                continue
-            vid = id(v)
-            vm[vid] = v
-            vo[vid] = l
-            l += 1
-
     @staticmethod
     def _before_var(visitor, child):
         _id = id(child)
         if _id not in visitor.var_map:
             if child.fixed:
                 return False, (_CONSTANT, visitor.check_constant(child.value, child))
-            visitor.before_child_dispatcher.record_var(visitor, child)
+            visitor.var_recorder.add(child)
         ans = visitor.Result()
         ans.linear[_id] = 1
         return False, (_LINEAR, ans)
@@ -591,7 +578,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     _CONSTANT,
                     arg1 * visitor.check_constant(arg2.value, arg2),
                 )
-            visitor.before_child_dispatcher.record_var(visitor, arg2)
+            visitor.var_recorder.add(arg2)
 
         # Trap multiplication by 0 and nan.
         if not arg1:
@@ -599,7 +586,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 arg2 = visitor.check_constant(arg2.value, arg2)
                 if arg2 != arg2:
                     deprecation_warning(
-                        f"Encountered {arg1}*{str(arg2.value)} in expression "
+                        f"Encountered {arg1}*{_inv2str(arg2)} in expression "
                         "tree.  Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -614,7 +601,6 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_linear(visitor, child):
         var_map = visitor.var_map
-        var_order = visitor.var_order
         ans = visitor.Result()
         const = 0
         linear = ans.linear
@@ -633,7 +619,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
-                                f"Encountered {arg1}*{str(arg2.value)} in expression "
+                                f"Encountered {arg1}*{_inv2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the lp_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",
@@ -646,7 +632,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     if arg2.fixed:
                         const += arg1 * visitor.check_constant(arg2.value, arg2)
                         continue
-                    visitor.before_child_dispatcher.record_var(visitor, arg2)
+                    visitor.var_recorder.add(arg2)
                     linear[_id] = arg1
                 elif _id in linear:
                     linear[_id] += arg1
@@ -660,7 +646,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     if arg.fixed:
                         const += visitor.check_constant(arg.value, arg)
                         continue
-                    visitor.before_child_dispatcher.record_var(visitor, arg)
+                    visitor.var_recorder.add(arg)
                     linear[_id] = 1
                 elif _id in linear:
                     linear[_id] += 1
@@ -711,12 +697,34 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
     expand_nonlinear_products = False
     max_exponential_expansion = 1
 
-    def __init__(self, subexpression_cache, var_map, var_order, sorter):
+    def __init__(
+        self,
+        subexpression_cache,
+        var_map=None,
+        var_order=None,
+        sorter=None,
+        var_recorder=None,
+    ):
         super().__init__()
         self.subexpression_cache = subexpression_cache
-        self.var_map = var_map
-        self.var_order = var_order
-        self.sorter = sorter
+        if any(_ is not None for _ in (var_map, var_order, sorter)):
+            if var_recorder is not None:
+                raise ValueError(
+                    "LinearRepnVisitor: cannot specify any of var_map, "
+                    "var_order, or sorter with var_recorder"
+                )
+            deprecation_warning(
+                "var_map, var_order, and sorter are deprecated arguments to "
+                "LinearRepnVisitor().  Please pass the VarRecorder object directly.",
+                version='6.7.4.dev0',
+            )
+            var_recorder = OrderedVarRecorder(var_map, var_order, sorter)
+        if var_recorder is None:
+            var_recorder = VarRecorder(
+                {}, FileDeterminism_to_SortComponents(FileDeterminism.ORDERED)
+            )
+        self.var_recorder = var_recorder
+        self.var_map = var_recorder.var_map
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
@@ -797,7 +805,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                     c != c for c in ans.linear.values()
                 ):
                     deprecation_warning(
-                        f"Encountered {str(mult)}*nan in expression tree.  "
+                        f"Encountered {mult}*nan in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",

@@ -36,6 +36,7 @@ from pyomo.core.base import (
     Block,
     Constraint,
     Expression,
+    NumericLabeler,
     Suffix,
     SortComponents,
 )
@@ -158,19 +159,37 @@ class InvalidNumber(PyomoObject):
             return InvalidNumber(self.value, causes)
 
     def __eq__(self, other):
-        return self._cmp(operator.eq, other)
+        ans = self._cmp(operator.eq, other)
+        try:
+            return bool(ans)
+        except ValueError:
+            # ValueError can be raised by numpy.ndarray when two arrays
+            # are returned.  In that case, ndarray returns a new ndarray
+            # of bool values.  We will fall back on using `all` to
+            # reduce it to a single bool.
+            try:
+                return all(ans)
+            except:
+                pass
+            raise
 
     def __lt__(self, other):
-        return self._cmp(operator.lt, other)
+        # Note that as < is ambiguous for arrays, we will attempt to
+        # cast the result to bool and if it was an array, allow the
+        # exception to propagate
+        return bool(self._cmp(operator.lt, other))
 
     def __gt__(self, other):
-        return self._cmp(operator.gt, other)
+        # See the comment in __lt__() on the use of bool()
+        return bool(self._cmp(operator.gt, other))
 
     def __le__(self, other):
-        return self._cmp(operator.le, other)
+        # See the comment in __lt__() on the use of bool()
+        return bool(self._cmp(operator.le, other))
 
     def __ge__(self, other):
-        return self._cmp(operator.ge, other)
+        # See the comment in __lt__() on the use of bool()
+        return bool(self._cmp(operator.ge, other))
 
     def _error(self, msg):
         causes = list(filter(None, self.causes))
@@ -180,14 +199,21 @@ class InvalidNumber(PyomoObject):
         raise InvalidValueError(msg)
 
     def __str__(self):
-        # We will support simple conversion of InvalidNumber to strings
-        # (for reporting purposes)
+        # We want attempts to convert InvalidNumber to a string
+        # representation to raise a InvalidValueError, unless we are in
+        # the middle of processing an exception.  In that case, it is
+        # very likely that an exception handler is generating an error
+        # message.  We will play nice and return a reasonable string.
+        if sys.exc_info()[1] is None:
+            self._error(f'Cannot emit {self._str()} in compiled representation')
+        else:
+            return self._str()
+
+    def _str(self):
         return f'InvalidNumber({self.value!r})'
 
     def __repr__(self):
-        # We want attempts to convert InvalidNumber to a string
-        # representation to raise a InvalidValueError.
-        return self._error(f'Cannot emit {str(self)} in compiled representation')
+        return str(self)
 
     def __format__(self, format_spec):
         # FIXME: We want to move to where converting InvalidNumber to
@@ -243,12 +269,12 @@ _CONSTANT = ExprType.CONSTANT
 
 
 class BeforeChildDispatcher(collections.defaultdict):
-    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    """Dispatcher for handling the :class:`StreamBasedExpressionVisitor`
     `beforeChild` callback
 
-    This dispatcher implements a specialization of :py:`defaultdict`
+    This dispatcher implements a specialization of :class:`defaultdict`
     that supports automatic type registration.  Any missing types will
-    return the :py:meth:`register_dispatcher` method, which (when called
+    return the :meth:`register_dispatcher` method, which (when called
     as a callback) will interrogate the type, identify the appropriate
     callback, add the callback to the dict, and return the result of
     calling the callback.  As the callback is added to the dict, no type
@@ -427,10 +453,10 @@ class BeforeChildDispatcher(collections.defaultdict):
 
 
 class ExitNodeDispatcher(collections.defaultdict):
-    """Dispatcher for handling the :py:class:`StreamBasedExpressionVisitor`
+    """Dispatcher for handling the :class:`StreamBasedExpressionVisitor`
     `exitNode` callback
 
-    This dispatcher implements a specialization of :py:`defaultdict`
+    This dispatcher implements a specialization of :class:`defaultdict`
     that supports automatic type registration.  As the identified
     callback is added to the dict, no type will incur the overhead of
     `register_dispatcher` more than once.
@@ -730,6 +756,107 @@ def ordered_active_constraints(model, config):
     _n = len(row_map)
     _row_getter = row_map.get
     return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
+
+
+class VarRecorder(object):
+    def __init__(self, var_map, sorter):
+        self.var_map = var_map
+        self.sorter = sorter
+
+    def add(self, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        try:
+            _iter = var.parent_component().values(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for v in _iter:
+            if not v.fixed:
+                vm[id(v)] = v
+
+
+class OrderedVarRecorder(object):
+    def __init__(self, var_map, var_order, sorter):
+        self.var_map = var_map
+        self.var_order = var_order
+        self.sorter = sorter
+
+    def add(self, var):
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        vo = self.var_order
+        try:
+            _iter = var.parent_component().values(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        for i, v in enumerate(_iter, start=len(vo)):
+            vid = id(v)
+            vo[vid] = i
+            if not v.fixed:
+                vm[vid] = v
+
+
+class TemplateVarRecorder(object):
+    def __init__(self, var_map, var_order, sorter):
+        self.var_map = var_map
+        self._var_order = var_order
+        self.sorter = sorter
+        self.env = {None: 0}
+        self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
+
+    @property
+    def var_order(self):
+        if self._var_order is None:
+            self._var_order = {vid: i for i, vid in enumerate(self.var_map)}
+        return self._var_order
+
+    def add(self, var):
+        # Note: the following is mostly a copy of
+        # LinearBeforeChildDispatcher.record_var, but with extra
+        # handling to update the env in the same loop
+        var_comp = var.parent_component()
+        # Double-check that the component has not already been processed
+        # (through an individual var data)
+        name = self.symbolmap.getSymbol(var_comp)
+        if name in self.env:
+            return
+
+        # We always add all indices to the var_map at once so that
+        # we can honor deterministic ordering of unordered sets
+        # (because the user could have iterated over an unordered
+        # set when constructing an expression, thereby altering the
+        # order in which we would see the variables)
+        vm = self.var_map
+        ve = self.env[name] = {}
+        vo = self._var_order
+        try:
+            _iter = var_comp.items(self.sorter)
+        except AttributeError:
+            # Note that this only works for the AML, as kernel does not
+            # provide a parent_component()
+            _iter = (var,)
+        if vo is None:
+            for i, (idx, v) in enumerate(_iter, start=len(vm)):
+                vm[id(v)] = v
+                ve[idx] = i
+        else:
+            for i, (idx, v) in enumerate(_iter, start=len(vm)):
+                vid = id(v)
+                vm[vid] = v
+                ve[idx] = i
+                vo[vid] = i
 
 
 # Copied from cpxlp.py:

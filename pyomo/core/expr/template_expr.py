@@ -881,19 +881,28 @@ class ReplaceTemplateExpression(ExpressionReplacementVisitor):
 
 
 def substitute_template_expression(expr, substituter, *args, **kwargs):
-    """Substitute IndexTemplates in an expression tree.
+    r"""Substitute IndexTemplates in an expression tree.
 
     This is a general utility function for walking the expression tree
     and substituting all occurrences of IndexTemplate and
     GetItemExpression nodes.
 
-    Args:
-        substituter: method taking (expression, *args) and returning
-           the new object
-        *args: these are passed directly to the substituter
+    Parameters
+    ----------
+    expr : NumericExpression
+        the source template expression
 
-    Returns:
+    substituter: Callable
+        method taking ``(expression, *args)`` and returning the new object
+
+    \*args:
+        positional arguments passed directly to the substituter
+
+    Returns
+    -------
+    NumericExpression :
         a new expression tree with all substitutions done
+
     """
     visitor = ReplaceTemplateExpression(substituter, *args, **kwargs)
     return visitor.walk_expression(expr)
@@ -1207,45 +1216,3 @@ def templatize_constraint(con):
     if expr.__class__ is tuple:
         expr = tuple_to_relational_expr(expr)
     return expr, indices
-
-
-'''
-class TemplatizedDataStore(MutableMapping):
-    def __init__(self, component, expr, indices):
-        self._component = component
-        self._expr = expr
-        self._indices = indices
-
-    def __getitem__(self, item):
-        if self._component._data is self:
-            self._replace_with_dict()
-        return self._component._data[item]
-
-    def __setitem__(self, item, value):
-        if self._component._data is self:
-            self._replace_with_dict()
-        self._component._data[item] = value
-
-    def __delitem__(self, index):
-        if self._component._data is self:
-            self._replace_with_dict()
-        del self._component._data[item]
-
-    def __iter__(self):
-        return iter(self._component.index_set())
-
-    def __len__(self):
-        return len(self._component.index_set())
-
-    def __bool__(self):
-        return bool(self._component.index_set())
-
-    def _replace_with_dict(self):
-        comp = self._component
-        comp._data = {}
-        rule = comp.rule
-        block = comp.parent_block()
-        with PauseGC():
-            for index in comp.index_set():
-                comp._setitem_when_not_present(index, rule(block, index))
-'''

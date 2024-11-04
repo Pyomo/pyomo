@@ -19,6 +19,7 @@ from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
+from pyomo.common.errors import MouseTrap
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -77,7 +78,6 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
             return
         # Free the associated model
         if self._grb_model is not None:
-            self._grb_cons = None
             self._grb_cons = None
             self._grb_vars = None
             self._pyo_cons = None
@@ -253,7 +253,6 @@ class GurobiDirect(SolverBase):
         timer.start('prepare_matrices')
         inf = float('inf')
         ninf = -inf
-        nCols = len(repn.columns)
         bounds = list(map(operator.attrgetter('bounds'), repn.columns))
         lb = [ninf if _b is None else _b for _b in map(operator.itemgetter(0), bounds)]
         ub = [inf if _b is None else _b for _b in map(operator.itemgetter(1), bounds)]

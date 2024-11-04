@@ -8,17 +8,175 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""
-The pyomo.contrib.pynumero.sparse.block_vector module includes methods that extend
-linear algebra operations in numpy for case of structured problems
-where linear algebra operations present an inherent block structure.
-This interface consider vectors of the form:
+"""Implementation of a general "block vector"
 
-v = [v_1, v_2, v_3, ... , v_n]
 
-where v_i are numpy arrays of dimension 1
+The `pyomo.contrib.pynumero.sparse.block_vector` module includes methods
+that extend linear algebra operations in numpy for case of structured
+problems where linear algebra operations present an inherent block
+structure.  This interface consider vectors of the form:
+
+.. math::
+
+   v = [v_1, v_2, v_3, ... , v_n]
+
+where `v_i` are numpy arrays of dimension 1
 
 .. rubric:: Contents
+
+Methods specific to :py:class:`BlockVector`:
+
+   * :py:meth:`~BlockVector.set_block`
+   * :py:meth:`~BlockVector.get_block`
+   * :py:meth:`~BlockVector.block_sizes`
+   * :py:meth:`~BlockVector.get_block_size`
+   * :py:meth:`~BlockVector.is_block_defined`
+   * :py:meth:`~BlockVector.copyfrom`
+   * :py:meth:`~BlockVector.copyto`
+   * :py:meth:`~BlockVector.copy_structure`
+   * :py:meth:`~BlockVector.set_blocks`
+   * :py:meth:`~BlockVector.pprint`
+
+Attributes specific to :py:class:`BlockVector`:
+
+   * :py:attr:`~BlockVector.nblocks`
+   * :py:attr:`~BlockVector.bshape`
+   * :py:attr:`~BlockVector.has_none`
+
+
+NumPy compatible methods:
+
+   * :py:meth:`~numpy.ndarray.dot`
+   * :py:meth:`~numpy.ndarray.sum`
+   * :py:meth:`~numpy.ndarray.all`
+   * :py:meth:`~numpy.ndarray.any`
+   * :py:meth:`~numpy.ndarray.max`
+   * :py:meth:`~numpy.ndarray.astype`
+   * :py:meth:`~numpy.ndarray.clip`
+   * :py:meth:`~numpy.ndarray.compress`
+   * :py:meth:`~numpy.ndarray.conj`
+   * :py:meth:`~numpy.ndarray.conjugate`
+   * :py:meth:`~numpy.ndarray.nonzero`
+   * :py:meth:`~numpy.ndarray.ptp`
+   * :py:meth:`~numpy.ndarray.round`
+   * :py:meth:`~numpy.ndarray.std`
+   * :py:meth:`~numpy.ndarray.var`
+   * :py:meth:`~numpy.ndarray.tofile`
+   * :py:meth:`~numpy.ndarray.min`
+   * :py:meth:`~numpy.ndarray.mean`
+   * :py:meth:`~numpy.ndarray.prod`
+   * :py:meth:`~numpy.ndarray.fill`
+   * :py:meth:`~numpy.ndarray.tolist`
+   * :py:meth:`~numpy.ndarray.flatten`
+   * :py:meth:`~numpy.ndarray.ravel`
+   * :py:meth:`~numpy.ndarray.argmax`
+   * :py:meth:`~numpy.ndarray.argmin`
+   * :py:meth:`~numpy.ndarray.cumprod`
+   * :py:meth:`~numpy.ndarray.cumsum`
+   * :py:meth:`~numpy.ndarray.copy`
+
+For example,
+
+.. code-block:: python
+
+   >>> import numpy as np
+   >>> from pyomo.contrib.pynumero.sparse import BlockVector
+   >>> v = BlockVector(2)
+   >>> v.set_block(0, np.random.normal(size=100))
+   >>> v.set_block(1, np.random.normal(size=30))
+   >>> avg = v.mean()
+
+NumPy compatible functions:
+
+   * :py:func:`~numpy.log10`
+   * :py:func:`~numpy.sin`
+   * :py:func:`~numpy.cos`
+   * :py:func:`~numpy.exp`
+   * :py:func:`~numpy.ceil`
+   * :py:func:`~numpy.floor`
+   * :py:func:`~numpy.tan`
+   * :py:func:`~numpy.arctan`
+   * :py:func:`~numpy.arcsin`
+   * :py:func:`~numpy.arccos`
+   * :py:func:`~numpy.sinh`
+   * :py:func:`~numpy.cosh`
+   * :py:func:`~numpy.abs`
+   * :py:func:`~numpy.tanh`
+   * :py:func:`~numpy.arccosh`
+   * :py:func:`~numpy.arcsinh`
+   * :py:func:`~numpy.arctanh`
+   * :py:func:`~numpy.fabs`
+   * :py:func:`~numpy.sqrt`
+   * :py:func:`~numpy.log`
+   * :py:func:`~numpy.log2`
+   * :py:func:`~numpy.absolute`
+   * :py:func:`~numpy.isfinite`
+   * :py:func:`~numpy.isinf`
+   * :py:func:`~numpy.isnan`
+   * :py:func:`~numpy.log1p`
+   * :py:func:`~numpy.logical_not`
+   * :py:func:`~numpy.expm1`
+   * :py:func:`~numpy.exp2`
+   * :py:func:`~numpy.sign`
+   * :py:func:`~numpy.rint`
+   * :py:func:`~numpy.square`
+   * :py:func:`~numpy.positive`
+   * :py:func:`~numpy.negative`
+   * :py:func:`~numpy.rad2deg`
+   * :py:func:`~numpy.deg2rad`
+   * :py:func:`~numpy.conjugate`
+   * :py:func:`~numpy.reciprocal`
+   * :py:func:`~numpy.signbit`
+   * :py:func:`~numpy.add`
+   * :py:func:`~numpy.multiply`
+   * :py:func:`~numpy.divide`
+   * :py:func:`~numpy.subtract`
+   * :py:func:`~numpy.greater`
+   * :py:func:`~numpy.greater_equal`
+   * :py:func:`~numpy.less`
+   * :py:func:`~numpy.less_equal`
+   * :py:func:`~numpy.not_equal`
+   * :py:func:`~numpy.maximum`
+   * :py:func:`~numpy.minimum`
+   * :py:func:`~numpy.fmax`
+   * :py:func:`~numpy.fmin`
+   * :py:func:`~numpy.equal`
+   * :py:func:`~numpy.logical_and`
+   * :py:func:`~numpy.logical_or`
+   * :py:func:`~numpy.logical_xor`
+   * :py:func:`~numpy.logaddexp`
+   * :py:func:`~numpy.logaddexp2`
+   * :py:func:`~numpy.remainder`
+   * :py:func:`~numpy.heaviside`
+   * :py:func:`~numpy.hypot`
+
+For example,
+
+.. code-block:: python
+
+   >>> import numpy as np
+   >>> from pyomo.contrib.pynumero.sparse import BlockVector
+   >>> v = BlockVector(2)
+   >>> v.set_block(0, np.random.normal(size=100))
+   >>> v.set_block(1, np.random.normal(size=30))
+   >>> inf_norm = np.max(np.abs(v))
+
+.. autosummary::
+
+   BlockVector
+   BlockVector.set_block
+   BlockVector.get_block
+   BlockVector.block_sizes
+   BlockVector.get_block_size
+   BlockVector.is_block_defined
+   BlockVector.copyfrom
+   BlockVector.copyto
+   BlockVector.copy_structure
+   BlockVector.set_blocks
+   BlockVector.pprint
+   BlockVector.nblocks
+   BlockVector.bshape
+   BlockVector.has_none
 
 """
 
@@ -38,7 +196,7 @@ def assert_block_structure(vec):
         raise NotFullyDefinedBlockVectorError(msg)
 
 
-class BlockVector(np.ndarray, BaseBlockVector):
+class BlockVector(BaseBlockVector, np.ndarray):
     """
     Structured vector interface. This interface can be used to
     perform operations on vectors composed by vectors. For example,
@@ -1592,86 +1750,3 @@ class BlockVector(np.ndarray, BaseBlockVector):
             mpi_bv.set_block(bid, self.get_block(bid))
 
         return mpi_bv
-
-    # the following methods are not supported by blockvector
-
-    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.argpartition(self, kth, axis=axis, kind=kind, order=order)
-
-    def argsort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.argsort(self, axis=axis, kind=kind, order=order)
-
-    def byteswap(self, inplace=False):
-        BaseBlockVector.byteswap(self, inplace=inplace)
-
-    def choose(self, choices, out=None, mode='raise'):
-        BaseBlockVector.choose(self, choices, out=out, mode=mode)
-
-    def diagonal(self, offset=0, axis1=0, axis2=1):
-        BaseBlockVector.diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
-
-    def dump(self, file):
-        BaseBlockVector.dump(self, file)
-
-    def dumps(self):
-        BaseBlockVector.dumps(self)
-
-    def getfield(self, dtype, offset=0):
-        BaseBlockVector.getfield(self, dtype, offset=offset)
-
-    def item(self, *args):
-        BaseBlockVector.item(self, *args)
-
-    def itemset(self, *args):
-        BaseBlockVector.itemset(self, *args)
-
-    def newbyteorder(self, new_order='S'):
-        BaseBlockVector.newbyteorder(self, new_order=new_order)
-
-    def put(self, indices, values, mode='raise'):
-        BaseBlockVector.put(self, indices, values, mode=mode)
-
-    def partition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.partition(self, kth, axis=axis, kind=kind, order=order)
-
-    def repeat(self, repeats, axis=None):
-        BaseBlockVector.repeat(self, repeats, axis=axis)
-
-    def reshape(self, shape, order='C'):
-        BaseBlockVector.reshape(self, shape, order=order)
-
-    def resize(self, new_shape, refcheck=True):
-        BaseBlockVector.resize(self, new_shape, refcheck=refcheck)
-
-    def searchsorted(self, v, side='left', sorter=None):
-        BaseBlockVector.searchsorted(self, v, side=side, sorter=sorter)
-
-    def setfield(self, val, dtype, offset=0):
-        BaseBlockVector.setfield(self, val, dtype, offset=offset)
-
-    def setflags(self, write=None, align=None, uic=None):
-        BaseBlockVector.setflags(self, write=write, align=align, uic=uic)
-
-    def sort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.sort(self, axis=axis, kind=kind, order=order)
-
-    def squeeze(self, axis=None):
-        BaseBlockVector.squeeze(self, axis=axis)
-
-    def swapaxes(self, axis1, axis2):
-        BaseBlockVector.swapaxes(self, axis1, axis2)
-
-    def tobytes(self, order='C'):
-        BaseBlockVector.tobytes(self, order=order)
-
-    def take(self, indices, axis=None, out=None, mode='raise'):
-        BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)
-
-    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
-        raise NotImplementedError('trace not implemented for BlockVector')
-
-    def transpose(*axes):
-        BaseBlockVector.transpose(*axes)
-
-    def tostring(order='C'):
-        BaseBlockVector.tostring(order=order)

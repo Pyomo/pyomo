@@ -40,10 +40,13 @@ from pyomo.core.expr.numvalue import (
 )
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
-    InitializerBase,
-    Initializer,
     CountedCallInitializer,
     IndexedCallInitializer,
+    Initializer,
+    InitializerBase,
+    ParameterizedIndexedCallInitializer,
+    ParameterizedInitializer,
+    ParameterizedScalarCallInitializer,
 )
 from pyomo.core.base.range import (
     NumericRange,
@@ -254,7 +257,11 @@ def set_options(**kwds):
     decorator allows an arbitrary dictionary of values to passed
     through to the set constructor.
 
-    Examples:
+    Examples
+    --------
+
+    .. code::
+
         @set_options(dimen=3)
         def B_index(model):
             return [(i,i+1,i*i) for i in model.A]
@@ -262,6 +269,7 @@ def set_options(**kwds):
         @set_options(domain=Integers)
         def B_index(model):
             return range(10)
+
     """
 
     def decorator(func):
@@ -277,11 +285,15 @@ def simple_set_rule(rule):
     This supports a simpler syntax in set rules, though these can be
     more difficult to debug when errors occur.
 
-    Example:
+    Examples
+    --------
 
-    @simple_set_rule
-    def A_rule(model, i, j):
-        ...
+    .. code::
+
+        @simple_set_rule
+        def A_rule(model, i, j):
+            ...
+
     """
     return rule_wrapper(rule, {None: Set.End})
 
@@ -507,6 +519,7 @@ class TuplizeValuesInitializer(InitializerBase):
 
 class _NotFound(object):
     "Internal type flag used to indicate if an object is not found in a set"
+
     pass
 
 
@@ -1297,7 +1310,7 @@ class _FiniteSetMixin(object):
 class FiniteSetData(_FiniteSetMixin, SetData):
     """A general unordered iterable Set"""
 
-    __slots__ = ('_values', '_domain', '_validate', '_filter', '_dimen')
+    __slots__ = ('_values', '_domain', '_dimen')
 
     def __init__(self, component):
         SetData.__init__(self, component=component)
@@ -1306,8 +1319,6 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         if not hasattr(self, '_values'):
             self._values = set()
         self._domain = Any
-        self._validate = None
-        self._filter = None
         self._dimen = UnknownSetDimen
 
     def get(self, value, default=None):
@@ -1386,29 +1397,30 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         self.update(val)
 
     def _initialize(self, val):
-        self.update(val)
+        try:
+            # We want to explicitly call the update() on *this class* to
+            # bypass potential double logging of the use of unordered
+            # data with ordered Sets
+            FiniteSetData.update(self, val)
+        except TypeError as e:
+            if 'not iterable' in str(e):
+                logger.error(
+                    "Initializer for Set %s returned non-iterable object "
+                    "of type %s."
+                    % (
+                        self.name,
+                        (val if val.__class__ is type else type(val).__name__),
+                    )
+                )
+            raise
 
     def update(self, values):
-        # _values was initialized above...
-        #
         # Special case: set operations that are not first attached
         # to the model must be constructed.
         if isinstance(values, SetOperator):
             values.construct()
-        try:
-            val_iter = iter(values)
-        except TypeError:
-            logger.error(
-                "Initializer for Set %s%s returned non-iterable object "
-                "of type %s."
-                % (
-                    self.name,
-                    ("[%s]" % (index,) if self.is_indexed() else ""),
-                    (values if values.__class__ is type else type(values).__name__),
-                )
-            )
-            raise
-
+        # It is important that val_iter is an actual iterator
+        val_iter = iter(values)
         if self._dimen is not None:
             if normalize_index.flatten:
                 val_iter = self._cb_normalized_dimen_verifier(self._dimen, val_iter)
@@ -1422,11 +1434,12 @@ class FiniteSetData(_FiniteSetMixin, SetData):
         if self._domain is not Any:
             val_iter = self._cb_domain_verifier(self._domain, val_iter)
 
-        if self._filter is not None:
-            val_iter = filter(partial(self._filter, self.parent_block()), val_iter)
+        comp = self.parent_component()
+        if comp._filter is not None:
+            val_iter = self._cb_validate_filter('filter', val_iter)
 
-        if self._validate is not None:
-            val_iter = self._cb_validate(self._validate, self.parent_block(), val_iter)
+        if comp._validate is not None:
+            val_iter = self._cb_validate_filter('validate', val_iter)
 
         # We wrap this check in a try-except because some values
         #  (like lists) are not hashable and can raise exceptions.
@@ -1454,37 +1467,103 @@ class FiniteSetData(_FiniteSetMixin, SetData):
                 return
             yield value
 
-    def _cb_validate(self, validate, block, val_iter):
+    def _cb_validate_filter(self, mode, val_iter):
+        fail_false = mode == 'validate'
+        comp = self.parent_component()
+        fcn = getattr(comp, '_' + mode)
+        block = comp.parent_block()
+        idx = self.index()
         for value in val_iter:
             try:
-                flag = validate(block, value)
-            except:
-                logger.error(
-                    "Exception raised while validating element '%s' "
-                    "for Set %s" % (value, self.name)
-                )
-                raise
-            if not flag:
-                raise ValueError(
-                    "The value=%s violates the validation rule of Set %s"
-                    % (value, self.name)
-                )
-            yield value
+                flag = fcn(block, idx, value)
+                if flag:
+                    yield value
+                    continue
+            except Exception as e:
+                flag = None
+                exc = e
+
+            if isinstance(value, tuple):
+                vstar = value
+            else:
+                vstar = (value,)
+
+            # First: try the old format: *values and no index
+            if fcn.__class__ is ParameterizedIndexedCallInitializer:
+                try:
+                    flag = fcn(block, (), *vstar)
+                    if flag:
+                        self._filter_validate_scalar_api_deprecation(mode, warning=True)
+                        yield value
+                        continue
+                except TypeError:
+                    pass
+                except Exception as e:
+                    exc = e
+
+            # Now try *values and index
+            try:
+                flag = fcn(block, idx, *value)
+                if flag:
+                    deprecation_warning(
+                        f"{self.__class__.__name__} {self.name}: '{mode}=' "
+                        "callback signature matched (block, *value, *index).  "
+                        "Please update the callback to match the signature "
+                        "(block, value, *index).",
+                        version='6.8.0',
+                    )
+                    if fcn.__class__ is not ParameterizedInitializer:
+                        orig_fcn = fcn._fcn
+                        fcn._fcn = lambda m, v, *i: orig_fcn(m, *v, *i)
+                    yield value
+                    continue
+            except TypeError:
+                pass
+            except Exception as e:
+                exc = e
+            if flag is not None:
+                if fail_false:
+                    raise ValueError(
+                        "The value=%s violates the validation rule of Set %s"
+                        % (value, self.name)
+                    )
+                continue
+            logger.error(
+                "Exception raised while validating element '%s' "
+                "for Set %s" % (value, self.name)
+            )
+            raise exc from None
+
+    def _filter_validate_scalar_api_deprecation(self, mode, warning):
+        comp = self.parent_component()
+        fcn = getattr(comp, '_' + mode)
+        if warning:
+            deprecation_warning(
+                f"{self.__class__.__name__} {self.name}: '{mode}=' "
+                "callback signature matched (block, *value).  "
+                "Please update the callback to match the signature "
+                f"(block, value{', *index' if comp.is_indexed() else ''}).",
+                version='6.8.0',
+            )
+        orig_fcn = fcn._fcn
+        fcn = ParameterizedScalarCallInitializer(lambda m, v: orig_fcn(m, *v), True)
+        setattr(comp, '_' + mode, fcn)
 
     def _cb_normalized_dimen_verifier(self, dimen, val_iter):
-        # It is important that the iterator is an actual iterator
-        val_iter = iter(val_iter)
         for value in val_iter:
-            if value.__class__ is tuple:
-                if dimen == len(value):
-                    yield value[0] if dimen == 1 else value
+            if value.__class__ in native_types:
+                if dimen == 1:
+                    yield value
                     continue
-            elif dimen == 1 and value.__class__ in native_types:
-                yield value
-                continue
+                normalized_value = value
+            else:
+                normalized_value = normalize_index(value)
+                # Note: normalize_index() will never return a 1-tuple
+                if normalized_value.__class__ is tuple:
+                    if dimen == len(normalized_value):
+                        yield normalized_value[0] if dimen == 1 else normalized_value
+                        continue
 
-            # Note: normalize_index() will never return a 1-tuple
-            normalized_value = normalize_index(value)
             _d = len(normalized_value) if normalized_value.__class__ is tuple else 1
             if _d == dimen:
                 yield normalized_value
@@ -1833,7 +1912,7 @@ class InsertionOrderSetData(OrderedSetData):
                 "This WILL potentially lead to nondeterministic behavior "
                 "in Pyomo" % (self.name, type(val).__name__)
             )
-        super().update(val)
+        super()._initialize(val)
 
     def set_value(self, val):
         if type(val) in Set._UnorderedInitializers:
@@ -1901,8 +1980,12 @@ class SortedSetData(_SortedSetMixin, OrderedSetData):
 
     def _update_impl(self, values):
         for val in values:
+            # Note that we reset _ordered_values within the loop because
+            # of an old example where the initializer rule makes
+            # reference to values previously inserted into the Set
+            # (which triggered the creation of the _ordered_values)
+            self._ordered_values = None
             self._values[val] = None
-        self._ordered_values = None
 
     # Note: removing data does not affect the sorted flag
     # def remove(self, val):
@@ -1981,7 +2064,8 @@ class Set(IndexedComponent):
 
     within : initialiser(set), optional
         A set that defines the valid values that can be contained
-        in this set
+        in this set. If the latter is indexed, the former can be indexed or
+        non-indexed, in which case it applies to all indices.
     domain : initializer(set), optional
         A set that defines the valid values that can be contained
         in this set
@@ -2162,8 +2246,8 @@ class Set(IndexedComponent):
                 allow_generators=True,
             )
         )
-        self._init_validate = Initializer(kwds.pop('validate', None))
-        self._init_filter = Initializer(kwds.pop('filter', None))
+        self._validate = Initializer(kwds.pop('validate', None), additional_args=1)
+        self._filter = Initializer(kwds.pop('filter', None), additional_args=1)
 
         if 'virtual' in kwds:
             deprecation_warning(
@@ -2185,13 +2269,19 @@ class Set(IndexedComponent):
             self._init_values._init = CountedCallInitializer(
                 self, self._init_values._init
             )
-        # HACK: the DAT parser needs to know the domain of a set in
-        # order to correctly parse the data stream.
+
         if not self.is_indexed():
+            # HACK: the DAT parser needs to know the domain of a set in
+            # order to correctly parse the data stream.
             if self._init_domain.constant():
                 self._domain = self._init_domain(self.parent_block(), None, self)
             if self._init_dimen.constant():
                 self._dimen = self._init_dimen(self.parent_block(), None)
+
+            if self._filter.__class__ is ParameterizedIndexedCallInitializer:
+                self._filter_validate_scalar_api_deprecation('filter', warning=False)
+            if self._validate.__class__ is ParameterizedIndexedCallInitializer:
+                self._filter_validate_scalar_api_deprecation('validate', warning=False)
 
     @deprecated(
         "check_values() is deprecated: Sets only contain valid members", version='5.7'
@@ -2271,7 +2361,7 @@ class Set(IndexedComponent):
 
         domain = self._init_domain(_block, index, self)
         if domain is not None:
-            domain.construct()
+            domain.parent_component().construct()
         if _d is UnknownSetDimen and domain is not None and domain.dimen is not None:
             _d = domain.dimen
 
@@ -2283,30 +2373,6 @@ class Set(IndexedComponent):
         obj._domain = domain
         if _d is not UnknownSetDimen:
             obj._dimen = _d
-        if self._init_validate is not None:
-            try:
-                obj._validate = Initializer(self._init_validate(_block, index))
-                if obj._validate.constant():
-                    # _init_validate was the actual validate function; use it.
-                    obj._validate = self._init_validate
-            except:
-                # We will assume any exceptions raised when getting the
-                # validator for this index indicate that the function
-                # should have been passed directly to the underlying sets.
-                obj._validate = self._init_validate
-        if self._init_filter is not None:
-            try:
-                obj._filter = Initializer(self._init_filter(_block, index))
-                if obj._filter.constant():
-                    # _init_filter was the actual filter function; use it.
-                    obj._filter = self._init_filter
-            except:
-                # We will assume any exceptions raised when getting the
-                # filter for this index indicate that the function
-                # should have been passed directly to the underlying sets.
-                obj._filter = self._init_filter
-        else:
-            obj._filter = None
         if self._init_values is not None:
             # record the user-provided dimen in the initializer
             self._init_values._dimen = _d
@@ -2989,8 +3055,8 @@ class RangeSet(Component):
             )
         kwds.pop('finite', None)
         self._init_data = (args, kwds.pop('ranges', ()))
-        self._init_validate = Initializer(kwds.pop('validate', None))
-        self._init_filter = Initializer(kwds.pop('filter', None))
+        self._validate = Initializer(kwds.pop('validate', None), additional_args=1)
+        self._filter = Initializer(kwds.pop('filter', None), additional_args=1)
         self._init_bounds = kwds.pop('bounds', None)
         if self._init_bounds is not None:
             self._init_bounds = BoundsInitializer(self._init_bounds)
@@ -3141,23 +3207,13 @@ class RangeSet(Component):
 
         self._ranges = ranges
 
-        if self._init_filter is not None:
+        if self._filter is not None:
             if not self.isfinite():
                 raise ValueError(
                     "The 'filter' keyword argument is not valid for "
                     "non-finite RangeSet component (%s)" % (self.name,)
                 )
-
-            try:
-                _filter = Initializer(self._init_filter(_block, None))
-                if _filter.constant():
-                    # _init_filter was the actual filter function; use it.
-                    _filter = self._init_filter
-            except:
-                # We will assume any exceptions raised when getting the
-                # filter for this index indicate that the function
-                # should have been passed directly to the underlying sets.
-                _filter = self._init_filter
+            _filter = self._filter
 
             # If this is a finite set, then we can go ahead and filter
             # all the ranges.  This allows pprint and len to be correct,
@@ -3168,7 +3224,7 @@ class RangeSet(Component):
             while old_ranges:
                 r = old_ranges.pop()
                 for i, val in enumerate(FiniteRangeSetData._range_gen(r)):
-                    if not _filter(_block, val):
+                    if not _filter(_block, (), val):
                         split_r = r.range_difference((NumericRange(val, val, 0),))
                         if len(split_r) == 2:
                             new_ranges.append(split_r[0])
@@ -3184,38 +3240,25 @@ class RangeSet(Component):
                     new_ranges.append(r)
             self._ranges = new_ranges
 
-        if self._init_validate is not None:
+        if self._validate is not None:
             if not self.isfinite():
                 raise ValueError(
                     "The 'validate' keyword argument is not valid for "
                     "non-finite RangeSet component (%s)" % (self.name,)
                 )
-
             try:
-                _validate = Initializer(self._init_validate(_block, None))
-                if _validate.constant():
-                    # _init_validate was the actual validate function; use it.
-                    _validate = self._init_validate
+                for val in self:
+                    if not self._validate(_block, None, val):
+                        raise ValueError(
+                            "The value=%s violates the validation rule of "
+                            "Set %s" % (val, self.name)
+                        )
             except:
-                # We will assume any exceptions raised when getting the
-                # validator for this index indicate that the function
-                # should have been passed directly to the underlying set.
-                _validate = self._init_validate
-
-            for val in self:
-                try:
-                    flag = _validate(_block, val)
-                except:
-                    logger.error(
-                        "Exception raised while validating element '%s' "
-                        "for Set %s" % (val, self.name)
-                    )
-                    raise
-                if not flag:
-                    raise ValueError(
-                        "The value=%s violates the validation rule of "
-                        "Set %s" % (val, self.name)
-                    )
+                logger.error(
+                    "Exception raised while validating element '%s' "
+                    "for Set %s" % (val, self.name)
+                )
+                raise
 
         # Defer the warning about non-constant args until after the
         # component has been constructed, so that the conversion of the

@@ -171,6 +171,13 @@ model.R = Set(model.B, initialize=R_init)
 #
 model.S = Set(model.B, within=model.A)
 
+#
+# Validation of a set array can also be linked to another set array. If so, the
+# elements under each index must also be found under the corresponding index in
+# the validation set array:
+#
+model.X = Set(model.B, within=model.S)
+
 
 #
 # Validation of set arrays can also be performed with the _validate_ option.
@@ -180,7 +187,17 @@ def T_validate(model, value):
     return value in model.A
 
 
-model.T = Set(model.B, validate=M_validate)
+model.T = Set(model.B, validate=T_validate)
+
+
+#
+# Validation also provides the index within the IndexedSet being validated:
+#
+def T_indexed_validate(model, value, i):
+    return value in model.A and value < i
+
+
+model.T_indexed_validate = Set(model.B, validate=T_indexed_validate)
 
 
 ##

@@ -43,6 +43,7 @@ from pyomo.repn.linear_template import LinearTemplateRepnVisitor
 from pyomo.repn.util import (
     FileDeterminism,
     FileDeterminism_to_SortComponents,
+    TemplateVarRecorder,
     categorize_valid_components,
     initialize_var_map_from_column_order,
     ordered_active_constraints,
@@ -68,7 +69,7 @@ class LinearStandardFormInfo(object):
 
         The objective coefficients.  Note that this is a sparse array
         and may contain multiple rows (for multiobjective problems).  The
-        objectives may be calculated by "c @ x"
+        objectives may be calculated by ``c @ x``
 
     c_offset : numpy.ndarray
 
@@ -77,7 +78,7 @@ class LinearStandardFormInfo(object):
     A : scipy.sparse.csc_array
 
         The constraint coefficients.  The constraint bodies may be
-        calculated by "A @ x"
+        calculated by ``A @ x``
 
     rhs : numpy.ndarray
 
@@ -124,18 +125,35 @@ class LinearStandardFormInfo(object):
 
     @property
     def x(self):
+        "Alias for :attr:`columns`"
         return self.columns
 
     @property
     def b(self):
+        "Alias for :attr:`rhs`"
         return self.rhs
 
 
 @WriterFactory.register(
-    'compile_standard_form', 'Compile an LP to standard form (`min cTx s.t. Ax <= b`)'
+    'compile_standard_form',
+    r'Compile an LP to standard form (:math:`\min c^Tx s.t. Ax \le b)`',
 )
 class LinearStandardFormCompiler(object):
+    r"""Compiler to convert an LP to the matrix representation of the
+    standard form:
+
+    .. math::
+
+        \min\ & c^Tx \\
+        s.t.\ & Ax \le b
+
+    and return the compiled representation as NumPy arrays and SciPy
+    sparse matrices.
+
+    """
+
     CONFIG = ConfigBlock('compile_standard_form')
+
     CONFIG.declare(
         'nonnegative_vars',
         ConfigValue(
@@ -149,7 +167,8 @@ class LinearStandardFormCompiler(object):
         ConfigValue(
             default=False,
             domain=bool,
-            description='Add slack variables and return `min cTx s.t. Ax == b`',
+            description='Add slack variables and return '
+            r':math:`\min c^Tx; s.t. Ax = b`',
         ),
     )
     CONFIG.declare(
@@ -186,10 +205,13 @@ class LinearStandardFormCompiler(object):
             doc="""
             How much effort do we want to put into ensuring the
             resulting matrices are produced deterministically:
-                NONE (0) : None
-                ORDERED (10): rely on underlying component ordering (default)
-                SORT_INDICES (20) : sort keys of indexed components
-                SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
+
+               - ``NONE`` (0): None
+               - ``ORDERED`` (10): rely on underlying component ordering (default)
+               - ``SORT_INDICES`` (20) : sort keys of indexed components
+               - ``SORT_SYMBOLS`` (30) : sort keys AND sort names (not
+                 declaration order)
+
             """,
         ),
     )
@@ -200,7 +222,7 @@ class LinearStandardFormCompiler(object):
             description='Preferred constraint ordering',
             doc="""
             List of constraints in the order that they should appear in
-            the resulting `A` matrix.  Unspecified constraints will
+            the resulting ``A`` matrix.  Unspecified constraints will
             appear at the end.""",
         ),
     )
@@ -221,7 +243,7 @@ class LinearStandardFormCompiler(object):
 
     @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream=None, **options):
-        """Convert a model to standard form (`min cTx s.t. Ax <= b`)
+        """Convert a model to standard form
 
         Returns
         -------
@@ -232,7 +254,7 @@ class LinearStandardFormCompiler(object):
         model: ConcreteModel
             The concrete Pyomo model to write out.
 
-        ostream: None
+        ostream:
             This is provided for API compatibility with other writers
             and is ignored here.
 
@@ -249,12 +271,19 @@ class LinearStandardFormCompiler(object):
 class _LinearStandardFormCompiler_impl(object):
     # Making these methods class attributes so that others can change the hooks
     _get_visitor = LinearRepnVisitor
-    _to_vector = np.fromiter
-    _csc_matrix = scipy.sparse.csc_array
-    _csr_matrix = scipy.sparse.csr_array
+    _to_vector = None
+    _csc_matrix = None
+    _csr_matrix = None
 
     def __init__(self, config):
         self.config = config
+        # We defer the first instantiation of these attributes so we do
+        # not trigger the numpy / scipy imports when the module is
+        # imported
+        if _LinearStandardFormCompiler_impl._to_vector is None:
+            _LinearStandardFormCompiler_impl._to_vector = np.fromiter
+            _LinearStandardFormCompiler_impl._csc_matrix = scipy.sparse.csc_array
+            _LinearStandardFormCompiler_impl._csr_matrix = scipy.sparse.csr_array
 
     def write(self, model):
         timing_logger = logging.getLogger('pyomo.common.timing.writer')
@@ -300,10 +329,10 @@ class _LinearStandardFormCompiler_impl(object):
 
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
-        var_order = {_id: i for i, _id in enumerate(var_map)}
 
-        visitor = self._get_visitor({}, var_map, var_order, sorter)
-        template_visitor = LinearTemplateRepnVisitor({}, var_map, var_order, sorter)
+        var_recorder = TemplateVarRecorder(var_map, None, sorter)
+        visitor = self._get_visitor({}, var_recorder=var_recorder)
+        template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
 
         timer.toc('Initialized column order', level=logging.DEBUG)
 
@@ -353,13 +382,13 @@ class _LinearStandardFormCompiler_impl(object):
                     template_visitor.expand_expression(obj, obj.template_expr())
                 )
                 N = len(linear_index)
-                obj_index.append(map(var_order.__getitem__, linear_index))
+                obj_index.append(linear_index)
                 obj_data.append(linear_data)
                 obj_offset.append(offset)
             else:
                 repn = visitor.walk_expression(obj.expr)
                 N = len(repn.linear)
-                obj_index.append(map(var_order.__getitem__, repn.linear))
+                obj_index.append(map(var_recorder.var_order.__getitem__, repn.linear))
                 obj_data.append(repn.linear.values())
                 obj_offset.append(repn.constant)
 
@@ -402,10 +431,9 @@ class _LinearStandardFormCompiler_impl(object):
                     template_visitor.expand_expression(con, con.template_expr())
                 )
                 N = len(linear_data)
-                linear_index = map(var_order.__getitem__, linear_index)
             else:
                 # Note: lb and ub could be a number, expression, or None
-                lb, body, ub = con.normalize_constraint()
+                lb, body, ub = con.to_bounded_expression()
                 if lb.__class__ not in native_types:
                     lb = value(lb)
                 if ub.__class__ not in native_types:
@@ -420,7 +448,7 @@ class _LinearStandardFormCompiler_impl(object):
                 N = len(repn.linear)
                 # Pull out the constant: we will move it to the bounds
                 offset = repn.constant
-                linear_index = map(var_order.__getitem__, repn.linear)
+                linear_index = map(var_recorder.var_order.__getitem__, repn.linear)
                 linear_data = repn.linear.values()
 
             if lb is None and ub is None:
@@ -480,7 +508,10 @@ class _LinearStandardFormCompiler_impl(object):
                         if ub is not None:
                             v.lb = lb - ub
                     var_map[id(v)] = v
-                    var_order[id(v)] = slack_col = len(var_order)
+                    if var_recorder.var_order is not None:
+                        var_recorder.var_order[id(v)] = slack_col = len(
+                            var_recorder.var_order
+                        )
                     linear_data = list(linear_data)
                     linear_data.append(1)
                     linear_index = list(linear_index)
@@ -513,13 +544,12 @@ class _LinearStandardFormCompiler_impl(object):
             timer.toc('Constraint %s', last_parent(), level=logging.DEBUG)
 
         # Get the variable list
-        var_order.update({_id: i for i, _id in enumerate(var_map)})
         columns = list(var_map.values())
-        nCol = len(columns)
+        n_cols = len(columns)
 
         # Convert the compiled data to scipy sparse matrices
-        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, nCol)
-        A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, nCol)
+        c = self._create_csc(obj_data, obj_index, obj_index_ptr, obj_nnz, n_cols)
+        A = self._create_csc(con_data, con_index, con_index_ptr, con_nnz, n_cols)
 
         if with_debug_timing:
             timer.toc('Formed matrices', level=logging.DEBUG)
@@ -538,8 +568,8 @@ class _LinearStandardFormCompiler_impl(object):
         # columns
         augmented_mask = np.concatenate((active_var_mask, [True]))
         reduced_A_indptr = A.indptr[augmented_mask]
-        nCol -= len(reduced_A_indptr) - 1
-        if nCol > 0:
+        n_cols -= len(reduced_A_indptr) - 1
+        if n_cols > 0:
             columns = [v for k, v in zip(active_var_mask, columns) if k]
             c = self._csc_matrix(
                 (c.data, c.indices, c.indptr[augmented_mask]),
@@ -551,7 +581,7 @@ class _LinearStandardFormCompiler_impl(object):
             )
 
         if with_debug_timing:
-            timer.toc('Eliminated %s unused columns', nCol, level=logging.DEBUG)
+            timer.toc('Eliminated %s unused columns', n_cols, level=logging.DEBUG)
 
         if self.config.nonnegative_vars:
             c, A, columns, eliminated_vars = self._csc_to_nonnegative_vars(
@@ -566,24 +596,22 @@ class _LinearStandardFormCompiler_impl(object):
         timer.toc("Generated linear standard form representation", delta=False)
         return info
 
-    def _create_csc(self, data, index, index_ptr, nnz, nCol):
+    def _create_csc(self, data, index, index_ptr, nnz, n_cols):
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
             # the empty CSR on the python side and convert it to CSC on
-            # the C (numpy) side, as opposed to ceating the large [0] *
-            # (nCol + 1) array on the Python side and transfer it to C
+            # the C (numpy) side, as opposed to creating the large [0] *
+            # (n_cols + 1) array on the Python side and transfer it to C
             # (numpy)
             return self._csr_matrix(
-                (data, index, index_ptr), [len(index_ptr) - 1, nCol]
+                (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
         data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
-        # data = list(itertools.chain(*data))
         index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
-        # index = list(itertools.chain(*index))
         index_ptr = np.array(index_ptr, dtype=np.int32)
-        A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, nCol])
+        A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
         A.sum_duplicates()
         A.eliminate_zeros()
@@ -647,13 +675,13 @@ class _LinearStandardFormCompiler_impl(object):
                 new_c_indices.append(c.indices[s:e])
                 new_c_indptr.append(new_c_indptr[-1] + e - s)
 
-        nCol = len(new_columns)
+        n_cols = len(new_columns)
         c = self._csc_matrix(
             (np.concatenate(new_c_data), np.concatenate(new_c_indices), new_c_indptr),
-            [c.shape[0], nCol],
+            [c.shape[0], n_cols],
         )
         A = self._csc_matrix(
             (np.concatenate(new_A_data), np.concatenate(new_A_indices), new_A_indptr),
-            [A.shape[0], nCol],
+            [A.shape[0], n_cols],
         )
         return c, A, new_columns, eliminated_vars

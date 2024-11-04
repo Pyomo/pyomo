@@ -1,4 +1,4 @@
-23 Set Declarations
+25 Set Declarations
     A : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    3 : {1, 2, 3}
@@ -80,6 +80,11 @@
         Key : Dimen : Domain : Size : Members
           2 :     1 :    Any :    2 : {1, 3}
           5 :     1 :    Any :    2 : {2, 3}
+    T_indexed_validate : Size=3, Index=B, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+          2 :     1 :    Any :    1 : {1,}
+          3 :     1 :    Any :    2 : {1, 2}
+          4 :     1 :    Any :    3 : {1, 2, 3}
     U : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members
         None :     1 :    Any :    5 : {1, 2, 6, 24, 120}
@@ -89,5 +94,9 @@
           2 :     1 :    Any :    5 : {1, 3, 5, 7, 9}
           3 :     1 :    Any :    5 : {1, 4, 7, 10, 13}
           4 :     1 :    Any :    5 : {1, 5, 9, 13, 17}
+    X : Size=2, Index=B, Ordered=Insertion
+        Key : Dimen : Domain : Size : Members
+          2 :     1 :   S[2] :    1 : {1,}
+          5 :     1 :   S[5] :    2 : {2, 3}
 
-23 Declarations: A B C D E F G H Hsub I J K K_2 L M N O P R S T U V
+25 Declarations: A B C D E F G H Hsub I J K K_2 L M N O P R S X T T_indexed_validate U V

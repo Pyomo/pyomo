@@ -20,6 +20,7 @@ import subprocess
 
 import pyomo.common
 from pyomo.common.collections import Bunch
+from pyomo.common.tee import capture_output
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -188,7 +189,7 @@ def help_transformations():
         # The next best thing is to ensure that the deprecation status
         # is indicated here.
         _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ or ""
-        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECAT' not in _doc:
+        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECATE' not in _doc:
             _doc = ' '.join(('[DEPRECATED]', _doc))
         if _doc:
             print(wrapper.fill(_doc))
@@ -235,33 +236,44 @@ def help_solvers():
     try:
         # Disable warnings
         logging.disable(logging.WARNING)
-        for s in solver_list:
-            # Create a solver, and see if it is available
-            with pyomo.opt.SolverFactory(s) as opt:
-                ver = ''
-                if opt.available(False):
-                    avail = '-'
-                    if opt.license_is_valid():
-                        avail = '+'
-                    try:
-                        ver = opt.version()
-                        if ver:
-                            while len(ver) > 2 and ver[-1] == 0:
-                                ver = ver[:-1]
-                            ver = '.'.join(str(v) for v in ver)
-                        else:
-                            ver = ''
-                    except (AttributeError, NameError):
-                        pass
-                elif s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
-                    # py is a metasolver, but since we don't specify a subsolver
-                    # for this test, opt is actually an UnknownSolver, so we
-                    # can't try to get the _metasolver attribute from it.
-                    # Also, default to False if the attribute isn't implemented
-                    avail = '*'
-                else:
-                    avail = ''
-                _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
+        # suppress ALL output
+        with capture_output(capture_fd=True):
+            for s in solver_list:
+                # Create a solver, and see if it is available
+                with pyomo.opt.SolverFactory(s) as opt:
+                    ver = ''
+                    if opt.available(False):
+                        avail = '-'
+                        if opt.license_is_valid():
+                            avail = '+'
+                        try:
+                            ver = opt.version()
+                            if isinstance(ver, str):
+                                pass
+                            elif ver:
+                                while len(ver) > 2 and ver[-1] == 0:
+                                    ver = ver[:-1]
+                                ver = '.'.join(str(v) for v in ver)
+                            else:
+                                ver = ''
+                        except (AttributeError, NameError):
+                            pass
+                    elif s == 'py':
+                        # py is a metasolver, but since we don't specify a subsolver
+                        # for this test, opt is actually an UnknownSolver, so we
+                        # can't try to get the _metasolver attribute from it.
+                        avail = '*'
+                    elif isinstance(s, pyomo.opt.solvers.UnknownSolver):
+                        # We can get here if creating a registered
+                        # solver failed (i.e., an exception was raised
+                        # in __init__)
+                        avail = ''
+                    elif getattr(opt, "_metasolver", False):
+                        # Note: default to False if the attribute isn't implemented
+                        avail = '*'
+                    else:
+                        avail = ''
+                    _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
