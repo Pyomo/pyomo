@@ -16,7 +16,7 @@ Tests for the PyROS preprocessor.
 
 import logging
 import textwrap
-import unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch, ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy_available

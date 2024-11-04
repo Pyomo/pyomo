@@ -15,7 +15,7 @@ Test separation problem construction methods.
 
 
 import logging
-import unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available

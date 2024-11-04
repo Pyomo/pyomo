@@ -17,7 +17,7 @@ objects.
 
 import logging
 import time
-import unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import numpy_available, scipy_available

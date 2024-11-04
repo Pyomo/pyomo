@@ -14,7 +14,7 @@ Tests for the PyROS UncertaintySet class and subclasses.
 """
 
 import itertools as it
-import unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import (
     attempt_import,

@@ -14,7 +14,7 @@ Test objects for construction of PyROS ConfigDict.
 """
 
 import logging
-import unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.base import ConcreteModel, Var, VarData
 from pyomo.common.log import LoggingIntercept
