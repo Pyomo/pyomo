@@ -771,7 +771,7 @@ class TestMoved(unittest.TestCase):
                 with LoggingIntercept() as LOG:
                     m = import_module(info.old_name)
                 self.assertIn('DEPRECATED', LOG.getvalue())
-                # We expect every module in _archive to be depracated
+                # We expect every module in _archive to be deprecated
                 # (and to state that in the module docstring):
                 self.assertIn('deprecated', m.__doc__)
                 self.assertEqual(m.__name__, info.new_name)
