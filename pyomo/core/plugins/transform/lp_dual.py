@@ -114,8 +114,8 @@ class LinearProgrammingDual(object):
         primal_sense = std_form.objectives[0].sense
 
         dual = ConcreteModel(name="%s dual" % model.name)
-        # This is a csc matrix, so we'll skipping transposing and just work off
-        # of the folumns
+        # This is a csc matrix, so we'll skip transposing and just work off
+        # of the columns
         A = std_form.A
         c = std_form.c.todense()
         dual_rows = range(A.shape[1])
