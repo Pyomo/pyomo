@@ -35,6 +35,8 @@ import sys
 sys.path.insert(0, os.path.abspath('../../../pyutilib'))
 # top-level pyomo source directory
 sys.path.insert(0, os.path.abspath('../..'))
+# our sphinx extensions
+sys.path.insert(0, os.path.abspath('ext'))
 
 # -- Rebuild SPY files ----------------------------------------------------
 sys.path.insert(0, os.path.abspath('src'))
@@ -71,18 +73,17 @@ needs_sphinx = '1.8'
 # ones.
 extensions = [
     'sphinx.ext.intersphinx',
-    'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon',
-    'sphinx.ext.ifconfig',
     'sphinx.ext.inheritance_diagram',
-    'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx_copybutton',
-    'enum_tools.autoenum',
+    # Our version of 'autoenum', designed to work with autosummary.
+    # This adds 'sphinx.ext.autosummary', and 'sphinx.ext.autodoc':
+    'pyomo_autosummary_autoenum',
 ]
 
 viewcode_follow_imported_members = True
@@ -244,7 +245,7 @@ texinfo_documents = [
 ]
 
 # autodoc_member_order = 'bysource'
-# autodoc_member_order = 'groupwise'
+autodoc_member_order = 'groupwise'
 
 autosummary_generate = True
 autosummary_ignore_module_all = True
