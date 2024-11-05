@@ -518,11 +518,21 @@ class DeferredImportCallbackFinder:
         if fullname not in self._callbacks:
             return None
 
-        spec = importlib.machinery.PathFinder.find_spec(fullname, path, target)
-        if spec is None:
+        spec = None
+        # Continue looking for the finder that would have originally
+        # loaded the deferred import module b starting at the next
+        # finder in sys.meta_path (this way, we are agnostic to where
+        # the module is coming from: file system, registry, etc.)
+        for finder in sys.meta_path[sys.meta_path.index(self) + 1 :]:
+            spec = finder.find_spec(fullname, path, target)
+            if spec is not None:
+                break
+        else:
             # Module not found.  Returning None will proceed to the next
-            # finder (which is likely to raise a ModuleNotFoundError)
+            # finder (which will eventually raise a ModuleNotFoundError)
             return None
+        # Override the loader to trigger the finalization callback
+        # after the original loader is finished
         spec.loader = DeferredImportCallbackLoader(
             spec.loader, self._callbacks[fullname]
         )

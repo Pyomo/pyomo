@@ -9,6 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import relocated_module
+__doc__ = """This package contains archived modules that are no longer part of the
+official Pyomo API.
 
-relocated_module('pyomo.common.gsl', version='6.5.0')
+These modules are still importable through their old names via
+:func:`pyomo.common.moved_module()`
+
+"""
