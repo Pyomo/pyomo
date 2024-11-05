@@ -349,11 +349,10 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         warmstart_filename = self._warm_start_file_name
 
         # translate the options into a normal python dictionary, from a
-        # pyutilib SectionWrapper - the gurobi_run function doesn't know
-        # about pyomo, so the translation is necessary.
-        options_dict = {}
-        for key in self.options:
-            options_dict[key] = self.options[key]
+        # pyomo.common.collections.Bunch - the gurobi_run function
+        # doesn't know about pyomo, so the translation is necessary
+        # (`repr(options)` doesn't produce executable python code)
+        options_dict = dict(self.options)
 
         # NOTE: the gurobi shell is independent of Pyomo python
         #       virtualized environment, so any imports - specifically
