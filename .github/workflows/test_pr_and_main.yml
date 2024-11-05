@@ -367,6 +367,10 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+            # As of Nov 4, 2024, pint/qtconsole are not compatible with python 3.13 on win
+            EXCLUDE="pint qtconsole $EXCLUDE"
+        fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
@@ -385,10 +389,6 @@ jobs:
         # For windows, cannot use newer setuptools because of APPSI compilation issues
         if test "${{matrix.TARGET}}" == 'win'; then
             CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
-            # As of Nov 4, 2024, pint is not compatible with python 3.13
-            if test "${{matrix.python}}" == "3.13"; then
-                CONDA_DEPENDENCIES=${CONDA_DEPENDENCIES//"pint"}
-            fi
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
