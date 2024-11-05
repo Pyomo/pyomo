@@ -9,4 +9,4 @@ How-To Guides
    solver_recipes
    abstract_models/index.rst
    debugging
-   contribution_guide
+   ../contribution_guide

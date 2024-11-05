@@ -16,7 +16,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.flags import NOTSET, in_testing_environment, building_documentation
 
 
-class TestModeling(unittest.TestCase):
+class TestFlags(unittest.TestCase):
 
     def test_NOTSET(self):
         self.assertTrue(in_testing_environment())
@@ -41,3 +41,9 @@ class TestModeling(unittest.TestCase):
             del sys.modules['sphinx']
             in_testing_environment(None)
         self.assertIsNone(in_testing_environment.state)
+
+    def test_singleton(self):
+        # This tests that the type is a "singleton", and that any
+        # attempts to construct an instance will return the class
+        self.assertIs(NOTSET(), NOTSET)
+        self.assertIs(NOTSET(), NOTSET())
