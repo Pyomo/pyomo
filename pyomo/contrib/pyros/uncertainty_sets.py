@@ -117,7 +117,7 @@ def _setup_standard_uncertainty_set_constraint_block(
     param_var_data_list : list of VarData
         Variable data objects representing the main uncertain
         parameters.
-    conlist : ConstraintList
+    con_list : ConstraintList
         Empty ConstraintList, to which the uncertainty set constraints
         should be added later.
     auxiliary_var_list : list of VarData
@@ -139,9 +139,9 @@ def _setup_standard_uncertainty_set_constraint_block(
         param_var_data_list = standardize_uncertain_param_vars(
             uncertain_param_vars, dim=dim
         )
-    conlist = ConstraintList()
+    con_list = ConstraintList()
     block.add_component(
-        unique_component_name(block, "uncertainty_set_conlist"), conlist
+        unique_component_name(block, "uncertainty_set_conlist"), con_list
     )
 
     auxiliary_var_list = []
@@ -152,7 +152,7 @@ def _setup_standard_uncertainty_set_constraint_block(
         )
         auxiliary_var_list = list(auxiliary_param_var.values())
 
-    return block, param_var_data_list, conlist, auxiliary_var_list
+    return block, param_var_data_list, con_list, auxiliary_var_list
 
 
 UncertaintyQuantification = namedtuple(
