@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 from collections import defaultdict
-import enum
 import itertools
 
 import logging
@@ -41,6 +40,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue, PositiveInt, InEnum
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np
+from pyomo.common.enums import IntEnum
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr import identify_variables
@@ -59,7 +59,7 @@ sklearn_lm, sklearn_available = attempt_import('sklearn.linear_model')
 logger = logging.getLogger(__name__)
 
 
-class DomainPartitioningMethod(enum.IntEnum):
+class DomainPartitioningMethod(IntEnum):
     RANDOM_GRID = 1
     UNIFORM_GRID = 2
     LINEAR_MODEL_TREE_UNIFORM = 3
