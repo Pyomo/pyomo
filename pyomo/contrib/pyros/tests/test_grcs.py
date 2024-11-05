@@ -27,7 +27,7 @@ import pyomo.repn.ampl as pyomo_ampl_repn
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
-from pyomo.environ import maximize as pyo_max
+from pyomo.environ import maximize as pyo_max, units as u
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -180,6 +180,64 @@ class TimeDelaySolver(object):
         return results
 
 
+def build_leyffer():
+    """
+    Build original Leyffer two-variable test problem.
+    """
+    m = ConcreteModel()
+
+    m.u = Param(initialize=1.125, mutable=True)
+
+    m.x1 = Var(initialize=0, bounds=(0, None))
+    m.x2 = Var(initialize=0, bounds=(0, None))
+
+    m.con = Constraint(expr=m.x1 * sqrt(m.u) - m.u * m.x2 <= 2)
+    m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+    return m
+
+
+def build_leyffer_two_cons():
+    """
+    Build extended Leyffer problem with single uncertain parameter.
+    """
+    m = ConcreteModel()
+
+    m.u = Param(initialize=1.125, mutable=True)
+
+    m.x1 = Var(initialize=0, bounds=(0, None))
+    m.x2 = Var(initialize=0, bounds=(0, None))
+    m.x3 = Var(initialize=0, bounds=(None, None))
+
+    m.con1 = Constraint(expr=m.x1 * sqrt(m.u) - m.x2 * m.u <= 2)
+    m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
+
+    m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+    return m
+
+
+def build_leyffer_two_cons_two_params():
+    """
+    Build extended Leyffer problem with two uncertain parameters.
+    """
+    m = ConcreteModel()
+
+    m.u1 = Param(initialize=1.125, mutable=True)
+    m.u2 = Param(initialize=1, mutable=True)
+
+    m.x1 = Var(initialize=0, bounds=(0, None))
+    m.x2 = Var(initialize=0, bounds=(0, None))
+    m.x3 = Var(initialize=0, bounds=(None, None))
+
+    m.con1 = Constraint(expr=m.x1 * sqrt(m.u1) - m.x2 * m.u1 <= 2)
+    m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
+
+    m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+    return m
+
+
 class TestPyROSSolveFactorModelSet(unittest.TestCase):
     """
     Test PyROS successfully solves model with factor model uncertainty.
@@ -193,18 +251,7 @@ class TestPyROSSolveFactorModelSet(unittest.TestCase):
         Test two-stage model with `FactorModelSet`
         as the uncertainty set.
         """
-        # define model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u1 = Param(initialize=1.125, mutable=True)
-        m.u2 = Param(initialize=1, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+        m = build_leyffer_two_cons_two_params()
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
@@ -256,17 +303,7 @@ class TestPyROSSolveAxisAlignedEllipsoidalSet(unittest.TestCase):
         as the uncertainty set.
         """
         # define model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u1 = Param(initialize=1.125, mutable=True)
-        m.u2 = Param(initialize=1, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+        m = build_leyffer_two_cons_two_params()
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
@@ -320,22 +357,7 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
         Test two-stage model under discrete uncertainty with
         a single scenario.
         """
-        m = ConcreteModel()
-
-        # model params
-        m.u1 = Param(initialize=1.125, mutable=True)
-        m.u2 = Param(initialize=1, mutable=True)
-
-        # model vars
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-
-        # model constraints
-        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+        m = build_leyffer_two_cons_two_params()
 
         # uncertainty set
         discrete_set = DiscreteScenarioSet(scenarios=[(1.125, 1)])
@@ -387,12 +409,7 @@ class TestPyROSSolveDiscreteSet(unittest.TestCase):
         Test PyROS successfully solves two-stage model with
         multiple scenarios.
         """
-        m = ConcreteModel()
-        m.x1 = Var(bounds=(0, 10))
-        m.x2 = Var(bounds=(0, 10))
-        m.u = Param(mutable=True, initialize=1.125)
-        m.con = Constraint(expr=sqrt(m.u) * m.x1 - m.u * m.x2 <= 2)
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u) ** 2)
+        m = build_leyffer()
 
         discrete_set = DiscreteScenarioSet(scenarios=[[0.25], [1.125], [2]])
 
@@ -463,28 +480,39 @@ global_solver = "baron"
 # === regression test for the solver
 @unittest.skipUnless(baron_available, "Global NLP solver is not available.")
 class RegressionTest(unittest.TestCase):
-    @unittest.skipUnless(
-        baron_license_is_valid, "Global NLP solver is not available and licensed."
-    )
-    def test_regression_constant_drs(self):
+    """
+    Collection of regression tests.
+    """
+
+    def build_regression_test_model(self):
+        """
+        Create model used for regression tests.
+        """
         m = ConcreteModel()
         m.name = "s381"
+
+        m.set_params = Set(initialize=list(range(4)))
+        m.p = Param(m.set_params, initialize=2, mutable=True)
 
         m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
         m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
         m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
 
-        # === State Vars = [x13]
-        # === Decision Vars ===
-        m.decision_vars = [m.x1, m.x2, m.x3]
-
-        # === Uncertain Params ===
-        m.set_params = Set(initialize=list(range(4)))
-        m.p = Param(m.set_params, initialize=2, mutable=True)
-        m.uncertain_params = [m.p]
+        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
 
         m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
-        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+
+        m.decision_vars = [m.x1, m.x2, m.x3]
+
+        m.uncertain_params = [m.p]
+
+        return m
+
+    @unittest.skipUnless(
+        baron_license_is_valid, "Global NLP solver is not available and licensed."
+    )
+    def test_regression_constant_drs(self):
+        m = self.build_regression_test_model()
 
         box_set = BoxSet(bounds=[(1.8, 2.2)])
         solver = SolverFactory("baron")
@@ -508,24 +536,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_regression_affine_drs(self):
-        m = ConcreteModel()
-        m.name = "s381"
-
-        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-
-        # === State Vars = [x13]
-        # === Decision Vars ===
-        m.decision_vars = [m.x1, m.x2, m.x3]
-
-        # === Uncertain Params ===
-        m.set_params = Set(initialize=list(range(4)))
-        m.p = Param(m.set_params, initialize=2, mutable=True)
-        m.uncertain_params = [m.p]
-
-        m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
-        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+        m = self.build_regression_test_model()
 
         box_set = BoxSet(bounds=[(1.8, 2.2)])
         solver = SolverFactory("baron")
@@ -552,24 +563,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_regression_quadratic_drs(self):
-        m = ConcreteModel()
-        m.name = "s381"
-
-        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-
-        # === State Vars = [x13]
-        # === Decision Vars ===
-        m.decision_vars = [m.x1, m.x2, m.x3]
-
-        # === Uncertain Params ===
-        m.set_params = Set(initialize=list(range(4)))
-        m.p = Param(m.set_params, initialize=2, mutable=True)
-        m.uncertain_params = [m.p]
-
-        m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
-        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+        m = self.build_regression_test_model()
 
         box_set = BoxSet(bounds=[(1.8, 2.2)])
         solver = SolverFactory("baron")
@@ -596,16 +590,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_identifying_violating_param_realization(self):
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -651,16 +636,7 @@ class RegressionTest(unittest.TestCase):
         "Test known to fail for BARON 23.1.5 and versions preceding 23.6.23",
     )
     def test_terminate_with_max_iter(self):
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -708,16 +684,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_terminate_with_time_limit(self):
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -839,16 +806,7 @@ class RegressionTest(unittest.TestCase):
         Test PyROS time limit status returned in event
         separation problem times out.
         """
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -894,16 +852,7 @@ class RegressionTest(unittest.TestCase):
         Check that PyROS does not ultimately alter state of
         subordinate solver options due to time limit adjustments.
         """
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -1364,15 +1313,7 @@ class RegressionTest(unittest.TestCase):
         Test problem under nominal objective focus terminates
         successfully.
         """
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # singleton set, guaranteed robust feasibility
         discrete_scenarios = DiscreteScenarioSet(scenarios=[[1.125]])
@@ -1411,16 +1352,7 @@ class RegressionTest(unittest.TestCase):
         baron_license_is_valid, "Global NLP solver is not available and licensed."
     )
     def test_discrete_separation(self):
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         discrete_scenarios = DiscreteScenarioSet(scenarios=[[0.25], [2.0], [1.125]])
@@ -1457,16 +1389,7 @@ class RegressionTest(unittest.TestCase):
         scip_available and scip_license_is_valid, "SCIP is not available and licensed."
     )
     def test_higher_order_decision_rules(self):
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -1503,12 +1426,7 @@ class RegressionTest(unittest.TestCase):
     @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_solve(self):
         # Write the deterministic Pyomo model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m = build_leyffer()
         m.eq_con = Constraint(
             expr=m.u**2 * (m.x2 - 1)
             + m.u * (m.x1**3 + 0.5)
@@ -1516,7 +1434,6 @@ class RegressionTest(unittest.TestCase):
             + m.u * (m.x1 + 2)
             == 0
         )
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
 
@@ -1557,7 +1474,7 @@ class RegressionTest(unittest.TestCase):
             msg="Incorrect objective function value.",
         )
 
-    def create_mitsos_4_3(self):
+    def build_mitsos_4_3(self):
         """
         Create instance of Problem 4_3 from Mitsos (2011)'s
         Test Set of semi-infinite programs.
@@ -1596,7 +1513,7 @@ class RegressionTest(unittest.TestCase):
         coefficient matching is insensitive to subsolver settings. Based
         on Mitsos (2011) semi-infinite programming instance 4_3.
         """
-        m = self.create_mitsos_4_3()
+        m = self.build_mitsos_4_3()
 
         # instantiate BARON subsolver and PyROS solver
         baron = SolverFactory("baron")
@@ -1650,7 +1567,7 @@ class RegressionTest(unittest.TestCase):
         is based on Mitsos (2011) semi-infinite programming instance
         4_3.
         """
-        m = self.create_mitsos_4_3()
+        m = self.build_mitsos_4_3()
 
         global_solver = SolverFactory("scip")
         pyros_solver = SolverFactory("pyros")
@@ -1700,12 +1617,7 @@ class RegressionTest(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available.")
     def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
         # Write the deterministic Pyomo model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m = build_leyffer()
         m.eq_con = Constraint(
             expr=m.u * (m.x1**3 + 0.5)
             - 5 * m.u * m.x1 * m.x2
@@ -1713,7 +1625,6 @@ class RegressionTest(unittest.TestCase):
             + m.u**2
             == 0
         )
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
 
@@ -1753,15 +1664,8 @@ class RegressionTest(unittest.TestCase):
         equality constraint that cannot be reformulated via
         coefficient matching due to nonlinearity.
         """
-        # Write the deterministic Pyomo model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m = build_leyffer()
         m.eq_con = Constraint(expr=m.u**2 * (m.x2 - 1) == 0)
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
 
         interval = BoxSet(bounds=[(0.25, 2)])
 
@@ -1807,16 +1711,7 @@ class testBypassingSeparation(unittest.TestCase):
     @unittest.skipUnless(ipopt_available, "IPOPT is not available.")
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m = build_leyffer_two_cons()
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -1954,18 +1849,7 @@ class testModelMultipleObjectives(unittest.TestCase):
 
     def test_multiple_objs(self):
         """Test bypassing of global separation solve calls."""
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
-
-        # add another objective
+        m = build_leyffer_two_cons()
         m.obj2 = Objective(expr=m.obj.expr / 2)
 
         # add block, with another objective
@@ -2060,9 +1944,6 @@ class TestMasterFeasibilityUnitConsistency(unittest.TestCase):
         Test two-stage model with `AxisAlignedEllipsoidalSet`
         as the uncertainty set.
         """
-        from pyomo.environ import units as u
-
-        # define model
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
         m.x2 = Var(initialize=0, bounds=(0, None), units=u.m)
@@ -2132,20 +2013,7 @@ class TestSubsolverTiming(unittest.TestCase):
         Create simple NLP for the unit tests defined
         within this class
         """
-        # define model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u1 = Param(initialize=1.125, mutable=True)
-        m.u2 = Param(initialize=1, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
-
-        return m
+        return build_leyffer_two_cons_two_params()
 
     @unittest.skipUnless(
         SolverFactory('appsi_ipopt').available(exception_flag=False),
@@ -2253,18 +2121,7 @@ class TestSubsolverTiming(unittest.TestCase):
         Test two-stage model with `AxisAlignedEllipsoidalSet`
         as the uncertainty set.
         """
-        # define model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u1 = Param(initialize=1.125, mutable=True)
-        m.u2 = Param(initialize=1, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+        m = self.simple_nlp_model()
 
         # construct the IntersectionSet
         ellipsoid = AxisAlignedEllipsoidalSet(center=[1.125, 1], half_lengths=[1, 0])
@@ -2831,18 +2688,7 @@ class TestPyROSResolveKwargs(unittest.TestCase):
         keyword arguments passed explicitly and implicitly
         through `options`.
         """
-        # define model
-        m = ConcreteModel()
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.x3 = Var(initialize=0, bounds=(None, None))
-        m.u1 = Param(initialize=1.125, mutable=True)
-        m.u2 = Param(initialize=1, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u1 ** (0.5) - m.x2 * m.u1 <= 2)
-        m.con2 = Constraint(expr=m.x1**2 - m.x2**2 * m.u1 == m.x3)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+        m = build_leyffer_two_cons_two_params()
 
         # Define the uncertainty set
         # we take the parameter `u2` to be 'fixed'
@@ -2947,17 +2793,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         """
         Build simple valid test model.
         """
-        m = ConcreteModel(name="test_model")
-
-        m.x1 = Var(initialize=0, bounds=(0, None))
-        m.x2 = Var(initialize=0, bounds=(0, None))
-        m.u = Param(initialize=1.125, mutable=True)
-
-        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
-
-        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
-
-        return m
+        return build_leyffer()
 
     def test_pyros_invalid_model_type(self):
         """
@@ -3137,6 +2973,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         # build model; make one variable discrete
         mdl = self.build_simple_test_model()
         mdl.x2.domain = NonNegativeIntegers
+        mdl.name = "test_model"
 
         # prepare solvers
         pyros = SolverFactory("pyros")
