@@ -429,6 +429,10 @@ jobs:
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
+        # Remove qt from win/3.13 so we don't trigger test_qt.py
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+            conda remove qt6-main || echo "qt6 is not in the environment"
+        fi
         # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
