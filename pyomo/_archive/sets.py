@@ -9,11 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# TODO
-# . rename 'filter' to something else
-# . confirm that filtering is efficient
+"This is the deprecated pyomo.core.base.sets module"
 
-from .set import (
+from pyomo.core.base.set import (
     process_setarg,
     set_options,
     simple_set_rule,
@@ -22,12 +20,4 @@ from .set import (
     Set,
     SetOf,
     IndexedSet,
-)
-
-from pyomo.common.deprecation import deprecation_warning
-
-deprecation_warning(
-    'The pyomo.core.base.sets module is deprecated.  '
-    'Import Set objects from pyomo.core.base.set or pyomo.core.',
-    version='5.7',
 )

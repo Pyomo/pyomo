@@ -8,7 +8,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
 
-from pyomo.common.deprecation import relocated_module
+# This is a simple module used as part of testing moved_module()
 
-relocated_module('pyomo.repn.tests.nl_diff', version='6.6.0', remove_in='6.6.1')
+
+class Bar(object):
+    data = 42
