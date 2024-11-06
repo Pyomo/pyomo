@@ -116,14 +116,20 @@ class _CSRMatrix(_SparseMatrixBase):
         for i, tally in enumerate(col_index_ptr):
             col_index_ptr[i] = cum_sum
             cum_sum += tally
-        # we leave off the last entry (the number of nonzeros) because we are
-        # going to do the cute scipy thing and it will get 'added' at the end
-        # when we shift right (by which I mean it will conveniently already be
-        # there)
+        # We have now initialized the col_index_ptr to the *starting* position
+        # of each column in the data vector.  Note that col_index_ptr is only
+        # num_cols long: we have ignored the last entry in the standard CSC
+        # col_index_ptr (the total number of nonzeros).  This will get resolved
+        # below when we shift this vector by one position.
 
         # Now we are actually going to mess up what we just did while we
-        # construct the row index, but it's beautiful because "mess up" just
-        # means we increment everything by one, so we can fix it at the end.
+        # construct the row index: We can imagine that col_index_ptr holds the
+        # position of the *next* nonzero in each column, so each time we move a
+        # data element into a column we will increment that col_index_ptr by
+        # one.  This is beautiful because by "messing up" the col_index_pointer,
+        # we are just transforming the vector of *starting* indices for each
+        # column to a vector of *ending* indices (actually 1 past the last
+        # index) of each column. Thank you, scipy.
         for row in range(nrows):
             for j in range(row_index_ptr[row], row_index_ptr[row + 1]):
                 col = col_index[j]
@@ -135,9 +141,13 @@ class _CSRMatrix(_SparseMatrixBase):
 
                 col_index_ptr[col] += 1
 
-        # fix the column index pointer by inserting 0 at the beginning--the rest
-        # is right because we know each entry got incremented by 1 in the loop
-        # above.
+        # Fix the column index pointer by inserting 0 at the beginning. The
+        # col_index_ptr currently holds pointers to 1 past the last element of
+        # each column, which is really the starting index for the next
+        # column. Inserting the 0 (the starting index for the firsst column)
+        # shifts everything by one column, "converting" the vector to the
+        # starting indices of each column, and extending the vector length to
+        # num_cols + 1 (as is expected by the CSC matrix).
         col_index_ptr = np.insert(col_index_ptr, 0, 0)
 
         return _CSCMatrix((csc_data, row_index, col_index_ptr), self.shape)
