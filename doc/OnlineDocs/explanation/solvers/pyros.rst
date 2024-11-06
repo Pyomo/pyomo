@@ -14,19 +14,18 @@ The developers gratefully acknowledge support from the U.S. Department of Energy
 Methodology Overview
 -----------------------------
 
-Below is an overview of the type of optimization models PyROS can accommodate.
+PyROS can accommodate optimization models with:
 
+* **Continuous variables** only
+* **Nonlinearities** (including **nonconvexities**) in both the
+  variables and uncertain parameters
+* **First-stage degrees of freedom** and **second-stage degrees of freedom**
+* **Equality constraints** defining state variables,
+  including implicitly defined state variables that cannot be
+  eliminated from the model via reformulation
+* **Inequality constraints** in the degree-of-freedom and/or state variables
 
-* PyROS is suitable for optimization models of **continuous variables**
-  that may feature non-linearities (including **non-convexities**) in
-  both the variables and uncertain parameters.
-* PyROS can handle **equality constraints** defining state variables,
-  including implicit state variables that cannot be eliminated via
-  reformulation.
-* PyROS allows for **two-stage** optimization problems that may
-  feature both first-stage and second-stage degrees of freedom.
-
-PyROS is designed to operate on deterministic models of the general form
+Supported deterministic models can be written in the general form
 
 .. _deterministic-model:
 
@@ -39,20 +38,21 @@ PyROS is designed to operate on deterministic models of the general form
 
 where:
 
-* :math:`x \in \mathcal{X}` are the "design" variables
-  (i.e., first-stage degrees of freedom),
-  where :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}` is the feasible space defined by the model constraints
-  (including variable bounds specifications) referencing :math:`x` only.
-* :math:`z \in \mathbb{R}^{n_z}` are the "control" variables
-  (i.e., second-stage degrees of freedom)
+* :math:`x \in \mathcal{X}` are the first-stage degrees of freedom,
+  (or "design" variables,)
+  of which the feasible space :math:`\mathcal{X} \subseteq \mathbb{R}^{n_x}`
+  is defined by the model constraints
+  (including variable bounds specifications) referencing :math:`x` only
+* :math:`z \in \mathbb{R}^{n_z}` are the second-stage degrees of freedom
+  (or "control" variables)
 * :math:`y \in \mathbb{R}^{n_y}` are the "state" variables
 * :math:`q \in \mathbb{R}^{n_q}` is the vector of model parameters considered
   uncertain, and :math:`q^{\text{nom}}` is the vector of nominal values
-  associated with those.
-* :math:`f_1\left(x\right)` are the terms of the objective function that depend
+  associated with those
+* :math:`f_1\left(x\right)` is the summand of the objective function that depends
   only on design variables
-* :math:`f_2\left(x, z, y; q\right)` are the terms of the objective function
-  that depend on all variables and the uncertain parameters
+* :math:`f_2\left(x, z, y; q\right)` is the summand of the objective function
+  that depends on all variables and the uncertain parameters
 * :math:`g_i\left(x, z, y; q\right)` is the :math:`i^\text{th}`
   inequality constraint function in set :math:`\mathcal{I}`
   (see :ref:`Note <var-bounds-to-ineqs>`)
@@ -63,23 +63,13 @@ where:
 .. _var-bounds-to-ineqs:
 
 .. note::
-    PyROS accepts models in which bounds are directly imposed on
-    ``Var`` objects representing components of the variables :math:`z`
-    and :math:`y`. These models are cast to
-    :ref:`the form above <deterministic-model>`
-    by reformulating the bounds as inequality constraints.
+    PyROS accepts models in which there are:
 
-.. _unique-mapping:
-
-.. note::
-    A key requirement of PyROS is that each value of :math:`\left(x, z, q \right)`
-    maps to a unique value of :math:`y`, a property that is assumed to
-    be properly enforced by the system of equality constraints
-    :math:`\mathcal{J}`.
-    If the mapping is not unique, then the selection of 'state'
-    (i.e., not degree of freedom) variables :math:`y` is incorrect,
-    and one or more of the :math:`y` variables should be appropriately
-    redesignated to be part of either :math:`x` or :math:`z`.
+    1. Bounds declared on the ``Var`` objects representing
+       components of the variable vectors :math:`z` and :math:`y`.
+       These bounds are reformulated to inequality constraints.
+    2. Ranged inequality constraints. These are easily reformulated to
+       single inequality constraints.
 
 In order to cast the robust optimization counterpart of the
 :ref:`deterministic model <deterministic-model>`,
@@ -89,7 +79,8 @@ any realization in a compact uncertainty set
 the nominal value :math:`q^{\text{nom}}`.
 The set :math:`\mathcal{Q}` may be **either continuous or discrete**.
 
-Based on the above notation, the form of the robust counterpart addressed by PyROS is
+Based on the above notation,
+the form of the robust counterpart addressed by PyROS is
 
 .. math::
     \begin{array}{ccclll}
@@ -100,10 +91,66 @@ Based on the above notation, the form of the robust counterpart addressed by PyR
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall\,j \in \mathcal{J}
     \end{array}
 
-PyROS solves problems of this form using the
-Generalized Robust Cutting-Set algorithm developed in [IAE+21]_.
+PyROS accepts a deterministic model and accompanying uncertainty set
+and then, using the Generalized Robust Cutting-Set algorithm developed
+in [IAE+21]_, seeks a solution to the robust counterpart.
+When using PyROS, please consider citing [IAE+21]_.
 
-When using PyROS, please consider citing the above paper.
+.. _unique-mapping:
+
+.. note::
+    A key assumption of PyROS is that
+    for every
+    :math:`x \in \mathcal{X}`,
+    :math:`z \in \mathbb{R}^{n_z}`,
+    :math:`q \in \mathcal{Q}`,
+    there exists a unique :math:`y \in \mathbb{R}^{n_y}`
+    for which :math:`(x, z, y, q)`
+    satisfies the equality constraints
+    :math:`h_j(x, z, y, q) = 0\,\,\forall\, j \in \mathcal{J}`.
+    If this assumption is not met,
+    then the selection of 'state'
+    (i.e., not degree of freedom) variables :math:`y` is incorrect,
+    and one or more of the :math:`y` variables should be appropriately
+    redesignated to be part of either :math:`x` or :math:`z`.
+
+PyROS Installation
+-----------------------------
+PyROS can be installed as follows:
+
+1. :doc:`Install Pyomo <../../installation>`.
+   PyROS is included in the Pyomo software package, at pyomo/contrib/pyros.
+2. Install NumPy and SciPy with your preferred package manager;
+   both NumPy and SciPy are required dependencies of PyROS.
+   You may install NumPy and SciPy with, for example, ``conda``:
+
+   ::
+
+      conda install numpy scipy
+
+   or ``pip``:
+
+   ::
+
+      pip install numpy scipy
+3. (*Optional*) Test your installation:
+   install ``pytest`` and ``parameterized``
+   with your preferred package manager (as in the previous step):
+
+   ::
+
+      pip install pytest parameterized
+
+   You may then run the PyROS tests as follows:
+
+   ::
+
+      python -c 'import os, pytest, pyomo.contrib.pyros as p; pytest.main([os.path.dirname(p.__file__)])'
+
+   Some tests involving solvers may fail or be skipped,
+   depending on the solver distributions (e.g., Ipopt, BARON, SCIP)
+   that you have pre-installed and licensed on your system.
+
 
 PyROS Required Inputs
 -----------------------------
@@ -128,7 +175,8 @@ These are more elaborately presented in the
 PyROS Solver Interface
 -----------------------------
 
-The PyROS solver is invoked through the :py:meth:`PyROS.solve` method.
+The PyROS solver is invoked through the
+:py:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 
 .. autoclass:: pyomo.contrib.pyros.PyROS
     :members: solve
@@ -442,7 +490,7 @@ global NLP solver:
 .. note::
     Additional NLP optimizers can be automatically used in the event the primary
     subordinate local or global optimizer passed
-    to the PyROS :meth:`~pyomo.contrib.pyros.PyROS.solve` method
+    to the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
     does not successfully solve a subproblem to an appropriate termination
     condition. These alternative solvers are provided through the optional
     keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
@@ -551,7 +599,7 @@ The :ref:`preceding code snippet <single-stage-problem>`
 demonstrates how to retrieve this information.
 
 If we pass ``load_solution=True`` (the default setting)
-to the :meth:`~pyomo.contrib.pyros.PyROS.solve` method,
+to the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method,
 then the solution at which PyROS terminates will be loaded to
 the variables of the original deterministic model.
 Note that in the :ref:`preceding code snippet <single-stage-problem>`,
@@ -581,7 +629,7 @@ freedom are in fact second-stage degrees of freedom.
 PyROS handles second-stage degrees of freedom via the use of polynomial
 decision rules, of which the degree is controlled through the
 optional keyword argument ``decision_rule_order`` to the PyROS
-:meth:`~pyomo.contrib.pyros.PyROS.solve` method.
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 In this example, we select affine decision rules by setting
 ``decision_rule_order=1``:
 
@@ -638,10 +686,10 @@ to an affine decision rule.
 Specifying Arguments Indirectly Through ``options``
 """""""""""""""""""""""""""""""""""""""""""""""""""
 Like other Pyomo solver interface methods,
-:meth:`~pyomo.contrib.pyros.PyROS.solve`
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 provides support for specifying options indirectly by passing
 a keyword argument ``options``, whose value must be a :class:`dict`
-mapping names of arguments to :meth:`~pyomo.contrib.pyros.PyROS.solve`
+mapping names of arguments to :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 to their desired values.
 For example, the ``solve()`` statement in the
 :ref:`two-stage problem snippet <example-two-stg>`
@@ -775,7 +823,7 @@ PyROS Solver Log Output
 The PyROS solver log output is controlled through the optional
 ``progress_logger`` argument, itself cast to
 a standard Python logger (:py:class:`logging.Logger`) object
-at the outset of a :meth:`~pyomo.contrib.pyros.PyROS.solve` call.
+at the outset of a :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` call.
 The level of detail of the solver log output
 can be adjusted by adjusting the level of the
 logger object; see :ref:`the following table <table-logging-levels>`.
@@ -816,7 +864,7 @@ for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
          every master feasility, master, and DR polishing problem
        * Progress updates for the separation procedure
        * Separation subproblem initial point infeasibilities
-       * Summary of separation loop outcomes: performance constraints
+       * Summary of separation loop outcomes: second-stage inequality constraints
          violated, uncertain parameter scenario added to the
          master problem
        * Uncertain parameter scenarios added to the master problem
@@ -837,12 +885,20 @@ Observe that the log contains the following information:
 * **Preprocessing information** (lines 39--41).
   Wall time required for preprocessing
   the deterministic model and associated components,
-  i.e. standardizing model components and adding the decision rule
+  i.e., standardizing model components and adding the decision rule
   variables and equations.
 * **Model component statistics** (lines 42--58).
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
+  The preprocessor may find that some second-stage variables
+  and state variables are mathematically
+  not adjustable to the uncertain parameters.
+  To this end, in the logs, the numbers of
+  adjustable second-stage variables and state variables
+  are included in parentheses, next to the total numbers
+  of second-stage variables and state variables, respectively;
+  note that "adjustable" has been abbreviated as "adj."
 * **Iteration log table** (lines 59--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
@@ -879,21 +935,21 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.2.11.
-          Pyomo version: 6.7.2
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.0.
+          Pyomo version: 6.8.1
           Commit hash: unknown
-          Invoked at UTC 2024-03-28T00:00:00.000000
-
+          Invoked at UTC 2024-11-01T00:00:00.000000
+   
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
    (1) Carnegie Mellon University, Department of Chemical Engineering
    (2) Sandia National Laboratories, Center for Computing Research
-
+   
    The developers gratefully acknowledge support from the U.S. Department
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
    ================================= DISCLAIMER =================================
-   PyROS is still under development. 
+   PyROS is still under development.
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
@@ -919,55 +975,56 @@ Observe that the log contains the following information:
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.175s.
+   Done preprocessing; required wall time of 0.018s.
    ------------------------------------------------------------------------------
-   Model statistics:
+   Model Statistics:
      Number of variables : 62
        Epigraph variable : 1
        First-stage variables : 7
-       Second-stage variables : 6
-       State variables : 18
+       Second-stage variables : 6 (6 adj.)
+       State variables : 18 (7 adj.)
        Decision rule variables : 30
      Number of uncertain parameters : 4
-     Number of constraints : 81
+     Number of constraints : 52
        Equality constraints : 24
          Coefficient matching constraints : 0
+         Other first-stage equations : 10
+         Second-stage equations : 8
          Decision rule equations : 6
-         All other equality constraints : 18
-       Inequality constraints : 57
-         First-stage inequalities (incl. certain var bounds) : 10
-         Performance constraints (incl. var bounds) : 47
+       Inequality constraints : 28
+         First-stage inequalities : 1
+         Second-stage inequalities : 27
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   1.741        
-   1     3.5838e+07  3.5184e-15   3.9404e-15   10      4.2516e+06   3.766        
-   2     3.5993e+07  1.8105e-01   7.1406e-01   13      5.2004e+06   6.288
-   3     3.6285e+07  5.1968e-01   7.7753e-01   4       1.7892e+04   8.247
-   4     3.6285e+07  9.1166e-13   1.9702e-15   0       7.1157e-10g  11.456
+   0     3.5838e+07  -            -            1       2.7000e+02   0.657
+   1     3.6087e+07  8.0199e-01   1.2807e-01   5       4.1852e+04   1.460
+   2     3.6125e+07  8.7068e-01   2.7098e-01   8       2.7711e+01   3.041
+   3     3.6174e+07  7.6526e-01   2.2357e-01   4       1.3893e+02   4.186
+   4     3.6285e+07  2.8923e-01   3.4064e-01   0       1.2670e-09g  7.162
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-
+   
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1    11.457    11.457  100.0
+   main                           1     7.163     7.163  100.0
         ------------------------------------------------------
-        dr_polishing              4     0.682     0.171    6.0
-        global_separation        47     1.109     0.024    9.7
-        local_separation        235     5.810     0.025   50.7
-        master                    5     1.353     0.271   11.8
-        master_feasibility        4     0.247     0.062    2.2
-        preprocessing             1     0.429     0.429    3.7
-        other                   n/a     1.828       n/a   16.0
+        dr_polishing              4     0.293     0.073    4.1
+        global_separation        27     1.106     0.041   15.4
+        local_separation        135     3.385     0.025   47.3
+        master                    5     1.396     0.279   19.5
+        master_feasibility        4     0.155     0.039    2.2
+        preprocessing             1     0.018     0.018    0.2
+        other                   n/a     0.811       n/a   11.3
         ======================================================
    ===========================================================
-
+   
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 5
-    Solve time (wall s)   : 11.457
+    Solve time (wall s)   : 7.163
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -1025,10 +1082,10 @@ The constituent columns are defined in the
        there are no second-stage variables,
        or the master problem of the current iteration is not solved successfully.
    * - #CViol
-     - Number of performance constraints found to be violated during
+     - Number of second-stage inequality constraints found to be violated during
        the separation step of the current iteration.
-       Unless a custom prioritization of the model's performance constraints
-       is specified (through the ``separation_priority_order`` argument),
+       Unless a custom prioritization of the model's second-stage inequality
+       constraints is specified (through the ``separation_priority_order`` argument),
        expect this number to trend downward as the iteration number increases.
        A "+" is appended if not all of the separation problems
        were solved successfully, either due to custom prioritization, a time out,
@@ -1036,13 +1093,13 @@ The constituent columns are defined in the
        A dash ("-") is produced in lieu of a value if the separation
        routine is not invoked during the current iteration.
    * - Max Viol
-     - Maximum scaled performance constraint violation.
+     - Maximum scaled second-stage inequality constraint violation.
        Expect this value to trend downward as the iteration number increases.
        A 'g' is appended to the value if the separation problems were solved
        globally during the current iteration.
        A dash ("-") is produced in lieu of a value if the separation
        routine is not invoked during the current iteration, or if there are
-       no performance constraints.
+       no second-stage inequality constraints.
    * - Wall time (s)
      - Total time elapsed by the solver, in seconds, up to the end of the
        current iteration.

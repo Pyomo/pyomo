@@ -8,18 +8,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import inspect
-from pyomo.common.deprecation import deprecation_warning
 
-deprecation_warning(
-    "The pyomo.core.base.plugin module is deprecated.  "
-    "See pyomo.core.base.transformation for Transformation and "
-    "TransformationFactory, pyomo.core.base.component for "
-    "ModelComponentFactory and pyomo.scripting.interface for "
-    "IPyomoScript* interfaces.",
-    version='6.0',
-    calling_frame=inspect.currentframe().f_back,
-)
+"This is the deprecated pyomo.core.base.plugin module"
 
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.transformation import (

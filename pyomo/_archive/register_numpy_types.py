@@ -9,13 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import deprecation_warning
-
-deprecation_warning(
-    "pyomo.core.kernel.register_numpy_types is deprecated.  NumPy type "
-    "registration is handled automatically by pyomo.common.dependencies.numpy",
-    version='6.1',
-)
+"This is the deprecated pyomo.core.kernel.register_numpy_types module"
 
 from pyomo.common.numeric_types import (
     RegisterNumericType,

@@ -9,6 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import relocated_module
+"This is the deprecated pyomo.core.kernel.component_set module"
 
-relocated_module('pyomo.contrib.parmest.utils.ipopt_solver_wrapper', version='6.4.2')
+from pyomo.common.collections import ComponentSet

@@ -260,7 +260,6 @@ setup_kwargs = dict(
             'sphinxcontrib-napoleon',
             'sphinx-toolbox>=2.16.0',
             'sphinx-jinja2-compat>=0.1.1',
-            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
