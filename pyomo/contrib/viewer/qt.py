@@ -38,19 +38,17 @@ supported = ["PySide6", "PyQt5"]
 import_errors = []
 # Set this to the Qt wrapper module is available
 available = False
-from pyomo.core.base.units_container import pint_available
 
-if pint_available:
-    for module_str in supported:
-        try:
-            qt_package = importlib.import_module(module_str)
-            QtWidgets = importlib.import_module(f"{module_str}.QtWidgets")
-            QtCore = importlib.import_module(f"{module_str}.QtCore")
-            QtGui = importlib.import_module(f"{module_str}.QtGui")
-            available = module_str
-            break
-        except Exception as e:
-            import_errors.append(f"{e}")
+for module_str in supported:
+    try:
+        qt_package = importlib.import_module(module_str)
+        QtWidgets = importlib.import_module(f"{module_str}.QtWidgets")
+        QtCore = importlib.import_module(f"{module_str}.QtCore")
+        QtGui = importlib.import_module(f"{module_str}.QtGui")
+        available = module_str
+        break
+    except Exception as e:
+        import_errors.append(f"{e}")
 
 if not available:
     # If Qt is not available, we still want to be able to test as much

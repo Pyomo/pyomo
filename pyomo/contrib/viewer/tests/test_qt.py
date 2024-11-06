@@ -44,6 +44,7 @@ import pyomo.common.unittest as unittest
 import pyomo.contrib.viewer.qt as myqt
 import pyomo.contrib.viewer.pyomo_viewer as pv
 from pyomo.contrib.viewer.qt import available
+from pyomo.core.base.units_container import pint_available
 
 if available:
     import contextvars
@@ -58,6 +59,11 @@ else:
         return
 
     pytestmark = unittest.pytest.mark.skip("Qt components are not available.")
+
+if not pint_available:
+    pytestmark = unittest.pytest.mark.skip(
+        "contrib.viewer requires pint, which is not available."
+    )
 
 
 def get_model():
