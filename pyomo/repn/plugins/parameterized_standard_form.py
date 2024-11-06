@@ -95,7 +95,9 @@ class _SparseMatrixBase(object):
 
 class _CSRMatrix(_SparseMatrixBase):
     def tocsc(self):
-        # Implements the same algorithm as scipy's csr_tocsc function
+        """Implements the same algorithm as scipy's csr_tocsc function from
+        sparsetools.
+        """
         csr_data = self.data
         col_index = self.indices
         row_index_ptr = self.indptr
@@ -141,6 +143,9 @@ class _CSRMatrix(_SparseMatrixBase):
         return _CSCMatrix((csc_data, row_index, col_index_ptr), self.shape)
 
     def todense(self):
+        """Implements the algorithm from scipy's csr_todense function
+        in sparsetools.
+        """
         nrows = self.shape[0]
         col_index = self.indices
         row_index_ptr = self.indptr
@@ -157,6 +162,9 @@ class _CSRMatrix(_SparseMatrixBase):
 
 class _CSCMatrix(_SparseMatrixBase):
     def todense(self):
+        """Implements the algorithm from scipy's csr_todense function
+        in sparsetools.
+        """
         ncols = self.shape[1]
         row_index = self.indices
         col_index_ptr = self.indptr
@@ -171,6 +179,9 @@ class _CSCMatrix(_SparseMatrixBase):
         return dense
 
     def sum_duplicates(self):
+        """Implements the algorithm from scipy's csr_sum_duplicates function
+        in sparsetools.
+        """
         ncols = self.shape[1]
         row_index = self.indices
         col_index_ptr = self.indptr
@@ -194,6 +205,9 @@ class _CSCMatrix(_SparseMatrixBase):
             col_index_ptr[i + 1] = num_non_zeros
 
     def eliminate_zeros(self):
+        """Implements the algorithm from scipy's csr_eliminate_zeros function
+        in sparsetools.
+        """
         ncols = self.shape[1]
         row_index = self.indices
         col_index_ptr = self.indptr
