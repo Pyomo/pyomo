@@ -204,6 +204,7 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(n[0]):
             self.assertTrue(np.allclose(blk, v2.get_block(bid)))
 
+    @unittest.skipUnless(np.__version__[0] == "1", "PTP only included in Numpy 1.x")
     def test_ptp(self):
         v = BlockVector(2)
         a = np.arange(5)

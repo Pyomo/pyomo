@@ -57,7 +57,7 @@ NumPy compatible methods:
    * :py:meth:`~numpy.ndarray.conj`
    * :py:meth:`~numpy.ndarray.conjugate`
    * :py:meth:`~numpy.ndarray.nonzero`
-   * :py:meth:`~numpy.ndarray.ptp`
+   * :py:meth:`~numpy.ndarray.ptp` (NumPy 1.x only)
    * :py:meth:`~numpy.ndarray.round`
    * :py:meth:`~numpy.ndarray.std`
    * :py:meth:`~numpy.ndarray.var`
@@ -679,13 +679,15 @@ class BlockVector(BaseBlockVector, np.ndarray):
             result.set_block(idx, self.get_block(idx).nonzero()[0])
         return (result,)
 
-    def ptp(self, axis=None, out=None, keepdims=False):
-        """
-        Peak to peak (maximum - minimum) value along a given axis.
-        """
-        assert_block_structure(self)
-        assert out is None, 'Out keyword not supported'
-        return self.max() - self.min()
+    if np.__version__[0] < '2':
+
+        def ptp(self, axis=None, out=None, keepdims=False):
+            """
+            Peak to peak (maximum - minimum) value along a given axis.
+            """
+            assert_block_structure(self)
+            assert out is None, 'Out keyword not supported'
+            return self.max() - self.min()
 
     def round(self, decimals=0, out=None):
         """
