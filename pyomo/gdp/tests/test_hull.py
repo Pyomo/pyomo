@@ -9,10 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import dill_available
-import pyomo.common.unittest as unittest
-from pyomo.common.log import LoggingIntercept
 import logging
+import random
+from io import StringIO
+
+import pyomo.common.unittest as unittest
+
+from pyomo.common.dependencies import dill_available
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.fileutils import this_file_dir
 
 from pyomo.environ import (
     TransformationFactory,
@@ -46,14 +51,9 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
-import random
-from io import StringIO
-import os
-from os.path import abspath, dirname, join
 
 
-currdir = dirname(abspath(__file__))
-from filecmp import cmp
+currdir = this_file_dir()
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
