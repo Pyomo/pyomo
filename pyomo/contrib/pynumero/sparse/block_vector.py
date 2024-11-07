@@ -270,47 +270,49 @@ class BlockVector(BaseBlockVector, np.ndarray):
         return super(BlockVector, self).__array_wrap__(self, out_arr, context)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """Runs ufuncs specializations to BlockVector"""
+        if kwargs.get('out', None) is not None:
+            return NotImplemented
+        if method == 'reduce' and ufunc in vec_associative_reductions:
+            (arg,) = inputs
+            return self._reduction_operation(ufunc, method, arg, kwargs)
+        if method == '__call__':
+            if ufunc in vec_unary_ufuncs:
+                (arg,) = inputs
+                return self._unary_operation(ufunc, method, arg, kwargs)
+            if ufunc in vec_binary_ufuncs:
+                return self._binary_operation(ufunc, method, inputs, kwargs)
+        return NotImplemented
+
+    def _reduction_operation(self, ufunc, method, x, kwargs):
+        results = [
+            self._unary_operation(ufunc, method, x.get_block(i), kwargs)
+            for i in range(x.nblocks)
         ]
-
-        args = [input_ for i, input_ in enumerate(inputs)]
-        outputs = kwargs.pop('out', None)
-        if outputs is not None:
-            raise NotImplementedError(
-                str(ufunc)
-                + ' cannot be used with BlockVector if the out keyword argument is given.'
-            )
-
-        if ufunc in unary_funcs:
-            results = self._unary_operation(ufunc, method, *args, **kwargs)
-            return results
-        elif ufunc in binary_funcs:
-            results = self._binary_operation(ufunc, method, *args, **kwargs)
-            return results
+        if len(results) == 1:
+            return results[0]
         else:
-            raise NotImplementedError(str(ufunc) + "not supported for BlockVector")
+            return super().__array_ufunc__(ufunc, method, np.array(results), **kwargs)
 
-    def _unary_operation(self, ufunc, method, *args, **kwargs):
+    def _unary_operation(self, ufunc, method, x, kwargs):
         """Run recursion to perform unary_funcs on BlockVector"""
         # ToDo: deal with out
-        x = args[0]
         if isinstance(x, BlockVector):
             v = BlockVector(x.nblocks)
             for i in range(x.nblocks):
-                _args = [x.get_block(i)] + [args[j] for j in range(1, len(args))]
-                v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
+                v.set_block(
+                    i, self._unary_operation(ufunc, method, x.get_block(i), kwargs)
+                )
             return v
         elif type(x) == np.ndarray:
-            return super(BlockVector, self).__array_ufunc__(
-                ufunc, method, *args, **kwargs
-            )
+            return super().__array_ufunc__(ufunc, method, x, **kwargs)
         else:
-            raise NotImplementedError()
+            return NotImplemented
 
-    def _binary_operation(self, ufunc, method, *args, **kwargs):
+    def _binary_operation(self, ufunc, method, args, kwargs):
         """Run recursion to perform binary_funcs on BlockVector"""
         # ToDo: deal with out
-        x1 = args[0]
-        x2 = args[1]
+        x1, x2 = args
         if isinstance(x1, BlockVector) and isinstance(x2, BlockVector):
             assert_block_structure(x1)
             assert_block_structure(x2)
@@ -323,14 +325,8 @@ class BlockVector(BaseBlockVector, np.ndarray):
             res = BlockVector(x1.nblocks)
 
             for i in range(x1.nblocks):
-                _args = (
-                    [x1.get_block(i)]
-                    + [x2.get_block(i)]
-                    + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1.get_block(i), x2.get_block(i))
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
             return res
         elif type(x1) == np.ndarray and isinstance(x2, BlockVector):
             assert_block_structure(x2)
@@ -341,14 +337,8 @@ class BlockVector(BaseBlockVector, np.ndarray):
             accum = 0
             for i in range(x2.nblocks):
                 nelements = x2._brow_lengths[i]
-                _args = (
-                    [x1[accum : accum + nelements]]
-                    + [x2.get_block(i)]
-                    + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1[accum : accum + nelements], x2.get_block(i))
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
                 accum += nelements
             return res
         elif type(x2) == np.ndarray and isinstance(x1, BlockVector):
@@ -360,37 +350,23 @@ class BlockVector(BaseBlockVector, np.ndarray):
             accum = 0
             for i in range(x1.nblocks):
                 nelements = x1._brow_lengths[i]
-                _args = (
-                    [x1.get_block(i)]
-                    + [x2[accum : accum + nelements]]
-                    + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1.get_block(i), x2[accum : accum + nelements])
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
                 accum += nelements
             return res
         elif np.isscalar(x1) and isinstance(x2, BlockVector):
             assert_block_structure(x2)
             res = BlockVector(x2.nblocks)
             for i in range(x2.nblocks):
-                _args = (
-                    [x1] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1, x2.get_block(i))
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
             return res
         elif np.isscalar(x2) and isinstance(x1, BlockVector):
             assert_block_structure(x1)
             res = BlockVector(x1.nblocks)
             for i in range(x1.nblocks):
-                _args = (
-                    [x1.get_block(i)] + [x2] + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1.get_block(i), x2)
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
             return res
         elif (type(x1) == np.ndarray or np.isscalar(x1)) and (
             type(x2) == np.ndarray or np.isscalar(x2)
@@ -403,7 +379,7 @@ class BlockVector(BaseBlockVector, np.ndarray):
                 raise RuntimeError('Operation not supported by BlockVector')
             if x2.__class__.__name__ == 'MPIBlockVector':
                 raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+            return NotImplemented
 
     @property
     def nblocks(self):

@@ -1073,6 +1073,9 @@ class TestBlockVector(unittest.TestCase):
         v.set_block(0, a)
         v.set_block(1, b)
 
+        for fun in vec_associative_reductions:
+            self.assertAlmostEqual(fun.reduce(v), fun.reduce(v.flatten()))
+
         reduce_funcs = [np.sum, np.max, np.min, np.prod, np.mean]
         for fun in reduce_funcs:
             self.assertAlmostEqual(fun(v), fun(v.flatten()))
