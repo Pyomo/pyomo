@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import sys
 import random
 from io import StringIO
 
@@ -2874,7 +2875,14 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
 
     @unittest.skipIf(not dill_available, "Dill is not available")
     def test_dill_pickle(self):
-        ct.check_transformed_model_pickles_with_dill(self, 'hull')
+        try:
+            # As of Nov 2024, this test needs a larger recursion limit
+            # due to the various references among the modeling objects
+            rl = sys.getrecursionlimit()
+            sys.setrecursionlimit(1385)
+            ct.check_transformed_model_pickles_with_dill(self, 'hull')
+        finally:
+            sys.setrecursionlimit(rl)
 
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
