@@ -1708,7 +1708,32 @@ class UninitializedMixin(object):
 
     @_data.setter
     def _data(self, value):
-        self.__class__ = self.__class__.__mro__[2]
+        _mro = self.__class__.__mro__
+        # There is an edge case in multithreaded environments where this
+        # function could actually be called more than once for a single
+        # ConfigValue.  We want to make sure that only the first of the
+        # calls actually updates the __class__ (the others will
+        # recursively lookup the _data attribute and the second lookup
+        # will resolve to normal attribute assignment).
+        #
+        # We first encountered this issue for Config objects stores as
+        # class attributes (i.e., the default Config for something like
+        # a solver or writer) and multiple threads were simultaneously
+        # creating instances of the class (each of which was resolving
+        # the default values for the class attribute).
+        #
+        # Note that this explicitly assumes that the uninitialized
+        # Config object was defined as:
+        #
+        #    class UninitializedConfig(UninitializedMixin, Config)
+        #
+        # and that the resulting class was never inherited from.  If
+        # this assumption is ever violated, attempts to use the
+        # uninitialized config object will generate infinite recursion
+        # (and that is OK, as the developer should immediately be
+        # informed of their error)
+        if _mro[1] is UninitializedMixin:
+            self.__class__ = _mro[2]
         self._data = value
 
 
