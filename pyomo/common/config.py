@@ -1693,17 +1693,23 @@ class UninitializedMixin(object):
     @property
     def _data(self):
         #
-        # This is a possibly dangerous construct: falling back on
-        # calling the _default can mask a real problem in the default
-        # type/value.
+        # We assume that _default is usually a concrete value.  But, we
+        # also accept a types (classes) and initialization functions as
+        # defaults, in which case we will construct an instance of that
+        # class and use that as the default.  If they both raise
+        # exceptions, we will let the original exception propagate up.
         #
         try:
             self._setter(self._default)
         except:
             if hasattr(self._default, '__call__'):
-                self._setter(self._default())
-            else:
-                raise
+                _default_val = self._default()
+                try:
+                    self._setter(_default_val)
+                    return self._data
+                except:
+                    pass
+            raise
         return self._data
 
     @_data.setter
