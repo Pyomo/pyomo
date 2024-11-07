@@ -2883,6 +2883,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
             ct.check_transformed_model_pickles_with_dill(self, 'hull')
         finally:
             sys.setrecursionlimit(rl)
+        self.fail()
 
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
