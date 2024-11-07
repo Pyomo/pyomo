@@ -53,7 +53,6 @@ import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
 
-
 currdir = this_file_dir()
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
