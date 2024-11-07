@@ -1410,7 +1410,7 @@ class TestMPIBlockVector(unittest.TestCase):
         _int_ufuncs = {np.invert, np.arccosh}
 
         bv2 = BlockVector(2)
-        for fun in unary_funcs:
+        for fun in vec_unary_ufuncs:
             if fun in _int_ufuncs:
                 continue
 
@@ -1484,7 +1484,7 @@ class TestMPIBlockVector(unittest.TestCase):
             np.bitwise_xor,
         }
 
-        for fun in binary_ufuncs:
+        for fun in vec_binary_ufuncs:
             if fun in _int_ufuncs:
                 continue
 
