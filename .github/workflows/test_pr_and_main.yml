@@ -148,7 +148,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
-          PACKAGES: 'numpy>2.0' scipy networkx dill gurobipy
+          PACKAGES: numpy scipy networkx dill gurobipy
 
         - os: ubuntu-latest
           python: 3.9
