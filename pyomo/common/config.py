@@ -2714,7 +2714,9 @@ class ConfigDict(ConfigBase, Mapping):
         # partially constructed ConfigDict (before the _data attribute
         # was declared) can lead to infinite recursion.
         if _attr == "_data" or _attr not in self._data:
-            raise AttributeError("Unknown attribute '%s'" % attr)
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{attr}'"
+            )
         return ConfigDict.__getitem__(self, _attr)
 
     def __setattr__(self, name, value):

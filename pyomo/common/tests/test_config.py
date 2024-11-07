@@ -2736,7 +2736,9 @@ Node information:
         ):
             config.baz = 10
 
-        with self.assertRaisesRegex(AttributeError, "Unknown attribute 'baz'"):
+        with self.assertRaisesRegex(
+            AttributeError, "'ConfigDict' object has no attribute 'baz'"
+        ):
             a = config.baz
 
     def test_nonString_keys(self):
