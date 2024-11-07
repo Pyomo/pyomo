@@ -35,6 +35,10 @@ except ImportError:
 
 if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse import BlockVector
+    from pyomo.contrib.pynumero.sparse.base_block import (
+        vec_unary_ufuncs,
+        vec_binary_ufuncs,
+    )
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 
