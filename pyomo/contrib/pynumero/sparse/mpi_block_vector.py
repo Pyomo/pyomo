@@ -11,7 +11,12 @@
 
 from pyomo.common.dependencies import mpi4py
 from pyomo.contrib.pynumero.sparse import BlockVector
-from .base_block import BaseBlockVector
+from .base_block import (
+    BaseBlockVector,
+    vec_unary_ufuncs,
+    vec_binary_ufuncs,
+    vec_associative_reductions,
+)
 from .block_vector import NotFullyDefinedBlockVectorError
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 import numpy as np
@@ -136,74 +141,6 @@ class MPIBlockVector(BaseBlockVector, np.ndarray):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         """Runs ufuncs speciallizations to MPIBlockVector"""
-        # functions that take one vector
-        unary_funcs = [
-            np.log10,
-            np.sin,
-            np.cos,
-            np.exp,
-            np.ceil,
-            np.floor,
-            np.tan,
-            np.arctan,
-            np.arcsin,
-            np.arccos,
-            np.sinh,
-            np.cosh,
-            np.abs,
-            np.tanh,
-            np.arccosh,
-            np.arcsinh,
-            np.arctanh,
-            np.fabs,
-            np.sqrt,
-            np.log,
-            np.log2,
-            np.absolute,
-            np.isfinite,
-            np.isinf,
-            np.isnan,
-            np.log1p,
-            np.logical_not,
-            np.expm1,
-            np.exp2,
-            np.sign,
-            np.rint,
-            np.square,
-            np.positive,
-            np.negative,
-            np.rad2deg,
-            np.deg2rad,
-            np.conjugate,
-            np.reciprocal,
-            np.signbit,
-        ]
-        # functions that take two vectors
-        binary_funcs = [
-            np.add,
-            np.multiply,
-            np.divide,
-            np.subtract,
-            np.greater,
-            np.greater_equal,
-            np.less,
-            np.less_equal,
-            np.not_equal,
-            np.maximum,
-            np.minimum,
-            np.fmax,
-            np.fmin,
-            np.equal,
-            np.logical_and,
-            np.logical_or,
-            np.logical_xor,
-            np.logaddexp,
-            np.logaddexp2,
-            np.remainder,
-            np.heaviside,
-            np.hypot,
-        ]
-
         outputs = kwargs.pop('out', None)
         if outputs is not None:
             raise NotImplementedError(
@@ -211,10 +148,10 @@ class MPIBlockVector(BaseBlockVector, np.ndarray):
                 + ' cannot be used with MPIBlockVector if the out keyword argument is given.'
             )
 
-        if ufunc in unary_funcs:
+        if ufunc in vec_unary_ufuncs:
             results = self._unary_operation(ufunc, method, *inputs, **kwargs)
             return results
-        elif ufunc in binary_funcs:
+        elif ufunc in vec_binary_ufuncs:
             results = self._binary_operation(ufunc, method, *inputs, **kwargs)
             return results
         else:

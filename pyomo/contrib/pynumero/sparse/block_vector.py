@@ -183,7 +183,12 @@ For example,
 import operator
 
 from ..dependencies import numpy as np
-from .base_block import BaseBlockVector
+from .base_block import (
+    BaseBlockVector,
+    vec_unary_ufuncs,
+    vec_binary_ufuncs,
+    vec_associative_reductions,
+)
 
 
 class NotFullyDefinedBlockVectorError(Exception):
@@ -265,74 +270,6 @@ class BlockVector(BaseBlockVector, np.ndarray):
         return super(BlockVector, self).__array_wrap__(self, out_arr, context)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        """Runs ufuncs speciallizations to BlockVector"""
-        # functions that take one vector
-        unary_funcs = [
-            np.log10,
-            np.sin,
-            np.cos,
-            np.exp,
-            np.ceil,
-            np.floor,
-            np.tan,
-            np.arctan,
-            np.arcsin,
-            np.arccos,
-            np.sinh,
-            np.cosh,
-            np.abs,
-            np.tanh,
-            np.arccosh,
-            np.arcsinh,
-            np.arctanh,
-            np.fabs,
-            np.sqrt,
-            np.log,
-            np.log2,
-            np.absolute,
-            np.isfinite,
-            np.isinf,
-            np.isnan,
-            np.log1p,
-            np.logical_not,
-            np.expm1,
-            np.exp2,
-            np.sign,
-            np.rint,
-            np.square,
-            np.positive,
-            np.negative,
-            np.rad2deg,
-            np.deg2rad,
-            np.conjugate,
-            np.reciprocal,
-            np.signbit,
-        ]
-
-        # functions that take two vectors
-        binary_funcs = [
-            np.add,
-            np.multiply,
-            np.divide,
-            np.subtract,
-            np.greater,
-            np.greater_equal,
-            np.less,
-            np.less_equal,
-            np.not_equal,
-            np.maximum,
-            np.minimum,
-            np.fmax,
-            np.fmin,
-            np.equal,
-            np.logical_and,
-            np.logical_or,
-            np.logical_xor,
-            np.logaddexp,
-            np.logaddexp2,
-            np.remainder,
-            np.heaviside,
-            np.hypot,
         ]
 
         args = [input_ for i, input_ in enumerate(inputs)]
