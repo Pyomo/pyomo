@@ -2705,14 +2705,17 @@ class ConfigDict(ConfigBase, Mapping):
     def __iter__(self):
         return map(attrgetter('_name'), self._data.values())
 
-    def __getattr__(self, name):
+    def __getattr__(self, attr):
         # Note: __getattr__ is only called after all "usual" attribute
         # lookup methods have failed.  So, if we get here, we already
         # know that key is not a __slot__ or a method, etc...
-        _name = name.replace(' ', '_')
-        if _name not in self._data:
-            raise AttributeError("Unknown attribute '%s'" % name)
-        return ConfigDict.__getitem__(self, _name)
+        _attr = attr.replace(' ', '_')
+        # Note: we test for "_data" because finding attributes on a
+        # partially constructed ConfigDict (before the _data attribute
+        # was declared) can lead to infinite recursion.
+        if _attr == "_data" or _attr not in self._data:
+            raise AttributeError("Unknown attribute '%s'" % attr)
+        return ConfigDict.__getitem__(self, _attr)
 
     def __setattr__(self, name, value):
         if name in ConfigDict._reserved_words:
