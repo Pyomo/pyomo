@@ -2877,13 +2877,12 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         try:
             # As of Nov 2024, this test needs a larger recursion limit
             # due to the various references among the modeling objects
+            # 1385 is sufficient locally, but not always on GHA.
             rl = sys.getrecursionlimit()
-            print(f"RECURSIONLIMIT {rl}")
-            sys.setrecursionlimit(1385)
+            sys.setrecursionlimit(max(1500, rl))
             ct.check_transformed_model_pickles_with_dill(self, 'hull')
         finally:
             sys.setrecursionlimit(rl)
-        self.fail()
 
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
