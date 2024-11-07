@@ -2878,6 +2878,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
             # As of Nov 2024, this test needs a larger recursion limit
             # due to the various references among the modeling objects
             rl = sys.getrecursionlimit()
+            print(f"RECURSIONLIMIT {rl}")
             sys.setrecursionlimit(1385)
             ct.check_transformed_model_pickles_with_dill(self, 'hull')
         finally:
