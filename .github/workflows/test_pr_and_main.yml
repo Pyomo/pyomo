@@ -142,7 +142,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.13
+          python: 3.12
           other: /numpy2
           slim: 1
           skip_doctest: 1
