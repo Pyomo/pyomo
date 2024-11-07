@@ -779,7 +779,6 @@ class TestFactorModelSet(unittest.TestCase):
                 beta=1 / 6,
             )
 
-    @unittest.skipUnless(baron_available, "BARON is not available")
     @parameterized.expand(
         [
             # map beta to expected parameter bounds
@@ -813,6 +812,7 @@ class TestFactorModelSet(unittest.TestCase):
             ["beta1", 1, [(-3.0, 3.0), (-1.1, 3.1), (-13.0, 17.0), (-12.0, 18.0)]],
         ]
     )
+    @unittest.skipUnless(baron_available, "BARON is not available")
     def test_compute_parameter_bounds(self, name, beta, expected_param_bounds):
         """
         Test parameter bounds computations give expected results.
@@ -2401,6 +2401,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(len(uq.uncertainty_cons), 3)
         self.assertEqual(len(uq.uncertain_param_vars), 2)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
     def test_compute_parameter_bounds(self):
         """
         Test parameter bounds computations give expected results.

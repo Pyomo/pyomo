@@ -9,10 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import dill_available
-import pyomo.common.unittest as unittest
-from pyomo.common.log import LoggingIntercept
 import logging
+import sys
+import random
+from io import StringIO
+
+import pyomo.common.unittest as unittest
+
+from pyomo.common.dependencies import dill_available
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.fileutils import this_file_dir
 
 from pyomo.environ import (
     TransformationFactory,
@@ -46,14 +52,8 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
-import random
-from io import StringIO
-import os
-from os.path import abspath, dirname, join
 
-
-currdir = dirname(abspath(__file__))
-from filecmp import cmp
+currdir = this_file_dir()
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
@@ -2874,7 +2874,15 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
 
     @unittest.skipIf(not dill_available, "Dill is not available")
     def test_dill_pickle(self):
-        ct.check_transformed_model_pickles_with_dill(self, 'hull')
+        try:
+            # As of Nov 2024, this test needs a larger recursion limit
+            # due to the various references among the modeling objects
+            # 1385 is sufficient locally, but not always on GHA.
+            rl = sys.getrecursionlimit()
+            sys.setrecursionlimit(max(1500, rl))
+            ct.check_transformed_model_pickles_with_dill(self, 'hull')
+        finally:
+            sys.setrecursionlimit(rl)
 
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
