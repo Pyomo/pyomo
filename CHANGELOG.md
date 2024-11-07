@@ -1,6 +1,57 @@
 Pyomo CHANGELOG
 ===============
 
+-------------------------------------------------------------------------------
+Pyomo 6.8.1   (07 Nov 2024)
+-------------------------------------------------------------------------------
+
+SIGNIFICANT CHANGE NOTICE
+
+- This will be the last release to support Python 3.8
+- Complete reorganization of our online documentation (#3382)
+
+CHANGELOG
+
+- General
+  - Add a 'Do not delete' Disclaimer to Templates (#3361)
+  - Add URL Status Badge to README (#3373)
+  - Resolve change in InvalidNumber handling in writers (#3390)
+  - Update `common.timing` to make tests more deterministic (#3397)
+  - Defer processing `ConfigValue`/`ConfigList` default until first use (#3394)
+  - Improved support for moved/renamed/deprecated modules (#3385)
+  - Fix ConfigValue initialization in multithreaded environments (#3405)
+- Core
+  - Resolve bugs in create_node_with_local_data (#3376)
+  - Resolve issue in filter/validate deprecation path (#3368)
+  - Support `Param.pprint()` for non-finite Params (#3387)
+- Documentation
+  - Autogenerate API documentation (#3378)
+  - Add Alternative Solutions documentation (#3370)
+  - Reorganize online documentation (#3382)
+  - Fix broken doc URLs (#3398)
+  - Improved autoenum documentation (#3389)
+  - Reduce the number of formats built on readthedocs to avoid timeout (#3404)
+- Solver Interfaces
+  - Remove deprecated gurobipy addConstr call (#3350)
+  - Update Xpress interfaces to support 9.5 (#3392)
+  - Add support for templatized models in `gurobi_direct_v2` (#3362)
+  - Update test for GAMS mapping 'infeasible or unbounded' to infeasible (#3396)
+  - XpressDirect.available(): check there is a valid license (#3400)
+  - Move away from dependence on gurobi.sh (#3384)
+- Testing
+  - Move URL Checker to Weekly Job (#3360)
+  - Fixing a couple typos the new version of typos (1.24.5) is finding (#3365)
+  - Remove Octeract from NEOS solvers list (and other testing fixes) (#3374)
+  - Guard tests against broken Gurobi licenses (#3383)
+  - Remove pin to Gurobi 10.0.3 (#3393)
+  - Fixing spelling found by new typos release (v1.27.0) (#3399)
+- GDP
+  - Fix performance degredation in hull transformation (#3366)
+- Contributed Packages
+  - DoE: Fix bug from using hardcoded value (#3358)
+  - iis: Catch catastrophic solver failure when building MIS (#3403)
+  - PyNumero: Reverse the BlockVector/MPIBlockVector base class order (#3380)
+  - PyROS: Overhaul preprocessor subroutine and subproblem objects (#3341)
 
 -------------------------------------------------------------------------------
 Pyomo 6.8.0   (20 Aug 2024)
