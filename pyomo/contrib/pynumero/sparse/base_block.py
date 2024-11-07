@@ -258,7 +258,7 @@ vec_binary_ufuncs = {
     np.remainder,
     np.mod,
     np.fmod,
-    # np.divmod,  # dieabled because shape is not preserved
+    # np.divmod,  # disabled because shape is not preserved
     np.heaviside,
     np.gcd,
     np.lcm,
