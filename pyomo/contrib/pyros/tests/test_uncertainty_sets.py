@@ -2401,6 +2401,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         self.assertEqual(len(uq.uncertainty_cons), 3)
         self.assertEqual(len(uq.uncertain_param_vars), 2)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
     def test_compute_parameter_bounds(self):
         """
         Test parameter bounds computations give expected results.
