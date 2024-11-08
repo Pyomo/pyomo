@@ -100,7 +100,7 @@ class LinearProgrammingDual(object):
                 model, mixed_form=True, set_sense=None
             )
         else:
-            std_form = WriterFactory('parameterized_standard_form_compiler').write(
+            std_form = WriterFactory('compile_parameterized_standard_form').write(
                 model, wrt=config.parameterize_wrt, mixed_form=True, set_sense=None
             )
         return self._take_dual(model, std_form)

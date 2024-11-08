@@ -25,7 +25,7 @@ from pyomo.util.var_list_domain import var_component_set
 
 
 @WriterFactory.register(
-    'parameterized_standard_form_compiler',
+    'compile_parameterized_standard_form',
     'Compile an LP to standard form (`min cTx s.t. Ax <= b`) treating some '
     'variables as data (e.g., variables decided by the outer problem in a '
     'bilevel optimization problem).',
