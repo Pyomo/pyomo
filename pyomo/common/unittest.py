@@ -876,10 +876,11 @@ class BaselineTestDriver(object):
             # next 6 patterns ignore entries in pstats reports:
             'function calls',
             'List reduced',
-            '.py:',
+            '.py:',  # timing/profiling output
             ' {built-in method',
             ' {method',
             ' {pyomo.core.expr.numvalue.as_numeric}',
+            ' {gurobipy.',
         ):
             if field in line:
                 return True

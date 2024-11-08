@@ -1693,22 +1693,53 @@ class UninitializedMixin(object):
     @property
     def _data(self):
         #
-        # This is a possibly dangerous construct: falling back on
-        # calling the _default can mask a real problem in the default
-        # type/value.
+        # We assume that _default is usually a concrete value.  But, we
+        # also accept a types (classes) and initialization functions as
+        # defaults, in which case we will construct an instance of that
+        # class and use that as the default.  If they both raise
+        # exceptions, we will let the original exception propagate up.
         #
         try:
             self._setter(self._default)
         except:
             if hasattr(self._default, '__call__'):
-                self._setter(self._default())
-            else:
-                raise
+                _default_val = self._default()
+                try:
+                    self._setter(_default_val)
+                    return self._data
+                except:
+                    pass
+            raise
         return self._data
 
     @_data.setter
     def _data(self, value):
-        self.__class__ = self.__class__.__mro__[2]
+        _mro = self.__class__.__mro__
+        # There is an edge case in multithreaded environments where this
+        # function could actually be called more than once for a single
+        # ConfigValue.  We want to make sure that only the first of the
+        # calls actually updates the __class__ (the others will
+        # recursively lookup the _data attribute and the second lookup
+        # will resolve to normal attribute assignment).
+        #
+        # We first encountered this issue for Config objects stores as
+        # class attributes (i.e., the default Config for something like
+        # a solver or writer) and multiple threads were simultaneously
+        # creating instances of the class (each of which was resolving
+        # the default values for the class attribute).
+        #
+        # Note that this explicitly assumes that the uninitialized
+        # Config object was defined as:
+        #
+        #    class UninitializedConfig(UninitializedMixin, Config)
+        #
+        # and that the resulting class was never inherited from.  If
+        # this assumption is ever violated, attempts to use the
+        # uninitialized config object will generate infinite recursion
+        # (and that is OK, as the developer should immediately be
+        # informed of their error)
+        if _mro[1] is UninitializedMixin:
+            self.__class__ = _mro[2]
         self._data = value
 
 
@@ -2680,14 +2711,19 @@ class ConfigDict(ConfigBase, Mapping):
     def __iter__(self):
         return map(attrgetter('_name'), self._data.values())
 
-    def __getattr__(self, name):
+    def __getattr__(self, attr):
         # Note: __getattr__ is only called after all "usual" attribute
         # lookup methods have failed.  So, if we get here, we already
         # know that key is not a __slot__ or a method, etc...
-        _name = name.replace(' ', '_')
-        if _name not in self._data:
-            raise AttributeError("Unknown attribute '%s'" % name)
-        return ConfigDict.__getitem__(self, _name)
+        _attr = attr.replace(' ', '_')
+        # Note: we test for "_data" because finding attributes on a
+        # partially constructed ConfigDict (before the _data attribute
+        # was declared) can lead to infinite recursion.
+        if _attr == "_data" or _attr not in self._data:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{attr}'"
+            )
+        return ConfigDict.__getitem__(self, _attr)
 
     def __setattr__(self, name, value):
         if name in ConfigDict._reserved_words:

@@ -1863,7 +1863,18 @@ scenarios[1].detection""",
             c.value()
 
         c = ConfigValue('a', domain=int)
-        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
+        with self.assertRaisesRegex(
+            ValueError, '(?s)invalid value for configuration.*casting a'
+        ):
+            c.value()
+
+        # Test that if both the default and the result from calling the
+        # default raise exceptions, the propagated exception is from
+        # castig the original default:
+        c = ConfigValue(default=lambda: 'a', domain=int)
+        with self.assertRaisesRegex(
+            ValueError, "(?s)invalid value for configuration.*lambda"
+        ):
             c.value()
 
     def test_set_default(self):
@@ -2736,7 +2747,9 @@ Node information:
         ):
             config.baz = 10
 
-        with self.assertRaisesRegex(AttributeError, "Unknown attribute 'baz'"):
+        with self.assertRaisesRegex(
+            AttributeError, "'ConfigDict' object has no attribute 'baz'"
+        ):
             a = config.baz
 
     def test_nonString_keys(self):
