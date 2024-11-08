@@ -10,6 +10,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import gc
 import os
 import time
 import sys
@@ -23,6 +24,20 @@ import pyomo.common.tee as tee
 
 
 class TestTeeStream(unittest.TestCase):
+    def setUp(self):
+        self.reenable_gc = gc.isenabled()
+        gc.disable()
+        # Set a short switch interval so that the threading tests behave
+        # as expected
+        self.switchinterval = sys.getswitchinterval()
+        sys.setswitchinterval(tee._poll_interval / 100)
+
+    def tearDown(self):
+        sys.setswitchinterval(self.switchinterval)
+        if self.reenable_gc:
+            gc.enable()
+            gc.collect()
+
     def test_stdout(self):
         a = StringIO()
         b = StringIO()
