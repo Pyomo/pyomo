@@ -12,7 +12,7 @@
 from pyomo.common.collections import ComponentSet
 
 
-class ComponentDataList():
+class ComponentDataList:
     """ComponentDataList(ctype)
     Domain validation class that accepts singleton or iterable arguments and
     compiles them into a ComponentSet, verifying that they are all ComponentDatas
@@ -26,6 +26,7 @@ class ComponentDataList():
     ------
         ValueError if all of the arguments are not of type 'ctype'
     """
+
     def __init__(self, ctype):
         self._ctype = ctype
 
@@ -46,7 +47,8 @@ class ComponentDataList():
             _ctype_name = str(self._ctype)
             raise ValueError(
                 f"Expected {_ctype_name} or iterable of "
-                f"{_ctype_name}s.\n\tReceived {type(x)}")
+                f"{_ctype_name}s.\n\tReceived {type(x)}"
+            )
 
     def domain_name(self):
         _ctype_name = str(self._ctype)
