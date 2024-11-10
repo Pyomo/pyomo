@@ -195,7 +195,7 @@ class _CSCMatrix(_SparseMatrixBase):
 
         Note that this only removes duplicates that are adjacent, so it will remove
         all duplicates if the incoming CSC matrix has sorted indices. (In particular
-        this will be true if it was just convered from CSR).
+        this will be true if it was just converted from CSR).
         """
         ncols = self.shape[1]
         row_index = self.indices
