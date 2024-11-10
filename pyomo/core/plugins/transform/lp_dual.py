@@ -12,7 +12,6 @@
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
-from pyomo.common.errors import MouseTrap
 from pyomo.common.dependencies import scipy
 from pyomo.core import (
     ConcreteModel,
@@ -68,9 +67,9 @@ class LinearProgrammingDual(object):
     )
 
     def apply_to(self, model, **options):
-        raise MouseTrap(
-            "The 'core.lp_dual' transformation does not currently implement "
-            "apply_to since it is a bit ambiguous what it means to take a dual "
+        raise NotImplementedError(
+            "The 'core.lp_dual' transformation does not implement "
+            "apply_to since it is ambiguous what it means to take a dual "
             "in place. Please use 'create_using' and do what you wish with the "
             "returned model."
         )
