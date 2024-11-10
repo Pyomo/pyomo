@@ -164,47 +164,6 @@ class LinearProgrammingDual(object):
 
         return dual
 
-    def _get_corresponding_component(
-        self, model, model_type, component, component_type, mapping
-    ):
-        """Return the corresponding component based on the provided mapping.
-
-        Parameters
-        ----------
-        model: ConcreteModel
-            The model containing the mappings.
-        component: Var or Constraint
-            The primal/dual component for which we want to find the corresponding
-            dual/primal component.
-        component_type: str
-            A string indicating whether the component is 'dual' or 'primal'.
-        mapping: dict
-            The mapping to look up the corresponding component.
-
-        Returns
-        -------
-        Var or Constraint
-            The corresponding component.
-
-        Raises
-        ------
-        ValueError
-            If the component is not found in the mapping.
-        """
-        if component in mapping:
-            return mapping[component]
-        else:
-            raise ValueError(
-                "It does not appear that %s '%s' is a %s %s on model '%s'"
-                % (
-                    component_type,
-                    component.name,
-                    model_type,
-                    'variable' if component_type == 'Var' else 'constraint',
-                    model.name,
-                )
-            )
-
     def get_primal_constraint(self, model, dual_var):
         """Return the primal constraint corresponding to 'dual_var'
 
@@ -221,9 +180,13 @@ class LinearProgrammingDual(object):
 
         """
         primal_constraint = model.private_data().primal_constraint
-        return self._get_corresponding_component(
-            model, 'dual', dual_var, 'Var', primal_constraint
-        )
+        if dual_var in primal_constraint:
+            return primal_constraint[dual_var]
+        else:
+            raise ValueError(
+                "It does not appear that Var '%s' is a dual variable on model '%s'"
+                % (dual_var.name, model.name)
+            )
 
     def get_dual_constraint(self, model, primal_var):
         """Return the dual constraint corresponding to 'primal_var'
@@ -241,9 +204,13 @@ class LinearProgrammingDual(object):
 
         """
         dual_constraint = model.private_data().dual_constraint
-        return self._get_corresponding_component(
-            model, 'primal', primal_var, 'Var', dual_constraint
-        )
+        if primal_var in dual_constraint:
+            return dual_constraint[primal_var]
+        else:
+            raise ValueError(
+                "It does not appear that Var '%s' is a primal variable on model '%s'"
+                % (primal_var.name, model.name)
+            )
 
     def get_primal_var(self, model, dual_constraint):
         """Return the primal variable corresponding to 'dual_constraint'
@@ -261,9 +228,13 @@ class LinearProgrammingDual(object):
 
         """
         primal_var = model.private_data().primal_var
-        return self._get_corresponding_component(
-            model, 'dual', dual_constraint, 'Constraint', primal_var
-        )
+        if dual_constraint in primal_var:
+            return primal_var[dual_constraint]
+        else:
+            raise ValueError(
+                "It does not appear that Constraint '%s' is a dual constraint on "
+                "model '%s'" % (dual_constraint.name, model.name)
+            )
 
     def get_dual_var(self, model, primal_constraint):
         """Return the dual variable corresponding to 'primal_constraint'
@@ -281,6 +252,10 @@ class LinearProgrammingDual(object):
 
         """
         dual_var = model.private_data().dual_var
-        return self._get_corresponding_component(
-            model, 'primal', primal_constraint, 'Constraint', dual_var
-        )
+        if primal_constraint in dual_var:
+            return dual_var[primal_constraint]
+        else:
+            raise ValueError(
+                "It does not appear that Constraint '%s' is a primal constraint on "
+                "model '%s'" % (primal_constraint.name, model.name)
+            )
