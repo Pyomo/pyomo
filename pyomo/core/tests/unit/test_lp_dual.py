@@ -331,7 +331,7 @@ class TestLPDual(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "Model 'primal' has no objective or multiple active objectives. "
-            "Cannot take dual with more than one objective!",
+            "Can only take dual with exactly one active objective!",
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
 
@@ -341,7 +341,7 @@ class TestLPDual(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "Model 'primal' has no objective or multiple active objectives. "
-            "Cannot take dual with more than one objective!",
+            "Can only take dual with exactly one active objective!",
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=[m.outer1, m.outer])
 

@@ -29,7 +29,7 @@ from pyomo.core import (
 )
 from pyomo.opt import WriterFactory
 from pyomo.repn.standard_repn import isclose_const
-from pyomo.util.var_list_domain import var_component_set
+from pyomo.util.config_domains import ComponentDataList
 
 
 class _LPDualData(AutoSlots.Mixin):
@@ -54,7 +54,7 @@ class LinearProgrammingDual(object):
         'parameterize_wrt',
         ConfigValue(
             default=None,
-            domain=var_component_set,
+            domain=ComponentDataList(Var),
             description="Vars to treat as data for the purposes of taking the dual",
             doc="""
             Optional list of Vars to be treated as data while taking the LP dual.
@@ -108,8 +108,8 @@ class LinearProgrammingDual(object):
     def _take_dual(self, model, std_form):
         if len(std_form.objectives) != 1:
             raise ValueError(
-                "Model '%s' has no objective or multiple active objectives. Cannot "
-                "take dual with more than one objective!" % model.name
+                "Model '%s' has no objective or multiple active objectives. Can "
+                "only take dual with exactly one active objective!" % model.name
             )
         primal_sense = std_form.objectives[0].sense
 

@@ -13,6 +13,7 @@ from pyomo.common.config import ConfigValue, document_kwargs_from_configdict
 from pyomo.common.dependencies import numpy as np
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.numeric_types import native_numeric_types
+from pyomo.core import Var
 
 from pyomo.opt import WriterFactory
 from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
@@ -21,7 +22,7 @@ from pyomo.repn.plugins.standard_form import (
     LinearStandardFormCompiler,
     _LinearStandardFormCompiler_impl,
 )
-from pyomo.util.var_list_domain import var_component_set
+from pyomo.util.config_domains import ComponentDataList
 
 
 @WriterFactory.register(
@@ -36,7 +37,7 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
         'wrt',
         ConfigValue(
             default=None,
-            domain=var_component_set,
+            domain=ComponentDataList(Var),
             description="Vars to treat as data for the purposes of compiling"
             "the standard form",
             doc="""
@@ -191,6 +192,10 @@ class _CSCMatrix(_SparseMatrixBase):
     def sum_duplicates(self):
         """Implements the algorithm from scipy's csr_sum_duplicates function
         in sparsetools.
+
+        Note that this only removes duplicates that are adjacent, so it will remove
+        all duplicates if the incoming CSC matrix has sorted indices. (In particular
+        this will be true if it was just convered from CSR).
         """
         ncols = self.shape[1]
         row_index = self.indices
