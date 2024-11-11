@@ -95,6 +95,16 @@ class _SparseMatrixBase(object):
 
 
 class _CSRMatrix(_SparseMatrixBase):
+    def __init__(self, matrix_data, shape):
+        super().__init__(matrix_data, shape)
+        if len(self.indptr) != self.shape[0] + 1:
+            raise ValueError(
+                "Shape specifies the number of rows as %s but the index "
+                "pointer has length %s. The index pointer must have length "
+                "nrows + 1: Check the 'shape' and 'matrix_data' arguments."
+                % (self.shape[0], len(self.indptr))
+            )
+
     def tocsc(self):
         """Implements the same algorithm as scipy's csr_tocsc function from
         sparsetools.
@@ -172,6 +182,16 @@ class _CSRMatrix(_SparseMatrixBase):
 
 
 class _CSCMatrix(_SparseMatrixBase):
+    def __init__(self, matrix_data, shape):
+        super().__init__(matrix_data, shape)
+        if len(self.indptr) != self.shape[1] + 1:
+            raise ValueError(
+                "Shape specifies the number of columns as %s but the index "
+                "pointer has length %s. The index pointer must have length "
+                "ncols + 1: Check the 'shape' and 'matrix_data' arguments."
+                % (self.shape[1], len(self.indptr))
+            )
+
     def todense(self):
         """Implements the algorithm from scipy's csr_todense function
         in sparsetools.
