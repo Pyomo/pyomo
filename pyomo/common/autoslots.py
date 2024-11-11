@@ -272,7 +272,7 @@ class AutoSlots(type):
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
             state = self.__getstate__()
             ans.__setstate__([fast_deepcopy(field, memo) for field in state])
-            # The state ises a temporary dict to store the (mapped)
+            # The state uses a temporary dict to store the (mapped)
             # __dict__ state.  It is important that we DO NOT save the
             # id() of that temporary object in the memo
             if self.__auto_slots__.has_dict:
