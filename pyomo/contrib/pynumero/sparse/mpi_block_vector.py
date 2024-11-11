@@ -305,14 +305,14 @@ class MPIBlockVector(BaseBlockVector, np.ndarray):
     @property
     def owned_blocks(self):
         """
-        Returns list with inidices of blocks owned by this processor.
+        Returns list with indices of blocks owned by this processor.
         """
         return self._owned_blocks
 
     @property
     def shared_blocks(self):
         """
-        Returns list with inidices of blocks shared by all processors
+        Returns list with indices of blocks shared by all processors
         """
         return np.array([i for i in range(self.nblocks) if self._rank_owner[i] < 0])
 
@@ -1377,6 +1377,9 @@ class MPIBlockVector(BaseBlockVector, np.ndarray):
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def tolist(self):
+        """
+        Disable `np.ndarray.tolist` as it is not supported.
+        """
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def flatten(self, order='C'):
