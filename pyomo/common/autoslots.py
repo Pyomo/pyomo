@@ -306,7 +306,7 @@ class AutoSlots(type):
             if self.__auto_slots__.has_dict:
                 fields = dict(self.__dict__)
                 # Map (encode) any field values.  It is not an error if
-                # the field if not present.
+                # the field is not present.
                 for name, mapper in self.__auto_slots__.field_mappers.items():
                     if name in fields:
                         fields[name] = mapper(True, fields[name])

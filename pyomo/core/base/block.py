@@ -361,7 +361,7 @@ class PseudoMap(AutoSlots.Mixin):
         TODO
         """
         # Return True is the underlying Block contains the component
-        # name.  Note, if this Pseudomap soecifies a ctype or the
+        # name.  Note, if this Pseudomap specifies a ctype or the
         # active flag, we need to check that the underlying
         # component matches those flags
         if key in self._block._decl:
