@@ -93,6 +93,21 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(A.todense() == dense))
         self.assertTrue(np.all(A.tocsc().todense() == dense))
 
+    def test_sum_duplicates(self):
+        A = _CSCMatrix(([4, 5], [1, 1], [0, 0, 2, 2]), [3, 3])
+        self.assertTrue(np.all(A.data == [4, 5]))
+        self.assertTrue(np.all(A.indptr == [0, 0, 2, 2]))
+        self.assertTrue(np.all(A.indices == [1, 1]))
+
+        A.sum_duplicates()
+        
+        self.assertTrue(np.all(A.data == [9,]))
+        self.assertTrue(np.all(A.indptr == [0, 0, 1, 1]))
+        self.assertTrue(np.all(A.indices == [1,]))
+
+        dense = np.array([[0, 0, 0], [0, 9, 0], [0, 0, 0]])
+        self.assertTrue(np.all(A.todense() == dense))
+
 
 def assertExpressionArraysEqual(self, A, B):
     self.assertEqual(A.shape, B.shape)
