@@ -1744,6 +1744,7 @@ class UninitializedMixin(object):
 
 
 class ConfigBase(object):
+    # Note: __getstate__ relies on this field ordering.  Do not change.
     __slots__ = (
         '_parent',
         '_domain',
@@ -1799,20 +1800,19 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        state = [('_domain', _picklable(self._domain, self))]
+        state = [None, _picklable(self._domain, self)]
         # Note: [2:] skips _parent and _domain (intentionally): We just
-        # wrapped _domain in _picklable and will restore _parent in
-        # __setstate__
-        state.extend((key, getattr(self, key)) for key in ConfigBase.__slots__[2:])
+        # wrapped _domain in _picklable and explicitly set _parent to
+        # None (it will be restored in __setstate__).
+        state.extend(getattr(self, key) for key in ConfigBase.__slots__[2:])
         return state
 
     def __setstate__(self, state):
-        for key, val in state:
+        for key, val in zip(ConfigBase.__slots__, state):
             # Note: per the Python data model docs, we explicitly
             # set the attribute using object.__setattr__() instead
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
-        self._parent = None
 
     def __call__(
         self,
@@ -2605,6 +2605,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     content_filters = {None, 'all', 'userdata'}
 
+    # Note: __getstate__ relies on this field ordering.  Do not change.
     __slots__ = ('_implicit_domain', '_declared', '_implicit_declaration')
     _reserved_words = set()
 
@@ -2634,14 +2635,16 @@ class ConfigDict(ConfigBase, Mapping):
 
     def __getstate__(self):
         state = super().__getstate__()
-        state.append(('_implicit_domain', _picklable(self._implicit_domain, self)))
+        state.append(_picklable(self._implicit_domain, self))
         # Note: [1:] intentionally skips the _implicit_domain (which we
         # just handled)
-        state.extend((key, getattr(self, key)) for key in ConfigDict.__slots__[1:])
+        state.extend(getattr(self, key) for key in ConfigDict.__slots__[1:])
         return state
 
     def __setstate__(self, state):
-        state = super().__setstate__(state)
+        super().__setstate__(state)
+        for key, val in zip(ConfigDict.__slots__, state[len(ConfigBase.__slots__):]):
+            object.__setattr__(self, key, val)
         for x in self._data.values():
             x._parent = self
 
