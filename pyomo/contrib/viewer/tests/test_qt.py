@@ -65,6 +65,11 @@ if not pint_available:
         "contrib.viewer requires pint, which is not available."
     )
 
+if not pv.qtconsole_available:
+    pytestmark = unittest.pytest.mark.skip(
+        "contrib.viewer requires qtconsole, which is not available."
+    )
+
 
 def get_model():
     # Borrowed this test model from the trust region tests
