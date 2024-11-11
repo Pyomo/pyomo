@@ -27,6 +27,7 @@ class ComponentDataSet:
     ------
         ValueError if all of the arguments are not of a type in 'ctype'
     """
+
     def __init__(self, ctype):
         if isinstance(ctype, Sequence):
             self._ctypes = set(ctype)
