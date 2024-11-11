@@ -271,9 +271,7 @@ class AutoSlots(type):
             # 'state' list, significantly speeding things up.
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
             state = self.__getstate__()
-            ans.__setstate__(
-                [fast_deepcopy(field, memo) for field in state]
-            )
+            ans.__setstate__([fast_deepcopy(field, memo) for field in state])
             # The state ises a temporary dict to store the (mapped)
             # __dict__ state.  It is important that we DO NOT save the
             # id() of that temporary object in the memo

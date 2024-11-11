@@ -2643,7 +2643,7 @@ class ConfigDict(ConfigBase, Mapping):
 
     def __setstate__(self, state):
         super().__setstate__(state)
-        for key, val in zip(ConfigDict.__slots__, state[len(ConfigBase.__slots__):]):
+        for key, val in zip(ConfigDict.__slots__, state[len(ConfigBase.__slots__) :]):
             object.__setattr__(self, key, val)
         for x in self._data.values():
             x._parent = self
