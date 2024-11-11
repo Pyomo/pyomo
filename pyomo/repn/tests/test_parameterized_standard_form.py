@@ -100,10 +100,10 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(A.indices == [1, 1]))
 
         A.sum_duplicates()
-        
-        self.assertTrue(np.all(A.data == [9,]))
+
+        self.assertTrue(np.all(A.data == [9]))
         self.assertTrue(np.all(A.indptr == [0, 0, 1, 1]))
-        self.assertTrue(np.all(A.indices == [1,]))
+        self.assertTrue(np.all(A.indices == [1]))
 
         dense = np.array([[0, 0, 0], [0, 9, 0], [0, 0, 0]])
         self.assertTrue(np.all(A.todense() == dense))

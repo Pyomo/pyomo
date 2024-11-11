@@ -218,7 +218,7 @@ class _CSCMatrix(_SparseMatrixBase):
                 data[num_non_zeros] = x
                 num_non_zeros += 1
             col_index_ptr[i + 1] = num_non_zeros
-        
+
         # [ESJ 11/11/24]: I'm not 100% sure how scipy handles this, but we need
         # to remove the "extra" entries from the data and row_index arrays.
         self.data = data[:num_non_zeros]
