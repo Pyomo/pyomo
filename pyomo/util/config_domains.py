@@ -10,46 +10,57 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentSet
+from typing import Sequence
 
 
-class ComponentDataList:
-    """ComponentDataList(ctype)
+class ComponentDataSet:
+    """ComponentDataSet(ctype)
     Domain validation class that accepts singleton or iterable arguments and
     compiles them into a ComponentSet, verifying that they are all ComponentDatas
     of type 'ctype.'
 
     Parameters
     ----------
-        ctype: The component type of the list
+        ctype: The component type(s) of the list
 
     Raises
     ------
-        ValueError if all of the arguments are not of type 'ctype'
+        ValueError if all of the arguments are not of a type in 'ctype'
     """
-
     def __init__(self, ctype):
-        self._ctype = ctype
+        if isinstance(ctype, Sequence):
+            self._ctypes = set(ctype)
+        else:
+            self._ctypes = set([ctype])
 
     def __call__(self, x):
-        if hasattr(x, 'ctype') and x.ctype is self._ctype:
-            if not x.is_indexed():
-                return ComponentSet([x])
-            ans = ComponentSet()
-            for j in x.index_set():
-                ans.add(x[j])
-            return ans
-        elif hasattr(x, '__iter__'):
-            ans = ComponentSet()
-            for i in x:
-                ans.update(self(i))
-            return ans
+        return ComponentSet(self._process(x))
+
+    def _process(self, x):
+        _names = ', '.join(ct.__name__ for ct in self._ctypes)
+        if hasattr(x, 'ctype'):
+            if x.ctype not in self._ctypes:
+                raise ValueError(
+                    f"Expected component or iterable of one "
+                    f"of the following ctypes: "
+                    f"{_names}.\n\tReceived {type(x)}"
+                )
+            if x.is_indexed():
+                yield from x.values()
+            else:
+                yield x
+        elif isinstance(x, (Sequence, ComponentSet)):
+            for y in x:
+                yield from self._process(y)
         else:
-            _ctype_name = str(self._ctype)
             raise ValueError(
-                f"Expected {_ctype_name} or iterable of "
-                f"{_ctype_name}s.\n\tReceived {type(x)}"
+                f"Expected component or iterable of one "
+                f"of the following ctypes: "
+                f"{_names}.\n\tReceived {type(x)}"
             )
 
     def domain_name(self):
-        _ctype_name = str(self._ctype)
-        return f'ComponentDataList({_ctype_name})'
+        _names = ', '.join(ct.__name__ for ct in self._ctypes)
+        if len(self._ctypes) > 1:
+            _names = '[' + _names + ']'
+        return f"ComponentDataSet({_names})"

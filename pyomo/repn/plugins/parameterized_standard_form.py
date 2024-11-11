@@ -22,7 +22,7 @@ from pyomo.repn.plugins.standard_form import (
     LinearStandardFormCompiler,
     _LinearStandardFormCompiler_impl,
 )
-from pyomo.util.config_domains import ComponentDataList
+from pyomo.util.config_domains import ComponentDataSet
 
 
 @WriterFactory.register(
@@ -37,7 +37,7 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
         'wrt',
         ConfigValue(
             default=None,
-            domain=ComponentDataList(Var),
+            domain=ComponentDataSet(Var),
             description="Vars to treat as data for the purposes of compiling"
             "the standard form",
             doc="""

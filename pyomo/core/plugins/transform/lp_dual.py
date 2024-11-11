@@ -28,7 +28,7 @@ from pyomo.core import (
 )
 from pyomo.opt import WriterFactory
 from pyomo.repn.standard_repn import isclose_const
-from pyomo.util.config_domains import ComponentDataList
+from pyomo.util.config_domains import ComponentDataSet
 
 
 class _LPDualData(AutoSlots.Mixin):
@@ -53,7 +53,7 @@ class LinearProgrammingDual(object):
         'parameterize_wrt',
         ConfigValue(
             default=None,
-            domain=ComponentDataList(Var),
+            domain=ComponentDataSet(Var),
             description="Vars to treat as data for the purposes of taking the dual",
             doc="""
             Optional list of Vars to be treated as data while taking the LP dual.

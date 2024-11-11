@@ -30,7 +30,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import TerminationCondition
-from pyomo.util.config_domains import ComponentDataList
+from pyomo.util.config_domains import ComponentDataSet
 
 import logging
 
@@ -95,7 +95,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         'vars_to_eliminate',
         ConfigValue(
             default=None,
-            domain=ComponentDataList(Var),
+            domain=ComponentDataSet(Var),
             description="Continuous variable or list of continuous variables to "
             "project out of the model",
             doc="""
