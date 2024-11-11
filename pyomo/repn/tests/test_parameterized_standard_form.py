@@ -113,7 +113,7 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
             ValueError,
             r"Shape specifies the number of rows as 3 but the index "
             r"pointer has length 2. The index pointer must have length "
-            r"nrows \+ 1: Check the 'shape' and 'matrix_data' arguments."
+            r"nrows \+ 1: Check the 'shape' and 'matrix_data' arguments.",
         ):
             A = _CSRMatrix(([4, 5], [1, 1], [1, 1]), shape=(3, 3))
 
@@ -121,7 +121,7 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
             ValueError,
             r"Shape specifies the number of columns as 3 but the index "
             r"pointer has length 2. The index pointer must have length "
-            r"ncols \+ 1: Check the 'shape' and 'matrix_data' arguments."
+            r"ncols \+ 1: Check the 'shape' and 'matrix_data' arguments.",
         ):
             A = _CSCMatrix(([4, 5], [1, 1], [1, 1]), shape=(3, 3))
 
