@@ -1948,8 +1948,9 @@ component, use the block del_component() and add_component() methods.
             # deepcopy() from violating the Python recursion limit.
             # This step is recursive; however, we do not expect "super
             # deep" Pyomo block hierarchies, so should be okay.
-            for comp in self.component_map().values():
-                comp._create_objects_for_deepcopy(memo, component_list)
+            for comp in self._decl_order:
+                if comp[0] is not None:
+                    comp[0]._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
     def private_data(self, scope=None):
