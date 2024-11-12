@@ -21,8 +21,7 @@ class ComponentDataSet:
 
     Parameters
     ----------
-        ctype: Either a single component type an iterable of component types to
-            admit in the set
+        ctype: Either a single component type or an iterable of component types
 
     Raises
     ------
