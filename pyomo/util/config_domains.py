@@ -39,7 +39,9 @@ class ComponentDataSet:
         return ComponentSet(self._process(x))
 
     def _process(self, x):
-        _names = ', '.join(ct.__name__ for ct in self._ctypes)
+        # Ordering for determinism
+        _ctypes = sorted([ct.__name__ for ct in self._ctypes])
+        _names = ', '.join(_ctypes)
         if hasattr(x, 'ctype'):
             if x.ctype not in self._ctypes:
                 raise ValueError(
@@ -62,7 +64,9 @@ class ComponentDataSet:
             )
 
     def domain_name(self):
-        _names = ', '.join(ct.__name__ for ct in self._ctypes)
+        # Ordering for determinism
+        _ctypes = sorted([ct.__name__ for ct in self._ctypes])
+        _names = ', '.join(_ctypes)
         if len(self._ctypes) > 1:
             _names = '[' + _names + ']'
         return f"ComponentDataSet({_names})"
