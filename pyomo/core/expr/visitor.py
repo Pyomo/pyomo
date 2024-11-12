@@ -1708,6 +1708,9 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node is None:
             return True, None
 
+        if node.__class__ in native_numeric_types:
+            return True, str(node)
+
         if node.__class__ in nonpyomo_leaf_types:
             return True, repr(node)
 

@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 
 import collections
-import enum
 import logging
 import math
 import operator
 
 logger = logging.getLogger('pyomo.core')
 
+from pyomo.common import enums
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.errors import PyomoException, DeveloperError
@@ -1638,7 +1638,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 # -------------------------------------------------------
 
 
-class ARG_TYPE(enum.IntEnum):
+class ARG_TYPE(enums.IntEnum):
     MUTABLE = -2
     ASNUMERIC = -1
     INVALID = 0
