@@ -12,32 +12,23 @@
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 import pyomo.common.unittest as unittest
-from pyomo.core import (
-    Block,
-    ConcreteModel,
-    Constraint,
-    Objective,
-    Var,
-)
+from pyomo.core import Block, ConcreteModel, Constraint, Objective, Var
 from pyomo.util.config_domains import ComponentDataSet
+
 
 def ComponentSetConfig():
     CONFIG = ConfigDict()
     CONFIG.declare(
         'var_set',
-        ConfigValue(
-            default=None,
-            domain=ComponentDataSet(Var),
-            doc="VarDataSet"
-        )
+        ConfigValue(default=None, domain=ComponentDataSet(Var), doc="VarDataSet"),
     )
     CONFIG.declare(
         'var_and_constraint_set',
         ConfigValue(
             default=None,
             domain=ComponentDataSet(ctype=(Var, Constraint)),
-            doc="VarAndConstraintSet"
-        )
+            doc="VarAndConstraintSet",
+        ),
     )
     return CONFIG
 
@@ -69,7 +60,7 @@ class TestComponentDataSetDomain(unittest.TestCase):
             ValueError,
             ".*Expected component or iterable of one "
             "of the following ctypes: Var.\n\t"
-            "Received <class 'pyomo.core.base.constraint.ScalarConstraint'>"
+            "Received <class 'pyomo.core.base.constraint.ScalarConstraint'>",
         ):
             config.var_set = ComponentSet([m.y, m.c])
 
@@ -87,7 +78,7 @@ class TestComponentDataSetDomain(unittest.TestCase):
             ValueError,
             ".*Expected component or iterable of one "
             "of the following ctypes: Constraint, Var.\n\t"
-            "Received <class 'pyomo.core.base.block.ScalarBlock'>"
+            "Received <class 'pyomo.core.base.block.ScalarBlock'>",
         ):
             config.var_and_constraint_set = ComponentSet([m.y, m.c, m.b])
 
@@ -95,13 +86,14 @@ class TestComponentDataSetDomain(unittest.TestCase):
             ValueError,
             ".*Expected component or iterable of one "
             "of the following ctypes: Constraint, Var.\n\t"
-            "Received <class 'int'>"
+            "Received <class 'int'>",
         ):
             config.var_and_constraint_set = ComponentSet([3, m.y, m.c])
 
     def test_domain_name(self):
         config = ComponentSetConfig()
-        self.assertEqual(config.get("var_set").domain_name(),
-                         "ComponentDataSet(Var)")
-        self.assertEqual(config.get("var_and_constraint_set").domain_name(),
-                         "ComponentDataSet([Constraint, Var])") 
+        self.assertEqual(config.get("var_set").domain_name(), "ComponentDataSet(Var)")
+        self.assertEqual(
+            config.get("var_and_constraint_set").domain_name(),
+            "ComponentDataSet([Constraint, Var])",
+        )
