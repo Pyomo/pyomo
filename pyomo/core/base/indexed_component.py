@@ -751,7 +751,7 @@ You can silence this warning by one of three ways:
     def _construct_from_rule_using_setitem(self):
         if self._rule is None:
             return
-        index = None
+        index = None  # set so it is defined for scalars for `except:` below
         rule = self._rule
         block = self.parent_block()
         try:

@@ -112,7 +112,7 @@ class ComponentBase(PyomoObject):
         # Templates (and the corresponding _GetItemExpression object),
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
-        # ComponentData.
+        # ComponentData (so we put it here on ComponentBase).
         #
         if '__block_scope__' in memo:
             _scope = memo['__block_scope__']
