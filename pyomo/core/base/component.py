@@ -227,15 +227,11 @@ class ComponentBase(PyomoObject):
             # warn the user
             if '__block_scope__' not in memo:
                 logger.warning(
-                    """
-                    Uncopyable field encountered when deep
-                    copying outside the scope of Block.clone().
-                    There is a distinct possibility that the new
-                    copy is not complete.  To avoid this
-                    situation, either use Block.clone() or set
-                    'paranoid' mode by adding '__paranoid__' ==
-                    True to the memo before calling
-                    copy.deepcopy."""
+                    "Uncopyable field encountered when deep "
+                    "copying Pyomo components outside the scope of "
+                    "Block.clone().  There is a distinct possibility "
+                    "that the new copy is not complete.  To avoid "
+                    "this situation, please use Block.clone()"
                 )
             if self.model() is self:
                 what = 'Model'
