@@ -996,7 +996,7 @@ class IndexedParam(Param):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
         return _ans
 
     # Because CP supports indirection [the ability to index objects by

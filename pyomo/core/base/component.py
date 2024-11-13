@@ -185,7 +185,7 @@ class ComponentBase(PyomoObject):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
         return _ans
 
     def __deepcopy_field__(self, value, memo, slot_name):

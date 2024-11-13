@@ -340,7 +340,7 @@ class IndexedComponent(Component):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
             # For indexed components, we will pre-emptively clone all
             # component data objects as well (as those are the objects
             # that will be referenced by things like expressions).  It
