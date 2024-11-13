@@ -269,15 +269,97 @@ class AutoSlots(type):
             """
             # Note: this implementation avoids deepcopying the temporary
             # 'state' list, significantly speeding things up.
-            memo[id(self)] = ans = self.__class__.__new__(self.__class__)
-            state = self.__getstate__()
-            ans.__setstate__([fast_deepcopy(field, memo) for field in state])
-            # The state uses a temporary dict to store the (mapped)
-            # __dict__ state.  It is important that we DO NOT save the
-            # id() of that temporary object in the memo
-            if self.__auto_slots__.has_dict:
-                del memo[id(state[-1])]
+            ans = self.__class__.__new__(self.__class__)
+            self.__deepcopy_state__(memo, ans)
             return ans
+
+        def __deepcopy_state__(self, memo, new_object):
+            """This implements the state copy from a source object to the new
+            instance in the deepcopy memo.
+
+            This splits out the logic for actually duplicating the
+            object state from the "boilerplate" that creates a new
+            object and registers the object in the memo.  This allows us
+            to create new schemes for duplicating / registering objects
+            that reuse all the logic here for copying the state.
+
+            """
+            #
+            # At this point we know we need to deepcopy this object.
+            # But, we can't do the "obvious", since this is a
+            # (partially) slot-ized class and the __dict__ structure is
+            # nonauthoritative:
+            #
+            # for key, val in self.__dict__.iteritems():
+            #     object.__setattr__(ans, key, deepcopy(val, memo))
+            #
+            # Further, __slots__ is also nonauthoritative (this may be a
+            # derived class that also has a __dict__), or this may be a
+            # derived class with several layers of slots.  So, we will
+            # piggyback on the __getstate__/__setstate__ logic and
+            # resort to partially "pickling" the object, deepcopying the
+            # state, and then restoring the copy into the new instance.
+            #
+            # [JDS 7/7/14] I worry about the efficiency of using both
+            # getstate/setstate *and* deepcopy, but we need to update
+            # fields like weakrefs correctly (and that logic is all in
+            # __getstate__/__setstate__).
+            #
+            # There is a particularly subtle bug with 'uncopyable'
+            # attributes: if the exception is thrown while copying a
+            # complex data structure, we can be in a state where objects
+            # have been created and assigned to the memo in the try
+            # block, but they haven't had their state set yet.  When the
+            # exception moves us into the except block, we need to
+            # effectively "undo" those partially copied classes.  The
+            # only way is to restore the memo to the state it was in
+            # before we started.  We will make use of the knowledge that
+            # 1) memo entries are never reassigned during a deepcopy(),
+            # and 2) dict are ordered by insertion order in Python >=
+            # 3.7.  As a result, we do not need to preserve the whole
+            # memo before calling __getstate__/__setstate__, and can get
+            # away with only remembering the number of items in the
+            # memo.
+            #
+            state = self.__getstate__()
+            try:
+                memo['__auto_slots__'].append(state)
+            except KeyError:
+                memo['__auto_slots__'] = [state]
+
+            memo_size = len(memo)
+            try:
+                new_state = [fast_deepcopy(field, memo) for field in state]
+            except:
+                # We hit an error deepcopying the state.  Attempt to
+                # reset things and try again, but in a more cautious
+                # manner.
+                #
+                # We want to remove any new entries added to the memo
+                # during the failed try above.
+                for _ in range(len(memo) - memo_size):
+                    memo.popitem()
+                #
+                # Now we are going to continue on, but in a more
+                # cautious manner: we will clone entries field at a time
+                # so that we can get the most "complete" copy possible.
+                #
+                # Note: if has_dict, then __auto_slots__.slots will be 1
+                # shorter than the state (the last element is the
+                # __dict__).  Zip will ignore it.
+                _copier = getattr(self, '__deepcopy_field__', _deepcopier)
+                new_state = [
+                    _copier(value, memo, slot)
+                    for slot, value in zip(self.__auto_slots__.slots, state)
+                ]
+                if self.__auto_slots__.has_dict:
+                    new_state.append(
+                        {
+                            slot: _copier(value, memo, slot)
+                            for slot, value in state[-1].items()
+                        }
+                    )
+            new_object.__setstate__(new_state)
 
         def __getstate__(self):
             """Generic implementation of `__getstate__`
