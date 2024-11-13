@@ -1943,7 +1943,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.x = ExternalFunction(library='foo.so', function='bar')
 
         expr = model.x(model.a, 1, "foo", [])
-        self.assertEqual("x(a, 1, 'foo', '[]')", str(expr))
+        self.assertEqual("x(a, 1, 'foo', [])", str(expr))
 
     def test_inequality(self):
         #
@@ -3477,7 +3477,7 @@ class TestPolynomialDegree(unittest.TestCase):
     def test_Expr_if(self):
         m = self.instance
         #
-        # When IF conditional is constant, then polynomial degree is propigated
+        # When IF conditional is constant, then polynomial degree is propagated
         #
         expr = Expr_if(1, m.a**3, m.a**2)
         self.assertEqual(expr.polynomial_degree(), 3)

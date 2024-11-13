@@ -68,7 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
+        python: [ 3.8, 3.9, '3.10', '3.11', '3.12', '3.13' ]
         other: [""]
         category: [""]
 
@@ -110,7 +110,7 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: '3.12'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -140,6 +140,15 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.12
+          other: /numpy2
+          slim: 1
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
 
         - os: ubuntu-latest
           python: 3.9
@@ -372,6 +381,10 @@ jobs:
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
+        fi
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+            # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
+            EXCLUDE="qtconsole $EXCLUDE"
         fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then

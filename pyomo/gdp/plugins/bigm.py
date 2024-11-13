@@ -93,18 +93,17 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         targets: the targets to transform [default: the instance]
 
     M values are determined as follows:
-       1) if the constraint appears in the bigM argument dict
-       2) if the constraint parent_component appears in the bigM
-          argument dict
-       3) if any block which is an ancestor to the constraint appears in
+       1. if the constraint appears in the bigM argument dict
+       2. if the constraint parent_component appears in the bigM argument dict
+       3. if any block which is an ancestor to the constraint appears in
           the bigM argument dict
-       3) if 'None' is in the bigM argument dict
-       4) if the constraint or the constraint parent_component appear in
+       4. if 'None' is in the bigM argument dict
+       5. if the constraint or the constraint parent_component appear in
           a BigM Suffix attached to any parent_block() beginning with the
           constraint's parent_block and moving up to the root model.
-       5) if None appears in a BigM Suffix attached to any
+       6. if None appears in a BigM Suffix attached to any
           parent_block() between the constraint and the root model.
-       6) if the constraint is linear, estimate M using the variable bounds
+       7. if the constraint is linear, estimate M using the variable bounds
 
     M values may be a single value or a 2-tuple specifying the M for the
     lower bound and the upper bound of the constraint body.

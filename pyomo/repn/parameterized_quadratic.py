@@ -19,12 +19,12 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.repn.linear import (
     ExitNodeDispatcher,
+    initialize_exit_node_dispatcher,
     _handle_division_ANY_constant,
     _handle_expr_if_const,
     _handle_pow_ANY_constant,
     _handle_product_ANY_constant,
     _handle_product_constant_ANY,
-    _initialize_exit_node_dispatcher,
 )
 from pyomo.repn.parameterized_linear import (
     define_exit_node_handlers as _param_linear_def_exit_node_handlers,
@@ -190,9 +190,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
-    arg1.quadratic = _mul_linear_linear(
-        visitor.var_order.__getitem__, arg1.linear, arg2.linear
-    )
+    arg1.quadratic = _mul_linear_linear(visitor, arg1.linear, arg2.linear)
     # Linear second, as this relies on knowing the original constants
     if is_zero(arg2.constant):
         arg1.linear = {}
@@ -259,7 +257,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
                 ans.quadratic = {k: c * coef for k, coef in x2.quadratic.items()}
     # [B1B2]
     if x1.linear and x2.linear:
-        quad = _mul_linear_linear(visitor.var_order.__getitem__, x1.linear, x2.linear)
+        quad = _mul_linear_linear(visitor, x1.linear, x2.linear)
         if ans.quadratic:
             _merge_dict(ans.quadratic, 1, quad)
         else:
@@ -335,7 +333,7 @@ def define_exit_node_handlers(exit_node_handlers=None):
 class ParameterizedQuadraticRepnVisitor(ParameterizedLinearRepnVisitor):
     Result = ParameterizedQuadraticRepn
     exit_node_dispatcher = ExitNodeDispatcher(
-        _initialize_exit_node_dispatcher(define_exit_node_handlers())
+        initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2
     expand_nonlinear_products = True

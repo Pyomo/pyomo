@@ -40,8 +40,8 @@ from pyomo.common.deprecation import (
     relocated_module_attribute,
 )
 from pyomo.common.fileutils import import_file
+from pyomo.common.flags import building_documentation, NOTSET
 from pyomo.common.formatting import wrap_reStructuredText
-from pyomo.common.modeling import NOTSET
 
 logger = logging.getLogger(__name__)
 
@@ -298,7 +298,7 @@ class InEnum(object):
         raise ValueError("%r is not a valid %s" % (value, self._domain.__name__))
 
     def domain_name(self):
-        return f'InEnum[{self._domain.__name__}]'
+        return f'InEnum[{_domain_name(self._domain)}]'
 
 
 class IsInstance(object):
@@ -361,8 +361,8 @@ class IsInstance(object):
         raise ValueError(msg)
 
     def domain_name(self):
-        class_names = (self._get_class_name(kls) for kls in self.baseClasses)
-        return f"IsInstance({', '.join(class_names)})"
+        class_names = (_domain_name(kls) for kls in self.baseClasses)
+        return f"IsInstance[{', '.join(class_names)}]"
 
 
 class ListOf(object):
@@ -442,23 +442,22 @@ class Module(object):
     name, by module name, or by module object. Regardless of how the module is
     specified, what is stored in the configuration is a module object.
 
-    .. doctest::
+    .. testcode::
 
-        >>> from pyomo.common.config import (
-        ...     ConfigDict, ConfigValue, Module
-        ... )
-        >>> config = ConfigDict()
-        >>> config.declare('my_module', ConfigValue(
-        ...     domain=Module(),
-        ... ))
-        <pyomo.common.config.ConfigValue object at ...>
-        >>> # Set using file path
-        >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
-        >>> # Set using python module name, as a string
-        >>> config.my_module = 'os.path'
-        >>> # Set using an imported module object
-        >>> import os.path
-        >>> config.my_module = os.path
+        from pyomo.common.config import (
+            ConfigDict, ConfigValue, Module
+        )
+        config = ConfigDict()
+        config.declare('my_module', ConfigValue(
+            domain=Module(),
+        ))
+        # Set using file path
+        config.my_module = '../../pyomo/common/tests/config_plugin.py'
+        # Set using python module name, as a string
+        config.my_module = 'os.path'
+        # Set using an imported module object
+        import os.path
+        config.my_module = os.path
 
     """
 
@@ -533,7 +532,7 @@ class Path(object):
             base = self.basePath
         else:
             base = Path.BasePath
-        if type(base) is ConfigValue:
+        if isinstance(base, ConfigValue):
             base = base.value()
         if base is None:
             base = ""
@@ -558,7 +557,7 @@ class Path(object):
         return ans
 
     def domain_name(self):
-        return type(self).__name__
+        return _domain_name(type(self))
 
 
 class PathList(Path):
@@ -613,18 +612,24 @@ class DynamicImplicitDomain(object):
        >>> import pyomo.common.fileutils
        >>> from pyomo.common.config import ConfigDict, DynamicImplicitDomain
 
-    .. doctest::
+    Then we can declare a `:class:``ConfigDict`` that imports the domain
+    for specific keys from a module that matches the key name:
 
-       >>> def _pluginImporter(name, config):
-       ...     mod = importlib.import_module(name)
-       ...     return mod.get_configuration(config)
-       >>> config = ConfigDict()
-       >>> config.declare('plugins', ConfigDict(
-       ...     implicit=True,
-       ...     implicit_domain=DynamicImplicitDomain(_pluginImporter)))
-       <pyomo.common.config.ConfigDict object at ...>
-       >>> config.plugins['pyomo.common.tests.config_plugin'] = {'key1': 5}
-       >>> config.display()
+    .. testcode::
+
+       def _pluginImporter(name, config):
+           mod = importlib.import_module(name)
+           return mod.get_configuration(config)
+       config = ConfigDict()
+       config.declare('plugins', ConfigDict(
+           implicit=True,
+           implicit_domain=DynamicImplicitDomain(_pluginImporter)))
+       config.plugins['pyomo.common.tests.config_plugin'] = {'key1': 5}
+       config.display()
+
+
+    .. testoutput::
+
        plugins:
          pyomo.common.tests.config_plugin:
            key1: 5
@@ -699,35 +704,37 @@ entry.  ConfigValue objects can be grouped using two containers
 Python's dict and list classes, respectively.
 
 At its simplest, the Config system allows for developers to specify a
-dictionary of documented configuration entries, allow users to provide
-values for those entries, and retrieve the current values:
+dictionary of documented configuration entries:
+
+.. testcode::
+
+    from pyomo.common.config import (
+        ConfigDict, ConfigList, ConfigValue
+    )
+    config = ConfigDict()
+    config.declare('filename', ConfigValue(
+        default=None,
+        domain=str,
+        description="Input file name",
+    ))
+    config.declare("bound tolerance", ConfigValue(
+        default=1E-5,
+        domain=float,
+        description="Bound tolerance",
+        doc="Relative tolerance for bound feasibility checks"
+    ))
+    config.declare("iteration limit", ConfigValue(
+        default=30,
+        domain=int,
+        description="Iteration limit",
+        doc="Number of maximum iterations in the decomposition methods"
+    ))
+
+Users can then provide values for those entries, and retrieve the
+current values:
 
 .. doctest::
 
-    >>> from pyomo.common.config import (
-    ...     ConfigDict, ConfigList, ConfigValue
-    ... )
-    >>> config = ConfigDict()
-    >>> config.declare('filename', ConfigValue(
-    ...     default=None,
-    ...     domain=str,
-    ...     description="Input file name",
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare("bound tolerance", ConfigValue(
-    ...     default=1E-5,
-    ...     domain=float,
-    ...     description="Bound tolerance",
-    ...     doc="Relative tolerance for bound feasibility checks"
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare("iteration limit", ConfigValue(
-    ...     default=30,
-    ...     domain=int,
-    ...     description="Iteration limit",
-    ...     doc="Number of maximum iterations in the decomposition methods"
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
     >>> config['filename'] = 'tmp.txt'
     >>> print(config['filename'])
     tmp.txt
@@ -882,45 +889,40 @@ Config entries can be declared as argparse arguments using the
 simpler, the :py:meth:`declare` method returns the declared Config
 object so that the argument declaration can be done inline:
 
-.. doctest::
+.. testcode::
 
-    >>> import argparse
-    >>> config = ConfigDict()
-    >>> config.declare('iterlim', ConfigValue(
-    ...     domain=int,
-    ...     default=100,
-    ...     description="iteration limit",
-    ... )).declare_as_argument()
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('lbfgs', ConfigValue(
-    ...     domain=bool,
-    ...     description="use limited memory BFGS update",
-    ... )).declare_as_argument()
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('linesearch', ConfigValue(
-    ...     domain=bool,
-    ...     default=True,
-    ...     description="use line search",
-    ... )).declare_as_argument()
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('relative tolerance', ConfigValue(
-    ...     domain=float,
-    ...     description="relative convergence tolerance",
-    ... )).declare_as_argument('--reltol', '-r', group='Tolerances')
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('absolute tolerance', ConfigValue(
-    ...     domain=float,
-    ...     description="absolute convergence tolerance",
-    ... )).declare_as_argument('--abstol', '-a', group='Tolerances')
-    <pyomo.common.config.ConfigValue object at ...>
+    import argparse
+    config = ConfigDict()
+    config.declare('iterlim', ConfigValue(
+        domain=int,
+        default=100,
+        description="iteration limit",
+    )).declare_as_argument()
+    config.declare('lbfgs', ConfigValue(
+        domain=bool,
+        description="use limited memory BFGS update",
+    )).declare_as_argument()
+    config.declare('linesearch', ConfigValue(
+        domain=bool,
+        default=True,
+        description="use line search",
+    )).declare_as_argument()
+    config.declare('relative tolerance', ConfigValue(
+        domain=float,
+        description="relative convergence tolerance",
+    )).declare_as_argument('--reltol', '-r', group='Tolerances')
+    config.declare('absolute tolerance', ConfigValue(
+        domain=float,
+        description="absolute convergence tolerance",
+    )).declare_as_argument('--abstol', '-a', group='Tolerances')
 
 The ConfigDict can then be used to initialize (or augment) an argparse
 ArgumentParser object:
 
-.. doctest::
+.. testcode::
 
-    >>> parser = argparse.ArgumentParser("tester")
-    >>> config.initialize_argparse(parser)
+    parser = argparse.ArgumentParser("tester")
+    config.initialize_argparse(parser)
 
 
 Key information from the ConfigDict is automatically transferred over
@@ -945,10 +947,8 @@ to the ArgumentParser object:
       --disable-linesearch  [DON'T] use line search
     <BLANKLINE>
     Tolerances:
-      --reltol FLOAT, -r FLOAT
-                            relative convergence tolerance
-      --abstol FLOAT, -a FLOAT
-                            absolute convergence tolerance
+      --reltol... -r FLOAT  relative convergence tolerance
+      --abstol... -a FLOAT  absolute convergence tolerance
     <BLANKLINE>
 
 .. doctest::
@@ -1000,30 +1000,30 @@ children).  :py:meth:`generate_yaml_template` is similar to
 :py:meth:`display`, but also includes the description fields as
 formatted comments.
 
+.. testcode::
+
+    solver_config = config
+    config = ConfigDict()
+    config.declare('output', ConfigValue(
+        default='results.yml',
+        domain=str,
+        description='output results filename'
+    ))
+    config.declare('verbose', ConfigValue(
+        default=0,
+        domain=int,
+        description='output verbosity',
+        doc='This sets the system verbosity.  The default (0) only logs '
+        'warnings and errors.  Larger integer values will produce '
+        'additional log messages.',
+    ))
+    config.declare('solvers', ConfigList(
+        domain=solver_config,
+        description='list of solvers to apply',
+    ))
+
 .. doctest::
 
-    >>> solver_config = config
-    >>> config = ConfigDict()
-    >>> config.declare('output', ConfigValue(
-    ...     default='results.yml',
-    ...     domain=str,
-    ...     description='output results filename'
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('verbose', ConfigValue(
-    ...     default=0,
-    ...     domain=int,
-    ...     description='output verbosity',
-    ...     doc='This sets the system verbosity.  The default (0) only logs '
-    ...     'warnings and errors.  Larger integer values will produce '
-    ...     'additional log messages.',
-    ... ))
-    <pyomo.common.config.ConfigValue object at ...>
-    >>> config.declare('solvers', ConfigList(
-    ...     domain=solver_config,
-    ...     description='list of solvers to apply',
-    ... ))
-    <pyomo.common.config.ConfigList object at ...>
     >>> config.display()
     output: results.yml
     verbose: 0
@@ -1116,6 +1116,8 @@ def _dump(*args, **kwds):
         def dump(x, **args):
             if type(x) is bool:
                 return str(x).lower()
+            if type(x) is type:
+                return str(type(x))
             return str(x)
 
     assert '_dump' in globals()
@@ -1133,16 +1135,26 @@ def _munge_name(name, space_to_dash=True):
 def _domain_name(domain):
     if domain is None:
         return ""
-    elif hasattr(domain, 'domain_name'):
+    if hasattr(domain, 'domain_name') and not isinstance(domain, type):
         dn = domain.domain_name
         if hasattr(dn, '__call__'):
             return dn()
         else:
             return dn
-    elif domain.__class__ is type:
-        return domain.__name__
+    if domain.__module__ == 'builtins':
+        module = ""
+    else:
+        module = "~" + domain.__module__ + '.'
+    if isinstance(domain, type):
+        if building_documentation():
+            return module + domain.__qualname__
+        else:
+            return domain.__name__
     elif inspect.isfunction(domain):
-        return domain.__name__
+        if building_documentation():
+            return module + domain.__qualname__
+        else:
+            return domain.__name__
     else:
         return None
 
@@ -1172,17 +1184,17 @@ def _value2string(prefix, value, obj):
     _str = prefix
     if value is not None:
         try:
-            _data = value._data if value is obj else value
-            if getattr(builtins, _data.__class__.__name__, None) is not None:
+            data = value.value(False) if value is obj else value
+            if getattr(builtins, data.__class__.__name__, None) is not None:
                 _str += _dump(
-                    _data, default_flow_style=True, allow_unicode=True
+                    data, default_flow_style=True, allow_unicode=True
                 ).rstrip()
                 if _str.endswith("..."):
                     _str = _str[:-3].rstrip()
             else:
-                _str += str(_data)
+                _str += str(data)
         except:
-            _str += str(type(_data))
+            _str += str(type(data))
     return _str.rstrip()
 
 
@@ -1190,12 +1202,12 @@ def _value2yaml(prefix, value, obj):
     _str = prefix
     if value is not None:
         try:
-            _data = value._data if value is obj else value
-            _str += _dump(_data, default_flow_style=True).rstrip()
+            data = value.value(False) if value is obj else value
+            _str += _dump(data, default_flow_style=True).rstrip()
             if _str.endswith("..."):
                 _str = _str[:-3].rstrip()
         except:
-            _str += str(type(_data))
+            _str += str(type(data))
     return _str.rstrip()
 
 
@@ -1205,7 +1217,7 @@ class _UnpickleableDomain(object):
         self._name = obj.name(True)
 
     def __call__(self, arg):
-        logging.error(
+        logger.error(
             """%s '%s' was pickled with an unpicklable domain.
     The domain was stripped and lost during the pickle process.  Setting
     new values on the restored object cannot be mapped into the correct
@@ -1487,7 +1499,7 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
                     (
                         'optional'
                         if obj._default is None
-                        else f'default={repr(obj._default)}'
+                        else f'default={obj._default!r}'
                     ),
                 ],
             )
@@ -1520,7 +1532,7 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
             self.wrapper,
         )
         if itemdoc:
-            self.out.write(itemdoc + '\n')
+            self.out.write('\n' + itemdoc + '\n')
 
     def _finalize(self):
         return inspect.cleandoc(self.out.getvalue())
@@ -1664,15 +1676,83 @@ class document_kwargs_from_configdict(object):
         return fcn
 
 
+class UninitializedMixin(object):
+    """Mixin class to support delayed data initialization.
+
+    This mixin can be used to create a derived Config class that hides
+    the (uninitialized) ``_data`` attribute behind a property.  Any
+    attempt to access the ``_data`` will trigger the initialization of the
+    Config object from its ``_default`` value.  Setting the ``_data``
+    attribute will also trigger resolution of the Config object, but
+    without processing the ``_default__``.
+
+    """
+
+    __slots__ = ()
+
+    @property
+    def _data(self):
+        #
+        # We assume that _default is usually a concrete value.  But, we
+        # also accept a types (classes) and initialization functions as
+        # defaults, in which case we will construct an instance of that
+        # class and use that as the default.  If they both raise
+        # exceptions, we will let the original exception propagate up.
+        #
+        try:
+            self._setter(self._default)
+        except:
+            if hasattr(self._default, '__call__'):
+                _default_val = self._default()
+                try:
+                    self._setter(_default_val)
+                    return self._data
+                except:
+                    pass
+            raise
+        return self._data
+
+    @_data.setter
+    def _data(self, value):
+        _mro = self.__class__.__mro__
+        # There is an edge case in multithreaded environments where this
+        # function could actually be called more than once for a single
+        # ConfigValue.  We want to make sure that only the first of the
+        # calls actually updates the __class__ (the others will
+        # recursively lookup the _data attribute and the second lookup
+        # will resolve to normal attribute assignment).
+        #
+        # We first encountered this issue for Config objects stores as
+        # class attributes (i.e., the default Config for something like
+        # a solver or writer) and multiple threads were simultaneously
+        # creating instances of the class (each of which was resolving
+        # the default values for the class attribute).
+        #
+        # Note that this explicitly assumes that the uninitialized
+        # Config object was defined as:
+        #
+        #    class UninitializedConfig(UninitializedMixin, Config)
+        #
+        # and that the resulting class was never inherited from.  If
+        # this assumption is ever violated, attempts to use the
+        # uninitialized config object will generate infinite recursion
+        # (and that is OK, as the developer should immediately be
+        # informed of their error)
+        if _mro[1] is UninitializedMixin:
+            self.__class__ = _mro[2]
+        self._data = value
+
+
 class ConfigBase(object):
+    # Note: __getstate__ relies on this field ordering.  Do not change.
     __slots__ = (
         '_parent',
+        '_domain',
         '_name',
         '_userSet',
         '_userAccessed',
         '_data',
         '_default',
-        '_domain',
         '_description',
         '_doc',
         '_visibility',
@@ -1694,13 +1774,15 @@ class ConfigBase(object):
         self._userSet = False
         self._userAccessed = False
 
-        self._data = None
+        self._data = NOTSET
         self._default = default
         self._domain = domain
         self._description = _strip_indentation(description)
         self._doc = _strip_indentation(doc)
         self._visibility = visibility
         self._argparse = None
+        if self._UninitializedClass is not None:
+            self.__class__ = self._UninitializedClass
 
     def __getstate__(self):
         # Nominally, __getstate__() should return:
@@ -1718,13 +1800,15 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        state = {key: getattr(self, key) for key in ConfigBase.__slots__}
-        state['_domain'] = _picklable(state['_domain'], self)
-        state['_parent'] = None
+        state = [None, _picklable(self._domain, self)]
+        # Note: [2:] skips _parent and _domain (intentionally): We just
+        # wrapped _domain in _picklable and explicitly set _parent to
+        # None (it will be restored in __setstate__).
+        state.extend(getattr(self, key) for key in ConfigBase.__slots__[2:])
         return state
 
     def __setstate__(self, state):
-        for key, val in state.items():
+        for key, val in zip(ConfigBase.__slots__, state):
             # Note: per the Python data model docs, we explicitly
             # set the attribute using object.__setattr__() instead
             # of setting self.__dict__[key] = val.
@@ -1772,9 +1856,7 @@ class ConfigBase(object):
         # Initialize the new config object
         ans = self.__class__(**kwds)
 
-        if not isinstance(self, ConfigDict):
-            ans.reset()
-        else:
+        if isinstance(self, ConfigDict):
             # Copy over any Dict definitions
             for k, v in self._data.items():
                 if preserve_implicit or k in self._declared:
@@ -1840,17 +1922,9 @@ class ConfigBase(object):
             return value
 
     def reset(self):
-        #
-        # This is a dangerous construct, the failure in the first try block
-        # can mask a real problem.
-        #
-        try:
-            self.set_value(self._default)
-        except:
-            if hasattr(self._default, '__call__'):
-                self.set_value(self._default())
-            else:
-                raise
+        # Reset the object back to its default value and clear the
+        # userSet and userAccessed flags
+        self._UninitializedClass._data.fget(self)
         self._userAccessed = False
         self._userSet = False
 
@@ -2171,20 +2245,18 @@ class ConfigValue(ConfigBase):
 
     """
 
-    def __init__(self, *args, **kwds):
-        ConfigBase.__init__(self, *args, **kwds)
-        self.reset()
+    __slots__ = ()
 
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
         return self._data
 
-    def set_value(self, value):
-        # Trap self-assignment (useful for providing editor completion)
-        if value is self:
-            return
+    def _setter(self, value):
         self._data = self._cast(value)
+
+    def set_value(self, value):
+        self._setter(value)
         self._userSet = True
 
     def _data_collector(self, level, prefix, visibility=None, docMode=False):
@@ -2193,17 +2265,28 @@ class ConfigValue(ConfigBase):
         yield (level, prefix, self, self)
 
 
+ConfigValue._UninitializedClass = type(
+    'UninitializedConfigValue', (UninitializedMixin, ConfigValue), {'__slots__': ()}
+)
+
+
 class ImmutableConfigValue(ConfigValue):
+    __slots__ = ()
+
     def __new__(self, *args, **kwds):
         # ImmutableConfigValue objects are never directly created, and
         # any attempt to copy one will generate a mutable ConfigValue
         # object
         return ConfigValue(*args, **kwds)
 
-    def set_value(self, value):
-        if self._cast(value) != self._data:
-            raise RuntimeError(str(self) + ' is currently immutable')
-        super(ImmutableConfigValue, self).set_value(value)
+    def _setter(self, value):
+        try:
+            _data = self._data
+            super()._setter(value)
+            if _data != self._data:
+                raise RuntimeError(f"'{self.name(True)}' is currently immutable")
+        finally:
+            self._data = _data
 
 
 class MarkImmutable(object):
@@ -2218,14 +2301,48 @@ class MarkImmutable(object):
 
     Examples
     --------
-    >>> config = ConfigDict()
-    >>> config.declare('a', ConfigValue(default=1, domain=int))
-    >>> config.declare('b', ConfigValue(default=1, domain=int))
-    >>> locker = MarkImmutable(config.get('a'), config.get('b'))
+    .. testcode::
 
-    Now, config.a and config.b cannot be changed. To make them mutable again,
+       config = ConfigDict()
+       config.declare('a', ConfigValue(default=1, domain=int))
+       config.declare('b', ConfigValue(default=1, domain=int))
+       locker = MarkImmutable(config.get('a'), config.get('b'))
 
-    >>> locker.release_lock()
+    Now, config.a and config.b cannot be changed:
+
+    .. doctest::
+
+       >>> config.a = 5
+       Traceback (most recent call last):
+          ...
+       RuntimeError: ConfigValue 'a' is currently immutable
+       >>> print(config.a)
+       1
+
+    To make them mutable again,
+
+    .. doctest::
+
+       >>> locker.release_lock()
+       >>> config.a = 5
+       >>> print(config.a)
+       5
+
+    Note that this can be used as a context manager as well:
+
+    .. doctest::
+
+       >>> with MarkImmutable(config.get('a'), config.get('b')):
+       ...     config.a = 10
+       Traceback (most recent call last):
+          ...
+       RuntimeError: ConfigValue 'a' is currently immutable
+       >>> print(config.a)
+       5
+       >>> config.a = 10
+       >>> print(config.a)
+       10
+
     """
 
     def __init__(self, *args):
@@ -2237,9 +2354,13 @@ class MarkImmutable(object):
         try:
             for cfg in self._targets:
                 if type(cfg) is not ConfigValue:
-                    raise ValueError(
-                        'Only ConfigValue instances can be marked immutable.'
-                    )
+                    if isinstance(cfg, ConfigValue):
+                        # Resolve any UninitializedConfigValue
+                        cfg._data
+                    else:
+                        raise ValueError(
+                            'Only ConfigValue instances can be marked immutable.'
+                        )
                 cfg.__class__ = ImmutableConfigValue
                 self._locked.append(cfg)
         except:
@@ -2299,15 +2420,25 @@ class ConfigList(ConfigBase, Sequence):
 
     """
 
-    def __init__(self, *args, **kwds):
-        ConfigBase.__init__(self, *args, **kwds)
-        if self._domain is None:
-            self._domain = ConfigValue()
-        elif isinstance(self._domain, ConfigBase):
+    __slots__ = ()
+
+    def __init__(
+        self, default=None, domain=None, description=None, doc=None, visibility=0
+    ):
+        if domain is None:
+            domain = ConfigValue()
+        elif isinstance(domain, ConfigBase):
             pass
         else:
-            self._domain = ConfigValue(None, domain=self._domain)
-        self.reset()
+            domain = ConfigValue(None, domain=domain)
+        ConfigBase.__init__(
+            self,
+            default=default,
+            domain=domain,
+            description=description,
+            doc=doc,
+            visibility=visibility,
+        )
 
     def __setstate__(self, state):
         state = super(ConfigList, self).__setstate__(state)
@@ -2356,43 +2487,43 @@ class ConfigList(ConfigBase, Sequence):
             self._userAccessed = True
         return [config.value(accessValue) for config in self._data]
 
-    def set_value(self, value):
-        # If the set_value fails part-way through the list values, we
+    def _setter(self, value):
+        # If the _setter fails part-way through the list values, we
         # want to restore a deterministic state.  That is, either
         # set_value succeeds completely, or else nothing happens.
-        _old = self._data
-        self._data = []
-        try:
-            if isinstance(value, str):
-                value = list(_default_string_list_lexer(value))
-            if (type(value) is list) or isinstance(value, ConfigList):
-                for val in value:
-                    self.append(val)
-            else:
-                self.append(value)
-        except:
-            self._data = _old
-            raise
+        _data = []
+        if isinstance(value, str):
+            value = list(_default_string_list_lexer(value))
+        if (type(value) is list) or isinstance(value, ConfigList):
+            for val in value:
+                self._append(_data, val)
+        else:
+            self._append(_data, value)
+        self._data = _data
+
+    def set_value(self, value):
+        self._setter(value)
         self._userSet = True
+        for _data in self._data:
+            _data._userSet = True
 
-    def reset(self):
-        ConfigBase.reset(self)
-        # Because the base reset() calls set_value, any deefault list
-        # entries will get their userSet flag set.  This is wrong, as
-        # reset() should conceptually reset the object to it's default
-        # state (e.g., before the user ever had a chance to mess with
-        # things).  As the list could contain a ConfigDict, this is a
-        # recursive operation to put the userSet values back.
-        for val in self.user_values():
-            val._userSet = False
-
-    def append(self, value=NOTSET):
+    def _append(self, _data, value):
         val = self._cast(value)
         if val is None:
             return
-        self._data.append(val)
-        self._data[-1]._parent = self
-        self._data[-1]._name = '[%s]' % (len(self._data) - 1,)
+        val._parent = self
+        val._name = f'[{len(_data)}]'
+        # We need to reset the _userSet to False because the List domain
+        # is a ConfigValue and __call__ will trigger set_value(), which
+        # will set the _userSet flag.  As we get here during _default
+        # processing, we want to clear that flag.  If this is actually
+        # getting triggered through set_value() / append(), then
+        # append() will be responsible for setting _userSet.
+        val._userSet = False
+        _data.append(val)
+
+    def append(self, value=NOTSET):
+        self._append(self._data, value)
         self._data[-1]._userSet = True
         # Adding something to the container should not change the
         # userSet on the container (see Pyomo/pyomo#352; now
@@ -2435,6 +2566,11 @@ class ConfigList(ConfigBase, Sequence):
                 yield v
 
 
+ConfigList._UninitializedClass = type(
+    'UninitializedConfigList', (UninitializedMixin, ConfigList), {'__slots__': ()}
+)
+
+
 class ConfigDict(ConfigBase, Mapping):
     """Store and manipulate a dictionary of configuration values.
 
@@ -2469,8 +2605,9 @@ class ConfigDict(ConfigBase, Mapping):
 
     content_filters = {None, 'all', 'userdata'}
 
-    __slots__ = ('_declared', '_implicit_declaration', '_implicit_domain')
-    _all_slots = set(__slots__ + ConfigBase.__slots__)
+    # Note: __getstate__ relies on this field ordering.  Do not change.
+    __slots__ = ('_implicit_domain', '_declared', '_implicit_declaration')
+    _reserved_words = set()
 
     def __init__(
         self,
@@ -2497,13 +2634,17 @@ class ConfigDict(ConfigBase, Mapping):
         return _munge_name(self.name(), False)
 
     def __getstate__(self):
-        state = super(ConfigDict, self).__getstate__()
-        state.update((key, getattr(self, key)) for key in ConfigDict.__slots__)
-        state['_implicit_domain'] = _picklable(state['_implicit_domain'], self)
+        state = super().__getstate__()
+        state.append(_picklable(self._implicit_domain, self))
+        # Note: [1:] intentionally skips the _implicit_domain (which we
+        # just handled)
+        state.extend(getattr(self, key) for key in ConfigDict.__slots__[1:])
         return state
 
     def __setstate__(self, state):
-        state = super(ConfigDict, self).__setstate__(state)
+        super().__setstate__(state)
+        for key, val in zip(ConfigDict.__slots__, state[len(ConfigBase.__slots__) :]):
+            object.__setattr__(self, key, val)
         for x in self._data.values():
             x._parent = self
 
@@ -2549,8 +2690,11 @@ class ConfigDict(ConfigBase, Mapping):
         if _key not in self._data:
             self.add(key, val)
         else:
-            self._data[_key].set_value(val)
-        # self._userAccessed = True
+            cfg = self._data[_key]
+            # Trap self-assignment (useful for providing editor completion)
+            if cfg is val:
+                return
+            cfg.set_value(val)
 
     def __delitem__(self, key):
         # Note that this will produce a KeyError if the key is not valid
@@ -2570,20 +2714,23 @@ class ConfigDict(ConfigBase, Mapping):
     def __iter__(self):
         return map(attrgetter('_name'), self._data.values())
 
-    def __getattr__(self, name):
+    def __getattr__(self, attr):
         # Note: __getattr__ is only called after all "usual" attribute
         # lookup methods have failed.  So, if we get here, we already
         # know that key is not a __slot__ or a method, etc...
-        # if name in ConfigDict._all_slots:
-        #    return super(ConfigDict,self).__getattribute__(name)
-        _name = name.replace(' ', '_')
-        if _name not in self._data:
-            raise AttributeError("Unknown attribute '%s'" % name)
-        return ConfigDict.__getitem__(self, _name)
+        _attr = attr.replace(' ', '_')
+        # Note: we test for "_data" because finding attributes on a
+        # partially constructed ConfigDict (before the _data attribute
+        # was declared) can lead to infinite recursion.
+        if _attr == "_data" or _attr not in self._data:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{attr}'"
+            )
+        return ConfigDict.__getitem__(self, _attr)
 
     def __setattr__(self, name, value):
-        if name in ConfigDict._all_slots:
-            super(ConfigDict, self).__setattr__(name, value)
+        if name in ConfigDict._reserved_words:
+            super().__setattr__(name, value)
         else:
             ConfigDict.__setitem__(self, name, value)
 
@@ -2767,6 +2914,9 @@ class ConfigDict(ConfigBase, Mapping):
         for cfg in self._data.values():
             yield from cfg._data_collector(level, cfg._name + ': ', visibility, docMode)
 
+
+ConfigDict._UninitializedClass = None
+ConfigDict._reserved_words.update(dir(ConfigDict))
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict

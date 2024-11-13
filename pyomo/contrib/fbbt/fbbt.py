@@ -43,36 +43,45 @@ from pyomo.common.numeric_types import native_types
 logger = logging.getLogger(__name__)
 
 
-"""
-The purpose of this file is to perform feasibility based bounds 
-tightening. This is a very basic implementation, but it is done 
-directly with pyomo expressions. The only functions that are meant to 
-be used by users are fbbt and compute_bounds_on_expr. The first set of 
-functions in this file (those with names starting with 
-_prop_bnds_leaf_to_root) are used for propagating bounds from the  
-variables to each node in the expression tree (all the way to the  
-root node). The second set of functions (those with names starting 
-with _prop_bnds_root_to_leaf) are used to propagate bounds from the 
-constraint back to the variables. For example, consider the constraint 
-x*y + z == 1 with -1 <= x <= 1 and -2 <= y <= 2. When propagating 
-bounds from the variables to the root (the root is x*y + z), we find 
-that -2 <= x*y <= 2, and that -inf <= x*y + z <= inf. However, 
-from the constraint, we know that 1 <= x*y + z <= 1, so we may 
-propagate bounds back to the variables. Since we know that 
-1 <= x*y + z <= 1 and -2 <= x*y <= 2, then we must have -1 <= z <= 3. 
-However, bounds cannot be improved on x*y, so bounds cannot be 
-improved on either x or y.
+__doc__ = """
+Feasibility-Based Bounds Tightening
 
->>> import pyomo.environ as pe
->>> m = pe.ConcreteModel()
->>> m.x = pe.Var(bounds=(-1,1))
->>> m.y = pe.Var(bounds=(-2,2))
->>> m.z = pe.Var()
->>> from pyomo.contrib.fbbt.fbbt import fbbt
->>> m.c = pe.Constraint(expr=m.x*m.y + m.z == 1)
->>> fbbt(m)
->>> print(m.z.lb, m.z.ub)
--1.0 3.0
+The purpose of this module is to perform feasibility-based bounds
+tightening. This is a very basic implementation, but it is done
+directly with pyomo expressions. The only functions that are meant to
+be used by users are :func:`fbbt` and :func:`compute_bounds_on_expr`.
+The first set of
+functions in this file (those with names starting with
+``_prop_bnds_leaf_to_root``) are used for propagating bounds from the
+variables to each node in the expression tree (all the way to the
+root node). The second set of functions (those with names starting
+with ``_prop_bnds_root_to_leaf``) are used to propagate bounds from the
+constraint back to the variables.
+
+For example, consider the constraint x*y + z == 1 with -1 <= x <= 1 and
+-2 <= y <= 2. When propagating bounds from the variables to the root
+(the root is x*y + z), we find that -2 <= x*y <= 2, and that -inf <= x*y
++ z <= inf. However, from the constraint, we know that 1 <= x*y + z <=
+1, so we may propagate bounds back to the variables. Since we know that
+1 <= x*y + z <= 1 and -2 <= x*y <= 2, then we must have -1 <= z <= 3.
+However, bounds cannot be improved on x*y, so bounds cannot be improved
+on either x or y.
+
+.. testcode::
+
+   import pyomo.environ as pe
+   m = pe.ConcreteModel()
+   m.x = pe.Var(bounds=(-1,1))
+   m.y = pe.Var(bounds=(-2,2))
+   m.z = pe.Var()
+   from pyomo.contrib.fbbt.fbbt import fbbt
+   m.c = pe.Constraint(expr=m.x*m.y + m.z == 1)
+   fbbt(m)
+   print(f"z bounds = {m.z.bounds}")
+
+.. testoutput::
+
+   z bounds = (-1, 3)
 
 """
 
@@ -1242,7 +1251,7 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                     ub = min(math.ceil(ub), math.floor(ub + self.integer_tol))
                 """
                 We have to make sure we do not make lb lower than the original lower bound
-                and make sure we do not make ub larger than the original upper bound. This is what 
+                and make sure we do not make ub larger than the original upper bound. This is what
                 _check_and_reset_bounds is for.
                 """
                 lb, ub = _check_and_reset_bounds(node, lb, ub)

@@ -197,21 +197,6 @@ class _xpress_importer_class(object):
         return xpress
 
 
-_xpress_importer = _xpress_importer_class()
-xpress, xpress_available = attempt_import(
-    'xpress',
-    error_message=_xpress_importer,
-    # Other forms of exceptions can be thrown by the xpress python
-    # import.  For example, an xpress.InterfaceError exception is thrown
-    # if the Xpress license is not valid.  Unfortunately, you can't
-    # import without a license, which means we can't test for that
-    # explicit exception!
-    catch_exceptions=(Exception,),
-    importer=_xpress_importer,
-    callback=_finalize_xpress_import,
-)
-
-
 @SolverFactory.register('xpress_direct', doc='Direct python interface to XPRESS')
 class XpressDirect(DirectSolver):
     _name = None
@@ -257,12 +242,24 @@ class XpressDirect(DirectSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
 
-        if exception_flag and not xpress_available:
-            xpress.log_import_warning(logger=__name__)
-            raise ApplicationError(
-                "No Python bindings available for %s solver plugin" % (type(self),)
-            )
-        return bool(xpress_available)
+        if not xpress_available:
+            if exception_flag:
+                xpress.log_import_warning(logger=__name__)
+                raise ApplicationError(
+                    "No Python bindings available for %s solver plugin" % (type(self),)
+                )
+            return False
+
+        # Check that there is a valid license
+        try:
+            xpress.init()
+            return True
+        except:
+            if exception_flag:
+                raise
+            return False
+        finally:
+            xpress.free()
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -1210,3 +1207,21 @@ class XpressDirect(DirectSolver):
 
         """
         self._load_slacks(cons_to_load)
+
+
+# Note: because _finalize_xpress_import references XpressDirect, we need
+# to make sure to not attempt the xpress import until after the
+# XpressDirect class is fully declared.
+_xpress_importer = _xpress_importer_class()
+xpress, xpress_available = attempt_import(
+    'xpress',
+    error_message=_xpress_importer,
+    # Other forms of exceptions can be thrown by the xpress python
+    # import.  For example, an xpress.InterfaceError exception is thrown
+    # if the Xpress license is not valid.  Unfortunately, you can't
+    # import without a license, which means we can't test for that
+    # explicit exception!
+    catch_exceptions=(Exception,),
+    importer=_xpress_importer,
+    callback=_finalize_xpress_import,
+)

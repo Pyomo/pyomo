@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 """
-Objects to contain all model data and solve results for the ROSolver
+Containers for PyROS subproblem solve results.
 """
 
 
@@ -33,15 +33,19 @@ class ROSolveResults(object):
 
     Attributes
     ----------
-    config : ConfigDict, optional
+    config : ConfigDict
         User-specified solver settings.
-    iterations : int, optional
+    iterations : int
         Number of iterations required by PyROS.
-    time : float, optional
+    time : float
         Total elapsed time (or wall time), in seconds.
-    final_objective_value : float, optional
+    final_objective_value : float
         Final objective function value to report.
-    pyros_termination_condition : pyros.util.pyrosTerminationStatus
+        If a nominal objective focus was elected, then the
+        value of the nominal objective function is reported.
+        If a worst-case objective focus was elected, then
+        the value of the worst-case objective function is reported.
+    pyros_termination_condition : pyrosTerminationCondition
         Indicator of the manner of termination.
     """
 
@@ -83,46 +87,39 @@ class ROSolveResults(object):
         return "\n".join(lines)
 
 
-class MasterProblemData(object):
+class MasterResults:
     """
-    Container for the grcs master problem
+    Result of solving the master problem in a single PyROS iteration.
 
-    Attributes:
-        :master_model: master problem model object
-        :base_model: block representing the original model object
-        :iteration: current iteration of the algorithm
-    """
-
-
-class SeparationProblemData(object):
-    """
-    Container for the grcs separation problem
-
-    Attributes:
-        :separation_model: separation problem model object
-        :points_added_to_master: list of parameter violations added to the master problem over the course of the algorithm
-        :separation_problem_subsolver_statuses: list of subordinate sub-solver statuses throughout separations
-        :total_global_separation_solvers: Counter for number of times global solvers were employed in separation
-        :constraint_violations: List of constraint violations identified in separation
+    Attributes
+    ----------
+    master_model : ConcreteModel
+        Master model.
+    feasibility_problem_results : SolverResults
+        Feasibility problem subsolver results.
+    master_results_list : list of SolverResults
+        List of subsolver results for the master problem.
+    pyros_termination_condition : None or pyrosTerminationCondition
+        PyROS termination status established via solution of
+        the master problem.
+        If `None`, then no termination status has been established.
     """
 
-    pass
-
-
-class MasterResult(object):
-    """Data class for master problem results data.
-
-    Attributes:
-         - termination_condition: Solver termination condition
-         - fsv_values: list of design variable values
-         - ssv_values: list of control variable values
-         - first_stage_objective: objective contribution due to first-stage degrees of freedom
-         - second_stage_objective: objective contribution due to second-stage degrees of freedom
-         - grcs_termination_condition: the conditions under which the grcs terminated
-                                       (max_iter, robust_optimal, error)
-         - pyomo_results: results object from solve() statement
-
-    """
+    def __init__(
+        self,
+        master_model=None,
+        feasibility_problem_results=None,
+        master_results_list=None,
+        pyros_termination_condition=None,
+    ):
+        """Initialize self (see class docstring)."""
+        self.master_model = master_model
+        self.feasibility_problem_results = feasibility_problem_results
+        if master_results_list is None:
+            self.master_results_list = []
+        else:
+            self.master_results_list = list(master_results_list)
+        self.pyros_termination_condition = pyros_termination_condition
 
 
 class SeparationSolveCallResults:
@@ -147,19 +144,22 @@ class SeparationSolveCallResults:
         subordinate local/global solvers provided (including backup)
         and the number of scenarios in the uncertainty set.
     scaled_violations : ComponentMap, optional
-        Mapping from performance constraints to floats equal
+        Mapping from second-stage inequality constraints to floats equal
         to their scaled violations by separation problem solution
         stored in this result.
     violating_param_realization : list of float, optional
         Uncertain parameter realization for reported separation
         problem solution.
+    auxiliary_param_values : list of float, optional
+        Auxiliary parameter values corresponding to the
+        uncertain parameter realization `violating_param_realization`.
     variable_values : ComponentMap, optional
         Second-stage DOF and state variable values for reported
         separation problem solution.
     found_violation : bool, optional
-        True if violation of performance constraint (i.e. constraint
-        expression value) by reported separation solution was found to
-        exceed tolerance, False otherwise.
+        True if violation of second-stage inequality constraint
+        (i.e. constraint expression value) by reported separation
+        solution was found to exceed tolerance, False otherwise.
     time_out : bool, optional
         True if PyROS time limit reached attempting to solve the
         separation problem, False otherwise.
@@ -178,6 +178,7 @@ class SeparationSolveCallResults:
     results_list
     scaled_violations
     violating_param_realizations
+    auxiliary_param_values
     variable_values
     found_violation
     time_out
@@ -191,6 +192,7 @@ class SeparationSolveCallResults:
         results_list=None,
         scaled_violations=None,
         violating_param_realization=None,
+        auxiliary_param_values=None,
         variable_values=None,
         found_violation=None,
         time_out=None,
@@ -202,6 +204,7 @@ class SeparationSolveCallResults:
         self.solved_globally = solved_globally
         self.scaled_violations = scaled_violations
         self.violating_param_realization = violating_param_realization
+        self.auxiliary_param_values = auxiliary_param_values
         self.variable_values = variable_values
         self.found_violation = found_violation
         self.time_out = time_out
@@ -228,31 +231,6 @@ class SeparationSolveCallResults:
             for res in self.results_list
         )
 
-    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by subordinate solvers
-        for separation problem of interest, according to Pyomo
-        ``SolverResults`` objects stored in ``self.results_list``.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolverResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by solvers.
-        """
-        return sum(
-            evaluator_func(res, **evaluator_func_kwargs) for res in self.results_list
-        )
-
 
 class DiscreteSeparationSolveCallResults:
     """
@@ -268,27 +246,24 @@ class DiscreteSeparationSolveCallResults:
         Mapping from discrete uncertainty set scenario list
         indexes to solver call results for separation problems
         subject to the scenarios.
-    performance_constraint : Constraint
-        Separation problem performance constraint for which
+    second_stage_ineq_con : Constraint
+        Separation problem second-stage inequality constraint for which
         `self` was generated.
 
     Attributes
     ----------
     solved_globally
-    scenario_indexes
     solver_call_results
-    performance_constraint
-    time_out
-    subsolver_error
+    second_stage_ineq_con
     """
 
     def __init__(
-        self, solved_globally, solver_call_results=None, performance_constraint=None
+        self, solved_globally, solver_call_results=None, second_stage_ineq_con=None
     ):
         """Initialize self (see class docstring)."""
         self.solved_globally = solved_globally
         self.solver_call_results = solver_call_results
-        self.performance_constraint = performance_constraint
+        self.second_stage_ineq_con = second_stage_ineq_con
 
     @property
     def time_out(self):
@@ -308,31 +283,6 @@ class DiscreteSeparationSolveCallResults:
         """
         return any(res.subsolver_error for res in self.solver_call_results.values())
 
-    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolveResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by solvers.
-        """
-        return sum(
-            solver_call_res.evaluate_total_solve_time(evaluator_func)
-            for solver_call_res in self.solver_call_results.values()
-        )
-
 
 class SeparationLoopResults:
     """
@@ -345,10 +295,11 @@ class SeparationLoopResults:
         True if separation problems were solved to global optimality,
         False otherwise.
     solver_call_results : ComponentMap
-        Mapping from performance constraints to corresponding
+        Mapping from second-stage inequality constraints to corresponding
         ``SeparationSolveCallResults`` objects.
-    worst_case_perf_con : None or Constraint
-        Performance constraint mapped to ``SeparationSolveCallResults``
+    worst_case_ss_ineq_con : None or Constraint
+        Second-stage inequality constraint mapped to
+        ``SeparationSolveCallResults``
         object in `self` corresponding to maximally violating
         separation problem solution.
     all_discrete_scenarios_exhausted : bool, optional
@@ -360,29 +311,30 @@ class SeparationLoopResults:
 
     Attributes
     ----------
-    solver_call_results
-    solved_globally
-    worst_case_perf_con
-    all_discrete_scenarios_exhausted
-    found_violation
-    violating_param_realization
-    scaled_violations
-    violating_separation_variable_values
-    subsolver_error
-    time_out
+    solved_globally : bool
+        True if global solver was used, False otherwise.
+    solver_call_results : ComponentMap
+        Mapping from second-stage inequality constraints to corresponding
+        ``SeparationSolveCallResults`` objects.
+    worst_case_ss_ineq_con : None or ConstraintData
+        Worst-case second-stage inequality constraint.
+    all_discrete_scenarios_exhausted : bool
+        True if all scenarios of the discrete set were exhausted
+        already explicitly accounted for in the master problems,
+        False otherwise.
     """
 
     def __init__(
         self,
         solved_globally,
         solver_call_results,
-        worst_case_perf_con,
+        worst_case_ss_ineq_con,
         all_discrete_scenarios_exhausted=False,
     ):
         """Initialize self (see class docstring)."""
         self.solver_call_results = solver_call_results
         self.solved_globally = solved_globally
-        self.worst_case_perf_con = worst_case_perf_con
+        self.worst_case_ss_ineq_con = worst_case_ss_ineq_con
         self.all_discrete_scenarios_exhausted = all_discrete_scenarios_exhausted
 
     @property
@@ -390,8 +342,8 @@ class SeparationLoopResults:
         """
         bool : True if separation solution for at least one
         ``SeparationSolveCallResults`` object listed in self
-        was reported to violate its corresponding performance
-        constraint, False otherwise.
+        was reported to violate its corresponding second-stage
+        inequality constraint, False otherwise.
         """
         return any(
             solver_call_res.found_violation
@@ -404,29 +356,45 @@ class SeparationLoopResults:
         None or list of float : Uncertain parameter values for
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_perf_con``.
-        If ``self.worst_case_perf_con`` is not specified,
+        listed in self at index ``self.worst_case_ss_ineq_con``.
+        If ``self.worst_case_ss_ineq_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_perf_con is not None:
+        if self.worst_case_ss_ineq_con is not None:
             return self.solver_call_results[
-                self.worst_case_perf_con
+                self.worst_case_ss_ineq_con
             ].violating_param_realization
+        else:
+            return None
+
+    @property
+    def auxiliary_param_values(self):
+        """
+        None or list of float : Auxiliary parameter values for the
+        maximially violating separation problem solution.
+        """
+        if self.worst_case_ss_ineq_con is not None:
+            return self.solver_call_results[
+                self.worst_case_ss_ineq_con
+            ].auxiliary_param_values
         else:
             return None
 
     @property
     def scaled_violations(self):
         """
-        None or ComponentMap : Scaled performance constraint violations
+        None or ComponentMap : Scaled second-stage inequality
+        constraint violations
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_perf_con``.
-        If ``self.worst_case_perf_con`` is not specified,
+        listed in self at index ``self.worst_case_ss_ineq_con``.
+        If ``self.worst_case_ss_ineq_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_perf_con is not None:
-            return self.solver_call_results[self.worst_case_perf_con].scaled_violations
+        if self.worst_case_ss_ineq_con is not None:
+            return self.solver_call_results[
+                self.worst_case_ss_ineq_con
+            ].scaled_violations
         else:
             return None
 
@@ -436,20 +404,20 @@ class SeparationLoopResults:
         None or ComponentMap : Second-stage and state variable values
         for maximally violating separation problem solution,
         specified according to solver call results object
-        listed in self at index ``self.worst_case_perf_con``.
-        If ``self.worst_case_perf_con`` is not specified,
+        listed in self at index ``self.worst_case_ss_ineq_con``.
+        If ``self.worst_case_ss_ineq_con`` is not specified,
         then None is returned.
         """
-        if self.worst_case_perf_con is not None:
-            return self.solver_call_results[self.worst_case_perf_con].variable_values
+        if self.worst_case_ss_ineq_con is not None:
+            return self.solver_call_results[self.worst_case_ss_ineq_con].variable_values
         else:
             return None
 
     @property
-    def violated_performance_constraints(self):
+    def violated_second_stage_ineq_cons(self):
         """
-        list of Constraint : Performance constraints for which violation
-        found.
+        list of Constraint : Second-stage inequality constraints
+        for which violation found.
         """
         return [
             con
@@ -481,31 +449,6 @@ class SeparationLoopResults:
             for solver_call_res in self.solver_call_results.values()
         )
 
-    def evaluate_total_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolveResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by solvers.
-        """
-        return sum(
-            res.evaluate_total_solve_time(evaluator_func)
-            for res in self.solver_call_results.values()
-        )
-
 
 class SeparationResults:
     """
@@ -520,18 +463,14 @@ class SeparationResults:
 
     Attributes
     ----------
-    local_separation_loop_results
-    global_separation_loop_results
-    main_loop_results
-    subsolver_error
-    time_out
-    solved_locally
-    solved_globally
-    found_violation
-    violating_param_realization
-    scaled_violations
-    violating_separation_variable_values
-    robustness_certified
+    local_separation_loop_results : None or SeparationLoopResults
+        Local separation results. If separation problems
+        were not solved locally, then this attribute is set
+        to None.
+    global_separation_loop_results : None or SeparationLoopResults
+        Global separation results. If separation problems
+        were not solved globally, then this attribute is set
+        to None.
     """
 
     def __init__(self, local_separation_loop_results, global_separation_loop_results):
@@ -625,12 +564,13 @@ class SeparationResults:
         return self.get_violating_attr("all_discrete_scenarios_exhausted")
 
     @property
-    def worst_case_perf_con(self):
+    def worst_case_ss_ineq_con(self):
         """
-        ConstraintData : Performance constraint corresponding to the
+        ConstraintData : Second-stage inequality constraint
+        corresponding to the
         separation solution chosen for the next master problem.
         """
-        return self.get_violating_attr("worst_case_perf_con")
+        return self.get_violating_attr("worst_case_ss_ineq_con")
 
     @property
     def main_loop_results(self):
@@ -661,19 +601,28 @@ class SeparationResults:
         None or list of float : Uncertain parameter values
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_perf_con``
+        If no such solution found, (i.e. ``worst_case_ss_ineq_con``
         set to None for both local and global loop results),
         then None is returned.
         """
         return self.get_violating_attr("violating_param_realization")
 
     @property
+    def auxiliary_param_values(self):
+        """
+        None or list of float: Auxiliary parameter values accompanying
+        `self.violating_param_realization`.
+        """
+        return self.get_violating_attr("auxiliary_param_values")
+
+    @property
     def scaled_violations(self):
         """
-        None or ComponentMap : Scaled performance constraint violations
+        None or ComponentMap :
+        Scaled second-stage inequality constraint violations
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_perf_con``
+        If no such solution found, (i.e. ``worst_case_ss_ineq_con``
         set to None for both local and global loop results),
         then None is returned.
         """
@@ -685,72 +634,18 @@ class SeparationResults:
         None or ComponentMap : Second-stage and state variable values
         for maximally violating separation problem solution
         reported in local or global separation loop results.
-        If no such solution found, (i.e. ``worst_case_perf_con``
+        If no such solution found, (i.e. ``worst_case_ss_ineq_con``
         set to None for both local and global loop results),
         then None is returned.
         """
         return self.get_violating_attr("violating_separation_variable_values")
 
     @property
-    def violated_performance_constraints(self):
+    def violated_second_stage_ineq_cons(self):
         """
-        Return list of violated performance constraints.
+        Return list of violated second-stage inequality constraints.
         """
-        return self.get_violating_attr("violated_performance_constraints")
-
-    def evaluate_local_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by local subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolverResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by local solvers.
-        """
-        if self.solved_locally:
-            return self.local_separation_loop_results.evaluate_total_solve_time(
-                evaluator_func, **evaluator_func_kwargs
-            )
-        else:
-            return 0
-
-    def evaluate_global_solve_time(self, evaluator_func, **evaluator_func_kwargs):
-        """
-        Evaluate total time required by global subordinate solvers
-        for separation problem of interest.
-
-        Parameters
-        ----------
-        evaluator_func : callable
-            Solve time evaluator function.
-            This callable should accept an object of type
-            ``pyomo.opt.results.SolverResults``, and
-            return a float equal to the time required.
-        **evaluator_func_kwargs : dict, optional
-            Keyword arguments to evaluator function.
-
-        Returns
-        -------
-        float
-            Total time spent by global solvers.
-        """
-        if self.solved_globally:
-            return self.global_separation_loop_results.evaluate_total_solve_time(
-                evaluator_func, **evaluator_func_kwargs
-            )
-        else:
-            return 0
+        return self.get_violating_attr("violated_second_stage_ineq_cons")
 
     @property
     def robustness_certified(self):
@@ -779,30 +674,3 @@ class SeparationResults:
             is_robust = heuristically_robust
 
         return is_robust
-
-    def generate_subsolver_results(self, include_local=True, include_global=True):
-        """
-        Generate flattened sequence all Pyomo SolverResults objects
-        for all ``SeparationSolveCallResults`` objects listed in
-        the local and global ``SeparationLoopResults``
-        attributes of `self`.
-
-        Yields
-        ------
-        pyomo.opt.SolverResults
-        """
-        if include_local and self.local_separation_loop_results is not None:
-            all_local_call_results = (
-                self.local_separation_loop_results.solver_call_results.values()
-            )
-            for solve_call_res in all_local_call_results:
-                for res in solve_call_res.results_list:
-                    yield res
-
-        if include_global and self.global_separation_loop_results is not None:
-            all_global_call_results = (
-                self.global_separation_loop_results.solver_call_results.values()
-            )
-            for solve_call_res in all_global_call_results:
-                for res in solve_call_res.results_list:
-                    yield res
