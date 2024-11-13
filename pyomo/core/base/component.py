@@ -120,8 +120,34 @@ class ComponentBase(PyomoObject):
             tmp = self.parent_block()
             # "Floating" components should be in scope by default (we
             # will handle 'global' components like GlobalSets in the
-            # components)
-            _in_scope = tmp is None
+            # components).  This ensures that things like set operators
+            # on Abstract set objects are correctly cloned.  For
+            # example, consider an abstract indexed model component
+            # whose domain is specified by a Set expression:
+            #
+            #   def x_init(m,i):
+            #       if i == 2:
+            #           return Set.Skip
+            #       else:
+            #           return []
+            #   m.x = Set( [1,2],
+            #              domain={1: m.A*m.B, 2: m.A*m.A},
+            #              initialize=x_init )
+            #
+            # We do not want to automatically add all the Set operators
+            # to the model at declaration time, as m.x[2] is never
+            # actually created.  Plus, doing so would require complex
+            # parsing of the initializers.  BUT, we need to ensure that
+            # the operators are deepcopied, otherwise when the model is
+            # cloned before construction the operators will still refer
+            # to the sets on the original abstract model (in particular,
+            # the Set x will have an unknown dimen).
+            #
+            # The solution is to automatically clone all floating
+            # components, except for Models (i.e., top-level BlockData
+            # have no parent and technically "float")
+            _in_scope = tmp is None and self is not self.model()
+            #
             # Note: normally we would need to check that tmp does not
             # end up being None.  However, since clone() inserts
             # id(None) into the __block_scope__ dictionary, we are safe
