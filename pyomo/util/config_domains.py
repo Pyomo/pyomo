@@ -38,11 +38,10 @@ class ComponentDataSet:
         return ComponentSet(self._process(x))
 
     def _process(self, x):
-        # Ordering for determinism
-        _ctypes = sorted([ct.__name__ for ct in self._ctypes])
-        _names = ', '.join(_ctypes)
         if hasattr(x, 'ctype'):
             if x.ctype not in self._ctypes:
+                # Ordering for determinism
+                _names = ', '.join(sorted([ct.__name__ for ct in self._ctypes]))
                 raise ValueError(
                     f"Expected component or iterable of one "
                     f"of the following ctypes: "
@@ -52,10 +51,12 @@ class ComponentDataSet:
                 yield from x.values()
             else:
                 yield x
-        elif isinstance(x, (Sequence, ComponentSet)):
+        elif hasattr(x, '__iter__'):
             for y in x:
                 yield from self._process(y)
         else:
+            # Ordering for determinism
+            _names = ', '.join(sorted([ct.__name__ for ct in self._ctypes]))
             raise ValueError(
                 f"Expected component or iterable of one "
                 f"of the following ctypes: "
