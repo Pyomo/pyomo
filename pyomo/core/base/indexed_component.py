@@ -354,10 +354,12 @@ class IndexedComponent(Component):
                 # for the _data dict, we can effectively "deepcopy" it
                 # right now (almost for free!)
                 _src = self._data
-                memo[id(_src)] = _new._data = _data = _src.__class__()
+                memo[id(_src)] = _new._data = _src.__class__()
+                _setter = _new._data.__setitem__
                 for idx, obj in _src.items():
-                    _data[fast_deepcopy(idx, memo)] = obj._create_objects_for_deepcopy(
-                        memo, component_list
+                    _setter(
+                        fast_deepcopy(idx, memo),
+                        obj._create_objects_for_deepcopy(memo, component_list),
                     )
 
         return _ans

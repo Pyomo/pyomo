@@ -9,22 +9,23 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections
 import types
-from collections import namedtuple
 from copy import deepcopy
 from weakref import ref as _weakref_ref
 
-_autoslot_info = namedtuple(
+_autoslot_info = collections.namedtuple(
     '_autoslot_info', ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
 
 
 def _deepcopy_tuple(obj, memo, _id):
     ans = []
+    _append = ans.append
     unchanged = True
     for item in obj:
         new_item = fast_deepcopy(item, memo)
-        ans.append(new_item)
+        _append(new_item)
         if new_item is not item:
             unchanged = False
     if unchanged:
@@ -46,22 +47,43 @@ def _deepcopy_tuple(obj, memo, _id):
 def _deepcopy_list(obj, memo, _id):
     # Two steps here because a list can include itself
     memo[_id] = ans = []
-    ans.extend(fast_deepcopy(x, memo) for x in obj)
+    _append = ans.append
+    for x in obj:
+        _append(fast_deepcopy(x, memo))
     return ans
 
 
 def _deepcopy_dict(obj, memo, _id):
     # Two steps here because a dict can include itself
     memo[_id] = ans = {}
+    _setter = ans.__setitem__
     for key, val in obj.items():
-        ans[fast_deepcopy(key, memo)] = fast_deepcopy(val, memo)
+        _setter(fast_deepcopy(key, memo), fast_deepcopy(val, memo))
     return ans
 
 
-def _deepcopier(obj, memo, _id):
+def _deepcopy_dunder_deepcopy(obj, memo, _id):
+    ans = memo[_id] = obj.__deepcopy__(memo)
+    return ans
+
+
+def _deepcopy(obj, memo, _id):
     return deepcopy(obj, memo)
 
 
+class _DeepcopyDispatcher(collections.defaultdict):
+    def __missing__(self, key):
+        if hasattr(key, '__deepcopy__'):
+            ans = _deepcopy_dunder_deepcopy
+        else:
+            ans = _deepcopy
+        self[key] = ans
+        return ans
+
+
+_deepcopy_dispatcher = _DeepcopyDispatcher(
+    None, {tuple: _deepcopy_tuple, list: _deepcopy_list, dict: _deepcopy_dict}
+)
 _atomic_types = {
     int,
     float,
@@ -75,8 +97,6 @@ _atomic_types = {
     types.BuiltinFunctionType,
     types.FunctionType,
 }
-
-_deepcopy_mapper = {tuple: _deepcopy_tuple, list: _deepcopy_list, dict: _deepcopy_dict}
 
 
 def fast_deepcopy(obj, memo):
@@ -94,7 +114,7 @@ def fast_deepcopy(obj, memo):
     if _id in memo:
         return memo[_id]
     else:
-        return _deepcopy_mapper.get(obj.__class__, _deepcopier)(obj, memo, _id)
+        return _deepcopy_dispatcher[obj.__class__](obj, memo, _id)
 
 
 class AutoSlots(type):
