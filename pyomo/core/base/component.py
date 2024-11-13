@@ -196,7 +196,7 @@ class ComponentBase(PyomoObject):
         # Note that self is now the first element of component_list
         #
         # Now that we have created (but not populated) all the
-        # components that we expect to need in hte memo, we can go
+        # components that we expect to need in the memo, we can go
         # through and populate all the components.
         #
         # The component_list is roughly in declaration order.  This
