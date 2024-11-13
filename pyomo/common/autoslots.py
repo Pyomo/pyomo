@@ -373,7 +373,7 @@ class AutoSlots(type):
                 # Note: if has_dict, then __auto_slots__.slots will be 1
                 # shorter than the state (the last element is the
                 # __dict__).  Zip will ignore it.
-                _copier = getattr(self, '__deepcopy_field__', _deepcopier)
+                _copier = getattr(self, '__deepcopy_field__', _deepcopy)
                 new_state = [
                     _copier(value, memo, slot)
                     for slot, value in zip(self.__auto_slots__.slots, state)
