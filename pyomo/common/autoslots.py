@@ -342,6 +342,12 @@ class AutoSlots(type):
             # memo.
             #
             state = self.__getstate__()
+            # It is important to keep this temporary state alive (which
+            # in turn keeps things like the temporary fields dict alive)
+            # until after deepcopy is finished in order to prevent
+            # accidentally recycling id()'s for temporary objects that
+            # were recorded in the memo.  We will follow the pattern
+            # used by copy._keep_alive():
             try:
                 memo['__auto_slots__'].append(state)
             except KeyError:
