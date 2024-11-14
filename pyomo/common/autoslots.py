@@ -107,6 +107,29 @@ def fast_deepcopy(obj, memo):
     deepcopy that provides special handling to circumvent some of the
     slowest parts of deepcopy().
 
+    Note
+    ----
+
+    This implementation is not as aggressive about keeping the copied
+    state alive until the end of the deepcopy operation.  In particular,
+    the ``dict``, ``list`` and ``tuple`` handlers do not register their
+    source objects with the memo.  This is acceptable, as
+    fast_deepcopy() is only called in situations where we are ensuring
+    that the source object will persist:
+
+    - :meth:`AutoSlots.__deepcopy_state__` explicitly preserved the
+      source state
+    - :meth:`Component.__deepcopy_field__` is only called by
+      :meth:`AutoSlots.__deepcopy_state__` -
+    - :meth:`IndexedComponent._create_objects_for_deepcopy` is
+      deepcopying the raw keys from the source ``_data`` dict (which is
+      not a temporary object and will persist)
+
+    If other consumers wish to make use of this function (e.g., within
+    their implementation of ``__deepcopy__``), they must remember that
+    they are responsible to ensure that any temporary source ``obj``
+    persists.
+
     """
     if obj.__class__ in _atomic_types:
         return obj
