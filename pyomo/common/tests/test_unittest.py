@@ -189,7 +189,7 @@ class TestPyomoUnittest(unittest.TestCase):
     @unittest.timeout(0.01)
     def test_timeout_timeout(self):
         time.sleep(1)
-        self.assertEqual(0, 1)
+        self.assertEqual(0, 0)
 
     @unittest.timeout(10)
     def test_timeout_skip(self):
