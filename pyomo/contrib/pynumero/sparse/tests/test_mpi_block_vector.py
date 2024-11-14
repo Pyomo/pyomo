@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 import pyomo.common.unittest as unittest
 
+from pyomo.common.dependencies import mpi4py, mpi4py_available
 from pyomo.contrib.pynumero.dependencies import (
     numpy_available,
     scipy_available,
@@ -22,15 +23,12 @@ if numpy_available and scipy_available:
 else:
     SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
 
-try:
-    from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
-    if comm.Get_size() < 3:
+if mpi4py_available:
+    if mpi4py.MPI.COMM_WORLD.Get_size() < 3:
         SKIPTESTS.append(
             "Pynumero needs at least 3 processes to run BlockVector MPI tests"
         )
-except ImportError:
+else:
     SKIPTESTS.append("Pynumero needs mpi4py to run BlockVector MPI tests")
 
 if not SKIPTESTS:
