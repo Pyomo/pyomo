@@ -232,7 +232,7 @@ class TestPyomoUnittest(unittest.TestCase):
             self.bound_function_require_fork()
             return
         with self.assertRaisesRegex(
-            unittest.SkipTest, "timeout requires unavailable fork interface"
+            unittest.SkipTest, r"timeout\(\) requires unavailable fork interface"
         ):
             self.bound_function_require_fork()
 

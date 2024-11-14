@@ -420,7 +420,9 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
             if qualname in _runner.data:
                 return fcn(*args, **kwargs)
             if require_fork and multiprocessing.get_start_method() != 'fork':
-                raise _unittest.SkipTest("timeout requires unavailable fork interface")
+                raise _unittest.SkipTest(
+                    "timeout() requires unavailable fork interface"
+                )
 
             pipe_recv, pipe_send = multiprocessing.Pipe(False)
             if multiprocessing.get_start_method() == 'fork':
@@ -455,7 +457,7 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
             except:
                 if type(runner_arg) is tuple:
                     logging.getLogger(__name__).error(
-                        "Exception raised spawning timeout subprocess "
+                        "Exception raised spawning timeout() subprocess "
                         "on a platform that does not support 'fork'.  "
                         "It is likely that either the wrapped function or "
                         "one of its arguments is not serializable"
