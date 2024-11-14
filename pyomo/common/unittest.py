@@ -417,8 +417,12 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
         @functools.wraps(fcn)
         def test_timer(*args, **kwargs):
             qualname = '%s.%s' % (fcn.__module__, fcn.__qualname__)
+            # If qualname is in the data dict, then we are in the child
+            # process and are being asked to run the wrapped function.
             if qualname in _runner.data:
                 return fcn(*args, **kwargs)
+            # Parent process: spawn a subprocess to execute the wrapped
+            # function and monitor for timeout
             if require_fork and multiprocessing.get_start_method() != 'fork':
                 raise _unittest.SkipTest(
                     "timeout() requires unavailable fork interface"
@@ -451,6 +455,8 @@ def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
             test_proc = multiprocessing.Process(
                 target=_runner, args=(pipe_send, runner_arg)
             )
+            # Set daemon: if the parent process is killed, the child
+            # process should be killed and collected.
             test_proc.daemon = True
             try:
                 test_proc.start()
