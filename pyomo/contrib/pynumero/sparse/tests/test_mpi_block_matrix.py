@@ -26,7 +26,8 @@ else:
     SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
 
 if mpi4py_available:
-    if mpi4py.MPI.COMM_WORLD.Get_size() < 3:
+    comm = mpi4py.MPI.COMM_WORLD
+    if comm.Get_size() < 3:
         SKIPTESTS.append(
             "Pynumero needs at least 3 processes to run BlockMatrix MPI tests"
         )
