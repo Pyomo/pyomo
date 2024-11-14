@@ -13,7 +13,6 @@ import datetime
 import multiprocessing
 import os
 import time
-from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
@@ -218,8 +217,7 @@ class TestPyomoUnittest(unittest.TestCase):
         if multiprocessing.get_start_method() == 'fork':
             self.bound_function()
             return
-        LOG = StringIO()
-        with LoggingIntercept(LOG):
+        with LoggingIntercept() as LOG:
             with self.assertRaises((TypeError, EOFError, AttributeError)):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())

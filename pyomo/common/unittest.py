@@ -328,9 +328,8 @@ def _runner(pipe, qualname):
     else:
         qualname, fcn, args, kwargs = qualname
     _runner.data[qualname] = None
-    OUT = StringIO()
     try:
-        with capture_output(OUT):
+        with capture_output() as OUT:
             result = fcn(*args, **kwargs)
         pipe.send((resultType, result, OUT.getvalue()))
     except:
