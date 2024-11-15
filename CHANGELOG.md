@@ -2,12 +2,13 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 6.8.1   (07 Nov 2024)
+Pyomo 6.8.1   (15 Nov 2024)
 -------------------------------------------------------------------------------
 
 SIGNIFICANT CHANGE NOTICE
 
 - This will be the last release to support Python 3.8
+- This is the first release to be tested against Python 3.13
 - Complete reorganization of our online documentation (#3382)
 
 CHANGELOG
@@ -20,10 +21,14 @@ CHANGELOG
   - Defer processing `ConfigValue`/`ConfigList` default until first use (#3394)
   - Improved support for moved/renamed/deprecated modules (#3385)
   - Fix ConfigValue initialization in multithreaded environments (#3405)
+  - ConfigDict: prevent recursion on partially-constructed objects (#3409)
+  - Fix bug in AutoSlots deepcopy (#3412, #3413)
+  - Update `mpi4py_available` to work around `conda-forge/openmpi` (#3416)
 - Core
   - Resolve bugs in create_node_with_local_data (#3376)
   - Resolve issue in filter/validate deprecation path (#3368)
   - Support `Param.pprint()` for non-finite Params (#3387)
+  - Add (parameterized) linear programming dual transformation (#3402)
 - Documentation
   - Autogenerate API documentation (#3378)
   - Add Alternative Solutions documentation (#3370)
@@ -38,6 +43,7 @@ CHANGELOG
   - Update test for GAMS mapping 'infeasible or unbounded' to infeasible (#3396)
   - XpressDirect.available(): check there is a valid license (#3400)
   - Move away from dependence on gurobi.sh (#3384)
+  - Fix error when xpress is imported before xpress_direct (#3410)
 - Testing
   - Move URL Checker to Weekly Job (#3360)
   - Fixing a couple typos the new version of typos (1.24.5) is finding (#3365)
@@ -45,12 +51,15 @@ CHANGELOG
   - Guard tests against broken Gurobi licenses (#3383)
   - Remove pin to Gurobi 10.0.3 (#3393)
   - Fixing spelling found by new typos release (v1.27.0) (#3399)
+  - Add Python 3.13 to Testing Infrastructure (#3401)
+  - Resolve `timeout()` failures on Windows/py3.13 (#3415)
 - GDP
   - Fix performance degredation in hull transformation (#3366)
 - Contributed Packages
   - DoE: Fix bug from using hardcoded value (#3358)
   - iis: Catch catastrophic solver failure when building MIS (#3403)
   - PyNumero: Reverse the BlockVector/MPIBlockVector base class order (#3380)
+  - PyNumero: Resolve incompatibilities with NumPy2 (#3408)
   - PyROS: Overhaul preprocessor subroutine and subproblem objects (#3341)
 
 -------------------------------------------------------------------------------
