@@ -2999,6 +2999,52 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
+    # `start`, `end`, `step` in `*args` are positional-only that cannot be filled with keywords.
+    # But positional-only params syntax are not supported before python 3.8.
+    # To emphasize they are positional-only, an underscore is added before their name.
+    @overload
+    def __init__(
+        self,
+        _end,
+        *,
+        finite=None,
+        ranges=(),
+        bounds=None,
+        filter=None,
+        validate=None,
+        name=None,
+        doc=None,
+    ): ...
+
+    @overload
+    def __init__(
+        self,
+        _start,
+        _end,
+        _step=1,
+        *,
+        finite=None,
+        ranges=(),
+        bounds=None,
+        filter=None,
+        validate=None,
+        name=None,
+        doc=None,
+    ): ...
+
+    @overload
+    def __init__(
+        self,
+        *,
+        finite=None,
+        ranges=(),
+        bounds=None,
+        filter=None,
+        validate=None,
+        name=None,
+        doc=None,
+    ): ...
+
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__
         kwds.setdefault('ctype', RangeSet)
@@ -3403,6 +3449,40 @@ class SetOperator(SetData, Set):
         if self._name is not None:
             return self.name
         return self._expression_str()
+
+    def __deepcopy__(self, memo):
+        # SetOperators form an expression system.  As we allow operators
+        # on abstract Set objects, it is important to *always* deepcopy
+        # SetOperators that have not been assigned to a Block.  For
+        # example, consider an abstract indexed model component whose
+        # domain is specified by a Set expression:
+        #
+        #   def x_init(m,i):
+        #       if i == 2:
+        #           return Set.Skip
+        #       else:
+        #           return []
+        #   m.x = Set( [1,2],
+        #              domain={1: m.A*m.B, 2: m.A*m.A},
+        #              initialize=x_init )
+        #
+        # We do not want to automatically add all the Set operators to
+        # the model at declaration time, as m.x[2] is never actually
+        # created.  Plus, doing so would require complex parsing of the
+        # initializers.  BUT, we need to ensure that the operators are
+        # deepcopied, otherwise when the model is cloned before
+        # construction the operators will still refer to the sets on the
+        # original abstract model (in particular, the Set x will have an
+        # unknown dimen).
+        #
+        # Our solution is to cause SetOperators to be automatically
+        # cloned if they haven't been assigned to a block.
+        if '__block_scope__' in memo:
+            if self.parent_block() is None:
+                # Hijack the block scope rules to cause this object to
+                # be deepcopied.
+                memo['__block_scope__'][id(self)] = True
+        return super(SetOperator, self).__deepcopy__(memo)
 
     def _expression_str(self):
         _args = []
