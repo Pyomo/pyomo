@@ -716,7 +716,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             deprecation_warning(
                 "var_map, var_order, and sorter are deprecated arguments to "
                 "LinearRepnVisitor().  Please pass the VarRecorder object directly.",
-                version='6.7.4.dev0',
+                version='6.8.1',
             )
             var_recorder = OrderedVarRecorder(var_map, var_order, sorter)
         if var_recorder is None:
