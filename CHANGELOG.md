@@ -54,6 +54,7 @@ CHANGELOG
   - Remove pin to Gurobi 10.0.3 (#3393)
   - Add Python 3.13 to Testing Infrastructure (#3401)
   - Resolve `timeout()` failures on Windows/py3.13 (#3415)
+  - Update release wheel builder to support Python 3.13 (#3419)
 - GDP
   - Fix performance degradation in hull transformation (#3366)
 - Contributed Packages
