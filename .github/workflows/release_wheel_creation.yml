@@ -51,6 +51,7 @@ jobs:
           TARGET: 'py313'
           GLOBAL_OPTIONS: "--without-cython --with-distributable-extensions"
 
+        # We use pure python for any Windows/python greater than 3.10
         exclude:
         - wheel-version: 'cp311*'
           os: windows-latest
@@ -63,6 +64,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Create pyproject.toml
         run: |
+          # Per the cibuildwheel documentation, you can technically use
+          # CIBW_BEFORE_BUILD to do these steps; however, as of the newest
+          # version (2.21.3) this feature does not work. This is a hack
+          # to make cibuildwheel recognize our pre-build requirements
           echo -e '[build-system]\n\nrequires = [ "setuptools", "wheel", "cython", "pybind11" ]' > $GITHUB_WORKSPACE/pyproject.toml
           cat $GITHUB_WORKSPACE/pyproject.toml
           ls -la $GITHUB_WORKSPACE
@@ -121,6 +126,10 @@ jobs:
           platforms: all
       - name: Create pyproject.toml
         run: |
+          # Per the cibuildwheel documentation, you can technically use
+          # CIBW_BEFORE_BUILD to do these steps; however, as of the newest
+          # version (2.21.3) this feature does not work. This is a hack
+          # to make cibuildwheel recognize our pre-build requirements
           echo -e '[build-system]\n\nrequires = [ "setuptools", "wheel", "cython", "pybind11" ]' > $GITHUB_WORKSPACE/pyproject.toml
           cat $GITHUB_WORKSPACE/pyproject.toml
           ls -la $GITHUB_WORKSPACE
