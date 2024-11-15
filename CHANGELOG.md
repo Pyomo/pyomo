@@ -2,7 +2,7 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 6.8.1   (15 Nov 2024)
+Pyomo 6.8.1   (15 Nov 2024)                                          AKA: Annie
 -------------------------------------------------------------------------------
 
 SIGNIFICANT CHANGE NOTICE
@@ -46,15 +46,14 @@ CHANGELOG
   - Fix error when xpress is imported before xpress_direct (#3410)
 - Testing
   - Move URL Checker to Weekly Job (#3360)
-  - Fixing a couple typos the new version of typos (1.24.5) is finding (#3365)
+  - Correct newly discovered typos (#3365, #3399)
   - Remove Octeract from NEOS solvers list (and other testing fixes) (#3374)
   - Guard tests against broken Gurobi licenses (#3383)
   - Remove pin to Gurobi 10.0.3 (#3393)
-  - Fixing spelling found by new typos release (v1.27.0) (#3399)
   - Add Python 3.13 to Testing Infrastructure (#3401)
   - Resolve `timeout()` failures on Windows/py3.13 (#3415)
 - GDP
-  - Fix performance degredation in hull transformation (#3366)
+  - Fix performance degradation in hull transformation (#3366)
 - Contributed Packages
   - DoE: Fix bug from using hardcoded value (#3358)
   - iis: Catch catastrophic solver failure when building MIS (#3403)
