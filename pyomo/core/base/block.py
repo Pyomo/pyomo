@@ -361,7 +361,7 @@ class PseudoMap(AutoSlots.Mixin):
         TODO
         """
         # Return True is the underlying Block contains the component
-        # name.  Note, if this Pseudomap soecifies a ctype or the
+        # name.  Note, if this Pseudomap specifies a ctype or the
         # active flag, we need to check that the underlying
         # component matches those flags
         if key in self._block._decl:
@@ -1942,14 +1942,15 @@ component, use the block del_component() and add_component() methods.
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
             # Blocks (and block-like things) need to pre-populate all
             # Components / ComponentData objects to help prevent
             # deepcopy() from violating the Python recursion limit.
             # This step is recursive; however, we do not expect "super
             # deep" Pyomo block hierarchies, so should be okay.
-            for comp in self.component_map().values():
-                comp._create_objects_for_deepcopy(memo, component_list)
+            for comp, _ in self._decl_order:
+                if comp is not None:
+                    comp._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
     def private_data(self, scope=None):
