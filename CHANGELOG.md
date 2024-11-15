@@ -2,7 +2,7 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 6.8.1   (15 Nov 2024)                                          AKA: Annie
+Pyomo 6.8.1   (15 Nov 2024)
 -------------------------------------------------------------------------------
 
 SIGNIFICANT CHANGE NOTICE
@@ -10,6 +10,7 @@ SIGNIFICANT CHANGE NOTICE
 - This will be the last release to support Python 3.8
 - This is the first release to be tested against Python 3.13
 - Complete reorganization of our online documentation (#3382)
+- This is the only named version of a Pyomo release - **Annie**
 
 CHANGELOG
 
