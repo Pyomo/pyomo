@@ -31,7 +31,7 @@ from pyomo.common.deprecation import relocated_module_attribute
 
 for _attr in ('ScalarData', 'ScalarType', 'default_print_options', 'strict'):
     relocated_module_attribute(
-        _attr, 'pyomo.opt.results.container.' + _attr, version='6.8.1.dev0'
+        _attr, 'pyomo.opt.results.container.' + _attr, version='6.8.1'
     )
 del _attr
 del relocated_module_attribute
