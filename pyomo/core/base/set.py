@@ -2999,52 +2999,6 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
-    # `start`, `end`, `step` in `*args` are positional-only that cannot be filled with keywords.
-    # But positional-only params syntax are not supported before python 3.8.
-    # To emphasize they are positional-only, an underscore is added before their name.
-    @overload
-    def __init__(
-        self,
-        _end,
-        *,
-        finite=None,
-        ranges=(),
-        bounds=None,
-        filter=None,
-        validate=None,
-        name=None,
-        doc=None,
-    ): ...
-
-    @overload
-    def __init__(
-        self,
-        _start,
-        _end,
-        _step=1,
-        *,
-        finite=None,
-        ranges=(),
-        bounds=None,
-        filter=None,
-        validate=None,
-        name=None,
-        doc=None,
-    ): ...
-
-    @overload
-    def __init__(
-        self,
-        *,
-        finite=None,
-        ranges=(),
-        bounds=None,
-        filter=None,
-        validate=None,
-        name=None,
-        doc=None,
-    ): ...
-
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__
         kwds.setdefault('ctype', RangeSet)
