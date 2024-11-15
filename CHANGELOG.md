@@ -52,7 +52,7 @@ CHANGELOG
   - Remove Octeract from NEOS solvers list (and other testing fixes) (#3374)
   - Guard tests against broken Gurobi licenses (#3383)
   - Remove pin to Gurobi 10.0.3 (#3393)
-  - Add Python 3.13 to Testing Infrastructure (#3401)
+  - Add Python 3.13 to Testing Infrastructure (#3401, #3419)
   - Resolve `timeout()` failures on Windows/py3.13 (#3415)
 - GDP
   - Fix performance degradation in hull transformation (#3366)
