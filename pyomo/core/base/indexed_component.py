@@ -1201,7 +1201,7 @@ class IndexedComponent_NDArrayMixin(object):
         if not self.is_indexed():
             ans = _ndarray.NumericNDArray(shape=(1,), dtype=object)
             ans[0] = self
-            return ans
+            return ans.reshape(())
 
         _dim = self.dim()
         if _dim is None:
