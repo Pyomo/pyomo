@@ -5,10 +5,14 @@ Pyomo CHANGELOG
 Pyomo 6.8.2   (18 Nov 2024)
 -------------------------------------------------------------------------------
 
+- Core
+  - Resolve errors in mapping ScalarVar to numpy ndarray (#3423)
 - Documentation
-  - Update Documentation URLs (#3425) 
+  - Update Documentation URLs (#3425)
 - Solver Interfaces
   -  Resolve error in xpress_direct interface retrieving reduced costs (#3422)
+- Testing 
+  - Resolve errors in mapping ScalarVar to numpy ndarray (#3423)
 
 -------------------------------------------------------------------------------
 Pyomo 6.8.1   (15 Nov 2024)
