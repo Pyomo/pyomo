@@ -32,13 +32,28 @@ from pyomo.util.config_domains import ComponentDataSet
     'bilevel optimization problem).',
 )
 class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
+    r"""Compiler to convert a "Parameterized" LP to the matrix representation
+    of the standard form:
+
+    .. math::
+
+        \min\ & c^Tx \\
+        s.t.\ & Ax \le b
+
+    by treating the variables specified in the ``wrt`` list as data
+    (constants).  The resulting compiled representation is returned as
+    NumPy arrays and SciPy sparse matrices in a
+    :py:class:`LinearStandardFormInfo` .
+
+    """
+
     CONFIG = LinearStandardFormCompiler.CONFIG()
     CONFIG.declare(
         'wrt',
         ConfigValue(
             default=None,
             domain=ComponentDataSet(Var),
-            description="Vars to treat as data for the purposes of compiling"
+            description="Vars to treat as data for the purposes of compiling "
             "the standard form",
             doc="""
             Optional list of Vars to be treated as data while compiling the 
@@ -54,8 +69,8 @@ class ParameterizedLinearStandardFormCompiler(LinearStandardFormCompiler):
 
     @document_kwargs_from_configdict(CONFIG)
     def write(self, model, ostream=None, **options):
-        """Convert a model to standard form (`min cTx s.t. Ax <= b`) treating the
-        Vars specified in 'wrt' as data
+        r"""Convert a model to standard form treating the Vars specified in
+        ``wrt`` as data.
 
         Returns
         -------
