@@ -116,7 +116,7 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_. The four ``Suffix`` components are:
+The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, `Parmest <https://pyomo.readthedocs.io/en/stable/explanation/analysis/parmest/index.html>`_. The four ``Suffix`` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
 * ``experiment_outputs`` - The values measured during the experiment
