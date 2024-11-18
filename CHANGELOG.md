@@ -12,7 +12,7 @@ Pyomo 6.8.2   (18 Nov 2024)
 - Solver Interfaces
   -  Resolve error in xpress_direct interface retrieving reduced costs (#3422)
 - Testing 
-  - Resolve errors in mapping ScalarVar to numpy ndarray (#3423)
+  - Remove (unused) legacy test drivers (#3427)
 
 -------------------------------------------------------------------------------
 Pyomo 6.8.1   (15 Nov 2024)
