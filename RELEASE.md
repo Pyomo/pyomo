@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.8.1.
+We are pleased to announce the release of Pyomo 6.8.2.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
