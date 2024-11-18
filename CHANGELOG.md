@@ -11,7 +11,7 @@ Pyomo 6.8.2   (18 Nov 2024)
   - Update Documentation URLs (#3425)
 - Solver Interfaces
   - Resolve error in xpress_direct interface retrieving reduced costs (#3422)
-- Testing 
+- Testing
   - Remove (unused) legacy test drivers (#3427)
 
 -------------------------------------------------------------------------------
