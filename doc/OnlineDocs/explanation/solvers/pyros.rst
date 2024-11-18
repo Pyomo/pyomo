@@ -118,7 +118,7 @@ PyROS Installation
 -----------------------------
 PyROS can be installed as follows:
 
-1. :doc:`Install Pyomo <../../installation>`.
+1. :ref:`Install Pyomo <pyomo_installation>`.
    PyROS is included in the Pyomo software package, at pyomo/contrib/pyros.
 2. Install NumPy and SciPy with your preferred package manager;
    both NumPy and SciPy are required dependencies of PyROS.

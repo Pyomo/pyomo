@@ -26,7 +26,7 @@ Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the Pyomo 
 the allowable design spaces for design variables, and the assumed observation error model.
 During exploratory analysis, Pyomo.DoE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
-Parameter estimation packages such as `Parmest <https://pyomo.readthedocs.io/en/stable/explanation/analysis/parmest/index.html>`_ can perform parameter estimation using the available data to infer values for parameters,
+Parameter estimation packages such as :ref:`Parmest <parmest>` can perform parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
 If not, MBDoE recommends optimized experimental conditions to generate new data.
@@ -116,7 +116,7 @@ In order to solve problems of the above, Pyomo.DoE implements the 2-stage stocha
 
 Pyomo.DoE Required Inputs
 --------------------------------
-The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, `Parmest <https://pyomo.readthedocs.io/en/stable/explanation/analysis/parmest/index.html>`_. The four ``Suffix`` components are:
+The required input to the Pyomo.DoE solver is an ``Experiment`` object. The experiment object must have a ``get_labeled_model`` function which returns a Pyomo model with four ``Suffix`` components identifying the parts of the model used in MBDoE analysis. This is in line with the convention used in the parameter estimation tool, :ref:`Parmest <parmest>`. The four ``Suffix`` components are:
 
 * ``experiment_inputs`` - The experimental design decisions
 * ``experiment_outputs`` - The values measured during the experiment

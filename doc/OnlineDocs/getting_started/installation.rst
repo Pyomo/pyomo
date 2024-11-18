@@ -1,3 +1,5 @@
+.. _pyomo_installation:
+
 Installation
 ------------
 
