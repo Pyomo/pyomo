@@ -26,7 +26,7 @@ Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the Pyomo 
 the allowable design spaces for design variables, and the assumed observation error model.
 During exploratory analysis, Pyomo.DoE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
-Parameter estimation packages such as `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_ can perform parameter estimation using the available data to infer values for parameters,
+Parameter estimation packages such as `Parmest <https://pyomo.readthedocs.io/en/stable/explanation/analysis/parmest/index.html>`_ can perform parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
 If not, MBDoE recommends optimized experimental conditions to generate new data.

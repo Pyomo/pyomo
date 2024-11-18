@@ -26,7 +26,7 @@ at Purdue University and Carnegie Mellon University.
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 .. _Westerlund & Petterson, 1995: http://dx.doi.org/10.1016/0098-1354(95)87027-X
 .. _Kesavan & Allgor, 2004: https://link.springer.com/article/10.1007/s10107-004-0503-1
-.. _MC++: https://pyomo.readthedocs.io/en/stable/contributed_packages/mcpp.html
+.. _MC++: https://pyomo.readthedocs.io/en/stable/explanation/solvers/mcpp.html
 .. _Bernal & Peng, 2021: http://www.optimization-online.org/DB_HTML/2021/06/8452.html
 .. _Kronqvist & Bernal, 2018: https://link.springer.com/article/10.1007%2Fs10107-018-1356-3
 .. _Bonami & Cornuéjols, 2009: https://link.springer.com/article/10.1007/s10107-008-0212-2
@@ -132,7 +132,7 @@ The LP/NLP based branch-and-bound algorithm in MindtPy is implemented based on t
 
    In Pyomo, `persistent solvers`_ are necessary to set or register callback functions. The single tree implementation currently only works with CPLEX and GUROBI, more exactly ``cplex_persistent`` and ``gurobi_persistent``. To use the `LazyConstraintCallback`_ function of CPLEX from Pyomo, the `CPLEX Python API`_ is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer. To use the `cbLazy`_ function of GUROBI from pyomo, `gurobipy`_ is required.
 
-.. _`persistent solvers`: https://pyomo.readthedocs.io/en/stable/advanced_topics/persistent_solvers.html?highlight=persistent
+.. _`persistent solvers`: https://pyomo.readthedocs.io/en/stable/explanation/solvers/persistent.html
 .. _CPLEX Python API: https://www.ibm.com/docs/en/icos/20.1.0?topic=cplex-setting-up-python-api
 .. _gurobipy: https://www.gurobi.com/documentation/9.1/quickstart_mac/cs_grbpy_the_gurobi_python.html
 .. _LazyConstraintCallback: https://www.ibm.com/docs/en/icos/20.1.0?topic=classes-cplexcallbackslazyconstraintcallback
