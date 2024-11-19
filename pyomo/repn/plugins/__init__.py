@@ -20,6 +20,7 @@ def load():
         lp_writer,
         nl_writer,
         standard_form,
+        parameterized_standard_form,
     )
     from pyomo.opt import WriterFactory
 

@@ -1,3 +1,5 @@
+.. _persistent_solvers:
+
 Persistent Solvers
 ==================
 

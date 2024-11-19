@@ -1,5 +1,7 @@
-Parameter Estimation with ``parmest``
-=====================================
+.. _parmest:
+
+Parameter Estimation
+====================
 
 ``parmest`` is a Python package built on the Pyomo optimization modeling
 language ([Pyomo-paper]_, [PyomoBookIII]_) to support parameter estimation using experimental data along with

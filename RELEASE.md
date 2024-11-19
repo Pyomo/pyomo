@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.8.0.
+We are pleased to announce the release of Pyomo 6.8.2.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
@@ -6,7 +6,10 @@ optimization models.
 
 The following are highlights of the 6.8 release series:
 
-- Support for Numpy2
+- Complete Documentation Reorganization
+- Added support for Python 3.13
+- Refactor default Gurobi interface to support version 12
+- Support for NumPy2
 - Refactor of Design of Experiments (`contrib.doe`)
 - New packages:
   - alternative_solutions: alternative (near) optimal solutions

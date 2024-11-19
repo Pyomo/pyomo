@@ -1126,7 +1126,7 @@ class XpressDirect(DirectSolver):
             vars_to_load = var_map.keys()
 
         xpress_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
-        vals = self._getRedCost(self._solver_model, xpress_vars_to_load)
+        vals = self._getRedCosts(self._solver_model, xpress_vars_to_load)
 
         for var, val in zip(vars_to_load, vals):
             if ref_vars[var] > 0:

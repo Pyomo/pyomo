@@ -998,6 +998,12 @@ def _finalize_matplotlib(module, available):
     import matplotlib.backends
 
 
+def _finalize_mpi4py(module, available):
+    if not available:
+        return
+    import mpi4py.MPI
+
+
 def _finalize_numpy(np, available):
     if not available:
         return
@@ -1081,7 +1087,9 @@ with declare_modules_as_importable(globals()):
 
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
-    mpi4py, mpi4py_available = attempt_import('mpi4py')
+    mpi4py, mpi4py_available = attempt_import(
+        'mpi4py', deferred_submodules=['MPI'], callback=_finalize_mpi4py
+    )
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')
