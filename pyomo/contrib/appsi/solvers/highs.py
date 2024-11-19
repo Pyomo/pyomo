@@ -397,12 +397,8 @@ class Highs(PersistentBase, PersistentSolver):
 
         for con in cons:
             repn = generate_standard_repn(
-                con.body, quadratic=False, compute_values=False
+                con.body, quadratic=True, compute_values=False
             )
-            if repn.nonlinear_expr is not None:
-                raise DegreeError(
-                    f'Highs interface does not support expressions of degree {repn.polynomial_degree()}'
-                )
 
             starts.append(len(coef_values))
             for ndx, coef in enumerate(repn.linear_coefs):
@@ -589,12 +585,8 @@ class Highs(PersistentBase, PersistentSolver):
                 )
 
             repn = generate_standard_repn(
-                obj.expr, quadratic=False, compute_values=False
+                obj.expr, quadratic=True, compute_values=False
             )
-            if repn.nonlinear_expr is not None:
-                raise DegreeError(
-                    f'Highs interface does not support expressions of degree {repn.polynomial_degree()}'
-                )
 
             for coef, v in zip(repn.linear_coefs, repn.linear_vars):
                 v_id = id(v)
