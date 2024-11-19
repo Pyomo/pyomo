@@ -190,7 +190,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                         'contrib.deactivate_trivial_constraints'
                     ).apply_to(subproblem, tmp=False, ignore_infeasible=False)
                 except InfeasibleConstraintException:
-                    return False
+                    return False, None
                 minlp_args = dict(config.minlp_solver_args)
                 if config.time_limit is not None and config.minlp_solver == 'gams':
                     elapsed = get_main_elapsed_time(self.timing)
@@ -200,16 +200,19 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 result = SolverFactory(config.minlp_solver).solve(
                     subproblem, **minlp_args
                 )
+                # Retrieve the primal bound (objective value) from the subproblem
+                obj = next(subproblem.component_data_objects(Objective, active=True))
+                primal_bound = value(obj)
                 primal_improved = self._handle_subproblem_result(
                     result, subproblem, external_var_value, config, search_type
                 )
-            return primal_improved
+            return primal_improved, primal_bound
         except RuntimeError as e:
             config.logger.warning(
                 "Solver encountered RuntimeError. Treating as infeasible. "
                 "Msg: %s\n%s" % (str(e), traceback.format_exc())
             )
-            return False
+            return False, None
 
     def _get_external_information(self, util_block, config):
         """Function that obtains information from the model to perform the reformulation with external variables.
