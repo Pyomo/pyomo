@@ -33,7 +33,7 @@ from pyomo.contrib.gdpopt.config_options import (
 from pyomo.contrib.gdpopt.nlp_initialization import restore_vars_to_original_values
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, get_main_elapsed_time
 from pyomo.contrib.satsolver.satsolver import satisfiable
-from pyomo.core import minimize, Suffix, TransformationFactory
+from pyomo.core import minimize, Suffix, TransformationFactory, Objective, value
 from pyomo.opt import SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
