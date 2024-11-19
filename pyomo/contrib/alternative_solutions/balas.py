@@ -36,6 +36,9 @@ def enumerate_binary_solutions(
     Finds alternative optimal solutions for a binary problem using no-good
     cuts.
 
+    This function implements a no-good cuts technique inheriting from
+    Balas's work on Canonical Cuts [BJ72]_.
+
     Parameters
     ----------
     model : ConcreteModel
@@ -74,6 +77,7 @@ def enumerate_binary_solutions(
     solutions
         A list of Solution objects.
         [Solution]
+
     """
     logger.info("STARTING NO-GOOD CUT ANALYSIS")
 

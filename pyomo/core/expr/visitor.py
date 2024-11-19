@@ -894,7 +894,7 @@ class ExpressionValueVisitor(object):
         if flag:
             return self.finalize(value)
         # _stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
-        _stack = [(node, node._args_, 0, node.nargs(), [])]
+        _stack = [(node, node.args, 0, node.nargs(), [])]
         #
         # Iterate until the stack is empty
         #
@@ -926,7 +926,7 @@ class ExpressionValueVisitor(object):
                     _stack.append((_obj, _argList, _idx, _len, _result))
                     _obj = _sub
                     # _argList                = self.children(_sub)
-                    _argList = _sub._args_
+                    _argList = _sub.args
                     _idx = 0
                     _len = _sub.nargs()
                     _result = []
@@ -936,7 +936,8 @@ class ExpressionValueVisitor(object):
             ans = self.visit(_obj, _result)
             if _stack:
                 #
-                # "return" the recursion by putting the return value on the end of the results stack
+                # "return" the recursion by putting the return value on
+                # the end of the results stack
                 #
                 _stack[-1][-1].append(ans)
             else:
@@ -1244,9 +1245,13 @@ class _EvaluateConstantExpressionVisitor(ExpressionValueVisitor):
                 # opportunity to map the error to a NonConstant / Fixed
                 # expression error
                 if not node.is_fixed():
-                    raise NonConstantExpressionError()
+                    raise NonConstantExpressionError(
+                        f"{node} ({type(node).__name__}) is not fixed"
+                    )
                 if not node.is_constant():
-                    raise FixedExpressionError()
+                    raise FixedExpressionError(
+                        f"{node} ({type(node).__name__}) is not constant"
+                    )
                 raise
 
             if not node.is_fixed():
@@ -1650,6 +1655,7 @@ RIGHT_TO_LEFT = common.OperatorAssociativity.RIGHT_TO_LEFT
 
 class _ToStringVisitor(ExpressionValueVisitor):
     _expression_handlers = None
+    _leaf_node_types = set()
 
     def __init__(self, verbose, smap):
         super(_ToStringVisitor, self).__init__()
@@ -1659,14 +1665,14 @@ class _ToStringVisitor(ExpressionValueVisitor):
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
         for i, val in enumerate(values):
-            arg = node._args_[i]
+            arg = node.arg(i)
 
             if arg is None:
                 values[i] = 'Undefined'
             elif arg.__class__ in native_numeric_types:
                 pass
             elif arg.__class__ in nonpyomo_leaf_types:
-                values[i] = f"'{val}'"
+                values[i] = f"{val}"
             else:
                 parens = False
                 if (
@@ -1681,7 +1687,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
                     elif node.PRECEDENCE == arg.PRECEDENCE:
                         if i == 0:
                             parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
-                        elif i == len(node._args_) - 1:
+                        elif i == node.nargs() - 1:
                             parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
@@ -1702,14 +1708,19 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node is None:
             return True, None
 
-        if node.__class__ in nonpyomo_leaf_types:
+        if node.__class__ in native_numeric_types:
             return True, str(node)
 
-        if node.is_expression_type():
+        if node.__class__ in nonpyomo_leaf_types:
+            return True, repr(node)
+
+        if node.is_expression_type() and node.__class__ not in self._leaf_node_types:
             return False, None
 
         if hasattr(node, 'to_string'):
             return True, node.to_string(verbose=self.verbose, smap=self.smap)
+        elif self.smap is not None:
+            return True, self.smap.getSymbol(node)
         else:
             return True, str(node)
 

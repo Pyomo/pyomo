@@ -257,7 +257,11 @@ def set_options(**kwds):
     decorator allows an arbitrary dictionary of values to passed
     through to the set constructor.
 
-    Examples:
+    Examples
+    --------
+
+    .. code::
+
         @set_options(dimen=3)
         def B_index(model):
             return [(i,i+1,i*i) for i in model.A]
@@ -265,6 +269,7 @@ def set_options(**kwds):
         @set_options(domain=Integers)
         def B_index(model):
             return range(10)
+
     """
 
     def decorator(func):
@@ -280,11 +285,15 @@ def simple_set_rule(rule):
     This supports a simpler syntax in set rules, though these can be
     more difficult to debug when errors occur.
 
-    Example:
+    Examples
+    --------
 
-    @simple_set_rule
-    def A_rule(model, i, j):
-        ...
+    .. code::
+
+        @simple_set_rule
+        def A_rule(model, i, j):
+            ...
+
     """
     return rule_wrapper(rule, {None: Set.End})
 
@@ -3440,40 +3449,6 @@ class SetOperator(SetData, Set):
         if self._name is not None:
             return self.name
         return self._expression_str()
-
-    def __deepcopy__(self, memo):
-        # SetOperators form an expression system.  As we allow operators
-        # on abstract Set objects, it is important to *always* deepcopy
-        # SetOperators that have not been assigned to a Block.  For
-        # example, consider an abstract indexed model component whose
-        # domain is specified by a Set expression:
-        #
-        #   def x_init(m,i):
-        #       if i == 2:
-        #           return Set.Skip
-        #       else:
-        #           return []
-        #   m.x = Set( [1,2],
-        #              domain={1: m.A*m.B, 2: m.A*m.A},
-        #              initialize=x_init )
-        #
-        # We do not want to automatically add all the Set operators to
-        # the model at declaration time, as m.x[2] is never actually
-        # created.  Plus, doing so would require complex parsing of the
-        # initializers.  BUT, we need to ensure that the operators are
-        # deepcopied, otherwise when the model is cloned before
-        # construction the operators will still refer to the sets on the
-        # original abstract model (in particular, the Set x will have an
-        # unknown dimen).
-        #
-        # Our solution is to cause SetOperators to be automatically
-        # cloned if they haven't been assigned to a block.
-        if '__block_scope__' in memo:
-            if self.parent_block() is None:
-                # Hijack the block scope rules to cause this object to
-                # be deepcopied.
-                memo['__block_scope__'][id(self)] = True
-        return super(SetOperator, self).__deepcopy__(memo)
 
     def _expression_str(self):
         _args = []

@@ -481,9 +481,7 @@ class TestConfigDomains(unittest.TestCase):
                 None, IsInstance(int, TestClass, document_full_base_names=True)
             ),
         )
-        self.assertRegex(
-            c.get("val3").domain_name(), r"IsInstance\(int, .*\.TestClass\)"
-        )
+        self.assertRegex(c.get("val3").domain_name(), r"IsInstance\[int, TestClass\]")
         c.val3 = 2
         self.assertEqual(c.val3, 2)
         exc_str = (
@@ -499,7 +497,7 @@ class TestConfigDomains(unittest.TestCase):
                 None, IsInstance(int, TestClass, document_full_base_names=False)
             ),
         )
-        self.assertEqual(c.get("val4").domain_name(), "IsInstance(int, TestClass)")
+        self.assertEqual(c.get("val4").domain_name(), "IsInstance[int, TestClass]")
         c.val4 = 2
         self.assertEqual(c.val4, 2)
         exc_str = (
@@ -1175,7 +1173,6 @@ class TestConfig(unittest.TestCase):
         test = config.generate_yaml_template(**kwds)
         width = kwds.get('width', 80)
         indent = kwds.get('indent_spacing', 2)
-        sys.stdout.write(test)
         for l in test.splitlines():
             self.assertLessEqual(len(l), width)
             if l.strip().startswith("#"):
@@ -1337,7 +1334,6 @@ flushing:
     response time: 60.0
 """
         test = _display(self.config)
-        sys.stdout.write(test)
         self.assertEqual(test, reference)
 
     def test_display_list(self):
@@ -1376,18 +1372,15 @@ flushing:
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config)
-        sys.stdout.write(test)
         self.assertEqual(test, reference)
 
     def test_display_userdata_default(self):
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_display_userdata_list(self):
         self.config['scenarios'].append()
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios:
@@ -1399,7 +1392,6 @@ flushing:
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios:
@@ -1414,7 +1406,6 @@ flushing:
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """foo: 0
@@ -1426,7 +1417,6 @@ bar:
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """foo: 0
@@ -1435,42 +1425,48 @@ bar:
 """,
         )
 
+    def test_display_nondata_type(self):
+        class NOOP(object):
+            def __getattr__(self, attr):
+                def noop(*args, **kwargs):
+                    pass
+
+                return noop
+
+        cfg = ConfigDict()
+        cfg.declare('callback', ConfigValue(default=NOOP))
+        self.assertEqual(_display(cfg), "callback: <class 'type'>\n")
+
     def test_display_userdata_declare_block(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
         self.config.declare("bar", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_display_userdata_declare_block_nonDefault(self):
         self.config.declare("foo", ConfigValue(0, int, None, None))
         self.config.declare("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(test, "bar:\n  baz:\n")
 
     def test_unusedUserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_unusedUserValues_scalar(self):
         self.config['scenario']['merlion'] = True
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "scenario.merlion")
 
     def test_unusedUserValues_list(self):
         self.config['scenarios'].append()
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, """scenarios[0]""")
 
     def test_unusedUserValues_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios[0]
@@ -1485,7 +1481,6 @@ scenarios[1].detection""",
         for x in self.config['scenarios']:
             pass
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios[0]
@@ -1499,7 +1494,6 @@ scenarios[1].detection""",
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         self.config['scenarios'][1]['merlion']
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios[0]
@@ -1509,52 +1503,43 @@ scenarios[1].detection""",
     def test_unusedUserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "foo")
         test = '\n'.join(x.name(True) for x in self.config.foo.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "foo")
 
     def test_unusedUserValues_add_subBlock(self):
         self.config['scenario'].add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, """scenario.foo""")
 
     def test_unusedUserValues_declare_topBlock(self):
         self.config.declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_unusedUserValues_declare_subBlock(self):
         self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_UserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_UserValues_scalar(self):
         self.config['scenario']['merlion'] = True
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "scenario.merlion")
 
     def test_UserValues_list(self):
         self.config['scenarios'].append()
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, """scenarios[0]""")
 
     def test_UserValues_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios[0]
@@ -1569,7 +1554,6 @@ scenarios[1].detection""",
         for x in self.config['scenarios']:
             pass
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios[0]
@@ -1583,7 +1567,6 @@ scenarios[1].detection""",
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         self.config['scenarios'][1]['merlion']
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios[0]
@@ -1595,34 +1578,28 @@ scenarios[1].detection""",
     def test_UserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "foo")
         test = '\n'.join(x.name(True) for x in self.config.foo.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "foo")
 
     def test_UserValues_add_subBlock(self):
         self.config['scenario'].add('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, """scenario.foo""")
 
     def test_UserValues_declare_topBlock(self):
         self.config.declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     def test_UserValues_declare_subBlock(self):
         self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
-        sys.stdout.write(test)
         self.assertEqual(test, "")
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
         test = _display(self.config)
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), self.config.value())
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
@@ -1630,20 +1607,17 @@ scenarios[1].detection""",
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config)
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), self.config.value())
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_default(self):
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), None)
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplay_userdata_list(self):
         self.config['scenarios'].append()
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'scenarios': [None]})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
@@ -1651,7 +1625,6 @@ scenarios[1].detection""",
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             yaml_load(test), {'scenarios': [None, {'merlion': True, 'detection': []}]}
         )
@@ -1661,7 +1634,6 @@ scenarios[1].detection""",
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'foo': 0, 'bar': None})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
@@ -1669,7 +1641,6 @@ scenarios[1].detection""",
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'bar': {'baz': None}, 'foo': 0})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
@@ -1677,7 +1648,6 @@ scenarios[1].detection""",
         self.config.declare("foo", ConfigValue(0, int, None, None))
         self.config.declare("bar", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), None)
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
@@ -1685,7 +1655,6 @@ scenarios[1].detection""",
         self.config.declare("foo", ConfigValue(0, int, None, None))
         self.config.declare("bar", ConfigDict(implicit=True)).add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(yaml_load(test), {'bar': {'baz': None}})
 
     def test_value_ConfigValue(self):
@@ -1889,11 +1858,24 @@ scenarios[1].detection""",
         c.reset()
         self.assertEqual(c.value(), 10)
 
+        c = ConfigValue(default=lambda x: 10 * x, domain=int)
         with self.assertRaisesRegex(TypeError, r"<lambda>\(\) .* argument"):
-            c = ConfigValue(default=lambda x: 10 * x, domain=int)
+            c.value()
 
-        with self.assertRaisesRegex(ValueError, 'invalid value for configuration'):
-            c = ConfigValue('a', domain=int)
+        c = ConfigValue('a', domain=int)
+        with self.assertRaisesRegex(
+            ValueError, '(?s)invalid value for configuration.*casting a'
+        ):
+            c.value()
+
+        # Test that if both the default and the result from calling the
+        # default raise exceptions, the propagated exception is from
+        # castig the original default:
+        c = ConfigValue(default=lambda: 'a', domain=int)
+        with self.assertRaisesRegex(
+            ValueError, "(?s)invalid value for configuration.*lambda"
+        ):
+            c.value()
 
     def test_set_default(self):
         c = ConfigValue()
@@ -2421,7 +2403,6 @@ endBlock{}
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios:
@@ -2435,7 +2416,6 @@ endBlock{}
         self.config['scenarios'][0] = {'merlion': True, 'detection': []}
         self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """scenarios:
@@ -2449,7 +2429,6 @@ endBlock{}
 """,
         )
         test = _display(self.config['scenarios'])
-        sys.stdout.write(test)
         self.assertEqual(
             test,
             """-
@@ -2768,7 +2747,9 @@ Node information:
         ):
             config.baz = 10
 
-        with self.assertRaisesRegex(AttributeError, "Unknown attribute 'baz'"):
+        with self.assertRaisesRegex(
+            AttributeError, "'ConfigDict' object has no attribute 'baz'"
+        ):
             a = config.baz
 
     def test_nonString_keys(self):
@@ -2914,6 +2895,18 @@ c: 1.0
         self.assertEqual(mod_copy._doc, "new doc")
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
+
+    def test_template_nondata(self):
+        class NOOP(object):
+            def __getattr__(self, attr):
+                def noop(*args, **kwargs):
+                    pass
+
+                return noop
+
+        cfg = ConfigDict()
+        cfg.declare('callback', ConfigValue(default=NOOP, description="docstr"))
+        self._validateTemplate(cfg, "callback: <class 'type'>  # docstr\n")
 
     def test_pickle(self):
         def anon_domain(domain):
@@ -3120,16 +3113,19 @@ c: 1.0
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_1: float, default=1
+
         [DEVELOPER option]
 
         The first solver configuration option
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly
@@ -3138,6 +3134,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing
@@ -3149,6 +3146,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
@@ -3159,11 +3157,13 @@ option_2: int, default=5
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly
@@ -3172,6 +3172,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing
@@ -3183,6 +3184,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line
     containing wrappable text in a long, silly paragraph with little
     actual information."""
@@ -3192,11 +3194,13 @@ option_2: int, default=5
 Keyword Arguments
 -----------------
 option_1: int, default=5
+
     The first configuration option
 
 solver_options: dict, optional
 
     solver_option_2: float, default=1
+
         The second solver configuration option
 
         With a very long line containing wrappable text in a long, silly paragraph with little actual information.
@@ -3204,6 +3208,7 @@ solver_options: dict, optional
         #) with two bullets
 
     solver_option_3: float, default=1
+
         The third solver configuration option
 
            This has a leading newline and a very long line containing wrappable text in a long, silly paragraph with little actual information.
@@ -3213,6 +3218,7 @@ solver_options: dict, optional
            #) with two bullets
 
 option_2: int, default=5
+
     The second solver configuration option with a very long line containing wrappable text in a long, silly paragraph with little actual information."""
         with LoggingIntercept() as LOG:
             self.assertEqual(add_docstring_list("", ExampleClass.CONFIG), ref)
@@ -3293,6 +3299,56 @@ option_2: int, default=5
 
         cfg.declare('type', ConfigValue(domain=int))
         self.assertEqual(cfg.get('type').domain_name(), 'int')
+
+    def test_deferred_initialization(self):
+        class Accumulator(object):
+            def __init__(self):
+                self.data = []
+
+            def __call__(self, val):
+                self.data.append(val)
+                return val
+
+        record = Accumulator()
+
+        cfg = ConfigDict()
+        cfg.declare('a', ConfigValue(5, record))
+        self.assertEqual(record.data, [])
+        self.assertEqual(cfg.a, 5)
+        self.assertEqual(record.data, [5])
+
+        # Test that assignment bypasses the default value
+        cfg.declare('b', ConfigValue(6, record))
+        self.assertEqual(record.data, [5])
+        cfg.b = 10
+        self.assertEqual(record.data, [5, 10])
+        self.assertEqual(cfg.b, 10)
+        self.assertEqual(record.data, [5, 10])
+
+        # But resetting it will trigger the default
+        cfg.get('b').reset()
+        self.assertEqual(record.data, [5, 10, 6])
+        self.assertEqual(cfg.b, 6)
+
+        record.data = []
+        cfg.declare('la', ConfigList(['a', 'b'], ConfigValue(7, record)))
+        self.assertEqual(record.data, [])
+        self.assertEqual(cfg.la.value(), ['a', 'b'])
+        self.assertEqual(record.data, [7, 'a', 'b'])
+
+        # Test that assignment bypasses the default value
+        record.data = []
+        cfg.declare('lb', ConfigList(['a', 'b'], record))
+        self.assertEqual(record.data, [])
+        cfg.lb = [10, 11]
+        self.assertEqual(record.data, [10, 11])
+        self.assertEqual(cfg.lb.value(), [10, 11])
+        self.assertEqual(record.data, [10, 11])
+
+        # But resetting it will trigger the default
+        cfg.get('lb').reset()
+        self.assertEqual(record.data, [10, 11, 'a', 'b'])
+        self.assertEqual(cfg.lb.value(), ['a', 'b'])
 
 
 if __name__ == "__main__":

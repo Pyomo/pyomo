@@ -27,6 +27,7 @@ from pyomo.common.dependencies import (
     check_min_version,
     dill,
     dill_available,
+    mpi4py_available,
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
@@ -449,6 +450,12 @@ class TestDependencies(unittest.TestCase):
             r"'__there_is_no_module_named_this__'\)",
         ):
             A_Class.method()
+
+    @unittest.pytest.mark.mpi
+    def test_mpi4py_available(self):
+        from mpi4py import MPI
+
+        self.assertTrue(bool(mpi4py_available))
 
 
 if __name__ == '__main__':

@@ -33,119 +33,107 @@ class TerminationCondition(enum.Enum):
     """
     An Enum that enumerates all possible exit statuses for a solver call.
 
-    Attributes
-    ----------
-    convergenceCriteriaSatisfied: 0
-        The solver exited because convergence criteria of the problem were
-        satisfied.
-    maxTimeLimit: 1
-        The solver exited due to reaching a specified time limit.
-    iterationLimit: 2
-        The solver exited due to reaching a specified iteration limit.
-    objectiveLimit: 3
-        The solver exited due to reaching an objective limit. For example,
-        in Gurobi, the exit message "Optimal objective for model was proven to
-        be worse than the value specified in the Cutoff parameter" would map
-        to objectiveLimit.
-    minStepLength: 4
-        The solver exited due to a minimum step length.
-        Minimum step length reached may mean that the problem is infeasible or
-        that the problem is feasible but the solver could not converge.
-    unbounded: 5
-        The solver exited because the problem has been found to be unbounded.
-    provenInfeasible: 6
-        The solver exited because the problem has been proven infeasible.
-    locallyInfeasible: 7
-        The solver exited because no feasible solution was found to the
-        submitted problem, but it could not be proven that no such solution exists.
-    infeasibleOrUnbounded: 8
-        Some solvers do not specify between infeasibility or unboundedness and
-        instead return that one or the other has occurred. For example, in
-        Gurobi, this may occur because there are some steps in presolve that
-        prevent Gurobi from distinguishing between infeasibility and unboundedness.
-    error: 9
-        The solver exited with some error. The error message will also be
-        captured and returned.
-    interrupted: 10
-        The solver was interrupted while running.
-    licensingProblems: 11
-        The solver experienced issues with licensing. This could be that no
-        license was found, the license is of the wrong type for the problem (e.g.,
-        problem is too big for type of license), or there was an issue contacting
-        a licensing server.
-    emptyModel: 12
-        The model being solved did not have any variables
-    unknown: 42
-        All other unrecognized exit statuses fall in this category.
     """
 
     convergenceCriteriaSatisfied = 0
+    "The solver exited because convergence criteria of the problem were satisfied."
 
     maxTimeLimit = 1
+    """The solver exited due to reaching a specified time limit."""
 
     iterationLimit = 2
+    """The solver exited due to reaching a specified iteration limit."""
 
     objectiveLimit = 3
+    """The solver exited due to reaching an objective limit. For example, in
+    Gurobi, the exit message "Optimal objective for model was proven to
+    be worse than the value specified in the Cutoff parameter" would map
+    to objectiveLimit.
+    """
 
     minStepLength = 4
+    """The solver exited due to a minimum step length.  Minimum step length
+    reached may mean that the problem is infeasible or that the problem
+    is feasible but the solver could not converge.
+    """
 
     unbounded = 5
+    "The solver exited because the problem has been found to be unbounded."
 
     provenInfeasible = 6
+    "The solver exited because the problem has been proven infeasible."
 
     locallyInfeasible = 7
+    """The solver exited because no feasible solution was found to the
+    submitted problem, but it could not be proven that no such solution
+    exists.
+    """
 
     infeasibleOrUnbounded = 8
+    """Some solvers do not specify between infeasibility or unboundedness
+    and instead return that one or the other has occurred. For example,
+    in Gurobi, this may occur because there are some steps in presolve
+    that prevent Gurobi from distinguishing between infeasibility and
+    unboundedness.
+    """
 
     error = 9
+    """The solver exited with some error. The error message will also be
+    captured and returned.
+    """
 
     interrupted = 10
+    "The solver was interrupted while running."
 
     licensingProblems = 11
+    """The solver experienced issues with licensing. This could be that no
+    license was found, the license is of the wrong type for the problem
+    (e.g., problem is too big for type of license), or there was an
+    issue contacting a licensing server.
+    """
 
     emptyModel = 12
+    "The model being solved did not have any variables"
 
     unknown = 42
+    "All other unrecognized exit statuses fall in this category."
 
 
 class SolutionStatus(enum.Enum):
-    """
-    An enumeration for interpreting the result of a termination. This describes the designated
-    status by the solver to be loaded back into the model.
+    """An enumeration for interpreting the result of a termination. This
+    describes the designated status by the solver to be loaded back into
+    the model.
 
-    Attributes
-    ----------
-    noSolution: 0
-        No (single) solution was found; possible that a population of solutions
-        was returned.
-    infeasible: 10
-        Solution point does not satisfy some domains and/or constraints.
-    feasible: 20
-        A solution for which all of the constraints in the model are satisfied.
-    optimal: 30
-        A feasible solution where the objective function reaches its specified
-        sense (e.g., maximum, minimum)
     """
 
     noSolution = 0
+    """No (single) solution was found; possible that a population of
+    solutions was returned.
+    """
 
     infeasible = 10
+    "Solution point does not satisfy some domains and/or constraints."
 
     feasible = 20
+    "A solution for which all of the constraints in the model are satisfied."
 
     optimal = 30
+    """A feasible solution where the objective function reaches its
+    specified sense (e.g., maximum, minimum)
+    """
 
 
 class Results(ConfigDict):
-    """
+    """Base class for all solver results
+
     Attributes
     ----------
-    solution_loader: SolutionLoaderBase
+    solution_loader: .SolutionLoaderBase
         Object for loading the solution back into the model.
-    termination_condition: :class:`TerminationCondition<pyomo.contrib.solver.results.TerminationCondition>`
+    termination_condition: TerminationCondition
         The reason the solver exited. This is a member of the
         TerminationCondition enum.
-    solution_status: :class:`SolutionStatus<pyomo.contrib.solver.results.SolutionStatus>`
+    solution_status: SolutionStatus
         The result of the solve call. This is a member of the SolutionStatus
         enum.
     incumbent_objective: float
@@ -165,9 +153,11 @@ class Results(ConfigDict):
         The total number of iterations.
     timing_info: ConfigDict
         A ConfigDict containing three pieces of information:
-            - ``start_timestamp``: UTC timestamp of when run was initiated
-            - ``wall_time``: elapsed wall clock time for entire process
-            - ``timer``: a HierarchicalTimer object containing timing data about the solve
+
+          - ``start_timestamp``: UTC timestamp of when run was initiated
+          - ``wall_time``: elapsed wall clock time for entire process
+          - ``timer``: a HierarchicalTimer object containing timing data
+            about the solve
 
         Specific solvers may add other relevant timing information, as appropriate.
     extra_info: ConfigDict
@@ -176,6 +166,7 @@ class Results(ConfigDict):
         A copy of the SolverConfig ConfigDict, for later inspection/reproducibility.
     solver_log: str
         (ADVANCED OPTION) Any solver log messages.
+
     """
 
     def __init__(
