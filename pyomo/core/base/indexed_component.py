@@ -63,6 +63,8 @@ def normalize_index(x):
         # new object)
         x = tuple(x)
     else:
+        # Note: new Sequence types will be caught below and added to the
+        # sequence_types set
         x = (x,)
 
     x_len = len(x)
@@ -338,7 +340,7 @@ class IndexedComponent(Component):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
             # For indexed components, we will pre-emptively clone all
             # component data objects as well (as those are the objects
             # that will be referenced by things like expressions).  It
@@ -352,10 +354,12 @@ class IndexedComponent(Component):
                 # for the _data dict, we can effectively "deepcopy" it
                 # right now (almost for free!)
                 _src = self._data
-                memo[id(_src)] = _new._data = _data = _src.__class__()
+                memo[id(_src)] = _new._data = _src.__class__()
+                _setter = _new._data.__setitem__
                 for idx, obj in _src.items():
-                    _data[fast_deepcopy(idx, memo)] = obj._create_objects_for_deepcopy(
-                        memo, component_list
+                    _setter(
+                        fast_deepcopy(idx, memo),
+                        obj._create_objects_for_deepcopy(memo, component_list),
                     )
 
         return _ans
@@ -747,7 +751,7 @@ You can silence this warning by one of three ways:
     def _construct_from_rule_using_setitem(self):
         if self._rule is None:
             return
-        index = None
+        index = None  # set so it is defined for scalars for `except:` below
         rule = self._rule
         block = self.parent_block()
         try:
@@ -1197,7 +1201,7 @@ class IndexedComponent_NDArrayMixin(object):
         if not self.is_indexed():
             ans = _ndarray.NumericNDArray(shape=(1,), dtype=object)
             ans[0] = self
-            return ans
+            return ans.reshape(())
 
         _dim = self.dim()
         if _dim is None:

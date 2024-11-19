@@ -436,7 +436,7 @@ def _add_mip_solver_configs(CONFIG):
         ConfigValue(
             default="gurobi",
             description="""
-            Mixed-integer linear solver to use. Note that no persisent solvers
+            Mixed-integer linear solver to use. Note that no persistent solvers
             other than the auto-persistent solvers in the APPSI package are
             supported.""",
         ),
@@ -457,7 +457,7 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default=default_solver,
             description="""
-            Nonlinear solver to use. Note that no persisent solvers
+            Nonlinear solver to use. Note that no persistent solvers
             other than the auto-persistent solvers in the APPSI package are
             supported.""",
         ),
@@ -475,7 +475,7 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default="baron",
             description="""
-            Mixed-integer nonlinear solver to use. Note that no persisent solvers
+            Mixed-integer nonlinear solver to use. Note that no persistent solvers
             other than the auto-persistent solvers in the APPSI package are
             supported.""",
         ),
@@ -493,7 +493,7 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         ConfigValue(
             default="bonmin",
             description="""
-            Mixed-integer nonlinear solver to use. Note that no persisent solvers
+            Mixed-integer nonlinear solver to use. Note that no persistent solvers
             other than the auto-persistent solvers in the APPSI package are
             supported.""",
         ),

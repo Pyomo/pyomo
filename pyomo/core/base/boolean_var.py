@@ -90,21 +90,10 @@ class BooleanVarData(ComponentData, BooleanValue):
 
     Attributes
     ----------
-    domain: SetData
-        The domain of this variable.
-
     fixed: bool
         If True, then this variable is treated as a fixed constant in
         the model.
 
-    stale: bool
-        A Boolean indicating whether the value of this variable is
-        Consistent with the most recent solve.  `True` indicates that
-        this variable's value was set prior to the most recent solve and
-        was not updated by the results returned by the solve.
-
-    value: bool
-        The value of this variable.
     """
 
     __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
@@ -172,7 +161,7 @@ class BooleanVarData(ComponentData, BooleanValue):
 
     @property
     def value(self):
-        """Return (or set) the value for this variable."""
+        """bool : the current value for this variable."""
         return self._value
 
     @value.setter
@@ -181,11 +170,17 @@ class BooleanVarData(ComponentData, BooleanValue):
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """BooleanSet : the domain for this variable."""
         return BooleanSet
 
     @property
     def stale(self):
+        """
+        bool : A Boolean indicating whether the value of this variable is
+        Consistent with the most recent solve.  `True` indicates that
+        this variable's value was set prior to the most recent solve and
+        was not updated by the results returned by the solve.
+        """
         return StaleFlagManager.is_stale(self._stale)
 
     @stale.setter
@@ -484,7 +479,7 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """bool : the current value of this variable."""
         if self._constructed:
             return BooleanVarData.value.fget(self)
         raise ValueError(
@@ -495,7 +490,6 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
 
     @value.setter
     def value(self, val):
-        """Set the value for this variable."""
         if self._constructed:
             return BooleanVarData.value.fset(self, val)
         raise ValueError(
@@ -506,6 +500,7 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
 
     @property
     def domain(self):
+        """BooleanSet : the domain for this variable."""
         return BooleanVarData.domain.fget(self)
 
     def fix(self, value=NOTSET, skip_validation=False):
@@ -568,6 +563,7 @@ class IndexedBooleanVar(BooleanVar):
 
     @property
     def domain(self):
+        """BooleanSet : the domain for this variable."""
         return BooleanSet
 
     # Because Emma wants crazy things... (Where crazy things are the ability to

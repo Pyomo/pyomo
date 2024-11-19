@@ -22,9 +22,9 @@ Problem:
   Lower bound: 45.0
   Upper bound: 45.0
   Number of objectives: 1
-  Number of constraints: 58
+  Number of constraints: 60
   Number of variables: 24
-  Number of nonzeros: 124
+  Number of nonzeros: 126
   Sense: minimize
 # ----------------------------------------------------------
 #   Solver Information
@@ -34,8 +34,8 @@ Solver:
   Termination condition: optimal
   Statistics: 
     Branch and bound: 
-      Number of bounded subproblems: 15
-      Number of created subproblems: 15
+      Number of bounded subproblems: 9
+      Number of created subproblems: 9
   Error rc: 0
   Time: 0.007754325866699219
 # ----------------------------------------------------------
@@ -51,24 +51,24 @@ Solution:
     obj:
       Value: 45
   Variable:
-    GenOff[g1,2].binary_indicator_var:
+    GenOff[g1,1].binary_indicator_var:
       Value: 1
-    GenOff[g2,1].binary_indicator_var:
+    GenOff[g2,2].binary_indicator_var:
       Value: 1
-    GenOn[g1,1].binary_indicator_var:
+    GenOn[g1,3].binary_indicator_var:
       Value: 1
-    GenOn[g2,3].binary_indicator_var:
+    GenOn[g2,1].binary_indicator_var:
       Value: 1
-    GenStartup[g1,3].binary_indicator_var:
+    GenStartup[g1,2].binary_indicator_var:
       Value: 1
-    GenStartup[g2,2].binary_indicator_var:
+    GenStartup[g2,3].binary_indicator_var:
       Value: 1
-    Power[g1,1]:
-      Value: 10
-    Power[g1,3]:
+    Power[g1,2]:
       Value: 5
-    Power[g2,2]:
+    Power[g1,3]:
       Value: 10
-    Power[g2,3]:
+    Power[g2,1]:
       Value: 20
+    Power[g2,3]:
+      Value: 10
   Constraint: No values

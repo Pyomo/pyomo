@@ -19,9 +19,13 @@ from collections.abc import Mapping
 from types import ModuleType
 from typing import List
 
-from .deprecation import deprecated, deprecation_warning, in_testing_environment
-from .errors import DeferredImportError
-
+from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.errors import DeferredImportError
+from pyomo.common.flags import (
+    in_testing_environment,
+    building_documentation,
+    serializing,
+)
 
 SUPPRESS_DEPENDENCY_WARNINGS = False
 
@@ -70,10 +74,9 @@ class ModuleUnavailable(object):
         self._moduleunavailable_info_ = (message, version_error, import_error, package)
 
     def __getattr__(self, attr):
-        if attr in ModuleUnavailable._getattr_raises_attributeerror:
-            raise AttributeError(
-                "'%s' object has no attribute '%s'" % (type(self).__name__, attr)
-            )
+        if serializing() or attr in ModuleUnavailable._getattr_raises_attributeerror:
+            msg = "'%s' object has no attribute '%s'" % (type(self).__name__, attr)
+            raise AttributeError(msg)
         raise DeferredImportError(self._moduleunavailable_message())
 
     def __getstate__(self):
@@ -226,6 +229,13 @@ def UnavailableClass(unavailable_module):
 
     As does attempting to access class attributes on the derived class:
 
+    .. testcode::
+       :hide:
+
+       # We suppress this exception when building the documentation
+       # from pyomo.common.flags import building_documentation
+       building_documentation(False)
+
     .. doctest::
 
        >>> MyPlugin.create_instance()
@@ -236,10 +246,21 @@ def UnavailableClass(unavailable_module):
        dependency was not found (import raised ModuleNotFoundError: No module
        named 'bogus_unavailable_class')
 
+    .. testcode::
+       :hide:
+
+       building_documentation(None)
+
     """
 
     class UnavailableMeta(type):
         def __getattr__(cls, name):
+            if building_documentation():
+                # If we are building documentation, avoid the
+                # DeferredImportError (we will still raise one if
+                # someone attempts to *create* an instance of this
+                # class)
+                return getattr(super(), name)
             raise DeferredImportError(
                 unavailable_module._moduleunavailable_message(
                     f"The class attribute '{cls.__name__}.{name}' is not available "
@@ -497,11 +518,21 @@ class DeferredImportCallbackFinder:
         if fullname not in self._callbacks:
             return None
 
-        spec = importlib.machinery.PathFinder.find_spec(fullname, path, target)
-        if spec is None:
+        spec = None
+        # Continue looking for the finder that would have originally
+        # loaded the deferred import module b starting at the next
+        # finder in sys.meta_path (this way, we are agnostic to where
+        # the module is coming from: file system, registry, etc.)
+        for finder in sys.meta_path[sys.meta_path.index(self) + 1 :]:
+            spec = finder.find_spec(fullname, path, target)
+            if spec is not None:
+                break
+        else:
             # Module not found.  Returning None will proceed to the next
-            # finder (which is likely to raise a ModuleNotFoundError)
+            # finder (which will eventually raise a ModuleNotFoundError)
             return None
+        # Override the loader to trigger the finalization callback
+        # after the original loader is finished
         spec.loader = DeferredImportCallbackLoader(
             spec.loader, self._callbacks[fullname]
         )
@@ -967,6 +998,12 @@ def _finalize_matplotlib(module, available):
     import matplotlib.backends
 
 
+def _finalize_mpi4py(module, available):
+    if not available:
+        return
+    import mpi4py.MPI
+
+
 def _finalize_numpy(np, available):
     if not available:
         return
@@ -1050,10 +1087,17 @@ with declare_modules_as_importable(globals()):
 
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
-    mpi4py, mpi4py_available = attempt_import('mpi4py')
+    mpi4py, mpi4py_available = attempt_import(
+        'mpi4py', deferred_submodules=['MPI'], callback=_finalize_mpi4py
+    )
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')
+    pint, pint_available = attempt_import(
+        'pint',
+        # TypeError for pint<=0.24.3 and python>=3.13
+        catch_exceptions=(ImportError, TypeError),
+    )
     plotly, plotly_available = attempt_import('plotly')
     pympler, pympler_available = attempt_import('pympler', callback=_finalize_pympler)
     pyutilib, pyutilib_available = attempt_import(

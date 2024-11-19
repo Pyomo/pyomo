@@ -10,165 +10,206 @@
 #  ___________________________________________________________________________
 
 """
-Functions for handling the construction and solving of the GRCS master problem via ROSolver
+Functions for construction and solution of the PyROS master problem.
 """
 
-from pyomo.core.base import (
-    ConcreteModel,
-    Block,
-    Var,
-    Objective,
-    Constraint,
-    ConstraintList,
-    SortComponents,
-)
-from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverResults
-from pyomo.core.expr import value
+import os
+
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.modeling import unique_component_name
+from pyomo.core import TransformationFactory
+from pyomo.core.base import ConcreteModel, Block, Var, Objective, Constraint
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
+from pyomo.core.expr import identify_variables, value
+from pyomo.core.util import prod
+from pyomo.opt import TerminationCondition as tc
+from pyomo.repn.standard_repn import generate_standard_repn
+
+from pyomo.contrib.pyros.solve_data import MasterResults
 from pyomo.contrib.pyros.util import (
     call_solver,
-    selective_clone,
+    DR_POLISHING_PARAM_PRODUCT_ZERO_TOL,
+    enforce_dr_degree,
+    get_dr_expression,
+    check_time_limit_reached,
+    generate_all_decision_rule_var_data_objects,
     ObjectiveType,
     pyrosTerminationCondition,
-    process_termination_condition_master_problem,
-    adjust_solver_time_settings,
-    revert_solver_max_time_adjustment,
-    get_main_elapsed_time,
+    TIC_TOC_SOLVE_TIME_ATTR,
 )
-from pyomo.contrib.pyros.solve_data import MasterProblemData, MasterResult
-from pyomo.opt.results import check_optimal_termination
-from pyomo.core.expr.visitor import replace_expressions, identify_variables
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.core import TransformationFactory
-import itertools as it
-import os
-from copy import deepcopy
-from pyomo.common.errors import ApplicationError
-from pyomo.common.modeling import unique_component_name
-
-from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.pyros.util import TIC_TOC_SOLVE_TIME_ATTR, enforce_dr_degree
 
 
-def initial_construct_master(model_data):
+def construct_initial_master_problem(model_data):
     """
-    Constructs the iteration 0 master problem
-    return: a MasterProblemData object containing the master_model object
-    """
-    m = ConcreteModel()
-    m.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
-
-    master_data = MasterProblemData()
-    master_data.original = model_data.working_model.clone()
-    master_data.master_model = m
-    master_data.timing = model_data.timing
-
-    return master_data
-
-
-def get_state_vars(model, iterations):
-    """
-    Obtain the state variables of a two-stage model
-    for a given (sequence of) iterations corresponding
-    to model blocks.
+    Construct the initial master problem model object
+    from the preprocessed working model.
 
     Parameters
     ----------
-    model : ConcreteModel
-        PyROS model.
-    iterations : iterable
-        Iterations to consider.
+    model_data : model data object
+        Main model data object,
+        containing the preprocessed working model.
 
     Returns
     -------
-    iter_state_var_map : dict
-        Mapping from iterations to list(s) of state vars.
+    master_model : ConcreteModel
+        Initial master problem model object.
+        Contains a single scenario block fully cloned from
+        the working model.
     """
-    iter_state_var_map = dict()
-    for itn in iterations:
-        state_vars = [
-            var for blk in model.scenarios[itn, :] for var in blk.util.state_vars
-        ]
-        iter_state_var_map[itn] = state_vars
+    master_model = ConcreteModel()
+    master_model.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
+    add_scenario_block_to_master_problem(
+        master_model=master_model,
+        scenario_idx=(0, 0),
+        param_realization=model_data.config.nominal_uncertain_param_vals,
+        from_block=model_data.working_model,
+        clone_first_stage_components=True,
+    )
 
-    return iter_state_var_map
+    # epigraph Objective was not added during preprocessing,
+    # as we wanted to add it to the root block of the master
+    # model rather than to the model to prevent
+    # duplication across scenario sub-blocks
+    master_model.epigraph_obj = Objective(
+        expr=master_model.scenarios[0, 0].first_stage.epigraph_var
+    )
+
+    return master_model
 
 
-def construct_master_feasibility_problem(model_data, config):
+def add_scenario_block_to_master_problem(
+    master_model,
+    scenario_idx,
+    param_realization,
+    from_block,
+    clone_first_stage_components,
+):
     """
-    Construct a slack-variable based master feasibility model.
-    Initialize all model variables appropriately, and scale slack variables
-    as well.
+    Add new scenario block to the master model.
 
     Parameters
     ----------
-    model_data : MasterProblemData
+    master_model : ConcreteModel
+        Master model.
+    scenario_idx : tuple
+        Index of ``master_model.scenarios`` for the new block.
+    param_realization : Iterable of numeric type
+        Uncertain parameter realization for new block.
+    from_block : BlockData
+        Block from which to transfer attributes.
+        This can be an existing scenario block, or a block
+        with the same hierarchical structure as the
+        preprocessed working model.
+    clone_first_stage_components : bool
+        True to clone first-stage variables
+        when transferring attributes to the new block
+        to the new block (as opposed to using the objects as
+        they are in `from_block`), False otherwise.
+    """
+    # Note for any of the Vars not copied:
+    # - if Var is not a member of an indexed var, then
+    #   the 'name' attribute changes from
+    #   '{from_block.name}.{var.name}'
+    #   to 'scenarios[{scenario_idx}].{var.name}'
+    # - otherwise, the name stays the same
+    memo = dict()
+    if not clone_first_stage_components:
+        nonadjustable_comps = from_block.all_nonadjustable_variables
+        memo = {id(comp): comp for comp in nonadjustable_comps}
+
+        # we will clone the first-stage constraints
+        # (mostly to prevent symbol map name clashes).
+        # the duplicate constraints are redundant.
+        # consider deactivating these constraints in the
+        # off-nominal blocks?
+
+    new_block = from_block.clone(memo=memo)
+    master_model.scenarios[scenario_idx].transfer_attributes_from(new_block)
+
+    # update uncertain parameter values in new block
+    new_uncertain_params = master_model.scenarios[scenario_idx].uncertain_params
+    for param, val in zip(new_uncertain_params, param_realization):
+        param.set_value(val)
+
+    # deactivate the first-stage constraints: they are duplicate
+    if scenario_idx != (0, 0):
+        new_blk = master_model.scenarios[scenario_idx]
+        for con in new_blk.first_stage.inequality_cons.values():
+            con.deactivate()
+        for con in new_blk.first_stage.equality_cons.values():
+            con.deactivate()
+
+
+def construct_master_feasibility_problem(master_data):
+    """
+    Construct slack variable minimization problem from the master
+    model.
+
+    Slack variables are added only to the seconds-stage
+    inequality constraints of the blocks added for the
+    current PyROS iteration.
+
+    Parameters
+    ----------
+    master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver config.
 
     Returns
     -------
-    model : ConcreteModel
+    slack_model : ConcreteModel
         Slack variable model.
     """
-
-    # clone master model. current state:
-    # - variables for all but newest block are set to values from
-    #   master solution from previous iteration
-    # - variables for newest block are set to values from separation
-    #   solution chosen in previous iteration
-    model = model_data.master_model.clone()
-
-    # obtain mapping from master problem to master feasibility
-    # problem variables
-    varmap_name = unique_component_name(model_data.master_model, 'pyros_var_map')
+    # to prevent use of find_component when copying variable values
+    # from the slack model to the master problem later, we will
+    # map corresponding variables before/during slack model construction
+    varmap_name = unique_component_name(master_data.master_model, 'pyros_var_map')
     setattr(
-        model_data.master_model,
+        master_data.master_model,
         varmap_name,
-        list(model_data.master_model.component_data_objects(Var)),
+        list(master_data.master_model.component_data_objects(Var)),
     )
-    model = model_data.master_model.clone()
-    model_data.feasibility_problem_varmap = list(
-        zip(getattr(model_data.master_model, varmap_name), getattr(model, varmap_name))
-    )
-    delattr(model_data.master_model, varmap_name)
-    delattr(model, varmap_name)
 
-    for obj in model.component_data_objects(Objective):
+    slack_model = master_data.master_model.clone()
+
+    master_data.feasibility_problem_varmap = list(
+        zip(
+            getattr(master_data.master_model, varmap_name),
+            getattr(slack_model, varmap_name),
+        )
+    )
+    delattr(master_data.master_model, varmap_name)
+    delattr(slack_model, varmap_name)
+
+    for obj in slack_model.component_data_objects(Objective):
         obj.deactivate()
-    iteration = model_data.iteration
+    iteration = master_data.iteration
 
-    # add slacks only to inequality constraints for the newest
-    # master block. these should be the only constraints which
+    # add slacks only to second-stage inequality constraints for the
+    # newest master block(s).
+    # these should be the only constraints that
     # may have been violated by the previous master and separation
     # solution(s)
     targets = []
-    for blk in model.scenarios[iteration, :]:
-        targets.extend(
-            [
-                con
-                for con in blk.component_data_objects(
-                    Constraint, active=True, descend_into=True
-                )
-                if not con.equality
-            ]
-        )
+    for blk in slack_model.scenarios[iteration, :]:
+        targets.extend(blk.second_stage.inequality_cons.values())
 
-    # retain original constraint expressions
-    # (for slack initialization and scaling)
+    # retain original constraint expressions before adding slacks
+    # (to facilitate slack initialization and scaling)
     pre_slack_con_exprs = ComponentMap((con, con.body - con.upper) for con in targets)
 
     # add slack variables and objective
     # inequalities g(v) <= b become g(v) - s^- <= b
-    TransformationFactory("core.add_slack_variables").apply_to(model, targets=targets)
+    TransformationFactory("core.add_slack_variables").apply_to(
+        slack_model, targets=targets
+    )
     slack_vars = ComponentSet(
-        model._core_add_slack_variables.component_data_objects(Var, descend_into=True)
+        slack_model._core_add_slack_variables.component_data_objects(
+            Var, descend_into=True
+        )
     )
 
-    # initialize and scale slack variables
+    # initialize slack variables
     for con in pre_slack_con_exprs:
         # get mapping from slack variables to their (linear)
         # coefficients (+/-1) in the updated constraint expressions
@@ -179,7 +220,6 @@ def construct_master_feasibility_problem(model_data, config):
             if var in slack_vars:
                 slack_var_coef_map[var] = repn.linear_coefs[idx]
 
-        slack_substitution_map = dict()
         for slack_var in slack_var_coef_map:
             # coefficient determines whether the slack
             # is a +ve or -ve slack
@@ -188,26 +228,12 @@ def construct_master_feasibility_problem(model_data, config):
             else:
                 con_slack = max(0, -value(pre_slack_con_exprs[con]))
 
-            # initialize slack variable, evaluate scaling coefficient
             slack_var.set_value(con_slack)
-            scaling_coeff = 1
 
-            # update expression replacement map for slack scaling
-            slack_substitution_map[id(slack_var)] = scaling_coeff * slack_var
-
-        # finally, scale slack(s)
-        con.set_value(
-            (
-                replace_expressions(con.lower, slack_substitution_map),
-                replace_expressions(con.body, slack_substitution_map),
-                replace_expressions(con.upper, slack_substitution_map),
-            )
-        )
-
-    return model
+    return slack_model
 
 
-def solve_master_feasibility_problem(model_data, config):
+def solve_master_feasibility_problem(master_data):
     """
     Solve a slack variable-based feasibility model derived
     from the master problem. Initialize the master problem
@@ -216,20 +242,19 @@ def solve_master_feasibility_problem(model_data, config):
 
     Parameters
     ----------
-    model_data : MasterProblemData
+    master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
     results : SolverResults
         Solver results.
     """
-    model = construct_master_feasibility_problem(model_data, config)
+    model = construct_master_feasibility_problem(master_data)
 
     active_obj = next(model.component_data_objects(Objective, active=True))
 
+    config = master_data.config
     config.progress_logger.debug("Solving master feasibility problem")
     config.progress_logger.debug(
         f" Initial objective (total slack): {value(active_obj)}"
@@ -244,12 +269,12 @@ def solve_master_feasibility_problem(model_data, config):
         model=model,
         solver=solver,
         config=config,
-        timing_obj=model_data.timing,
+        timing_obj=master_data.timing,
         timer_name="main.master_feasibility",
         err_msg=(
             f"Optimizer {repr(solver)} encountered exception "
             "attempting to solve master feasibility problem in iteration "
-            f"{model_data.iteration}."
+            f"{master_data.iteration}."
         ),
     )
 
@@ -273,7 +298,7 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         config.progress_logger.warning(
             "Could not successfully solve master feasibility problem "
-            f"of iteration {model_data.iteration} with primary subordinate "
+            f"of iteration {master_data.iteration} with primary subordinate "
             f"{'global' if config.solve_master_globally else 'local'} solver "
             "to acceptable level. "
             f"Termination stats:\n{results.solver}\n"
@@ -281,23 +306,20 @@ def solve_master_feasibility_problem(model_data, config):
         )
 
     # load master feasibility point to master model
-    for master_var, feas_var in model_data.feasibility_problem_varmap:
+    for master_var, feas_var in master_data.feasibility_problem_varmap:
         master_var.set_value(feas_var.value, skip_validation=True)
 
     return results
 
 
-def construct_dr_polishing_problem(model_data, config):
+def construct_dr_polishing_problem(master_data):
     """
-    Construct DR polishing problem from most recently added
-    master problem.
+    Construct DR polishing problem from the master problem.
 
     Parameters
     ----------
-    model_data : MasterProblemData
+    master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
@@ -312,119 +334,150 @@ def construct_dr_polishing_problem(model_data, config):
     (including epigraph) fixed. Optimality of the polished
     DR with respect to the master objective is also enforced.
     """
-    # clone master problem
-    master_model = model_data.master_model
+    master_model = master_data.master_model
     polishing_model = master_model.clone()
     nominal_polishing_block = polishing_model.scenarios[0, 0]
 
-    # fix first-stage variables (including epigraph, where applicable)
-    decision_rule_var_set = ComponentSet(
-        var
-        for indexed_dr_var in nominal_polishing_block.util.decision_rule_vars
-        for var in indexed_dr_var.values()
+    nominal_eff_var_partitioning = nominal_polishing_block.effective_var_partitioning
+
+    nondr_nonadjustable_vars = (
+        nominal_eff_var_partitioning.first_stage_variables
+        # fixing epigraph variable constrains the problem
+        # to the optimal master problem solution set
+        + [nominal_polishing_block.first_stage.epigraph_var]
     )
-    first_stage_vars = nominal_polishing_block.util.first_stage_variables
-    for var in first_stage_vars:
-        if var not in decision_rule_var_set:
-            var.fix()
+    for var in nondr_nonadjustable_vars:
+        var.fix()
 
-    # ensure master optimality constraint enforced
-    if config.objective_focus == ObjectiveType.worst_case:
-        polishing_model.zeta.fix()
-    else:
-        optimal_master_obj_value = value(polishing_model.obj)
-        polishing_model.nominal_optimality_con = Constraint(
-            expr=(
-                nominal_polishing_block.first_stage_objective
-                + nominal_polishing_block.second_stage_objective
-                <= optimal_master_obj_value
-            )
-        )
+    # deactivate original constraints that involved
+    # only vars that have been fixed.
+    # we do this mostly to ensure that the active equality constraints
+    # do not grossly outnumber the unfixed Vars
+    fixed_dr_vars = [
+        var
+        for var in generate_all_decision_rule_var_data_objects(nominal_polishing_block)
+        if var.fixed
+    ]
+    fixed_nonadjustable_vars = ComponentSet(nondr_nonadjustable_vars + fixed_dr_vars)
+    for blk in polishing_model.scenarios.values():
+        for con in blk.component_data_objects(Constraint, active=True):
+            vars_in_con = ComponentSet(identify_variables(con.body))
+            if not (vars_in_con - fixed_nonadjustable_vars):
+                con.deactivate()
 
-    # deactivate master problem objective
-    polishing_model.obj.deactivate()
+    # we will add the polishing objective later
+    polishing_model.epigraph_obj.deactivate()
 
-    decision_rule_vars = nominal_polishing_block.util.decision_rule_vars
-    nominal_polishing_block.util.polishing_vars = polishing_vars = []
-    for idx, indexed_dr_var in enumerate(decision_rule_vars):
-        # declare auxiliary 'polishing' variables.
+    polishing_model.polishing_vars = polishing_vars = []
+    indexed_dr_var_list = nominal_polishing_block.first_stage.decision_rule_vars
+    for idx, indexed_dr_var in enumerate(indexed_dr_var_list):
+        # auxiliary 'polishing' variables.
         # these are meant to represent the absolute values
-        # of the terms of DR polynomial
+        # of the terms of DR polynomial;
+        # we need these for the L1-norm
         indexed_polishing_var = Var(
             list(indexed_dr_var.keys()), domain=NonNegativeReals
         )
-        nominal_polishing_block.add_component(
-            unique_component_name(nominal_polishing_block, f"dr_polishing_var_{idx}"),
-            indexed_polishing_var,
-        )
+        polishing_model.add_component(f"dr_polishing_var_{idx}", indexed_polishing_var)
         polishing_vars.append(indexed_polishing_var)
 
-    dr_eq_var_zip = zip(
-        nominal_polishing_block.util.decision_rule_eqns,
-        polishing_vars,
-        nominal_polishing_block.util.second_stage_variables,
-    )
-    nominal_polishing_block.util.polishing_abs_val_lb_cons = all_lb_cons = []
-    nominal_polishing_block.util.polishing_abs_val_ub_cons = all_ub_cons = []
-    for idx, (dr_eq, indexed_polishing_var, ss_var) in enumerate(dr_eq_var_zip):
+    # we need the DR expressions to set up the
+    # absolute value constraints and initialize the
+    # auxiliary polishing variables
+    eff_ss_var_to_dr_expr_pairs = [
+        (ss_var, get_dr_expression(nominal_polishing_block, ss_var))
+        for ss_var in nominal_eff_var_partitioning.second_stage_variables
+    ]
+
+    dr_eq_var_zip = zip(polishing_vars, eff_ss_var_to_dr_expr_pairs)
+    polishing_model.polishing_abs_val_lb_cons = all_lb_cons = []
+    polishing_model.polishing_abs_val_ub_cons = all_ub_cons = []
+    for idx, (indexed_polishing_var, (ss_var, dr_expr)) in enumerate(dr_eq_var_zip):
         # set up absolute value constraint components
         polishing_absolute_value_lb_cons = Constraint(indexed_polishing_var.index_set())
         polishing_absolute_value_ub_cons = Constraint(indexed_polishing_var.index_set())
 
-        # add constraints to polishing model
-        nominal_polishing_block.add_component(
-            unique_component_name(polishing_model, f"polishing_abs_val_lb_con_{idx}"),
-            polishing_absolute_value_lb_cons,
+        # add indexed constraints to polishing model
+        polishing_model.add_component(
+            f"polishing_abs_val_lb_con_{idx}", polishing_absolute_value_lb_cons
         )
-        nominal_polishing_block.add_component(
-            unique_component_name(polishing_model, f"polishing_abs_val_ub_con_{idx}"),
-            polishing_absolute_value_ub_cons,
+        polishing_model.add_component(
+            f"polishing_abs_val_ub_con_{idx}", polishing_absolute_value_ub_cons
         )
 
-        # update list of absolute value cons
+        # update list of absolute value (i.e., polishing) cons
         all_lb_cons.append(polishing_absolute_value_lb_cons)
         all_ub_cons.append(polishing_absolute_value_ub_cons)
 
-        # get monomials; ensure second-stage variable term excluded
-        #
-        # the dr_eq is a linear sum where the first term is the
-        # second-stage variable: the remainder of the terms will be
-        # either MonomialTermExpressions or bare VarData
-        dr_expr_terms = dr_eq.body.args[:-1]
-
-        for dr_eq_term in dr_expr_terms:
-            if dr_eq_term.is_expression_type():
-                dr_var_in_term = dr_eq_term.args[-1]
+        for dr_monomial in dr_expr.args:
+            is_a_nonstatic_dr_term = dr_monomial.is_expression_type()
+            if is_a_nonstatic_dr_term:
+                # degree >= 1 monomial expression of form
+                # (product of uncertain params) * dr variable
+                dr_var_in_term = dr_monomial.args[-1]
             else:
-                dr_var_in_term = dr_eq_term
-            dr_var_in_term_idx = dr_var_in_term.index()
+                # the static term (intercept)
+                dr_var_in_term = dr_monomial
 
-            # get corresponding polishing variable
+            # we want the DR variable and corresponding polishing
+            # constraints to have the same index in the indexed
+            # components
+            dr_var_in_term_idx = dr_var_in_term.index()
             polishing_var = indexed_polishing_var[dr_var_in_term_idx]
+
+            # Fix DR variable if:
+            # (1) it has already been fixed from master due to
+            #     DR efficiencies (already done)
+            # (2) coefficient of term
+            #     (i.e. product of uncertain parameter values)
+            #     in DR expression is 0
+            #     across all master blocks
+            dr_term_copies = [
+                (
+                    scenario_blk.second_stage.decision_rule_eqns[idx].body.args[
+                        dr_var_in_term_idx
+                    ]
+                )
+                for scenario_blk in master_model.scenarios.values()
+            ]
+            all_copy_coeffs_zero = is_a_nonstatic_dr_term and all(
+                abs(value(prod(term.args[:-1]))) <= DR_POLISHING_PARAM_PRODUCT_ZERO_TOL
+                for term in dr_term_copies
+            )
+            if all_copy_coeffs_zero:
+                # increment static DR variable value
+                # to maintain feasibility of the initial point
+                # as much as possible
+                static_dr_var_in_expr = dr_expr.args[0]
+                static_dr_var_in_expr.set_value(
+                    value(static_dr_var_in_expr) + value(dr_monomial)
+                )
+                dr_var_in_term.fix(0)
 
             # add polishing constraints
             polishing_absolute_value_lb_cons[dr_var_in_term_idx] = (
-                -polishing_var - dr_eq_term <= 0
+                -polishing_var - dr_monomial <= 0
             )
             polishing_absolute_value_ub_cons[dr_var_in_term_idx] = (
-                dr_eq_term - polishing_var <= 0
+                dr_monomial - polishing_var <= 0
             )
 
-            # if DR var is fixed, then fix corresponding polishing
-            # variable, and deactivate the absolute value constraints
-            if dr_var_in_term.fixed:
+            # some DR variables may be fixed,
+            # due to the PyROS DR order efficiency instituted
+            # in the first few iterations.
+            # these need not be polished
+            if dr_var_in_term.fixed or not is_a_nonstatic_dr_term:
                 polishing_var.fix()
                 polishing_absolute_value_lb_cons[dr_var_in_term_idx].deactivate()
                 polishing_absolute_value_ub_cons[dr_var_in_term_idx].deactivate()
 
-            # initialize polishing variable to absolute value of
-            # the DR term. polishing constraints should now be
-            # satisfied (to equality) at the initial point
-            polishing_var.set_value(abs(value(dr_eq_term)))
+            # ensure polishing var properly initialized
+            polishing_var.set_value(abs(value(dr_monomial)))
 
-    # polishing problem objective is taken to be 1-norm
-    # of DR monomials, or equivalently, sum of the polishing
-    # variables.
+    # L1-norm objective
+    # TODO: if dropping nonstatic terms, ensure the
+    #       corresponding polishing variables are excluded
+    #       from this expression
     polishing_model.polishing_obj = Objective(
         expr=sum(sum(polishing_var.values()) for polishing_var in polishing_vars)
     )
@@ -432,16 +485,14 @@ def construct_dr_polishing_problem(model_data, config):
     return polishing_model
 
 
-def minimize_dr_vars(model_data, config):
+def minimize_dr_vars(master_data):
     """
     Polish decision rule of most recent master problem solution.
 
     Parameters
     ----------
-    model_data : MasterProblemData
+    master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver settings.
 
     Returns
     -------
@@ -451,10 +502,10 @@ def minimize_dr_vars(model_data, config):
         True if polishing model was solved to acceptable level,
         False otherwise.
     """
+    config = master_data.config
+
     # create polishing NLP
-    polishing_model = construct_dr_polishing_problem(
-        model_data=model_data, config=config
-    )
+    polishing_model = construct_dr_polishing_problem(master_data)
 
     if config.solve_master_globally:
         solver = config.global_solver
@@ -474,12 +525,12 @@ def minimize_dr_vars(model_data, config):
         model=polishing_model,
         solver=solver,
         config=config,
-        timing_obj=model_data.timing,
+        timing_obj=master_data.timing,
         timer_name="main.dr_polishing",
         err_msg=(
             f"Optimizer {repr(solver)} encountered an exception "
             "attempting to solve decision rule polishing problem "
-            f"in iteration {model_data.iteration}"
+            f"in iteration {master_data.iteration}"
         ),
     )
 
@@ -499,7 +550,7 @@ def minimize_dr_vars(model_data, config):
         # continue with "unpolished" master model solution
         config.progress_logger.warning(
             "Could not successfully solve DR polishing problem "
-            f"of iteration {model_data.iteration} with primary subordinate "
+            f"of iteration {master_data.iteration} with primary subordinate "
             f"{'global' if config.solve_master_globally else 'local'} solver "
             "to acceptable level. "
             f"Termination stats:\n{results.solver}\n"
@@ -511,102 +562,30 @@ def minimize_dr_vars(model_data, config):
     # variables to polishing model solution
     polishing_model.solutions.load_from(results)
 
-    for idx, blk in model_data.master_model.scenarios.items():
-        ssv_zip = zip(
-            blk.util.second_stage_variables,
-            polishing_model.scenarios[idx].util.second_stage_variables,
-        )
-        sv_zip = zip(
-            blk.util.state_vars, polishing_model.scenarios[idx].util.state_vars
-        )
-        for master_ssv, polish_ssv in ssv_zip:
-            master_ssv.set_value(value(polish_ssv))
-        for master_sv, polish_sv in sv_zip:
-            master_sv.set_value(value(polish_sv))
-
-        # update master problem decision rule variables
+    # update master problem variable values
+    for idx, blk in master_data.master_model.scenarios.items():
+        master_adjustable_vars = blk.all_adjustable_variables
+        polishing_adjustable_vars = polishing_model.scenarios[
+            idx
+        ].all_adjustable_variables
+        adjustable_vars_zip = zip(master_adjustable_vars, polishing_adjustable_vars)
+        for master_var, polish_var in adjustable_vars_zip:
+            master_var.set_value(value(polish_var))
         dr_var_zip = zip(
-            blk.util.decision_rule_vars,
-            polishing_model.scenarios[idx].util.decision_rule_vars,
+            blk.first_stage.decision_rule_vars,
+            polishing_model.scenarios[idx].first_stage.decision_rule_vars,
         )
         for master_dr, polish_dr in dr_var_zip:
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
                 mvar.set_value(value(pvar), skip_validation=True)
 
     config.progress_logger.debug(f" Optimized DR norm: {value(polishing_obj)}")
-    config.progress_logger.debug(" Polished master objective:")
-
-    # print breakdown of objective value of polished master solution
-    if config.objective_focus == ObjectiveType.worst_case:
-        eval_obj_blk_idx = max(
-            model_data.master_model.scenarios.keys(),
-            key=lambda idx: value(
-                model_data.master_model.scenarios[idx].second_stage_objective
-            ),
-        )
-    else:
-        eval_obj_blk_idx = (0, 0)
-
-    # debugging: summarize objective breakdown
-    eval_obj_blk = model_data.master_model.scenarios[eval_obj_blk_idx]
-    config.progress_logger.debug(
-        "  First-stage objective: " f"{value(eval_obj_blk.first_stage_objective)}"
-    )
-    config.progress_logger.debug(
-        "  Second-stage objective: " f"{value(eval_obj_blk.second_stage_objective)}"
-    )
-    polished_master_obj = value(
-        eval_obj_blk.first_stage_objective + eval_obj_blk.second_stage_objective
-    )
-    config.progress_logger.debug(f"  Objective: {polished_master_obj}")
+    log_master_solve_results(polishing_model, config, results, desc="polished")
 
     return results, True
 
 
-def add_p_robust_constraint(model_data, config):
-    """
-    p-robustness--adds constraints to the master problem ensuring that the
-    optimal k-th iteration solution is within (1+rho) of the nominal
-    objective. The parameter rho is specified by the user and should be between.
-    """
-    rho = config.p_robustness['rho']
-    model = model_data.master_model
-    block_0 = model.scenarios[0, 0]
-    frac_nom_cost = (1 + rho) * (
-        block_0.first_stage_objective + block_0.second_stage_objective
-    )
-
-    for block_k in model.scenarios[model_data.iteration, :]:
-        model.p_robust_constraints.add(
-            block_k.first_stage_objective + block_k.second_stage_objective
-            <= frac_nom_cost
-        )
-    return
-
-
-def add_scenario_to_master(model_data, violations):
-    """
-    Add block to master, without cloning the master_model.first_stage_variables
-    """
-
-    m = model_data.master_model
-    i = max(m.scenarios.keys())[0] + 1
-
-    # === Add a block to master for each violation
-    idx = 0  # Only supporting adding single violation back to master in v1
-    new_block = selective_clone(
-        m.scenarios[0, 0], m.scenarios[0, 0].util.first_stage_variables
-    )
-    m.scenarios[i, idx].transfer_attributes_from(new_block)
-
-    # === Set uncertain params in new block(s) to correct value(s)
-    for j, p in enumerate(m.scenarios[i, idx].util.uncertain_params):
-        p.set_value(violations[j])
-
-    return
-
-
-def get_master_dr_degree(model_data, config):
+def get_master_dr_degree(master_data):
     """
     Determine DR polynomial degree to enforce based on
     the iteration number.
@@ -620,35 +599,31 @@ def get_master_dr_degree(model_data, config):
 
     Parameters
     ----------
-    model_data : MasterProblemData
+    master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver options.
 
     Returns
     -------
     int
         DR order, or polynomial degree, to enforce.
     """
-    if model_data.iteration == 0:
+    if master_data.iteration == 0:
         return 0
-    elif model_data.iteration <= len(config.uncertain_params):
-        return min(1, config.decision_rule_order)
+    elif master_data.iteration <= len(master_data.config.uncertain_params):
+        return min(1, master_data.config.decision_rule_order)
     else:
-        return min(2, config.decision_rule_order)
+        return min(2, master_data.config.decision_rule_order)
 
 
-def higher_order_decision_rule_efficiency(model_data, config):
+def higher_order_decision_rule_efficiency(master_data):
     """
     Enforce DR coefficient variable efficiencies for
     master problem-like formulation.
 
     Parameters
     ----------
-    model_data : MasterProblemData
+    master_data : MasterProblemData
         Master problem data.
-    config : ConfigDict
-        PyROS solver options.
 
     Note
     ----
@@ -658,168 +633,184 @@ def higher_order_decision_rule_efficiency(model_data, config):
     to be set depends on the iteration number;
     see ``get_master_dr_degree``.
     """
-    order_to_enforce = get_master_dr_degree(model_data, config)
+    order_to_enforce = get_master_dr_degree(master_data)
     enforce_dr_degree(
-        blk=model_data.master_model.scenarios[0, 0],
-        config=config,
+        working_blk=master_data.master_model.scenarios[0, 0],
+        config=master_data.config,
         degree=order_to_enforce,
     )
 
 
-def solver_call_master(model_data, config, solver, solve_data):
+def log_master_solve_results(master_model, config, results, desc="Optimized"):
     """
-    Invoke subsolver(s) on PyROS master problem.
+    Log master problem solve results.
+    """
+    if config.objective_focus == ObjectiveType.worst_case:
+        eval_obj_blk_idx = max(
+            master_model.scenarios.keys(),
+            key=lambda idx: value(master_model.scenarios[idx].second_stage_objective),
+        )
+    else:
+        eval_obj_blk_idx = (0, 0)
+
+    eval_obj_blk = master_model.scenarios[eval_obj_blk_idx]
+    config.progress_logger.debug(f" {desc.capitalize()} master objective breakdown:")
+    config.progress_logger.debug(
+        f"  First-stage objective: {value(eval_obj_blk.first_stage_objective)}"
+    )
+    config.progress_logger.debug(
+        f"  Second-stage objective: {value(eval_obj_blk.second_stage_objective)}"
+    )
+    master_obj = eval_obj_blk.full_objective
+    config.progress_logger.debug(f"  Overall Objective: {value(master_obj)}")
+    config.progress_logger.debug(
+        f" Termination condition: {results.solver.termination_condition}"
+    )
+    config.progress_logger.debug(
+        f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
+    )
+
+
+def process_termination_condition_master_problem(config, results):
+    """
+    Process master problem solve termination condition.
 
     Parameters
     ----------
-    model_data : MasterProblemData
-        Container for current master problem and related data.
     config : ConfigDict
-        PyROS solver settings.
-    solver : solver type
-        Primary subordinate optimizer with which to solve
-        the master problem. This may be a local or global
-        NLP solver.
-    solve_data : MasterResult
-        Master problem results object. May be empty or contain
-        master feasibility problem results.
+        PyROS solver options.
+    results : SolverResults
+        Solver results.
 
     Returns
     -------
-    master_soln : MasterResult
-        Master problem results object, containing master
-        model and subsolver results.
+    optimality_acceptable : bool
+        True if problem was solved to an acceptable optimality target,
+        False otherwise.
+    infeasible : bool
+        True if problem was found to be infeasible, False otherwise.
+
+    Raises
+    ------
+    NotImplementedError
+        If a particular solver termination is not supported by
+        PyROS.
     """
-    nlp_model = model_data.master_model
-    master_soln = solve_data
-    solver_term_cond_dict = {}
+    locally_acceptable = [tc.optimal, tc.locallyOptimal, tc.globallyOptimal]
+    globally_acceptable = [tc.optimal, tc.globallyOptimal]
+    robust_infeasible = [tc.infeasible]
+    try_backups = [
+        tc.feasible,
+        tc.maxTimeLimit,
+        tc.maxIterations,
+        tc.maxEvaluations,
+        tc.minStepLength,
+        tc.minFunctionValue,
+        tc.other,
+        tc.solverFailure,
+        tc.internalSolverError,
+        tc.error,
+        tc.unbounded,
+        tc.infeasibleOrUnbounded,
+        tc.invalidProblem,
+        tc.intermediateNonInteger,
+        tc.noSolution,
+        tc.unknown,
+    ]
+
+    termination_condition = results.solver.termination_condition
+    optimality_acceptable = (
+        (termination_condition in globally_acceptable)
+        if config.solve_master_globally
+        else (termination_condition in locally_acceptable)
+    )
+    infeasible = termination_condition in robust_infeasible
+    try_backup_solver = termination_condition in try_backups
+
+    unsupported_termination = not (
+        optimality_acceptable or try_backup_solver or infeasible
+    )
+    if unsupported_termination:
+        solve_type = "global" if config.solve_master_globally else "local"
+        raise NotImplementedError(
+            f"Processing of termination condition {termination_condition} "
+            f"for attempt at {solve_type} solution of master problem "
+            "is currently not supported by PyROS. "
+            "Please report this issue to the PyROS developers."
+        )
+
+    return optimality_acceptable, infeasible
+
+
+def solver_call_master(master_data):
+    """
+    Invoke subsolver(s) on PyROS master problem,
+    and update the MasterResults object accordingly.
+
+    Parameters
+    ----------
+    master_data : MasterProblemData
+        Container for current master problem and related data.
+
+    Returns
+    -------
+    master_soln : MasterResults
+        Master solution results object.
+    """
+    config = master_data.config
+    master_model = master_data.master_model
+    master_soln = MasterResults(
+        master_model=master_model, pyros_termination_condition=None
+    )
 
     if config.solve_master_globally:
-        solvers = [solver] + config.backup_global_solvers
+        solvers = [config.global_solver] + config.backup_global_solvers
     else:
-        solvers = [solver] + config.backup_local_solvers
-
-    higher_order_decision_rule_efficiency(model_data=model_data, config=config)
+        solvers = [config.local_solver] + config.backup_local_solvers
 
     solve_mode = "global" if config.solve_master_globally else "local"
     config.progress_logger.debug("Solving master problem")
+
+    higher_order_decision_rule_efficiency(master_data)
 
     for idx, opt in enumerate(solvers):
         if idx > 0:
             config.progress_logger.warning(
                 f"Invoking backup solver {opt!r} "
                 f"(solver {idx + 1} of {len(solvers)}) for "
-                f"master problem of iteration {model_data.iteration}."
+                f"master problem of iteration {master_data.iteration}."
             )
         results = call_solver(
-            model=nlp_model,
+            model=master_model,
             solver=opt,
             config=config,
-            timing_obj=model_data.timing,
+            timing_obj=master_data.timing,
             timer_name="main.master",
             err_msg=(
                 f"Optimizer {repr(opt)} ({idx + 1} of {len(solvers)}) "
                 "encountered exception attempting to "
-                f"solve master problem in iteration {model_data.iteration}"
+                f"solve master problem in iteration {master_data.iteration}"
             ),
         )
 
-        optimal_termination = check_optimal_termination(results)
-        infeasible = results.solver.termination_condition == tc.infeasible
-
-        if optimal_termination:
-            nlp_model.solutions.load_from(results)
-
-        # record master problem termination conditions
-        # for this particular subsolver
-        # pyros termination condition is determined later in the
-        # algorithm
-        solver_term_cond_dict[str(opt)] = str(results.solver.termination_condition)
-        master_soln.termination_condition = results.solver.termination_condition
-        master_soln.pyros_termination_condition = None
-        (try_backup, _) = master_soln.master_subsolver_results = (
+        master_soln.master_results_list.append(results)
+        optimality_acceptable, infeasible = (
             process_termination_condition_master_problem(config=config, results=results)
         )
+        time_out = check_time_limit_reached(master_data.timing, config)
 
-        master_soln.nominal_block = nlp_model.scenarios[0, 0]
-        master_soln.results = results
-        master_soln.master_model = nlp_model
-
-        # if model was solved successfully, update/record the results
-        # (nominal block DOF variable and objective values)
-        if not try_backup and not infeasible:
-            master_soln.fsv_vals = list(
-                v.value for v in nlp_model.scenarios[0, 0].util.first_stage_variables
-            )
-            if config.objective_focus is ObjectiveType.nominal:
-                master_soln.ssv_vals = list(
-                    v.value
-                    for v in nlp_model.scenarios[0, 0].util.second_stage_variables
-                )
-                master_soln.second_stage_objective = value(
-                    nlp_model.scenarios[0, 0].second_stage_objective
-                )
-            else:
-                idx = max(nlp_model.scenarios.keys())[0]
-                master_soln.ssv_vals = list(
-                    v.value
-                    for v in nlp_model.scenarios[idx, 0].util.second_stage_variables
-                )
-                master_soln.second_stage_objective = value(
-                    nlp_model.scenarios[idx, 0].second_stage_objective
-                )
-            master_soln.first_stage_objective = value(
-                nlp_model.scenarios[0, 0].first_stage_objective
+        if optimality_acceptable:
+            master_model.solutions.load_from(results)
+            log_master_solve_results(master_model, config, results)
+        if time_out:
+            master_soln.pyros_termination_condition = pyrosTerminationCondition.time_out
+        if infeasible:
+            master_soln.pyros_termination_condition = (
+                pyrosTerminationCondition.robust_infeasible
             )
 
-            # debugging: log breakdown of master objective
-            if config.objective_focus == ObjectiveType.worst_case:
-                eval_obj_blk_idx = max(
-                    nlp_model.scenarios.keys(),
-                    key=lambda idx: value(
-                        nlp_model.scenarios[idx].second_stage_objective
-                    ),
-                )
-            else:
-                eval_obj_blk_idx = (0, 0)
-
-            eval_obj_blk = nlp_model.scenarios[eval_obj_blk_idx]
-            config.progress_logger.debug(" Optimized master objective breakdown:")
-            config.progress_logger.debug(
-                f"  First-stage objective: {value(eval_obj_blk.first_stage_objective)}"
-            )
-            config.progress_logger.debug(
-                f"  Second-stage objective: {value(eval_obj_blk.second_stage_objective)}"
-            )
-            master_obj = (
-                eval_obj_blk.first_stage_objective + eval_obj_blk.second_stage_objective
-            )
-            config.progress_logger.debug(f"  Objective: {value(master_obj)}")
-            config.progress_logger.debug(
-                f" Termination condition: {results.solver.termination_condition}"
-            )
-            config.progress_logger.debug(
-                f" Solve time: {getattr(results.solver, TIC_TOC_SOLVE_TIME_ATTR)}s"
-            )
-
-            master_soln.nominal_block = nlp_model.scenarios[0, 0]
-            master_soln.results = results
-            master_soln.master_model = nlp_model
-
-        # if PyROS time limit exceeded, exit loop and return solution
-        elapsed = get_main_elapsed_time(model_data.timing)
-        if config.time_limit:
-            if elapsed >= config.time_limit:
-                try_backup = False
-                master_soln.master_subsolver_results = (
-                    None,
-                    pyrosTerminationCondition.time_out,
-                )
-                master_soln.pyros_termination_condition = (
-                    pyrosTerminationCondition.time_out
-                )
-
-        if not try_backup:
+        final_result_established = optimality_acceptable or time_out or infeasible
+        if final_result_established:
             return master_soln
 
     # all solvers have failed to return an acceptable status.
@@ -835,13 +826,13 @@ def solver_call_master(model_data, config, solver, solve_data):
             (
                 config.uncertainty_set.type
                 + "_"
-                + model_data.original.name
+                + master_data.original_model_name
                 + "_master_"
-                + str(model_data.iteration)
+                + str(master_data.iteration)
                 + ".bar"
             ),
         )
-        nlp_model.write(
+        master_model.write(
             output_problem_path, io_options={'symbolic_solver_labels': True}
         )
         serialization_msg = (
@@ -850,7 +841,7 @@ def solver_call_master(model_data, config, solver, solve_data):
         )
 
     deterministic_model_qual = (
-        " (i.e., the deterministic model)" if model_data.iteration == 0 else ""
+        " (i.e., the deterministic model)" if master_data.iteration == 0 else ""
     )
     deterministic_msg = (
         (
@@ -858,16 +849,20 @@ def solver_call_master(model_data, config, solver, solve_data):
             f"is solvable by at least one of the subordinate {solve_mode} "
             "optimizers provided."
         )
-        if model_data.iteration == 0
+        if master_data.iteration == 0
         else ""
     )
+
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
+    subsolver_termination_conditions = [
+        res.solver.termination_condition for res in master_soln.master_results_list
+    ]
     config.progress_logger.warning(
         f"Could not successfully solve master problem of iteration "
-        f"{model_data.iteration}{deterministic_model_qual} with any of the "
+        f"{master_data.iteration}{deterministic_model_qual} with any of the "
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
-        f"{[term_cond for term_cond in solver_term_cond_dict.values()]}.)"
+        f"{[term_cond for term_cond in subsolver_termination_conditions]}.)"
         f"{deterministic_msg}"
         f"{serialization_msg}"
     )
@@ -875,44 +870,78 @@ def solver_call_master(model_data, config, solver, solve_data):
     return master_soln
 
 
-def solve_master(model_data, config):
+def solve_master(master_data):
     """
-    Solve the master problem
+    Solve the master problem.
+
+    Returns
+    -------
+    master_soln : MasterResults
+        Master problem solve results.
     """
-    master_soln = MasterResult()
+    feasibility_problem_results = None
+    time_out_after_feasibility = False
+    if master_data.iteration > 0:
+        feasibility_problem_results = solve_master_feasibility_problem(master_data)
+        time_out_after_feasibility = check_time_limit_reached(
+            master_data.timing, master_data.config
+        )
 
-    # no master feas problem for iteration 0
-    if model_data.iteration > 0:
-        results = solve_master_feasibility_problem(model_data, config)
-        master_soln.feasibility_problem_results = results
+    if time_out_after_feasibility:
+        master_soln = MasterResults(
+            master_model=master_data.master_model,
+            feasibility_problem_results=feasibility_problem_results,
+            master_results_list=None,
+            pyros_termination_condition=pyrosTerminationCondition.time_out,
+        )
+    else:
+        master_soln = solver_call_master(master_data)
+        master_soln.feasibility_problem_results = feasibility_problem_results
 
-        # if pyros time limit reached, load time out status
-        # to master results and return to caller
-        elapsed = get_main_elapsed_time(model_data.timing)
-        if config.time_limit:
-            if elapsed >= config.time_limit:
-                # load master model
-                master_soln.master_model = model_data.master_model
-                master_soln.nominal_block = model_data.master_model.scenarios[0, 0]
+    return master_soln
 
-                # empty results object, with master solve time of zero
-                master_soln.results = SolverResults()
-                setattr(master_soln.results.solver, TIC_TOC_SOLVE_TIME_ATTR, 0)
 
-                # PyROS time out status
-                master_soln.pyros_termination_condition = (
-                    pyrosTerminationCondition.time_out
-                )
-                master_soln.master_subsolver_results = (
-                    None,
-                    pyrosTerminationCondition.time_out,
-                )
-                return master_soln
+class MasterProblemData:
+    """
+    Container for objects pertaining to the PyROS master problem.
 
-    solver = (
-        config.global_solver if config.solve_master_globally else config.local_solver
-    )
+    Parameters
+    ----------
+    model_data : ModelData
+        PyROS model data object, equipped with the
+        fully preprocessed working model.
 
-    return solver_call_master(
-        model_data=model_data, config=config, solver=solver, solve_data=master_soln
-    )
+    Attributes
+    ----------
+    master_model : BlockData
+        Master problem model object.
+    original_model_name : str
+        Name of the user-provided deterministic model object.
+    iteration : int
+        Index of the current PyROS cutting set iteration.
+    timing : TimingData
+        Main timer for the current problem being solved.
+    config : ConfigDict
+        PyROS solver options.
+    """
+
+    def __init__(self, model_data):
+        """Initialize self (see docstring)."""
+        self.master_model = construct_initial_master_problem(model_data)
+        # we track the original model name for serialization purposes
+        self.original_model_name = model_data.original_model.name
+        self.iteration = 0
+        self.timing = model_data.timing
+        self.config = model_data.config
+
+    def solve_master(self):
+        """
+        Solve the master problem.
+        """
+        return solve_master(self)
+
+    def solve_dr_polishing(self):
+        """
+        Solve the DR polishing problem.
+        """
+        return minimize_dr_vars(self)

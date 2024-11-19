@@ -112,7 +112,7 @@ class ComponentBase(PyomoObject):
         # Templates (and the corresponding _GetItemExpression object),
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
-        # ComponentData.
+        # ComponentData (so we put it here on ComponentBase).
         #
         if '__block_scope__' in memo:
             _scope = memo['__block_scope__']
@@ -120,8 +120,34 @@ class ComponentBase(PyomoObject):
             tmp = self.parent_block()
             # "Floating" components should be in scope by default (we
             # will handle 'global' components like GlobalSets in the
-            # components)
-            _in_scope = tmp is None
+            # components).  This ensures that things like set operators
+            # on Abstract set objects are correctly cloned.  For
+            # example, consider an abstract indexed model component
+            # whose domain is specified by a Set expression:
+            #
+            #   def x_init(m,i):
+            #       if i == 2:
+            #           return Set.Skip
+            #       else:
+            #           return []
+            #   m.x = Set( [1,2],
+            #              domain={1: m.A*m.B, 2: m.A*m.A},
+            #              initialize=x_init )
+            #
+            # We do not want to automatically add all the Set operators
+            # to the model at declaration time, as m.x[2] is never
+            # actually created.  Plus, doing so would require complex
+            # parsing of the initializers.  BUT, we need to ensure that
+            # the operators are deepcopied, otherwise when the model is
+            # cloned before construction the operators will still refer
+            # to the sets on the original abstract model (in particular,
+            # the Set x will have an unknown dimen).
+            #
+            # The solution is to automatically clone all floating
+            # components, except for Models (i.e., top-level BlockData
+            # have no parent and technically "float")
+            _in_scope = tmp is None and self is not self.model()
+            #
             # Note: normally we would need to check that tmp does not
             # end up being None.  However, since clone() inserts
             # id(None) into the __block_scope__ dictionary, we are safe
@@ -151,28 +177,6 @@ class ComponentBase(PyomoObject):
                 memo[id(self)] = self
                 return self
         #
-        # At this point we know we need to deepcopy this component (and
-        # everything under it).  We can't do the "obvious", since this
-        # is a (partially) slot-ized class and the __dict__ structure is
-        # nonauthoritative:
-        #
-        # for key, val in self.__dict__.iteritems():
-        #     object.__setattr__(ans, key, deepcopy(val, memo))
-        #
-        # Further, __slots__ is also nonauthoritative (this may be a
-        # singleton component -- in which case it also has a __dict__).
-        # Plus, this may be a derived class with several layers of
-        # slots.  So, we will piggyback on the __getstate__/__setstate__
-        # logic amd resort to partially "pickling" the object,
-        # deepcopying the state, and then restoring the copy into
-        # the new instance.
-        #
-        # [JDS 7/7/14] I worry about the efficiency of using both
-        # getstate/setstate *and* deepcopy, but we need deepcopy to
-        # update the _parent refs appropriately, and since this is a
-        # slot-ized class, we cannot overwrite the __deepcopy__
-        # attribute to prevent infinite recursion.
-        #
         # deepcopy() is an inherently recursive operation.  This can
         # cause problems for highly interconnected Pyomo models (for
         # example, a time linked model where each time block has a
@@ -183,95 +187,34 @@ class ComponentBase(PyomoObject):
         # components / component datas, and NOT to attributes on the
         # components/datas.  So, if we can first go through and stub in
         # all the objects that we will need to populate, and then go
-        # through and deepcopy them, then we can unroll the vast
+        # through and deepcopy them, we can unroll the vast
         # majority of the recursion.
         #
         component_list = []
         self._create_objects_for_deepcopy(memo, component_list)
         #
+        # Note that self is now the first element of component_list
+        #
         # Now that we have created (but not populated) all the
-        # components that we expect to need, we can go through and
-        # populate all the components.
+        # components that we expect to need in the memo, we can go
+        # through and populate all the components.
         #
         # The component_list is roughly in declaration order.  This
         # means that it should be relatively safe to clone the contents
         # in the same order.
         #
-        # There is a particularly subtle bug with 'uncopyable'
-        # attributes: if the exception is thrown while copying a complex
-        # data structure, we can be in a state where objects have been
-        # created and assigned to the memo in the try block, but they
-        # haven't had their state set yet.  When the exception moves us
-        # into the except block, we need to effectively "undo" those
-        # partially copied classes.  The only way is to restore the memo
-        # to the state it was in before we started.  We will make use of
-        # the knowledge that 1) memo entries are never reassigned during
-        # a deepcopy(), and 2) dict are ordered by insertion order in
-        # Python >= 3.7.  As a result, we do not need to preserve the
-        # whole memo before calling __getstate__/__setstate__, and can
-        # get away with only remembering the number of items in the
-        # memo.
-        #
-        # Note that entering/leaving try-except contexts has a
-        # not-insignificant overhead.  On the hope that the user wrote a
-        # sane (deepcopy-able) model, we will try to do everything in
-        # one try-except block.
-        #
-        try:
-            for i, comp in enumerate(component_list):
-                saved_memo = len(memo)
-                # Note: this implementation avoids deepcopying the
-                # temporary 'state' list, significantly speeding things
-                # up.
-                memo[id(comp)].__setstate__(
-                    [fast_deepcopy(field, memo) for field in comp.__getstate__()]
-                )
-            return memo[id(self)]
-        except:
-            pass
-        #
-        # We hit an error deepcopying a component.  Attempt to reset
-        # things and try again, but in a more cautious manner (after
-        # all, if one component was not deepcopyable, it stands to
-        # reason that several others will not be either).
-        #
-        # We want to remove any new entries added to the memo during the
-        # failed try above.
-        #
-        for _ in range(len(memo) - saved_memo):
-            memo.popitem()
-        #
-        # Now we are going to continue on, but in a more cautious
-        # manner: we will clone entries field at a time so that we can
-        # get the most "complete" copy possible.
-        for comp in component_list[i:]:
-            state = comp.__getstate__()
-            # Note: if has_dict, then __auto_slots__.slots will be 1
-            # shorter than the state (the last element is the __dict__).
-            # Zip will ignore it.
-            _deepcopy_field = comp._deepcopy_field
-            new_state = [
-                _deepcopy_field(memo, slot, value)
-                for slot, value in zip(comp.__auto_slots__.slots, state)
-            ]
-            if comp.__auto_slots__.has_dict:
-                new_state.append(
-                    {
-                        slot: _deepcopy_field(memo, slot, value)
-                        for slot, value in state[-1].items()
-                    }
-                )
-            memo[id(comp)].__setstate__(new_state)
+        for comp, new in component_list:
+            comp.__deepcopy_state__(memo, new)
         return memo[id(self)]
 
     def _create_objects_for_deepcopy(self, memo, component_list):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
         return _ans
 
-    def _deepcopy_field(self, memo, slot_name, value):
+    def __deepcopy_field__(self, value, memo, slot_name):
         saved_memo = len(memo)
         try:
             return fast_deepcopy(value, memo)
@@ -284,15 +227,11 @@ class ComponentBase(PyomoObject):
             # warn the user
             if '__block_scope__' not in memo:
                 logger.warning(
-                    """
-                    Uncopyable field encountered when deep
-                    copying outside the scope of Block.clone().
-                    There is a distinct possibility that the new
-                    copy is not complete.  To avoid this
-                    situation, either use Block.clone() or set
-                    'paranoid' mode by adding '__paranoid__' ==
-                    True to the memo before calling
-                    copy.deepcopy."""
+                    "Uncopyable field encountered when deep "
+                    "copying Pyomo components outside the scope of "
+                    "Block.clone().  There is a distinct possibility "
+                    "that the new copy is not complete.  To avoid "
+                    "this situation, please use Block.clone()"
                 )
             if self.model() is self:
                 what = 'Model'
@@ -484,19 +423,22 @@ class Component(ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
-    Constructor arguments:
-        ctype           The class type for the derived subclass
-        doc             A text string describing this component
-        name            A name for this component
+    Parameters
+    ----------
+    ctype : type
+        The class type for the derived subclass
 
-    Public class attributes:
-        doc             A text string describing this component
+    doc : str
+        A text string describing this component
 
-    Private class attributes:
-        _constructed    A boolean that is true if this component has been
-                            constructed
-        _parent         A weakref to the parent block that owns this component
-        _ctype          The class type for the derived subclass
+    name : str
+        A name for this component
+
+    Attributes
+    ----------
+    doc : str
+        A text string describing this component
+
     """
 
     __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
@@ -882,21 +824,24 @@ class ComponentData(ComponentBase):
         - for some unknown reason - this instance does not belong
         to the parent component's index set.
         """
+        try:
+            if self._component()[self._index] is self:
+                return self._index
+        except:
+            pass
+        if self._index is NOTSET:
+            return self._index
         parent = self.parent_component()
-        if (
-            parent is not None
-            and self._index is not NOTSET
-            and parent[self._index] is not self
-        ):
-            # This error message is a bit goofy, but we can't call self.name
-            # here--it's an infinite loop!
-            raise DeveloperError(
-                "The '_data' dictionary and '_index' attribute are out of "
-                "sync for indexed %s '%s': The %s entry in the '_data' "
-                "dictionary does not map back to this component data object."
-                % (parent.ctype.__name__, parent.name, self._index)
-            )
-        return self._index
+        if parent is None:
+            return self._index
+        # This error message is a bit goofy, but we can't call self.name
+        # here--it's an infinite loop!
+        raise DeveloperError(
+            "The '_data' dictionary and '_index' attribute are out of "
+            "sync for indexed %s '%s': The %s entry in the '_data' "
+            "dictionary does not map back to this component data object."
+            % (parent.ctype.__name__, parent.name, self._index)
+        )
 
     def __str__(self):
         """Return a string with the component name and index"""

@@ -71,17 +71,23 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.12']
+        python: ['3.13']
         other: [""]
         category: [""]
 
+        # win/3.8 conda builds no longer work due to environment not being able
+        # to resolve. We are skipping it now.
+        exclude:
+        - os: windows-latest
+          python: 3.8
+
         include:
         - os: ubuntu-latest
-          python: '3.12'
+          python: '3.13'
           TARGET: linux
           PYENV: pip
 
-        - os: macos-13
+        - os: macos-latest
           python: '3.10'
           TARGET: osx
           PYENV: pip
@@ -110,7 +116,7 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.10'
+          python: '3.12'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -215,6 +221,7 @@ jobs:
       if: matrix.TARGET == 'win'
       run: |
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
+        choco install pkgconfiglite
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
@@ -279,7 +286,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            python -m pip install --cache-dir cache/pip gurobipy==10.0.3 \
+            python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
@@ -337,6 +344,10 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+            # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
+            EXCLUDE="qtconsole $EXCLUDE"
+        fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
@@ -352,13 +363,17 @@ jobs:
         done
         echo ""
         echo "*** Install Pyomo dependencies ***"
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
+        fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 # conda can literally take an hour to determine that a
