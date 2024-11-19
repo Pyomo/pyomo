@@ -390,6 +390,9 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         locally_optimal = True
         best_neighbor = None
         self.best_direction = None  # reset best direction
+        fmin = float('inf')  # Initialize the best objective value
+        best_dist = 0  # Initialize the best distance
+        abs_tol = config.integer_tolerance  # Use integer_tolerance for objective comparison
         for direction in self.directions:
             neighbor = tuple(map(sum, zip(self.current_point, direction)))
             if self._check_valid_neighbor(neighbor):
