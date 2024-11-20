@@ -11,7 +11,7 @@ The following algorithms are currently available in MindtPy:
 - **Outer-Approximation (OA)** [`Duran & Grossmann, 1986`_]
 - **LP/NLP based Branch-and-Bound (LP/NLP BB)** [`Quesada & Grossmann, 1992`_]
 - **Extended Cutting Plane (ECP)**  [`Westerlund & Petterson, 1995`_]
-- **Global Outer-Approximation (GOA)** [`Kesavan & Allgor, 2004`_, `MC++`_]
+- **Global Outer-Approximation (GOA)** [`Kesavan & Allgor, 2004`_]
 - **Regularized Outer-Approximation (ROA)** [`Bernal & Peng, 2021`_, `Kronqvist & Bernal, 2018`_]
 - **Feasibility Pump (FP)** [`Bernal & Vigerske, 2019`_, `Bonami & Cornuéjols, 2009`_]
 
@@ -26,7 +26,6 @@ at Purdue University and Carnegie Mellon University.
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 .. _Westerlund & Petterson, 1995: http://dx.doi.org/10.1016/0098-1354(95)87027-X
 .. _Kesavan & Allgor, 2004: https://link.springer.com/article/10.1007/s10107-004-0503-1
-.. _MC++: https://pyomo.readthedocs.io/en/stable/contributed_packages/mcpp.html
 .. _Bernal & Peng, 2021: http://www.optimization-online.org/DB_HTML/2021/06/8452.html
 .. _Kronqvist & Bernal, 2018: https://link.springer.com/article/10.1007%2Fs10107-018-1356-3
 .. _Bonami & Cornuéjols, 2009: https://link.springer.com/article/10.1007/s10107-008-0212-2
@@ -130,9 +129,8 @@ The LP/NLP based branch-and-bound algorithm in MindtPy is implemented based on t
 
 .. note::
 
-   In Pyomo, `persistent solvers`_ are necessary to set or register callback functions. The single tree implementation currently only works with CPLEX and GUROBI, more exactly ``cplex_persistent`` and ``gurobi_persistent``. To use the `LazyConstraintCallback`_ function of CPLEX from Pyomo, the `CPLEX Python API`_ is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer. To use the `cbLazy`_ function of GUROBI from pyomo, `gurobipy`_ is required.
+   In Pyomo, :ref:`persistent solvers <persistent_solvers>` are necessary to set or register callback functions. The single tree implementation currently only works with CPLEX and GUROBI, more exactly ``cplex_persistent`` and ``gurobi_persistent``. To use the `LazyConstraintCallback`_ function of CPLEX from Pyomo, the `CPLEX Python API`_ is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer. To use the `cbLazy`_ function of GUROBI from pyomo, `gurobipy`_ is required.
 
-.. _`persistent solvers`: https://pyomo.readthedocs.io/en/stable/advanced_topics/persistent_solvers.html?highlight=persistent
 .. _CPLEX Python API: https://www.ibm.com/docs/en/icos/20.1.0?topic=cplex-setting-up-python-api
 .. _gurobipy: https://www.gurobi.com/documentation/9.1/quickstart_mac/cs_grbpy_the_gurobi_python.html
 .. _LazyConstraintCallback: https://www.ibm.com/docs/en/icos/20.1.0?topic=classes-cplexcallbackslazyconstraintcallback
@@ -257,7 +255,7 @@ Augmented Penalty refers to the introduction of (non-negative) slack variables o
 Global Outer-Approximation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan & Allgor, 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the package `MC++`_. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON`_ or `SCIP`_.
+Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan & Allgor, 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the :ref:`interface to the MC++ package <MC++>`. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON`_ or `SCIP`_.
 
 .. _BARON: https://minlp.com/baron-solver
 .. _SCIP: https://www.scipopt.org/

@@ -40,9 +40,22 @@ class TestXpressPersistent(unittest.TestCase):
         res = opt.solve()
         self.assertAlmostEqual(m.x.value, -0.4, delta=1e-6)
         self.assertAlmostEqual(m.y.value, 0.2, delta=1e-6)
+
         opt.load_duals()
+        self.assertEqual(len(m.dual), 1)
         self.assertAlmostEqual(m.dual[m.c1], -0.4, delta=1e-6)
         del m.dual
+
+        opt.load_rc()
+        self.assertEqual(len(m.rc), 2)
+        self.assertAlmostEqual(m.rc[m.x], 0, delta=1e-8)
+        self.assertAlmostEqual(m.rc[m.y], 0, delta=1e-8)
+        del m.rc
+
+        opt.load_slacks()
+        self.assertEqual(len(m.slack), 1)
+        self.assertAlmostEqual(m.slack[m.c1], 0, delta=1e-6)
+        del m.slack
 
         m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
         opt.add_constraint(m.c2)

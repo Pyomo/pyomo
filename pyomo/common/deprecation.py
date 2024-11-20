@@ -307,7 +307,7 @@ def _import_object(name, target, version, remove_in, msg):
 
 @deprecated(
     "relocated_module() has been deprecated.  Please use moved_module()",
-    version='6.8.1.dev0',
+    version='6.8.1',
 )
 def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=None):
     """Provide a deprecation path for moved / renamed modules

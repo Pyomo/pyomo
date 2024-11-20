@@ -22,4 +22,5 @@ from pyomo.core.plugins.transform import (
     add_slack_vars,
     scaling,
     logical_to_linear,
+    lp_dual,
 )

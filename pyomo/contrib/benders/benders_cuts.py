@@ -9,27 +9,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.block import BlockData, declare_custom_block
-import pyomo.environ as pyo
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet
-
-try:
-    from mpi4py import MPI
-
-    mpi4py_available = True
-except:
-    mpi4py_available = False
-try:
-    import numpy as np
-
-    numpy_available = True
-except:
-    numpy_available = False
 import logging
 
+from pyomo.common.collections import ComponentSet
+from pyomo.common.dependencies import (
+    mpi4py,
+    mpi4py_available,
+    numpy as np,
+    numpy_available,
+)
+from pyomo.core.base.block import BlockData, declare_custom_block
+from pyomo.core.expr.visitor import identify_variables
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+import pyomo.environ as pyo
+
+MPI = mpi4py.MPI
 logger = logging.getLogger(__name__)
 
 
