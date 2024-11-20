@@ -641,10 +641,9 @@ class SCIPDirect(DirectSolver):
             except TypeError:
                 soln.gap = None
 
-        # TODO: Should these values be of the transformed or the original problem?
-        self.results.problem.number_of_constraints = scip.getNConss()
+        self.results.problem.number_of_constraints = scip.getNConss(transformed=False)
         # self.results.problem.number_of_nonzeros = None
-        self.results.problem.number_of_variables = scip.getNVars()
+        self.results.problem.number_of_variables = scip.getNVars(transformed=False)
         self.results.problem.number_of_binary_variables = n_bin_vars
         self.results.problem.number_of_integer_variables = n_int_vars
         self.results.problem.number_of_continuous_variables = n_con_vars
@@ -704,16 +703,13 @@ class SCIPDirect(DirectSolver):
                 scip_sol[scip_var] = value(pyomo_var)
         if partial_sol:
             self._solver_model.addSol(scip_sol)
-            del scip_sol
         else:
-            feasible = self._solver_model.checkSol(scip_sol)
+            feasible = self._solver_model.checkSol(scip_sol, printreason=not self._tee)
             if feasible:
                 self._solver_model.addSol(scip_sol)
-                del scip_sol
             else:
                 logger.warning("Warm start solution was not accepted by SCIP")
                 self._solver_model.freeSol(scip_sol)
-                del scip_sol
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_expr_map
