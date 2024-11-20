@@ -147,6 +147,20 @@ class _MutableConstraintBounds(object):
         ub = value(self.upper_expr)
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
+class _MutableQuadraticCoefficient(object):
+    def __init__(self, pyomo_con, pyomo_var1_id, pyomo_var2_id, con_map, var_map, expr, highs):
+        self.expr = expr
+        self.highs = highs
+        self.pyomo_var1_id = pyomo_var1_id
+        self.pyomo_var2_id = pyomo_var2_id
+        self.pyomo_con = pyomo_con
+        self.con_map = con_map
+        self.var_map = var_map
+
+    def update(self):
+        row_ndx = self.con_map[self.pyomo_con]
+        col_ndx = self.var_map[self.pyomo_var_id]
+        self.highs.changeCoeff(row_ndx, col_ndx, value(self.expr))
 
 class Highs(PersistentBase, PersistentSolver):
     """
@@ -422,6 +436,29 @@ class Highs(PersistentBase, PersistentSolver):
                 var_indices.append(self._pyomo_var_to_solver_var_map[v_id])
                 coef_values.append(coef_val)
 
+            # TODO fix quadratic expression
+            for coef, v in zip(repn.quadratic_coefs, repn.quadratic_vars):
+                x, y = v
+                if not is_constant(coef):
+                    mutable_quadratic_coefficient = _MutableQuadraticCoefficient(
+                        pyomo_con=con,
+                        pyomo_var1_id=id(x),
+                        pyomo_var2_id=id(y),
+                        con_map=self._pyomo_con_to_solver_con_map,
+                        var_map=self._pyomo_var_to_solver_var_map,
+                        expr=coef,
+                        highs=self._solver_model,
+                    )
+                    if con not in self._mutable_helpers:
+                        self._mutable_helpers[con] = list()
+                    self._mutable_helpers[con].append(mutable_quadratic_coefficient)
+                    if coef_val == 0:
+                        continue
+                coef_val = value(coef)
+                var_indices.append(self._pyomo_var_to_solver_var_map[id(x)])
+                var_indices.append(self._pyomo_var_to_solver_var_map[id(y)])
+                coef_values.append(coef_val)
+
             if con.has_lb():
                 lb = con.lower - repn.constant
             else:
@@ -588,6 +625,10 @@ class Highs(PersistentBase, PersistentSolver):
                 obj.expr, quadratic=True, compute_values=False
             )
 
+            degree = repn.polynomial_degree()
+            if (degree is None) or (degree > 2):
+                raise DegreeError('Highs does not support expressions of degree {0}.'.format(degree))
+
             for coef, v in zip(repn.linear_coefs, repn.linear_vars):
                 v_id = id(v)
                 v_ndx = self._pyomo_var_to_solver_var_map[v_id]
@@ -595,6 +636,18 @@ class Highs(PersistentBase, PersistentSolver):
                 if not is_constant(coef):
                     mutable_objective_coef = _MutableObjectiveCoefficient(
                         pyomo_var_id=v_id,
+                        var_map=self._pyomo_var_to_solver_var_map,
+                        expr=coef,
+                        highs=self._solver_model,
+                    )
+                    self._objective_helpers.append(mutable_objective_coef)
+
+            # TODO fix representation of quadratic vars
+            for coef, v in zip(repn.quadratic_coefs, repn.quadratic_vars):
+                x, y = v
+                if not is_constant(coef):
+                    mutable_objective_coef = _MutableObjectiveCoefficient(
+                        pyomo_var_id=id(x),
                         var_map=self._pyomo_var_to_solver_var_map,
                         expr=coef,
                         highs=self._solver_model,
