@@ -50,6 +50,7 @@ qcp_solvers = [
     ('gurobi', Gurobi),
     ('ipopt', Ipopt),
     ('cplex', Cplex),
+    ('highs', Highs),
     ('maingo', MAiNGO),
 ]
 miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('maingo', MAiNGO)]
