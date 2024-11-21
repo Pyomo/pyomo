@@ -100,10 +100,11 @@ class TestKestrel(unittest.TestCase):
 
     def test_check_all_ampl_solvers(self):
         kestrel = kestrelAMPL()
-        solvers = kestrelAMPL.getAvailableSolvers()
+        solvers = kestrel.getAvailableSolvers()
         for solver in solvers:
-            if not hasattr(RunAllNEOSSolvers, 'test_' + solver.lower()):
-                self.fail("RunAllNEOSSolvers missing test for '{solver}'")
+            name = solver.lower().replace('-', '')
+            if not hasattr(RunAllNEOSSolvers, 'test_' + name):
+                self.fail(f"RunAllNEOSSolvers missing test for '{solver}'")
 
 
 class RunAllNEOSSolvers(object):
@@ -172,10 +173,10 @@ class RunAllNEOSSolvers(object):
         else:
             self._run('ooqp')
 
-    # The simple tests aren't complementarity
-    # problems
-    # def test_path(self):
-    #    self._run('path')
+    def test_path(self):
+        # The simple tests aren't complementarity
+        # problems
+        self.skip("The simple NEOS test is not a complementarity problem")
 
     def test_snopt(self):
         self._run('snopt')
