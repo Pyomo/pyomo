@@ -208,7 +208,7 @@ class kestrelAMPL(object):
         return (jobNumber, password)
 
     def getAvailableSolvers(self):
-        """Return a list of all NNEOS solvers that this interface supports"""
+        """Return a list of all NEOS solvers that this interface supports"""
         allKestrelSolvers = self.neos.listSolversInCategory("kestrel")
         _ampl = ':AMPL'
         return sorted(s[: -len(_ampl)] for s in allKestrelSolvers if s.endswith(_ampl))
