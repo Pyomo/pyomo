@@ -211,7 +211,7 @@ class kestrelAMPL(object):
         """Return a list of all NNEOS solvers that this interface supports"""
         allKestrelSolvers = self.neos.listSolversInCategory("kestrel")
         _ampl = ':AMPL'
-        return sorted(s[: len(_ampl)] for s in allKestrelSolvers if s.endswith(_ampl))
+        return sorted(s[: -len(_ampl)] for s in allKestrelSolvers if s.endswith(_ampl))
 
     def getSolverName(self):
         """
