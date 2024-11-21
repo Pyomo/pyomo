@@ -176,7 +176,7 @@ class RunAllNEOSSolvers(object):
     def test_path(self):
         # The simple tests aren't complementarity
         # problems
-        self.skip("The simple NEOS test is not a complementarity problem")
+        self.skipTest("The simple NEOS test is not a complementarity problem")
 
     def test_snopt(self):
         self._run('snopt')
