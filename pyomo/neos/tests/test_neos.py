@@ -98,6 +98,13 @@ class TestKestrel(unittest.TestCase):
         finally:
             pyomo.neos.kestrel.NEOS.host = orig_host
 
+    def test_check_all_ampl_solvers(self):
+        kestrel = kestrelAMPL()
+        solvers = kestrelAMPL.getAvailableSolvers()
+        for solver in solvers:
+            if not hasattr(RunAllNEOSSolvers, 'test_' + solver.lower()):
+                self.fail("RunAllNEOSSolvers missing test for '{solver}'")
+
 
 class RunAllNEOSSolvers(object):
     def test_bonmin(self):
