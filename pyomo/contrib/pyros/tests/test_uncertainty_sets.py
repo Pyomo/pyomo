@@ -20,6 +20,7 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np,
     numpy_available,
+    scipy as sp,
     scipy_available,
 )
 from pyomo.environ import SolverFactory
@@ -1863,6 +1864,11 @@ class TestEllipsoidalSet(unittest.TestCase):
         np.testing.assert_allclose(
             scale, eset.scale, err_msg="EllipsoidalSet scale not as expected"
         )
+        np.testing.assert_allclose(
+            sp.stats.chi2.cdf(scale ** 0.5, df=2),
+            eset.chi_sq_conf_lvl,
+            err_msg="EllipsoidalSet chi-squared confidence level not as expected",
+        )
 
         # check attributes update
         new_center = [-1, -3]
@@ -1885,6 +1891,40 @@ class TestEllipsoidalSet(unittest.TestCase):
         )
         np.testing.assert_allclose(
             new_scale, eset.scale, err_msg="EllipsoidalSet scale update not as expected"
+        )
+        np.testing.assert_allclose(
+            sp.stats.chi2.cdf(new_scale ** 0.5, df=2),
+            eset.chi_sq_conf_lvl,
+            err_msg="EllipsoidalSet chi-square confidence level update not as expected"
+        )
+
+    def test_normal_construction_and_update_chi_sq_conf_lvl(self):
+        """
+        Test EllipsoidalSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        init_conf_lvl = 0.95
+        eset = EllipsoidalSet(
+            center=[0, 0, 0],
+            shape_matrix=np.eye(3),
+            scale=None,
+            chi_sq_conf_lvl=init_conf_lvl,
+        )
+
+        self.assertEqual(eset.chi_sq_conf_lvl, init_conf_lvl)
+        np.testing.assert_allclose(
+            sp.stats.chi2.isf(q=1 - init_conf_lvl, df=eset.dim),
+            eset.scale,
+            err_msg="EllipsoidalSet scale not as expected",
+        )
+
+        new_conf_lvl = 0.99
+        eset.chi_sq_conf_lvl = new_conf_lvl
+        self.assertEqual(eset.chi_sq_conf_lvl, new_conf_lvl)
+        np.testing.assert_allclose(
+            sp.stats.chi2.isf(q=1 - new_conf_lvl, df=eset.dim),
+            eset.scale,
+            err_msg="EllipsoidalSet scale not as expected",
         )
 
     def test_error_on_ellipsoidal_dim_change(self):
@@ -1925,6 +1965,48 @@ class TestEllipsoidalSet(unittest.TestCase):
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
             eset.scale = neg_scale
+
+    def test_error_invalid_chi_sq_conf_lvl(self):
+        """
+        Test error when attempting to initialize with chi-squared
+        confidence level outside range.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        invalid_conf_lvl = 1.001
+
+        exc_str = r"Ensure the confidence level is a value in \[0, 1\)."
+
+        # error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(
+                center=center,
+                shape_matrix=shape_matrix,
+                scale=None,
+                chi_sq_conf_lvl=invalid_conf_lvl,
+            )
+
+        # error on updating valid ellipsoid
+        eset = EllipsoidalSet(center, shape_matrix, scale=None, chi_sq_conf_lvl=0.95)
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.chi_sq_conf_lvl = invalid_conf_lvl
+
+        # negative confidence level
+        eset = EllipsoidalSet(center, shape_matrix, scale=None, chi_sq_conf_lvl=0.95)
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.chi_sq_conf_lvl = -0.1
+
+    def test_error_scale_chi_sq_conf_lvl_construction(self):
+        """
+        Test exception raised if neither or both of
+        `scale` and `chi_sq_conf_lvl` are None.
+        """
+        exc_str = r"Exactly one of `scale` and `chi_sq_conf_lvl` should be None"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet([0], [[1]], scale=None, chi_sq_conf_lvl=None)
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet([0], [[1]], scale=1, chi_sq_conf_lvl=0.95)
 
     def test_error_on_shape_matrix_with_wrong_size(self):
         """
