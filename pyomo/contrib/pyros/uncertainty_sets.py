@@ -2599,7 +2599,7 @@ class EllipsoidalSet(UncertaintySet):
             )
 
         self._scale = val
-        self._chi_sq_conf_lvl = sp.stats.chi2.cdf(x=val ** 0.5, df=self.dim)
+        self._chi_sq_conf_lvl = sp.stats.chi2.cdf(x=val**0.5, df=self.dim)
 
     @property
     def chi_sq_conf_lvl(self):
@@ -2614,11 +2614,7 @@ class EllipsoidalSet(UncertaintySet):
     @chi_sq_conf_lvl.setter
     def chi_sq_conf_lvl(self, val):
         validate_arg_type(
-            "chi_sq_conf_lvl",
-            val,
-            valid_num_types,
-            "a valid numeric type",
-            False,
+            "chi_sq_conf_lvl", val, valid_num_types, "a valid numeric type", False
         )
         self._chi_sq_conf_lvl = val
         self._scale = sp.stats.chi2.isf(q=1 - val, df=self.dim)
