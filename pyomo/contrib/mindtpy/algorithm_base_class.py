@@ -185,7 +185,7 @@ class _MindtPyAlgorithm(object):
             '               Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)                \n'
             '-----------------------------------------------------------------------------------------------\n'
             'For more information, please visit \n'
-            'https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html'
+            'https://pyomo.readthedocs.io/en/stable/explanation/solvers/mindtpy.html'
         )
         self.config.logger.info(
             'If you use this software, please cite the following:\n'

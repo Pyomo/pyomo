@@ -2,6 +2,19 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.8.2   (18 Nov 2024)
+-------------------------------------------------------------------------------
+
+- Core
+  - Resolve errors in mapping ScalarVar to numpy ndarray (#3423)
+- Documentation
+  - Update Documentation URLs (#3425)
+- Solver Interfaces
+  - Resolve error in xpress_direct interface retrieving reduced costs (#3422)
+- Testing
+  - Remove (unused) legacy test drivers (#3427)
+
+-------------------------------------------------------------------------------
 Pyomo 6.8.1   (15 Nov 2024)
 -------------------------------------------------------------------------------
 
@@ -52,7 +65,7 @@ CHANGELOG
   - Remove Octeract from NEOS solvers list (and other testing fixes) (#3374)
   - Guard tests against broken Gurobi licenses (#3383)
   - Remove pin to Gurobi 10.0.3 (#3393)
-  - Add Python 3.13 to Testing Infrastructure (#3401)
+  - Add Python 3.13 to Testing Infrastructure (#3401, #3419)
   - Resolve `timeout()` failures on Windows/py3.13 (#3415)
 - GDP
   - Fix performance degradation in hull transformation (#3366)
