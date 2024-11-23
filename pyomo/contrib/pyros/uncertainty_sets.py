@@ -2599,7 +2599,7 @@ class EllipsoidalSet(UncertaintySet):
             )
 
         self._scale = val
-        self._chi_sq_conf_lvl = sp.stats.chi2.cdf(x=val**0.5, df=self.dim)
+        self._chi_sq_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
 
     @property
     def chi_sq_conf_lvl(self):

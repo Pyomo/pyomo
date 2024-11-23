@@ -1865,7 +1865,9 @@ class TestEllipsoidalSet(unittest.TestCase):
             scale, eset.scale, err_msg="EllipsoidalSet scale not as expected"
         )
         np.testing.assert_allclose(
-            sp.stats.chi2.cdf(scale**0.5, df=2),
+            # evaluate chisquare CDF for 2 degrees of freedom
+            # using simplified formula
+            1 - np.exp(-scale / 2),
             eset.chi_sq_conf_lvl,
             err_msg="EllipsoidalSet chi-squared confidence level not as expected",
         )
@@ -1893,7 +1895,9 @@ class TestEllipsoidalSet(unittest.TestCase):
             new_scale, eset.scale, err_msg="EllipsoidalSet scale update not as expected"
         )
         np.testing.assert_allclose(
-            sp.stats.chi2.cdf(new_scale**0.5, df=2),
+            # evaluate chisquare CDF for 2 degrees of freedom
+            # using simplified formula
+            1 - np.exp(-new_scale / 2),
             eset.chi_sq_conf_lvl,
             err_msg="EllipsoidalSet chi-square confidence level update not as expected",
         )
