@@ -2380,11 +2380,11 @@ class EllipsoidalSet(UncertaintySet):
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
-    chi_sq_conf_lvl : numeric type or None, optional
-        (Fractional) chi-squared confidence level of the multivariate
+    gaussian_conf_lvl : numeric type or None, optional
+        (Fractional) confidence level of the multivariate
         normal distribution with mean `center` and covariance
         matrix `shape_matrix`.
-        Exactly one of `scale` and `chi_sq_conf_lvl` should be
+        Exactly one of `scale` and `gaussian_conf_lvl` should be
         None; otherwise, an exception is raised.
 
     Examples
@@ -2428,7 +2428,7 @@ class EllipsoidalSet(UncertaintySet):
     ...     center=np.zeros(4),
     ...     shape_matrix=np.diag(range(1, 5)),
     ...     scale=None,
-    ...     chi_sq_conf_lvl=0.95,
+    ...     gaussian_conf_lvl=0.95,
     ... )
     >>> conf_ellipsoid.center
     array([0, 0, 0, 0])
@@ -2439,24 +2439,24 @@ class EllipsoidalSet(UncertaintySet):
            [0, 0, 0. 4]])
     >>> conf_ellipsoid.scale
     ...9.4877...
-    >>> conf_ellipsoid.chi_sq_conf_lvl
+    >>> conf_ellipsoid.gaussian_conf_lvl
     0.95
 
     """
 
-    def __init__(self, center, shape_matrix, scale=1, chi_sq_conf_lvl=None):
+    def __init__(self, center, shape_matrix, scale=1, gaussian_conf_lvl=None):
         """Initialize self (see class docstring)."""
         self.center = center
         self.shape_matrix = shape_matrix
 
-        if scale is not None and chi_sq_conf_lvl is None:
+        if scale is not None and gaussian_conf_lvl is None:
             self.scale = scale
-        elif scale is None and chi_sq_conf_lvl is not None:
-            self.chi_sq_conf_lvl = chi_sq_conf_lvl
+        elif scale is None and gaussian_conf_lvl is not None:
+            self.gaussian_conf_lvl = gaussian_conf_lvl
         else:
             raise ValueError(
-                "Exactly one of `scale` and `chi_sq_conf_lvl` should be "
-                f"None (got {scale=}, {chi_sq_conf_lvl=})"
+                "Exactly one of `scale` and `gaussian_conf_lvl` should be "
+                f"None (got {scale=}, {gaussian_conf_lvl=})"
             )
 
     @property
@@ -2599,24 +2599,24 @@ class EllipsoidalSet(UncertaintySet):
             )
 
         self._scale = val
-        self._chi_sq_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
+        self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
 
     @property
-    def chi_sq_conf_lvl(self):
+    def gaussian_conf_lvl(self):
         """
-        numeric type : (Fractional) chi-squared confidence level of the
-        multivariate normal distribution with mean ``self.origin``
+        numeric type : (Fractional) confidence level of the
+        multivariate Gaussian distribution with mean ``self.origin``
         and covariance ``self.shape_matrix`` for ellipsoidal region
         with square magnification factor ``self.scale``.
         """
-        return self._chi_sq_conf_lvl
+        return self._gaussian_conf_lvl
 
-    @chi_sq_conf_lvl.setter
-    def chi_sq_conf_lvl(self, val):
+    @gaussian_conf_lvl.setter
+    def gaussian_conf_lvl(self, val):
         validate_arg_type(
-            "chi_sq_conf_lvl", val, valid_num_types, "a valid numeric type", False
+            "gaussian_conf_lvl", val, valid_num_types, "a valid numeric type", False
         )
-        self._chi_sq_conf_lvl = val
+        self._gaussian_conf_lvl = val
         self._scale = sp.stats.chi2.isf(q=1 - val, df=self.dim)
         if np.isnan(self._scale) or np.isinf(self._scale):
             raise ValueError(

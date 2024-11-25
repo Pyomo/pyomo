@@ -1868,8 +1868,8 @@ class TestEllipsoidalSet(unittest.TestCase):
             # evaluate chisquare CDF for 2 degrees of freedom
             # using simplified formula
             1 - np.exp(-scale / 2),
-            eset.chi_sq_conf_lvl,
-            err_msg="EllipsoidalSet chi-squared confidence level not as expected",
+            eset.gaussian_conf_lvl,
+            err_msg="EllipsoidalSet Gaussian confidence level not as expected",
         )
 
         # check attributes update
@@ -1898,11 +1898,11 @@ class TestEllipsoidalSet(unittest.TestCase):
             # evaluate chisquare CDF for 2 degrees of freedom
             # using simplified formula
             1 - np.exp(-new_scale / 2),
-            eset.chi_sq_conf_lvl,
-            err_msg="EllipsoidalSet chi-square confidence level update not as expected",
+            eset.gaussian_conf_lvl,
+            err_msg="EllipsoidalSet Gaussian confidence level update not as expected",
         )
 
-    def test_normal_construction_and_update_chi_sq_conf_lvl(self):
+    def test_normal_construction_and_update_gaussian_conf_lvl(self):
         """
         Test EllipsoidalSet constructor and setter
         work normally when arguments are appropriate.
@@ -1912,10 +1912,10 @@ class TestEllipsoidalSet(unittest.TestCase):
             center=[0, 0, 0],
             shape_matrix=np.eye(3),
             scale=None,
-            chi_sq_conf_lvl=init_conf_lvl,
+            gaussian_conf_lvl=init_conf_lvl,
         )
 
-        self.assertEqual(eset.chi_sq_conf_lvl, init_conf_lvl)
+        self.assertEqual(eset.gaussian_conf_lvl, init_conf_lvl)
         np.testing.assert_allclose(
             sp.stats.chi2.isf(q=1 - init_conf_lvl, df=eset.dim),
             eset.scale,
@@ -1923,8 +1923,8 @@ class TestEllipsoidalSet(unittest.TestCase):
         )
 
         new_conf_lvl = 0.99
-        eset.chi_sq_conf_lvl = new_conf_lvl
-        self.assertEqual(eset.chi_sq_conf_lvl, new_conf_lvl)
+        eset.gaussian_conf_lvl = new_conf_lvl
+        self.assertEqual(eset.gaussian_conf_lvl, new_conf_lvl)
         np.testing.assert_allclose(
             sp.stats.chi2.isf(q=1 - new_conf_lvl, df=eset.dim),
             eset.scale,
@@ -1970,9 +1970,9 @@ class TestEllipsoidalSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             eset.scale = neg_scale
 
-    def test_error_invalid_chi_sq_conf_lvl(self):
+    def test_error_invalid_gaussian_conf_lvl(self):
         """
-        Test error when attempting to initialize with chi-squared
+        Test error when attempting to initialize with Gaussian
         confidence level outside range.
         """
         center = [0, 0]
@@ -1987,30 +1987,30 @@ class TestEllipsoidalSet(unittest.TestCase):
                 center=center,
                 shape_matrix=shape_matrix,
                 scale=None,
-                chi_sq_conf_lvl=invalid_conf_lvl,
+                gaussian_conf_lvl=invalid_conf_lvl,
             )
 
         # error on updating valid ellipsoid
-        eset = EllipsoidalSet(center, shape_matrix, scale=None, chi_sq_conf_lvl=0.95)
+        eset = EllipsoidalSet(center, shape_matrix, scale=None, gaussian_conf_lvl=0.95)
         with self.assertRaisesRegex(ValueError, exc_str):
-            eset.chi_sq_conf_lvl = invalid_conf_lvl
+            eset.gaussian_conf_lvl = invalid_conf_lvl
 
         # negative confidence level
-        eset = EllipsoidalSet(center, shape_matrix, scale=None, chi_sq_conf_lvl=0.95)
+        eset = EllipsoidalSet(center, shape_matrix, scale=None, gaussian_conf_lvl=0.95)
         with self.assertRaisesRegex(ValueError, exc_str):
-            eset.chi_sq_conf_lvl = -0.1
+            eset.gaussian_conf_lvl = -0.1
 
-    def test_error_scale_chi_sq_conf_lvl_construction(self):
+    def test_error_scale_gaussian_conf_lvl_construction(self):
         """
         Test exception raised if neither or both of
-        `scale` and `chi_sq_conf_lvl` are None.
+        `scale` and `gaussian_conf_lvl` are None.
         """
-        exc_str = r"Exactly one of `scale` and `chi_sq_conf_lvl` should be None"
+        exc_str = r"Exactly one of `scale` and `gaussian_conf_lvl` should be None"
         with self.assertRaisesRegex(ValueError, exc_str):
-            EllipsoidalSet([0], [[1]], scale=None, chi_sq_conf_lvl=None)
+            EllipsoidalSet([0], [[1]], scale=None, gaussian_conf_lvl=None)
 
         with self.assertRaisesRegex(ValueError, exc_str):
-            EllipsoidalSet([0], [[1]], scale=1, chi_sq_conf_lvl=0.95)
+            EllipsoidalSet([0], [[1]], scale=1, gaussian_conf_lvl=0.95)
 
     def test_error_on_shape_matrix_with_wrong_size(self):
         """
