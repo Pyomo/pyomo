@@ -1909,6 +1909,58 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
         return self.run_walker(self.evaluate_abex())
 
 
+class TestSimpleExpressionVisitor(unittest.TestCase):
+    def test_base_class(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True)
+        v = SimpleExpressionVisitor()
+
+        e = 5
+        self.assertEqual(v.xbfs(e), None)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [])
+
+        e = m.x
+        self.assertEqual(v.xbfs(e), None)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [])
+
+        e = m.x + 5 * m.y**m.p
+        self.assertEqual(v.xbfs(e), None)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [])
+
+    def test_derived_visitor(self):
+        class _Visitor(SimpleExpressionVisitor):
+            def __init__(self):
+                super().__init__()
+                self.nodes = []
+
+            def visit(self, node):
+                self.nodes.append(node)
+                return node
+
+            def finalize(self):
+                return len(self.nodes)
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True)
+        v = _Visitor()
+
+        e = 5
+        self.assertEqual(v.xbfs(e), 1)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [5])
+
+        e = m.x
+        self.assertEqual(v.xbfs(e), 3)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [m.x])
+
+        e = m.x + 5 * m.y**m.p
+        self.assertEqual(v.xbfs(e), 11)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [m.x, 5, m.y, m.p])
+
+
 class TestEvaluateExpression(unittest.TestCase):
     def test_constant(self):
         m = ConcreteModel()
