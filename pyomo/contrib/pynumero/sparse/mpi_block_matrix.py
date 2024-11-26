@@ -148,14 +148,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
     @property
     def owned_blocks(self):
         """
-        Returns list with inidices of blocks owned by this processor.
+        Returns list with indices of blocks owned by this processor.
         """
         return list(zip(*np.nonzero(self._owned_mask)))
 
     @property
     def shared_blocks(self):
         """
-        Returns list of 2-tuples with inidices of blocks shared by all processors
+        Returns list of 2-tuples with indices of blocks shared by all processors
         """
         return list(zip(*np.nonzero(self._rank_owner < 0)))
 
