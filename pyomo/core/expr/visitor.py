@@ -1476,7 +1476,7 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             # Note that a cache hit requires not only that we have seen
             # this expression before, but also that none of the named
             # expressions have changed.  If they have, then the cache
-            # miss will fall over to the else clause below and decend
+            # miss will fall over to the else clause below and descend
             # into the expression, (implicitly) rebuilding the cache.
             self._merge_obj_lists(self._cache[eid])
             return False, None
