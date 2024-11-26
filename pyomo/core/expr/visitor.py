@@ -1505,20 +1505,28 @@ identify_variables.visitor = IdentifyVariableVisitor()
 # =====================================================
 
 
-class _MutableParamVisitor(SimpleExpressionVisitor):
+class IdentifyMutableParamVisitor(IdentifyVariableVisitor):
     def __init__(self):
-        self.seen = set()
+        # Hide the IdentifyVariableVisitor API (not relevant here)
+        super().__init__()
 
-    def visit(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return
-
-        # TODO: Confirm that this has the right semantics
-        if not node.is_variable_type() and node.is_fixed() and not node.is_constant():
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-            return node
+    def beforeChild(self, parent, child, index):
+        if child.__class__ in native_types:
+            return False, None
+        elif child.is_expression_type():
+            if child.is_named_expression_type():
+                return self._process_named_expr(child)
+            else:
+                return True, None
+        if (
+            not child.is_variable_type()
+            and child.is_fixed()
+            and not child.is_constant()
+        ):
+            if id(child) not in self._seen:
+                self._seen.add(id(child))
+                self._objs.append(child)
+        return False, None
 
 
 def identify_mutable_parameters(expr):
@@ -1532,9 +1540,10 @@ def identify_mutable_parameters(expr):
     Yields:
         Each mutable parameter that is found.
     """
-    visitor = _MutableParamVisitor()
-    yield from visitor.xbfs_yield_leaves(expr)
+    yield from identify_mutable_parameters.visitor.walk_expression(expr)
 
+
+identify_mutable_parameters.visitor = IdentifyMutableParamVisitor()
 
 # =====================================================
 #  polynomial_degree
