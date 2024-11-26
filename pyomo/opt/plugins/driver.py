@@ -50,7 +50,7 @@ def setup_test_parser(parser):
 def test_exec(options):
     import pyomo.solvers.tests.testcases
 
-    pyomo.solvers.tests.testcases.run_test_scenarios(options)
+    pyomo.solvers.tests.testcases.run_scenarios(options)
 
 
 #

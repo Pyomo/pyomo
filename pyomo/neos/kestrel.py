@@ -207,6 +207,12 @@ class kestrelAMPL(object):
                 password = m.groups()[0]
         return (jobNumber, password)
 
+    def getAvailableSolvers(self):
+        """Return a list of all NEOS solvers that this interface supports"""
+        allKestrelSolvers = self.neos.listSolversInCategory("kestrel")
+        _ampl = ':AMPL'
+        return sorted(s[: -len(_ampl)] for s in allKestrelSolvers if s.endswith(_ampl))
+
     def getSolverName(self):
         """
         Read in the kestrel_options to pick out the solver name.
@@ -218,12 +224,7 @@ class kestrelAMPL(object):
 
         """
         # Get a list of available kestrel solvers from NEOS
-        allKestrelSolvers = self.neos.listSolversInCategory("kestrel")
-        kestrelAmplSolvers = []
-        for s in allKestrelSolvers:
-            i = s.find(':AMPL')
-            if i > 0:
-                kestrelAmplSolvers.append(s[0:i])
+        kestrelAmplSolvers = self.getAvailableSolvers()
         self.options = None
         # Read kestrel_options to get solver name
         if "kestrel_options" in os.environ:

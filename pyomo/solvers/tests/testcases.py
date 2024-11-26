@@ -355,7 +355,7 @@ def run_scenarios(options):
 
     for key, test_case in generate_scenarios():
         model, solver, io = key
-        if len(solvers) > 0 and not solver in solvers:
+        if len(solvers) > 0 and solver not in solvers:
             continue
         if test_case.status == 'skip':
             continue
@@ -381,7 +381,7 @@ def run_scenarios(options):
         # Validate solution status
         try:
             model_class.post_solve_test_validation(None, results)
-        except:
+        except Exception:
             if test_case.status == 'expected failure':
                 stat[key] = (True, "Expected failure")
             else:
@@ -431,7 +431,7 @@ def run_scenarios(options):
     total = Bunch(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
     for key in stat:
         model, solver, io = key
-        if not solver in summary:
+        if solver not in summary:
             summary[solver] = Bunch(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
         _pass, _str = stat[key]
         if _pass:
