@@ -2616,14 +2616,17 @@ class EllipsoidalSet(UncertaintySet):
         validate_arg_type(
             "gaussian_conf_lvl", val, valid_num_types, "a valid numeric type", False
         )
-        self._gaussian_conf_lvl = val
-        self._scale = sp.stats.chi2.isf(q=1 - val, df=self.dim)
-        if np.isnan(self._scale) or np.isinf(self._scale):
+
+        scale_val = sp.stats.chi2.isf(q=1 - val, df=self.dim)
+        if np.isnan(scale_val) or np.isinf(scale_val):
             raise ValueError(
                 f"Squared scaling factor calculation for confidence level {val} "
-                f"and set dimension {self.dim} returned {self._scale}. "
+                f"and set dimension {self.dim} returned {scale_val}. "
                 "Ensure the confidence level is a value in [0, 1)."
             )
+
+        self._gaussian_conf_lvl = val
+        self._scale = scale_val
 
     @property
     def dim(self):
