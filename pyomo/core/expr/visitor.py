@@ -736,6 +736,14 @@ class SimpleExpressionVisitor(object):
             The return value is determined by the :func:`finalize` function,
             which may be defined by the user.  Defaults to :const:`None`.
         """
+        if (
+            node.__class__ in nonpyomo_leaf_types
+            or not node.is_expression_type()
+            or node.nargs() == 0
+        ):
+            self.visit(node)
+            return self.finalize()
+
         dq = deque([node])
         while dq:
             current = dq.popleft()
