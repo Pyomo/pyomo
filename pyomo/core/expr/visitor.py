@@ -1378,7 +1378,7 @@ def identify_components(expr, component_types):
 # =====================================================
 
 
-class _VariableVisitor(StreamBasedExpressionVisitor):
+class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
     def __init__(self, include_fixed=False, named_expression_cache=None):
         """Visitor that collects all unique variables participating in an
         expression
@@ -1392,108 +1392,85 @@ class _VariableVisitor(StreamBasedExpressionVisitor):
         """
         super().__init__()
         self._include_fixed = include_fixed
-        if named_expression_cache is None:
-            # This cache will map named expression ids to the
-            # tuple: ([variables], {variable ids})
-            named_expression_cache = {}
-        self._named_expression_cache = named_expression_cache
-        # Stack of active named expressions. This holds the id of
-        # expressions we are currently in.
-        self._active_named_expressions = []
+        self._cache = named_expression_cache
+        # Stack of named expressions. This holds the id of the
+        # subexpression we are currently processing, along with a
+        # (_objs, _seen, _exprs) tuple for the parent context..
+        self._expr_stack = []
+        # The following attributes will be added by initializeWalker:
+        # self._objs: the list of found objects
+        # self._seen: set(self._objs)
+        # self._exprs: list of (e, e.expr) for any (nested) named expressions
 
     def initializeWalker(self, expr):
-        if expr.__class__ in native_types:
-            return False, []
-        elif expr.is_named_expression_type():
-            eid = id(expr)
-            if eid in self._named_expression_cache:
-                # If we were given a named expression that is already cached,
-                # just do nothing and return the expression's variables
-                variables, var_set = self._named_expression_cache[eid]
-                return False, variables
-            else:
-                # We were given a named expression that is not cached.
-                # Initialize data structures and add this expression to the
-                # stack. This expression will get popped in exitNode.
-                self._variables = []
-                self._seen = set()
-                self._named_expression_cache[eid] = [], set()
-                self._active_named_expressions.append(eid)
-                return True, expr
-        elif expr.is_variable_type():
-            return False, [expr]
-        else:
-            self._variables = []
-            self._seen = set()
-            return True, expr
+        assert not self._expr_stack
+        self._objs = []
+        self._seen = set()
+        self._exprs = None
+        if not self.beforeChild(None, expr, 0)[0]:
+            return False, self.finalizeResult(None)
+        return True, expr
 
     def beforeChild(self, parent, child, index):
         if child.__class__ in native_types:
             return False, None
-        elif child.is_named_expression_type():
-            eid = id(child)
-            if eid in self._named_expression_cache:
-                # We have already encountered this named expression. We just add
-                # the cached variables to our list and don't descend.
-                if self._active_named_expressions:
-                    # If we are in another named expression, we update the
-                    # parent expression's cache. We don't need to update the
-                    # global list as we will do this when we exit the active
-                    # named expression.
-                    parent_eid = self._active_named_expressions[-1]
-                    variables, var_set = self._named_expression_cache[parent_eid]
-                else:
-                    # If we are not in a named expression, we update the global
-                    # list.
-                    variables = self._variables
-                    var_set = self._seen
-                for var in self._named_expression_cache[eid][0]:
-                    if id(var) not in var_set:
-                        var_set.add(id(var))
-                        variables.append(var)
-                return False, None
+        elif child.is_expression_type():
+            if child.is_named_expression_type():
+                return self._process_named_expr(child)
             else:
-                # If we are descending into a new named expression, initialize
-                # a cache to store the expression's local variables.
-                self._named_expression_cache[id(child)] = ([], set())
-                self._active_named_expressions.append(id(child))
                 return True, None
-        elif child.is_variable_type() and (self._include_fixed or not child.fixed):
-            if self._active_named_expressions:
-                # If we are in a named expression, add new variables to the cache.
-                eid = self._active_named_expressions[-1]
-                variables, var_set = self._named_expression_cache[eid]
-            else:
-                variables = self._variables
-                var_set = self._seen
-            if id(child) not in var_set:
-                var_set.add(id(child))
-                variables.append(child)
-            return False, None
-        else:
-            return True, None
+        if child.is_variable_type() and (self._include_fixed or not child.fixed):
+            if id(child) not in self._seen:
+                self._seen.add(id(child))
+                self._objs.append(child)
+        return False, None
 
     def exitNode(self, node, data):
-        if node.is_named_expression_type():
-            # If we are returning from a named expression, we have at least one
-            # active named expression. We must make sure that we properly
-            # handle the variables for the named expression we just exited.
-            eid = self._active_named_expressions.pop()
-            if self._active_named_expressions:
-                # If we still are in a named expression, we update that expression's
-                # cache with any new variables encountered.
-                parent_eid = self._active_named_expressions[-1]
-                variables, var_set = self._named_expression_cache[parent_eid]
-            else:
-                variables = self._variables
-                var_set = self._seen
-            for var in self._named_expression_cache[eid][0]:
-                if id(var) not in var_set:
-                    var_set.add(id(var))
-                    variables.append(var)
+        if node.is_named_expression_type() and self._cache is not None:
+            # If we are returning from a named expression, we must make
+            # sure that we properly restore the "outer" context and then
+            # merge the objects from the named expression we just exited
+            # into the list for the parent expression context.
+            sub_info = self._objs, self._seen, self._exprs
+            eid, (self._objs, self._seen, self._exprs) = self._expr_stack.pop()
+            assert eid == id(node)
+            self._merge_obj_lists(sub_info)
 
     def finalizeResult(self, result):
-        return self._variables
+        assert not self._expr_stack
+        return self._objs
+
+    def _merge_obj_lists(self, info):
+        _objs, _seen, _exprs = info
+        self._objs.extend(v for v in _objs if id(v) not in self._seen)
+        self._seen.update(_seen)
+        if self._exprs is not None:
+            self._exprs.extend(_exprs)
+
+    def _process_named_expr(self, child):
+        eid = id(child)
+        if self._cache is None:
+            return True, None
+        elif eid in self._cache and all(c.expr is e for c, e in self._cache[eid][2]):
+            # We have already encountered this named expression. We just add
+            # the cached objects to our list and don't descend.
+            #
+            # Note that a cache hit requires not only that we have seen
+            # this expression before, but also that none of the named
+            # expressions have changed.  If they have, then the cache
+            # miss will fall over to the else clause below and decend
+            # into the expression, (implicitly) rebuilding the cache.
+            self._merge_obj_lists(self._cache[eid])
+            return False, None
+        else:
+            # If we are descending into a new named expression, initialize
+            # a cache to store the expression's local objects.
+            self._expr_stack.append((eid, (self._objs, self._seen, self._exprs)))
+            self._objs = []
+            self._seen = set()
+            self._exprs = [(child, child.expr)]
+            self._cache[eid] = (self._objs, self._seen, self._exprs)
+            return True, None
 
 
 def identify_variables(expr, include_fixed=True, named_expression_cache=None):
@@ -1510,13 +1487,17 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     Yields:
         Each variable that is found.
     """
-    if named_expression_cache is None:
-        named_expression_cache = {}
-    visitor = _VariableVisitor(
-        named_expression_cache=named_expression_cache, include_fixed=include_fixed
-    )
-    variables = visitor.walk_expression(expr)
-    yield from variables
+    v = identify_variables.visitor
+    save = v._include_fixed, v._cache
+    try:
+        v._include_fixed = include_fixed
+        v._cache = named_expression_cache
+        yield from v.walk_expression(expr)
+    finally:
+        v._include_fixed, v._cache = save
+
+
+identify_variables.visitor = IdentifyVariableVisitor()
 
 
 # =====================================================
