@@ -1335,20 +1335,25 @@ evaluate_expression.visitor_active = False
 # =====================================================
 
 
-class _ComponentVisitor(SimpleExpressionVisitor):
+class _ComponentVisitor(StreamBasedExpressionVisitor):
     def __init__(self, types):
-        self.seen = set()
-        if types.__class__ is set:
-            self.types = types
-        else:
-            self.types = set(types)
+        super().__init__()
+        if types.__class__ is not set:
+            types = set(types)
+        self._types = types
 
-    def visit(self, node):
-        if node.__class__ in self.types:
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-            return node
+    def initializeWalker(self, expr):
+        self._objs = []
+        self._seen = set()
+        return True, None
+
+    def finalizeResult(self, result):
+        return self._objs
+
+    def exitNode(self, node, data):
+        if node.__class__ in self._types and id(node) not in self._seen:
+            self._seen.add(id(node))
+            self._objs.append(node)
 
 
 def identify_components(expr, component_types):
@@ -1370,7 +1375,7 @@ def identify_components(expr, component_types):
     # in the expression.
     #
     visitor = _ComponentVisitor(component_types)
-    yield from visitor.xbfs_yield_leaves(expr)
+    yield from visitor.walk_expression(expr)
 
 
 # =====================================================
