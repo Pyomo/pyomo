@@ -679,6 +679,11 @@ class StreamBasedExpressionVisitor(object):
                 ptr = ptr[0]
 
 
+@deprecated(
+    "The SimpleExpressionVisitor is deprecated.  "
+    "Please use the StreamBasedExpressionVisitor instead.",
+    version='6.9.0.dev0',
+)
 class SimpleExpressionVisitor(object):
     """
     Note:
