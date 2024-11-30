@@ -2795,8 +2795,6 @@ class TestPreprocessModelData(unittest.TestCase):
                 + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
                 + ublk.z4
                 + ublk.z5
-                # TODO: are we sure this shouldn't be q2expr.expr?
-                #       expected removal of named expression
                 + ublk.q2expr
             ),
         )

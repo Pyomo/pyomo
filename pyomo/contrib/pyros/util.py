@@ -1661,14 +1661,53 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     # the interface for separation priority ordering
 
 
+def _replace_vars_in_component_exprs(block, substitution_map, ctype):
+    """
+    Substitute other objects for Vars in the expression attributes
+    of the component objects of a given type in a given block.
+
+    For efficiency purposes, only components whose expressions
+    contain the Vars to remove via the substitution are acted upon.
+
+    Named expressions in the components acted upon are descended
+    into, but not removed.
+
+    Parameters
+    ----------
+    block : BlockData
+        Block on which to perform the replacement.
+    substitution_map : ComponentMap
+        First entry of each tuple is a Var to remove,
+        second entry is an object to introduce in its place.
+    ctype : type or tuple of type
+        Type(s) of the components whose expressions are to be
+        modified.
+    """
+    vars_to_be_replaced = ComponentSet([var for var, _ in substitution_map.items()])
+    substitution_map = {id(var): dest for var, dest in substitution_map.items()}
+    for cdata in block.component_data_objects(ctype, active=None, descend_into=True):
+        # efficiency: act only on components containing
+        #             the Vars to be substituted
+        if ComponentSet(identify_variables(cdata.expr)) & vars_to_be_replaced:
+            cdata.set_value(
+                replace_expressions(
+                    expr=cdata.expr,
+                    substitution_map=substitution_map,
+                    descend_into_named_expressions=True,
+                    remove_named_expressions=False,
+                )
+            )
+
+
 def replace_vars_with_params(block, var_to_param_map):
     """
     Substitute ParamData objects for VarData objects
-    in all named expression, constraint, and objective components
+    in the Expression, Constraint, and Objective components
     declared on a block and all its sub-blocks.
 
-    Named Expressions are removed from Constraint and Objective
-    components during the substitution.
+    Note that when performing the substitutions in the
+    Constraint and Objective components,
+    named Expressions are descended into, but not replaced.
 
     Parameters
     ----------
@@ -1678,24 +1717,14 @@ def replace_vars_with_params(block, var_to_param_map):
         Mapping from VarData objects to be replaced
         to the ParamData objects to be introduced.
     """
-    substitution_map = {id(var): param for var, param in var_to_param_map.items()}
-    vars_to_replace = ComponentSet(var_to_param_map.keys())
-    ctypes = (Constraint, Objective, Expression)
-    cdata_objs = (
-        cdata
-        for cdata in block.component_data_objects(
-            ctype=ctypes, active=None, descend_into=True
-        )
-        if ComponentSet(identify_variables(cdata.expr)) & vars_to_replace
-    )
-    for cdata in cdata_objs:
-        cdata.set_value(
-            replace_expressions(
-                expr=cdata.expr,
-                substitution_map=substitution_map,
-                descend_into_named_expressions=True,
-                remove_named_expressions=True,
-            )
+    # invoke the expression replacement method for each
+    # individual component type to ensure the substitutions
+    # are always performed in the named expressions first
+    for ctype in (Expression, Constraint, Objective):
+        _replace_vars_in_component_exprs(
+            block=block,
+            substitution_map=var_to_param_map,
+            ctype=ctype,
         )
 
 
