@@ -40,6 +40,7 @@ from pyomo.core.base import (
     maximize,
     minimize,
     Param,
+    ParamData,
     Reals,
     Var,
     VarData,
@@ -1787,15 +1788,6 @@ def setup_working_model(model_data, user_var_partitioning):
     uncertain_param_var_idxs = []
     for idx, obj in enumerate(working_model.orig_uncertain_params):
         if isinstance(obj, VarData):
-            config.progress_logger.debug(
-                "Entry of argument `uncertain_params` with name "
-                f"{obj.name!r} is of type {VarData.__name__}. "
-                f"Bounds and fixing for this {VarData.__name__} object "
-                "will be ignored. "
-                "A temporary ParamData object will be substituted for  "
-                f"{obj.name!r} in all expressions, constraints, and objectives "
-                "of the working model clone. "
-            )
             obj.fix()
             uncertain_param_var_idxs.append(idx)
     temp_params = working_model.temp_uncertain_params = Param(
@@ -1815,13 +1807,27 @@ def setup_working_model(model_data, user_var_partitioning):
     # don't want to pass over the model components unless
     # at least one Var is to be replaced
     if uncertain_param_var_idxs:
+        uncertain_var_to_param_map = ComponentMap(
+            (working_model.orig_uncertain_params[idx], temp_param)
+            for idx, temp_param in temp_params.items()
+        )
         replace_vars_with_params(
             working_model,
-            var_to_param_map=ComponentMap(
-                (working_model.orig_uncertain_params[idx], temp_param)
-                for idx, temp_param in temp_params.items()
-            ),
+            var_to_param_map=uncertain_var_to_param_map,
         )
+        for var, param in uncertain_var_to_param_map.items():
+            config.progress_logger.debug(
+                "Uncertain parameter with name "
+                f"{var.name!r} (relative to the working model clone) "
+                f"is of type {VarData.__name__}. "
+                f"The user-specified domain, declared bounds, and fixing of "
+                f"this {VarData.__name__} object will be ignored. "
+                f"A newly declared {ParamData.__name__} object "
+                f"with name {param.name!r} "
+                f"has been substituted for the {VarData.__name__} object "
+                "in all named expressions, constraints, and objectives "
+                "of the working model clone. "
+            )
 
     # keep track of the original active constraints
     working_model.original_active_equality_cons = []
