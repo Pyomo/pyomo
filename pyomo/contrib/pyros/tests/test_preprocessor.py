@@ -2218,6 +2218,13 @@ class TestPreprocessModelData(unittest.TestCase):
         m.z4.fix()
         m.y2.fix()
 
+        # Var representing uncertain parameter
+        m.q2var = Var(initialize=3.2)
+
+        # named Expression in terms of uncertain parameter
+        # represented by a Var
+        m.q2expr = Expression(expr=m.q2var * 10)
+
         # EQUALITY CONSTRAINTS
         # this will be reformulated by coefficient matching
         m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
@@ -2227,7 +2234,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # pretriangular: makes z2 nonadjustable, so first-stage
         m.eq3 = Constraint(expr=m.x1**2 + m.x2 + m.p * m.z2 == m.p)
         # second-stage equality
-        m.eq4 = Constraint(expr=m.z3 + m.y1 == m.q)
+        m.eq4 = Constraint(expr=m.z3 + m.y1 + 5 * m.q2var == m.q)
 
         # INEQUALITY CONSTRAINTS
         # since x1, z1 nonadjustable, LB is first-stage,
@@ -2250,6 +2257,11 @@ class TestPreprocessModelData(unittest.TestCase):
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
         m.ineq5.deactivate()
 
+        # ineq constraint in which the only uncertain parameter
+        # is represented by a Var. will be second-stage due
+        # to the presence of the uncertain parameter
+        m.ineq6 = Constraint(expr=-m.q2var <= m.x1)
+
         # OBJECTIVE
         # contains a rich combination of first-stage and second-stage terms
         m.obj = Objective(
@@ -2262,6 +2274,7 @@ class TestPreprocessModelData(unittest.TestCase):
                 + m.p**3 * (m.z1 + m.z2 + m.y1)
                 + m.z4
                 + m.z5
+                + m.q2expr
             )
         )
 
@@ -2288,7 +2301,8 @@ class TestPreprocessModelData(unittest.TestCase):
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
+                uncertain_params=[om.q, om.q2var],
+                nominal_uncertain_param_vals=[om.q.value, om.q2var.value],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=0,
                 progress_logger=logger,
@@ -2424,7 +2438,8 @@ class TestPreprocessModelData(unittest.TestCase):
         om = model_data.original_model
         model_data.config.update(
             dict(
-                uncertain_params=[om.q],
+                uncertain_params=[om.q, om.q2var],
+                nominal_uncertain_param_vals=[om.q.value, om.q2var.value],
                 objective_focus=ObjectiveType[obj_focus],
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2443,14 +2458,19 @@ class TestPreprocessModelData(unittest.TestCase):
             coeff_matching_con_names = [
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0",
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2",
                 'coeff_matching_eq_con_eq1_coeff_1',
                 'coeff_matching_eq_con_eq1_coeff_2',
+                'coeff_matching_eq_con_eq1_coeff_3',
             ]
         else:
             coeff_matching_con_names = [
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0",
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1",
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_3",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_4",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_5",
             ]
 
         self.assertEqual(
@@ -2479,6 +2499,7 @@ class TestPreprocessModelData(unittest.TestCase):
                     "ineq_con_ineq3_lower_bound_con",
                     "ineq_con_ineq3_upper_bound_con",
                     "ineq_con_ineq4_lower_bound_con",
+                    "ineq_con_ineq6_lower_bound_con",
                 ]
                 + (["epigraph_con"] if obj_focus == "worst_case" else [])
                 + (
@@ -2578,6 +2599,11 @@ class TestPreprocessModelData(unittest.TestCase):
             -(m.y2**2 + log(m.y2)) <= -(-m.q),
         )
         self.assertFalse(m.ineq5.active)
+        assertExpressionsEqual(
+            self,
+            ss.inequality_cons["ineq_con_ineq6_lower_bound_con"].expr,
+            -m.x1 <= - (-1 * working_model.temp_uncertain_params[1]),
+        )
 
         assertExpressionsEqual(
             self, fs.equality_cons["eq_con_eq2"].expr, m.x1 - m.z1 == 0
@@ -2620,7 +2646,8 @@ class TestPreprocessModelData(unittest.TestCase):
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
+                uncertain_params=[om.q, om.q2var],
+                nominal_uncertain_param_vals=[om.q.value, om.q2var.value],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2655,6 +2682,11 @@ class TestPreprocessModelData(unittest.TestCase):
             )
             assertExpressionsEqual(
                 self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"].expr,
+                fs.decision_rule_vars[1][2] == 0,
+            )
+            assertExpressionsEqual(
+                self,
                 fs_eqs["coeff_matching_eq_con_eq1_coeff_1"].expr,
                 fs.decision_rule_vars[0][0] + m.x2 == 0,
             )
@@ -2662,6 +2694,11 @@ class TestPreprocessModelData(unittest.TestCase):
                 self,
                 fs_eqs["coeff_matching_eq_con_eq1_coeff_2"].expr,
                 fs.decision_rule_vars[0][1] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_eq_con_eq1_coeff_3"].expr,
+                fs.decision_rule_vars[0][2] == 0,
             )
         if config.decision_rule_order == 2:
             # eq1 should be deactivated and refomulated to 2 inequalities
@@ -2692,6 +2729,21 @@ class TestPreprocessModelData(unittest.TestCase):
                 fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"].expr,
                 fs.decision_rule_vars[1][2] == 0,
             )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_3"].expr,
+                fs.decision_rule_vars[1][3] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_4"].expr,
+                fs.decision_rule_vars[1][4] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_5"].expr,
+                fs.decision_rule_vars[1][5] == 0,
+            )
 
     @parameterized.expand([["static", 0], ["affine", 1], ["quadratic", 2]])
     def test_preprocessor_objective_standardization(self, name, dr_order):
@@ -2704,7 +2756,8 @@ class TestPreprocessModelData(unittest.TestCase):
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
+                uncertain_params=[om.q, om.q2var],
+                nominal_uncertain_param_vals=[om.q.value, om.q2var.value],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2742,6 +2795,9 @@ class TestPreprocessModelData(unittest.TestCase):
                 + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
                 + ublk.z4
                 + ublk.z5
+                # TODO: are we sure this shouldn't be q2expr.expr?
+                #       expected removal of named expression
+                + ublk.q2expr
             ),
         )
 
@@ -2756,7 +2812,8 @@ class TestPreprocessModelData(unittest.TestCase):
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
+                uncertain_params=[om.q, om.q2var],
+                nominal_uncertain_param_vals=[om.q.value, om.q2var.value],
                 objective_focus=ObjectiveType[obj_focus],
                 decision_rule_order=1,
                 progress_logger=logger,
@@ -2769,22 +2826,22 @@ class TestPreprocessModelData(unittest.TestCase):
         expected_log_str = textwrap.dedent(
             f"""
             Model Statistics:
-              Number of variables : 14
+              Number of variables : 16
                 Epigraph variable : 1
                 First-stage variables : 2
                 Second-stage variables : 5 (2 adj.)
                 State variables : 2 (1 adj.)
-                Decision rule variables : 4
-              Number of uncertain parameters : 1
-              Number of constraints : 23
-                Equality constraints : 9
-                  Coefficient matching constraints : 4
+                Decision rule variables : 6
+              Number of uncertain parameters : 2
+              Number of constraints : 26
+                Equality constraints : 11
+                  Coefficient matching constraints : 6
                   Other first-stage equations : 2
                   Second-stage equations : 1
                   Decision rule equations : 2
-                Inequality constraints : 14
+                Inequality constraints : 15
                   First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
-                  Second-stage inequalities : {11 if obj_focus == 'nominal' else 12}
+                  Second-stage inequalities : {12 if obj_focus == 'nominal' else 13}
             """
         )
 
@@ -2810,7 +2867,8 @@ class TestPreprocessModelData(unittest.TestCase):
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
+                uncertain_params=[om.q, om.q2var],
+                nominal_uncertain_param_vals=[om.q.value, om.q2var.value],
                 objective_focus=ObjectiveType[obj_focus],
                 decision_rule_order=2,
                 progress_logger=logger,
@@ -2823,22 +2881,22 @@ class TestPreprocessModelData(unittest.TestCase):
         expected_log_str = textwrap.dedent(
             f"""
             Model Statistics:
-              Number of variables : 16
+              Number of variables : 22
                 Epigraph variable : 1
                 First-stage variables : 2
                 Second-stage variables : 5 (2 adj.)
                 State variables : 2 (1 adj.)
-                Decision rule variables : 6
-              Number of uncertain parameters : 1
-              Number of constraints : 24
-                Equality constraints : 8
-                  Coefficient matching constraints : 3
+                Decision rule variables : 12
+              Number of uncertain parameters : 2
+              Number of constraints : 28
+                Equality constraints : 11
+                  Coefficient matching constraints : 6
                   Other first-stage equations : 2
                   Second-stage equations : 1
                   Decision rule equations : 2
-                Inequality constraints : 16
+                Inequality constraints : 17
                   First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
-                  Second-stage inequalities : {13 if obj_focus == 'nominal' else 14}
+                  Second-stage inequalities : {14 if obj_focus == 'nominal' else 15}
             """
         )
 
