@@ -36,7 +36,14 @@ from pyomo.core.base import (
     Block,
 )
 from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
-from pyomo.core.expr import LinearExpression, log, replace_expressions, sin, exp, RangedExpression
+from pyomo.core.expr import (
+    LinearExpression,
+    log,
+    replace_expressions,
+    sin,
+    exp,
+    RangedExpression,
+)
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.util import (
@@ -449,14 +456,14 @@ class TestSetupModelData(unittest.TestCase):
         # uncertain params
         self.assertEqual(
             ComponentSet(working_model.orig_uncertain_params),
-            ComponentSet([m.q, m.q2var])
+            ComponentSet([m.q, m.q2var]),
         )
 
         self.assertEqual(list(working_model.temp_uncertain_params.index_set()), [1])
         temp_uncertain_param = working_model.temp_uncertain_params[1]
         self.assertEqual(
             ComponentSet(working_model.uncertain_params),
-            ComponentSet([m.q, temp_uncertain_param])
+            ComponentSet([m.q, temp_uncertain_param]),
         )
 
         # ensure original model unchanged
@@ -472,52 +479,33 @@ class TestSetupModelData(unittest.TestCase):
 
         # ensure uncertain Param substitutions carried out properly
         ublk = model_data.working_model.user_model
+        self.assertExpressionsEqual(ublk.nexpr.expr, temp_uncertain_param + ublk.x1)
         self.assertExpressionsEqual(
-            ublk.nexpr.expr,
-            temp_uncertain_param + ublk.x1,
+            ublk.inactive_obj.expr, LinearExpression([1, temp_uncertain_param, m.x1])
         )
         self.assertExpressionsEqual(
-            ublk.inactive_obj.expr,
-            LinearExpression([1, temp_uncertain_param, m.x1]),
-        )
-        self.assertExpressionsEqual(
-            ublk.ineq4.expr,
-            -ublk.q <= ublk.y2 ** 2 + log(ublk.y2) + temp_uncertain_param,
+            ublk.ineq4.expr, -ublk.q <= ublk.y2**2 + log(ublk.y2) + temp_uncertain_param
         )
 
         # other component expressions should remain as declared
+        self.assertExpressionsEqual(ublk.eq1.expr, ublk.q * (ublk.z3 + ublk.x2) == 0)
+        self.assertExpressionsEqual(ublk.eq2.expr, ublk.x1 - ublk.z1 == 0)
         self.assertExpressionsEqual(
-            ublk.eq1.expr,
-            ublk.q * (ublk.z3 + ublk.x2) == 0,
+            ublk.eq3.expr, ublk.x1**2 + ublk.x2 + ublk.p * ublk.z2 == ublk.p
         )
-        self.assertExpressionsEqual(
-            ublk.eq2.expr,
-            ublk.x1 - ublk.z1 == 0,
-        )
-        self.assertExpressionsEqual(
-            ublk.eq3.expr,
-            ublk.x1 ** 2 + ublk.x2 + ublk.p * ublk.z2 == ublk.p,
-        )
-        self.assertExpressionsEqual(
-            ublk.eq4.expr,
-            ublk.z3 + ublk.y1 == ublk.q,
-        )
+        self.assertExpressionsEqual(ublk.eq4.expr, ublk.z3 + ublk.y1 == ublk.q)
         self.assertExpressionsEqual(
             ublk.ineq1.expr,
             RangedExpression((-ublk.p, ublk.x1 + ublk.z1, exp(ublk.q)), False),
         )
         self.assertExpressionsEqual(
-            ublk.ineq2.expr,
-            RangedExpression((0, ublk.x1 + ublk.x2, 10), False),
+            ublk.ineq2.expr, RangedExpression((0, ublk.x1 + ublk.x2, 10), False)
         )
         self.assertExpressionsEqual(
             ublk.ineq3.expr,
             RangedExpression((2 * ublk.q, 2 * (ublk.z3 + ublk.y1), 2 * ublk.q), False),
         )
-        self.assertExpressionsEqual(
-            ublk.ineq5.expr,
-            ublk.y3 <= ublk.q,
-        )
+        self.assertExpressionsEqual(ublk.ineq5.expr, ublk.y3 <= ublk.q)
         self.assertExpressionsEqual(
             ublk.obj.expr,
             (
@@ -529,7 +517,7 @@ class TestSetupModelData(unittest.TestCase):
                 + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
                 + ublk.z4
                 + ublk.z5
-            )
+            ),
         )
 
 
