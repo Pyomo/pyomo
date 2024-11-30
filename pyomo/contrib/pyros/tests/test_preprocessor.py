@@ -39,7 +39,6 @@ from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
 from pyomo.core.expr import (
     LinearExpression,
     log,
-    replace_expressions,
     sin,
     exp,
     RangedExpression,
