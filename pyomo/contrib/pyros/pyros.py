@@ -303,6 +303,8 @@ class PyROS(object):
             Uncertain model parameters.
             Of every constituent `Param` and `ParamData` object,
             the `mutable` attribute must be set to True.
+            Of every constituent `Var` and `VarData` object,
+            the domain, declared bounds, and fixing are ignored.
         uncertainty_set: UncertaintySet
             Uncertainty set against which the solution(s) returned
             will be confirmed to be robust.
