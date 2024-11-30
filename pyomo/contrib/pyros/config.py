@@ -60,16 +60,21 @@ positive_int_or_minus_one.domain_name = "positive int or -1"
 
 def uncertain_param_validator(uncertain_obj):
     """
-    Check that a component/component data object modeling an
+    Check that a component object modeling an
     uncertain parameter in PyROS is appropriately constructed,
     initialized, and/or mutable, where applicable.
+
+    Parameters
+    ----------
+    uncertain_obj : Param or Var
+        Object on which to perform checks.
 
     Raises
     ------
     ValueError
         If the length of the component (data) object does not
-        match that of its index set, or the object is an instance
-        of Param/ParamData with attribute `mutable=False`.
+        match that of its index set, or the object is a Param
+        with attribute `mutable=False`.
     """
     if len(uncertain_obj) != len(uncertain_obj.index_set()):
         raise ValueError(
@@ -111,11 +116,11 @@ class InputDataStandardizer(object):
 
     Attributes
     ----------
-    ctype
-    cdatatype
-    ctype_validator
-    cdatatype_validator
-    allow_repeats
+    ctype : type or tuple of type
+    cdatatype : type or tuple of type
+    ctype_validator : callable or None
+    cdatatype_validator : callable or None
+    allow_repeats : bool
     """
 
     def __init__(
@@ -503,8 +508,8 @@ def pyros_config():
         ConfigValue(
             default=[],
             domain=InputDataStandardizer(
-                ctype=Param,
-                cdatatype=ParamData,
+                ctype=(Param, Var),
+                cdatatype=(ParamData, VarData),
                 ctype_validator=uncertain_param_validator,
                 allow_repeats=False,
             ),

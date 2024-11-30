@@ -299,10 +299,10 @@ class PyROS(object):
             First-stage model variables (or design variables).
         second_stage_variables: VarData, Var, or iterable of VarData/Var
             Second-stage model variables (or control variables).
-        uncertain_params: ParamData, Param, or iterable of ParamData/Param
+        uncertain_params: (iterable of) Param, Var, ParamData, or VarData
             Uncertain model parameters.
-            The `mutable` attribute for all uncertain parameter objects
-            must be set to True.
+            Of every constituent `Param` and `ParamData` object,
+            the `mutable` attribute must be set to True.
         uncertainty_set: UncertaintySet
             Uncertainty set against which the solution(s) returned
             will be confirmed to be robust.
