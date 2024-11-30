@@ -36,13 +36,7 @@ from pyomo.core.base import (
     Block,
 )
 from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
-from pyomo.core.expr import (
-    LinearExpression,
-    log,
-    sin,
-    exp,
-    RangedExpression,
-)
+from pyomo.core.expr import LinearExpression, log, sin, exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.util import (
@@ -2602,7 +2596,7 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             ss.inequality_cons["ineq_con_ineq6_lower_bound_con"].expr,
-            -m.x1 <= - (-1 * working_model.temp_uncertain_params[1]),
+            -m.x1 <= -(-1 * working_model.temp_uncertain_params[1]),
         )
 
         assertExpressionsEqual(

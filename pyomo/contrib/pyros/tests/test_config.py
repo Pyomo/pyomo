@@ -342,15 +342,14 @@ class TestInputDataStandardizer(unittest.TestCase):
         """
         std1 = InputDataStandardizer(ctype=Param, cdatatype=ParamData)
         self.assertEqual(
-            std1.domain_name(),
-            f"(iterable of) {Param.__name__}, {ParamData.__name__}",
+            std1.domain_name(), f"(iterable of) {Param.__name__}, {ParamData.__name__}"
         )
 
         std2 = InputDataStandardizer(ctype=(Param, Var), cdatatype=(ParamData, VarData))
         self.assertEqual(
             std2.domain_name(),
             f"(iterable of) {Param.__name__}, {Var.__name__}, "
-            f"{ParamData.__name__}, {VarData.__name__}"
+            f"{ParamData.__name__}, {VarData.__name__}",
         )
 
 

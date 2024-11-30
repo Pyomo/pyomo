@@ -1723,9 +1723,7 @@ def replace_vars_with_params(block, var_to_param_map):
     # are always performed in the named expressions first
     for ctype in (Expression, Constraint, Objective):
         _replace_vars_in_component_exprs(
-            block=block,
-            substitution_map=var_to_param_map,
-            ctype=ctype,
+            block=block, substitution_map=var_to_param_map, ctype=ctype
         )
 
 
@@ -1812,8 +1810,7 @@ def setup_working_model(model_data, user_var_partitioning):
             for idx, temp_param in temp_params.items()
         )
         replace_vars_with_params(
-            working_model,
-            var_to_param_map=uncertain_var_to_param_map,
+            working_model, var_to_param_map=uncertain_var_to_param_map
         )
         for var, param in uncertain_var_to_param_map.items():
             config.progress_logger.debug(
