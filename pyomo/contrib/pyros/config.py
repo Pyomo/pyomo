@@ -2,10 +2,8 @@
 Interfaces for managing PyROS solver options.
 """
 
-from collections.abc import Iterable
 import logging
 
-from pyomo.common.collections import ComponentSet
 from pyomo.common.config import (
     ConfigDict,
     ConfigValue,
@@ -14,7 +12,6 @@ from pyomo.common.config import (
     NonNegativeFloat,
     InEnum,
     Path,
-    _domain_name,
 )
 from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.core.base import Var, VarData
@@ -61,56 +58,56 @@ def positive_int_or_minus_one(obj):
 positive_int_or_minus_one.domain_name = "positive int or -1"
 
 
-def mutable_param_validator(param_obj):
+def uncertain_param_validator(uncertain_obj):
     """
-    Check that Param-like object has attribute `mutable=True`.
-
-    Parameters
-    ----------
-    param_obj : Param or ParamData
-        Param-like object of interest.
+    Check that a component/component data object modeling an
+    uncertain parameter in PyROS is appropriately constructed,
+    initialized, and/or mutable, where applicable.
 
     Raises
     ------
     ValueError
-        If lengths of the param object and the accompanying
-        index set do not match. This may occur if some entry
-        of the Param is not initialized.
-    ValueError
-        If attribute `mutable` is of value False.
+        If the length of the component (data) object does not
+        match that of its index set, or the object is an instance
+        of Param/ParamData with attribute `mutable=False`.
     """
-    if len(param_obj) != len(param_obj.index_set()):
+    if len(uncertain_obj) != len(uncertain_obj.index_set()):
         raise ValueError(
-            f"Length of Param component object with "
-            f"name {param_obj.name!r} is {len(param_obj)}, "
+            f"Length of {type(uncertain_obj).__name__} object with "
+            f"name {uncertain_obj.name!r} is {len(uncertain_obj)}, "
             "and does not match that of its index set, "
-            f"which is of length {len(param_obj.index_set())}. "
-            "Check that all entries of the component object "
-            "have been initialized."
+            f"which is of length {len(uncertain_obj.index_set())}. "
+            "Check that the component has been properly constructed, "
+            "and all entries have been initialized. "
         )
-    if not param_obj.mutable:
-        raise ValueError(f"Param object with name {param_obj.name!r} is immutable.")
+    if isinstance(uncertain_obj, (Param, ParamData)) and not uncertain_obj.mutable:
+        raise ValueError(
+            f"{type(uncertain_obj).__name__} object with name {uncertain_obj.name!r} "
+            "is immutable."
+        )
 
 
 class InputDataStandardizer(object):
     """
-    Standardizer for objects castable to a list of Pyomo
-    component types.
+    Domain validator for an object that is castable to
+    a list of Pyomo component data objects.
 
     Parameters
     ----------
-    ctype : type
-        Pyomo component type, such as Component, Var or Param.
-    cdatatype : type
-        Corresponding Pyomo component data type, such as
+    ctype : type or tuple of type
+        Valid Pyomo component type(s),
+        such as Component, Var or Param.
+    cdatatype : type or tuple of type
+        Valid Pyomo component data type(s), such as
         ComponentData, VarData, or ParamData.
     ctype_validator : callable, optional
         Validator function for objects of type `ctype`.
     cdatatype_validator : callable, optional
         Validator function for objects of type `cdatatype`.
     allow_repeats : bool, optional
-        True to allow duplicate component data entries in final
-        list to which argument is cast, False otherwise.
+        True to allow duplicate component data object
+        entries in final list to which argument is cast,
+        False otherwise.
 
     Attributes
     ----------
@@ -151,13 +148,10 @@ class InputDataStandardizer(object):
             True if list can contain repeated entries,
             False otherwise.
 
-        Raises
-        ------
-        TypeError
-            If all entries in the resulting list
-            are not of type ``self.cdatatype``.
-        ValueError
-            If the resulting list contains duplicate entries.
+        Returns
+        -------
+        list of ComponentData
+            Each entry is an instance of ``self.cdatatype``.
         """
         return standardize_component_data(
             obj=obj,
@@ -171,9 +165,12 @@ class InputDataStandardizer(object):
 
     def domain_name(self):
         """Return str briefly describing domain encompassed by self."""
-        cdt = _domain_name(self.cdatatype)
-        ct = _domain_name(self.ctype)
-        return f"{cdt}, {ct}, or Iterable[{cdt}/{ct}]"
+        ctypes_tup = (self.ctype,) if isinstance(self.ctype, type) else self.ctype
+        cdtypes_tup = (
+            (self.cdatatype,) if isinstance(self.cdatatype, type) else self.cdatatype
+        )
+        alltypes_desc = ", ".join(vtype.__name__ for vtype in ctypes_tup + cdtypes_tup)
+        return f"(iterable of) {alltypes_desc}"
 
 
 class SolverNotResolvable(PyomoException):
@@ -508,7 +505,7 @@ def pyros_config():
             domain=InputDataStandardizer(
                 ctype=Param,
                 cdatatype=ParamData,
-                ctype_validator=mutable_param_validator,
+                ctype_validator=uncertain_param_validator,
                 allow_repeats=False,
             ),
             description=(
