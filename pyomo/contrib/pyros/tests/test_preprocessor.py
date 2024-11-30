@@ -27,6 +27,7 @@ from pyomo.core.base import (
     Any,
     Var,
     Constraint,
+    Expression,
     Objective,
     ConcreteModel,
     Param,
@@ -35,7 +36,7 @@ from pyomo.core.base import (
     Block,
 )
 from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
-from pyomo.core.expr import log, sin, exp, RangedExpression
+from pyomo.core.expr import LinearExpression, log, replace_expressions, sin, exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
 from pyomo.contrib.pyros.util import (
@@ -348,9 +349,17 @@ class TestSetupModelData(unittest.TestCase):
         #       Objective and Constraint objects
         m.y3 = Var(domain=RangeSet(0, 1, 0), bounds=(0.2, 0.5))
 
+        # Var to represent an uncertain Param;
+        # bounds will be ignored
+        m.q2var = Var(bounds=(0, None), initialize=3.2)
+
         # fix some variables
         m.z4.fix()
         m.y2.fix()
+
+        # NAMED EXPRESSIONS: mainly to test
+        # Var -> Param substitution for uncertain params
+        m.nexpr = Expression(expr=m.q2var + m.x1)
 
         # EQUALITY CONSTRAINTS
         m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
@@ -362,7 +371,7 @@ class TestSetupModelData(unittest.TestCase):
         m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
         m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
         m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
-        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + log(m.y2))
+        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + log(m.y2) + m.q2var)
 
         # out of scope: deactivated
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
@@ -383,6 +392,10 @@ class TestSetupModelData(unittest.TestCase):
             )
         )
 
+        # inactive objective
+        m.inactive_obj = Objective(expr=1 + m.q2var + m.x1)
+        m.inactive_obj.deactivate()
+
         # set up the var partitioning
         user_var_partitioning = VariablePartitioning(
             first_stage_variables=[m.x1, m.x2],
@@ -400,7 +413,9 @@ class TestSetupModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.uncertain_params = [om.q]
+        config.uncertain_params = [om.q, om.q2var]
+        config.progress_logger = logger
+        config.nominal_uncertain_param_vals = [om.q.value, om.q2var.value]
 
         setup_working_model(model_data, user_var_partitioning)
         working_model = model_data.working_model
@@ -418,6 +433,7 @@ class TestSetupModelData(unittest.TestCase):
 
         # active objective
         self.assertTrue(m.obj.active)
+        self.assertFalse(m.inactive_obj.active)
 
         # user var partitioning
         up = working_model.user_var_partitioning
@@ -432,7 +448,15 @@ class TestSetupModelData(unittest.TestCase):
 
         # uncertain params
         self.assertEqual(
-            ComponentSet(working_model.uncertain_params), ComponentSet([m.q])
+            ComponentSet(working_model.orig_uncertain_params),
+            ComponentSet([m.q, m.q2var])
+        )
+
+        self.assertEqual(list(working_model.temp_uncertain_params.index_set()), [1])
+        temp_uncertain_param = working_model.temp_uncertain_params[1]
+        self.assertEqual(
+            ComponentSet(working_model.uncertain_params),
+            ComponentSet([m.q, temp_uncertain_param])
         )
 
         # ensure original model unchanged
@@ -445,6 +469,68 @@ class TestSetupModelData(unittest.TestCase):
         self.assertFalse(working_model.first_stage.equality_cons)
         self.assertFalse(working_model.second_stage.inequality_cons)
         self.assertFalse(working_model.second_stage.equality_cons)
+
+        # ensure uncertain Param substitutions carried out properly
+        ublk = model_data.working_model.user_model
+        self.assertExpressionsEqual(
+            ublk.nexpr.expr,
+            temp_uncertain_param + ublk.x1,
+        )
+        self.assertExpressionsEqual(
+            ublk.inactive_obj.expr,
+            LinearExpression([1, temp_uncertain_param, m.x1]),
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq4.expr,
+            -ublk.q <= ublk.y2 ** 2 + log(ublk.y2) + temp_uncertain_param,
+        )
+
+        # other component expressions should remain as declared
+        self.assertExpressionsEqual(
+            ublk.eq1.expr,
+            ublk.q * (ublk.z3 + ublk.x2) == 0,
+        )
+        self.assertExpressionsEqual(
+            ublk.eq2.expr,
+            ublk.x1 - ublk.z1 == 0,
+        )
+        self.assertExpressionsEqual(
+            ublk.eq3.expr,
+            ublk.x1 ** 2 + ublk.x2 + ublk.p * ublk.z2 == ublk.p,
+        )
+        self.assertExpressionsEqual(
+            ublk.eq4.expr,
+            ublk.z3 + ublk.y1 == ublk.q,
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq1.expr,
+            RangedExpression((-ublk.p, ublk.x1 + ublk.z1, exp(ublk.q)), False),
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq2.expr,
+            RangedExpression((0, ublk.x1 + ublk.x2, 10), False),
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq3.expr,
+            RangedExpression((2 * ublk.q, 2 * (ublk.z3 + ublk.y1), 2 * ublk.q), False),
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq5.expr,
+            ublk.y3 <= ublk.q,
+        )
+        self.assertExpressionsEqual(
+            ublk.obj.expr,
+            (
+                ublk.p**2
+                + 2 * ublk.p * ublk.q
+                + log(ublk.x1)
+                + 2 * ublk.p * ublk.x1
+                + ublk.q**2 * ublk.x1
+                + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
+                + ublk.z4
+                + ublk.z5
+            )
+        )
 
 
 class TestResolveVarBounds(unittest.TestCase):
