@@ -1664,6 +1664,50 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_infeasible,
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
+        self.assertEqual(
+            results.iterations,
+            0,
+            msg="Number of PyROS iterations not as expected.",
+        )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT not available")
+    def test_coefficient_matching_robust_infeasible_param_only_con(self):
+        """
+        Test robust infeasibility reported due to equality
+        constraint depending only on uncertain params.
+        """
+        m = build_leyffer()
+        m.robust_infeasible_eq_con = Constraint(expr=m.u == 1)
+
+        box_set = BoxSet(bounds=[(0.25, 2)])
+
+        ipopt = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=box_set,
+            local_solver=ipopt,
+            global_solver=ipopt,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+            msg="Robust infeasible problem not identified via coefficient matching.",
+        )
+        self.assertEqual(
+            results.iterations,
+            0,
+            msg="Number of PyROS iterations not as expected.",
+        )
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available.")
     def test_coefficient_matching_nonlinear_expr(self):
