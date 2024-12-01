@@ -1665,9 +1665,7 @@ class RegressionTest(unittest.TestCase):
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
         self.assertEqual(
-            results.iterations,
-            0,
-            msg="Number of PyROS iterations not as expected.",
+            results.iterations, 0, msg="Number of PyROS iterations not as expected."
         )
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available")
@@ -1704,9 +1702,7 @@ class RegressionTest(unittest.TestCase):
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
         self.assertEqual(
-            results.iterations,
-            0,
-            msg="Number of PyROS iterations not as expected.",
+            results.iterations, 0, msg="Number of PyROS iterations not as expected."
         )
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available.")
