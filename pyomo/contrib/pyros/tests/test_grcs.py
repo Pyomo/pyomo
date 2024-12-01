@@ -1760,9 +1760,13 @@ class RegressionTest(unittest.TestCase):
         """
         mdl1 = build_leyffer()
 
-        # clone: use a Var to represent the uncertain parameter
+        # clone: use a Var to represent the uncertain parameter.
+        #        to ensure Var is out of scope of all subproblems
+        #        as viewed by the subsolvers,
+        #        let's make the bounds exclude the nominal value;
+        #        PyROS should ignore these bounds as well
         mdl2 = mdl1.clone()
-        mdl2.uvar = Var(initialize=mdl2.u.value)
+        mdl2.uvar = Var(initialize=mdl2.u.value, bounds=(-1, 0))
         mdl2.con.set_value(
             replace_expressions(
                 expr=mdl2.con.expr, substitution_map={id(mdl2.u): mdl2.uvar}
