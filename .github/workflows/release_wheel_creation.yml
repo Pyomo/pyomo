@@ -29,12 +29,9 @@ jobs:
       matrix:
         os: [ubuntu-22.04, windows-latest, macos-latest]
         arch: [all]
-        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
+        wheel-version: ['cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
 
         include:
-        - wheel-version: 'cp38*'
-          TARGET: 'py38'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
           GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
@@ -96,12 +93,9 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         arch: [all]
-        wheel-version: ['cp38*', 'cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
+        wheel-version: ['cp39*', 'cp310*', 'cp311*', 'cp312*', 'cp313*']
 
         include:
-        - wheel-version: 'cp38*'
-          TARGET: 'py38'
-          GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
         - wheel-version: 'cp39*'
           TARGET: 'py39'
           GLOBAL_OPTIONS: "--with-cython --with-distributable-extensions"
@@ -185,7 +179,7 @@ jobs:
         include:
         - os: ubuntu-latest
           TARGET: generic_tarball
-        python-version: [3.8]
+        python-version: [3.9]
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
