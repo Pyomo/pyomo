@@ -329,23 +329,30 @@ The deterministic Pyomo model for *hydro* is shown below.
 
 .. note::
     Primitive data (Python literals) that have been hard-coded within a
-    deterministic model cannot be later considered uncertain,
-    unless they are first converted to ``Param`` objects within
-    the ``ConcreteModel`` object.
-    Furthermore, any ``Param`` object that is to be later considered
-    uncertain must have the property ``mutable=True``.
+    deterministic model (:class:`~pyomo.core.base.PyomoModel.ConcreteModel`)
+    cannot be later considered uncertain,
+    unless they are first converted to Pyomo
+    :class:`~pyomo.core.base.param.Param` instances declared on the
+    :class:`~pyomo.core.base.PyomoModel.ConcreteModel` object.
+    Furthermore, any :class:`~pyomo.core.base.param.Param`
+    object that is to be later considered uncertain must be instantiated
+    with the argument ``mutable=True``.
 
 .. note::
-    In case modifying the ``mutable`` property inside the deterministic
-    model object itself is not straightforward in your context,
-    you may consider adding the following statement **after**
+    If specifying/modifying the ``mutable`` argument in the
+    :class:`~pyomo.core.base.param.Param` declarations
+    of your deterministic model source code
+    is not straightforward in your context, then
+    you may consider adding **after** the line
     ``import pyomo.environ as pyo`` but **before** defining the model
-    object: ``pyo.Param.DefaultMutable = True``.
-    For all ``Param`` objects declared after this statement,
-    the attribute ``mutable`` is set to ``True`` by default.
-    Hence, non-mutable ``Param`` objects are now declared by
-    explicitly passing the argument ``mutable=False`` to the
-    ``Param`` constructor.
+    object the statement: ``pyo.Param.DefaultMutable = True``.
+    For all :class:`~pyomo.core.base.param.Param`
+    objects declared after this statement,
+    the attribute ``mutable`` is set to True by default.
+    Hence, non-mutable :class:`~pyomo.core.base.param.Param`
+    objects are now declared by explicitly passing the argument
+    ``mutable=False`` to the :class:`~pyomo.core.base.param.Param`
+    constructor.
 
 .. doctest::
 
@@ -428,22 +435,39 @@ The deterministic Pyomo model for *hydro* is shown below.
 Step 2: Define the Uncertainty
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-First, we need to collect into a list those ``Param`` objects of our model
-that represent potentially uncertain parameters.
-For the purposes of our example, we shall assume uncertainty in the model
-parameters ``[m.p[0], m.p[1], m.p[2], m.p[3]]``, for which we can
-conveniently utilize the object ``m.p`` (itself an indexed ``Param`` object).
+We first collect the components of our model that represent the
+uncertain parameters.
+In this example, we assume uncertainty in
+the parameter objects ``m.p[0]``, ``m.p[1]``, ``m.p[2]``, and ``m.p[3]``.
+Since these objects comprise the mutable :class:`~pyomo.core.base.param.Param`
+object ``m.p``, we can conveniently specify:
 
 .. doctest::
 
-  >>> # === Specify which parameters are uncertain ===
-  >>> # We can pass IndexedParams this way to PyROS,
-  >>> #   or as an expanded list per index
-  >>> uncertain_parameters = [m.p]
+  >>> uncertain_params = m.p
+
+Equivalently, we may instead set ``uncertain_params`` to
+either ``[m.p]``, ``[m.p[0], m.p[1], m.p[2], m.p[3]]``, or ``list(m.p.values())``.
+The PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+will upon invocation cast any of these to the list
+``[m.p[0], m.p[1], m.p[2], m.p[3]]``.
 
 .. note::
-    Any ``Param`` object that is to be considered uncertain by PyROS
-    must have the property ``mutable=True``.
+    Any :class:`~pyomo.core.base.param.Param` object that is
+    to be considered uncertain by PyROS must have the property
+    ``mutable=True``.
+
+.. note::
+    PyROS also supports uncertain parameters implemented as
+    :class:`~pyomo.core.base.var.Var` objects declared on the
+    deterministic model.
+    This may be convenient for users transitioning to PyROS from
+    uncertainty quantification workflows.
+    Note that for each :class:`~pyomo.core.base.var.Var` object
+    that represents an uncertain parameter,
+    the domain and bounds specified through the attributes of the
+    :class:`~pyomo.core.base.var.Var` are ignored.
+
 
 PyROS will seek to identify solutions that remain feasible for any
 realization of these parameters included in an uncertainty set.
@@ -555,7 +579,7 @@ correspond to first-stage degrees of freedom.
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
-  ...     uncertain_params=uncertain_parameters,
+  ...     uncertain_params=uncertain_params,
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
@@ -648,7 +672,7 @@ In this example, we select affine decision rules by setting
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
-  ...     uncertain_params=uncertain_parameters,
+  ...     uncertain_params=uncertain_params,
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
@@ -702,7 +726,7 @@ could have been equivalently written as:
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
-  ...     uncertain_params=uncertain_parameters,
+  ...     uncertain_params=uncertain_params,
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
@@ -768,7 +792,7 @@ instance and invoking the PyROS solver:
   ...         model=m,
   ...         first_stage_variables=first_stage_variables,
   ...         second_stage_variables=second_stage_variables,
-  ...         uncertain_params=uncertain_parameters,
+  ...         uncertain_params=uncertain_params,
   ...         uncertainty_set= box_uncertainty_set,
   ...         local_solver=local_solver,
   ...         global_solver=global_solver,
