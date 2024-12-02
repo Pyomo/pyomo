@@ -465,8 +465,8 @@ will upon invocation cast any of these to the list
     uncertainty quantification workflows.
     Note that for each :class:`~pyomo.core.base.var.Var` object
     that represents an uncertain parameter,
-    the domain and bounds specified through the attributes of the
-    :class:`~pyomo.core.base.var.Var` are ignored.
+    PyROS ignores the domain and bounds specified
+    through the attributes of the :class:`~pyomo.core.base.var.Var`.
 
 
 PyROS will seek to identify solutions that remain feasible for any
