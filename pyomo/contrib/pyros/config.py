@@ -14,12 +14,17 @@ from pyomo.common.config import (
     NonNegativeFloat,
     InEnum,
     Path,
+    _domain_name,
 )
 from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.core.base import Var, VarData
 from pyomo.core.base.param import Param, ParamData
 from pyomo.opt import SolverFactory
-from pyomo.contrib.pyros.util import ObjectiveType, setup_pyros_logger
+from pyomo.contrib.pyros.util import (
+    ObjectiveType,
+    setup_pyros_logger,
+    standardize_component_data,
+)
 from pyomo.contrib.pyros.uncertainty_sets import UncertaintySet
 
 
@@ -131,24 +136,6 @@ class InputDataStandardizer(object):
         self.cdatatype_validator = cdatatype_validator
         self.allow_repeats = allow_repeats
 
-    def standardize_ctype_obj(self, obj):
-        """
-        Standardize object of type ``self.ctype`` to list
-        of objects of type ``self.cdatatype``.
-        """
-        if self.ctype_validator is not None:
-            self.ctype_validator(obj)
-        return list(obj.values())
-
-    def standardize_cdatatype_obj(self, obj):
-        """
-        Standardize object of type ``self.cdatatype`` to
-        ``[obj]``.
-        """
-        if self.cdatatype_validator is not None:
-            self.cdatatype_validator(obj)
-        return [obj]
-
     def __call__(self, obj, from_iterable=None, allow_repeats=None):
         """
         Cast object to a flat list of Pyomo component data type
@@ -172,47 +159,21 @@ class InputDataStandardizer(object):
         ValueError
             If the resulting list contains duplicate entries.
         """
-        if allow_repeats is None:
-            allow_repeats = self.allow_repeats
-
-        if isinstance(obj, self.ctype):
-            ans = self.standardize_ctype_obj(obj)
-        elif isinstance(obj, self.cdatatype):
-            ans = self.standardize_cdatatype_obj(obj)
-        elif isinstance(obj, Iterable) and not isinstance(obj, str):
-            ans = []
-            for item in obj:
-                ans.extend(self.__call__(item, from_iterable=obj))
-        else:
-            from_iterable_qual = (
-                f" (entry of iterable {from_iterable})"
-                if from_iterable is not None
-                else ""
-            )
-            raise TypeError(
-                f"Input object {obj!r}{from_iterable_qual} "
-                "is not of valid component type "
-                f"{self.ctype.__name__} or component data type "
-                f"{self.cdatatype.__name__}."
-            )
-
-        # check for duplicates if desired
-        if not allow_repeats and len(ans) != len(ComponentSet(ans)):
-            comp_name_list = [comp.name for comp in ans]
-            raise ValueError(
-                f"Standardized component list {comp_name_list} "
-                f"derived from input {obj} "
-                "contains duplicate entries."
-            )
-
-        return ans
+        return standardize_component_data(
+            obj=obj,
+            valid_ctype=self.ctype,
+            valid_cdatatype=self.cdatatype,
+            ctype_validator=self.ctype_validator,
+            cdatatype_validator=self.cdatatype_validator,
+            allow_repeats=allow_repeats,
+            from_iterable=from_iterable,
+        )
 
     def domain_name(self):
         """Return str briefly describing domain encompassed by self."""
-        return (
-            f"{self.cdatatype.__name__}, {self.ctype.__name__}, "
-            f"or Iterable of {self.cdatatype.__name__}/{self.ctype.__name__}"
-        )
+        cdt = _domain_name(self.cdatatype)
+        ct = _domain_name(self.ctype)
+        return f"{cdt}, {ct}, or Iterable[{cdt}/{ct}]"
 
 
 class SolverNotResolvable(PyomoException):

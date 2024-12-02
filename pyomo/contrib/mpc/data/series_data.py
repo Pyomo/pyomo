@@ -25,18 +25,21 @@ class TimeSeriesData(_DynamicDataBase):
     An object to store time series data associated with time-indexed
     variables.
 
+    Parameters
+    ----------
+    data : dict or ComponentMap
+        Maps variables, names, or CUIDs to lists of values
+
+    time : list
+        Contains the time points corresponding to variable data points.
+
+    time_set : ContinuousSetData
+
+    context : BlockData
     """
 
     def __init__(self, data, time, time_set=None, context=None):
-        """
-        Arguments:
-        ----------
-        data: dict or ComponentMap
-            Maps variables, names, or CUIDs to lists of values
-        time: list
-            Contains the time points corresponding to variable data points.
-
-        """
+        """ """
         _time = list(time)
         if _time != list(sorted(time)):
             raise ValueError("Time points are not sorted in increasing order")
@@ -119,7 +122,7 @@ class TimeSeriesData(_DynamicDataBase):
 
         Returns
         -------
-        TimeSeriesData or ScalarData
+        TimeSeriesData or ~scalar_data.ScalarData
             TimeSeriesData containing only the specified time points
             or dict mapping CUIDs to values at the specified scalar time
             point.

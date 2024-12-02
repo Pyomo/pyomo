@@ -2,7 +2,7 @@
 
 Pyomo MPC is an extension for developing model predictive control simulations
 using Pyomo models. Please see the
-[documentation](https://pyomo.readthedocs.io/en/stable/contributed_packages/mpc/index.html)
+[documentation](https://pyomo.readthedocs.io/en/stable/explanation/analysis/mpc/index.html)
 for more detailed information.
 
 Pyomo MPC helps with, among other things, the following use cases:

@@ -1,6 +1,80 @@
 Pyomo CHANGELOG
 ===============
 
+-------------------------------------------------------------------------------
+Pyomo 6.8.2   (18 Nov 2024)
+-------------------------------------------------------------------------------
+
+- Core
+  - Resolve errors in mapping ScalarVar to numpy ndarray (#3423)
+- Documentation
+  - Update Documentation URLs (#3425)
+- Solver Interfaces
+  - Resolve error in xpress_direct interface retrieving reduced costs (#3422)
+- Testing
+  - Remove (unused) legacy test drivers (#3427)
+
+-------------------------------------------------------------------------------
+Pyomo 6.8.1   (15 Nov 2024)
+-------------------------------------------------------------------------------
+
+"Annie"
+
+SIGNIFICANT CHANGE NOTICE
+
+- This will be the last release to support Python 3.8
+- This is the first release to be tested against Python 3.13
+- Complete reorganization of our online documentation (#3382, #3378)
+
+CHANGELOG
+
+- General
+  - Add a 'Do not delete' Disclaimer to Issues/PR Templates (#3361)
+  - Add URL Status Badge to README (#3373)
+  - Resolve change in `InvalidNumber` handling in writers (#3390)
+  - Update `common.timing` to make tests more deterministic (#3397)
+  - Defer processing `ConfigValue`/`ConfigList` default until first use (#3394)
+  - Improved support for moved/renamed/deprecated modules (#3385)
+  - Fix `ConfigValue` initialization in multithreaded environments (#3405)
+  - `ConfigDict`: prevent recursion on partially-constructed objects (#3409)
+  - Fix bug in `AutoSlots` deepcopy (#3412, #3413)
+  - Update `mpi4py_available` to work around `conda-forge/openmpi` (#3416)
+- Core
+  - Resolve bugs in `create_node_with_local_data` (#3376)
+  - Resolve issue in filter/validate deprecation path (#3368)
+  - Support `Param.pprint()` for non-finite Params (#3387)
+  - Add (parameterized) linear programming dual transformation (#3402)
+- Documentation
+  - Autogenerate API documentation (#3378)
+  - Add Alternative Solutions documentation (#3370)
+  - Reorganize online documentation (#3382)
+  - Fix broken doc URLs (#3398)
+  - Improved autoenum documentation (#3389)
+  - Reduce the number of formats built on readthedocs to avoid timeout (#3404)
+- Solver Interfaces
+  - Remove deprecated `gurobipy` `addConstr` call (#3350)
+  - Update Xpress interfaces to support 9.5 (#3392)
+  - Add support for templatized models in `gurobi_direct_v2` (#3362)
+  - Update test for GAMS mapping 'infeasible or unbounded' to infeasible (#3396)
+  - `XpressDirect.available()`: check there is a valid license (#3400)
+  - Move away from dependence on gurobi.sh (#3384)
+  - Fix error when xpress is imported before `xpress_direct` (#3410)
+- Testing
+  - Move URL Checker to Weekly Job (#3360)
+  - Correct newly discovered typos (#3365, #3399)
+  - Remove Octeract from NEOS solvers list (and other testing fixes) (#3374)
+  - Guard tests against broken Gurobi licenses (#3383)
+  - Remove pin to Gurobi 10.0.3 (#3393)
+  - Add Python 3.13 to Testing Infrastructure (#3401, #3419)
+  - Resolve `timeout()` failures on Windows/py3.13 (#3415)
+- GDP
+  - Fix performance degradation in hull transformation (#3366)
+- Contributed Packages
+  - DoE: Fix bug from using hardcoded value (#3358)
+  - iis: Catch catastrophic solver failure when building MIS (#3403)
+  - PyNumero: Reverse `BlockVector`/`MPIBlockVector` base class order (#3380)
+  - PyNumero: Resolve incompatibilities with NumPy2 (#3408)
+  - PyROS: Overhaul preprocessor subroutine and subproblem objects (#3341)
 
 -------------------------------------------------------------------------------
 Pyomo 6.8.0   (20 Aug 2024)

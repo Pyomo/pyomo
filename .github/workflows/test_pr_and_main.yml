@@ -67,22 +67,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-13, windows-latest]
-        python: [ 3.8, 3.9, '3.10', '3.11', '3.12' ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: [ 3.9, '3.10', '3.11', '3.12', '3.13' ]
         other: [""]
         category: [""]
 
-        # win/3.8 conda builds no longer work due to environment not being able
-        # to resolve. We are skipping it now.
-        exclude:
-        - os: windows-latest
-          python: 3.8
         include:
         - os: ubuntu-latest
           TARGET: linux
           PYENV: pip
 
-        - os: macos-13
+        - os: macos-latest
           TARGET: osx
           PYENV: pip
 
@@ -109,15 +104,7 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.11'
-          other: /singletest
-          category: "-m 'neos or importtest'"
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-latest
-          python: '3.10'
+          python: '3.12'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -126,14 +113,22 @@ jobs:
           PACKAGES: cython
 
         - os: windows-latest
-          python: 3.8
+          python: 3.9
           other: /pip
           skip_doctest: 1
           TARGET: win
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: '3.11'
+          other: /singletest
+          category: "-m 'neos or importtest'"
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
+        - os: ubuntu-latest
+          python: 3.9
           other: /slim
           slim: 1
           skip_doctest: 1
@@ -141,7 +136,16 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.9
+          python: 3.12
+          other: /numpy2
+          slim: 1
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
+
+        - os: ubuntu-latest
+          python: '3.10'
           other: /pyutilib
           TARGET: linux
           PYENV: pip
@@ -243,6 +247,7 @@ jobs:
       if: matrix.TARGET == 'win'
       run: |
         echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
+        choco install pkgconfiglite
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
@@ -307,7 +312,7 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            python -m pip install --cache-dir cache/pip gurobipy==10.0.3 \
+            python -m pip install --cache-dir cache/pip gurobipy \
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
@@ -365,6 +370,10 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+            # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
+            EXCLUDE="qtconsole $EXCLUDE"
+        fi
         EXCLUDE=`echo "$EXCLUDE" | xargs`
         if test -n "$EXCLUDE"; then
             for WORD in $EXCLUDE; do
@@ -380,13 +389,17 @@ jobs:
         done
         echo ""
         echo "*** Install Pyomo dependencies ***"
+        # For windows, cannot use newer setuptools because of APPSI compilation issues
+        if test "${{matrix.TARGET}}" == 'win'; then
+            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
+        fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex 'gurobi=10.0.3' xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
                 # conda can literally take an hour to determine that a
@@ -547,7 +560,7 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $URL = "https://minlp.com/downloads/xecs/baron/current/"
+        $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
             $URL += "baron-win64.exe"
@@ -698,6 +711,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
+        include-hidden-files: true
         path: |
           .coverage
           coverage.xml
@@ -707,7 +721,7 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.8/bare-env
+    name: linux/3.9/bare-env
     needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -715,10 +729,10 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install Pyomo
       run: |
@@ -776,17 +790,17 @@ jobs:
     #  id: pip-cache
     #  with:
     #    path: cache/pip
-    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.9
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above

@@ -66,6 +66,11 @@ def handle_external_function_expression(node: ExternalFunctionExpression, pn: Li
     return node.args
 
 
+def handle_sequence(node: collections.abc.Sequence, pn: List):
+    pn.append((collections.abc.Sequence, len(node)))
+    return list(node)
+
+
 def _generic_expression_handler():
     return handle_expression
 
@@ -79,6 +84,7 @@ handler[NPV_ExternalFunctionExpression] = handle_external_function_expression
 handler[AbsExpression] = handle_unary_expression
 handler[NPV_AbsExpression] = handle_unary_expression
 handler[RangedExpression] = handle_expression
+handler[list] = handle_sequence
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):
@@ -97,19 +103,26 @@ class PrefixVisitor(StreamBasedExpressionVisitor):
             self._result.append(node)
             return tuple(), None
 
-        if node.is_expression_type():
-            if node.is_named_expression_type():
-                return (
-                    handle_named_expression(
-                        node, self._result, self._include_named_exprs
-                    ),
-                    None,
-                )
-            else:
-                return handler[ntype](node, self._result), None
-        else:
-            self._result.append(node)
-            return tuple(), None
+        if ntype in handler:
+            return handler[ntype](node, self._result), None
+
+        if hasattr(node, 'is_expression_type'):
+            if node.is_expression_type():
+                if node.is_named_expression_type():
+                    return (
+                        handle_named_expression(
+                            node, self._result, self._include_named_exprs
+                        ),
+                        None,
+                    )
+                else:
+                    return handler[ntype](node, self._result), None
+        elif hasattr(node, '__len__'):
+            handler[ntype] = handle_sequence
+            return handle_sequence(node, self._result), None
+
+        self._result.append(node)
+        return tuple(), None
 
     def finalizeResult(self, result):
         ans = self._result
@@ -161,10 +174,7 @@ def convert_expression_to_prefix_notation(expr, include_named_exprs=True):
 
     """
     visitor = PrefixVisitor(include_named_exprs=include_named_exprs)
-    if isinstance(expr, Sequence):
-        return expr.__class__(visitor.walk_expression(e) for e in expr)
-    else:
-        return visitor.walk_expression(expr)
+    return visitor.walk_expression(expr)
 
 
 def compare_expressions(expr1, expr2, include_named_exprs=True):
@@ -216,13 +226,14 @@ def assertExpressionsEqual(test, a, b, include_named_exprs=True, places=None):
 
     b: ExpressionBase or native type
 
-    include_named_exprs: bool
-       If True (the default), the comparison expands all named
-       expressions when generating the prefix notation
+    include_named_exprs : bool
+        If True (the default), the comparison expands all named
+        expressions when generating the prefix notation
 
-    places: Number of decimal places required for equality of floating
-            point numbers in the expression. If None (the default), the
-            expressions must be exactly equal.
+    places : int
+        Number of decimal places required for equality of floating
+        point numbers in the expression. If None (the default), the
+        expressions must be exactly equal.
     """
     prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
     prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
@@ -265,10 +276,14 @@ def assertExpressionsStructurallyEqual(
 
     b: ExpressionBase or native type
 
-    include_named_exprs: bool
+    include_named_exprs : bool
        If True (the default), the comparison expands all named
        expressions when generating the prefix notation
 
+    places : int
+        Number of decimal places required for equality of floating
+        point numbers in the expression. If None (the default), the
+        expressions must be exactly equal.
     """
     prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
     prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)

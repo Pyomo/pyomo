@@ -56,7 +56,7 @@ class MindtPy_GOA_Solver(_MindtPyAlgorithm):
             if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
                 raise ValueError(
                     "Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
-                    "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound."
+                    "Please refer to https://pyomo.readthedocs.io/en/stable/explanation/solvers/mindtpy.html#lp-nlp-based-branch-and-bound."
                 )
             if config.threads > 1:
                 config.threads = 1

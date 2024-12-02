@@ -22,13 +22,16 @@
 
 import logging
 import functools
+import importlib
 import inspect
 import itertools
 import sys
 import textwrap
 import types
+import typing
 
 from pyomo.common.errors import DeveloperError
+from pyomo.common.flags import NOTSET, in_testing_environment, building_documentation
 
 _doc_flag = '.. deprecated::'
 
@@ -101,7 +104,7 @@ def _wrap_class(cls, msg, logger, version, remove_in):
     if msg is not None or _doc is None:
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
     if cls.__doc__:
-        _doc = cls.__doc__ + '\n\n' + _doc
+        _doc = inspect.cleandoc(cls.__doc__) + '\n\n' + _doc
     cls.__doc__ = 'DEPRECATED.\n\n' + _doc
 
     if _flagIdx < 0:
@@ -131,7 +134,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
-    _doc = func.__doc__ or ''
+    _doc = inspect.cleandoc(func.__doc__ or '')
     if _doc:
         wrapper.__doc__ += _doc + '\n\n'
     wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
@@ -149,17 +152,6 @@ def _find_calling_frame(module_offset):
         else:
             break
     return calling_frame
-
-
-def in_testing_environment():
-    """Return True if we are currently running in a "testing" environment
-
-    This currently includes if nose, nose2, pytest, or Sphinx are
-    running (imported).
-
-    """
-
-    return any(mod in sys.modules for mod in ('nose', 'nose2', 'pytest', 'sphinx'))
 
 
 def deprecation_warning(
@@ -238,7 +230,11 @@ def deprecation_warning(
     logger.warning(msg)
 
 
-if in_testing_environment():
+# We do not want to cache / suppress repeated warnings when we are
+# testing or when we are building the documentation.  Note that doctest
+# doesn't set the "in_testing" flag until after pyomo.common is
+# imported.
+if in_testing_environment() or building_documentation():
     deprecation_warning.emitted_warnings = None
 else:
     deprecation_warning.emitted_warnings = set()
@@ -292,10 +288,8 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 
 
 def _import_object(name, target, version, remove_in, msg):
-    from importlib import import_module
-
     modname, targetname = target.rsplit('.', 1)
-    _object = getattr(import_module(modname), targetname)
+    _object = getattr(importlib.import_module(modname), targetname)
     if msg is None:
         if inspect.isclass(_object):
             _type = 'class'
@@ -311,14 +305,26 @@ def _import_object(name, target, version, remove_in, msg):
     return _object
 
 
+@deprecated(
+    "relocated_module() has been deprecated.  Please use moved_module()",
+    version='6.8.1',
+)
 def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=None):
     """Provide a deprecation path for moved / renamed modules
 
     Upon import, the old module (that called `relocated_module()`) will
-    be replaced in `sys.modules` by an alias that points directly to the
+    be replaced in :data:`sys.modules` by an alias that points directly to the
     new module.  As a result, the old module should have only two lines
     of executable Python code (the import of `relocated_module` and the
     call to it).
+
+    Note
+    ----
+    This method (which was placed in the old module that is
+    being removed) is deprecated and should be replaced by calls to
+    :func:`moved_module()`, which can be called in any parent scope of
+    the removed module and does not require that the old module continue
+    to exist in the project.
 
     Parameters
     ----------
@@ -345,17 +351,15 @@ def relocated_module(new_name, msg=None, logger=None, version=None, remove_in=No
     -------
     >>> from pyomo.common.deprecation import relocated_module
     >>> relocated_module('pyomo.common.deprecation', version='1.2.3')
-    WARNING: DEPRECATED: The '...' module has been moved to
+    WARNING: DEPRECATED: ... The '...' module has been moved to
         'pyomo.common.deprecation'. Please update your import.
         (deprecated in 1.2.3) ...
 
     """
-    from importlib import import_module
-
-    new_module = import_module(new_name)
+    new_module = importlib.import_module(new_name)
 
     # The relevant module (the one being deprecated) is the one that
-    # holds the function/method that called deprecated_module().  The
+    # holds the function/method that called relocated_module().  The
     # relevant calling frame for the deprecation warning is the first
     # frame in the stack that doesn't look like the importer (i.e., the
     # thing that imported the deprecated module).
@@ -574,3 +578,170 @@ class RenamedClass(type):
             return issubclass(subclass, getattr(cls, '__renamed__new_class__'))
         else:
             return super().__subclasscheck__(subclass)
+
+
+class MovedModuleLoader:
+    """Custom module loader that supports loading modules through alternate names
+
+    This class implements the :class:`importlib.abc.Loader` interface
+    (through duck-typing to avoid a surprisingly costly import of
+    :mod:`importlib.abc`).  Calls to :meth:`create_module()` and
+    :meth:`exec_module()` are delegated to corresponding methods on the
+    loader for the new module name.
+
+    """
+
+    def __init__(self, info):
+        self._info = info
+
+    def create_module(self, spec) -> types.ModuleType:
+        msg = self._info.msg
+        if msg is NOTSET:
+            msg = (
+                f"The '{spec.name}' module has been moved to '{self._info.new_name}'. "
+                'Please update your import.'
+            )
+        if msg is not None:
+            deprecation_warning(
+                msg, self._info.logger, self._info.version, self._info.remove_in
+            )
+        if self._info.new_name in sys.modules:
+            return sys.modules[self._info.new_name]
+        return importlib.import_module(self._info.new_name)
+
+    def exec_module(self, module: types.ModuleType) -> None:
+        pass
+
+
+class MovedModuleFinder:
+    """Custom finder that supports loading a module through an alternative name.
+
+    This class implements the :class:`importlib.abc.Finder` interface
+    (through duck-typing to avoid a surprisingly costly import of
+    :mod:`importlib.abc`).
+
+    Pyomo automatically registers a single instance of this finder with
+    :mod:`importlib` by appending it to the end of the
+    :data:`sys.meta_path` list when this module is imported.
+    Subsequent calls to :func:`moved_module` register the association
+    between the old and new module names with the ``mapping`` class
+    attribute.
+
+    """
+
+    mapping = {}
+    ":class:`dict` that maps (removed) module names to :class:`MovedModuleInfo` objects"
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname not in self.mapping:
+            return None
+
+        info = MovedModuleFinder.mapping[fullname]
+        src_spec = importlib.util.find_spec(info.new_name)
+        return importlib.machinery.ModuleSpec(
+            name=fullname,
+            loader=MovedModuleLoader(info),
+            origin=getattr(src_spec, 'origin', None),
+        )
+
+    def invalidate_caches(self):
+        pass
+
+
+# Insert the MovedModuleFinder at the end of the sys.meta_path.  This
+# way, it has no impact on the performance of importing "normal"
+# (present) modules, and instead is called as a "last-chance" finder
+# before Python would raise an ImportError
+sys.meta_path.append(MovedModuleFinder())
+
+
+MovedModuleInfo = typing.NamedTuple(
+    'MovedModuleInfo',
+    [
+        ('old_name', str),
+        ('new_name', str),
+        ('msg', str),
+        ('logger', str),
+        ('version', str),
+        ('remove_in', str),
+    ],
+)
+
+
+def moved_module(
+    old_name, new_name, msg=NOTSET, logger=None, version=None, remove_in=None
+):
+    """Provide a deprecation path for moved / renamed modules
+
+    This function hooks into the Python :mod:`importlib` to cause any
+    import of the ``old_name`` to instead import and return the module
+    from ``new_name``.  The new module is automatically registered with
+    :data:`sys.modules` under both the old and new names.
+
+    Because :func:`moved_module()` works through the Python
+    :mod:`importlib` system, the old module file can be completely
+    deleted (in contrast to the [deprecated] :func:`relocated_module()`
+    function).  Calls to :func:`moved_module` should be placed in any
+    package above the removed module in the package hierarchy (or in any
+    other location that is guaranteeded to be imported / executed before
+    any attempts at importng the module through its old name.
+
+    Any import of the module through the old name will emit a
+    deprecation warning unless the ``msg`` is ``None`` (see also
+    :func:`deprecated`).
+
+    Parameters
+    ----------
+    old_name: str
+        The original (fully-qualified) module name (that has been removed)
+
+    new_name: str
+        The new (fully-qualified) module name
+
+    msg: str
+        A custom deprecation message.  If None, the deprecation message
+        will be suppressed.  If NOTSET (default), a generic deprecation
+        message will be logged.
+
+    logger: str
+        The logger to use for emitting the warning (default: the calling
+        pyomo package, or "pyomo")
+
+    version: str [required]
+        The version in which the module was renamed or moved.  General
+        practice is to set version to the current development version
+        (from `pyomo --version`) during development and update it to the
+        actual release as part of the release process.
+
+    remove_in: str
+        The version in which the module will be removed from the code.
+
+    Example
+    -------
+    >>> from pyomo.common.deprecation import moved_module
+    >>> moved_module(
+    ...     'pyomo.common.old_deprecation',
+    ...     'pyomo.common.deprecation',
+    ...     version='1.2.3',
+    ... )
+    >>> import pyomo.common.old_deprecation
+    WARNING: DEPRECATED: The 'pyomo.common.old_deprecation' module has
+        been moved to 'pyomo.common.deprecation'. Please update your import.
+        (deprecated in 1.2.3) ...
+    >>> import pyomo.common.deprecation
+    >>> pyomo.common.old_deprecation is pyomo.common.deprecation
+    True
+
+    """
+    if old_name in MovedModuleFinder.mapping:
+        _current = MovedModuleFinder.mapping[old_name].new_name
+        if new_name == _current:
+            return
+        raise RuntimeError(
+            "Duplicate module alias declaration.\n"
+            f"\toriginal: {old_name} -> {_current}\n"
+            f"\tconflict: {old_name} -> {new_name}\n"
+        )
+    MovedModuleFinder.mapping[old_name] = MovedModuleInfo(
+        old_name, new_name, msg, logger, version, remove_in
+    )

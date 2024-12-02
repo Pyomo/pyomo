@@ -234,17 +234,17 @@ setup_kwargs = dict(
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     install_requires=['ply'],
     extras_require={
         # There are certain tests that also require pytest-qt, but because those
@@ -259,7 +259,6 @@ setup_kwargs = dict(
             'sphinxcontrib-napoleon',
             'sphinx-toolbox>=2.16.0',
             'sphinx-jinja2-compat>=0.1.1',
-            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],

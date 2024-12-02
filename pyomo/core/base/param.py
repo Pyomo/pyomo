@@ -157,6 +157,10 @@ class ParamData(ComponentData, NumericValue):
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
     def set_value(self, value, idx=NOTSET):
+        """Set the value of this ParamData object, performing unit conversion
+        and validation as necessary.
+
+        """
         #
         # If this param has units, then we need to check the incoming
         # value and see if it is "units compatible".  We only need to
@@ -894,8 +898,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             dataGen = lambda k, v: [v._value]
         else:
             dataGen = lambda k, v: [v]
+        if self.index_set().isfinite() or self._default_val is Param.NoValue:
+            _len = len(self)
+        else:
+            _len = 'inf'
         headers = [
-            ("Size", len(self)),
+            ("Size", _len),
             ("Index", self._index_set if self.is_indexed() else None),
             ("Domain", self.domain.name),
             ("Default", default),
@@ -988,7 +996,7 @@ class IndexedParam(Param):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
         return _ans
 
     # Because CP supports indirection [the ability to index objects by

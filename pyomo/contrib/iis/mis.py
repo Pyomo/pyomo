@@ -287,7 +287,7 @@ def compute_infeasibility_explanation(
     except:
         results = None
 
-    if pyo.check_optimal_termination(results):
+    if (results is not None) and pyo.check_optimal_termination(results):
         msg += "Could not determine Minimal Intractable System\n"
     else:
         deletion_filter = []

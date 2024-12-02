@@ -30,6 +30,7 @@ from pyomo.core.expr.relational_expr import (
 )
 from pyomo.core.base.expression import Expression
 from . import linear
+from . import util
 from .linear import _merge_dict, to_expression
 
 _CONSTANT = linear.ExprType.CONSTANT
@@ -157,11 +158,12 @@ class QuadraticRepn(object):
                 self.nonlinear += nl
 
 
-def _mul_linear_linear(varOrder, linear1, linear2):
+def _mul_linear_linear(visitor, linear1, linear2):
     quadratic = {}
+    vo = visitor.var_recorder.var_order
     for vid1, coef1 in linear1.items():
         for vid2, coef2 in linear2.items():
-            if varOrder(vid1) < varOrder(vid2):
+            if vo[vid1] < vo[vid2]:
                 key = vid1, vid2
             else:
                 key = vid2, vid1
@@ -176,9 +178,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
     _, arg1 = arg1
     _, arg2 = arg2
     # Quadratic first, because we will update linear in a minute
-    arg1.quadratic = _mul_linear_linear(
-        visitor.var_order.__getitem__, arg1.linear, arg2.linear
-    )
+    arg1.quadratic = _mul_linear_linear(visitor, arg1.linear, arg2.linear)
     # Linear second, as this relies on knowing the original constants
     if not arg2.constant:
         arg1.linear = {}
@@ -234,7 +234,7 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
                 ans.quadratic = {k: c * coef for k, coef in x2.quadratic.items()}
     # [BB]
     if x1.linear and x2.linear:
-        quad = _mul_linear_linear(visitor.var_order.__getitem__, x1.linear, x2.linear)
+        quad = _mul_linear_linear(visitor, x1.linear, x2.linear)
         if ans.quadratic:
             _merge_dict(ans.quadratic, 1, quad)
         else:
@@ -331,6 +331,6 @@ def define_exit_node_handlers(_exit_node_handlers=None):
 class QuadraticRepnVisitor(linear.LinearRepnVisitor):
     Result = QuadraticRepn
     exit_node_dispatcher = linear.ExitNodeDispatcher(
-        linear._initialize_exit_node_dispatcher(define_exit_node_handlers())
+        util.initialize_exit_node_dispatcher(define_exit_node_handlers())
     )
     max_exponential_expansion = 2

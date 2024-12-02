@@ -116,3 +116,9 @@ def obj(m):
 @model.Constraint(model.GENERATORS)
 def nontrivial(m, g):
     return sum(m.Power[g, t] for t in m.TIME) >= len(m.TIME) / 2 * m.MinPower[g]
+
+
+@model.ConstraintList()
+def nondegenerate(m):
+    for i, g in enumerate(m.GENERATORS):
+        yield m.Power[g, i + 1] == 0
