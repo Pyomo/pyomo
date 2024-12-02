@@ -75,12 +75,6 @@ jobs:
         other: [""]
         category: [""]
 
-        # win/3.8 conda builds no longer work due to environment not being able
-        # to resolve. We are skipping it now.
-        exclude:
-        - os: windows-latest
-          python: 3.8
-
         include:
         - os: ubuntu-latest
           python: '3.13'
@@ -88,7 +82,7 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
-          python: '3.10'
+          python: '3.11'
           TARGET: osx
           PYENV: pip
 
@@ -125,7 +119,7 @@ jobs:
           PACKAGES: cython
 
         - os: windows-latest
-          python: 3.8
+          python: '3.10'
           other: /pip
           skip_doctest: 1
           TARGET: win
@@ -693,17 +687,17 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.8/bare-env
+    name: linux/3.9/bare-env
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install Pyomo
       run: |
@@ -761,17 +755,17 @@ jobs:
     #  id: pip-cache
     #  with:
     #    path: cache/pip
-    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.9
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
