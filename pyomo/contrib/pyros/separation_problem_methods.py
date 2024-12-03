@@ -423,6 +423,7 @@ def get_worst_discrete_separation_solution(
     # violation of specified second-stage inequality
     # constraint by separation
     # problem solutions for all scenarios
+    # scenarios with subsolver errors are replaced with nan
     violations_of_ss_ineq_con = [
         (
             solve_call_res.scaled_violations[ss_ineq_con]
@@ -468,7 +469,7 @@ def get_worst_discrete_separation_solution(
         results_list = []
 
     # check if there were any failed scenarios for subsolver_error
-    # this only needs to be returned once to trigger subsolver error efficiency
+    # this only needs to be returned once for the subsolver error efficiency
     if any(np.isnan(violations_of_ss_ineq_con)) and is_optimized_ss_ineq_con:
         subsolver_error_flag = True
     else:
@@ -661,6 +662,9 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
                     solved_globally=solve_globally,
                     worst_case_ss_ineq_con=None,
                 )
+
+            # provide message that PyROS will attempt to find a violation and move
+            # to the next iteration even after subsolver error
             if solve_call_results.subsolver_error:
                 config.progress_logger.warning(
                     "PyROS is attempting to recover and will continue to "

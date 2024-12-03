@@ -277,8 +277,8 @@ class DiscreteSeparationSolveCallResults:
     @property
     def subsolver_error(self):
         """
-        bool : True if there is a subsolver error status for at least
-        one of the the ``SeparationSolveCallResults`` objects listed
+        bool : True if there is a subsolver error status for all
+        of the the ``SeparationSolveCallResults`` objects listed
         in `self`, False otherwise.
         """
         return all(res.subsolver_error for res in self.solver_call_results.values())
@@ -430,7 +430,7 @@ class SeparationLoopResults:
         """
         bool : Return True if subsolver error reported for
         at least one ``SeparationSolveCallResults`` stored in
-        `self`, False otherwise.
+        `self` and no violations are found, False otherwise.
         """
         return (
             any(

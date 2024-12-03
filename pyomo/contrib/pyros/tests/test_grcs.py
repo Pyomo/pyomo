@@ -3260,6 +3260,7 @@ class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
         local_subsolver = SubsolverErrorSolver(
             sub_solver=SolverFactory('ipopt'), all_fail=False
         )
@@ -3319,6 +3320,7 @@ class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
         local_subsolver = SubsolverErrorSolver(
             sub_solver=SolverFactory('ipopt'), all_fail=False
         )
