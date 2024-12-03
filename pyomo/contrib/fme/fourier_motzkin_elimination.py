@@ -756,7 +756,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
 
         # clean up
         m.del_component(obj)
-        del obj
         for obj in active_objs:
             obj.activate()
         # undo relax integrality
