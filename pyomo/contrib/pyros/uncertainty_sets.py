@@ -2376,11 +2376,11 @@ class EllipsoidalSet(UncertaintySet):
     shape_matrix : (N, N) array-like
         A symmetric positive definite matrix characterizing
         the shape and orientation of the ellipsoid.
-    scale : numeric type or None, optional
+    scale : numeric type, optional
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
-    gaussian_conf_lvl : numeric type or None, optional
+    gaussian_conf_lvl : numeric type, optional
         (Fractional) confidence level of the multivariate
         normal distribution with mean `center` and covariance
         matrix `shape_matrix`.
