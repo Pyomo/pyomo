@@ -68,15 +68,9 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.8, 3.9, '3.10', '3.11', '3.12', '3.13' ]
+        python: [ 3.9, '3.10', '3.11', '3.12', '3.13' ]
         other: [""]
         category: [""]
-
-        # win/3.8 conda builds no longer work due to environment not being able
-        # to resolve. We are skipping it now.
-        exclude:
-        - os: windows-latest
-          python: 3.8
 
         include:
         - os: ubuntu-latest
@@ -119,7 +113,7 @@ jobs:
           PACKAGES: cython
 
         - os: windows-latest
-          python: 3.8
+          python: 3.9
           other: /pip
           skip_doctest: 1
           TARGET: win
@@ -134,7 +128,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: 3.9
           other: /slim
           slim: 1
           skip_doctest: 1
@@ -151,7 +145,7 @@ jobs:
           PACKAGES: "gurobipy dill numpy>2.0 scipy networkx"
 
         - os: ubuntu-latest
-          python: 3.9
+          python: '3.10'
           other: /pyutilib
           TARGET: linux
           PYENV: pip
@@ -727,7 +721,7 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.8/bare-env
+    name: linux/3.9/bare-env
     needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -735,10 +729,10 @@ jobs:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install Pyomo
       run: |
@@ -796,17 +790,17 @@ jobs:
     #  id: pip-cache
     #  with:
     #    path: cache/pip
-    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
+    #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.9
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Set up Python 3.8
+    - name: Set up Python 3.9
       uses: actions/setup-python@v5
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Install Python Packages (pip)
       shell: bash # DO NOT REMOVE: see note above
