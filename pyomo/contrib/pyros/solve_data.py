@@ -281,7 +281,7 @@ class DiscreteSeparationSolveCallResults:
         one of the the ``SeparationSolveCallResults`` objects listed
         in `self`, False otherwise.
         """
-        return any(res.subsolver_error for res in self.solver_call_results.values())
+        return all(res.subsolver_error for res in self.solver_call_results.values())
 
 
 class SeparationLoopResults:
@@ -432,9 +432,12 @@ class SeparationLoopResults:
         at least one ``SeparationSolveCallResults`` stored in
         `self`, False otherwise.
         """
-        return any(
-            solver_call_res.subsolver_error
-            for solver_call_res in self.solver_call_results.values()
+        return (
+            any(
+                solver_call_res.subsolver_error
+                for solver_call_res in self.solver_call_results.values()
+            )
+            and not self.found_violation
         )
 
     @property
