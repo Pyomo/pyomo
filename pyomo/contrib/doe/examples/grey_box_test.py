@@ -286,7 +286,7 @@ class LogDetModel(ExternalGreyBoxModel):
             return coo_matrix((data, (row, col)), shape=(1, self.num_input))
         
 
-import idaes
+# import idaes
 
 m = pyo.ConcreteModel()
 m.params = pyo.Set(initialize=[0, 1])
