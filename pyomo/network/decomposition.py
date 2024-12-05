@@ -150,7 +150,7 @@ class SequentialDecomposition(FOQUSGraph):
             Keyword options to pass to solve method.
 
             `default={}`
-        
+
         skip_fixing_inputs: `bool`
             Skip fixing all the variables on the tear ports. Require the user
             to fix the port variables so that 0 degrees of freedom are
