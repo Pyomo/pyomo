@@ -252,7 +252,7 @@ class TestDependencies(unittest.TestCase):
         self.assertEqual(ans, [True, False])
 
     def test_callback_on_import(self):
-        sys.modules.pop('pyomo.common.tests.moved', None)
+        sys.modules.pop('pyomo.common.tests.mod', None)
         ans = []
 
         class ImpFinder(object):
@@ -276,18 +276,18 @@ class TestDependencies(unittest.TestCase):
             ans.append(len(ans))
 
         attempt_import(
-            'pyomo.common.tests.moved', defer_import=True, callback=_callback
+            'pyomo.common.tests.mod', defer_import=True, callback=_callback
         )
         self.assertEqual(ans, [])
-        import pyomo.common.tests.moved as m
+        import pyomo.common.tests.mod as m
 
         self.assertEqual(ans, [0])
-        self.assertEqual(m.Bar.data, 42)
+        self.assertEqual(m.Foo.data, 42)
 
-        sys.modules.pop('pyomo.common.tests.moved', None)
+        sys.modules.pop('pyomo.common.tests.mod', None)
         del m
         attempt_import(
-            'pyomo.common.tests.moved', defer_import=True, callback=_callback
+            'pyomo.common.tests.mod', defer_import=True, callback=_callback
         )
 
         try:
@@ -297,25 +297,25 @@ class TestDependencies(unittest.TestCase):
             sys.meta_path.insert(
                 sys.meta_path.index(_DeferredImportCallbackFinder) + 1, _finder
             )
-            import pyomo.common.tests.moved as m
+            import pyomo.common.tests.mod as m
 
             self.assertEqual(ans, [0, 'pass', 2])
-            self.assertEqual(m.Bar.data, 42)
+            self.assertEqual(m.Foo.data, 42)
 
-            sys.modules.pop('pyomo.common.tests.moved', None)
+            sys.modules.pop('pyomo.common.tests.mod', None)
             del m
             attempt_import(
-                'pyomo.common.tests.moved', defer_import=True, callback=_callback
+                'pyomo.common.tests.mod', defer_import=True, callback=_callback
             )
 
             # Test deferring to an imp-style finder that DOES match the
             # target module name
-            _finder.match = 'pyomo.common.tests.moved'
+            _finder.match = 'pyomo.common.tests.mod'
 
-            import pyomo.common.tests.moved as m
+            import pyomo.common.tests.mod as m
 
             self.assertEqual(ans, [0, 'pass', 2, 'load', 4])
-            self.assertEqual(m.Bar.data, 42)
+            self.assertEqual(m.Foo.data, 42)
         finally:
             sys.meta_path.remove(_finder)
 
