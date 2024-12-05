@@ -150,6 +150,13 @@ class SequentialDecomposition(FOQUSGraph):
             Keyword options to pass to solve method.
 
             `default={}`
+        
+        skip_fixing_inputs: `bool`
+            Skip fixing all the variables on the tear ports. Require the user
+            to fix the port variables so that 0 degrees of freedom are
+            maintained.
+
+            `default=False`
     """
 
     def __init__(self, **kwds):
@@ -176,6 +183,7 @@ class SequentialDecomposition(FOQUSGraph):
         options["tear_solver"] = "cplex"
         options["tear_solver_io"] = None
         options["tear_solver_options"] = {}
+        options["skip_fixing_inputs"] = False
 
         options.update(kwds)
 
@@ -390,6 +398,7 @@ class SequentialDecomposition(FOQUSGraph):
         arc_map = self.arc_to_edge(G)
         guesses = self.options["guesses"]
         default = self.options["default_guess"]
+        skip_fixing_inputs = self.options["skip_fixing_inputs"]
         for lev in order:
             for unit in lev:
                 if unit not in fixed_inputs:
@@ -402,7 +411,8 @@ class SequentialDecomposition(FOQUSGraph):
                         continue
                     if use_guesses and port in guesses:
                         self.load_guesses(guesses, port, fixed_ins)
-                    self.load_values(port, default, fixed_ins, use_guesses)
+                    if not skip_fixing_inputs:
+                        self.load_values(port, default, fixed_ins, use_guesses)
 
                 function(unit)
 
