@@ -275,9 +275,7 @@ class TestDependencies(unittest.TestCase):
         def _callback(module, avail):
             ans.append(len(ans))
 
-        attempt_import(
-            'pyomo.common.tests.mod', defer_import=True, callback=_callback
-        )
+        attempt_import('pyomo.common.tests.mod', defer_import=True, callback=_callback)
         self.assertEqual(ans, [])
         import pyomo.common.tests.mod as m
 
@@ -286,9 +284,7 @@ class TestDependencies(unittest.TestCase):
 
         sys.modules.pop('pyomo.common.tests.mod', None)
         del m
-        attempt_import(
-            'pyomo.common.tests.mod', defer_import=True, callback=_callback
-        )
+        attempt_import('pyomo.common.tests.mod', defer_import=True, callback=_callback)
 
         try:
             # Test deferring to an imp-style finder that does not match
