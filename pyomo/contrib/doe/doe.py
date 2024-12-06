@@ -45,6 +45,10 @@ from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
+from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
+
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverStatus
@@ -70,6 +74,7 @@ class DesignOfExperiments:
         fd_formula="central",
         step=1e-3,
         objective_option="determinant",
+        use_grey_box_objective=False,
         scale_constant_value=1.0,
         scale_nominal_param_value=False,
         prior_FIM=None,
@@ -106,6 +111,9 @@ class DesignOfExperiments:
             String representation of the objective option. Current available options are:
             ``determinant`` (for determinant, or D-optimality) and ``trace`` (for trace or
             A-optimality)
+        use_grey_box_objective:
+            Boolean of whether or not to use the grey-box version of the objective function.
+            True to use grey box, False to use standard. Default: False (do not use grey box)
         scale_constant_value:
             Constant scaling for the sensitivity matrix. Every element will be multiplied by this
             scaling factor.
@@ -164,6 +172,7 @@ class DesignOfExperiments:
 
         # Set the objective type and scaling options:
         self.objective_option = ObjectiveLib(objective_option)
+        self.use_grey_box = use_grey_box_objective
 
         self.scale_constant_value = scale_constant_value
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -190,6 +199,13 @@ class DesignOfExperiments:
             self.solver = solver
 
         self.tee = tee
+
+        # ToDo: allow user to supply grey box solver
+        if self.use_grey_box:
+            solver = pyo.SolverFactory("cyipopt")
+            solver.config.options['hessian_approximation'] = 'limited-memory'
+
+            self.solver = solver
 
         # Set get_labeled_model_args as an empty dict if no arguments are passed
         if get_labeled_model_args is None:
@@ -256,7 +272,35 @@ class DesignOfExperiments:
             self.create_doe_model(model=model)
 
         # Add the objective function to the model
-        self.create_objective_function(model=model)
+        if self.use_grey_box:
+            # Add external grey box block to a block named ``obj_cons`` to
+            # resuse material for initializing the objective-free square model
+            # ToDo: Make this naming convention robust
+            model.obj_cons = pyo.Block()
+            # ToDo: Add functionality for grey box objectives
+            grey_box_FIM = FIMExternalGreyBox(doe_object=self, objective_option=self.objective_option, logger_level=self.logger.getEffectiveLevel())
+            model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(external_model=grey_box_FIM)
+
+            # Adding constraints to for all grey box input values to equate to fim values
+            def FIM_egb_cons(m, p1, p2):
+                """
+                
+                m: Pyomo model
+                p1: parameter 1
+                p2: parameter 2
+                
+                """
+                return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
+            model.obj_cons.FIM_equalities = pyo.Constraint(model.parameter_names, model.parameter_names, rule=FIM_egb_cons)
+            model.obj_cons.pprint()
+
+            # ToDo: Add naming convention to adjust name of objective output
+            # to conincide with the ObjectiveLib type
+            # Proposal --> Use alphabetic opt e.g., ``A-opt``, ``D-opt``, etc.
+            # Add objective function from FIM grey box calculation
+            model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log_det"])  # Must change hardcoding
+        else:
+            self.create_objective_function(model=model)
 
         # Track time required to build the DoE model
         build_time = sp_timer.toc(msg=None)

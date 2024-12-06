@@ -26,6 +26,7 @@
 #  ___________________________________________________________________________
 
 from enum import Enum
+import itertools
 import logging
 from scipy.sparse import coo_matrix
 
@@ -33,9 +34,7 @@ from pyomo.common.dependencies import (
     numpy as np,
 )
 
-from pyomo.contrib.doe import ObjectiveLib
-
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock, ExternalGreyBoxModel
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 
 import pyomo.environ as pyo
 
@@ -44,7 +43,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     def __init__(
             self,
             doe_object,
-            obj_option="determinant",
+            objective_option="determinant",
             logger_level=None,
     ):
         """
@@ -70,10 +69,16 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         if doe_object is None:
             raise ValueError("DoE Object must be provided to build external grey box of the FIM.")
 
+        self.doe_object = doe_object
+
+        # Grab parameter list from the doe_object model
+        self._param_names = [i for i in self.doe_object.model.parameter_names]
+        
         # Check if the doe_object has model components that are required
         # TODO: add checks for the model --> doe_object.model needs FIM; all other checks should
         #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
-        self.obj_option = ObjectiveLib(obj_option)
+        self.objective_option = objective_option.name  # Add failsafe to make sure this is ObjectiveLib object?
+        # Will anyone ever call this without calling DoE? --> intended to be no; but maybe more utility?
 
         # Create logger for FIM egb object
         self.logger = logging.getLogger(__name__)
@@ -86,50 +91,58 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
     
     def input_names(self):
-        # ToDo: add input names from the FIM coming in from
-        # Question --> Should we avoid fragility and pass model components?
-        #              Then we can grab names from the model components?
-        #              Or is the fragility user-specified strings?
-        return
+        # Cartesian product gives us matrix indicies flattened in row-first format
+        input_names_list = list(itertools.product(self._param_names, self._param_names))
+        return input_names_list
 
     def equality_constraint_names(self):
         # ToDo: Are there any objectives that will have constraints?
-        return
+        return []
 
     def output_names(self):
         # ToDo: add output name for the variable. This may have to be
         # an input from the user. Or it could depend on the usage of
         # the ObjectiveLib Enum object, which should have an associated
         # name for the objective function at all times.
-        return
+        return ["log_det", ]  # Change for hard-coded D-optimality
 
     def set_input_values(self, input_values):
-        # ToDo: update this to add checks and update if necessary
-        # Assert that the names and inputs values have the same
-        # length here.
-        self._input_values = list(input_values)
+        # Set initial values to be flattened initial FIM (aligns with input names)
+        self._input_values = list(self.doe_object.fim_initial.flatten())
 
     def evaluate_equality_constraints(self):
         # ToDo: are there any objectives that will have constraints?
-        return
+        return None
 
     def evaluate_outputs(self):
         # ToDo: Take the objective function option and perform the
         # mathematical action to get the objective.
-        return np.asarray([], dtype=np.float64)
+
+        # CALCULATE THE INVERSE VALUE
+        # CHANGE HARD-CODED LOG DET
+        M = np.asarray(self._input_values, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
+
+        (sign, logdet) = np.linalg.slogdet(M)
+        
+        return np.asarray([logdet, ], dtype=np.float64)
 
     def finalize_block_construction(self, pyomo_block):
         # Set bounds on the inputs/outputs
+        # Set initial values of the inputs/outputs
         # This will depend on the objective used
-        
-        # No return statement
-        pass
+
+        # Initialize grey box FIM values
+        for ind, val in enumerate(self.input_names()):
+            pyomo_block.inputs[val] = self.doe_object.fim_initial.flatten()[ind]
+
+        # Initialize log_determinant value
+        pyomo_block.outputs["log_det"] = 0  # Remember to change hardcoded name
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
 
         # Returns coo_matrix of the correct shape
-        return
+        return None
         
     def evaluate_jacobian_outputs(self):
         # ToDo: compute the jacobian of the objective function with
@@ -138,9 +151,22 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         #
         # ToDo: there will be significant bookkeeping for more
         # complicated objective functions and the Hessian
+        M = np.asarray(self._input_values, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
+        
+        Minv = np.linalg.pinv(M)
+
+        # Since M is symmetric, the derivative of logdet(M) w.r.t M is
+        # 2*inverse(M) - diagonal(inverse(M)) ADD SOURCE
+        jac_M = 2*Minv - np.diagonal(Minv)
+
+        # Rows are the integer division by number of columns
+        M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]
+
+        # Columns are the remaindar (mod) by number of rows
+        M_cols = np.arange(len(jac_M.flatten())) % jac_M.shape[0]
 
         # Returns coo_matrix of the correct shape
-        return
+        return coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=jac_M.shape())
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
@@ -157,7 +183,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # ToDo: Do any objectives require constraints?
 
         # Returns coo_matrix of the correct shape
-        return
+        return None
 
     def evaluate_hessian_outputs(self):
         # ToDo: Add for objectives where we can define the Hessian
@@ -166,4 +192,4 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # operations. Just need mapping that works well and we are good.
         
         # Returns coo_matrix of the correct shape
-        return
+        return None
