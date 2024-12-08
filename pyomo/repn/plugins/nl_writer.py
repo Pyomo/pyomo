@@ -85,6 +85,14 @@ ScalingFactors = namedtuple(
 )
 
 
+class NLWriterEmptyModelError(ValueError):
+    """
+    A custom exception to allow handling of a
+    model with no free variables.
+    """
+    pass
+
+
 # TODO: make a proper base class
 class NLWriterInfo(object):
     """Return type for NLWriter.write()
@@ -320,7 +328,7 @@ class NLWriter(object):
             if config.symbolic_solver_labels:
                 os.remove(row_fname)
                 os.remove(col_fname)
-            raise ValueError(
+            raise NLWriterEmptyModelError(
                 "No variables appear in the Pyomo model constraints or"
                 " objective. This is not supported by the NL file interface"
             )
