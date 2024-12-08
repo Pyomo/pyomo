@@ -90,6 +90,7 @@ class NLWriterEmptyModelError(ValueError):
     A custom exception to allow handling of a
     model with no free variables.
     """
+
     pass
 
 
