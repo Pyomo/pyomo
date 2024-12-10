@@ -9,15 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Tests driven by test_mip.yml
-#
 
-import os
-from os.path import abspath, dirname
+# This is a simple module used as part of testing import callbacks
 
-currdir = dirname(abspath(__file__)) + os.sep
 
-import pyomo.common.unittest as unittest
-
-if __name__ == "__main__":
-    unittest.main()
+class Foo(object):
+    data = 42

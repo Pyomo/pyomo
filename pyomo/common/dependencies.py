@@ -11,6 +11,7 @@
 
 import inspect
 import importlib
+import importlib.util
 import logging
 import sys
 import warnings
@@ -520,13 +521,22 @@ class DeferredImportCallbackFinder:
 
         spec = None
         # Continue looking for the finder that would have originally
-        # loaded the deferred import module b starting at the next
+        # loaded the deferred import module by starting at the next
         # finder in sys.meta_path (this way, we are agnostic to where
         # the module is coming from: file system, registry, etc.)
         for finder in sys.meta_path[sys.meta_path.index(self) + 1 :]:
-            spec = finder.find_spec(fullname, path, target)
-            if spec is not None:
-                break
+            if hasattr(finder, 'find_spec'):
+                # Support standard importlib MetaPathFinders
+                spec = finder.find_spec(fullname, path, target)
+                if spec is not None:
+                    break
+            else:
+                # Support for imp finders/loaders (deprecated, but
+                # supported through Python 3.11)
+                loader = finder.find_module(fullname, path)
+                if loader is not None:
+                    spec = importlib.util.spec_from_loader(fullname, loader)
+                    break
         else:
             # Module not found.  Returning None will proceed to the next
             # finder (which will eventually raise a ModuleNotFoundError)
@@ -998,6 +1008,12 @@ def _finalize_matplotlib(module, available):
     import matplotlib.backends
 
 
+def _finalize_mpi4py(module, available):
+    if not available:
+        return
+    import mpi4py.MPI
+
+
 def _finalize_numpy(np, available):
     if not available:
         return
@@ -1081,7 +1097,9 @@ with declare_modules_as_importable(globals()):
 
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
-    mpi4py, mpi4py_available = attempt_import('mpi4py')
+    mpi4py, mpi4py_available = attempt_import(
+        'mpi4py', deferred_submodules=['MPI'], callback=_finalize_mpi4py
+    )
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')

@@ -30,6 +30,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import TerminationCondition
+from pyomo.util.config_domains import ComponentDataSet
 
 import logging
 
@@ -55,23 +56,6 @@ def _check_var_bounds_filter(constraint):
     if value(min_lhs) >= constraint['lower']:
         return False  # constraint implied by var bounds
     return True
-
-
-def vars_to_eliminate_list(x):
-    if isinstance(x, (Var, VarData)):
-        if not x.is_indexed():
-            return ComponentSet([x])
-        ans = ComponentSet()
-        for j in x.index_set():
-            ans.add(x[j])
-        return ans
-    elif hasattr(x, '__iter__'):
-        ans = ComponentSet()
-        for i in x:
-            ans.update(vars_to_eliminate_list(i))
-        return ans
-    else:
-        raise ValueError("Expected Var or list of Vars.\n\tReceived %s" % type(x))
 
 
 def gcd(a, b):
@@ -111,7 +95,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         'vars_to_eliminate',
         ConfigValue(
             default=None,
-            domain=vars_to_eliminate_list,
+            domain=ComponentDataSet(Var),
             description="Continuous variable or list of continuous variables to "
             "project out of the model",
             doc="""

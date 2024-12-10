@@ -98,6 +98,14 @@ class TestKestrel(unittest.TestCase):
         finally:
             pyomo.neos.kestrel.NEOS.host = orig_host
 
+    def test_check_all_ampl_solvers(self):
+        kestrel = kestrelAMPL()
+        solvers = kestrel.getAvailableSolvers()
+        for solver in solvers:
+            name = solver.lower().replace('-', '')
+            if not hasattr(RunAllNEOSSolvers, 'test_' + name):
+                self.fail(f"RunAllNEOSSolvers missing test for '{solver}'")
+
 
 class RunAllNEOSSolvers(object):
     def test_bonmin(self):
@@ -165,10 +173,10 @@ class RunAllNEOSSolvers(object):
         else:
             self._run('ooqp')
 
-    # The simple tests aren't complementarity
-    # problems
-    # def test_path(self):
-    #    self._run('path')
+    def test_path(self):
+        # The simple tests aren't complementarity
+        # problems
+        self.skipTest("The simple NEOS test is not a complementarity problem")
 
     def test_snopt(self):
         self._run('snopt')
