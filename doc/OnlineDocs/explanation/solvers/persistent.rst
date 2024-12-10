@@ -8,7 +8,7 @@ notify the solver of incremental changes to a Pyomo model. The
 persistent solver interfaces create and store model instances from the
 Python API for the corresponding solver. For example, the
 :class:`GurobiPersistent<pyomo.solvers.plugins.solvers.gurobi_persistent.GurobiPersistent>`
-class maintaints a pointer to a gurobipy Model object. Thus, we can
+class maintains a pointer to a gurobipy Model object. Thus, we can
 make small changes to the model and notify the solver rather than
 recreating the entire model using the solver Python API (or rewriting
 an entire model file - e.g., an lp file) every time the model is
