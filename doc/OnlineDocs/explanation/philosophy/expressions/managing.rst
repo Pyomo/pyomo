@@ -202,7 +202,7 @@ callbacks, which are documented in the class documentation.
 Detailed documentation of the APIs for these methods is provided
 with the class documentation for these visitors.
 
-StreamBAsedExpressionVisitor Example
+StreamBasedExpressionVisitor Example
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this example, we describe an visitor class that counts the number
