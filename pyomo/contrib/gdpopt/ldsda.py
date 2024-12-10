@@ -395,8 +395,10 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         self.best_direction = None  # reset best direction
         fmin = float('inf')  # Initialize the best objective value
         best_dist = 0  # Initialize the best distance
-        abs_tol = config.integer_tolerance  # Use integer_tolerance for objective comparison
-        
+        abs_tol = (
+            config.integer_tolerance
+        )  # Use integer_tolerance for objective comparison
+
         # Loop through all possible directions (neighbors)
         for direction in self.directions:
             # Generate a neighbor point by applying the direction to the current point
@@ -415,7 +417,9 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                     # --- Tiebreaker Logic ---
                     if abs(fmin - primal_bound) < abs_tol:
                         # Calculate the Euclidean distance from the current point
-                        dist = sum((x - y) ** 2 for x, y in zip(neighbor, self.current_point))
+                        dist = sum(
+                            (x - y) ** 2 for x, y in zip(neighbor, self.current_point)
+                        )
 
                         # Update the best neighbor if this one is farther away
                         if dist > best_dist:
@@ -427,7 +431,9 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                         fmin = primal_bound  # Update the best objective value
                         best_neighbor = neighbor  # Update the best neighbor
                         self.best_direction = direction  # Update the best direction
-                        best_dist = sum((x - y) ** 2 for x, y in zip(neighbor, self.current_point))
+                        best_dist = sum(
+                            (x - y) ** 2 for x, y in zip(neighbor, self.current_point)
+                        )
                     # --- End of Tiebreaker Logic ---
 
         # Move to the best neighbor if an improvement was found
