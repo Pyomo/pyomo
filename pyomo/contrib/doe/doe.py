@@ -82,6 +82,7 @@ class DesignOfExperiments:
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=None,
+        grey_box_solver=None,
         tee=False,
         get_labeled_model_args=None,
         logger_level=logging.WARNING,
@@ -193,7 +194,8 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             solver = pyo.SolverFactory("ipopt")
-            solver.options["linear_solver"] = "ma57"
+            # solver.options["linear_solver"] = "ma57"
+            solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
             self.solver = solver
@@ -201,11 +203,15 @@ class DesignOfExperiments:
         self.tee = tee
 
         # ToDo: allow user to supply grey box solver
-        if self.use_grey_box:
-            solver = pyo.SolverFactory("cyipopt")
-            solver.config.options['hessian_approximation'] = 'limited-memory'
+        if grey_box_solver:
+            self.grey_box_solver = grey_box_solver
+        else:
+            grey_box_solver = pyo.SolverFactory("cyipopt")
+            grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
+            grey_box_solver.config.options['max_iter'] = 3000
+            grey_box_solver.config.options['mu_strategy'] = "monotone"
 
-            self.solver = solver
+            self.grey_box_solver = grey_box_solver
 
         # Set get_labeled_model_args as an empty dict if no arguments are passed
         if get_labeled_model_args is None:
@@ -292,13 +298,12 @@ class DesignOfExperiments:
                 """
                 return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
             model.obj_cons.FIM_equalities = pyo.Constraint(model.parameter_names, model.parameter_names, rule=FIM_egb_cons)
-            model.obj_cons.pprint()
-
+            
             # ToDo: Add naming convention to adjust name of objective output
             # to conincide with the ObjectiveLib type
             # Proposal --> Use alphabetic opt e.g., ``A-opt``, ``D-opt``, etc.
             # Add objective function from FIM grey box calculation
-            model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log_det"])  # Must change hardcoding
+            model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log_det"], sense=pyo.maximize)  # Must change hardcoding
         else:
             self.create_objective_function(model=model)
 
@@ -362,7 +367,10 @@ class DesignOfExperiments:
             model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
 
         # Solve the full model, which has now been initialized with the square solve
-        res = self.solver.solve(model, tee=self.tee)
+        if self.use_grey_box:
+            res = self.grey_box_solver.solve(model, tee=self.tee)
+        else:
+            res = self.solver.solve(model, tee=self.tee)
 
         # Track time used to solve the DoE model
         solve_time = sp_timer.toc(msg=None)
@@ -375,7 +383,7 @@ class DesignOfExperiments:
             % (build_time + initialization_time + solve_time)
         )
 
-        #
+        # Avoid accidental carry-over of FIM information
         fim_local = self.get_FIM()
 
         # Make sure stale results don't follow the DoE object instance

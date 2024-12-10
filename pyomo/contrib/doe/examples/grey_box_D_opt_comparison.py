@@ -16,6 +16,7 @@ from pyomo.contrib.doe import DesignOfExperiments
 import pyomo.environ as pyo
 
 import json
+import logging
 from pathlib import Path
 
 
@@ -64,8 +65,9 @@ def compare_reactor_doe():
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=solver,
-        tee=True,
+        tee=False,
         get_labeled_model_args=None,
+        #logger_level=logging.ERROR,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     )
@@ -113,14 +115,37 @@ def compare_reactor_doe():
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=solver,
-        tee=False,
+        tee=True,
         get_labeled_model_args=None,
+        #logger_level=logging.ERROR,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     )
 
     doe_obj_grey_box.run_doe()
     # Print out a results summary                                                                                                                      
+    print("Optimal experiment values: ")
+    print(
+        "\tInitial concentration: {:.2f}".format(
+            doe_obj_grey_box.results["Experiment Design"][0]
+        )
+    )
+    print(
+        ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
+            *doe_obj_grey_box.results["Experiment Design"][1:]
+        )
+    )
+    print("FIM at optimal design:\n {}".format(np.array(doe_obj_grey_box.results["FIM"])))
+    print(
+        "Objective value at optimal design: {:.2f}".format(
+            pyo.value(doe_obj_grey_box.model.objective)
+        )
+    )
+    print("Raw logdet: {:.2f}".format(np.log10(np.linalg.det(np.array(doe_obj_grey_box.results["FIM"])))))
+
+    print(doe_obj_grey_box.results["Experiment Design Names"])
+
+    # Print out a results summary
     print("Optimal experiment values: ")
     print(
         "\tInitial concentration: {:.2f}".format(
@@ -141,5 +166,6 @@ def compare_reactor_doe():
 
     print(doe_obj.results["Experiment Design Names"])
 
+    
 if __name__ == "__main__":
     compare_reactor_doe()

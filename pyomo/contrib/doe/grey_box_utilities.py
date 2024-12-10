@@ -89,6 +89,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         self.logger.setLevel(level=logger_level)
 
+        # Set initial values for inputs
+        self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+
     
     def input_names(self):
         # Cartesian product gives us matrix indicies flattened in row-first format
@@ -108,7 +111,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
     def set_input_values(self, input_values):
         # Set initial values to be flattened initial FIM (aligns with input names)
-        self._input_values = list(self.doe_object.fim_initial.flatten())
+        np.copyto(self._input_values, input_values)
+        #self._input_values = list(self.doe_object.fim_initial.flatten())
 
     def evaluate_equality_constraints(self):
         # ToDo: are there any objectives that will have constraints?
@@ -120,8 +124,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # CALCULATE THE INVERSE VALUE
         # CHANGE HARD-CODED LOG DET
-        M = np.asarray(self._input_values, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
-
+        current_FIM = self._input_values
+        M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
+        
         (sign, logdet) = np.linalg.slogdet(M)
         
         return np.asarray([logdet, ], dtype=np.float64)
@@ -150,8 +155,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # a coo_matrix that aligns with what IPOPT will expect.
         #
         # ToDo: there will be significant bookkeeping for more
-        # complicated objective functions and the Hessian
-        M = np.asarray(self._input_values, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
+        # complicated objective functions and the Hessian        
+        current_FIM = self._input_values
+        M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
         
         Minv = np.linalg.pinv(M)
 
@@ -165,8 +171,15 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Columns are the remaindar (mod) by number of rows
         M_cols = np.arange(len(jac_M.flatten())) % jac_M.shape[0]
 
+        # Need to be flat?
+        M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
+
+        # Need to be flat?
+        M_cols = np.arange(len(jac_M.flatten()))
+        
         # Returns coo_matrix of the correct shape
-        return coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=jac_M.shape())
+        #print(coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))))
+        return coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten())))
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
@@ -179,17 +192,17 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Assert length matches
         self._output_con_mult_values = np.asarray(output_con_multiplier_values, dtype=np.float64)
 
-    def evaluate_hessian_equality_constraints(self):
+#    def evaluate_hessian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
 
         # Returns coo_matrix of the correct shape
-        return None
+#        return None
 
-    def evaluate_hessian_outputs(self):
+#    def evaluate_hessian_outputs(self):
         # ToDo: Add for objectives where we can define the Hessian
         #
         # ToDo: significant bookkeeping if the hessian's require vectorized
         # operations. Just need mapping that works well and we are good.
         
         # Returns coo_matrix of the correct shape
-        return None
+#        return None
