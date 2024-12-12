@@ -65,7 +65,7 @@ def compare_reactor_doe():
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=solver,
-        tee=False,
+        tee=True,
         get_labeled_model_args=None,
         #logger_level=logging.ERROR,
         _Cholesky_option=True,

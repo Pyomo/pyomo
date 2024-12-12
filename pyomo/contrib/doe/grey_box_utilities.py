@@ -126,6 +126,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # CHANGE HARD-CODED LOG DET
         current_FIM = self._input_values
         M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
+
+        # Trying symmetry calculation?
+        #M = np.multiply(M, np.tril(np.ones((len(self._param_names), len(self._param_names)))))
+        #M = M + M.transpose() - np.multiply(M, np.eye(len(self._param_names)))
         
         (sign, logdet) = np.linalg.slogdet(M)
         
@@ -158,8 +162,15 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # complicated objective functions and the Hessian        
         current_FIM = self._input_values
         M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
+
+        # Trying symmetry calculation?
+        #M = np.multiply(M, np.tril(np.ones((len(self._param_names), len(self._param_names)))))
+        #M = M + M.transpose() - np.multiply(M, np.eye(len(self._param_names)))
         
         Minv = np.linalg.pinv(M)
+        eig, _ = np.linalg.eig(M)
+        if min(eig) <= 1:
+            print("Warning: {:0.6f}".format(min(eig)))
 
         # Since M is symmetric, the derivative of logdet(M) w.r.t M is
         # 2*inverse(M) - diagonal(inverse(M)) ADD SOURCE

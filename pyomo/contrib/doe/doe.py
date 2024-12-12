@@ -209,7 +209,7 @@ class DesignOfExperiments:
             grey_box_solver = pyo.SolverFactory("cyipopt")
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             grey_box_solver.config.options['max_iter'] = 3000
-            grey_box_solver.config.options['mu_strategy'] = "monotone"
+            # grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
 
@@ -297,6 +297,10 @@ class DesignOfExperiments:
                 
                 """
                 return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
+                #if list(model.parameter_names).index(p1) >= list(model.parameter_names).index(p2):
+                #    return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
+                #else:
+                #    return pyo.Constraint.Skip
             model.obj_cons.FIM_equalities = pyo.Constraint(model.parameter_names, model.parameter_names, rule=FIM_egb_cons)
             
             # ToDo: Add naming convention to adjust name of objective output
@@ -346,6 +350,12 @@ class DesignOfExperiments:
         model.objective.activate()
         model.obj_cons.activate()
 
+        if self.use_grey_box:
+            # Initialize grey box inputs to be fim values currently
+            for i in model.parameter_names:
+                for j in model.parameter_names:
+                    model.obj_cons.egb_fim_block.inputs[(i, j)].set_value(pyo.value(model.fim[(i, j)]))
+        
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
             # Get the FIM values
@@ -368,6 +378,13 @@ class DesignOfExperiments:
 
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
+            #from idaes.core.util.model_diagnostics import DiagnosticsToolbox
+            #dt = DiagnosticsToolbox(model, constraint_residual_tolerance=1e-10)
+            self.grey_box_solver.config.options['tol'] = 1e-3
+            res = self.grey_box_solver.solve(model, tee=self.tee)
+            # Doing diagnostics
+            #dt.display_constraints_with_large_residuals()
+            self.grey_box_solver.config.options['tol'] = 1e-6
             res = self.grey_box_solver.solve(model, tee=self.tee)
         else:
             res = self.solver.solve(model, tee=self.tee)
