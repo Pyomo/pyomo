@@ -16,6 +16,7 @@ import operator
 import os
 
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
 from pyomo.common.errors import MouseTrap
@@ -27,7 +28,6 @@ from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import BranchAndBoundConfig
-from pyomo.contrib.solver.solvers.gurobi_utils import GurobiConfigMixin
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
@@ -44,6 +44,23 @@ from pyomo.contrib.solver.common.solution import SolutionLoaderBase
 
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
+
+
+class GurobiConfigMixin:
+    """
+    Mixin class for Gurobi-specific configurations
+    """
+
+    def __init__(self):
+        self.use_mipstart: bool = self.declare(
+            'use_mipstart',
+            ConfigValue(
+                default=False,
+                domain=bool,
+                description="If True, the current values of the integer variables "
+                "will be passed to Gurobi.",
+            ),
+        )
 
 
 class GurobiConfig(BranchAndBoundConfig, GurobiConfigMixin):

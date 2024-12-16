@@ -38,7 +38,7 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.solvers.gurobi_utils import GurobiConfigMixin
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiConfigMixin
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,

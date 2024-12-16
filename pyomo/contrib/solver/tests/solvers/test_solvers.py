@@ -22,6 +22,11 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     Results,
 )
+from pyomo.contrib.solver.common.util import (
+    NoDualsError,
+    NoSolutionError,
+    NoReducedCostsError,
+)
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.gurobi import Gurobi
@@ -557,15 +562,15 @@ class TestSolvers(unittest.TestCase):
             # even if it did not converge; raise_exception_on_nonoptimal_result
             # is set to False, so we are free to load infeasible solutions
             with self.assertRaisesRegex(
-                RuntimeError, '.*does not currently have a valid solution.*'
+                NoSolutionError, '.*does not currently have a valid solution.*'
             ):
                 res.solution_loader.load_vars()
             with self.assertRaisesRegex(
-                RuntimeError, '.*does not currently have valid duals.*'
+                NoDualsError, '.*does not currently have valid duals.*'
             ):
                 res.solution_loader.get_duals()
             with self.assertRaisesRegex(
-                RuntimeError, '.*does not currently have valid reduced costs.*'
+                NoReducedCostsError, '.*does not currently have valid reduced costs.*'
             ):
                 res.solution_loader.get_reduced_costs()
 
