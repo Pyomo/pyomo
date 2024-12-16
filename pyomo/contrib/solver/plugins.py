@@ -12,7 +12,7 @@
 
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt
-from .solvers.gurobi_persistent import Gurobi
+from .solvers.gurobi_persistent import GurobiPersistent
 from .solvers.gurobi_direct import GurobiDirect
 from .solvers.highs import Highs
 
@@ -25,7 +25,7 @@ def load():
         name='gurobi_persistent',
         legacy_name='gurobi_persistent_v2',
         doc='Persistent interface to Gurobi',
-    )(Gurobi)
+    )(GurobiPersistent)
     SolverFactory.register(
         name='gurobi_direct',
         legacy_name='gurobi_direct_v2',

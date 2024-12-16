@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import datetime
 import io
 import logging
 import math
@@ -18,7 +17,7 @@ from collections.abc import Iterable
 
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.errors import PyomoException
+from pyomo.common.errors import ApplicationError
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.shutdown import python_is_shutting_down
@@ -38,15 +37,19 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.solvers.gurobi_direct import GurobiConfigMixin
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiConfigMixin, GurobiSolverMixin
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
     NoDualsError,
     NoReducedCostsError,
     NoSolutionError,
+    IncompatibleModelError,
 )
-from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
+from pyomo.contrib.solver.common.persistent import (
+    PersistentSolverUtils,
+    PersistentSolverMixin
+)
 from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
@@ -58,19 +61,15 @@ def _import_gurobipy():
     try:
         import gurobipy
     except ImportError:
-        Gurobi._available = Availability.NotFound
+        GurobiPersistent._available = Availability.NotFound
         raise
     if gurobipy.GRB.VERSION_MAJOR < 7:
-        Gurobi._available = Availability.BadVersion
+        GurobiPersistent._available = Availability.BadVersion
         raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', importer=_import_gurobipy)
-
-
-class DegreeError(PyomoException):
-    pass
 
 
 class GurobiConfig(PersistentBranchAndBoundConfig, GurobiConfigMixin):
@@ -231,9 +230,9 @@ class _MutableQuadraticCoefficient:
         self.var2 = None
 
 
-class Gurobi(PersistentSolverUtils, PersistentSolverBase):
+class GurobiPersistent(GurobiSolverMixin, PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
     """
-    Interface to Gurobi
+    Interface to Gurobi persistent
     """
 
     CONFIG = GurobiConfig()
@@ -247,7 +246,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         PersistentSolverUtils.__init__(
             self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
         )
-        Gurobi._num_instances += 1
+        GurobiPersistent._num_instances += 1
         self._solver_model = None
         self._symbol_map = SymbolMap()
         self._labeler = None
@@ -267,43 +266,6 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         self._vars_added_since_update = ComponentSet()
         self._last_results_object: Optional[Results] = None
 
-    def available(self):
-        if not gurobipy_available:  # this triggers the deferred import
-            return Availability.NotFound
-        elif self._available == Availability.BadVersion:
-            return Availability.BadVersion
-        return self._check_license()
-
-    def _check_license(self):
-        avail = False
-        try:
-            # Gurobipy writes out license file information when creating
-            # the environment
-            with capture_output(capture_fd=True):
-                m = gurobipy.Model()
-            if self._solver_model is None:
-                self._solver_model = m
-            avail = True
-        except gurobipy.GurobiError:
-            avail = False
-
-        if avail:
-            if self._available is None:
-                self._available = Gurobi._check_full_license()
-            return self._available
-        return Availability.BadLicense
-
-    @classmethod
-    def _check_full_license(cls):
-        m = gurobipy.Model()
-        m.setParam('OutputFlag', 0)
-        try:
-            m.addVars(range(2001))
-            m.optimize()
-            return Availability.FullLicense
-        except gurobipy.GurobiError:
-            return Availability.LimitedLicense
-
     def release_license(self):
         self._reinit()
         if gurobipy_available:
@@ -312,17 +274,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
     def __del__(self):
         if not python_is_shutting_down():
-            Gurobi._num_instances -= 1
-            if Gurobi._num_instances == 0:
+            GurobiPersistent._num_instances -= 1
+            if GurobiPersistent._num_instances == 0:
                 self.release_license()
-
-    def version(self):
-        version = (
-            gurobipy.GRB.VERSION_MAJOR,
-            gurobipy.GRB.VERSION_MINOR,
-            gurobipy.GRB.VERSION_TECHNICAL,
-        )
-        return version
 
     @property
     def symbol_map(self):
@@ -369,35 +323,6 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
-        return res
-
-    def solve(self, model, **kwds) -> Results:
-        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
-        StaleFlagManager.mark_all_as_stale()
-        # Note: solver availability check happens in set_instance(),
-        # which will be called (either by the user before this call, or
-        # below) before this method calls self._solve.
-        if self._last_results_object is not None:
-            self._last_results_object.solution_loader.invalidate()
-        if config.timer is None:
-            config.timer = HierarchicalTimer()
-        timer = config.timer
-        if model is not self._model:
-            timer.start('set_instance')
-            self.set_instance(model)
-            timer.stop('set_instance')
-        else:
-            timer.start('update')
-            self.update(timer=timer)
-            timer.stop('update')
-        res = self._solve()
-        self._last_results_object = res
-        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
-        res.timing_info.start_timestamp = start_timestamp
-        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
-        res.timing_info.timer = timer
-        self._active_config = self.config
         return res
 
     def _process_domain_and_bounds(
@@ -491,7 +416,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
             self._last_results_object.solution_loader.invalidate()
         if not self.available():
             c = self.__class__
-            raise PyomoException(
+            raise ApplicationError(
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).'
             )
@@ -519,7 +444,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
 
         degree = repn.polynomial_degree()
         if (degree is None) or (degree > 2):
-            raise DegreeError(
+            raise IncompatibleModelError(
                 f'GurobiAuto does not support expressions of degree {degree}.'
             )
 

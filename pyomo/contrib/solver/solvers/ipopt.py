@@ -19,7 +19,7 @@ from typing import Mapping, Optional, Sequence
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
 from pyomo.common.errors import (
-    PyomoException,
+    ApplicationError,
     DeveloperError,
     InfeasibleConstraintException,
 )
@@ -48,10 +48,6 @@ from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
 
 logger = logging.getLogger(__name__)
-
-
-class IpoptSolverError(PyomoException):
-    """General exception to catch solver system errors"""
 
 
 class IpoptConfig(SolverConfig):
@@ -96,8 +92,7 @@ class IpoptSolutionLoader(SolSolutionLoader):
         if self._sol_data is None:
             raise DeveloperError(
                 "Solution data is empty. This should not "
-                "have happened. Report this error to the Pyomo Developers."
-            )
+                "have happened. Report this error to the Pyomo Developers.")
 
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None
@@ -305,7 +300,7 @@ class Ipopt(SolverBase):
         # Check if solver is available
         avail = self.available(config)
         if not avail:
-            raise IpoptSolverError(
+            raise ApplicationError(
                 f'Solver {self.__class__} is not available ({avail}).'
             )
         if config.threads:

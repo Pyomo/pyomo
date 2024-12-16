@@ -45,7 +45,7 @@ class NoDualsError(PyomoException):
     def __init__(self):
         super().__init__(
             'Solver does not currently have valid duals. Please '
-            'check the termination condition.'
+            'check results.termination_condition and/or results.solution_status.'
         )
 
 
@@ -53,7 +53,15 @@ class NoReducedCostsError(PyomoException):
     def __init__(self):
         super().__init__(
             'Solver does not currently have valid reduced costs. Please '
-            'check the termination condition.'
+            'check results.termination_condition and/or results.solution_status.'
+        )
+
+
+class IncompatibleModelError(PyomoException):
+    def __init__(self):
+        super().__init__(
+            'Model is not compatible with the chosen solver. Please check '
+            'the model and solver.'
         )
 
 

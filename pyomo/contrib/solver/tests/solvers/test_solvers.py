@@ -29,7 +29,7 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
-from pyomo.contrib.solver.solvers.gurobi_persistent import Gurobi
+from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -44,15 +44,15 @@ if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
 all_solvers = [
-    ('gurobi', Gurobi),
+    ('gurobi', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('ipopt', Ipopt),
     ('highs', Highs),
 ]
-mip_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('highs', Highs)]
+mip_solvers = [('gurobi', GurobiPersistent), ('gurobi_direct', GurobiDirect), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
-miqcqp_solvers = [('gurobi', Gurobi)]
+qcp_solvers = [('gurobi', GurobiPersistent), ('ipopt', Ipopt)]
+miqcqp_solvers = [('gurobi', GurobiPersistent)]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 

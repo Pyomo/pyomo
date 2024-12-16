@@ -19,7 +19,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import MouseTrap
+from pyomo.common.errors import MouseTrap, ApplicationError
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
@@ -34,6 +34,7 @@ from pyomo.contrib.solver.common.util import (
     NoDualsError,
     NoReducedCostsError,
     NoSolutionError,
+    IncompatibleModelError,
 )
 from pyomo.contrib.solver.common.results import (
     Results,
@@ -168,17 +169,12 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         return ComponentMap(iterator)
 
 
-class GurobiDirect(SolverBase):
-    CONFIG = GurobiConfig()
-
-    _available = None
-    _num_instances = 0
-    _tc_map = None
-
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        GurobiDirect._num_instances += 1
-
+class GurobiSolverMixin:
+    """
+    gurobi_direct and gurobi_persistent check availability and set versions
+    in the same way. This moves the logic to a central location to reduce
+    duplicate code.
+    """
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
             return Availability.NotFound
@@ -199,7 +195,7 @@ class GurobiDirect(SolverBase):
 
         if avail:
             if self._available is None:
-                self._available = GurobiDirect._check_full_license(m)
+                self._available = self._check_full_license(m)
             return self._available
         return Availability.BadLicense
 
@@ -215,18 +211,6 @@ class GurobiDirect(SolverBase):
         except gurobipy.GurobiError:
             return Availability.LimitedLicense
 
-    def __del__(self):
-        if not python_is_shutting_down():
-            GurobiDirect._num_instances -= 1
-            if GurobiDirect._num_instances == 0:
-                self.release_license()
-
-    @staticmethod
-    def release_license():
-        if gurobipy_available:
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
-
     def version(self):
         version = (
             gurobipy.GRB.VERSION_MAJOR,
@@ -235,9 +219,42 @@ class GurobiDirect(SolverBase):
         )
         return version
 
+
+class GurobiDirect(GurobiSolverMixin, SolverBase):
+    """
+    Interface to Gurobi direct (not persistent)
+    """
+    CONFIG = GurobiConfig()
+
+    _available = None
+    _num_instances = 0
+    _tc_map = None
+
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
+        GurobiDirect._num_instances += 1
+
+    @staticmethod
+    def release_license():
+        if gurobipy_available:
+            with capture_output(capture_fd=True):
+                gurobipy.disposeDefaultEnv()
+
+    def __del__(self):
+        if not python_is_shutting_down():
+            GurobiDirect._num_instances -= 1
+            if GurobiDirect._num_instances == 0:
+                self.release_license()
+
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         config = self.config(value=kwds, preserve_implicit=True)
+        if not self.available():
+            c = self.__class__
+            raise ApplicationError(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).'
+            )
         if config.timer is None:
             config.timer = HierarchicalTimer()
         timer = config.timer
@@ -251,7 +268,7 @@ class GurobiDirect(SolverBase):
         timer.stop('compile_model')
 
         if len(repn.objectives) > 1:
-            raise ValueError(
+            raise IncompatibleModelError(
                 f"The {self.__class__.__name__} solver only supports models "
                 f"with zero or one objectives (received {len(repn.objectives)})."
             )
