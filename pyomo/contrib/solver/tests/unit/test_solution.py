@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.contrib.solver.common.solution import (
+from pyomo.contrib.solver.common.solution_loader import (
     SolutionLoaderBase,
     PersistentSolutionLoader,
 )

@@ -41,7 +41,7 @@ from pyomo.contrib.solver.common.results import (
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
 from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
-from pyomo.contrib.solver.common.solution import PersistentSolutionLoader
+from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,

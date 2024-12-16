@@ -112,7 +112,7 @@ class SolverBase:
             A results object
         """
         raise NotImplementedError(
-            "Every solver interface must provide their own implementation of `solve` which returns an appropriately populated `Results` object."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
         )
 
     def available(self) -> Availability:
@@ -124,7 +124,7 @@ class SolverBase:
             An enum that indicates "how available" the solver is.
         """
         raise NotImplementedError(
-            "Every solver interface must provide their own implementation of `available` which returns an `Availability` object."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'available'."
         )
 
     def version(self) -> Tuple:
@@ -135,7 +135,7 @@ class SolverBase:
             A tuple representing the version
         """
         raise NotImplementedError(
-            "Solvers must return the version number in a tuple form (e.g., `(1, 2, 1)`)."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'version'."
         )
 
     def is_persistent(self) -> bool:
@@ -182,7 +182,7 @@ class PersistentSolverBase(SolverBase):
             A results object
         """
         raise NotImplementedError(
-            "Every solver interface must provide their own implementation of `solve` which returns an appropriately populated `Results` object."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
         )
 
     def is_persistent(self) -> bool:
@@ -271,7 +271,7 @@ class PersistentSolverBase(SolverBase):
         Set an instance of the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for setting an instance of the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'set_instance'."
         )
 
     def set_objective(self, obj: ObjectiveData):
@@ -279,7 +279,7 @@ class PersistentSolverBase(SolverBase):
         Set current objective for the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for setting the current objective of the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'set_objective'."
         )
 
     def add_variables(self, variables: List[VarData]):
@@ -287,7 +287,7 @@ class PersistentSolverBase(SolverBase):
         Add variables to the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for adding variables to the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_variables'."
         )
 
     def add_parameters(self, params: List[ParamData]):
@@ -295,7 +295,7 @@ class PersistentSolverBase(SolverBase):
         Add parameters to the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for adding parameters to the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_paramters'."
         )
 
     def add_constraints(self, cons: List[ConstraintData]):
@@ -303,7 +303,7 @@ class PersistentSolverBase(SolverBase):
         Add constraints to the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for adding constraints to the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_constraints'."
         )
 
     def add_block(self, block: BlockData):
@@ -311,7 +311,7 @@ class PersistentSolverBase(SolverBase):
         Add a block to the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for adding blocks to the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_block'."
         )
 
     def remove_variables(self, variables: List[VarData]):
@@ -319,7 +319,7 @@ class PersistentSolverBase(SolverBase):
         Remove variables from the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for removing variables from the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_variables'."
         )
 
     def remove_parameters(self, params: List[ParamData]):
@@ -327,7 +327,7 @@ class PersistentSolverBase(SolverBase):
         Remove parameters from the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for removing parameters from the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_parameters'."
         )
 
     def remove_constraints(self, cons: List[ConstraintData]):
@@ -335,7 +335,7 @@ class PersistentSolverBase(SolverBase):
         Remove constraints from the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for removing constraints from the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_constraints'."
         )
 
     def remove_block(self, block: BlockData):
@@ -343,7 +343,7 @@ class PersistentSolverBase(SolverBase):
         Remove a block from the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for removing blocks from the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_block'."
         )
 
     def update_variables(self, variables: List[VarData]):
@@ -351,7 +351,7 @@ class PersistentSolverBase(SolverBase):
         Update variables on the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for updating variables on the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'update_variables'."
         )
 
     def update_parameters(self):
@@ -359,7 +359,7 @@ class PersistentSolverBase(SolverBase):
         Update parameters on the model.
         """
         raise NotImplementedError(
-            "Persistent solvers should provide a mechanism for updating parameters on the model."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'update_parameters'."
         )
 
 

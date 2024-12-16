@@ -56,7 +56,9 @@ class SolutionLoaderBase:
         primals: ComponentMap
             Maps variables to solution values
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'get_primals'."
+        )
 
     def get_duals(
         self, cons_to_load: Optional[Sequence[ConstraintData]] = None

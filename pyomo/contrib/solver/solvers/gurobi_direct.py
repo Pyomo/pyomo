@@ -40,7 +40,7 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
     TerminationCondition,
 )
-from pyomo.contrib.solver.common.solution import SolutionLoaderBase
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
