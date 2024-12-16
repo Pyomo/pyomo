@@ -295,7 +295,7 @@ class PersistentSolverBase(SolverBase):
         Add parameters to the model.
         """
         raise NotImplementedError(
-            f"Derived class {self.__class__.__name__} failed to implement required method 'add_paramters'."
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_parameters'."
         )
 
     def add_constraints(self, cons: List[ConstraintData]):
