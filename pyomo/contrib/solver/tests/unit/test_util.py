@@ -11,16 +11,17 @@
 
 from pyomo.common import unittest
 import pyomo.environ as pyo
-from pyomo.contrib.solver.common.util import (
-    collect_vars_and_named_exprs,
-    get_objective,
-)
+from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs, get_objective
 from pyomo.opt.results.solver import (
     SolverStatus as LegacySolverStatus,
     TerminationCondition as LegacyTerminationCondition,
 )
 from pyomo.opt.results import SolverResults as LegacySolverResults
-from pyomo.contrib.solver.common.results import Results, SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.common.results import (
+    Results,
+    SolutionStatus,
+    TerminationCondition,
+)
 from typing import Callable
 from pyomo.common.gsl import find_GSL
 

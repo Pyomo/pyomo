@@ -10,7 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.contrib.solver.common.solution import SolutionLoaderBase, PersistentSolutionLoader
+from pyomo.contrib.solver.common.solution import (
+    SolutionLoaderBase,
+    PersistentSolutionLoader,
+)
 
 
 class TestSolutionLoaderBase(unittest.TestCase):

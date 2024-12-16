@@ -22,13 +22,7 @@ class _LegacyWrappedSolverBase(base.LegacySolverWrapper, base.SolverBase):
 
 class TestSolverBase(unittest.TestCase):
     def test_class_method_list(self):
-        expected_list = [
-            'CONFIG',
-            'available',
-            'is_persistent',
-            'solve',
-            'version',
-        ]
+        expected_list = ['CONFIG', 'available', 'is_persistent', 'solve', 'version']
         method_list = [
             method for method in dir(base.SolverBase) if method.startswith('_') is False
         ]

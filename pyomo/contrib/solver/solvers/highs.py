@@ -34,7 +34,11 @@ from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 
 from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
-from pyomo.contrib.solver.common.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.common.results import (
+    Results,
+    TerminationCondition,
+    SolutionStatus,
+)
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
 from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
 from pyomo.contrib.solver.common.solution import PersistentSolutionLoader

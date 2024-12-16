@@ -35,7 +35,11 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
     NoSolutionError,
 )
-from pyomo.contrib.solver.common.results import Results, SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.common.results import (
+    Results,
+    SolutionStatus,
+    TerminationCondition,
+)
 from pyomo.contrib.solver.common.solution import SolutionLoaderBase
 
 

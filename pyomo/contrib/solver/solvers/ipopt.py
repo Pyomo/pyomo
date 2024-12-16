@@ -30,7 +30,11 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
 from pyomo.contrib.solver.common.base import SolverBase, Availability
 from pyomo.contrib.solver.common.config import SolverConfig
-from pyomo.contrib.solver.common.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.common.results import (
+    Results,
+    TerminationCondition,
+    SolutionStatus,
+)
 from pyomo.contrib.solver.solvers.sol_reader import parse_sol_file, SolSolutionLoader
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,

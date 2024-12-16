@@ -17,7 +17,11 @@ import pyomo.environ as pe
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus, Results
+from pyomo.contrib.solver.common.results import (
+    TerminationCondition,
+    SolutionStatus,
+    Results,
+)
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.gurobi import Gurobi

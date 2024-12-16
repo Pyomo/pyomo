@@ -32,7 +32,11 @@ from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeri
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
-from pyomo.contrib.solver.common.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.common.results import (
+    Results,
+    TerminationCondition,
+    SolutionStatus,
+)
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
 from pyomo.contrib.solver.solvers.gurobi_utils import GurobiConfigMixin
 from pyomo.contrib.solver.common.util import (
@@ -42,7 +46,10 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
     NoSolutionError,
 )
-from pyomo.contrib.solver.common.persistent import PersistentSolverUtils, PersistentSolverMixin
+from pyomo.contrib.solver.common.persistent import (
+    PersistentSolverUtils,
+    PersistentSolverMixin,
+)
 from pyomo.contrib.solver.common.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
