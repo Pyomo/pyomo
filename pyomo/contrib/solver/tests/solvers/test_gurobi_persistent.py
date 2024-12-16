@@ -107,20 +107,20 @@ def create_pmedian_model():
 
     model.obj = pe.Objective(rule=rule)
 
-    def rule(model, m):
+    def rule1(model, m):
         return (sum(model.x[n, m] for n in model.Locations), 1.0)
 
-    model.single_x = pe.Constraint(model.Customers, rule=rule)
+    model.single_x = pe.Constraint(model.Customers, rule=rule1)
 
-    def rule(model, n, m):
+    def rule2(model, n, m):
         return (None, model.x[n, m] - model.y[n], 0.0)
 
-    model.bound_y = pe.Constraint(model.Locations, model.Customers, rule=rule)
+    model.bound_y = pe.Constraint(model.Locations, model.Customers, rule=rule2)
 
-    def rule(model):
+    def rule3(model):
         return (sum(model.y[n] for n in model.Locations) - model.P, 0.0)
 
-    model.num_facilities = pe.Constraint(rule=rule)
+    model.num_facilities = pe.Constraint(rule=rule3)
 
     return model
 

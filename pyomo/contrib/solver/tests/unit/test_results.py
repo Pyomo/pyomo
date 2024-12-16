@@ -18,12 +18,12 @@ from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.solver.common import results
-from pyomo.contrib.solver.common import solution
+from pyomo.contrib.solver.common import solution_loader
 from pyomo.core.base.var import Var
 from pyomo.common import unittest
 
 
-class SolutionLoaderExample(solution.SolutionLoaderBase):
+class SolutionLoaderExample(solution_loader.SolutionLoaderBase):
     """
     This is an example instantiation of a SolutionLoader that is used for
     testing generated results.
