@@ -153,6 +153,7 @@ def check_optimal_termination(results):
         TerminationCondition as FutureTerminationCondition,
         SolutionStatus as FutureSolutionStatus,
     )
+
     if hasattr(results, 'solution_status'):
         if results.solution_status == FutureSolutionStatus.optimal and (
             results.termination_condition
