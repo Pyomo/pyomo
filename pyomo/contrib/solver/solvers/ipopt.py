@@ -92,7 +92,8 @@ class IpoptSolutionLoader(SolSolutionLoader):
         if self._sol_data is None:
             raise DeveloperError(
                 "Solution data is empty. This should not "
-                "have happened. Report this error to the Pyomo Developers.")
+                "have happened. Report this error to the Pyomo Developers."
+            )
 
     def get_reduced_costs(
         self, vars_to_load: Optional[Sequence[VarData]] = None

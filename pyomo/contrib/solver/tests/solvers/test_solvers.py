@@ -49,7 +49,11 @@ all_solvers = [
     ('ipopt', Ipopt),
     ('highs', Highs),
 ]
-mip_solvers = [('gurobi', GurobiPersistent), ('gurobi_direct', GurobiDirect), ('highs', Highs)]
+mip_solvers = [
+    ('gurobi', GurobiPersistent),
+    ('gurobi_direct', GurobiDirect),
+    ('highs', Highs),
+]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', GurobiPersistent), ('ipopt', Ipopt)]
 miqcqp_solvers = [('gurobi', GurobiPersistent)]

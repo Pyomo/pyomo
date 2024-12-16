@@ -175,6 +175,7 @@ class GurobiSolverMixin:
     in the same way. This moves the logic to a central location to reduce
     duplicate code.
     """
+
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
             return Availability.NotFound
@@ -224,6 +225,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
     """
     Interface to Gurobi direct (not persistent)
     """
+
     CONFIG = GurobiConfig()
 
     _available = None

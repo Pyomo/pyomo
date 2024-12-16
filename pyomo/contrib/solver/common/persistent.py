@@ -505,6 +505,7 @@ class PersistentSolverMixin:
     The `solve` method in Gurobi and Highs is exactly the same, so this Mixin
     minimizes the duplicate code
     """
+
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         self._active_config = config = self.config(value=kwds, preserve_implicit=True)

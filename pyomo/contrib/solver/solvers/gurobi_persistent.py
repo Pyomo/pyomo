@@ -37,7 +37,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.solvers.gurobi_direct import GurobiConfigMixin, GurobiSolverMixin
+from pyomo.contrib.solver.solvers.gurobi_direct import (
+    GurobiConfigMixin,
+    GurobiSolverMixin,
+)
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
@@ -48,7 +51,7 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.common.persistent import (
     PersistentSolverUtils,
-    PersistentSolverMixin
+    PersistentSolverMixin,
 )
 from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
@@ -230,7 +233,12 @@ class _MutableQuadraticCoefficient:
         self.var2 = None
 
 
-class GurobiPersistent(GurobiSolverMixin, PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
+class GurobiPersistent(
+    GurobiSolverMixin,
+    PersistentSolverMixin,
+    PersistentSolverUtils,
+    PersistentSolverBase,
+):
     """
     Interface to Gurobi persistent
     """
