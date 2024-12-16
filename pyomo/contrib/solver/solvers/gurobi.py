@@ -61,10 +61,10 @@ def _import_gurobipy():
     try:
         import gurobipy
     except ImportError:
-        Gurobi._available = Gurobi.Availability.NotFound
+        Gurobi._available = Availability.NotFound
         raise
     if gurobipy.GRB.VERSION_MAJOR < 7:
-        Gurobi._available = Gurobi.Availability.BadVersion
+        Gurobi._available = Availability.BadVersion
         raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
