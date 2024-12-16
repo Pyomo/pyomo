@@ -10,6 +10,8 @@
 #  ___________________________________________________________________________
 
 import inspect
+import sys
+from importlib.machinery import PathFinder
 from io import StringIO
 
 import pyomo.common.unittest as unittest
@@ -24,6 +26,7 @@ from pyomo.common.dependencies import (
     UnavailableClass,
     _DeferredAnd,
     _DeferredOr,
+    _DeferredImportCallbackFinder,
     check_min_version,
     dill,
     dill_available,
@@ -247,6 +250,70 @@ class TestDependencies(unittest.TestCase):
         self.assertEqual(ans, [True])
         self.assertFalse(avail1)
         self.assertEqual(ans, [True, False])
+
+    def test_callback_on_import(self):
+        sys.modules.pop('pyomo.common.tests.mod', None)
+        ans = []
+
+        class ImpFinder(object):
+            # This is an "imp" module-style finder (deprecated in Python
+            # 3.4 and removed in Python 3.12, but Google Collab still
+            # defines finders like this)
+            match = ''
+
+            def find_module(self, fullname, path=None):
+                if fullname != self.match:
+                    ans.append('pass')
+                    return None
+                ans.append('load')
+                spec = PathFinder().find_spec(fullname, path)
+                return spec.loader
+
+            def load_module(self, name):
+                pass
+
+        def _callback(module, avail):
+            ans.append(len(ans))
+
+        attempt_import('pyomo.common.tests.mod', defer_import=True, callback=_callback)
+        self.assertEqual(ans, [])
+        import pyomo.common.tests.mod as m
+
+        self.assertEqual(ans, [0])
+        self.assertEqual(m.Foo.data, 42)
+
+        sys.modules.pop('pyomo.common.tests.mod', None)
+        del m
+        attempt_import('pyomo.common.tests.mod', defer_import=True, callback=_callback)
+
+        try:
+            # Test deferring to an imp-style finder that does not match
+            # the target module name
+            _finder = ImpFinder()
+            sys.meta_path.insert(
+                sys.meta_path.index(_DeferredImportCallbackFinder) + 1, _finder
+            )
+            import pyomo.common.tests.mod as m
+
+            self.assertEqual(ans, [0, 'pass', 2])
+            self.assertEqual(m.Foo.data, 42)
+
+            sys.modules.pop('pyomo.common.tests.mod', None)
+            del m
+            attempt_import(
+                'pyomo.common.tests.mod', defer_import=True, callback=_callback
+            )
+
+            # Test deferring to an imp-style finder that DOES match the
+            # target module name
+            _finder.match = 'pyomo.common.tests.mod'
+
+            import pyomo.common.tests.mod as m
+
+            self.assertEqual(ans, [0, 'pass', 2, 'load', 4])
+            self.assertEqual(m.Foo.data, 42)
+        finally:
+            sys.meta_path.remove(_finder)
 
     def test_import_exceptions(self):
         mod, avail = attempt_import(
