@@ -469,8 +469,8 @@ def get_worst_discrete_separation_solution(
         results_list = []
 
     # check if there were any failed scenarios for subsolver_error
-    # this only needs to be returned once for the subsolver error efficiency
-    if any(np.isnan(violations_of_ss_ineq_con)) and is_optimized_ss_ineq_con:
+    # if there are failed scenarios, subsolver error triggers for all ineq
+    if any(np.isnan(violations_of_ss_ineq_con)):
         subsolver_error_flag = True
     else:
         subsolver_error_flag = False
@@ -1163,6 +1163,12 @@ def discrete_solve(
         scenario = config.uncertainty_set.scenarios[scenario_idx]
         for param, coord_val in zip(uncertain_param_vars, scenario):
             param.fix(coord_val)
+
+        # debug statement for solving square problem for each scenario
+        # TODO add information on total number of scenarios not added to MP
+        config.progress_logger.debug(
+            f"Attempting to solve square problem for discrete scenario {scenario_idx}"
+        )
 
         # obtain separation problem solution
         solve_call_results = solver_call_separation(
