@@ -22,7 +22,9 @@ def load():
         name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver'
     )(Ipopt)
     SolverFactory.register(
-        name='gurobi_persistent', legacy_name='gurobi_persistent_v2', doc='Persistent interface to Gurobi'
+        name='gurobi_persistent',
+        legacy_name='gurobi_persistent_v2',
+        doc='Persistent interface to Gurobi',
     )(Gurobi)
     SolverFactory.register(
         name='gurobi_direct',
