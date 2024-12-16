@@ -17,12 +17,12 @@ import pyomo.environ as pe
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus, Results
-from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.ipopt import Ipopt
-from pyomo.contrib.solver.gurobi import Gurobi
-from pyomo.contrib.solver.gurobi_direct import GurobiDirect
-from pyomo.contrib.solver.highs import Highs
+from pyomo.contrib.solver.common.results import TerminationCondition, SolutionStatus, Results
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.solvers.gurobi import Gurobi
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 
 

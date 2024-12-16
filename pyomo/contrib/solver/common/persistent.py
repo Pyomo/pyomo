@@ -20,9 +20,9 @@ from pyomo.core.base.param import ParamData, Param
 from pyomo.core.base.objective import ObjectiveData
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.contrib.solver.util import collect_vars_and_named_exprs, get_objective
+from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs, get_objective
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.results import Results
+from pyomo.contrib.solver.common.results import Results
 
 
 class PersistentSolverUtils(abc.ABC):

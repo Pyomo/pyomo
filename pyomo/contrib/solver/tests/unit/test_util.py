@@ -11,18 +11,16 @@
 
 from pyomo.common import unittest
 import pyomo.environ as pyo
-from pyomo.contrib.solver.util import (
+from pyomo.contrib.solver.common.util import (
     collect_vars_and_named_exprs,
     get_objective,
-    check_optimal_termination,
-    assert_optimal_termination,
 )
 from pyomo.opt.results.solver import (
     SolverStatus as LegacySolverStatus,
     TerminationCondition as LegacyTerminationCondition,
 )
 from pyomo.opt.results import SolverResults as LegacySolverResults
-from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.common.results import Results, SolutionStatus, TerminationCondition
 from typing import Callable
 from pyomo.common.gsl import find_GSL
 
@@ -92,26 +90,26 @@ class TestGenericUtils(unittest.TestCase):
             TerminationCondition.convergenceCriteriaSatisfied
         )
         # Both items satisfied
-        self.assertTrue(check_optimal_termination(results))
+        self.assertTrue(pyo.check_optimal_termination(results))
         # Termination condition not satisfied
         results.termination_condition = TerminationCondition.iterationLimit
-        self.assertFalse(check_optimal_termination(results))
+        self.assertFalse(pyo.check_optimal_termination(results))
         # Both not satisfied
         results.solution_status = SolutionStatus.noSolution
-        self.assertFalse(check_optimal_termination(results))
+        self.assertFalse(pyo.check_optimal_termination(results))
 
     def test_check_optimal_termination_condition_legacy_interface(self):
         results = LegacySolverResults()
         results.solver.status = LegacySolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
         # Both items satisfied
-        self.assertTrue(check_optimal_termination(results))
+        self.assertTrue(pyo.check_optimal_termination(results))
         # Termination condition not satisfied
         results.solver.termination_condition = LegacyTerminationCondition.unknown
-        self.assertFalse(check_optimal_termination(results))
+        self.assertFalse(pyo.check_optimal_termination(results))
         # Both not satisfied
         results.solver.termination_condition = LegacySolverStatus.aborted
-        self.assertFalse(check_optimal_termination(results))
+        self.assertFalse(pyo.check_optimal_termination(results))
 
     def test_assert_optimal_termination_new_interface(self):
         results = Results()
@@ -119,26 +117,26 @@ class TestGenericUtils(unittest.TestCase):
         results.termination_condition = (
             TerminationCondition.convergenceCriteriaSatisfied
         )
-        assert_optimal_termination(results)
+        pyo.assert_optimal_termination(results)
         # Termination condition not satisfied
         results.termination_condition = TerminationCondition.iterationLimit
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)
         # Both not satisfied
         results.solution_status = SolutionStatus.noSolution
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)
 
     def test_assert_optimal_termination_legacy_interface(self):
         results = LegacySolverResults()
         results.solver.status = LegacySolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
-        assert_optimal_termination(results)
+        pyo.assert_optimal_termination(results)
         # Termination condition not satisfied
         results.solver.termination_condition = LegacyTerminationCondition.unknown
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)
         # Both not satisfied
         results.solver.termination_condition = LegacySolverStatus.aborted
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)

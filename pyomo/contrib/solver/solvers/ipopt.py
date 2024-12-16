@@ -28,15 +28,14 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
-from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.sol_reader import parse_sol_file
-from pyomo.contrib.solver.solution import SolSolutionLoader
-from pyomo.contrib.solver.util import (
+from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.solvers.sol_reader import parse_sol_file, SolSolutionLoader
+from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
-    NoValidSolutionError,
+    NoSolutionError,
 )
 from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
@@ -84,7 +83,7 @@ class IpoptConfig(SolverConfig):
 class IpoptSolutionLoader(SolSolutionLoader):
     def _error_check(self):
         if self._nl_info is None:
-            raise NoValidSolutionError()
+            raise NoSolutionError()
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
                 'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
@@ -215,9 +214,9 @@ class Ipopt(SolverBase):
         pth = config.executable.path()
         if self._available_cache is None or self._available_cache[0] != pth:
             if pth is None:
-                self._available_cache = (None, self.Availability.NotFound)
+                self._available_cache = (None, Availability.NotFound)
             else:
-                self._available_cache = (pth, self.Availability.FullLicense)
+                self._available_cache = (pth, Availability.FullLicense)
         return self._available_cache[1]
 
     def version(self, config=None):
@@ -482,7 +481,7 @@ class Ipopt(SolverBase):
                     )
                 )
 
-        results.solver_configuration = config
+        results.solver_config = config
         if not proven_infeasible and len(nl_info.variables) > 0:
             results.solver_log = ostreams[0].getvalue()
 

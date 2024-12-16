@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import datetime
 import logging
 import io
 from typing import List, Optional
@@ -19,6 +20,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.tee import TeeStream, capture_output
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
@@ -31,17 +33,17 @@ from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.staleflag import StaleFlagManager
 
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.persistent import PersistentSolverUtils, PersistentSolverMixin
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
-from pyomo.contrib.solver.util import (
+from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
+from pyomo.contrib.solver.common.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
+from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
+from pyomo.contrib.solver.common.solution import PersistentSolutionLoader
+from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
-    NoValidDualsError,
-    NoValidReducedCostsError,
-    NoValidSolutionError,
+    NoDualsError,
+    NoReducedCostsError,
+    NoSolutionError,
 )
 
 logger = logging.getLogger(__name__)
@@ -119,7 +121,7 @@ class _MutableConstraintBounds:
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
 
-class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
+class Highs(PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to HiGHS
     """
@@ -147,8 +149,8 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
 
     def available(self):
         if highspy_available:
-            return self.Availability.FullLicense
-        return self.Availability.NotFound
+            return Availability.FullLicense
+        return Availability.NotFound
 
     def version(self):
         try:
@@ -165,6 +167,35 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
             version = (tmp.versionMajor(), tmp.versionMinor(), tmp.versionPatch())
 
         return version
+
+    def solve(self, model, **kwds) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
+        StaleFlagManager.mark_all_as_stale()
+        # Note: solver availability check happens in set_instance(),
+        # which will be called (either by the user before this call, or
+        # below) before this method calls self._solve.
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+        if model is not self._model:
+            timer.start('set_instance')
+            self.set_instance(model)
+            timer.stop('set_instance')
+        else:
+            timer.start('update')
+            self.update(timer=timer)
+            timer.stop('update')
+        res = self._solve()
+        self._last_results_object = res
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        self._active_config = self.config
+        return res
 
     def _solve(self):
         config = self._active_config
@@ -660,7 +691,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
 
     def _get_primals(self, vars_to_load=None):
         if self._sol is None or not self._sol.value_valid:
-            raise NoValidSolutionError()
+            raise NoSolutionError()
 
         res = ComponentMap()
         if vars_to_load is None:
@@ -683,7 +714,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
 
     def _get_reduced_costs(self, vars_to_load=None):
         if self._sol is None or not self._sol.dual_valid:
-            raise NoValidReducedCostsError()
+            raise NoReducedCostsError()
         res = ComponentMap()
         if vars_to_load is None:
             var_ids_to_load = list(self._vars.keys())
@@ -701,7 +732,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
 
     def _get_duals(self, cons_to_load=None):
         if self._sol is None or not self._sol.dual_valid:
-            raise NoValidDualsError()
+            raise NoDualsError()
 
         res = {}
         if cons_to_load is None:

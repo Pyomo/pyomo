@@ -13,7 +13,7 @@ import os
 
 from pyomo.common import unittest
 from pyomo.common.config import ConfigDict
-from pyomo.contrib.solver import base
+from pyomo.contrib.solver.common import base
 
 
 class _LegacyWrappedSolverBase(base.LegacySolverWrapper, base.SolverBase):
@@ -21,14 +21,8 @@ class _LegacyWrappedSolverBase(base.LegacySolverWrapper, base.SolverBase):
 
 
 class TestSolverBase(unittest.TestCase):
-    def test_abstract_member_list(self):
-        expected_list = ['solve', 'available', 'version']
-        member_list = list(base.SolverBase.__abstractmethods__)
-        self.assertEqual(sorted(expected_list), sorted(member_list))
-
     def test_class_method_list(self):
         expected_list = [
-            'Availability',
             'CONFIG',
             'available',
             'is_persistent',
@@ -40,7 +34,6 @@ class TestSolverBase(unittest.TestCase):
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
-    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
     def test_init(self):
         self.instance = base.SolverBase()
         self.assertFalse(self.instance.is_persistent())
@@ -50,7 +43,6 @@ class TestSolverBase(unittest.TestCase):
         self.assertEqual(self.instance.solve(None), None)
         self.assertEqual(self.instance.available(), None)
 
-    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
     def test_context_manager(self):
         with base.SolverBase() as self.instance:
             self.assertFalse(self.instance.is_persistent())
@@ -60,53 +52,18 @@ class TestSolverBase(unittest.TestCase):
             self.assertEqual(self.instance.solve(None), None)
             self.assertEqual(self.instance.available(), None)
 
-    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
     def test_config_kwds(self):
         self.instance = base.SolverBase(tee=True)
         self.assertTrue(self.instance.config.tee)
 
-    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
-    def test_solver_availability(self):
-        self.instance = base.SolverBase()
-        self.instance.Availability._value_ = 1
-        self.assertTrue(self.instance.Availability.__bool__(self.instance.Availability))
-        self.instance.Availability._value_ = -1
-        self.assertFalse(
-            self.instance.Availability.__bool__(self.instance.Availability)
-        )
-
-    @unittest.mock.patch.multiple(base.SolverBase, __abstractmethods__=set())
     def test_custom_solver_name(self):
         self.instance = base.SolverBase(name='my_unique_name')
         self.assertEqual(self.instance.name, 'my_unique_name')
 
 
 class TestPersistentSolverBase(unittest.TestCase):
-    def test_abstract_member_list(self):
-        expected_list = [
-            'remove_parameters',
-            'version',
-            'update_variables',
-            'remove_variables',
-            'add_constraints',
-            '_get_primals',
-            'set_instance',
-            'set_objective',
-            'update_parameters',
-            'remove_block',
-            'add_block',
-            'available',
-            'add_parameters',
-            'remove_constraints',
-            'add_variables',
-            'solve',
-        ]
-        member_list = list(base.PersistentSolverBase.__abstractmethods__)
-        self.assertEqual(sorted(expected_list), sorted(member_list))
-
     def test_class_method_list(self):
         expected_list = [
-            'Availability',
             'CONFIG',
             '_get_duals',
             '_get_primals',
@@ -136,7 +93,6 @@ class TestPersistentSolverBase(unittest.TestCase):
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
-    @unittest.mock.patch.multiple(base.PersistentSolverBase, __abstractmethods__=set())
     def test_init(self):
         self.instance = base.PersistentSolverBase()
         self.assertTrue(self.instance.is_persistent())
@@ -162,7 +118,6 @@ class TestPersistentSolverBase(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.instance._get_reduced_costs()
 
-    @unittest.mock.patch.multiple(base.PersistentSolverBase, __abstractmethods__=set())
     def test_context_manager(self):
         with base.PersistentSolverBase() as self.instance:
             self.assertTrue(self.instance.is_persistent())
@@ -196,13 +151,11 @@ class TestLegacySolverWrapper(unittest.TestCase):
         ]
         self.assertEqual(sorted(expected_list), sorted(method_list))
 
-    @unittest.mock.patch.multiple(_LegacyWrappedSolverBase, __abstractmethods__=set())
     def test_context_manager(self):
         with _LegacyWrappedSolverBase() as instance:
             self.assertIsInstance(instance, _LegacyWrappedSolverBase)
             self.assertFalse(instance.available(False))
 
-    @unittest.mock.patch.multiple(_LegacyWrappedSolverBase, __abstractmethods__=set())
     def test_map_config(self):
         # Create a fake/empty config structure that can be added to an empty
         # instance of LegacySolverWrapper
@@ -278,7 +231,6 @@ class TestLegacySolverWrapper(unittest.TestCase):
         with self.assertRaises(AttributeError):
             print(instance.config.keepfiles)
 
-    @unittest.mock.patch.multiple(_LegacyWrappedSolverBase, __abstractmethods__=set())
     def test_solver_options_behavior(self):
         # options can work in multiple ways (set from instantiation, set
         # after instantiation, set during solve).

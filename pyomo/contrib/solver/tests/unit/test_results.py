@@ -12,17 +12,15 @@
 from io import StringIO
 from typing import Sequence, Dict, Optional, Mapping, MutableMapping
 
-
-from pyomo.common import unittest
+import pyomo.environ as pyo
 from pyomo.common.config import ConfigDict
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.common.collections import ComponentMap
-from pyomo.contrib.solver import results
-from pyomo.contrib.solver import solution
-import pyomo.environ as pyo
+from pyomo.contrib.solver.common import results
+from pyomo.contrib.solver.common import solution
 from pyomo.core.base.var import Var
-
+from pyomo.common import unittest
 
 class SolutionLoaderExample(solution.SolutionLoaderBase):
     """
@@ -167,7 +165,7 @@ class TestResults(unittest.TestCase):
             'termination_condition',
             'timing_info',
             'solver_log',
-            'solver_configuration',
+            'solver_config',
         }
         actual_declared = res._declared
         self.assertEqual(expected_declared, actual_declared)

@@ -25,18 +25,18 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
-from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.config import BranchAndBoundConfig
-from pyomo.contrib.solver.gurobi_utils import GurobiConfigMixin
-from pyomo.contrib.solver.util import (
+from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.config import BranchAndBoundConfig
+from pyomo.contrib.solver.solvers.gurobi_utils import GurobiConfigMixin
+from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
-    NoValidDualsError,
-    NoValidReducedCostsError,
-    NoValidSolutionError,
+    NoDualsError,
+    NoReducedCostsError,
+    NoSolutionError,
 )
-from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
-from pyomo.contrib.solver.solution import SolutionLoaderBase
+from pyomo.contrib.solver.common.results import Results, SolutionStatus, TerminationCondition
+from pyomo.contrib.solver.common.solution import SolutionLoaderBase
 
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
@@ -95,7 +95,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def load_vars(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
         if self._grb_model.SolCount == 0:
-            raise NoValidSolutionError()
+            raise NoSolutionError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
         if vars_to_load:
@@ -108,7 +108,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def get_primals(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
         if self._grb_model.SolCount == 0:
-            raise NoValidSolutionError()
+            raise NoSolutionError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
         if vars_to_load:
@@ -118,7 +118,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
     def get_duals(self, cons_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
-            raise NoValidDualsError()
+            raise NoDualsError()
 
         def dedup(_iter):
             last = None
@@ -138,7 +138,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
-            raise NoValidReducedCostsError()
+            raise NoReducedCostsError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.getAttr('Rc').tolist())
         if vars_to_load:
@@ -160,9 +160,9 @@ class GurobiDirect(SolverBase):
 
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
-            return self.Availability.NotFound
-        if self._available == self.Availability.BadVersion:
-            return self.Availability.BadVersion
+            return Availability.NotFound
+        if self._available == Availability.BadVersion:
+            return Availability.BadVersion
         return self._check_license()
 
     def _check_license(self):
@@ -180,7 +180,7 @@ class GurobiDirect(SolverBase):
             if self._available is None:
                 self._available = GurobiDirect._check_full_license(m)
             return self._available
-        return self.Availability.BadLicense
+        return Availability.BadLicense
 
     @classmethod
     def _check_full_license(cls, model=None):
@@ -190,9 +190,9 @@ class GurobiDirect(SolverBase):
         try:
             model.addVars(range(2001))
             model.optimize()
-            return cls.Availability.FullLicense
+            return Availability.FullLicense
         except gurobipy.GurobiError:
-            return cls.Availability.LimitedLicense
+            return Availability.LimitedLicense
 
     def __del__(self):
         if not python_is_shutting_down():
@@ -316,7 +316,7 @@ class GurobiDirect(SolverBase):
             ),
         )
 
-        res.solver_configuration = config
+        res.solver_config = config
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()

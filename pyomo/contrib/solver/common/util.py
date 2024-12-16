@@ -9,19 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 import pyomo.core.expr as EXPR
 from pyomo.core.base.objective import Objective
-from pyomo.opt.results.solver import (
-    SolverStatus,
-    TerminationCondition as LegacyTerminationCondition,
-)
 
 
-from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus
-
-
-class NoFeasibleSolutionError(RuntimeError):
+class NoFeasibleSolutionError(PyomoException):
     def __init__(self):
         super().__init__(
             'A feasible solution was not found, so no solution can be loaded. '
@@ -31,7 +25,7 @@ class NoFeasibleSolutionError(RuntimeError):
         )
 
 
-class NoOptimalSolutionError(RuntimeError):
+class NoOptimalSolutionError(PyomoException):
     def __init__(self):
         super().__init__(
             'Solver did not find the optimal solution. Set '
@@ -39,7 +33,7 @@ class NoOptimalSolutionError(RuntimeError):
         )
 
 
-class NoValidSolutionError(RuntimeError):
+class NoSolutionError(PyomoException):
     def __init__(self):
         super().__init__(
             'Solution loader does not currently have a valid solution. Please '
@@ -47,7 +41,7 @@ class NoValidSolutionError(RuntimeError):
         )
 
 
-class NoValidDualsError(RuntimeError):
+class NoDualsError(PyomoException):
     def __init__(self):
         super().__init__(
             'Solver does not currently have valid duals. Please '
@@ -55,7 +49,7 @@ class NoValidDualsError(RuntimeError):
         )
 
 
-class NoValidReducedCostsError(RuntimeError):
+class NoReducedCostsError(PyomoException):
     def __init__(self):
         super().__init__(
             'Solver does not currently have valid reduced costs. Please '
@@ -76,64 +70,6 @@ def get_objective(block):
             raise ValueError('Multiple active objectives found.')
         objective = obj
     return objective
-
-
-def check_optimal_termination(results):
-    """
-    This function returns True if the termination condition for the solver
-    is 'optimal'.
-
-    Parameters
-    ----------
-    results : Pyomo Results object returned from solver.solve
-
-    Returns
-    -------
-    `bool`
-    """
-    if hasattr(results, 'solution_status'):
-        if results.solution_status == SolutionStatus.optimal and (
-            results.termination_condition
-            == TerminationCondition.convergenceCriteriaSatisfied
-        ):
-            return True
-    else:
-        if results.solver.status == SolverStatus.ok and (
-            results.solver.termination_condition
-            in (
-                LegacyTerminationCondition.optimal,
-                LegacyTerminationCondition.locallyOptimal,
-                LegacyTerminationCondition.globallyOptimal,
-            )
-        ):
-            return True
-    return False
-
-
-def assert_optimal_termination(results):
-    """
-    This function checks if the termination condition for the solver
-    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
-    and it raises a RuntimeError exception if this is not true.
-
-    Parameters
-    ----------
-    results : Pyomo Results object returned from solver.solve
-    """
-    if not check_optimal_termination(results):
-        if hasattr(results, 'solution_status'):
-            msg = (
-                'Solver failed to return an optimal solution. '
-                f'Solution status: {results.solution_status}, '
-                f'Termination condition: {results.termination_condition}'
-            )
-        else:
-            msg = (
-                'Solver failed to return an optimal solution. '
-                f'Solution status: {results.solver.status}, '
-                f'Termination condition: {results.solver.termination_condition}'
-            )
-        raise RuntimeError(msg)
 
 
 class _VarAndNamedExprCollector(ExpressionValueVisitor):

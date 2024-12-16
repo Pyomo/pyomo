@@ -10,11 +10,11 @@
 #  ___________________________________________________________________________
 
 
-from .factory import SolverFactory
-from .ipopt import Ipopt
-from .gurobi import Gurobi
-from .gurobi_direct import GurobiDirect
-from .highs import Highs
+from .common.factory import SolverFactory
+from .solvers.ipopt import Ipopt
+from .solvers.gurobi import Gurobi
+from .solvers.gurobi_direct import GurobiDirect
+from .solvers.highs import Highs
 
 
 def load():

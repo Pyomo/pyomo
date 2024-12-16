@@ -195,20 +195,7 @@ class BranchAndBoundConfig(SolverConfig):
 
 class AutoUpdateConfig(ConfigDict):
     """
-    This is necessary for persistent solvers.
-
-    Attributes
-    ----------
-    check_for_new_or_removed_constraints: bool
-    check_for_new_or_removed_vars: bool
-    check_for_new_or_removed_params: bool
-    check_for_new_objective: bool
-    update_constraints: bool
-    update_vars: bool
-    update_parameters: bool
-    update_named_expressions: bool
-    update_objective: bool
-    treat_fixed_vars_as_params: bool
+    Control which parts of the model are automatically checked and/or updated upon re-solve
     """
 
     def __init__(
@@ -364,7 +351,7 @@ class PersistentSolverConfig(SolverConfig):
         )
 
 
-class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
+class PersistentBranchAndBoundConfig(PersistentSolverConfig, BranchAndBoundConfig):
     """
     Base config for all persistent MIP solver interfaces
     """
@@ -383,8 +370,4 @@ class PersistentBranchAndBoundConfig(BranchAndBoundConfig):
             implicit=implicit,
             implicit_domain=implicit_domain,
             visibility=visibility,
-        )
-
-        self.auto_updates: AutoUpdateConfig = self.declare(
-            'auto_updates', AutoUpdateConfig()
         )

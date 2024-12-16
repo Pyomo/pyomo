@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.contrib.solver.config import (
+from pyomo.contrib.solver.common.config import (
     SolverConfig,
     BranchAndBoundConfig,
     AutoUpdateConfig,

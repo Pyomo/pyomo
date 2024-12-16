@@ -119,56 +119,11 @@ class SolutionStatus(enum.Enum):
     "A solution for which all of the constraints in the model are satisfied."
 
     optimal = 30
-    """A feasible solution where the objective function reaches its
-    specified sense (e.g., maximum, minimum)
-    """
+    "A feasible solution satisfying the solver's optimality criteria."
 
 
 class Results(ConfigDict):
-    """Base class for all solver results
-
-    Attributes
-    ----------
-    solution_loader: .SolutionLoaderBase
-        Object for loading the solution back into the model.
-    termination_condition: TerminationCondition
-        The reason the solver exited. This is a member of the
-        TerminationCondition enum.
-    solution_status: SolutionStatus
-        The result of the solve call. This is a member of the SolutionStatus
-        enum.
-    incumbent_objective: float
-        If a feasible solution was found, this is the objective value of
-        the best solution found. If no feasible solution was found, this is
-        None.
-    objective_bound: float
-        The best objective bound found. For minimization problems, this is
-        the lower bound. For maximization problems, this is the upper bound.
-        For solvers that do not provide an objective bound, this should be -inf
-        (minimization) or inf (maximization)
-    solver_name: str
-        The name of the solver in use.
-    solver_version: tuple
-        A tuple representing the version of the solver in use.
-    iteration_count: int
-        The total number of iterations.
-    timing_info: ConfigDict
-        A ConfigDict containing three pieces of information:
-
-          - ``start_timestamp``: UTC timestamp of when run was initiated
-          - ``wall_time``: elapsed wall clock time for entire process
-          - ``timer``: a HierarchicalTimer object containing timing data
-            about the solve
-
-        Specific solvers may add other relevant timing information, as appropriate.
-    extra_info: ConfigDict
-        A ConfigDict to store extra information such as solver messages.
-    solver_configuration: ConfigDict
-        A copy of the SolverConfig ConfigDict, for later inspection/reproducibility.
-    solver_log: str
-        (ADVANCED OPTION) Any solver log messages.
-
-    """
+    """Base class for all solver results"""
 
     def __init__(
         self,
@@ -270,8 +225,8 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
-        self.solver_configuration: ConfigDict = self.declare(
-            'solver_configuration',
+        self.solver_config: ConfigDict = self.declare(
+            'solver_config',
             ConfigValue(
                 description="A copy of the config object used in the solve call.",
                 visibility=ADVANCED_OPTION,
@@ -344,10 +299,10 @@ LegacyTerminationCondition, and LegacySolutionStatus into TerminationCondition
 and SolutionStatus to reduce complexity. As a result, several LegacySolutionStatus values
 are no longer achievable:
     - `LegacySolutionStatus.other` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
-    - `SolutionStatus.unsure` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
-    - `SolutionStatus.locallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
-    - `SolutionStatus.glocallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
-    - `SolutionStatus.bestSoFar` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.feasible`
+    - `LegacySolutionStatus.unsure` -> `TerminationCondition.unknown`, `SolutionStatus.noSolution`
+    - `LegacySolutionStatus.locallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
+    - `LegacySolutionStatus.globallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
+    - `LegacySolutionStatus.bestSoFar` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.feasible`
 """,
         version='6.7.4.dev0',
     )

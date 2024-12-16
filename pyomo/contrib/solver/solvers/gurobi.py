@@ -31,19 +31,19 @@ from pyomo.core.base.param import ParamData
 from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
-from pyomo.contrib.solver.base import PersistentSolverBase
-from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.gurobi_utils import GurobiConfigMixin
-from pyomo.contrib.solver.util import (
+from pyomo.contrib.solver.common.base import PersistentSolverBase, Availability
+from pyomo.contrib.solver.common.results import Results, TerminationCondition, SolutionStatus
+from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
+from pyomo.contrib.solver.solvers.gurobi_utils import GurobiConfigMixin
+from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
     NoOptimalSolutionError,
-    NoValidDualsError,
-    NoValidReducedCostsError,
-    NoValidSolutionError,
+    NoDualsError,
+    NoReducedCostsError,
+    NoSolutionError,
 )
-from pyomo.contrib.solver.persistent import PersistentSolverUtils, PersistentSolverMixin
-from pyomo.contrib.solver.solution import PersistentSolutionLoader
+from pyomo.contrib.solver.common.persistent import PersistentSolverUtils, PersistentSolverMixin
+from pyomo.contrib.solver.common.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
 
@@ -227,7 +227,7 @@ class _MutableQuadraticCoefficient:
         self.var2 = None
 
 
-class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin):
+class Gurobi(PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to Gurobi
     """
@@ -266,9 +266,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
 
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
-            return self.Availability.NotFound
-        elif self._available == self.Availability.BadVersion:
-            return self.Availability.BadVersion
+            return Availability.NotFound
+        elif self._available == Availability.BadVersion:
+            return Availability.BadVersion
         return self._check_license()
 
     def _check_license(self):
@@ -288,7 +288,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
             if self._available is None:
                 self._available = Gurobi._check_full_license()
             return self._available
-        return self.Availability.BadLicense
+        return Availability.BadLicense
 
     @classmethod
     def _check_full_license(cls):
@@ -297,9 +297,9 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
         try:
             m.addVars(range(2001))
             m.optimize()
-            return cls.Availability.FullLicense
+            return Availability.FullLicense
         except gurobipy.GurobiError:
-            return cls.Availability.LimitedLicense
+            return Availability.LimitedLicense
 
     def release_license(self):
         self._reinit()
@@ -362,10 +362,39 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
 
         self._needs_updated = False
         res = self._postsolve(timer)
-        res.solver_configuration = config
+        res.solver_config = config
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
+        return res
+
+    def solve(self, model, **kwds) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
+        StaleFlagManager.mark_all_as_stale()
+        # Note: solver availability check happens in set_instance(),
+        # which will be called (either by the user before this call, or
+        # below) before this method calls self._solve.
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+        if model is not self._model:
+            timer.start('set_instance')
+            self.set_instance(model)
+            timer.stop('set_instance')
+        else:
+            timer.start('update')
+            self.update(timer=timer)
+            timer.stop('update')
+        res = self._solve()
+        self._last_results_object = res
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        self._active_config = self.config
         return res
 
     def _process_domain_and_bounds(
@@ -946,7 +975,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
             self._update_gurobi_model()  # this is needed to ensure that solutions cannot be loaded after the model has been changed
 
         if self._solver_model.SolCount == 0:
-            raise NoValidSolutionError()
+            raise NoSolutionError()
 
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
@@ -975,7 +1004,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
             self._update_gurobi_model()
 
         if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
-            raise NoValidReducedCostsError()
+            raise NoReducedCostsError()
 
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
@@ -1000,7 +1029,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase, PersistentSolverMixin)
             self._update_gurobi_model()
 
         if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
-            raise NoValidDualsError()
+            raise NoDualsError()
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
