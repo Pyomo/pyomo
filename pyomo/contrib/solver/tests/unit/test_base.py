@@ -31,20 +31,20 @@ class TestSolverBase(unittest.TestCase):
     def test_init(self):
         self.instance = base.SolverBase()
         self.assertFalse(self.instance.is_persistent())
-        self.assertEqual(self.instance.version(), None)
         self.assertEqual(self.instance.name, 'solverbase')
         self.assertEqual(self.instance.CONFIG, self.instance.config)
-        self.assertEqual(self.instance.solve(None), None)
-        self.assertEqual(self.instance.available(), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.version(), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.solve(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.available(), None)
 
     def test_context_manager(self):
         with base.SolverBase() as self.instance:
             self.assertFalse(self.instance.is_persistent())
-            self.assertEqual(self.instance.version(), None)
             self.assertEqual(self.instance.name, 'solverbase')
             self.assertEqual(self.instance.CONFIG, self.instance.config)
-            self.assertEqual(self.instance.solve(None), None)
-            self.assertEqual(self.instance.available(), None)
 
     def test_config_kwds(self):
         self.instance = base.SolverBase(tee=True)
@@ -90,43 +90,40 @@ class TestPersistentSolverBase(unittest.TestCase):
     def test_init(self):
         self.instance = base.PersistentSolverBase()
         self.assertTrue(self.instance.is_persistent())
-        self.assertEqual(self.instance.set_instance(None), None)
-        self.assertEqual(self.instance.add_variables(None), None)
-        self.assertEqual(self.instance.add_parameters(None), None)
-        self.assertEqual(self.instance.add_constraints(None), None)
-        self.assertEqual(self.instance.add_block(None), None)
-        self.assertEqual(self.instance.remove_variables(None), None)
-        self.assertEqual(self.instance.remove_parameters(None), None)
-        self.assertEqual(self.instance.remove_constraints(None), None)
-        self.assertEqual(self.instance.remove_block(None), None)
-        self.assertEqual(self.instance.set_objective(None), None)
-        self.assertEqual(self.instance.update_variables(None), None)
-        self.assertEqual(self.instance.update_parameters(), None)
-
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.set_instance(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.add_variables(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.add_parameters(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.add_constraints(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.add_block(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.remove_variables(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.remove_parameters(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.remove_constraints(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.remove_block(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.set_objective(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.update_variables(None), None)
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(self.instance.update_parameters(), None)
         with self.assertRaises(NotImplementedError):
             self.instance._get_primals()
-
         with self.assertRaises(NotImplementedError):
             self.instance._get_duals()
-
         with self.assertRaises(NotImplementedError):
             self.instance._get_reduced_costs()
 
     def test_context_manager(self):
         with base.PersistentSolverBase() as self.instance:
             self.assertTrue(self.instance.is_persistent())
-            self.assertEqual(self.instance.set_instance(None), None)
-            self.assertEqual(self.instance.add_variables(None), None)
-            self.assertEqual(self.instance.add_parameters(None), None)
-            self.assertEqual(self.instance.add_constraints(None), None)
-            self.assertEqual(self.instance.add_block(None), None)
-            self.assertEqual(self.instance.remove_variables(None), None)
-            self.assertEqual(self.instance.remove_parameters(None), None)
-            self.assertEqual(self.instance.remove_constraints(None), None)
-            self.assertEqual(self.instance.remove_block(None), None)
-            self.assertEqual(self.instance.set_objective(None), None)
-            self.assertEqual(self.instance.update_variables(None), None)
-            self.assertEqual(self.instance.update_parameters(), None)
 
 
 class TestLegacySolverWrapper(unittest.TestCase):
@@ -148,7 +145,8 @@ class TestLegacySolverWrapper(unittest.TestCase):
     def test_context_manager(self):
         with _LegacyWrappedSolverBase() as instance:
             self.assertIsInstance(instance, _LegacyWrappedSolverBase)
-            self.assertFalse(instance.available(False))
+            with self.assertRaises(NotImplementedError):
+                self.assertFalse(instance.available(False))
 
     def test_map_config(self):
         # Create a fake/empty config structure that can be added to an empty

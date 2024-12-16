@@ -71,7 +71,7 @@ class SolverBase:
         - version: The version of the solver
         - is_persistent: Set to false for all non-persistent solvers.
 
-    Additionally, solvers should have a :attr:`config<SolverBase.config>` attribute that
+    Additionally, solvers should have a :attr:`CONFIG<SolverBase.CONFIG>` attribute that
     inherits from one of :class:`SolverConfig<pyomo.contrib.solver.config.SolverConfig>`,
     :class:`BranchAndBoundConfig<pyomo.contrib.solver.config.BranchAndBoundConfig>`,
     :class:`PersistentSolverConfig<pyomo.contrib.solver.config.PersistentSolverConfig>`, or
@@ -111,7 +111,9 @@ class SolverBase:
         results: :class:`Results<pyomo.contrib.solver.results.Results>`
             A results object
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Every solver interface must provide their own implementation of `solve` which returns an appropriately populated `Results` object."
+        )
 
     def available(self) -> Availability:
         """Test if the solver is available on this system.
@@ -121,7 +123,9 @@ class SolverBase:
         available: Availability
             An enum that indicates "how available" the solver is.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Every solver interface must provide their own implementation of `available` which returns an `Availability` object."
+        )
 
     def version(self) -> Tuple:
         """
@@ -130,7 +134,9 @@ class SolverBase:
         version: tuple
             A tuple representing the version
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Solvers must return the version number in a tuple form (e.g., `(1, 2, 1)`)."
+        )
 
     def is_persistent(self) -> bool:
         """
@@ -175,7 +181,9 @@ class PersistentSolverBase(SolverBase):
         results: :class:`Results<pyomo.contrib.solver.results.Results>`
             A results object
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Every solver interface must provide their own implementation of `solve` which returns an appropriately populated `Results` object."
+        )
 
     def is_persistent(self) -> bool:
         """
@@ -262,73 +270,97 @@ class PersistentSolverBase(SolverBase):
         """
         Set an instance of the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for setting an instance of the model."
+        )
 
     def set_objective(self, obj: ObjectiveData):
         """
         Set current objective for the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for setting the current objective of the model."
+        )
 
     def add_variables(self, variables: List[VarData]):
         """
         Add variables to the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for adding variables to the model."
+        )
 
     def add_parameters(self, params: List[ParamData]):
         """
         Add parameters to the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for adding parameters to the model."
+        )
 
     def add_constraints(self, cons: List[ConstraintData]):
         """
         Add constraints to the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for adding constraints to the model."
+        )
 
     def add_block(self, block: BlockData):
         """
         Add a block to the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for adding blocks to the model."
+        )
 
     def remove_variables(self, variables: List[VarData]):
         """
         Remove variables from the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for removing variables from the model."
+        )
 
     def remove_parameters(self, params: List[ParamData]):
         """
         Remove parameters from the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for removing parameters from the model."
+        )
 
     def remove_constraints(self, cons: List[ConstraintData]):
         """
         Remove constraints from the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for removing constraints from the model."
+        )
 
     def remove_block(self, block: BlockData):
         """
         Remove a block from the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for removing blocks from the model."
+        )
 
     def update_variables(self, variables: List[VarData]):
         """
         Update variables on the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for updating variables on the model."
+        )
 
     def update_parameters(self):
         """
         Update parameters on the model.
         """
-        raise NotImplementedError("Subclasses should implement this method.")
+        raise NotImplementedError(
+            "Persistent solvers should provide a mechanism for updating parameters on the model."
+        )
 
 
 class LegacySolverWrapper:

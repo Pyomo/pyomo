@@ -29,7 +29,7 @@ from pyomo.contrib.solver.common.util import (
 )
 from pyomo.contrib.solver.common.base import SolverBase
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
-from pyomo.contrib.solver.solvers.gurobi import Gurobi
+from pyomo.contrib.solver.solvers.gurobi_persistent import Gurobi
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
 from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression

@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
-from pyomo.contrib.solver.solvers.gurobi import Gurobi
+from pyomo.contrib.solver.solvers.gurobi_persistent import Gurobi
 from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 

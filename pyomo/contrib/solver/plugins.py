@@ -12,7 +12,7 @@
 
 from .common.factory import SolverFactory
 from .solvers.ipopt import Ipopt
-from .solvers.gurobi import Gurobi
+from .solvers.gurobi_persistent import Gurobi
 from .solvers.gurobi_direct import GurobiDirect
 from .solvers.highs import Highs
 
@@ -22,7 +22,7 @@ def load():
         name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver'
     )(Ipopt)
     SolverFactory.register(
-        name='gurobi', legacy_name='gurobi_v2', doc='Persistent interface to Gurobi'
+        name='gurobi_persistent', legacy_name='gurobi_persistent_v2', doc='Persistent interface to Gurobi'
     )(Gurobi)
     SolverFactory.register(
         name='gurobi_direct',

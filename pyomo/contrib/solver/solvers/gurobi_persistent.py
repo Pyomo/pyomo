@@ -46,10 +46,7 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
     NoSolutionError,
 )
-from pyomo.contrib.solver.common.persistent import (
-    PersistentSolverUtils,
-    PersistentSolverMixin,
-)
+from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
 from pyomo.contrib.solver.common.solution import PersistentSolutionLoader
 from pyomo.core.staleflag import StaleFlagManager
 
@@ -250,7 +247,6 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         PersistentSolverUtils.__init__(
             self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
         )
-        PersistentSolverMixin.__init__(self)
         Gurobi._num_instances += 1
         self._solver_model = None
         self._symbol_map = SymbolMap()
