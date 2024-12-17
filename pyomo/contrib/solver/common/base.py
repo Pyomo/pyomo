@@ -72,10 +72,10 @@ class SolverBase:
         - is_persistent: Set to false for all non-persistent solvers.
 
     Additionally, solvers should have a :attr:`CONFIG<SolverBase.CONFIG>` attribute that
-    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.config.SolverConfig>`,
-    :class:`BranchAndBoundConfig<pyomo.contrib.solver.config.BranchAndBoundConfig>`,
-    :class:`PersistentSolverConfig<pyomo.contrib.solver.config.PersistentSolverConfig>`, or
-    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.config.PersistentBranchAndBoundConfig>`.
+    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.common.config.SolverConfig>`,
+    :class:`BranchAndBoundConfig<pyomo.contrib.solver.common.config.BranchAndBoundConfig>`,
+    :class:`PersistentSolverConfig<pyomo.contrib.solver.common.config.PersistentSolverConfig>`, or
+    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.common.config.PersistentBranchAndBoundConfig>`.
     """
 
     CONFIG = SolverConfig()
@@ -108,7 +108,7 @@ class SolverBase:
 
         Returns
         -------
-        results: :class:`Results<pyomo.contrib.solver.results.Results>`
+        results: :class:`Results<pyomo.contrib.solver.common.results.Results>`
             A results object
         """
         raise NotImplementedError(
@@ -178,7 +178,7 @@ class PersistentSolverBase(SolverBase):
 
         Returns
         -------
-        results: :class:`Results<pyomo.contrib.solver.results.Results>`
+        results: :class:`Results<pyomo.contrib.solver.common.results.Results>`
             A results object
         """
         raise NotImplementedError(
