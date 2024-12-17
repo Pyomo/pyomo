@@ -25,7 +25,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import relocated_module_attribute
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -85,13 +85,11 @@ ScalingFactors = namedtuple(
 )
 
 
-class NLWriterEmptyModelError(ValueError):
+class NLWriterEmptyModelError(PyomoException):
     """
     A custom exception to allow handling of a
     model with no free variables.
     """
-
-    pass
 
 
 # TODO: make a proper base class
