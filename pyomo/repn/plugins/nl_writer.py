@@ -25,7 +25,10 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import relocated_module_attribute
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
+from pyomo.common.errors import (
+    InfeasibleConstraintException,
+    PyomoException,
+)
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
