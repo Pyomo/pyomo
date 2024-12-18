@@ -50,6 +50,32 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class _SignalFlush(object):
+    def __init__(self, ostream, handle):
+        super().__setattr__('_ostream', ostream)
+        super().__setattr__('_handle', handle)
+
+    def flush(self):
+        self._ostream.flush()
+        self._handle.flush = True
+
+    def __getattr__(self, attr):
+        return getattr(self._ostream, attr)
+
+    def __setattr__(self, attr,val):
+        return setattr(self._ostream, attr, val)
+
+
+class _AutoFlush(_SignalFlush):
+    def write(self, data):
+        self._ostream.write(data)
+        self.flush()
+
+    def writelines(self, data):
+        self._ostream.writelines(data)
+        self.flush()
+
+
 class redirect_fd(object):
     """Redirect a file descriptor to a new file or file descriptor.
 
@@ -220,6 +246,7 @@ class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
         self.buffering = buffering
         self.newlines = newline
+        self.flush = False
         self.read_pipe, self.write_pipe = os.pipe()
         if not buffering and 'b' not in mode:
             # While we support "unbuffered" behavior in text mode,
@@ -233,6 +260,13 @@ class _StreamHandle(object):
             newline=newline,
             closefd=False,
         )
+        if not self.buffering and buffering:
+            # We want this stream to be unbuffered, but Python doesn't
+            # allow it for text strreams.  Mock up an unbuffered stream
+            # using AutoFlush
+            self.write_file = _AutoFlush(self.write_file, self)
+        else:
+            self.write_file = _SignalFlush(self.write_file, self)
         self.decoder_buffer = b''
         try:
             self.encoding = encoding or self.write_file.encoding
@@ -452,7 +486,11 @@ class TeeStream(object):
             pass
 
     def _streamReader(self, handle):
+        flush = False
         while True:
+            if handle.flush:
+                flush = True
+                handle.flush = False
             new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
             if not new_data:
                 break
@@ -463,6 +501,11 @@ class TeeStream(object):
             handle.decodeIncomingBuffer()
             # Now, output whatever we have decoded to the output streams
             handle.writeOutputBuffer(self.ostreams)
+            if flush:
+                flush = False
+                if self.buffering:
+                    for s in self.ostreams:
+                        s.flush()
         #
         # print("STREAM READER: DONE")
 
@@ -489,9 +532,13 @@ class TeeStream(object):
                             _fast_poll_ct = _poll_rampup
             else:
                 new_data = None
+            flush = False
             if _mswindows:
                 for handle in list(handles):
                     try:
+                        if handle.flush:
+                            flush = True
+                            handle.flush = False
                         pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
@@ -520,6 +567,9 @@ class TeeStream(object):
                     continue
 
                 handle = ready_handles[0]
+                if handle.flush:
+                    flush = True
+                    handle.flush = False
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
                     handles.remove(handle)
@@ -532,5 +582,8 @@ class TeeStream(object):
 
             # Now, output whatever we have decoded to the output streams
             handle.writeOutputBuffer(self.ostreams)
+            if flush and self.buffering:
+                for s in self.ostreams:
+                    s.flush()
         #
         # print("MERGED READER: DONE")

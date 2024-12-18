@@ -197,6 +197,8 @@ class TestTeeStream(unittest.TestCase):
         class MockStream(object):
             def write(self, data):
                 time.sleep(0.2)
+            def flush(self):
+                pass
 
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
