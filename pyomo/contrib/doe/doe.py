@@ -198,7 +198,7 @@ class DesignOfExperiments:
             #solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
-            solver.options["tol"] = 1e-4
+            #solver.options["tol"] = 1e-4
             self.solver = solver
 
         self.tee = tee
@@ -211,7 +211,7 @@ class DesignOfExperiments:
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             grey_box_solver.config.options["linear_solver"] = "ma57" 
             grey_box_solver.config.options['max_iter'] = 3000
-            grey_box_solver.config.options['tol'] = 1e-4
+            #grey_box_solver.config.options['tol'] = 1e-4
             grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
