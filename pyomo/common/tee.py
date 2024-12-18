@@ -370,7 +370,7 @@ class _StreamHandle(object):
     def writeOutputBuffer(self, ostreams):
         if not self.encoding:
             ostring, self.output_buffer = self.output_buffer, b''
-        elif self.buffering == 1:
+        elif self.buffering > 0:
             EOL = self.output_buffer.rfind(self.newlines or '\n') + 1
             ostring = self.output_buffer[:EOL]
             self.output_buffer = self.output_buffer[EOL:]
@@ -400,10 +400,11 @@ class _StreamHandle(object):
 
 
 class TeeStream(object):
-    def __init__(self, *ostreams, encoding=None):
+    def __init__(self, *ostreams, encoding=None, buffering=-1):
         self.user_ostreams = ostreams
         self.ostreams = []
         self.encoding = encoding
+        self.buffering = buffering
         self._stdout = None
         self._stderr = None
         self._handles = []
@@ -421,13 +422,19 @@ class TeeStream(object):
     @property
     def STDOUT(self):
         if self._stdout is None:
-            self._stdout = self.open(buffering=1)
+            b = self.buffering
+            if b == -1:
+                b = 1
+            self._stdout = self.open(buffering=b)
         return self._stdout
 
     @property
     def STDERR(self):
         if self._stderr is None:
-            self._stderr = self.open(buffering=0)
+            b = self.buffering
+            if b == -1:
+                b = 0
+            self._stderr = self.open(buffering=b)
         return self._stderr
 
     def open(self, mode='w', buffering=-1, encoding=None, newline=None):
