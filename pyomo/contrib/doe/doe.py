@@ -194,7 +194,7 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             solver = pyo.SolverFactory("ipopt")
-            # solver.options["linear_solver"] = "ma57"
+            #solver.options["linear_solver"] = "ma57"
             solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
@@ -209,7 +209,7 @@ class DesignOfExperiments:
             grey_box_solver = pyo.SolverFactory("cyipopt")
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             grey_box_solver.config.options['max_iter'] = 3000
-            # grey_box_solver.config.options['mu_strategy'] = "monotone"
+            grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
 
@@ -296,11 +296,10 @@ class DesignOfExperiments:
                 p2: parameter 2
                 
                 """
-                return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
-                #if list(model.parameter_names).index(p1) >= list(model.parameter_names).index(p2):
-                #    return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
-                #else:
-                #    return pyo.Constraint.Skip
+                if list(model.parameter_names).index(p1) >= list(model.parameter_names).index(p2):
+                    return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
+                else:
+                    return model.fim[(p2, p1)] == m.egb_fim_block.inputs[(p1, p2)]
             model.obj_cons.FIM_equalities = pyo.Constraint(model.parameter_names, model.parameter_names, rule=FIM_egb_cons)
             
             # ToDo: Add naming convention to adjust name of objective output
@@ -378,13 +377,6 @@ class DesignOfExperiments:
 
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
-            #from idaes.core.util.model_diagnostics import DiagnosticsToolbox
-            #dt = DiagnosticsToolbox(model, constraint_residual_tolerance=1e-10)
-            self.grey_box_solver.config.options['tol'] = 1e-3
-            res = self.grey_box_solver.solve(model, tee=self.tee)
-            # Doing diagnostics
-            #dt.display_constraints_with_large_residuals()
-            self.grey_box_solver.config.options['tol'] = 1e-6
             res = self.grey_box_solver.solve(model, tee=self.tee)
         else:
             res = self.solver.solve(model, tee=self.tee)

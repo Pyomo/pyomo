@@ -91,6 +91,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Set initial values for inputs
         self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+        print(self._input_values)
 
     
     def input_names(self):
@@ -174,7 +175,19 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Since M is symmetric, the derivative of logdet(M) w.r.t M is
         # 2*inverse(M) - diagonal(inverse(M)) ADD SOURCE
-        jac_M = 2*Minv - np.diagonal(Minv)
+        #jac_M = 2*Minv - np.diagonal(Minv)
+        #jac_M = Minv
+
+        jac_M = 0.5*(Minv + Minv.transpose())
+
+        #print("M")
+        #print(M)
+        #print("Jac_M")
+        #print(jac_M)
+        #print("Eigenvalues")
+        #print(eig)
+        #print("Eigenvectors")
+        #print(_)
 
         # Rows are the integer division by number of columns
         M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]
