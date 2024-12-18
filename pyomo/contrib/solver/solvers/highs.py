@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import datetime
 import io
 from typing import List, Optional
 from threading import Thread
@@ -18,6 +19,7 @@ import time
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.kernel.objective import minimize, maximize
@@ -38,10 +40,7 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.common.persistent import (
-    PersistentSolverUtils,
-    PersistentSolverMixin,
-)
+from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
 from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
@@ -123,7 +122,7 @@ class _MutableConstraintBounds:
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
 
-class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
+class Highs(PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to HiGHS
     """
@@ -232,6 +231,32 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             TempfileManager.pop()
 
         return self._postsolve()
+
+    def solve(self, model, **kwds) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
+        StaleFlagManager.mark_all_as_stale()
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+        if model is not self._model:
+            timer.start('set_instance')
+            self.set_instance(model)
+            timer.stop('set_instance')
+        else:
+            timer.start('update')
+            self.update(timer=timer)
+            timer.stop('update')
+        res = self._solve()
+        self._last_results_object = res
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        self._active_config = self.config
+        return res
 
     def _process_domain_and_bounds(self, var_id):
         _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[var_id]
