@@ -178,10 +178,33 @@ class redirect_fd(object):
 
 
 class capture_output(object):
-    """
-    Drop-in substitute for PyUtilib's capture_output.
-    Takes in a StringIO, file-like object, or filename and temporarily
-    redirects output to a string buffer.
+    """Context manager to capture output sent to sys.stdout and sys.stderr
+
+    This is a drop-in substitute for PyUtilib's capture_output to
+    temporarily redirect output to the provided stream or file.
+
+    Parameters
+    ----------
+    output : io.TextIOBase, TeeStream, str, or None
+
+        Output stream where all captured stdout/stderr data is sent.  If
+        a ``str`` is provided, it is used as a file name and opened
+        (potentially overwriting any existing file).  If ``None``, a
+        :class:`io.StringIO` object is created and used.
+
+    capture_fd : bool
+
+        If True, we will also redirect the low-level file descriptors
+        associated with stdout (1) and stderr (2) to the ``output``.
+        This is useful for capturing output emitted directly to the
+        process stdout / stderr by external compiled modules.
+
+    Returns
+    -------
+    io.TextIOBase
+
+        This is the output stream object where all data is sent.
+
     """
 
     def __init__(self, output=None, capture_fd=False):
@@ -195,12 +218,15 @@ class capture_output(object):
         self.fd_redirect = None
 
     def __enter__(self):
+        self.old = (sys.stdout, sys.stderr)
         if isinstance(self.output, str):
             self.output_stream = open(self.output, 'w')
         else:
             self.output_stream = self.output
-        self.old = (sys.stdout, sys.stderr)
-        self.tee = TeeStream(self.output_stream)
+        if isinstance(self.output, TeeStream):
+            self.tee = self.output
+        else:
+            self.tee = TeeStream(self.output_stream)
         self.tee.__enter__()
         sys.stdout = self.tee.STDOUT
         sys.stderr = self.tee.STDERR
