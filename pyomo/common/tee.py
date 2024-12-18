@@ -401,13 +401,22 @@ class _StreamHandle(object):
 
 class TeeStream(object):
     def __init__(self, *ostreams, encoding=None):
-        self.ostreams = ostreams
+        self.user_ostreams = ostreams
+        self.ostreams = []
         self.encoding = encoding
         self._stdout = None
         self._stderr = None
         self._handles = []
         self._active_handles = []
         self._threads = []
+        for s in ostreams:
+            try:
+                fileno = s.fileno()
+            except:
+                self.ostreams.append(s)
+                continue
+            s = os.fdopen(os.dup(fileno), mode=getattr(s, 'mode', None), closefd=True)
+            self.ostreams.append(s)
 
     @property
     def STDOUT(self):
@@ -482,6 +491,9 @@ class TeeStream(object):
         self._active_handles.clear()
         self._stdout = None
         self._stderr = None
+        for orig, local in zip(self.user_ostreams, self.ostreams):
+            if orig is not local:
+                local.close()
 
     def __enter__(self):
         return self
