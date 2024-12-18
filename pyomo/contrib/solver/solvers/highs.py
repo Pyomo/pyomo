@@ -186,17 +186,19 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             def run(self):
                 pos = 0
                 while not self.stop:
-                    with open(self.fname, 'r') as file:
-                        file.seek(pos)
-                        msg = file.read()
-                        pos = file.tell()
+                    f = open(self.fname, 'r')
+                    f.seek(pos)
+                    msg = f.read()
+                    pos = f.tell()
+                    f.close()
                     for s in self.ostreams:
                         s.write(msg)
                     time.sleep(self.sleep_time)
-                with open(self.fname, 'r') as file:
-                    file.seek(pos)
-                    msg = file.read()
-                    pos = file.tell()
+                f = open(self.fname, 'r')
+                f.seek(pos)
+                msg = f.read()
+                pos = f.tell()
+                f.close()
                 for s in self.ostreams:
                     s.write(msg)
 
