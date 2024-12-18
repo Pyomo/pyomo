@@ -62,7 +62,7 @@ class _SignalFlush(object):
     def __getattr__(self, attr):
         return getattr(self._ostream, attr)
 
-    def __setattr__(self, attr,val):
+    def __setattr__(self, attr, val):
         return setattr(self._ostream, attr, val)
 
 
