@@ -367,25 +367,24 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
-        with TeeStream(*ostreams) as t:
-            with capture_output(output=t.STDOUT, capture_fd=False):
-                config = self.config
-                options = self.gurobi_options
+        with capture_output(output=TeeStream(*ostreams), capture_fd=False):
+            config = self.config
+            options = self.gurobi_options
 
-                self._solver_model.setParam('LogToConsole', 1)
-                self._solver_model.setParam('LogFile', config.logfile)
+            self._solver_model.setParam('LogToConsole', 1)
+            self._solver_model.setParam('LogFile', config.logfile)
 
-                if config.time_limit is not None:
-                    self._solver_model.setParam('TimeLimit', config.time_limit)
-                if config.mip_gap is not None:
-                    self._solver_model.setParam('MIPGap', config.mip_gap)
+            if config.time_limit is not None:
+                self._solver_model.setParam('TimeLimit', config.time_limit)
+            if config.mip_gap is not None:
+                self._solver_model.setParam('MIPGap', config.mip_gap)
 
-                for key, option in options.items():
-                    self._solver_model.setParam(key, option)
+            for key, option in options.items():
+                self._solver_model.setParam(key, option)
 
-                timer.start('optimize')
-                self._solver_model.optimize(self._callback)
-                timer.stop('optimize')
+            timer.start('optimize')
+            self._solver_model.optimize(self._callback)
+            timer.stop('optimize')
 
         self._needs_updated = False
         return self._postsolve(timer)

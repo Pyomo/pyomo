@@ -684,15 +684,10 @@ class GUROBIFILE(GUROBISHELL):
         ostreams = [io.StringIO()]
         if self._tee:
             ostreams.append(sys.stdout)
-        with TeeStream(*ostreams) as t:
-            with capture_output(output=t.STDOUT, capture_fd=False):
-                self._soln = GUROBI_RUN.gurobi_run(
-                    problem_filename,
-                    warmstart_filename,
-                    None,
-                    options_dict,
-                    self._suffixes,
-                )
+        with capture_output(output=TeeStream(*ostreams), capture_fd=False):
+            self._soln = GUROBI_RUN.gurobi_run(
+                problem_filename, warmstart_filename, None, options_dict, self._suffixes
+            )
         self._log = ostreams[0].getvalue()
         self._rc = 0
         sys.stdout.flush()
