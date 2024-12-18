@@ -232,8 +232,8 @@ class capture_output(object):
         sys.stderr = self.tee.STDERR
         if self.capture_fd:
             self.fd_redirect = (
-                redirect_fd(1, sys.stdout.fileno()),
-                redirect_fd(2, sys.stderr.fileno()),
+                redirect_fd(1, self.tee.STDOUT.fileno(), synchronize=False),
+                redirect_fd(2, self.tee.STDERR.fileno(), synchronize=False),
             )
             self.fd_redirect[0].__enter__()
             self.fd_redirect[1].__enter__()
