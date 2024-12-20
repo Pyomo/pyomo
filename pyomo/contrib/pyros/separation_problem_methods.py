@@ -1157,7 +1157,7 @@ def discrete_solve(
     ]
 
     solve_call_results_dict = {}
-    for scenario_idx in scenario_idxs_to_separate:
+    for idx, scenario_idx in enumerate(scenario_idxs_to_separate):
         # fix uncertain parameters to scenario value
         # hence, no need to activate uncertainty set constraints
         scenario = config.uncertainty_set.scenarios[scenario_idx]
@@ -1165,9 +1165,9 @@ def discrete_solve(
             param.fix(coord_val)
 
         # debug statement for solving square problem for each scenario
-        # TODO add information on total number of scenarios not added to MP
         config.progress_logger.debug(
-            f"Attempting to solve square problem for discrete scenario {scenario_idx}"
+            f"Attempting to solve square problem for discrete scenario {scenario}"
+            f", {idx + 1} of {len(scenario_idxs_to_separate)} total"
         )
 
         # obtain separation problem solution
@@ -1190,7 +1190,7 @@ def discrete_solve(
         if solve_call_results.subsolver_error:
             config.progress_logger.warning(
                 f"All solvers failed to solve discrete scenario {scenario_idx}: "
-                f"{config.uncertainty_set.scenarios[scenario_idx]}"
+                f"{scenario}"
             )
 
     return DiscreteSeparationSolveCallResults(
