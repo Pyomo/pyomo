@@ -3229,6 +3229,11 @@ class SubsolverErrorSolver(object):
         return results
 
 
+@unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+@unittest.skipUnless(
+    baron_available and baron_license_is_valid,
+    "Global NLP solver is not available and licensed.",
+)
 class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
     """
     Test PyROS subsolver error efficiency for continuous and discrete uncertainty sets.
