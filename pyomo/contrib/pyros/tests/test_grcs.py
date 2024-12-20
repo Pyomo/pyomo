@@ -24,9 +24,14 @@ from pyomo.common.errors import InvalidValueError
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 import pyomo.repn.ampl as pyomo_ampl_repn
-from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import (
+    attempt_import,
+    numpy as np,
+    numpy_available,
+    scipy_available,
+)
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
+from pyomo.core.expr import replace_expressions
 from pyomo.environ import maximize as pyo_max, units as u
 from pyomo.opt import (
     SolverResults,
@@ -69,9 +74,12 @@ from pyomo.contrib.pyros.util import (
 
 logger = logging.getLogger(__name__)
 
+parameterized, param_available = attempt_import('parameterized')
 
-if not (numpy_available and scipy_available):
+if not (numpy_available and scipy_available and param_available):
     raise unittest.SkipTest('PyROS unit tests require parameterized, numpy, and scipy')
+
+parameterized = parameterized.parameterized
 
 # === Config args for testing
 nlp_solver = 'ipopt'
@@ -1656,6 +1664,46 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_infeasible,
             msg="Robust infeasible problem not identified via coefficient matching.",
         )
+        self.assertEqual(
+            results.iterations, 0, msg="Number of PyROS iterations not as expected."
+        )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT not available")
+    def test_coefficient_matching_robust_infeasible_param_only_con(self):
+        """
+        Test robust infeasibility reported due to equality
+        constraint depending only on uncertain params.
+        """
+        m = build_leyffer()
+        m.robust_infeasible_eq_con = Constraint(expr=m.u == 1)
+
+        box_set = BoxSet(bounds=[(0.25, 2)])
+
+        ipopt = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=box_set,
+            local_solver=ipopt,
+            global_solver=ipopt,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+            msg="Robust infeasible problem not identified via coefficient matching.",
+        )
+        self.assertEqual(
+            results.iterations, 0, msg="Number of PyROS iterations not as expected."
+        )
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available.")
     def test_coefficient_matching_nonlinear_expr(self):
@@ -1703,6 +1751,59 @@ class RegressionTest(unittest.TestCase):
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
         )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT not available.")
+    def test_pyros_vars_as_uncertain_params(self):
+        """
+        Test PyROS solver result is invariant to the type used
+        in argument `uncertain_params`.
+        """
+        mdl1 = build_leyffer()
+
+        # clone: use a Var to represent the uncertain parameter.
+        #        to ensure Var is out of scope of all subproblems
+        #        as viewed by the subsolvers,
+        #        let's make the bounds exclude the nominal value;
+        #        PyROS should ignore these bounds as well
+        mdl2 = mdl1.clone()
+        mdl2.uvar = Var(initialize=mdl2.u.value, bounds=(-1, 0))
+        mdl2.con.set_value(
+            replace_expressions(
+                expr=mdl2.con.expr, substitution_map={id(mdl2.u): mdl2.uvar}
+            )
+        )
+
+        box_set = BoxSet([[0.25, 2]])
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        res1 = pyros_solver.solve(
+            model=mdl1,
+            first_stage_variables=[mdl1.x1, mdl1.x2],
+            second_stage_variables=[],
+            uncertain_params=[mdl1.u],
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(
+            res1.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
+        )
+
+        res2 = pyros_solver.solve(
+            model=mdl2,
+            first_stage_variables=[mdl2.x1, mdl2.x2],
+            second_stage_variables=[],
+            uncertain_params=[mdl2.uvar],
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(
+            res2.pyros_termination_condition, res1.pyros_termination_condition
+        )
+        self.assertEqual(res1.final_objective_value, res2.final_objective_value)
+        self.assertEqual(res1.iterations, res2.iterations)
 
 
 @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
@@ -2912,6 +3013,59 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
             expected_regex=(
                 "The following Vars were found in both `first_stage_variables`"
                 "and `second_stage_variables`.*"
+            ),
+        )
+        self.assertRegex(text=log_msgs[1], expected_regex=" 'x1'")
+        self.assertRegex(
+            text=log_msgs[2],
+            expected_regex="Ensure no Vars are included in both arguments.",
+        )
+
+    @parameterized.expand([["first_stage", True], ["second_stage", False]])
+    def test_pyros_overlap_uncertain_params_vars(self, stage_name, is_first_stage):
+        """
+        Test PyROS solver raises exception if there
+        is overlap between `uncertain_params` and either
+        `first_stage_variables` or `second_stage_variables`.
+        """
+        # build model
+        mdl = self.build_simple_test_model()
+
+        first_stage_vars = [mdl.x1, mdl.x2] if is_first_stage else []
+        second_stage_vars = [mdl.x1, mdl.x2] if not is_first_stage else []
+
+        # prepare solvers
+        pyros = SolverFactory("pyros")
+        local_solver = SimpleTestSolver()
+        global_solver = SimpleTestSolver()
+
+        # perform checks
+        exc_str = (
+            f"Arguments `{stage_name}_variables` and `uncertain_params` "
+            "contain at least one common Var object."
+        )
+        with LoggingIntercept(level=logging.ERROR) as LOG:
+            with self.assertRaisesRegex(ValueError, exc_str):
+                pyros.solve(
+                    model=mdl,
+                    first_stage_variables=first_stage_vars,
+                    second_stage_variables=second_stage_vars,
+                    uncertain_params=[mdl.x1],
+                    uncertainty_set=BoxSet([[1 / 4, 2]]),
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                )
+
+        # check logger output is as expected
+        log_msgs = LOG.getvalue().split("\n")[:-1]
+        self.assertEqual(
+            len(log_msgs), 3, "Error message does not contain expected number of lines."
+        )
+        self.assertRegex(
+            text=log_msgs[0],
+            expected_regex=(
+                f"The following Vars were found in both `{stage_name}_variables`"
+                "and `uncertain_params`.*"
             ),
         )
         self.assertRegex(text=log_msgs[1], expected_regex=" 'x1'")
