@@ -884,7 +884,8 @@ for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
        * Iteration log table
        * Termination details: message, timing breakdown, summary of statistics
    * - :py:obj:`logging.DEBUG`
-     - * Termination outcomes and summary of statistics for
+     - * Progress through the various preprocessing subroutines
+       * Termination outcomes and summary of statistics for
          every master feasility, master, and DR polishing problem
        * Progress updates for the separation procedure
        * Separation subproblem initial point infeasibilities
@@ -959,7 +960,7 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.1.
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.2.
           Pyomo version: 6.9.0
           Commit hash: unknown
           Invoked at UTC 2024-11-01T00:00:00.000000
