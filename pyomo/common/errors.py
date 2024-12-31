@@ -244,3 +244,12 @@ class TemplateExpressionError(ValueError):
     def __init__(self, template, *args, **kwds):
         self.template = template
         super(TemplateExpressionError, self).__init__(*args, **kwds)
+
+
+class EmptyModelError(PyomoException, ValueError):
+    """
+    Exception class used to throw an error for an empty
+    Pyomo model (i.e., no variables or constraints).
+    """
+
+    pass
