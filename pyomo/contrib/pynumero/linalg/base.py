@@ -14,7 +14,34 @@ import enum
 from typing import Optional, Union, Tuple
 from scipy.sparse import spmatrix
 import numpy as np
-from pyomo.contrib.pynumero.sparse.base_block import BaseBlockVector, BaseBlockMatrix
+
+try:
+    from pyomo.contrib.pynumero.sparse.base_block import (
+        BaseBlockVector,
+        BaseBlockMatrix,
+    )
+except ImportError as e:
+    print("IMPORT ERROR: ", e)
+    print("Current environment information...")
+    import sys
+    import platform
+    import pkg_resources
+
+    print(f"Python version: {platform.python_version()}")
+    print(f"Python executable: {sys.executable}")
+    print(f"Platform: {platform.system()} {platform.release()} ({platform.platform()})")
+
+    print("\nInstalled packages:")
+    installed_packages = pkg_resources.working_set
+    installed_packages_list = sorted(
+        [f"{pkg.key}=={pkg.version}" for pkg in installed_packages]
+    )
+    print("\n".join(installed_packages_list))
+
+    print("\nImported packages:")
+    imported_packages = sorted(sys.modules.keys())
+    print("\n".join(imported_packages))
+    raise e
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
 
 
