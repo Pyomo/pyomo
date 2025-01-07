@@ -11,7 +11,7 @@
 
 # These classes are for checking types consistently and raising errors
 
-from ..dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np
 
 
 class BaseBlockVector(object):

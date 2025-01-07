@@ -9,4 +9,4 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from ..dependencies import numpy_available, scipy_available
+from pyomo.common.dependencies import numpy_available, scipy_available
