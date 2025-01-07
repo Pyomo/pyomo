@@ -11,6 +11,7 @@
 
 from abc import ABCMeta, abstractmethod
 from pyomo.contrib.pynumero.interfaces import pyomo_nlp, ampl_nlp
+
 try:
     from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
 except ImportError as e:
