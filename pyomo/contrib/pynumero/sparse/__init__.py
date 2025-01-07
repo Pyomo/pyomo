@@ -36,3 +36,4 @@ except ImportError as e:
     print("\nImported packages:")
     imported_packages = sorted(sys.modules.keys())
     print("\n".join(imported_packages))
+    raise e
