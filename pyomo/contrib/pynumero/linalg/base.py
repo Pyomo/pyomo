@@ -15,11 +15,10 @@ from typing import Optional, Union, Tuple
 from scipy.sparse import spmatrix
 import numpy as np
 
+from pyomo.contrib.pynumero.sparse.base_block import BaseBlockVector, BaseBlockMatrix
+
 try:
-    from pyomo.contrib.pynumero.sparse.base_block import (
-        BaseBlockVector,
-        BaseBlockMatrix,
-    )
+    from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
 except ImportError as e:
     print("IMPORT ERROR: ", e)
     print("Current environment information...")
@@ -42,7 +41,6 @@ except ImportError as e:
     imported_packages = sorted(sys.modules.keys())
     print("\n".join(imported_packages))
     raise e
-from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
 
 
 class LinearSolverStatus(enum.Enum):

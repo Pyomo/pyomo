@@ -11,7 +11,30 @@
 
 from abc import ABCMeta, abstractmethod
 from pyomo.contrib.pynumero.interfaces import pyomo_nlp, ampl_nlp
-from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
+try:
+    from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
+except ImportError as e:
+    print("IMPORT ERROR: ", e)
+    print("Current environment information...")
+    import sys
+    import platform
+    import pkg_resources
+
+    print(f"Python version: {platform.python_version()}")
+    print(f"Python executable: {sys.executable}")
+    print(f"Platform: {platform.system()} {platform.release()} ({platform.platform()})")
+
+    print("\nInstalled packages:")
+    installed_packages = pkg_resources.working_set
+    installed_packages_list = sorted(
+        [f"{pkg.key}=={pkg.version}" for pkg in installed_packages]
+    )
+    print("\n".join(installed_packages_list))
+
+    print("\nImported packages:")
+    imported_packages = sorted(sys.modules.keys())
+    print("\n".join(imported_packages))
+    raise e
 import numpy as np
 import scipy.sparse
 from pyomo.common.timing import HierarchicalTimer
