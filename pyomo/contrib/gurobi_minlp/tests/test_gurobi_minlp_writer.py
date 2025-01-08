@@ -11,9 +11,7 @@
 
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
-    GurobiMINLPVisitor,
-)
+from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -80,7 +78,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(x2.lb, -float('inf'))
         self.assertEqual(x2.ub, float('inf'))
         self.assertEqual(x2.vtype, GRB.CONTINUOUS)
-        
+
         self.assertEqual(x3.lb, -float('inf'))
         self.assertEqual(x3.ub, 0)
         self.assertEqual(x3.vtype, GRB.CONTINUOUS)
@@ -123,7 +121,7 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(x2.lb, -34)
         self.assertEqual(x2.ub, 45)
         self.assertEqual(x2.vtype, GRB.CONTINUOUS)
-        
+
         self.assertEqual(x3.lb, -float('inf'))
         self.assertEqual(x3.ub, 0)
         self.assertEqual(x3.vtype, GRB.CONTINUOUS)
@@ -160,11 +158,11 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
-        # TODO        
+        # TODO
 
     def test_write_power_expression_var_const(self):
         m = self.get_model()
-        m.c = Constraint(expr=m.x1 ** 2 >= 3)
+        m.c = Constraint(expr=m.x1**2 >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -172,7 +170,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
     def test_write_power_expression_var_var(self):
         m = self.get_model()
-        m.c = Constraint(expr=m.x1 ** m.x2 >= 3)
+        m.c = Constraint(expr=m.x1**m.x2 >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -180,7 +178,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
     def test_write_power_expression_const_var(self):
         m = self.get_model()
-        m.c = Constraint(expr=2 ** m.x2 >= 3)
+        m.c = Constraint(expr=2**m.x2 >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -197,7 +195,7 @@ class TestGurobiMINLPWalker(CommonTest):
     def test_write_expression_with_mutable_param(self):
         m = self.get_model()
         m.p = Param(initialize=4, mutable=True)
-        m.c = Constraint(expr=m.p ** m.x2 >= 3)
+        m.c = Constraint(expr=m.p**m.x2 >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -236,4 +234,3 @@ class TestGurobiMINLPWalker(CommonTest):
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
         # TODO
-

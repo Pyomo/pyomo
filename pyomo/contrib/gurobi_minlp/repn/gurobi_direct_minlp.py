@@ -67,18 +67,21 @@ if gurobipy_available:
 ### longer report active==True
 from pyomo.network import Port
 from pyomo.core.base import RangeSet, Set
+
 ###
 
 
-_domain_map = ComponentMap((
-    (Binary, (GRB.BINARY, -float('inf'), float('inf'))),
-    (Integers, (GRB.INTEGER, -float('inf'), float('inf'))),
-    (NonNegativeIntegers, (GRB.INTEGER, 0, float('inf'))),
-    (NonPositiveIntegers, (GRB.INTEGER, -float('inf'), 0)),
-    (NonNegativeReals, (GRB.CONTINUOUS, 0, float('inf'))),
-    (NonPositiveReals, (GRB.CONTINUOUS, -float('inf'), 0)),
-    (Reals, (GRB.CONTINUOUS, -float('inf'), float('inf'))),
-))
+_domain_map = ComponentMap(
+    (
+        (Binary, (GRB.BINARY, -float('inf'), float('inf'))),
+        (Integers, (GRB.INTEGER, -float('inf'), float('inf'))),
+        (NonNegativeIntegers, (GRB.INTEGER, 0, float('inf'))),
+        (NonPositiveIntegers, (GRB.INTEGER, -float('inf'), 0)),
+        (NonNegativeReals, (GRB.CONTINUOUS, 0, float('inf'))),
+        (NonPositiveReals, (GRB.CONTINUOUS, -float('inf'), 0)),
+        (Reals, (GRB.CONTINUOUS, -float('inf'), float('inf'))),
+    )
+)
 
 
 def _create_grb_var(visitor, pyomo_var, name=None):
@@ -91,12 +94,7 @@ def _create_grb_var(visitor, pyomo_var, name=None):
         )
     lb = max(domain_lb, pyomo_var.lb) if pyomo_var.lb is not None else domain_lb
     ub = min(domain_ub, pyomo_var.ub) if pyomo_var.ub is not None else domain_ub
-    return visitor.grb_model.addVar(
-        lb=lb,
-        ub=ub,
-        vtype=domain,
-        name=name
-    )
+    return visitor.grb_model.addVar(lb=lb, ub=ub, vtype=domain, name=name)
 
 
 class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
@@ -110,7 +108,8 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
                 return False, visitor.check_constant(child.value, child)
             grb_var = _create_grb_var(
                 visitor,
-                child, name=child.name if visitor.symbolic_solver_labels else None
+                child,
+                name=child.name if visitor.symbolic_solver_labels else None,
             )
             visitor.var_map[_id] = grb_var
         return False, visitor.var_map[_id]
@@ -134,7 +133,7 @@ def _handle_division(visitor, node, arg1, arg2):
 
 
 def _handle_pow(visitor, node, arg1, arg2):
-    return arg1 ** arg2
+    return arg1**arg2
 
 
 def _handle_unary(visitor, node, arg):
@@ -254,7 +253,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
 
 @WriterFactory.register(
     'gurobi_minlp',
-    'Direct interface to Gurobi that allows for general nonlinear expressions'
+    'Direct interface to Gurobi that allows for general nonlinear expressions',
 )
 class GurobiMINLPWriter(object):
     CONFIG = ConfigDict('gurobi_minlp_writer')
@@ -289,10 +288,7 @@ class GurobiMINLPWriter(object):
                 RangeSet,
                 Port,
             },
-            targets={
-                Objective,
-                Constraint,
-            },
+            targets={Objective, Constraint},
         )
         if unknown:
             raise ValueError(
@@ -340,13 +336,16 @@ class GurobiMINLPWriter(object):
 
         return grb_model, visitor.pyomo_to_gurobipy
 
+
 # ESJ TODO: We should probably not do this and actually tack this on to another
 # solver? But I'm not sure. In any case, it should probably at least inerhit
 # from another direct interface to Gurobi since all the handling of licenses and
 # termination conditions and things should be common.
-@SolverFactory.register('gurobi_direct_minlp',
-                        doc='Direct interface to Gurobi version 12 and up '
-                        'supporting general nonlinear expressions')
+@SolverFactory.register(
+    'gurobi_direct_minlp',
+    doc='Direct interface to Gurobi version 12 and up '
+    'supporting general nonlinear expressions',
+)
 class GurobiMINLPSolver(object):
     CONFIG = ConfigDict("gurobi_minlp_solver")
     CONFIG.declare(
@@ -404,4 +403,4 @@ class GurobiMINLPSolver(object):
         grbsol = grb_model.optimize(**self.options)
 
         # TODO: handle results status
-        #return results
+        # return results
