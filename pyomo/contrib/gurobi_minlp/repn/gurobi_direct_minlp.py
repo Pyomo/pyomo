@@ -58,7 +58,8 @@ from pyomo.repn.util import (
     initialize_exit_node_dispatcher,
 )
 
-gurobipy, gurobipy_available = attempt_import('gurobipy')
+
+gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
     from gurobipy import GRB
 

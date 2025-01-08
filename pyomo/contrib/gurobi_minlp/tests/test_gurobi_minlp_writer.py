@@ -30,8 +30,7 @@ from pyomo.environ import (
     Var,
 )
 
-# TODO: Need to check major version >=12 too.
-gurobipy, gurobipy_available = attempt_import('gurobipy')
+gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 
 if gurobipy_available:
     from gurobipy import GRB
