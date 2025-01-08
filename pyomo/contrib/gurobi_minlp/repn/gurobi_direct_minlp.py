@@ -14,6 +14,28 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.numeric_types import native_complex_types
 
+"""
+Even in Gurobi 12:
+
+If you have f(x) == 0, you must write it as z == f(x) and then write z == 0.
+Basically, you must introduce auxiliary variables for all the general nonlinear
+parts. (And no worries about additively separable or anything--they do that 
+under the hood).
+
+Radhakrishna thinks we should replace the *entire* LHS of the constraint with the
+auxiliary variable rather than just the nonlinear part. Otherwise we would really
+need to keep track of what nonlinear subexpressions we had already replaced and make
+sure to use the same auxiliary variables.
+
+Conclusion: So I think I should actually build on top of the linear walker and then
+replace anything that has a nonlinear part...
+
+Model.addConstr() doesn't have the three-arg version anymore.
+
+Let's not use the '.nl' attribute at all for now--seems like the exception rather than
+the rule that you would want to specifically tell Gurobi *not* to expand the expression.
+"""
+
 # ESJ TODO: We should move this somewhere sensible
 from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 
@@ -162,29 +184,51 @@ def _handle_expr_if(visitor, node, arg1, arg2, arg3):
 # TODO: We have to handle relational expression if we support Expr_If :(
 
 
-def define_exit_node_handlers(_exit_node_handlers=None):
-    if _exit_node_handlers is None:
-        _exit_node_handlers = {}
-    _exit_node_handlers[NegationExpression] = {None: _handle_negation}
-    _exit_node_handlers[SumExpression] = {None: _handle_sum}
-    _exit_node_handlers[LinearExpression] = {None: _handle_sum}
-    _exit_node_handlers[ProductExpression] = {None: _handle_product}
-    _exit_node_handlers[MonomialTermExpression] = {None: _handle_product}
-    _exit_node_handlers[DivisionExpression] = {None: _handle_division}
-    _exit_node_handlers[PowExpression] = {None: _handle_pow}
-    _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
-    _exit_node_handlers[AbsExpression] = {None: _handle_abs}
-    _exit_node_handlers[Expression] = {None: _handle_named_expression}
-    _exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if}
+# def define_exit_node_handlers(_exit_node_handlers=None):
+#     if _exit_node_handlers is None:
+#         _exit_node_handlers = {}
+#     _exit_node_handlers[NegationExpression] = {None: _handle_negation}
+#     _exit_node_handlers[SumExpression] = {None: _handle_sum}
+#     _exit_node_handlers[LinearExpression] = {None: _handle_sum}
+#     _exit_node_handlers[ProductExpression] = {None: _handle_product}
+#     _exit_node_handlers[MonomialTermExpression] = {None: _handle_product}
+#     _exit_node_handlers[DivisionExpression] = {None: _handle_division}
+#     _exit_node_handlers[PowExpression] = {None: _handle_pow}
+#     _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
+#     _exit_node_handlers[AbsExpression] = {None: _handle_abs}
+#     _exit_node_handlers[Expression] = {None: _handle_named_expression}
+#     _exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if}
 
-    return _exit_node_handlers
+#     return _exit_node_handlers
+
+
+# _function_map = {
+#     'exp': sympy.exp,
+#     'log': sympy.log,
+#     'log10': lambda x: sympy.log(x) / sympy.log(10),
+#     'sin': sympy.sin,
+#     'asin': sympy.asin,
+#     'sinh': sympy.sinh,
+#     'asinh': sympy.asinh,
+#     'cos': sympy.cos,
+#     'acos': sympy.acos,
+#     'cosh': sympy.cosh,
+#     'acosh': sympy.acosh,
+#     'tan': sympy.tan,
+#     'atan': sympy.atan,
+#     'tanh': sympy.tanh,
+#     'atanh': sympy.atanh,
+#     'ceil': sympy.ceiling,
+#     'floor': sympy.floor,
+#     'sqrt': sympy.sqrt,
+# }
 
 
 class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     before_child_dispatcher = GurobiMINLPBeforeChildDispatcher()
-    exit_node_dispatcher = ExitNodeDispatcher(
-        initialize_exit_node_dispatcher(define_exit_node_handlers())
-    )
+    # exit_node_dispatcher = ExitNodeDispatcher(
+    #     initialize_exit_node_dispatcher(define_exit_node_handlers())
+    # )
 
     def __init__(self, grb_model, symbolic_solver_labels=False):
         super().__init__()
@@ -210,7 +254,19 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        return self.exit_node_dispatcher[node.__class__](self, node, *data)
+        return self._eval_expr_visitor.visit(node, data)
+
+        # if node.__class__ is UnaryFunctionExpression:
+        #     ans = apply_node_operation(node, (data[1],))
+        #     # Unary includes sqrt() which can return complex numbers
+        #     if ans.__class__ in native_complex_types:
+        #         ans = complex_number_error(ans, visitor, node)
+        #     return ans
+        # _op = _pyomo_operator_map.get(node.__class__, None)
+        # if _op is None:
+        #     return node._apply_operation(values)
+        # else:
+        #     return _op(*tuple(values))
 
     def finalizeResult(self, result):
         self.grb_model.update()
