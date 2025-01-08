@@ -234,3 +234,4 @@ class TestGurobiMINLPWalker(CommonTest):
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
         # TODO
+    

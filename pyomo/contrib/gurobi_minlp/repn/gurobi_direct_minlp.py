@@ -14,28 +14,6 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.numeric_types import native_complex_types
 
-"""
-Even in Gurobi 12:
-
-If you have f(x) == 0, you must write it as z == f(x) and then write z == 0.
-Basically, you must introduce auxiliary variables for all the general nonlinear
-parts. (And no worries about additively separable or anything--they do that 
-under the hood).
-
-Radhakrishna thinks we should replace the *entire* LHS of the constraint with the
-auxiliary variable rather than just the nonlinear part. Otherwise we would really
-need to keep track of what nonlinear subexpressions we had already replaced and make
-sure to use the same auxiliary variables.
-
-Conclusion: So I think I should actually build on top of the linear walker and then
-replace anything that has a nonlinear part...
-
-Model.addConstr() doesn't have the three-arg version anymore.
-
-Let's not use the '.nl' attribute at all for now--seems like the exception rather than
-the rule that you would want to specifically tell Gurobi *not* to expand the expression.
-"""
-
 # ESJ TODO: We should move this somewhere sensible
 from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 
@@ -45,6 +23,8 @@ from pyomo.core.base import (
     Constraint,
     Expression,
     Integers,
+    minimize,
+    maximize,
     NonNegativeIntegers,
     NonNegativeReals,
     NonPositiveIntegers,
@@ -72,18 +52,63 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 
 from pyomo.opt import SolverFactory, WriterFactory
+from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     apply_node_operation,
     BeforeChildDispatcher,
     complex_number_error,
-    ExitNodeDispatcher,
-    initialize_exit_node_dispatcher,
+    OrderedVarRecorder,
 )
+
+"""
+Even in Gurobi 12:
+
+If you have f(x) == 0, you must write it as z == f(x) and then write z == 0.
+Basically, you must introduce auxiliary variables for all the general nonlinear
+parts. (And no worries about additively separable or anything--they do that 
+under the hood).
+
+Radhakrishna thinks we should replace the *entire* LHS of the constraint with the
+auxiliary variable rather than just the nonlinear part. Otherwise we would really
+need to keep track of what nonlinear subexpressions we had already replaced and make
+sure to use the same auxiliary variables.
+
+Conclusion: So I think I should actually build on top of the linear walker and then
+replace anything that has a nonlinear part...
+
+Model.addConstr() doesn't have the three-arg version anymore.
+
+Let's not use the '.nl' attribute at all for now--seems like the exception rather than
+the rule that you would want to specifically tell Gurobi *not* to expand the expression.
+"""
 
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
-    from gurobipy import GRB
+    from gurobipy import GRB, nlfunc
+    _function_map.update(
+        {
+            'exp': nlfunc.exp,
+            'log': nlfunc.log,
+            'log10': nlfunc.log10,
+            'sin': nlfunc.sin,
+            # TODO you are here
+            'asin': sympy.asin,
+            'sinh': sympy.sinh,
+            'asinh': sympy.asinh,
+            'cos': sympy.cos,
+            'acos': sympy.acos,
+            'cosh': sympy.cosh,
+            'acosh': sympy.acosh,
+            'tan': sympy.tan,
+            'atan': sympy.atan,
+            'tanh': sympy.tanh,
+            'atanh': sympy.atanh,
+            'ceil': sympy.ceiling,
+            'floor': sympy.floor,
+            'sqrt': sympy.sqrt,
+        }
+    )
 
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
@@ -106,7 +131,7 @@ _domain_map = ComponentMap(
 )
 
 
-def _create_grb_var(visitor, pyomo_var, name=None):
+def _create_grb_var(visitor, pyomo_var, name=""):
     pyo_domain = pyomo_var.domain
     if pyo_domain in _domain_map:
         domain, domain_lb, domain_ub = _domain_map[pyo_domain]
@@ -116,6 +141,7 @@ def _create_grb_var(visitor, pyomo_var, name=None):
         )
     lb = max(domain_lb, pyomo_var.lb) if pyomo_var.lb is not None else domain_lb
     ub = min(domain_ub, pyomo_var.ub) if pyomo_var.ub is not None else domain_ub
+    print(f"Trying to add Var:\n\tlb={lb}\n\tub={ub}\n\tvtype={domain}\n\tname={name}")
     return visitor.grb_model.addVar(lb=lb, ub=ub, vtype=domain, name=name)
 
 
@@ -131,104 +157,14 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
             grb_var = _create_grb_var(
                 visitor,
                 child,
-                name=child.name if visitor.symbolic_solver_labels else None,
+                name=child.name if visitor.symbolic_solver_labels else "",
             )
             visitor.var_map[_id] = grb_var
         return False, visitor.var_map[_id]
 
 
-def _handle_sum(visitor, node, *args):
-    return sum(arg for arg in args)
-
-
-def _handle_negation(visitor, node, arg):
-    return -arg
-
-
-def _handle_product(visitor, node, arg1, arg2):
-    return arg1 * arg2
-
-
-def _handle_division(visitor, node, arg1, arg2):
-    # ESJ TODO: Not 100% sure that this is the right operator overloading in grbpy
-    return arg1 / arg2
-
-
-def _handle_pow(visitor, node, arg1, arg2):
-    return arg1**arg2
-
-
-def _handle_unary(visitor, node, arg):
-    ans = apply_node_operation(node, (arg[1],))
-    # Unary includes sqrt() which can return complex numbers
-    if ans.__class__ in native_complex_types:
-        ans = complex_number_error(ans, visitor, node)
-    return ans
-
-
-def _handle_abs(visitor, node, arg):
-    # TODO
-    pass
-
-
-def _handle_named_expression(visitor, node, arg):
-    # TODO
-    pass
-
-
-def _handle_expr_if(visitor, node, arg1, arg2, arg3):
-    # TODO
-    pass
-
-
-# TODO: We have to handle relational expression if we support Expr_If :(
-
-
-# def define_exit_node_handlers(_exit_node_handlers=None):
-#     if _exit_node_handlers is None:
-#         _exit_node_handlers = {}
-#     _exit_node_handlers[NegationExpression] = {None: _handle_negation}
-#     _exit_node_handlers[SumExpression] = {None: _handle_sum}
-#     _exit_node_handlers[LinearExpression] = {None: _handle_sum}
-#     _exit_node_handlers[ProductExpression] = {None: _handle_product}
-#     _exit_node_handlers[MonomialTermExpression] = {None: _handle_product}
-#     _exit_node_handlers[DivisionExpression] = {None: _handle_division}
-#     _exit_node_handlers[PowExpression] = {None: _handle_pow}
-#     _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
-#     _exit_node_handlers[AbsExpression] = {None: _handle_abs}
-#     _exit_node_handlers[Expression] = {None: _handle_named_expression}
-#     _exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if}
-
-#     return _exit_node_handlers
-
-
-# _function_map = {
-#     'exp': sympy.exp,
-#     'log': sympy.log,
-#     'log10': lambda x: sympy.log(x) / sympy.log(10),
-#     'sin': sympy.sin,
-#     'asin': sympy.asin,
-#     'sinh': sympy.sinh,
-#     'asinh': sympy.asinh,
-#     'cos': sympy.cos,
-#     'acos': sympy.acos,
-#     'cosh': sympy.cosh,
-#     'acosh': sympy.acosh,
-#     'tan': sympy.tan,
-#     'atan': sympy.atan,
-#     'tanh': sympy.tanh,
-#     'atanh': sympy.atanh,
-#     'ceil': sympy.ceiling,
-#     'floor': sympy.floor,
-#     'sqrt': sympy.sqrt,
-# }
-
-
 class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     before_child_dispatcher = GurobiMINLPBeforeChildDispatcher()
-    # exit_node_dispatcher = ExitNodeDispatcher(
-    #     initialize_exit_node_dispatcher(define_exit_node_handlers())
-    # )
 
     def __init__(self, grb_model, symbolic_solver_labels=False):
         super().__init__()
@@ -237,7 +173,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         self.var_map = {}
         self._named_expressions = {}
         self._eval_expr_visitor = _EvaluationVisitor(True)
-        self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
+        #self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
     def initializeWalker(self, expr):
         expr, src, src_index = expr
@@ -254,19 +190,11 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
+        if node.__class__ is EXPR.UnaryFunctionExpression:
+            import pdb
+            pdb.set_trace()
+            return apply_node_operation((node, data[1],))
         return self._eval_expr_visitor.visit(node, data)
-
-        # if node.__class__ is UnaryFunctionExpression:
-        #     ans = apply_node_operation(node, (data[1],))
-        #     # Unary includes sqrt() which can return complex numbers
-        #     if ans.__class__ in native_complex_types:
-        #         ans = complex_number_error(ans, visitor, node)
-        #     return ans
-        # _op = _pyomo_operator_map.get(node.__class__, None)
-        # if _op is None:
-        #     return node._apply_operation(values)
-        # else:
-        #     return _op(*tuple(values))
 
     def finalizeResult(self, result):
         self.grb_model.update()
@@ -325,6 +253,23 @@ class GurobiMINLPWriter(object):
     def __init__(self):
         self.config = self.CONFIG()
 
+    def _create_gurobi_expression(self, expr, src, src_index, grb_model,
+                                  quadratic_visitor, grb_visitor):
+        """
+        Uses the quadratic walker to determine if the expression is a general
+        nonlinear (non-quadratic) expression, and returns a gurobipy representation
+        of the expression
+        """
+        repn = quadratic_visitor.walk_expression((expr, src, src_index))
+        if repn.nonlinear is None:
+            grb_expr = grb_visitor.walk_expression((expr, src, src_index))
+            return grb_expr, False, None
+        else:
+            # It's general nonlinear
+            grb_expr = grb_visitor.walk_expression((expr, src, src_index))
+            aux = grb_model.addVar()
+            return grb_expr, True, aux
+
     def write(self, model, **options):
         config = options.pop('config', self.config)(options)
 
@@ -360,7 +305,14 @@ class GurobiMINLPWriter(object):
                 )
             )
 
-        grb_model = grb.model()
+        # Get a quadratic walker instance
+        quadratic_visitor = QuadraticRepnVisitor(
+            subexpression_cache={},
+            var_recorder=OrderedVarRecorder({}, {}, None),
+        )
+
+        # create Gurobi model
+        grb_model = gurobipy.Model()
         visitor = GurobiMINLPVisitor(
             grb_model, symbolic_solver_labels=config.symbolic_solver_labels
         )
@@ -373,23 +325,48 @@ class GurobiMINLPWriter(object):
             )
         elif len(active_objs) == 1:
             obj = active_objs[0]
-            obj_expr = visitor.walk_expression((obj.expr, obj, 0))
             if obj.sense is minimize:
-                # TODO
-                pass
+                sense = GRB.MINIMIZE
             else:
-                # TODO
-                pass
-        else:
-            # TODO: We have no objective--we should put in a dummy, consistent
-            # with the other writers?
-            pass
-
+                sense = GRB.MAXIMIZE
+            obj_expr, nonlinear, aux = self._create_gurobi_expression(
+                obj.expr,
+                obj,
+                0,
+                grb_model,
+                quadratic_visitor,
+                visitor
+            )
+            if nonlinear:
+                # The objective must be linear or quadratic, so we move the nonlinear
+                # one to the constraints
+                grb_model.setObjective(aux, sense=sense)
+                grb_model.addConstr(aux == obj_expr)
+            else:
+                grb_model.setObjective(obj_expr, sense=sense)
+        # else it's fine--Gurobi doesn't require us to give an objective, so we don't
+                
         # write constraints
         for cons in components[Constraint]:
-            expr = visitor.walk_expression((cons.body, cons, 0))
-            # TODO
-
+            expr, nonlinear, aux = self._create_gurobi_expression(
+                cons.body,
+                cons,
+                0,
+                grb_model,
+                quadratic_visitor,
+                visitor
+            )
+            if nonlinear:
+                grb_model.addConstr(aux == expr)
+                expr = aux
+            if cons.equality:
+                grb_model.addConstr(cons.lower == expr)
+            else:
+                if cons.lower is not None:
+                    grb_model.addConstr(cons.lower <= expr)
+                if cons.upper is not None:
+                    grb_model.addConstr(cons.upper >= expr)
+            
         return grb_model, visitor.pyomo_to_gurobipy
 
 
