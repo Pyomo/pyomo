@@ -285,7 +285,7 @@ class TestTeeStream(unittest.TestCase):
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
-            sys.stdout.write(f"{time.time()}" + '  ' * 4096 + "\n")
+            sys.stdout.write(f"{time.time()}" + '    ' * 4096 + "\n")
             time.sleep(0.1)
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
@@ -321,7 +321,7 @@ class TestTeeStream(unittest.TestCase):
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
-            sys.stdout.write(f"{time.time()}" + '  ' * 4096 + "\n")
+            sys.stdout.write(f"{time.time()}" + '    ' * 4096 + "\n")
             time.sleep(0.1)
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
