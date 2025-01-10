@@ -846,7 +846,9 @@ class CPLEXDirect(DirectSolver):
 
                 if extract_slacks:
                     linear_slacks = self._solver_model.solution.get_linear_slacks()
-                    quadratic_slacks = self._solver_model.solution.get_quadratic_slacks()
+                    quadratic_slacks = (
+                        self._solver_model.solution.get_quadratic_slacks()
+                    )
                     for i, con_name in enumerate(
                         self._solver_model.linear_constraints.get_names()
                     ):
