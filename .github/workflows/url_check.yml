@@ -11,7 +11,7 @@ on:
 
 jobs:
   url_check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
