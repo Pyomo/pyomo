@@ -91,7 +91,9 @@ class TestExamples(unittest.TestCase):
         )
 
         with TempfileManager.new_context() as temp:
-            logfile = temp.create_tempfile('_cyipopt-external-greybox-react-scaling.log')
+            logfile = temp.create_tempfile(
+                '_cyipopt-external-greybox-react-scaling.log'
+            )
             aoptions = {
                 'nlp_scaling_method': 'user-scaling',
                 'output_file': logfile,
