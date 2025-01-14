@@ -152,7 +152,7 @@ jobs:
           PACKAGES: pyutilib
 
         - os: ubuntu-latest
-          python: pypy-3.9
+          python: 'pypy-3.10'
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -266,7 +266,7 @@ jobs:
     # have support for OSX.
     - name: Set up UI testing infrastructure
       if: ${{ matrix.TARGET != 'osx' }}
-      uses: pyvista/setup-headless-display-action@v2
+      uses: pyvista/setup-headless-display-action@v3
       with:
         qt: true
         pyvista: false
@@ -460,6 +460,9 @@ jobs:
         mkdir -p "$DOWNLOAD_DIR"
         echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
+        # Create a new PYOMO_PATH variable so we can ensure that we are actually
+        # getting the right PATH at the end
+        echo "PYOMO_PATH=$PATH" >> $GITHUB_ENV
 
     - name: Install Ipopt
       if: ${{ ! matrix.slim }}
@@ -467,6 +470,8 @@ jobs:
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
@@ -543,7 +548,9 @@ jobs:
     - name: Install GAMS Python bindings
       if: ${{ ! matrix.slim }}
       run: |
-        GAMS_DIR="${env:TPL_DIR}/gams"
+        GAMS_DIR="$TPL_DIR/gams"
+        NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -560,6 +567,17 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $CURRENT_PYOMO_PATH="${env:PYOMO_PATH}"
+        # Prepend BARON_DIR with appropriate path separator
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $PATH_SEPARATOR = ";"
+        } else {
+            $PATH_SEPARATOR = ":"
+        }
+        $NEW_PYOMO_PATH = "$BARON_DIR$PATH_SEPARATOR$CURRENT_PYOMO_PATH"
+        echo "New PYOMO_PATH: $NEW_PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" | `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
@@ -594,6 +612,8 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
+        NEW_PYOMO_PATH="$GJH_DIR:$PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
@@ -670,6 +690,11 @@ jobs:
 
     - name: Report pyomo plugin information
       run: |
+        # MRM / Jan 9, 2025: We update the PATH manually to make sure we
+        # capture all of our changes. This is necessary because of an
+        # issue with how the PATH rearranges on Windows.
+        # Issue: https://github.com/actions/runner-images/issues/11328
+        export PATH=$PYOMO_PATH
         echo "$PATH"
         pyomo help --solvers || exit 1
         pyomo help --transformations || exit 1
@@ -678,6 +703,7 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
+        export PATH=$PYOMO_PATH
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \

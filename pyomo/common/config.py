@@ -1840,7 +1840,11 @@ class ConfigBase(object):
             assert default is NOTSET
         else:
             fields += ('domain',)
-            kwds['default'] = self.value() if default is NOTSET else default
+            if default is NOTSET:
+                default = self.value()
+                if default is NOTSET:
+                    default = None
+            kwds['default'] = default
             assert implicit is NOTSET
             assert implicit_domain is NOTSET
         for field in fields:
