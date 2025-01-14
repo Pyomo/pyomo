@@ -690,8 +690,8 @@ jobs:
 
     - name: Report pyomo plugin information
       run: |
-        # MRM / Jan 9, 2025: We update the PATH manually to make sure we capture
-        # the all of our changes. This is necessary because of an
+        # MRM / Jan 9, 2025: We update the PATH manually to make sure we
+        # capture all of our changes. This is necessary because of an
         # issue with how the PATH rearranges on Windows.
         # Issue: https://github.com/actions/runner-images/issues/11328
         export PATH=$PYOMO_PATH
