@@ -73,7 +73,7 @@ And finally we call sIPOPT or k_aug:
 
    # The x3 result can come back -0.000 depending on the platform or
    # solver version; map it so that tests don't fail.
-   for _m in (m, m_sipopt, m_kaug):
+   for _m in (m, m_sipopt, m_kaug_dsdp):
        if f'{_m.x3():.3f}' == '-0.000':
            _m.x3 = 0.
 
