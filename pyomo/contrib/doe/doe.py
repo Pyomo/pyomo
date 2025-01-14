@@ -1458,7 +1458,7 @@ class DesignOfExperiments:
             }
         )
 
-        succeses = 0
+        successes = 0
         failures = 0
         total_points = np.prod(
             np.array([len(v) for k, v in design_ranges_enum.items()])
@@ -1477,14 +1477,14 @@ class DesignOfExperiments:
 
             # Compute FIM with given options
             try:
-                curr_point = succeses + failures + 1
+                curr_point = successes + failures + 1
 
                 # Logging information for each run
                 self.logger.info("This is run %s out of %s.", curr_point, total_points)
 
                 # Attempt the FIM computation
                 self.compute_FIM(model=model, method=method)
-                succeses += 1
+                successes += 1
 
                 # iteration time
                 iter_t = iter_timer.toc(msg=None)

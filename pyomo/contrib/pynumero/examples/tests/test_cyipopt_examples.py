@@ -10,14 +10,16 @@
 #  ___________________________________________________________________________
 
 import os.path
+from io import StringIO
+import logging
+
 from pyomo.common.fileutils import this_file_dir, import_file
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 from pyomo.opt import TerminationCondition
-from io import StringIO
-import logging
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -87,30 +89,34 @@ class TestExamples(unittest.TestCase):
                 'maximize_cb_ratio_residuals.py',
             )
         )
-        aoptions = {
-            'nlp_scaling_method': 'user-scaling',
-            'output_file': '_cyipopt-external-greybox-react-scaling.log',
-            'file_print_level': 10,
-        }
-        m = ex.maximize_cb_ratio_residuals_with_output_scaling(
-            additional_options=aoptions
-        )
-        self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
-        self.assertAlmostEqual(
-            pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2
-        )
-        self.assertAlmostEqual(
-            pyo.value(m.reactor.outputs['cb_ratio']), 0.15190409266, places=3
-        )
 
-        with open('_cyipopt-external-greybox-react-scaling.log', 'r') as fd:
-            solver_trace = fd.read()
-        os.remove('_cyipopt-external-greybox-react-scaling.log')
+        with TempfileManager.new_context() as temp:
+            logfile = temp.create_tempfile(
+                '_cyipopt-external-greybox-react-scaling.log'
+            )
+            aoptions = {
+                'nlp_scaling_method': 'user-scaling',
+                'output_file': logfile,
+                'file_print_level': 10,
+            }
+            m = ex.maximize_cb_ratio_residuals_with_output_scaling(
+                additional_options=aoptions
+            )
+            self.assertAlmostEqual(
+                pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3
+            )
+            self.assertAlmostEqual(
+                pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2
+            )
+            self.assertAlmostEqual(
+                pyo.value(m.reactor.outputs['cb_ratio']), 0.15190409266, places=3
+            )
+
+            with open(logfile, 'r') as fd:
+                solver_trace = fd.read()
 
         self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn(
-            'output_file = _cyipopt-external-greybox-react-scaling.log', solver_trace
-        )
+        self.assertIn(f'output_file = {logfile}', solver_trace)
         self.assertIn('objective scaling factor = 1', solver_trace)
         self.assertIn('x scaling provided', solver_trace)
         self.assertIn('c scaling provided', solver_trace)
