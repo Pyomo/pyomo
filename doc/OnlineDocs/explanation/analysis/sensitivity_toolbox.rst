@@ -67,6 +67,16 @@ And finally we call sIPOPT or k_aug:
     >>> m_sipopt = sensitivity_calculation('sipopt', m, [m.eta1, m.eta2], [m.perturbed_eta1, m.perturbed_eta2], tee=False)
     >>> m_kaug_dsdp = sensitivity_calculation('k_aug', m, [m.eta1, m.eta2], [m.perturbed_eta1, m.perturbed_eta2], tee=False)
 
+.. testcode:: python
+   :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
+   :hide:
+
+   # The x3 result can come back -0.000 depending on the platform or
+   # solver version; map it so that tests don't fail.
+   for _m in (m, m_sipopt, m_kaug):
+       if f'{_m.x3():.3f}' == '-0.000':
+           _m.x3 = 0.
+
 The first argument specifies the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. It's important that these two lists are the same length and in the same order. 
 
 First, we can inspect the initial point:
@@ -138,7 +148,7 @@ Note that k_aug does not save the solution with the original parameter values. F
     x2 = 0.667
 
     >>> print("x3 = %0.3f" % x3)
-    x3 = -0.000
+    x3 = 0.000
 
     # *k_aug*
     # New parameter values:
@@ -162,7 +172,7 @@ Note that k_aug does not save the solution with the original parameter values. F
     x2 = 0.667
 
     >>> print("x3 = %0.3f" % x3)
-    x3 = -0.000
+    x3 = 0.000
 
 
 Installing sIPOPT and k_aug
