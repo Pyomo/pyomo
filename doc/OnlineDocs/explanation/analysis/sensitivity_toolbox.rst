@@ -76,6 +76,8 @@ And finally we call sIPOPT or k_aug:
    for _m in (m, m_sipopt, m_kaug_dsdp):
        if f'{_m.x3():.3f}' == '-0.000':
            _m.x3 = 0.
+   if f'{m_sipopt.sens_sol_state_1[m_sipopt.x3]:.3f}' == '-0.000':
+       m_sipopt.sens_sol_state_1[m_sipopt.x3] = 0.
 
 The first argument specifies the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. It's important that these two lists are the same length and in the same order. 
 
