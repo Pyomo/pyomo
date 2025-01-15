@@ -711,6 +711,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
+        include-hidden-files: true
         path: |
           .coverage
           coverage.xml
