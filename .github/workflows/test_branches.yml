@@ -71,29 +71,29 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.13']
+        python: [3.13]
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.13'
+          python: 3.13
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: '3.11'
+          python: 3.12
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.9
+          python: 3.11
           TARGET: win
           PYENV: conda
           PACKAGES: glpk pytest-qt filelock
 
         - os: ubuntu-latest
-          python: '3.11'
+          python: 3.11
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -110,7 +110,7 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.12'
+          python: 3.12
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
