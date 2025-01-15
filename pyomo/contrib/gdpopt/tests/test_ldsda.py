@@ -7,7 +7,10 @@ from pyomo.contrib.gdpopt.tests.four_stage_dynamic_model import build_model
 class TestGDPoptLDSDA(unittest.TestCase):
     """Real unit tests for GDPopt"""
 
-    @unittest.skipUnless(SolverFactory('gams').available(), "gams solver not available")
+    @unittest.skipUnless(
+        SolverFactory('gams').available() and SolverFactory('gams').license_is_valid(),
+        "gams solver not available",
+    )
     def test_solve_four_stage_dynamic_model(self):
 
         model = build_model(mode_transfer=True)
