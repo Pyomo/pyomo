@@ -404,7 +404,7 @@ jobs:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
-                XPRESS='xpress=9.5.0|>9.5.1'
+                XPRESS='xpress=9.5.0'
             else
                 XPRESS='xpress'
             fi
