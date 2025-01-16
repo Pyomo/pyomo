@@ -255,7 +255,10 @@ class TestTeeStream(unittest.TestCase):
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
 
-    def _buffering_stdout(self, fd):
+
+class BufferTester(object):
+
+    def test_buffered_stdout(self):
         # Test 1: short messages to STDOUT are buffered
         #
         # TODO: [JDS] If we are capturing the file descriptor, the
@@ -263,6 +266,7 @@ class TestTeeStream(unittest.TestCase):
         # why (my guess is because the underlying pipe is not buffered),
         # but as it is generally not a problem to not buffer, we will
         # put off "fixing" it.
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
@@ -271,7 +275,9 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (1 - int(fd), 0), (1 - int(fd), 0), (1, 1)])
 
+    def test_buffered_stdout_flush(self):
         # Test 2: short messages to STDOUT that are flushed are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
@@ -281,7 +287,9 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stdout_long_message(self):
         # Test 3: long messages to STDOUT fill the buffer and are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
@@ -290,6 +298,7 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stdout_embed_TeeStream(self):
         # Test 4: short messages captured directly to TeeStream are not
         # buffered.
         #
@@ -297,6 +306,7 @@ class TestTeeStream(unittest.TestCase):
         # guess is because the underlying pipe is not buffered), but as
         # it is generally not a problem to not buffer, we will put off
         # "fixing" it.
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
@@ -305,8 +315,10 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stdout_flush_embed_TeeStream(self):
         # Test 5: short messages captured directly to TeeStream that are
         # flushed are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
@@ -316,8 +328,10 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stdout_long_message_embed_TeeStream(self):
         # Test 6: long messages captured directly to TeeStream fill the
         # buffer and are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
@@ -326,16 +340,11 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
-    def test_buffering_stdout(self):
-        self._buffering_stdout(False)
-
-    def test_buffering_stdout_capture_fd(self):
-        self._buffering_stdout(True)
-
-    def _buffering_stderr(self, fd):
+    def test_buffered_stderr(self):
         # Test 1: short messages to STDERR are buffered, unless we are
         # capturing the underlying file descriptor, in which case they
         # are buffered.
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
@@ -344,7 +353,9 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stderr_flush(self):
         # Test 2: short messages to STDERR that are flushed are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
@@ -354,7 +365,9 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stderr_long_message(self):
         # Test 3: long messages to STDERR fill the buffer and are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
@@ -363,9 +376,11 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stderr_embed_TeeStream(self):
         # Test 4: short messages captured directly to TeeStream are not
         # buffered, unless we are capturing the underlying file
         # descriptor, in which case they are buffered.
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
@@ -374,8 +389,10 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stderr_flush_embed_TeeStream(self):
         # Test 5: short messages captured directly to TeeStream that are
         # flushed are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
@@ -385,8 +402,10 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
+    def test_buffered_stderr_long_message_embed_TeeStream(self):
         # Test 6: long messages captured directly to TeeStream fill the
         # buffer and are flushed
+        fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
@@ -395,11 +414,13 @@ class TestTeeStream(unittest.TestCase):
         ts.write(f"{time.time()}")
         ts.check(self, [(0, 0), (0, 0), (0, 0), (1, 1)])
 
-    def test_buffering_stderr(self):
-        self._buffering_stderr(False)
 
-    def test_buffering_stderr_capture_fd(self):
-        self._buffering_stderr(True)
+class TestBuffering_noCapture(BufferTester, unittest.TestCase):
+    capture_fd = False
+
+
+class TestBuffering_capture(BufferTester, unittest.TestCase):
+    capture_fd = True
 
 
 class TestFileDescriptor(unittest.TestCase):
