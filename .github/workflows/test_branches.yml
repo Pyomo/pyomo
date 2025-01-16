@@ -377,6 +377,7 @@ jobs:
             for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
+                echo ""
                 # conda can literally take an hour to determine that a
                 # package is not available.  Perform a quick search to see
                 # if the package is available for this interpreter before
@@ -398,6 +399,7 @@ jobs:
                         conda install -y "$PKG" || _BUILDS=""
                     fi
                 fi
+                echo ""
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
