@@ -44,6 +44,7 @@ from pyomo.core.base import (
     SortComponents,
     minimize,
 )
+from pyomo.mpec import Complementarity
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.expression import ScalarExpression, ExpressionData
@@ -556,9 +557,9 @@ class _NLWriter_impl(object):
                 Set,
                 RangeSet,
                 Port,
-                # TODO: Piecewise, Complementarity
+                # TODO: Piecewise
             },
-            targets={Suffix, SOSConstraint},
+            targets={Suffix, SOSConstraint, Complementarity},
         )
         if unknown:
             raise ValueError(
@@ -709,6 +710,46 @@ class _NLWriter_impl(object):
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
         else:
             timer.toc('Processed %s constraints', len(all_constraints))
+        
+        # Complementarity handling
+        n_complementarity_nonlin = 0
+        n_complementarity_lin = 0  
+        complementarity_list = []
+
+        for block in component_map[Complementarity]:
+            for comp in block.component_data_objects(
+                Complementarity, active=True, descend_into=False, sort=sorter
+            ):
+                # Transform the complementarity condition into standard form
+                comp.to_standard_form()
+                
+                # Get the constraint that was created
+                if hasattr(comp, 'c'):
+                    con = comp.c
+                    expr_info = visitor.walk_expression((con.body, comp, 0, scaling_factor(comp)))
+                    if expr_info.named_exprs:
+                        self._record_named_expression_usage(expr_info.named_exprs, comp, 0)
+
+                    comp._complementarity = con._complementarity_type
+                    
+                    if expr_info.nonlinear:
+                        n_complementarity_nonlin += 1
+                    else:
+                        n_complementarity_lin += 1
+                    
+                    # Store ID of variable - needed for type=5 complementarity in NL file
+                    if hasattr(comp, 'v'):
+                        comp._vid = id(comp.v)
+
+                    complementarity_list.append((comp, expr_info, None))
+
+                # If there's a variable equation, we need to process that too
+                if hasattr(comp, 've'):
+                    ve = comp.ve
+                    expr_info = visitor.walk_expression((ve.body, comp, 0, scaling_factor(comp)))
+                    if expr_info.named_exprs:
+                        self._record_named_expression_usage(expr_info.named_exprs, comp, 0)
+                    all_constraints.append((comp, expr_info, None, None))
 
         # We have identified all the external functions (resolving them
         # by name).  Now we may need to resolve the function by the
@@ -1101,36 +1142,30 @@ class _NLWriter_impl(object):
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
-            if lb == ub:  # TBD: should this be within tolerance?
-                if lb is None:
-                    # type = 3  # -inf <= c <= inf
-                    r_lines[idx] = "3"
-                else:
-                    # _type = 4  # L == c == U
-                    r_lines[idx] = f"4 {lb - expr_info.const!s}"
-                    n_equality += 1
-            elif lb is None:
-                # _type = 1  # c <= U
-                r_lines[idx] = f"1 {ub - expr_info.const!s}"
-            elif ub is None:
-                # _type = 2  # L <= c
-                r_lines[idx] = f"2 {lb - expr_info.const!s}"
+            if hasattr(comp, '_complementarity'):
+                # _type = 5 for complementarity
+                r_lines[idx] = f"5 {comp._complementarity} {1+column_order[comp._vid]}"
+                # Note: we already counted nonlinear/linear when processing the constraints
             else:
-                # _type = 0  # L <= c <= U
-                r_lines[idx] = f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
-                n_ranges += 1
-            expr_info.const = 0
-            # FIXME: this is a HACK to be compatible with the NLv1
-            # writer.  In the future, this writer should be expanded to
-            # look for and process Complementarity components (assuming
-            # that they are in an acceptable form).
-            if hasattr(con, '_complementarity'):
-                # _type = 5
-                r_lines[idx] = f"5 {con._complementarity} {1+column_order[con._vid]}"
-                if expr_info.nonlinear:
-                    n_complementarity_nonlin += 1
+                if lb == ub:  # TBD: should this be within tolerance?
+                    if lb is None:
+                        # type = 3  # -inf <= c <= inf
+                        r_lines[idx] = "3"
+                    else:
+                        # _type = 4  # L == c == U
+                        r_lines[idx] = f"4 {lb - expr_info.const!s}"
+                        n_equality += 1
+                elif lb is None:
+                    # _type = 1  # c <= U
+                    r_lines[idx] = f"1 {ub - expr_info.const!s}"
+                elif ub is None:
+                    # _type = 2  # L <= c
+                    r_lines[idx] = f"2 {lb - expr_info.const!s}"
                 else:
-                    n_complementarity_lin += 1
+                    # _type = 0  # L <= c <= U
+                    r_lines[idx] = f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
+                    n_ranges += 1
+                expr_info.const = 0
         if symbolic_solver_labels:
             for idx in range(len(constraints)):
                 r_lines[idx] += row_comments[idx]
