@@ -713,8 +713,7 @@ class _NLWriter_impl(object):
         
         # Complementarity handling
         n_complementarity_nonlin = 0
-        n_complementarity_lin = 0  
-        complementarity_list = []
+        n_complementarity_lin = 0
 
         for block in component_map[Complementarity]:
             for comp in block.component_data_objects(
@@ -723,33 +722,40 @@ class _NLWriter_impl(object):
                 # Transform the complementarity condition into standard form
                 comp.to_standard_form()
                 
-                # Get the constraint that was created
+                # If a new variable was created, add it to var_map
+                if hasattr(comp, 'v'):
+                    _id = id(comp.v)
+                    if _id not in var_map:
+                        var_map[_id] = comp.v
+
+                # Process the complementarity constraint 
                 if hasattr(comp, 'c'):
                     con = comp.c
-                    expr_info = visitor.walk_expression((con.body, comp, 0, scaling_factor(comp)))
+                    con._vid = _id
+                    lb, body, ub = con.to_bounded_expression(True)
+                    expr_info = visitor.walk_expression((body, comp, 0, scaling_factor(comp)))
                     if expr_info.named_exprs:
                         self._record_named_expression_usage(expr_info.named_exprs, comp, 0)
 
-                    comp._complementarity = con._complementarity_type
-                    
                     if expr_info.nonlinear:
-                        n_complementarity_nonlin += 1
+                        n_complementarity_nonlin += 1 
                     else:
                         n_complementarity_lin += 1
-                    
-                    # Store ID of variable - needed for type=5 complementarity in NL file
-                    if hasattr(comp, 'v'):
-                        comp._vid = id(comp.v)
 
-                    complementarity_list.append((comp, expr_info, None))
+                    all_constraints.append((con, expr_info, lb, ub))
 
-                # If there's a variable equation, we need to process that too
+                # Process the variable equation if it exists
                 if hasattr(comp, 've'):
                     ve = comp.ve
-                    expr_info = visitor.walk_expression((ve.body, comp, 0, scaling_factor(comp)))
+                    lb, body, ub = ve.to_bounded_expression(True)
+                    expr_info = visitor.walk_expression((body, comp, 0, scaling_factor(comp)))
                     if expr_info.named_exprs:
                         self._record_named_expression_usage(expr_info.named_exprs, comp, 0)
-                    all_constraints.append((comp, expr_info, None, None))
+                    all_constraints.append((ve, expr_info, lb, ub))
+                    if linear_presolve:
+                        con_id = id(ve)
+                        for _id in expr_info.linear:
+                            comp_by_linear_var[_id].append((con_id, expr_info))
 
         # We have identified all the external functions (resolving them
         # by name).  Now we may need to resolve the function by the
@@ -1142,9 +1148,9 @@ class _NLWriter_impl(object):
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
-            if hasattr(comp, '_complementarity'):
+            if hasattr(con, '_complementarity_type'):
                 # _type = 5 for complementarity
-                r_lines[idx] = f"5 {comp._complementarity} {1+column_order[comp._vid]}"
+                r_lines[idx] = f"5 {con._complementarity_type} {1+column_order[con._vid]}"
                 # Note: we already counted nonlinear/linear when processing the constraints
             else:
                 if lb == ub:  # TBD: should this be within tolerance?
