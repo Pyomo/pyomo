@@ -710,7 +710,7 @@ class _NLWriter_impl(object):
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
         else:
             timer.toc('Processed %s constraints', len(all_constraints))
-        
+
         # Complementarity handling
         n_complementarity_nonlin = 0
         n_complementarity_lin = 0
@@ -721,24 +721,28 @@ class _NLWriter_impl(object):
             ):
                 # Transform the complementarity condition into standard form
                 comp.to_standard_form()
-                
+
                 # If a new variable was created, add it to var_map
                 if hasattr(comp, 'v'):
                     _id = id(comp.v)
                     if _id not in var_map:
                         var_map[_id] = comp.v
 
-                # Process the complementarity constraint 
+                # Process the complementarity constraint
                 if hasattr(comp, 'c'):
                     con = comp.c
                     con._vid = _id
                     lb, body, ub = con.to_bounded_expression(True)
-                    expr_info = visitor.walk_expression((body, comp, 0, scaling_factor(comp)))
+                    expr_info = visitor.walk_expression(
+                        (body, comp, 0, scaling_factor(comp))
+                    )
                     if expr_info.named_exprs:
-                        self._record_named_expression_usage(expr_info.named_exprs, comp, 0)
+                        self._record_named_expression_usage(
+                            expr_info.named_exprs, comp, 0
+                        )
 
                     if expr_info.nonlinear:
-                        n_complementarity_nonlin += 1 
+                        n_complementarity_nonlin += 1
                     else:
                         n_complementarity_lin += 1
 
@@ -748,9 +752,13 @@ class _NLWriter_impl(object):
                 if hasattr(comp, 've'):
                     ve = comp.ve
                     lb, body, ub = ve.to_bounded_expression(True)
-                    expr_info = visitor.walk_expression((body, comp, 0, scaling_factor(comp)))
+                    expr_info = visitor.walk_expression(
+                        (body, comp, 0, scaling_factor(comp))
+                    )
                     if expr_info.named_exprs:
-                        self._record_named_expression_usage(expr_info.named_exprs, comp, 0)
+                        self._record_named_expression_usage(
+                            expr_info.named_exprs, comp, 0
+                        )
                     all_constraints.append((ve, expr_info, lb, ub))
                     if linear_presolve:
                         con_id = id(ve)
@@ -1150,7 +1158,9 @@ class _NLWriter_impl(object):
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
             if hasattr(con, '_complementarity_type'):
                 # _type = 5 for complementarity
-                r_lines[idx] = f"5 {con._complementarity_type} {1+column_order[con._vid]}"
+                r_lines[idx] = (
+                    f"5 {con._complementarity_type} {1+column_order[con._vid]}"
+                )
                 # Note: we already counted nonlinear/linear when processing the constraints
             else:
                 if lb == ub:  # TBD: should this be within tolerance?
@@ -1169,7 +1179,9 @@ class _NLWriter_impl(object):
                     r_lines[idx] = f"2 {lb - expr_info.const!s}"
                 else:
                     # _type = 0  # L <= c <= U
-                    r_lines[idx] = f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
+                    r_lines[idx] = (
+                        f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
+                    )
                     n_ranges += 1
                 expr_info.const = 0
         if symbolic_solver_labels:
