@@ -379,9 +379,27 @@ class TestInputDataStandardizer(unittest.TestCase):
         va_vb_unraveled_output = standardizer_func(mdl.v)
         self.assertEqual(va_vb_unraveled_output, [mdl.v["a"], mdl.v["b"]])
 
+        # the param data validator supports unfixed Vars that
+        # have identical bounds
         mdl.v["a"].unfix()
         mdl.v["a"].setlb(1)
         mdl.v["a"].setub(1)
+        va_vb_unraveled_output_2 = standardizer_func(mdl.v)
+        self.assertEqual(va_vb_unraveled_output_2, [mdl.v["a"], mdl.v["b"]])
+
+        # ensure exception raised if the bounds are not identical
+        # (even if equal in value)
+        mdl.v["a"].setlb(1.0)
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        mdl.q = Param(initialize=1, mutable=True)
+        mdl.v["a"].setlb(mdl.q)
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        # support fixing by bounds that are identical mutable expressions
+        mdl.v["a"].setub(mdl.q)
         va_vb_unraveled_output_2 = standardizer_func(mdl.v)
         self.assertEqual(va_vb_unraveled_output_2, [mdl.v["a"], mdl.v["b"]])
 
