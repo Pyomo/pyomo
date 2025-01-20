@@ -1759,6 +1759,7 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
     Test PyROS solver treatment of Var/VarData
     objects passed as uncertain parameters.
     """
+
     def build_model_objects(self):
         mdl1 = build_leyffer()
 
