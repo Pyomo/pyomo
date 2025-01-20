@@ -976,7 +976,8 @@ def validate_uncertainty_specification(model, config):
             #       uncertain parameters;
             #       the bounds expressions are evaluated to
             #       to get the nominal realization
-            _get_uncertain_param_val(param) for param in config.uncertain_params
+            _get_uncertain_param_val(param)
+            for param in config.uncertain_params
         ]
     elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(
