@@ -374,25 +374,16 @@ class TestInputDataStandardizer(unittest.TestCase):
 
         mdl.v["b"].fix()
         va_vb_output = standardizer_func([mdl.v["a"], mdl.v["b"]])
-        self.assertEqual(
-            va_vb_output,
-            [mdl.v["a"], mdl.v["b"]],
-        )
+        self.assertEqual(va_vb_output, [mdl.v["a"], mdl.v["b"]])
 
         va_vb_unraveled_output = standardizer_func(mdl.v)
-        self.assertEqual(
-            va_vb_unraveled_output,
-            [mdl.v["a"], mdl.v["b"]],
-        )
+        self.assertEqual(va_vb_unraveled_output, [mdl.v["a"], mdl.v["b"]])
 
         mdl.v["a"].unfix()
         mdl.v["a"].setlb(1)
         mdl.v["a"].setub(1)
         va_vb_unraveled_output_2 = standardizer_func(mdl.v)
-        self.assertEqual(
-            va_vb_unraveled_output_2,
-            [mdl.v["a"], mdl.v["b"]],
-        )
+        self.assertEqual(va_vb_unraveled_output_2, [mdl.v["a"], mdl.v["b"]])
 
     def test_standardizer_domain_name(self):
         """

@@ -110,12 +110,9 @@ def uncertain_param_data_validator(uncertain_obj):
         or implicitly via bounds.
     """
     if isinstance(uncertain_obj, VarData):
-        is_fixed_var = (
-            uncertain_obj.fixed
-            or (
-                uncertain_obj.lower is uncertain_obj.upper
-                and uncertain_obj.lower is not None
-            )
+        is_fixed_var = uncertain_obj.fixed or (
+            uncertain_obj.lower is uncertain_obj.upper
+            and uncertain_obj.lower is not None
         )
         if not is_fixed_var:
             raise ValueError(
