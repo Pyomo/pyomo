@@ -970,6 +970,12 @@ def validate_uncertainty_specification(model, config):
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
         config.nominal_uncertain_param_vals = [
+            # NOTE: this allows uncertain parameters that are of type
+            #       VarData and implicitly fixed by identical bounds
+            #       that are mutable expressions in ParamData-type
+            #       uncertain parameters;
+            #       the bounds expressions are evaluated to
+            #       to get the nominal realization
             _get_uncertain_param_val(param) for param in config.uncertain_params
         ]
     elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
