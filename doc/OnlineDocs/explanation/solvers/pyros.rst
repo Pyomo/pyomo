@@ -447,10 +447,8 @@ object ``m.p``, we can conveniently specify:
   >>> uncertain_params = m.p
 
 Equivalently, we may instead set ``uncertain_params`` to
-either ``[m.p]``, ``[m.p[0], m.p[1], m.p[2], m.p[3]]``, or ``list(m.p.values())``.
-The PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-will upon invocation cast any of these to the list
-``[m.p[0], m.p[1], m.p[2], m.p[3]]``.
+either ``[m.p]``, ``[m.p[0], m.p[1], m.p[2], m.p[3]]``,
+or ``list(m.p.values())``.
 
 .. note::
     Any :class:`~pyomo.core.base.param.Param` object that is
@@ -463,10 +461,8 @@ will upon invocation cast any of these to the list
     deterministic model.
     This may be convenient for users transitioning to PyROS from
     uncertainty quantification workflows.
-    Note that for each :class:`~pyomo.core.base.var.Var` object
-    that represents an uncertain parameter,
-    PyROS ignores the domain and bounds specified
-    through the attributes of the :class:`~pyomo.core.base.var.Var`.
+    All :class:`~pyomo.core.base.var.Var` objects representing
+    uncertain parameters should be fixed.
 
 
 PyROS will seek to identify solutions that remain feasible for any
