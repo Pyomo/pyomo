@@ -85,11 +85,43 @@ def uncertain_param_validator(uncertain_obj):
             "Check that the component has been properly constructed, "
             "and all entries have been initialized. "
         )
-    if isinstance(uncertain_obj, (Param, ParamData)) and not uncertain_obj.mutable:
+    if isinstance(uncertain_obj, Param) and not uncertain_obj.mutable:
         raise ValueError(
             f"{type(uncertain_obj).__name__} object with name {uncertain_obj.name!r} "
             "is immutable."
         )
+
+
+def uncertain_param_data_validator(uncertain_obj):
+    """
+    Validator for component data object specified as an
+    uncertain parameter.
+
+    Parameters
+    ----------
+    uncertain_obj : Param or Var
+        Object on which to perform checks.
+
+    Raises
+    ------
+    ValueError
+        If `uncertain_obj` is a VarData object
+        that is not fixed explicitly via VarData.fixed
+        or implicitly via bounds.
+    """
+    if isinstance(uncertain_obj, VarData):
+        is_fixed_var = (
+            uncertain_obj.fixed
+            or (
+                uncertain_obj.lower is uncertain_obj.upper
+                and uncertain_obj.lower is not None
+            )
+        )
+        if not is_fixed_var:
+            raise ValueError(
+                f"{type(uncertain_obj).__name__} object with name "
+                f"{uncertain_obj.name!r} is not fixed."
+            )
 
 
 class InputDataStandardizer(object):
@@ -511,6 +543,7 @@ def pyros_config():
                 ctype=(Param, Var),
                 cdatatype=(ParamData, VarData),
                 ctype_validator=uncertain_param_validator,
+                cdatatype_validator=uncertain_param_data_validator,
                 allow_repeats=False,
             ),
             description=(

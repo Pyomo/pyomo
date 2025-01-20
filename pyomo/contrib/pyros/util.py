@@ -603,7 +603,11 @@ def standardize_component_data(
     if isinstance(obj, valid_ctype):
         if ctype_validator is not None:
             ctype_validator(obj)
-        return list(obj.values())
+        ans = list(obj.values())
+        if cdatatype_validator is not None:
+            for entry in ans:
+                cdatatype_validator(entry)
+        return ans
     elif isinstance(obj, valid_cdatatype):
         if cdatatype_validator is not None:
             cdatatype_validator(obj)
@@ -861,6 +865,40 @@ def validate_variable_partitioning(model, config):
     )
 
 
+def _get_uncertain_param_val(var_or_param_data):
+    """
+    Get value of VarData/ParamData object
+    that is considered an uncertain parameter.
+
+    Parameters
+    ----------
+    var_or_param_data : VarData or ParamData
+        Object to be evaluated.
+
+    Returns
+    -------
+    object
+        Value of the VarData/ParamData object.
+        The value is typically of a numeric type.
+    """
+    if isinstance(var_or_param_data, ParamData):
+        expr_to_evaluate = var_or_param_data
+    elif isinstance(var_or_param_data, VarData):
+        if var_or_param_data.fixed:
+            expr_to_evaluate = var_or_param_data
+        else:
+            expr_to_evaluate = var_or_param_data.lower
+    else:
+        raise ValueError(
+            f"Uncertain parameter object {var_or_param_data!r}"
+            f"is of type {type(var_or_param_data).__name__!r}, "
+            "but should be of type "
+            f"{ParamData.__name__} or {VarData.__name__}."
+        )
+
+    return value(expr_to_evaluate, exception=True)
+
+
 def validate_uncertainty_specification(model, config):
     """
     Validate specification of uncertain parameters and uncertainty
@@ -932,7 +970,7 @@ def validate_uncertainty_specification(model, config):
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
         config.nominal_uncertain_param_vals = [
-            value(param, exception=True) for param in config.uncertain_params
+            _get_uncertain_param_val(param) for param in config.uncertain_params
         ]
     elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(

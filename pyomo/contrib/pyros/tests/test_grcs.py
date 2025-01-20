@@ -1752,12 +1752,14 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
-    @unittest.skipUnless(ipopt_available, "IPOPT not available.")
-    def test_pyros_vars_as_uncertain_params(self):
-        """
-        Test PyROS solver result is invariant to the type used
-        in argument `uncertain_params`.
-        """
+
+@unittest.skipUnless(ipopt_available, "IPOPT not available.")
+class TestPyROSVarsAsUncertainParams(unittest.TestCase):
+    """
+    Test PyROS solver treatment of Var/VarData
+    objects passed as uncertain parameters.
+    """
+    def build_model_objects(self):
         mdl1 = build_leyffer()
 
         # clone: use a Var to represent the uncertain parameter.
@@ -1766,14 +1768,64 @@ class RegressionTest(unittest.TestCase):
         #        let's make the bounds exclude the nominal value;
         #        PyROS should ignore these bounds as well
         mdl2 = mdl1.clone()
-        mdl2.uvar = Var(initialize=mdl2.u.value, bounds=(-1, 0))
+        mdl2.uvar = Var([0], initialize={0: mdl2.u.value}, bounds=(-1, 0))
+        mdl2.uvar.fix()
         mdl2.con.set_value(
             replace_expressions(
-                expr=mdl2.con.expr, substitution_map={id(mdl2.u): mdl2.uvar}
+                expr=mdl2.con.expr, substitution_map={id(mdl2.u): mdl2.uvar[0]}
             )
         )
-
         box_set = BoxSet([[0.25, 2]])
+
+        return mdl1, mdl2, box_set
+
+    def test_pyros_unfixed_vars_as_uncertain_params(self):
+        """
+        Test PyROS raises exception if unfixed Vars are
+        passed to the argument `uncertain_params`.
+        """
+        _, mdl2, box_set = self.build_model_objects()
+        mdl2.uvar.unfix()
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        err_str = r".*VarData object with name 'uvar\[0\]' is not fixed"
+
+        with self.assertRaisesRegex(ValueError, err_str):
+            pyros_solver.solve(
+                model=mdl2,
+                first_stage_variables=[mdl2.x1, mdl2.x2],
+                second_stage_variables=[],
+                uncertain_params=mdl2.uvar,
+                uncertainty_set=box_set,
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+            )
+
+        with self.assertRaisesRegex(ValueError, err_str):
+            pyros_solver.solve(
+                model=mdl2,
+                first_stage_variables=[mdl2.x1, mdl2.x2],
+                second_stage_variables=[],
+                uncertain_params=[mdl2.uvar[0]],
+                uncertainty_set=box_set,
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+            )
+
+    def test_pyros_vars_as_uncertain_params_correct(self):
+        """
+        Test PyROS solver result is invariant to the type used
+        in argument `uncertain_params`.
+        """
+        mdl1, mdl2, box_set = self.build_model_objects()
+        mdl3 = mdl2.clone()
+
+        mdl3.uvar.unfix()
+        mdl3.uvar[0].setlb(mdl3.uvar[0].value)
+        mdl3.uvar[0].setub(mdl3.uvar[0].value)
+
         ipopt_solver = SolverFactory("ipopt")
         pyros_solver = SolverFactory("pyros")
 
@@ -1790,20 +1842,43 @@ class RegressionTest(unittest.TestCase):
             res1.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
 
-        res2 = pyros_solver.solve(
-            model=mdl2,
-            first_stage_variables=[mdl2.x1, mdl2.x2],
-            second_stage_variables=[],
-            uncertain_params=[mdl2.uvar],
-            uncertainty_set=box_set,
-            local_solver=ipopt_solver,
-            global_solver=ipopt_solver,
-        )
-        self.assertEqual(
-            res2.pyros_termination_condition, res1.pyros_termination_condition
-        )
-        self.assertEqual(res1.final_objective_value, res2.final_objective_value)
-        self.assertEqual(res1.iterations, res2.iterations)
+        for model, adverb in zip([mdl2, mdl3], ["explicitly", "by bounds"]):
+            res = pyros_solver.solve(
+                model=model,
+                first_stage_variables=[model.x1, model.x2],
+                second_stage_variables=[],
+                uncertain_params=model.uvar,
+                uncertainty_set=box_set,
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+            )
+            self.assertEqual(
+                res.pyros_termination_condition,
+                res1.pyros_termination_condition,
+                msg=(
+                    "PyROS termination condition "
+                    "is sensitive to uncertain parameter component type "
+                    f"when uncertain parameter is a Var fixed {adverb}."
+                ),
+            )
+            self.assertEqual(
+                res1.final_objective_value,
+                res.final_objective_value,
+                msg=(
+                    "PyROS termination condition "
+                    "is sensitive to uncertain parameter component type "
+                    f"when uncertain parameter is a Var fixed {adverb}."
+                ),
+            )
+            self.assertEqual(
+                res1.iterations,
+                res.iterations,
+                msg=(
+                    "PyROS iteration count "
+                    "is sensitive to uncertain parameter component type "
+                    f"when uncertain parameter is a Var fixed {adverb}."
+                ),
+            )
 
 
 @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
@@ -3045,6 +3120,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
             "contain at least one common Var object."
         )
         with LoggingIntercept(level=logging.ERROR) as LOG:
+            mdl.x1.fix()  # uncertain params should be fixed
             with self.assertRaisesRegex(ValueError, exc_str):
                 pyros.solve(
                     model=mdl,

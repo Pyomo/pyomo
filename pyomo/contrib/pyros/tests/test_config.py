@@ -23,6 +23,7 @@ from pyomo.core.base.param import Param, ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
     uncertain_param_validator,
+    uncertain_param_data_validator,
     logger_domain,
     SolverNotResolvable,
     positive_int_or_minus_one,
@@ -335,6 +336,63 @@ class TestInputDataStandardizer(unittest.TestCase):
                     f"(id {id(output)})"
                 ),
             )
+
+    def test_standardizer_with_both_validators(self):
+        """
+        Test input data standardizer when there is
+        a validator for the component and component data types.
+        """
+        mdl = ConcreteModel()
+        mdl.p = Param([0, 1], initialize=0, mutable=True)
+        mdl.v = Var(["a", "b"], initialize=1)
+
+        standardizer_func = InputDataStandardizer(
+            ctype=(Var, Param),
+            cdatatype=(VarData, ParamData),
+            ctype_validator=uncertain_param_validator,
+            cdatatype_validator=uncertain_param_data_validator,
+        )
+
+        err_str_a = r".*VarData object with name 'v\[a\]' is not fixed"
+        err_str_b = r".*VarData object with name 'v\[b\]' is not fixed"
+
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v])
+
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func(mdl.v["a"])
+
+        mdl.v["a"].fix()
+        va_output = standardizer_func(mdl.v["a"])
+        self.assertEqual(va_output, [mdl.v["a"]])
+
+        with self.assertRaisesRegex(ValueError, err_str_b):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        mdl.v["b"].fix()
+        va_vb_output = standardizer_func([mdl.v["a"], mdl.v["b"]])
+        self.assertEqual(
+            va_vb_output,
+            [mdl.v["a"], mdl.v["b"]],
+        )
+
+        va_vb_unraveled_output = standardizer_func(mdl.v)
+        self.assertEqual(
+            va_vb_unraveled_output,
+            [mdl.v["a"], mdl.v["b"]],
+        )
+
+        mdl.v["a"].unfix()
+        mdl.v["a"].setlb(1)
+        mdl.v["a"].setub(1)
+        va_vb_unraveled_output_2 = standardizer_func(mdl.v)
+        self.assertEqual(
+            va_vb_unraveled_output_2,
+            [mdl.v["a"], mdl.v["b"]],
+        )
 
     def test_standardizer_domain_name(self):
         """
