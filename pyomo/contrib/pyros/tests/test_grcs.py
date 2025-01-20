@@ -46,6 +46,7 @@ from pyomo.environ import (
     Block,
     ConcreteModel,
     Constraint,
+    Expression,
     Objective,
     Param,
     SolverFactory,
@@ -1761,7 +1762,7 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
     """
 
     def build_model_objects(self):
-        mdl1 = build_leyffer()
+        mdl1 = build_leyffer_two_cons_two_params()
 
         # clone: use a Var to represent the uncertain parameter.
         #        to ensure Var is out of scope of all subproblems
@@ -1769,14 +1770,26 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
         #        let's make the bounds exclude the nominal value;
         #        PyROS should ignore these bounds as well
         mdl2 = mdl1.clone()
-        mdl2.uvar = Var([0], initialize={0: mdl2.u.value}, bounds=(-1, 0))
-        mdl2.uvar.fix()
-        mdl2.con.set_value(
-            replace_expressions(
-                expr=mdl2.con.expr, substitution_map={id(mdl2.u): mdl2.uvar[0]}
-            )
+        mdl2.uvar = Var(
+            [1, 2], initialize={1: mdl2.u1.value, 2: mdl2.u2.value}, bounds=(-1, 0)
         )
-        box_set = BoxSet([[0.25, 2]])
+
+        # want to test replacement of named expressions
+        # in preprocessing as well,
+        # so we add a simple placeholder expression
+        mdl2.uvar2_expr = Expression(expr=mdl2.uvar[2])
+
+        for comp in [mdl2.con1, mdl2.con2, mdl2.obj]:
+            comp.set_value(
+                replace_expressions(
+                    expr=comp.expr,
+                    substitution_map={
+                        id(mdl2.u1): mdl2.uvar[1],
+                        id(mdl2.u2): mdl2.uvar2_expr,
+                    },
+                )
+            )
+        box_set = BoxSet([[0.25, 2], [0.5, 1.5]])
 
         return mdl1, mdl2, box_set
 
@@ -1791,9 +1804,8 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
         ipopt_solver = SolverFactory("ipopt")
         pyros_solver = SolverFactory("pyros")
 
-        err_str = r".*VarData object with name 'uvar\[0\]' is not fixed"
-
-        with self.assertRaisesRegex(ValueError, err_str):
+        err_str_1 = r".*VarData object with name 'uvar\[1\]' is not fixed"
+        with self.assertRaisesRegex(ValueError, err_str_1):
             pyros_solver.solve(
                 model=mdl2,
                 first_stage_variables=[mdl2.x1, mdl2.x2],
@@ -1803,13 +1815,35 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
                 local_solver=ipopt_solver,
                 global_solver=ipopt_solver,
             )
-
-        with self.assertRaisesRegex(ValueError, err_str):
+        with self.assertRaisesRegex(ValueError, err_str_1):
             pyros_solver.solve(
                 model=mdl2,
                 first_stage_variables=[mdl2.x1, mdl2.x2],
                 second_stage_variables=[],
-                uncertain_params=[mdl2.uvar[0]],
+                uncertain_params=[mdl2.uvar[1], mdl2.uvar[2]],
+                uncertainty_set=box_set,
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+            )
+
+        mdl2.uvar[1].fix()
+        err_str_2 = r".*VarData object with name 'uvar\[2\]' is not fixed"
+        with self.assertRaisesRegex(ValueError, err_str_2):
+            pyros_solver.solve(
+                model=mdl2,
+                first_stage_variables=[mdl2.x1, mdl2.x2],
+                second_stage_variables=[],
+                uncertain_params=mdl2.uvar,
+                uncertainty_set=box_set,
+                local_solver=ipopt_solver,
+                global_solver=ipopt_solver,
+            )
+        with self.assertRaisesRegex(ValueError, err_str_2):
+            pyros_solver.solve(
+                model=mdl2,
+                first_stage_variables=[mdl2.x1, mdl2.x2],
+                second_stage_variables=[],
+                uncertain_params=[mdl2.uvar[1], mdl2.uvar[2]],
                 uncertainty_set=box_set,
                 local_solver=ipopt_solver,
                 global_solver=ipopt_solver,
@@ -1821,11 +1855,17 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
         in argument `uncertain_params`.
         """
         mdl1, mdl2, box_set = self.build_model_objects()
-        mdl3 = mdl2.clone()
 
+        # explicitly fixed
+        mdl2.uvar.fix()
+
+        # fixed by bounds that are literal constants
+        mdl3 = mdl2.clone()
         mdl3.uvar.unfix()
-        mdl3.uvar[0].setlb(mdl3.uvar[0].value)
-        mdl3.uvar[0].setub(mdl3.uvar[0].value)
+        mdl3.uvar[1].setlb(mdl3.uvar[1].value)
+        mdl3.uvar[1].setub(mdl3.uvar[1].value)
+        mdl3.uvar[2].setlb(mdl3.uvar[2].value)
+        mdl3.uvar[2].setub(mdl3.uvar[2].value)
 
         ipopt_solver = SolverFactory("ipopt")
         pyros_solver = SolverFactory("pyros")
@@ -1834,7 +1874,7 @@ class TestPyROSVarsAsUncertainParams(unittest.TestCase):
             model=mdl1,
             first_stage_variables=[mdl1.x1, mdl1.x2],
             second_stage_variables=[],
-            uncertain_params=[mdl1.u],
+            uncertain_params=[mdl1.u1, mdl1.u2],
             uncertainty_set=box_set,
             local_solver=ipopt_solver,
             global_solver=ipopt_solver,
