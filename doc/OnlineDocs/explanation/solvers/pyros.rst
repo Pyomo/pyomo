@@ -456,13 +456,15 @@ or ``list(m.p.values())``.
     ``mutable=True``.
 
 .. note::
-    PyROS also supports uncertain parameters implemented as
+    PyROS also allows uncertain parameters to be implemented as
     :class:`~pyomo.core.base.var.Var` objects declared on the
     deterministic model.
     This may be convenient for users transitioning to PyROS from
-    uncertainty quantification workflows.
-    All :class:`~pyomo.core.base.var.Var` objects representing
-    uncertain parameters should be fixed.
+    parameter estimation and/or uncertainty quantification workflows,
+    in which the uncertain parameters are
+    often represented by :class:`~pyomo.core.base.var.Var` objects.
+    Prior to invoking PyROS,
+    all such :class:`~pyomo.core.base.var.Var` objects should be fixed.
 
 
 PyROS will seek to identify solutions that remain feasible for any
