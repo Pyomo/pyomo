@@ -108,6 +108,7 @@ def main():
         sys.exit(1)
 
     repository = sys.argv[1]
+    num_issues = 5
     if len(sys.argv) == 3:
         try:
             num_issues = int(sys.argv[2])
@@ -118,9 +119,6 @@ def main():
                 "*** ERROR: You did something weird when declaring the number of issues. Defaulting to 5.\n"
                 f"(For posterity, this is the error that was returned: {e})\n"
             )
-            num_issues = 5
-    else:
-        num_issues = 5
 
     print("Spinning the Big Wheel of Misfortune...\n")
     print_big_wheel()
