@@ -195,7 +195,9 @@ class SASAbc(ABC, OptSolver):
 
     def available(self, exception_flag=False):
         """True if the solver is available"""
-        return self._python_api_exists
+        if not self._python_api_exists:
+            return False
+        return self.start_sas_session() is not None
 
     def _has_integer_variables(self):
         """True if the problem has integer variables."""
@@ -285,12 +287,7 @@ class SAS94(SASAbc):
 
         # Store other options for the SAS session
         self._session_options = kwds
-
-        # Create the session
-        try:
-            self._sas_session = self._sas.SASsession(**self._session_options)
-        except:
-            self._sas_session = None
+        self._sas_session = None
 
     def __del__(self):
         # Close the session, if we created one
@@ -313,6 +310,15 @@ class SAS94(SASAbc):
 
     def sas_version(self):
         return self._sasver
+
+    def start_sas_session(self):
+        if self._sas_session is None:
+            # Create (and cache) the session
+            try:
+                self._sas_session = self._sas.SASsession(**self._session_options)
+            except:
+                pass
+        return self._sas_session
 
     def _apply_solver(self):
         """ "Prepare the options and run the solver. Then store the data to be returned."""
@@ -374,10 +380,7 @@ class SAS94(SASAbc):
         sas_options = "option notes nonumber nodate nosource pagesize=max;"
 
         # Get the current SAS session, submit the code and return the results
-        if not self._sas_session:
-            sas = self._sas_session = self._sas.SASsession(**self._session_options)
-        else:
-            sas = self._sas_session
+        sas = self.start_sas_session()
 
         # Find the version of 9.4 we are using
         self._sasver = sas.sasver
@@ -585,18 +588,22 @@ class SASCAS(SASAbc):
             self._python_api_exists = True
 
         self._session_options = kwds
-
-        # Create the session
-        try:
-            self._sas_session = self._sas.CAS(**self._session_options)
-        except:
-            self._sas_session = None
+        self._sas_session = None
 
     def __del__(self):
         # Close the session, if we created one
         if self._sas_session:
             self._sas_session.close()
             del self._sas_session
+
+    def start_sas_session(self):
+        if self._sas_session is None:
+            # Create (and cache) the session
+            try:
+                self._sas_session = self._sas.CAS(**self._session_options)
+            except:
+                pass
+        return self._sas_session
 
     def _uploadMpsFile(self, s, unique):
         # Declare a unique table name for the mps table
