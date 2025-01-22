@@ -34,7 +34,11 @@ from pyomo.contrib.pyros.separation_problem_methods import (
     SeparationProblemData,
     initialize_separation,
 )
-from pyomo.contrib.pyros.uncertainty_sets import BoxSet, FactorModelSet
+from pyomo.contrib.pyros.uncertainty_sets import (
+    BoxSet,
+    FactorModelSet,
+    DiscreteScenarioSet,
+)
 from pyomo.contrib.pyros.util import (
     ModelData,
     preprocess_model_data,
@@ -312,6 +316,10 @@ class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
 
 
 class TestInitializeSeparation(unittest.TestCase):
+    """
+    Tests for separation subproblem initialization.
+    """
+
     def test_initialize_separation(self):
         model_data = build_simple_model_data(
             objective_focus="worst_case",
@@ -352,8 +360,8 @@ class TestInitializeSeparation(unittest.TestCase):
             # so update the epigraph variable
             value(new_scenario_blk.full_objective)
         )
-        # different value for the adjustable variable, so
-        # we also adjust the DR variables
+        # different value for the adjustable variable
+        # so we also adjust the DR variables
         # to ensure the DR equations are satisfied
         new_scenario_blk.user_model.x3.set_value(6)
         new_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(4.5)
@@ -450,7 +458,7 @@ class TestInitializeSeparation(unittest.TestCase):
             expected_aux_var_vals[1],
         )
 
-    def test_initialize_separation_violated_con_logging(self):
+    def test_initialize_separation_infeasibility_logging(self):
         """
         Test initialization of a separation problem for which
         one of the active separation model constraints is
@@ -502,13 +510,116 @@ class TestInitializeSeparation(unittest.TestCase):
             len(log_output_lines),
             1,
             "Expected DEBUG-level output for separation problem initialization "
-            "test to have only one line.",
+            "test to have exactly 1 line.",
         )
         self.assertRegex(
             log_output,
             r"Initial point for separation of .*violates the model constraint "
             r"'second_stage.decision_rule_eqns\[0\].*' by more than.*",
         )
+
+    def test_initialize_separation_discrete_uncertainty(self):
+        """
+        Test initialization of a separation problem
+        with a discrete uncertainty set.
+        """
+        model_data = build_simple_model_data(
+            objective_focus="worst_case",
+            uncertainty_set=DiscreteScenarioSet(
+                scenarios=[[0.5, 0], [1, 0.5]],
+            ),
+        )
+
+        master_data = MasterProblemData(model_data)
+        nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+        nom_scenario_blk.user_model.x1.set_value(10)
+        nom_scenario_blk.user_model.x2.set_value(1)
+
+        # this results in a violation of the DR equality constraint,
+        # which is not logged, since the uncertainty set is discrete
+        nom_scenario_blk.user_model.x3.set_value(5 + 1.1e-5)
+        nom_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(5)
+
+        nom_scenario_blk.first_stage.epigraph_var.set_value(
+            value(nom_scenario_blk.full_objective)
+        )
+
+        separation_data = SeparationProblemData(model_data)
+        ss_ineq_con_to_maximize = (
+            separation_data
+            .separation_model
+            .second_stage
+            .inequality_cons["epigraph_con"]
+        )
+
+        sep_usr_blk = separation_data.separation_model.user_model
+        sep_model = separation_data.separation_model
+
+        # fix uncertain parameters to off-nominal value;
+        # these should not be modified by the initialization
+        off_nominal_scenario = model_data.config.uncertainty_set.scenarios[1]
+        sep_model.uncertainty.uncertain_param_var_list[0].set_value(
+            off_nominal_scenario[0]
+        )
+        sep_model.uncertainty.uncertain_param_var_list[1].set_value(
+            off_nominal_scenario[1]
+        )
+        sep_model.uncertainty.uncertain_param_var_list[0].fix()
+        sep_model.uncertainty.uncertain_param_var_list[1].fix()
+
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            initialize_separation(
+                ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+                separation_data=separation_data,
+                master_data=master_data,
+            )
+        log_output = LOG.getvalue()
+        self.assertFalse(log_output, "DEBUG-level log output should be empty.")
+
+        # first-stage variables added by PyROS
+        self.assertEqual(
+            value(sep_model.first_stage.epigraph_var),
+            value(nom_scenario_blk.first_stage.epigraph_var),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][0]),
+            value(nom_scenario_blk.first_stage.decision_rule_vars[0][0]),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][1]),
+            value(nom_scenario_blk.first_stage.decision_rule_vars[0][1]),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][2]),
+            value(nom_scenario_blk.first_stage.decision_rule_vars[0][2]),
+        )
+
+        # variables of original user model
+        self.assertEqual(
+            value(sep_usr_blk.x1),
+            value(nom_scenario_blk.user_model.x1),
+        )
+        self.assertEqual(
+            value(sep_usr_blk.x2),
+            value(nom_scenario_blk.user_model.x2),
+        )
+        self.assertEqual(
+            value(sep_usr_blk.x3),
+            value(nom_scenario_blk.user_model.x3),
+        )
+
+        # uncertain parameter variable state should not have been
+        # modified by the initialization
+        self.assertEqual(
+            value(sep_model.uncertainty.uncertain_param_indexed_var[0]),
+            off_nominal_scenario[0],
+        )
+        self.assertEqual(
+            value(sep_model.uncertainty.uncertain_param_indexed_var[1]),
+            off_nominal_scenario[1],
+        )
+        self.assertTrue(sep_model.uncertainty.uncertain_param_var_list[0].fixed)
+        self.assertTrue(sep_model.uncertainty.uncertain_param_var_list[1].fixed)
 
 
 if __name__ == "__main__":
