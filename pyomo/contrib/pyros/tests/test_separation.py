@@ -370,16 +370,14 @@ class TestInitializeSeparation(unittest.TestCase):
         separation_data = SeparationProblemData(model_data)
 
         ss_ineq_con_to_maximize = (
-            separation_data
-            .separation_model
-            .second_stage
-            .inequality_cons["epigraph_con"]
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
         )
         separation_data.points_added_to_master[1, 0] = new_master_param_realization
         separation_data.auxiliary_values_for_master_points[(1, 0)] = (
             model_data.config.uncertainty_set.compute_auxiliary_uncertain_param_vals(
-                point=new_master_param_realization,
-                solver=None,
+                point=new_master_param_realization, solver=None
             )
         )
 
@@ -423,16 +421,13 @@ class TestInitializeSeparation(unittest.TestCase):
 
         # variables of original user model
         self.assertEqual(
-            value(sep_usr_blk.x1),
-            value(init_from_scenario_blk.user_model.x1),
+            value(sep_usr_blk.x1), value(init_from_scenario_blk.user_model.x1)
         )
         self.assertEqual(
-            value(sep_usr_blk.x2),
-            value(init_from_scenario_blk.user_model.x2),
+            value(sep_usr_blk.x2), value(init_from_scenario_blk.user_model.x2)
         )
         self.assertEqual(
-            value(sep_usr_blk.x3),
-            value(init_from_scenario_blk.user_model.x3),
+            value(sep_usr_blk.x3), value(init_from_scenario_blk.user_model.x3)
         )
 
         # main uncertain parameter variables
@@ -446,16 +441,14 @@ class TestInitializeSeparation(unittest.TestCase):
         )
 
         # auxiliary uncertain parameter variables
-        expected_aux_var_vals = (
-            separation_data.auxiliary_values_for_master_points[(1, 0)]
+        expected_aux_var_vals = separation_data.auxiliary_values_for_master_points[
+            (1, 0)
+        ]
+        self.assertEqual(
+            value(sep_model.uncertainty.auxiliary_var_list[0]), expected_aux_var_vals[0]
         )
         self.assertEqual(
-            value(sep_model.uncertainty.auxiliary_var_list[0]),
-            expected_aux_var_vals[0],
-        )
-        self.assertEqual(
-            value(sep_model.uncertainty.auxiliary_var_list[1]),
-            expected_aux_var_vals[1],
+            value(sep_model.uncertainty.auxiliary_var_list[1]), expected_aux_var_vals[1]
         )
 
     def test_initialize_separation_infeasibility_logging(self):
@@ -493,10 +486,9 @@ class TestInitializeSeparation(unittest.TestCase):
 
         separation_data = SeparationProblemData(model_data)
         ss_ineq_con_to_maximize = (
-            separation_data
-            .separation_model
-            .second_stage
-            .inequality_cons["epigraph_con"]
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
         )
         with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
             initialize_separation(
@@ -525,9 +517,7 @@ class TestInitializeSeparation(unittest.TestCase):
         """
         model_data = build_simple_model_data(
             objective_focus="worst_case",
-            uncertainty_set=DiscreteScenarioSet(
-                scenarios=[[0.5, 0], [1, 0.5]],
-            ),
+            uncertainty_set=DiscreteScenarioSet(scenarios=[[0.5, 0], [1, 0.5]]),
         )
 
         master_data = MasterProblemData(model_data)
@@ -546,10 +536,9 @@ class TestInitializeSeparation(unittest.TestCase):
 
         separation_data = SeparationProblemData(model_data)
         ss_ineq_con_to_maximize = (
-            separation_data
-            .separation_model
-            .second_stage
-            .inequality_cons["epigraph_con"]
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
         )
 
         sep_usr_blk = separation_data.separation_model.user_model
@@ -595,18 +584,9 @@ class TestInitializeSeparation(unittest.TestCase):
         )
 
         # variables of original user model
-        self.assertEqual(
-            value(sep_usr_blk.x1),
-            value(nom_scenario_blk.user_model.x1),
-        )
-        self.assertEqual(
-            value(sep_usr_blk.x2),
-            value(nom_scenario_blk.user_model.x2),
-        )
-        self.assertEqual(
-            value(sep_usr_blk.x3),
-            value(nom_scenario_blk.user_model.x3),
-        )
+        self.assertEqual(value(sep_usr_blk.x1), value(nom_scenario_blk.user_model.x1))
+        self.assertEqual(value(sep_usr_blk.x2), value(nom_scenario_blk.user_model.x2))
+        self.assertEqual(value(sep_usr_blk.x3), value(nom_scenario_blk.user_model.x3))
 
         # uncertain parameter variable state should not have been
         # modified by the initialization
