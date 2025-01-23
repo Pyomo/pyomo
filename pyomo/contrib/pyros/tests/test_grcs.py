@@ -3176,8 +3176,7 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
         # (or else this problem is trivially robust feasible)
         # infeasibility as uncertain lower bound may exceed upper bound
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_infeasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_infeasible
         )
         self.assertEqual(res.iterations, 2)
 
