@@ -795,7 +795,7 @@ def validate_variable_partitioning(model, config):
         get_vars_from_components(
             block=model,
             active=True,
-            include_fixed=False,
+            include_fixed=True,
             descend_into=True,
             ctype=(Objective, Constraint),
         )

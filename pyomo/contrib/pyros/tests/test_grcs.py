@@ -3144,5 +3144,94 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(ipopt_available, "IPOPT not available.")
+class TestResolveAndValidatePyROSInputs(unittest.TestCase):
+    def test_validate_pyros_inputs_config(self):
+        """
+        Test PyROS solver input validation sets up the
+        final config (options) as expected.
+        """
+        model = build_leyffer_two_cons()
+        box_set = BoxSet(bounds=[[0.25, 2]])
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        config, _ = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(config.first_stage_variables, [model.x1, model.x2])
+        self.assertFalse(config.second_stage_variables)
+        self.assertEqual(config.uncertain_params, [model.u])
+        self.assertIs(config.uncertainty_set, box_set)
+        self.assertIs(config.local_solver, ipopt_solver)
+        self.assertIs(config.global_solver, ipopt_solver)
+
+    def test_validate_pyros_inputs_user_var_partitioning(self):
+        """
+        Test PyROS solver input validation sets up the user
+        variable partitioning/scope as expected.
+        """
+        model = build_leyffer_two_cons()
+        box_set = BoxSet([[0.25, 2]])
+        # so we can check treatment of fixed variables
+        # note: x3 does not appear in the objective
+        model.x3.fix()
+        # so we can check treatment of variables not in the
+        # active objective or constraints
+        model.x4 = Var()
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        _, user_var_partitioning = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(
+            user_var_partitioning.first_stage_variables, [model.x1, model.x2]
+        )
+        self.assertFalse(user_var_partitioning.second_stage_variables)
+        self.assertEqual(user_var_partitioning.state_variables, [model.x3])
+
+    def test_validate_pyros_inputs_user_var_partitioning_obj_only(self):
+        """
+        Test PyROS solver input validation sets up the user
+        variable partitioning/scope as expected.
+        """
+        model = build_leyffer_two_cons()
+        # so we can check that variables in objective but not
+        # constraints are in scope
+        model.con1.deactivate()
+        model.con2.deactivate()
+        box_set = BoxSet([[0.25, 2]])
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        _, user_var_partitioning = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(
+            user_var_partitioning.first_stage_variables, [model.x1, model.x2]
+        )
+        self.assertFalse(user_var_partitioning.second_stage_variables)
+        self.assertFalse(user_var_partitioning.state_variables)
+
+
 if __name__ == "__main__":
     unittest.main()
