@@ -26,7 +26,7 @@ from pyomo.environ import (
     Suffix,
 )
 from pyomo.opt.results import SolverStatus, TerminationCondition, ProblemSense
-from pyomo.opt import SolverFactory, check_available_solvers
+from pyomo.opt import SolverFactory
 import warnings
 
 CFGFILE = os.environ.get("SAS_CFG_FILE_PATH", None)
@@ -38,7 +38,10 @@ CAS_OPTIONS = {
 }
 
 
-sas_available = check_available_solvers("sas")
+try:
+    sas94_available = SolverFactory('_sas94').available()
+except:
+    sas94_available = False
 
 
 class SASTestAbc:
@@ -292,7 +295,7 @@ class SASTestLP(SASTestAbc):
         )
 
 
-@unittest.skipIf(not sas_available, "The SAS solver is not available")
+@unittest.skipIf(not sas94_available, "The SAS94 solver interface is not available")
 class SASTestLP94(SASTestLP, unittest.TestCase):
     @mock.patch(
         "pyomo.solvers.plugins.solvers.SAS.SAS94.sas_version",
@@ -325,7 +328,7 @@ class SASTestLP94(SASTestLP, unittest.TestCase):
         self.assertEqual(results.solver.status, SolverStatus.error)
 
 
-# @unittest.skipIf(not sas_available, "The SAS solver is not available")
+# @unittest.skipIf(not sascas_available, "The SAS solver is not available")
 @unittest.skip("Tests not yet configured for SAS Viya interface.")
 class SASTestLPCAS(SASTestLP, unittest.TestCase):
     solver_io = "_sascas"
@@ -526,13 +529,13 @@ class SASTestMILP(SASTestAbc):
         self.assertTrue(self.opt_sas.warm_start_capable())
 
 
-# @unittest.skipIf(not sas_available, "The SAS solver is not available")
+# @unittest.skipIf(not sas94_available, "The SAS solver is not available")
 @unittest.skip("MILP94 tests disabled.")
 class SASTestMILP94(SASTestMILP, unittest.TestCase):
     pass
 
 
-# @unittest.skipIf(not sas_available, "The SAS solver is not available")
+# @unittest.skipIf(not sascas_available, "The SAS solver is not available")
 @unittest.skip("Tests not yet configured for SAS Viya interface.")
 class SASTestMILPCAS(SASTestMILP, unittest.TestCase):
     solver_io = "_sascas"

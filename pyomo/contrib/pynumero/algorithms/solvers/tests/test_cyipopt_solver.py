@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-import os
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -219,24 +219,25 @@ class TestCyIpoptSolver(unittest.TestCase):
         m.scaling_factor[m.d] = 3.0  # scale the inequality constraint
         m.scaling_factor[m.x[1]] = 4.0  # scale one of the x variables
 
-        cynlp = CyIpoptNLP(PyomoNLP(m))
-        options = {
-            'nlp_scaling_method': 'user-scaling',
-            'output_file': '_cyipopt-scaling.log',
-            'file_print_level': 10,
-            'max_iter': 0,
-        }
-        solver = CyIpoptSolver(cynlp, options=options)
-        x, info = solver.solve()
+        with TempfileManager.new_context() as temp:
+            cynlp = CyIpoptNLP(PyomoNLP(m))
+            logfile = temp.create_tempfile('_cyipopt-scaling.log')
+            options = {
+                'nlp_scaling_method': 'user-scaling',
+                'output_file': logfile,
+                'file_print_level': 10,
+                'max_iter': 0,
+            }
+            solver = CyIpoptSolver(cynlp, options=options)
+            x, info = solver.solve()
+            cynlp.close()
 
-        with open('_cyipopt-scaling.log', 'r') as fd:
-            solver_trace = fd.read()
-        cynlp.close()
-        os.remove('_cyipopt-scaling.log')
+            with open(logfile, 'r') as fd:
+                solver_trace = fd.read()
 
-        # check for the following strings in the log and then delete the log
+        # check for the following strings in the log
         self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn('output_file = _cyipopt-scaling.log', solver_trace)
+        self.assertIn(f"output_file = {logfile}", solver_trace)
         self.assertIn('objective scaling factor = 1e-06', solver_trace)
         self.assertIn('x scaling provided', solver_trace)
         self.assertIn('c scaling provided', solver_trace)

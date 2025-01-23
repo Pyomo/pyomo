@@ -68,7 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.9, '3.10', '3.11', '3.12', '3.13' ]
+        python: [ 3.9, '3.10', 3.11, 3.12, 3.13 ]
         other: [""]
         category: [""]
 
@@ -87,7 +87,7 @@ jobs:
           PACKAGES: glpk pytest-qt filelock
 
         - os: ubuntu-latest
-          python: '3.11'
+          python: 3.11
           other: /conda
           skip_doctest: 1
           TARGET: linux
@@ -104,7 +104,7 @@ jobs:
           PACKAGES: openmpi mpi4py
 
         - os: ubuntu-latest
-          python: '3.12'
+          python: 3.12
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -120,7 +120,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: '3.11'
+          python: 3.11
           other: /singletest
           category: "-m 'neos or importtest'"
           skip_doctest: 1
@@ -152,7 +152,7 @@ jobs:
           PACKAGES: pyutilib
 
         - os: ubuntu-latest
-          python: pypy-3.9
+          python: 'pypy-3.10'
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
@@ -266,7 +266,7 @@ jobs:
     # have support for OSX.
     - name: Set up UI testing infrastructure
       if: ${{ matrix.TARGET != 'osx' }}
-      uses: pyvista/setup-headless-display-action@v2
+      uses: pyvista/setup-headless-display-action@v3
       with:
         qt: true
         pyvista: false
@@ -397,11 +397,23 @@ jobs:
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
+            # xpress.init() (from conda) hangs indefinitely on GHA/Windows under
+            # Python 3.10 and 3.11.  Exclude that release on that platform.
+            if [[ ${{matrix.TARGET}} == win && ${{matrix.python}} =~ 3.1[01] ]]; then
+                # We would like to just use something like:
+                #  - "!=9.5.1" (conda errors)
+                #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
+                #  - "<=9.5.0|>9.5.1" (conda seg faults)
+                XPRESS='xpress=9.5.0'
+            else
+                XPRESS='xpress'
+            fi
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi xpress cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
                 echo ""
                 echo "*** Install $PKG ***"
+                echo ""
                 # conda can literally take an hour to determine that a
                 # package is not available.  Perform a quick search to see
                 # if the package is available for this interpreter before
@@ -423,6 +435,7 @@ jobs:
                         conda install -y "$PKG" || _BUILDS=""
                     fi
                 fi
+                echo ""
                 if test -z "$_BUILDS"; then
                     echo "WARNING: $PKG is not available"
                 fi
@@ -460,6 +473,9 @@ jobs:
         mkdir -p "$DOWNLOAD_DIR"
         echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
+        # Create a new PYOMO_PATH variable so we can ensure that we are actually
+        # getting the right PATH at the end
+        echo "PYOMO_PATH=$PATH" >> $GITHUB_ENV
 
     - name: Install Ipopt
       if: ${{ ! matrix.slim }}
@@ -467,6 +483,8 @@ jobs:
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
@@ -543,7 +561,9 @@ jobs:
     - name: Install GAMS Python bindings
       if: ${{ ! matrix.slim }}
       run: |
-        GAMS_DIR="${env:TPL_DIR}/gams"
+        GAMS_DIR="$TPL_DIR/gams"
+        NEW_PYOMO_PATH="$GAMS_DIR:$PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         py_ver=$($PYTHON_EXE -c 'import sys;v="_%s%s" % sys.version_info[:2] \
             ;print(v if v != "_27" else "")')
         if test -e $GAMS_DIR/apifiles/Python/api$py_ver; then
@@ -560,6 +580,17 @@ jobs:
         $BARON_DIR = "${env:TPL_DIR}/baron"
         echo "$BARON_DIR" | `
             Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        $CURRENT_PYOMO_PATH="${env:PYOMO_PATH}"
+        # Prepend BARON_DIR with appropriate path separator
+        if ( "${{matrix.TARGET}}" -eq "win" ) {
+            $PATH_SEPARATOR = ";"
+        } else {
+            $PATH_SEPARATOR = ":"
+        }
+        $NEW_PYOMO_PATH = "$BARON_DIR$PATH_SEPARATOR$CURRENT_PYOMO_PATH"
+        echo "New PYOMO_PATH: $NEW_PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" | `
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $URL = "https://minlp-downloads.nyc3.cdn.digitaloceanspaces.com/xecs/baron/current/"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $INSTALLER = "${env:DOWNLOAD_DIR}/baron_install.exe"
@@ -594,6 +625,8 @@ jobs:
       run: |
         GJH_DIR="$TPL_DIR/gjh"
         echo "${GJH_DIR}" >> $GITHUB_PATH
+        NEW_PYOMO_PATH="$GJH_DIR:$PYOMO_PATH"
+        echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         INSTALL_DIR="${DOWNLOAD_DIR}/gjh"
         if test ! -e "$INSTALL_DIR/bin"; then
             mkdir -p "$INSTALL_DIR"
@@ -634,8 +667,7 @@ jobs:
       if: ${{ ! matrix.slim }}
       shell: bash
       run: |
-        echo "NOTE: temporarily pinning to highspy pre-release for testing"
-        $PYTHON_EXE -m pip install --cache-dir cache/pip "highspy>=1.7.1.dev1" \
+        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
             || echo "WARNING: highspy is not available"
 
     - name: Set up coverage tracking
@@ -670,6 +702,11 @@ jobs:
 
     - name: Report pyomo plugin information
       run: |
+        # MRM / Jan 9, 2025: We update the PATH manually to make sure we
+        # capture all of our changes. This is necessary because of an
+        # issue with how the PATH rearranges on Windows.
+        # Issue: https://github.com/actions/runner-images/issues/11328
+        export PATH=$PYOMO_PATH
         echo "$PATH"
         pyomo help --solvers || exit 1
         pyomo help --transformations || exit 1
@@ -678,6 +715,7 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
+        export PATH=$PYOMO_PATH
         $PYTHON_EXE -m pytest -v \
             -W ignore::Warning ${{matrix.category}} \
             pyomo `pwd`/pyomo-model-libraries \
