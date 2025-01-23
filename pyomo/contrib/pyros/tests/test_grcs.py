@@ -2785,8 +2785,9 @@ class SimpleTestSolver:
 
 class TestPyROSSolverAdvancedValidation(unittest.TestCase):
     """
-    Test PyROS solver returns expected exception messages
-    when arguments are invalid.
+    Test PyROS solver validation routines result in
+    expected normal or exceptional solver behavior
+    depending on the arguments.
     """
 
     def build_simple_test_model(self):
@@ -3142,6 +3143,43 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 bypass_local_separation=True,
                 bypass_global_separation=True,
             )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT not available")
+    def test_pyros_fixed_var_scope(self):
+        """
+        Test PyROS solver on an instance such that the outcome
+        is clearly affected by whether a fixed variable
+        is treated as a decision variable (as it should be)
+        rather than a constant.
+        """
+        model = ConcreteModel()
+        model.q = Param(initialize=1, mutable=True)
+        model.x1 = Var(bounds=(0, 1), initialize=0)
+        model.x2 = Var(bounds=(model.q, 1))
+        model.x2.fix(1)
+        model.obj = Objective(expr=model.x1 + model.x2)
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        res = pyros_solver.solve(
+            model=model,
+            first_stage_variables=[model.x1],
+            second_stage_variables=[],
+            uncertain_params=[model.q],
+            uncertainty_set=BoxSet([[1, 2]]),
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+
+        # fixed variable is considered decision variable,
+        # so the bounds must be honored
+        # (or else this problem is trivially robust feasible)
+        # infeasibility as uncertain lower bound may exceed upper bound
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+        )
+        self.assertEqual(res.iterations, 2)
 
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
