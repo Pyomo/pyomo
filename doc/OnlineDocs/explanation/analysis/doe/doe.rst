@@ -3,7 +3,7 @@ Pyomo.DoE
 
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
-Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
+Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://github.com/CCSI-Toolset/>`_.
 project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
 If you use Pyomo.DoE, please cite:
