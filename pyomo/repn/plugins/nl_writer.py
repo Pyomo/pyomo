@@ -664,14 +664,7 @@ class _NLWriter_impl(object):
         all_constraints = []
         n_ranges = 0
         n_equality = 0
-        n_complementarity_nonlin = 0
-        n_complementarity_lin = 0
-        # TODO: update the writer to tabulate and report the range and
-        # nzlb values.  Low priority, as they do not appear to be
-        # required for solvers like PATH.
-        n_complementarity_range = 0
-        n_complementarity_nz_var_lb = 0
-        #
+
         last_parent = None
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
@@ -714,6 +707,8 @@ class _NLWriter_impl(object):
         # Complementarity handling
         n_complementarity_nonlin = 0
         n_complementarity_lin = 0
+        n_complementarity_range = 0
+        n_complementarity_nz_var_lb = 0
 
         for block in component_map[Complementarity]:
             for comp in block.component_data_objects(
@@ -728,10 +723,17 @@ class _NLWriter_impl(object):
                     if _id not in var_map:
                         var_map[_id] = comp.v
 
+                    # Check if variable has nonzero lower bound or any upper bound
+                    lb, ub = comp.v.bounds
+                    if (lb is not None and lb != 0) or ub is not None:
+                        n_complementarity_nz_var_lb += 1
+
                 # Process the complementarity constraint
                 if hasattr(comp, 'c'):
                     con = comp.c
                     con._vid = _id
+                    if hasattr(con, '_complementarity_type'):
+                        con._complementarity = con._complementarity_type
                     lb, body, ub = con.to_bounded_expression(True)
                     expr_info = visitor.walk_expression(
                         (body, comp, 0, scaling_factor(comp))
@@ -740,6 +742,11 @@ class _NLWriter_impl(object):
                         self._record_named_expression_usage(
                             expr_info.named_exprs, comp, 0
                         )
+
+                    # TODO: Ask about how to handle n_complementarity_range
+                    # Check if this is a range constraint
+                    # if lb is not None and ub is not None and lb != ub:
+                    #     n_complementarity_range += 1
 
                     if expr_info.nonlinear:
                         n_complementarity_nonlin += 1
@@ -1156,34 +1163,32 @@ class _NLWriter_impl(object):
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
-            if hasattr(con, '_complementarity_type'):
-                # _type = 5 for complementarity
-                r_lines[idx] = (
-                    f"5 {con._complementarity_type} {1+column_order[con._vid]}"
-                )
-                # Note: we already counted nonlinear/linear when processing the constraints
-            else:
-                if lb == ub:  # TBD: should this be within tolerance?
-                    if lb is None:
-                        # type = 3  # -inf <= c <= inf
-                        r_lines[idx] = "3"
-                    else:
-                        # _type = 4  # L == c == U
-                        r_lines[idx] = f"4 {lb - expr_info.const!s}"
-                        n_equality += 1
-                elif lb is None:
-                    # _type = 1  # c <= U
-                    r_lines[idx] = f"1 {ub - expr_info.const!s}"
-                elif ub is None:
-                    # _type = 2  # L <= c
-                    r_lines[idx] = f"2 {lb - expr_info.const!s}"
+            if lb == ub:  # TBD: should this be within tolerance?
+                if lb is None:
+                    # type = 3  # -inf <= c <= inf
+                    r_lines[idx] = "3"
                 else:
-                    # _type = 0  # L <= c <= U
-                    r_lines[idx] = (
-                        f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
-                    )
-                    n_ranges += 1
-                expr_info.const = 0
+                    # _type = 4  # L == c == U
+                    r_lines[idx] = f"4 {lb - expr_info.const!s}"
+                    n_equality += 1
+            elif lb is None:
+                # _type = 1  # c <= U
+                r_lines[idx] = f"1 {ub - expr_info.const!s}"
+            elif ub is None:
+                # _type = 2  # L <= c
+                r_lines[idx] = f"2 {lb - expr_info.const!s}"
+            else:
+                # _type = 0  # L <= c <= U
+                r_lines[idx] = f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
+                n_ranges += 1
+            expr_info.const = 0
+            # FIXME: this is a HACK to be compatible with the NLv1
+            # writer.  In the future, this writer should be expanded to
+            # look for and process Complementarity components (assuming
+            # that they are in an acceptable form).
+            if hasattr(con, '_complementarity'):
+                # _type = 5
+                r_lines[idx] = f"5 {con._complementarity} {1+column_order[con._vid]}"
         if symbolic_solver_labels:
             for idx in range(len(constraints)):
                 r_lines[idx] += row_comments[idx]
