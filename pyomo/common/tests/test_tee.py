@@ -271,6 +271,7 @@ class BufferTester(object):
         # as expected
         self.switchinterval = sys.getswitchinterval()
         sys.setswitchinterval(tee._poll_interval)
+        self.dt = 0.1
 
     def tearDown(self):
         sys.setswitchinterval(self.switchinterval)
@@ -283,6 +284,7 @@ class BufferTester(object):
         # unreliable (and we are not entirely sure why), we will try
         # each test twice before reporting a failure.
         if retry:
+            self.dt *= 2
             return getattr(self, self.id().rsplit('.', 1)[1])(False)
         return False
 
@@ -299,7 +301,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stdout.write(f"{time.time()}\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (1 - int(fd), 0), (1 - int(fd), 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -312,7 +314,7 @@ class BufferTester(object):
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stdout.write(f"{time.time()}\n")
             sys.stdout.flush()
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -324,7 +326,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stdout.write(f"{time.time()}" + '    ' * 4096 + "\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -342,7 +344,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
             sys.stdout.write(f"{time.time()}\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -356,7 +358,7 @@ class BufferTester(object):
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
             sys.stdout.write(f"{time.time()}\n")
             sys.stdout.flush()
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -369,7 +371,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
             sys.stdout.write(f"{time.time()}" + '    ' * 4096 + "\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -383,7 +385,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stderr.write(f"{time.time()}\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -396,7 +398,7 @@ class BufferTester(object):
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stderr.write(f"{time.time()}\n")
             sys.stderr.flush()
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -408,7 +410,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stderr.write(f"{time.time()}" + '  ' * 4096 + "\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -422,7 +424,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
             sys.stderr.write(f"{time.time()}\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -436,7 +438,7 @@ class BufferTester(object):
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
             sys.stderr.write(f"{time.time()}\n")
             sys.stderr.flush()
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
@@ -449,7 +451,7 @@ class BufferTester(object):
         ts.write(f"{time.time()}")
         with tee.capture_output(tee.TeeStream(ts, ts), capture_fd=fd):
             sys.stderr.write(f"{time.time()}" + '  ' * 4096 + "\n")
-            time.sleep(0.1)
+            time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
             self.retry(retry) or self.fail(ts.error)
