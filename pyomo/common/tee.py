@@ -328,9 +328,7 @@ class _StreamHandle(object):
     def finalize(self, ostreams):
         self.decodeIncomingBuffer()
         if ostreams:
-            # Turn off buffering for the final write
-            self.buffering = 0
-            self.writeOutputBuffer(ostreams)
+            self.writeOutputBuffer(ostreams, True)
         os.close(self.read_pipe)
 
         if self.output_buffer:
@@ -367,10 +365,10 @@ class _StreamHandle(object):
         self.output_buffer += chars
         self.decoder_buffer = self.decoder_buffer[raw_len:]
 
-    def writeOutputBuffer(self, ostreams):
+    def writeOutputBuffer(self, ostreams, flush):
         if not self.encoding:
             ostring, self.output_buffer = self.output_buffer, b''
-        elif self.buffering > 0:
+        elif self.buffering > 0 and not flush:
             EOL = self.output_buffer.rfind(self.newlines or '\n') + 1
             ostring = self.output_buffer[:EOL]
             self.output_buffer = self.output_buffer[EOL:]
@@ -380,13 +378,15 @@ class _StreamHandle(object):
         if not ostring:
             return
 
-        for stream in ostreams:
+        for local_stream, user_stream in ostreams:
             try:
-                written = stream.write(ostring)
+                written = local_stream.write(ostring)
             except:
                 written = 0
-            if written and not self.buffering:
-                stream.flush()
+            if flush or (written and not self.buffering):
+                local_stream.flush()
+                if local_stream is not user_stream:
+                    user_stream.flush()
             # Note: some derived file-like objects fail to return the
             # number of characters written (and implicitly return None).
             # If we get None, we will just assume that everything was
@@ -395,13 +395,12 @@ class _StreamHandle(object):
                 logger.error(
                     "Output stream (%s) closed before all output was "
                     "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (stream, ostring[written:])
+                    "the output buffer:\n\t%r" % (local_stream, ostring[written:])
                 )
 
 
 class TeeStream(object):
     def __init__(self, *ostreams, encoding=None, buffering=-1):
-        self.user_ostreams = ostreams
         self.ostreams = []
         self.encoding = encoding
         self.buffering = buffering
@@ -410,14 +409,16 @@ class TeeStream(object):
         self._handles = []
         self._active_handles = []
         self._threads = []
-        for s in ostreams:
+        for user_stream in ostreams:
             try:
-                fileno = s.fileno()
+                fileno = user_stream.fileno()
             except:
-                self.ostreams.append(s)
+                self.ostreams.append((user_stream, user_stream))
                 continue
-            s = os.fdopen(os.dup(fileno), mode=getattr(s, 'mode', None), closefd=True)
-            self.ostreams.append(s)
+            local_stream = os.fdopen(
+                os.dup(fileno), mode=getattr(user_stream, 'mode', None), closefd=True
+            )
+            self.ostreams.append((local_stream, user_stream))
 
     @property
     def STDOUT(self):
@@ -498,7 +499,7 @@ class TeeStream(object):
         self._active_handles.clear()
         self._stdout = None
         self._stderr = None
-        for orig, local in zip(self.user_ostreams, self.ostreams):
+        for local, orig in self.ostreams:
             if orig is not local:
                 local.close()
 
@@ -531,8 +532,8 @@ class TeeStream(object):
             pass
 
     def _streamReader(self, handle):
-        flush = False
         while True:
+            flush = False
             if handle.flush:
                 flush = True
                 handle.flush = False
@@ -545,12 +546,7 @@ class TeeStream(object):
             # handle.decoder_buffer
             handle.decodeIncomingBuffer()
             # Now, output whatever we have decoded to the output streams
-            handle.writeOutputBuffer(self.ostreams)
-            if flush:
-                flush = False
-                if self.buffering:
-                    for s in self.ostreams:
-                        s.flush()
+            handle.writeOutputBuffer(self.ostreams, flush)
         #
         # print("STREAM READER: DONE")
 
@@ -561,6 +557,7 @@ class TeeStream(object):
         _fast_poll_ct = _poll_rampup
         new_data = ''  # something not None
         while handles:
+            flush = False
             if new_data is None:
                 # For performance reasons, we use very aggressive
                 # polling at the beginning (_poll_interval) and then
@@ -577,7 +574,6 @@ class TeeStream(object):
                             _fast_poll_ct = _poll_rampup
             else:
                 new_data = None
-            flush = False
             if _mswindows:
                 for handle in list(handles):
                     try:
@@ -592,7 +588,7 @@ class TeeStream(object):
                             break
                     except:
                         handles.remove(handle)
-                        new_data = None
+                        new_data = ''
                 if new_data is None:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
@@ -618,6 +614,7 @@ class TeeStream(object):
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
                     handles.remove(handle)
+                    new_data = ''  # not None so the poll interval doesn't increase
                     continue
                 handle.decoder_buffer += new_data
 
@@ -626,9 +623,6 @@ class TeeStream(object):
             handle.decodeIncomingBuffer()
 
             # Now, output whatever we have decoded to the output streams
-            handle.writeOutputBuffer(self.ostreams)
-            if flush and self.buffering:
-                for s in self.ostreams:
-                    s.flush()
+            handle.writeOutputBuffer(self.ostreams, flush)
         #
         # print("MERGED READER: DONE")
