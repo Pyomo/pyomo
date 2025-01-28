@@ -288,7 +288,7 @@ class _StreamHandle(object):
         )
         if not self.buffering and buffering:
             # We want this stream to be unbuffered, but Python doesn't
-            # allow it for text strreams.  Mock up an unbuffered stream
+            # allow it for text streams.  Mock up an unbuffered stream
             # using AutoFlush
             self.write_file = _AutoFlush(self.write_file, self)
         else:
