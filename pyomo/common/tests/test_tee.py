@@ -312,16 +312,7 @@ class BufferTester(object):
             gc.enable()
             gc.collect()
 
-    def retry(self, retry):
-        # Because these buffering/timing tests can sometimes be
-        # unreliable (and we are not entirely sure why), we will try
-        # each test twice before reporting a failure.
-        if retry:
-            self.dt *= 2
-            return getattr(self, self.id().rsplit('.', 1)[1])(False)
-        return False
-
-    def test_buffered_stdout(self, retry=True):
+    def test_buffered_stdout(self):
         # Test 1: short messages to STDOUT are buffered
         #
         # TODO: [JDS] If we are capturing the file descriptor, the
@@ -331,28 +322,28 @@ class BufferTester(object):
         # put off "fixing" it.
         fd = self.capture_fd
         ts = timestamper()
-        ts.write(f"{time.time()}")
+        ts.write(f"{time.time()}\n")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stdout.write(f"{time.time()}\n")
             time.sleep(self.dt)
-        ts.write(f"{time.time()}")
+        ts.write(f"{time.time()}\n")
         if not ts.check([(0, 0), (1 - int(fd), 0), (1 - int(fd), 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stdout_flush(self, retry=True):
+    def test_buffered_stdout_flush(self):
         # Test 2: short messages to STDOUT that are flushed are flushed
         fd = self.capture_fd
         ts = timestamper()
-        ts.write(f"{time.time()}")
+        ts.write(f"{time.time()}\n")
         with tee.TeeStream(ts, ts) as t, tee.capture_output(t.STDOUT, capture_fd=fd):
             sys.stdout.write(f"{time.time()}\n")
             sys.stdout.flush()
             time.sleep(self.dt)
-        ts.write(f"{time.time()}")
+        ts.write(f"{time.time()}\n")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stdout_long_message(self, retry=True):
+    def test_buffered_stdout_long_message(self):
         # Test 3: long messages to STDOUT fill the buffer and are flushed
         fd = self.capture_fd
         ts = timestamper()
@@ -362,9 +353,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stdout_embed_TeeStream(self, retry=True):
+    def test_buffered_stdout_embed_TeeStream(self):
         # Test 4: short messages captured directly to TeeStream are not
         # buffered.
         #
@@ -380,9 +371,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stdout_flush_embed_TeeStream(self, retry=True):
+    def test_buffered_stdout_flush_embed_TeeStream(self):
         # Test 5: short messages captured directly to TeeStream that are
         # flushed are flushed
         fd = self.capture_fd
@@ -394,9 +385,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stdout_long_message_embed_TeeStream(self, retry=True):
+    def test_buffered_stdout_long_message_embed_TeeStream(self):
         # Test 6: long messages captured directly to TeeStream fill the
         # buffer and are flushed
         fd = self.capture_fd
@@ -407,9 +398,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stderr(self, retry=True):
+    def test_buffered_stderr(self):
         # Test 1: short messages to STDERR are buffered, unless we are
         # capturing the underlying file descriptor, in which case they
         # are buffered.
@@ -421,9 +412,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stderr_flush(self, retry=True):
+    def test_buffered_stderr_flush(self):
         # Test 2: short messages to STDERR that are flushed are flushed
         fd = self.capture_fd
         ts = timestamper()
@@ -434,9 +425,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stderr_long_message(self, retry=True):
+    def test_buffered_stderr_long_message(self):
         # Test 3: long messages to STDERR fill the buffer and are flushed
         fd = self.capture_fd
         ts = timestamper()
@@ -446,9 +437,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stderr_embed_TeeStream(self, retry=True):
+    def test_buffered_stderr_embed_TeeStream(self):
         # Test 4: short messages captured directly to TeeStream are not
         # buffered, unless we are capturing the underlying file
         # descriptor, in which case they are buffered.
@@ -460,9 +451,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stderr_flush_embed_TeeStream(self, retry=True):
+    def test_buffered_stderr_flush_embed_TeeStream(self):
         # Test 5: short messages captured directly to TeeStream that are
         # flushed are flushed
         fd = self.capture_fd
@@ -474,9 +465,9 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
-    def test_buffered_stderr_long_message_embed_TeeStream(self, retry=True):
+    def test_buffered_stderr_long_message_embed_TeeStream(self):
         # Test 6: long messages captured directly to TeeStream fill the
         # buffer and are flushed
         fd = self.capture_fd
@@ -487,7 +478,7 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            self.retry(retry) or self.fail(ts.error)
+            self.fail(ts.error)
 
 
 class TestBuffering_noCapture(BufferTester, unittest.TestCase):
