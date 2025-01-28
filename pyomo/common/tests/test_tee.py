@@ -110,7 +110,8 @@ class TestTeeStream(unittest.TestCase):
             # This is a slightly nondeterministic (on Windows), so a
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
-            t.STDOUT.flush()
+            # NOTE: do not flush: we will test flush in the next test
+            # t.STDOUT.flush()
             time.sleep(tee._poll_interval * 100)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
@@ -123,6 +124,38 @@ class TestTeeStream(unittest.TestCase):
                 time.sleep(tee._poll_interval)
         acceptable_results = {
             "Hello\ninterrupting\ncowWorld",  # expected
+            "interrupting\ncowHello\nWorld",  # Windows occasionally puts
+            # all error before stdout
+        }
+        self.assertIn(a.getvalue(), acceptable_results)
+        self.assertEqual(b.getvalue(), a.getvalue())
+
+    def test_merge_out_and_err_flush(self):
+        # Test that the STDERR/STDOUT streams are merged correctly
+        # (i.e., STDOUT is line buffered and STDERR is not).  This merge
+        # logic is only applicable when using the merged reader (i.e.,
+        # _peek_available is True)
+        a = StringIO()
+        b = StringIO()
+        # make sure this doesn't accidentally become a very long wait
+        assert tee._poll_interval <= 0.1
+        with tee.TeeStream(a, b) as t:
+            # This is a slightly nondeterministic (on Windows), so a
+            # flush() and short pause should help
+            t.STDOUT.write("Hello\nWorld")
+            t.STDOUT.flush()
+            time.sleep(tee._poll_interval * 100)
+            t.STDERR.write("interrupting\ncow")
+            t.STDERR.flush()
+            # For determinism, it is important that the STDERR message
+            # appears in the output stream before we start shutting down
+            # the TeeStream (which will dump the OUT and ERR in an
+            # arbitrary order)
+            start_time = time.time()
+            while 'cow' not in a.getvalue() and time.time() - start_time < 1:
+                time.sleep(tee._poll_interval)
+        acceptable_results = {
+            "Hello\nWorldinterrupting\ncow",  # expected
             "interrupting\ncowHello\nWorld",  # Windows occasionally puts
             # all error before stdout
         }
