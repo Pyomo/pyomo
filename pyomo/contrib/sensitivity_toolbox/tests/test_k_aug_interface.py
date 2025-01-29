@@ -20,8 +20,7 @@
 # This software is distributed under the 3-clause BSD License.
 # ____________________________________________________________________________
 
-"""
-"""
+""" """
 import os
 import pyomo.common.unittest as unittest
 from io import StringIO

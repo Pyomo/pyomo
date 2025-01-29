@@ -28,6 +28,7 @@ UI Tests
 # QT_QPA_PLATFORM environemnt variable *before* initializing Qt can work
 # around this error (see https://stackoverflow.com/a/74719383):
 import os
+
 os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
 from pyomo.environ import (
