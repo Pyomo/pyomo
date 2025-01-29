@@ -590,7 +590,7 @@ class TeeStream(object):
                             break
                     except:
                         handles.remove(handle)
-                        new_data = '' # not None so the poll interval doesn't increase
+                        new_data = ''  # not None so the poll interval doesn't increase
                 if new_data is None and not flush:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
