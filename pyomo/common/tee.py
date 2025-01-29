@@ -533,14 +533,16 @@ class TeeStream(object):
 
     def _streamReader(self, handle):
         while True:
-            flush = False
+            new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
             if handle.flush:
                 flush = True
                 handle.flush = False
-            new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
-            if not new_data:
+            else:
+                flush = False
+            if new_data:
+                handle.decoder_buffer += new_data
+            elif not flush:
                 break
-            handle.decoder_buffer += new_data
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer
@@ -588,8 +590,8 @@ class TeeStream(object):
                             break
                     except:
                         handles.remove(handle)
-                        new_data = ''
-                if new_data is None:
+                        new_data = '' # not None so the poll interval doesn't increase
+                if new_data is None and not flush:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
                     time.sleep(_poll)
@@ -603,20 +605,26 @@ class TeeStream(object):
                 # deadlocks when handles are added while select() is
                 # waiting
                 ready_handles = select(list(handles), noop, noop, _poll)[0]
-                if not ready_handles:
-                    new_data = None
-                    continue
+                if ready_handles:
+                    handle = ready_handles[0]
+                    new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
+                    if new_data:
+                        handle.decoder_buffer += new_data
+                    else:
+                        handles.remove(handle)
+                        new_data = ''  # not None so the poll interval doesn't increase
+                else:
+                    for handle in handles:
+                        if handle.flush:
+                            new_data = ''
+                            break
+                    else:
+                        new_data = None
+                        continue
 
-                handle = ready_handles[0]
                 if handle.flush:
                     flush = True
                     handle.flush = False
-                new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
-                if not new_data:
-                    handles.remove(handle)
-                    new_data = ''  # not None so the poll interval doesn't increase
-                    continue
-                handle.decoder_buffer += new_data
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer
