@@ -85,7 +85,7 @@ def uncertain_param_validator(uncertain_obj):
             "Check that the component has been properly constructed, "
             "and all entries have been initialized. "
         )
-    if isinstance(uncertain_obj, Param) and not uncertain_obj.mutable:
+    if uncertain_obj.ctype is Param and not uncertain_obj.mutable:
         raise ValueError(
             f"{type(uncertain_obj).__name__} object with name {uncertain_obj.name!r} "
             "is immutable."
