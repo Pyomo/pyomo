@@ -43,7 +43,7 @@ class timestamper:
     def flush(self):
         pass
 
-    def check(self, base):
+    def check(self, *bases):
         """Map the recorded times to {0, 1} based on the range of times
         recorded: anything in the first half of the range is mapped to
         0, and anything in the second half is mapped to 1.  This
@@ -55,7 +55,7 @@ class timestamper:
         n = list(itertools.chain(*self.buf))
         mid = (min(n) + max(n)) / 2.0
         result = [tuple(0 if i < mid else 1 for i in _) for _ in self.buf]
-        if result != base:
+        if result not in bases:
             self.error = f"result {result} != baseline {base}\nRaw timing: {self.buf}"
             return False
         return True
@@ -314,12 +314,6 @@ class BufferTester(object):
 
     def test_buffered_stdout(self):
         # Test 1: short messages to STDOUT are buffered
-        #
-        # TODO: [JDS] If we are capturing the file descriptor, the
-        # stdout channel is no longer buffered.  I am not exactly sure
-        # why (my guess is because the underlying pipe is not buffered),
-        # but as it is generally not a problem to not buffer, we will
-        # put off "fixing" it.
         fd = self.capture_fd
         ts = timestamper()
         ts.write(f"{time.time()}\n")
@@ -327,7 +321,15 @@ class BufferTester(object):
             sys.stdout.write(f"{time.time()}\n")
             time.sleep(self.dt)
         ts.write(f"{time.time()}\n")
-        if not ts.check([(0, 0), (1 - int(fd), 0), (1 - int(fd), 0), (1, 1)]):
+        baseline = [[(0, 0), (1, 0), (1, 0), (1, 1)]]
+        if fd:
+            # TODO: [JDS] If we are capturing the file descriptor, the
+            # stdout channel is sometimes no longer buffered.  I am not
+            # exactly sure why (my guess is because the underlying pipe
+            # is not buffered), but as it is generally not a problem to
+            # not buffer, we will put off "fixing" it.
+            baseline.append([(0, 0), (0, 0), (0, 0), (1, 1)])
+        if not ts.check(*baseline):
             self.fail(ts.error)
 
     def test_buffered_stdout_flush(self):
