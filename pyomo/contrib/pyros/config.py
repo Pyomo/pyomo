@@ -548,8 +548,8 @@ def pyros_config():
                 Uncertain model parameters.
                 Of every constituent `Param` object,
                 the `mutable` attribute must be set to True.
-                Of every constituent `Var` and `VarData` object,
-                the domain, declared bounds, and fixing are ignored.
+                All constituent `Var`/`VarData` objects should be
+                fixed.
                 """
             ),
             visibility=1,
