@@ -56,6 +56,7 @@ class timestamper:
         mid = (min(n) + max(n)) / 2.0
         result = [tuple(0 if i < mid else 1 for i in _) for _ in self.buf]
         if result not in bases:
+            base = ' or '.join(str(_) for _ in bases)
             self.error = f"result {result} != baseline {base}\nRaw timing: {self.buf}"
             return False
         return True
