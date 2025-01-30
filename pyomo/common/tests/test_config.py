@@ -88,6 +88,7 @@ def _display(obj, *args):
 
 class GlobalClass(object):
     "test class for test_known_types"
+
     pass
 
 
