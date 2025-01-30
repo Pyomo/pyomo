@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # -*- coding: utf-8 -*-
-""" Example of constraint qualification.
+"""Example of constraint qualification.
 
 The expected optimal solution value is 3.
 

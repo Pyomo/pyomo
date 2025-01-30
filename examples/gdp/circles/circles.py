@@ -10,8 +10,8 @@
 #  ___________________________________________________________________________
 
 """
-The "circles" GDP example problem originating in Lee and Grossman (2000). The 
-goal is to choose a point to minimize a convex quadratic function over a set of 
+The "circles" GDP example problem originating in Lee and Grossman (2000). The
+goal is to choose a point to minimize a convex quadratic function over a set of
 disjoint hyperspheres.
 """
 

@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-""" Example from Section 3.2 in paper of Pseudo Basic Steps
+"""Example from Section 3.2 in paper of Pseudo Basic Steps
 
 Ref:
-    Pseudo basic steps: bound improvement guarantees from Lagrangian 
+    Pseudo basic steps: bound improvement guarantees from Lagrangian
     decomposition in convex disjunctive programming
     Papageorgiou and Trespalacios, 2017
 

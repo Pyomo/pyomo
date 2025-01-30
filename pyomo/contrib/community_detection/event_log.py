@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-""" Logger function for community_graph.py """
+"""Logger function for community_graph.py"""
 
 from logging import getLogger
 from pyomo.core import Constraint, Objective, Var
