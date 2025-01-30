@@ -10,11 +10,11 @@
 #  ___________________________________________________________________________
 
 """
-This example shows how to represent a piecewise function using 
+This example shows how to represent a piecewise function using
 Pyomo's built SOSConstraint component. The function is defined as:
 
        / 3x-2 , 1 <= x <= 2
-f(x) = | 
+f(x) = |
        \ 5x-6 , 2 <= x <= 3
 """
 
