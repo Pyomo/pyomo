@@ -1862,8 +1862,6 @@ def setup_working_model(model_data, user_var_partitioning):
                 "Uncertain parameter with name "
                 f"{var.name!r} (relative to the working model clone) "
                 f"is of type {VarData.__name__}. "
-                f"The user-specified domain, declared bounds, and fixing of "
-                f"this {VarData.__name__} object will be ignored. "
                 f"A newly declared {ParamData.__name__} object "
                 f"with name {param.name!r} "
                 f"has been substituted for the {VarData.__name__} object "
