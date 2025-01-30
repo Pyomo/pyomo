@@ -99,7 +99,7 @@ def uncertain_param_data_validator(uncertain_obj):
 
     Parameters
     ----------
-    uncertain_obj : Param or Var
+    uncertain_obj : ParamData or VarData
         Object on which to perform checks.
 
     Raises
