@@ -1463,13 +1463,15 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         self._objs.extend(v for v in _objs if id(v) not in self._seen)
         self._seen.update(_seen)
         if self._exprs is not None:
-            self._exprs.extend(_exprs)
+            self._exprs.update(_exprs)
 
     def _process_named_expr(self, child):
-        eid = id(child)
         if self._cache is None:
             return True, None
-        elif eid in self._cache and all(c.expr is e for c, e in self._cache[eid][2]):
+        eid = id(child)
+        if eid in self._cache and all(
+            c.expr is e for c, e in self._cache[eid][2].values()
+        ):
             # We have already encountered this named expression. We just add
             # the cached objects to our list and don't descend.
             #
@@ -1486,7 +1488,7 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             self._expr_stack.append((eid, (self._objs, self._seen, self._exprs)))
             self._objs = []
             self._seen = set()
-            self._exprs = [(child, child.expr)]
+            self._exprs = {eid: (child, child.expr)}
             self._cache[eid] = (self._objs, self._seen, self._exprs)
             return True, None
 
