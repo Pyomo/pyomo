@@ -147,14 +147,12 @@ class TestExpressionUtilities(unittest.TestCase):
             list(identify_variables(m.b + m.e, named_expression_cache=cache)),
             [m.b, m.a],
         )
-        self.assertEqual(cache, {id(m.e): ([m.a], {id(m.a)}, [(m.e, m.e.expr)])})
+        self.assertEqual(cache, {id(m.e): ({id(m.a): m.a}, {id(m.e): (m.e, m.e.expr)})})
 
         # Check that the cache is used (to check, we will cause the cache to lie)
-        v, s, e = cache[id(m.e)]
-        v.pop()
-        v.extend([m.b, m.c])
+        s, e = cache[id(m.e)]
         s.clear()
-        s.update((id(m.b), id(m.c)))
+        s.update({id(m.b): m.b, id(m.c): m.c})
         self.assertEqual(
             list(identify_variables(m.b + m.e, named_expression_cache=cache)),
             [m.b, m.c],
@@ -176,11 +174,10 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual(
             cache,
             {
-                id(m.e): ([m.d], {id(m.d)}, [(m.e, m.e.expr)]),
+                id(m.e): ({id(m.d): m.d}, {id(m.e): (m.e, m.e.expr)}),
                 id(m.f): (
-                    [m.a, m.d, m.b],
-                    {id(m.a), id(m.d), id(m.b)},
-                    [(m.f, m.f.expr), (m.e, m.e.expr)],
+                    {id(m.a): m.a, id(m.d): m.d, id(m.b): m.b},
+                    {id(m.f): (m.f, m.f.expr), id(m.e): (m.e, m.e.expr)},
                 ),
             },
         )
@@ -192,11 +189,10 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual(
             cache,
             {
-                id(m.e): ([], set(), [(m.e, m.e.expr)]),
+                id(m.e): ({}, {id(m.e): (m.e, m.e.expr)}),
                 id(m.f): (
-                    [m.a, m.b],
-                    {id(m.a), id(m.b)},
-                    [(m.f, m.f.expr), (m.e, m.e.expr)],
+                    {id(m.a): m.a, id(m.b): m.b},
+                    {id(m.f): (m.f, m.f.expr), id(m.e): (m.e, m.e.expr)},
                 ),
             },
         )
