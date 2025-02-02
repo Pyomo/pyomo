@@ -81,10 +81,7 @@ class TestComponentUID(unittest.TestCase):
             ValueError, r"Context 'b\[1,'2'\]' does not apply to component 's'"
         ):
             ComponentUID(self.m.s, context=self.m.b[1, '2'])
-        with self.assertRaisesRegex(
-            ValueError,
-            "Context is not allowed when initializing a ComponentUID from"
-        ):
+        with self.assertRaisesRegex(ValueError, "Context is not allowed"):
             ComponentUID("b[1,2].c.a[2]", context=self.m.b[1, '2'])
 
     def test_parseFromString(self):

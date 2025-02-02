@@ -81,6 +81,7 @@ class ComponentUID(object):
             raise ValueError(
                 f"Context is not allowed when initializing a ComponentUID from {_type}."
             )
+
         if isinstance(component, str):
             if context is not None:
                 _context_err(str)
