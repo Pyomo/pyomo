@@ -1248,6 +1248,23 @@ class TestComponentUID(unittest.TestCase):
         ):
             cuid = ComponentUID(_slice)
 
+    def test_cuid_from_cuid(self):
+        def assert_equal(cuid1, cuid2):
+            self.assertEqual(cuid1, cuid2)
+            self.assertFalse(cuid1 is cuid2)
+
+        cuid_str = ComponentUID("b.var[1]")
+        cuid_str_2 = ComponentUID(cuid_str)
+        assert_equal(cuid_str, cuid_str_2)
+
+        cuid_comp = ComponentUID(self.m.b[1, 1].c)
+        cuid_comp_2 = ComponentUID(cuid_comp)
+        assert_equal(cuid_str, cuid_str_2)
+
+        cuid_slice = ComponentUID(self.m.b[1, :].c)
+        cuid_slice_2 = ComponentUID(cuid_slice)
+        assert_equal(cuid_slice, cuid_slice_2)
+
 
 if __name__ == "__main__":
     unittest.main()

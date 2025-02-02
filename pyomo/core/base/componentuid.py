@@ -12,6 +12,7 @@
 import codecs
 import re
 import ply.lex
+import copy
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
@@ -86,7 +87,8 @@ class ComponentUID(object):
                 self._cids = tuple(self._parse_cuid_v2(component))
             except (OSError, IOError):
                 self._cids = tuple(self._parse_cuid_v1(component))
-
+        elif isinstance(component, ComponentUID):
+            self._cids = copy.deepcopy(component._cids)
         elif type(component) is IndexedComponent_slice:
             self._cids = tuple(
                 self._generate_cuid_from_slice(component, context=context)
