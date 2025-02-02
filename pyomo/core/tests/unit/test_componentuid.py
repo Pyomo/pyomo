@@ -83,8 +83,7 @@ class TestComponentUID(unittest.TestCase):
             ComponentUID(self.m.s, context=self.m.b[1, '2'])
         with self.assertRaisesRegex(
             ValueError,
-            "Context is not allowed when initializing a ComponentUID "
-            "object from a string type",
+            "Context is not allowed when initializing a ComponentUID from"
         ):
             ComponentUID("b[1,2].c.a[2]", context=self.m.b[1, '2'])
 
@@ -1264,6 +1263,9 @@ class TestComponentUID(unittest.TestCase):
         cuid_slice = ComponentUID(self.m.b[1, :].c)
         cuid_slice_2 = ComponentUID(cuid_slice)
         assert_equal(cuid_slice, cuid_slice_2)
+
+        with self.assertRaisesRegex(ValueError, "Context is not allowed"):
+            ComponentUID(cuid_comp, context=self.m.b[1, 1])
 
 
 if __name__ == "__main__":
