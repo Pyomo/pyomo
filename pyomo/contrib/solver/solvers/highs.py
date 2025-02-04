@@ -185,19 +185,18 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
             def run(self):
                 pos = 0
                 while not self.stop:
-                    f = open(self.fname, 'r')
-                    f.seek(pos)
-                    msg = f.read()
-                    pos = f.tell()
-                    f.close()
+                    with open(self.fname, 'r') as f:
+                        f.seek(pos)
+                        msg = f.read()
+                        pos = f.tell()
                     for s in self.ostreams:
                         s.write(msg)
                     time.sleep(self.sleep_time)
-                f = open(self.fname, 'r')
-                f.seek(pos)
-                msg = f.read()
-                pos = f.tell()
-                f.close()
+
+                # Final read after stopping
+                with open(self.fname, 'r') as f:
+                    f.seek(pos)
+                    msg = f.read()
                 for s in self.ostreams:
                     s.write(msg)
 
