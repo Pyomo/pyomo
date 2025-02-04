@@ -1767,13 +1767,11 @@ def replace_vars_with_params(block, var_to_param_map):
         Mapping from VarData objects to be replaced
         to the ParamData objects to be introduced.
     """
-    # invoke the expression replacement method for each
-    # individual component type to ensure the substitutions
-    # are always performed in the named expressions first
-    for ctype in (Expression, Constraint, Objective):
-        _replace_vars_in_component_exprs(
-            block=block, substitution_map=var_to_param_map, ctype=ctype
-        )
+    _replace_vars_in_component_exprs(
+        block=block,
+        substitution_map=var_to_param_map,
+        ctype=(Expression, Constraint, Objective),
+    )
 
 
 def setup_working_model(model_data, user_var_partitioning):
