@@ -870,6 +870,10 @@ def _get_uncertain_param_val(var_or_param_data):
     Get value of VarData/ParamData object
     that is considered an uncertain parameter.
 
+    For any unfixed VarData object, we assume that
+    the `lower` and `upper` attributes are identical,
+    so the value of `lower` is returned.
+
     Parameters
     ----------
     var_or_param_data : VarData or ParamData
