@@ -872,7 +872,8 @@ def _get_uncertain_param_val(var_or_param_data):
 
     For any unfixed VarData object, we assume that
     the `lower` and `upper` attributes are identical,
-    so the value of `lower` is returned.
+    so the value of `lower` is returned in lieu of
+    the level value.
 
     Parameters
     ----------
