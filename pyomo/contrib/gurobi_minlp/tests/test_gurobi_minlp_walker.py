@@ -185,6 +185,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # TODO
 
     def test_write_absolute_value_expression(self):
+        # TODO: Gurobi doesn't support abs, I don't think.
         m = self.get_model()
         m.c = Constraint(expr=abs(m.x1) >= 3)
         visitor = self.get_visitor()
@@ -234,4 +235,3 @@ class TestGurobiMINLPWalker(CommonTest):
         expr = visitor.walk_expression(m.c.body)
 
         # TODO
-    

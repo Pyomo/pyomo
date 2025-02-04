@@ -92,6 +92,7 @@ _function_map = {}
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
     from gurobipy import GRB, nlfunc
+
     _function_map.update(
         {
             'exp': nlfunc.exp,
@@ -175,8 +176,8 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_native_logical(visitor, child):
         return False, InvalidNumber(
-                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
-            )
+            child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+        )
 
     @staticmethod
     def _before_complex(visitor, child):
@@ -185,14 +186,14 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_invalid(visitor, child):
         return False, InvalidNumber(
-                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+            child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
         )
 
     @staticmethod
     def _before_string(visitor, child):
         return False, InvalidNumber(
-                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
-            )
+            child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+        )
 
     @staticmethod
     def _before_npv(visitor, child):
@@ -234,9 +235,9 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     def exitNode(self, node, data):
         if node.__class__ is EXPR.UnaryFunctionExpression:
             return _function_map[node._name](data[0])
-            #import pdb
-            #pdb.set_trace()
-            #return apply_node_operation(node, data)
+            # import pdb
+            # pdb.set_trace()
+            # return apply_node_operation(node, data)
         return self._eval_expr_visitor.visit(node, data)
 
     def finalizeResult(self, result):
@@ -296,8 +297,9 @@ class GurobiMINLPWriter(object):
     def __init__(self):
         self.config = self.CONFIG()
 
-    def _create_gurobi_expression(self, expr, src, src_index, grb_model,
-                                  quadratic_visitor, grb_visitor):
+    def _create_gurobi_expression(
+        self, expr, src, src_index, grb_model, quadratic_visitor, grb_visitor
+    ):
         """
         Uses the quadratic walker to determine if the expression is a general
         nonlinear (non-quadratic) expression, and returns a gurobipy representation
@@ -351,8 +353,7 @@ class GurobiMINLPWriter(object):
 
         # Get a quadratic walker instance
         quadratic_visitor = QuadraticRepnVisitor(
-            subexpression_cache={},
-            var_recorder=OrderedVarRecorder({}, {}, None),
+            subexpression_cache={}, var_recorder=OrderedVarRecorder({}, {}, None)
         )
 
         # create Gurobi model
@@ -374,12 +375,7 @@ class GurobiMINLPWriter(object):
             else:
                 sense = GRB.MAXIMIZE
             obj_expr, nonlinear, aux = self._create_gurobi_expression(
-                obj.expr,
-                obj,
-                0,
-                grb_model,
-                quadratic_visitor,
-                visitor
+                obj.expr, obj, 0, grb_model, quadratic_visitor, visitor
             )
             if nonlinear:
                 # The objective must be linear or quadratic, so we move the nonlinear
@@ -389,16 +385,11 @@ class GurobiMINLPWriter(object):
             else:
                 grb_model.setObjective(obj_expr, sense=sense)
         # else it's fine--Gurobi doesn't require us to give an objective, so we don't
-                
+
         # write constraints
         for cons in components[Constraint]:
             expr, nonlinear, aux = self._create_gurobi_expression(
-                cons.body,
-                cons,
-                0,
-                grb_model,
-                quadratic_visitor,
-                visitor
+                cons.body, cons, 0, grb_model, quadratic_visitor, visitor
             )
             if nonlinear:
                 grb_model.addConstr(aux == expr)
@@ -410,7 +401,7 @@ class GurobiMINLPWriter(object):
                     grb_model.addConstr(cons.lb <= expr)
                 if cons.ub is not None:
                     grb_model.addConstr(cons.ub >= expr)
-            
+
         return grb_model, visitor.var_map
 
 

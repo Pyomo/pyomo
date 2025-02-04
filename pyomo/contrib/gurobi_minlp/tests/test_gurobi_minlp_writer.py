@@ -25,17 +25,14 @@ from pyomo.environ import (
     Var,
 )
 from pyomo.opt import WriterFactory
-from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
-    GurobiMINLPVisitor
-)
-from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import (
-    CommonTest
-)
+from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
 
 ## DEBUG
 from pytest import set_trace
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
+
 
 def make_model():
     m = ConcreteModel()
@@ -47,13 +44,14 @@ def make_model():
     m.y3 = Var(domain=NonPositiveIntegers, bounds=(-13, 0))
     m.z1 = Var(domain=Binary)
 
-    m.c1 = Constraint(expr=2 ** m.x2 >= m.x3)
-    m.c2 = Constraint(expr=m.y1 ** 2 <= 7)
+    m.c1 = Constraint(expr=2**m.x2 >= m.x3)
+    m.c2 = Constraint(expr=m.y1**2 <= 7)
     m.c3 = Constraint(expr=m.y2 + m.y3 + 5 * m.z1 >= 17)
 
     m.obj = Objective(expr=log(m.x1))
 
     return m
+
 
 class TestGurobiMINLPWriter(CommonTest):
     def test_small_model(self):
@@ -74,7 +72,7 @@ class TestGurobiMINLPWriter(CommonTest):
         z1 = var_map[id(m.z1)]
 
         lin_constrs = grb_model.getConstrs()
-        # 
+        #
         self.assertEqual(len(lin_constrs), 3)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 1)
@@ -82,9 +80,11 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(nonlinear_constrs, 2)
 
         set_trace()
-        
+
         grb_model.optimize()
 
         # TODO: assert something! :P
 
-# ESJ: Note: It appears they don't allow x1 ** x2...?
+
+# ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
+# error in the solver log, so not sure what we want to do about that?
