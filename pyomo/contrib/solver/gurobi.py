@@ -327,7 +327,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         timer = config.timer
         ostreams = [io.StringIO()] + config.tee
 
-        with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
+        with capture_output(TeeStream(*ostreams), capture_fd=False):
             options = config.solver_options
 
             self._solver_model.setParam('LogToConsole', 1)
