@@ -303,7 +303,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
         try:
             if config.working_dir:
                 os.chdir(config.working_dir)
-            with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
+            with capture_output(TeeStream(*ostreams), capture_fd=False):
                 gurobi_model = gurobipy.Model()
 
                 timer.start('transfer_model')

@@ -1068,7 +1068,7 @@ class MOSEKDirect(DirectSolver):
         for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
                 self._solver_model.putxxslice(
-                    self._whichsol, mosek_var, mosek_var + 1, [(pyomo_var.value)]
+                    self._whichsol, mosek_var, mosek_var + 1, [pyomo_var.value]
                 )
 
         if (self._version[0] > 9) & (self._whichsol == mosek.soltype.itg):
