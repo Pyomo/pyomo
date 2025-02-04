@@ -359,7 +359,7 @@ class TestSetupModelData(unittest.TestCase):
 
         # NAMED EXPRESSIONS: mainly to test
         # Var -> Param substitution for uncertain params
-        m.nexpr = Expression(expr=m.q2var + m.x1)
+        m.nexpr = Expression(expr=log(m.y2) + m.q2var)
 
         # EQUALITY CONSTRAINTS
         m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
@@ -371,7 +371,7 @@ class TestSetupModelData(unittest.TestCase):
         m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
         m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
         m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
-        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + log(m.y2) + m.q2var)
+        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + m.nexpr)
 
         # out of scope: deactivated
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
@@ -472,13 +472,13 @@ class TestSetupModelData(unittest.TestCase):
 
         # ensure uncertain Param substitutions carried out properly
         ublk = model_data.working_model.user_model
-        self.assertExpressionsEqual(ublk.nexpr.expr, temp_uncertain_param + ublk.x1)
+        self.assertExpressionsEqual(
+            ublk.nexpr.expr, log(ublk.y2) + temp_uncertain_param
+        )
         self.assertExpressionsEqual(
             ublk.inactive_obj.expr, LinearExpression([1, temp_uncertain_param, m.x1])
         )
-        self.assertExpressionsEqual(
-            ublk.ineq4.expr, -ublk.q <= ublk.y2**2 + log(ublk.y2) + temp_uncertain_param
-        )
+        self.assertExpressionsEqual(ublk.ineq4.expr, -ublk.q <= ublk.y2**2 + ublk.nexpr)
 
         # other component expressions should remain as declared
         self.assertExpressionsEqual(ublk.eq1.expr, ublk.q * (ublk.z3 + ublk.x2) == 0)
