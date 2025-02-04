@@ -305,7 +305,6 @@ class GurobiMINLPWriter(object):
         nonlinear (non-quadratic) expression, and returns a gurobipy representation
         of the expression
         """
-        print("Creating Gurobi expression")
         repn = quadratic_visitor.walk_expression(expr)
         if repn.nonlinear is None:
             grb_expr = grb_visitor.walk_expression(expr)

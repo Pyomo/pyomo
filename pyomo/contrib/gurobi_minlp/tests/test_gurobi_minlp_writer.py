@@ -60,7 +60,9 @@ class TestGurobiMINLPWriter(CommonTest):
 
         m = make_model()
 
-        grb_model, var_map = WriterFactory('gurobi_minlp').write(m)
+        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+            m, symbolic_solver_labels=True
+        )
 
         self.assertEqual(len(var_map), 7)
         x1 = var_map[id(m.x1)]
@@ -71,15 +73,18 @@ class TestGurobiMINLPWriter(CommonTest):
         y3 = var_map[id(m.y3)]
         z1 = var_map[id(m.z1)]
 
+        self.assertEqual(grb_model.numVars, 9)
+        self.assertEqual(grb_model.numIntVars, 4)
+        self.assertEqual(grb_model.numBinVars, 1)
+
+        grb_model.printStats()
+
         lin_constrs = grb_model.getConstrs()
-        #
-        self.assertEqual(len(lin_constrs), 3)
+        self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 1)
         nonlinear_constrs = grb_model.getGenConstrs()
         self.assertEqual(nonlinear_constrs, 2)
-
-        set_trace()
 
         grb_model.optimize()
 
