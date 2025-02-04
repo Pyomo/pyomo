@@ -111,7 +111,7 @@ class SizeofVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         return self.counter
-    # @visitor1
+        # @visitor1
 
 
 # ---------------------------------------------
@@ -127,13 +127,14 @@ def sizeof_expression(expr):
     return visitor.walk_expression(expr)
     # @visitor2
 
+
 # Test:
 m = ConcreteModel()
 m.x = Var()
 m.p = Param(mutable=True)
 assert sizeof_expression(m.x) == 1
-assert sizeof_expression(m.x+m.p) == 3
-assert sizeof_expression(2*m.x+m.p) == 5
+assert sizeof_expression(m.x + m.p) == 3
+assert sizeof_expression(2 * m.x + m.p) == 5
 
 # ---------------------------------------------
 # @visitor3
