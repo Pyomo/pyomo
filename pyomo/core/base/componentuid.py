@@ -88,7 +88,7 @@ class ComponentUID(object):
                 self._cids = tuple(self._parse_cuid_v2(component))
             except (OSError, IOError):
                 self._cids = tuple(self._parse_cuid_v1(component))
-        elif type(component) is ComponentUID):
+        elif type(component) is ComponentUID:
             if context is not None:
                 self._context_err(ComponentUID)
             self._cids = component._cids
