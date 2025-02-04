@@ -181,24 +181,25 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
                 self.ostreams = ostreams
                 self.stop = False
                 self.sleep_time = sleep_time
+                self.pos = 0
+                self.file = open(self.fname, 'r')
 
             def run(self):
-                pos = 0
                 while not self.stop:
-                    with open(self.fname, 'r') as f:
-                        f.seek(pos)
-                        msg = f.read()
-                        pos = f.tell()
+                    self.file.seek(self.pos)
+                    msg = self.file.read()
+                    self.pos = self.file.tell()
                     for s in self.ostreams:
                         s.write(msg)
                     time.sleep(self.sleep_time)
 
-                # Final read after stopping
-                with open(self.fname, 'r') as f:
-                    f.seek(pos)
-                    msg = f.read()
+                self.file.seek(self.pos)
+                msg = self.file.read()
                 for s in self.ostreams:
                     s.write(msg)
+
+            def close(self):
+                self.file.close()
 
         with TempfileManager.new_context() as context:
             log_fname = context.create_tempfile()
@@ -227,6 +228,7 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
             finally:
                 reader.stop = True
                 thread.join()
+                reader.close()
 
         return self._postsolve()
 
