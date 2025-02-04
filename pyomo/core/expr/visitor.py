@@ -1411,19 +1411,18 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         super().__init__()
         self._include_fixed = include_fixed
         self._cache = named_expression_cache
-        # Stack of named expressions. This holds the id of the
-        # subexpression we are currently processing, along with a
-        # (_objs, _seen, _exprs) tuple for the parent context..
+        # Stack of named expressions. This holds the tuple
+        #     (eid, _seen, _exprs)
+        # where eid is the id() of the subexpression we are currently
+        # processing, and _seen and _exprs are from the parent context..
         self._expr_stack = []
         # The following attributes will be added by initializeWalker:
-        # self._objs: the list of found objects
-        # self._seen: set(self._objs)
+        # self._seen: dict(eid: obj)
         # self._exprs: list of (e, e.expr) for any (nested) named expressions
 
     def initializeWalker(self, expr):
         assert not self._expr_stack
-        self._objs = []
-        self._seen = set()
+        self._seen = {}
         self._exprs = None
         if not self.beforeChild(None, expr, 0)[0]:
             return False, self.finalizeResult(None)
@@ -1437,10 +1436,9 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
                 return self._process_named_expr(child)
             else:
                 return True, None
-        if child.is_variable_type() and (self._include_fixed or not child.fixed):
+        elif child.is_variable_type() and (self._include_fixed or not child.fixed):
             if id(child) not in self._seen:
-                self._seen.add(id(child))
-                self._objs.append(child)
+                self._seen[id(child)] = child
         return False, None
 
     def exitNode(self, node, data):
@@ -1449,46 +1447,46 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
             # sure that we properly restore the "outer" context and then
             # merge the objects from the named expression we just exited
             # into the list for the parent expression context.
-            sub_info = self._objs, self._seen, self._exprs
-            eid, (self._objs, self._seen, self._exprs) = self._expr_stack.pop()
+            _seen = self._seen
+            _exprs = self._exprs
+            eid, self._seen, self._exprs = self._expr_stack.pop()
             assert eid == id(node)
-            self._merge_obj_lists(sub_info)
+            self._merge_obj_lists(_seen, _exprs)
 
     def finalizeResult(self, result):
         assert not self._expr_stack
-        return self._objs
+        return self._seen.values()
 
-    def _merge_obj_lists(self, info):
-        _objs, _seen, _exprs = info
-        self._objs.extend(v for v in _objs if id(v) not in self._seen)
+    def _merge_obj_lists(self, _seen, _exprs):
         self._seen.update(_seen)
         if self._exprs is not None:
-            self._exprs.extend(_exprs)
+            self._exprs.update(_exprs)
 
     def _process_named_expr(self, child):
-        eid = id(child)
         if self._cache is None:
             return True, None
-        elif eid in self._cache and all(c.expr is e for c, e in self._cache[eid][2]):
-            # We have already encountered this named expression. We just add
-            # the cached objects to our list and don't descend.
-            #
-            # Note that a cache hit requires not only that we have seen
-            # this expression before, but also that none of the named
-            # expressions have changed.  If they have, then the cache
-            # miss will fall over to the else clause below and descend
-            # into the expression, (implicitly) rebuilding the cache.
-            self._merge_obj_lists(self._cache[eid])
-            return False, None
-        else:
-            # If we are descending into a new named expression, initialize
-            # a cache to store the expression's local objects.
-            self._expr_stack.append((eid, (self._objs, self._seen, self._exprs)))
-            self._objs = []
-            self._seen = set()
-            self._exprs = [(child, child.expr)]
-            self._cache[eid] = (self._objs, self._seen, self._exprs)
-            return True, None
+        eid = id(child)
+        if eid in self._cache:
+            _seen, _exprs = self._cache[eid]
+            if all(c.expr is e for c, e in _exprs.values()):
+                # We have already encountered this named expression. We just add
+                # the cached objects to our list and don't descend.
+                #
+                # Note that a cache hit requires not only that we have seen
+                # this expression before, but also that none of the named
+                # expressions have changed.  If they have, then the cache
+                # miss will fall over to the else clause below and descend
+                # into the expression, (implicitly) rebuilding the cache.
+                self._merge_obj_lists(_seen, _exprs)
+                return False, None
+        # If we are descending into a new named expression or a cached
+        # named expression where the cache is now invalid.  Initialize a
+        # cache to store the expression's local objects.
+        self._expr_stack.append((eid, self._seen, self._exprs))
+        self._seen = {}
+        self._exprs = {eid: (child, child.expr)}
+        self._cache[eid] = (self._seen, self._exprs)
+        return True, None
 
 
 def identify_variables(expr, include_fixed=True, named_expression_cache=None):
@@ -1542,8 +1540,7 @@ class IdentifyMutableParamVisitor(IdentifyVariableVisitor):
             and not child.is_constant()
         ):
             if id(child) not in self._seen:
-                self._seen.add(id(child))
-                self._objs.append(child)
+                self._seen[id(child)] = child
         return False, None
 
 
