@@ -227,8 +227,8 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
                 timer.stop('optimize')
             finally:
                 reader.stop = True
-                thread.join()
                 reader.close()
+                thread.join()
 
         return self._postsolve()
 
