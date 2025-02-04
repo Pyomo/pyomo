@@ -11,9 +11,18 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.environ import (
+    Binary,
+    ConcreteModel,
     Constraint,
+    Integers,
+    log,
+    NonNegativeIntegers,
+    NonNegativeReals,
+    NonPositiveIntegers,
+    NonPositiveReals,
     Objective,
-    log
+    Reals,
+    Var,
 )
 from pyomo.opt import WriterFactory
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
@@ -22,6 +31,9 @@ from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
 from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import (
     CommonTest
 )
+
+## DEBUG
+from pytest import set_trace
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 
@@ -50,7 +62,27 @@ class TestGurobiMINLPWriter(CommonTest):
 
         m = make_model()
 
-        grb_model, varmap = WriterFactory('gurobi_minlp').write(m)
+        grb_model, var_map = WriterFactory('gurobi_minlp').write(m)
+
+        self.assertEqual(len(var_map), 7)
+        x1 = var_map[id(m.x1)]
+        x2 = var_map[id(m.x2)]
+        x3 = var_map[id(m.x3)]
+        y1 = var_map[id(m.y1)]
+        y2 = var_map[id(m.y2)]
+        y3 = var_map[id(m.y3)]
+        z1 = var_map[id(m.z1)]
+
+        lin_constrs = grb_model.getConstrs()
+        # 
+        self.assertEqual(len(lin_constrs), 3)
+        quad_constrs = grb_model.getQConstrs()
+        self.assertEqual(len(quad_constrs), 1)
+        nonlinear_constrs = grb_model.getGenConstrs()
+        self.assertEqual(nonlinear_constrs, 2)
+
+        set_trace()
+        
         grb_model.optimize()
 
         # TODO: assert something! :P

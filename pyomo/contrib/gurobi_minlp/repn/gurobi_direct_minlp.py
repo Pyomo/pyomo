@@ -55,10 +55,14 @@ from pyomo.opt import SolverFactory, WriterFactory
 from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     apply_node_operation,
+    ExprType,
     BeforeChildDispatcher,
     complex_number_error,
     OrderedVarRecorder,
 )
+
+## DEBUG
+from pytest import set_trace
 
 """
 Even in Gurobi 12:
@@ -83,6 +87,8 @@ the rule that you would want to specifically tell Gurobi *not* to expand the exp
 """
 
 
+_function_map = {}
+
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
 if gurobipy_available:
     from gurobipy import GRB, nlfunc
@@ -92,21 +98,22 @@ if gurobipy_available:
             'log': nlfunc.log,
             'log10': nlfunc.log10,
             'sin': nlfunc.sin,
-            # TODO you are here
-            'asin': sympy.asin,
-            'sinh': sympy.sinh,
-            'asinh': sympy.asinh,
-            'cos': sympy.cos,
-            'acos': sympy.acos,
-            'cosh': sympy.cosh,
-            'acosh': sympy.acosh,
-            'tan': sympy.tan,
-            'atan': sympy.atan,
-            'tanh': sympy.tanh,
-            'atanh': sympy.atanh,
-            'ceil': sympy.ceiling,
-            'floor': sympy.floor,
-            'sqrt': sympy.sqrt,
+            'cos': nlfunc.cos,
+            'tan': nlfunc.tan,
+            'sqrt': nlfunc.sqrt,
+            # TODO: We'll have to do functional programming things if we want to support
+            # any of these...
+            'asin': None,
+            'sinh': None,
+            'asinh': None,
+            'acos': None,
+            'cosh': None,
+            'acosh': None,
+            'atan': None,
+            'tanh': None,
+            'atanh': None,
+            'ceil': None,
+            'floor': None,
         }
     )
 
@@ -141,7 +148,6 @@ def _create_grb_var(visitor, pyomo_var, name=""):
         )
     lb = max(domain_lb, pyomo_var.lb) if pyomo_var.lb is not None else domain_lb
     ub = min(domain_ub, pyomo_var.ub) if pyomo_var.ub is not None else domain_ub
-    print(f"Trying to add Var:\n\tlb={lb}\n\tub={ub}\n\tvtype={domain}\n\tname={name}")
     return visitor.grb_model.addVar(lb=lb, ub=ub, vtype=domain, name=name)
 
 
@@ -162,6 +168,43 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
             visitor.var_map[_id] = grb_var
         return False, visitor.var_map[_id]
 
+    @staticmethod
+    def _before_native_numeric(visitor, child):
+        return False, child
+
+    @staticmethod
+    def _before_native_logical(visitor, child):
+        return False, InvalidNumber(
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+            )
+
+    @staticmethod
+    def _before_complex(visitor, child):
+        return False, complex_number_error(child, visitor, child)
+
+    @staticmethod
+    def _before_invalid(visitor, child):
+        return False, InvalidNumber(
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+        )
+
+    @staticmethod
+    def _before_string(visitor, child):
+        return False, InvalidNumber(
+                child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
+            )
+
+    @staticmethod
+    def _before_npv(visitor, child):
+        try:
+            return False, visitor.check_constant(visitor.evaluate(child), child)
+        except (ValueError, ArithmeticError):
+            return True, None
+
+    @staticmethod
+    def _before_param(visitor, child):
+        return False, visitor.check_constant(child.value, child)
+
 
 class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     before_child_dispatcher = GurobiMINLPBeforeChildDispatcher()
@@ -173,10 +216,9 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         self.var_map = {}
         self._named_expressions = {}
         self._eval_expr_visitor = _EvaluationVisitor(True)
-        #self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
+        self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
     def initializeWalker(self, expr):
-        expr, src, src_index = expr
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, self.finalizeResult(result)
@@ -191,9 +233,10 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         if node.__class__ is EXPR.UnaryFunctionExpression:
-            import pdb
-            pdb.set_trace()
-            return apply_node_operation((node, data[1],))
+            return _function_map[node._name](data[0])
+            #import pdb
+            #pdb.set_trace()
+            #return apply_node_operation(node, data)
         return self._eval_expr_visitor.visit(node, data)
 
     def finalizeResult(self, result):
@@ -260,13 +303,14 @@ class GurobiMINLPWriter(object):
         nonlinear (non-quadratic) expression, and returns a gurobipy representation
         of the expression
         """
-        repn = quadratic_visitor.walk_expression((expr, src, src_index))
+        print("Creating Gurobi expression")
+        repn = quadratic_visitor.walk_expression(expr)
         if repn.nonlinear is None:
-            grb_expr = grb_visitor.walk_expression((expr, src, src_index))
+            grb_expr = grb_visitor.walk_expression(expr)
             return grb_expr, False, None
         else:
             # It's general nonlinear
-            grb_expr = grb_visitor.walk_expression((expr, src, src_index))
+            grb_expr = grb_visitor.walk_expression(expr)
             aux = grb_model.addVar()
             return grb_expr, True, aux
 
@@ -362,12 +406,12 @@ class GurobiMINLPWriter(object):
             if cons.equality:
                 grb_model.addConstr(cons.lower == expr)
             else:
-                if cons.lower is not None:
-                    grb_model.addConstr(cons.lower <= expr)
-                if cons.upper is not None:
-                    grb_model.addConstr(cons.upper >= expr)
+                if cons.lb is not None:
+                    grb_model.addConstr(cons.lb <= expr)
+                if cons.ub is not None:
+                    grb_model.addConstr(cons.ub >= expr)
             
-        return grb_model, visitor.pyomo_to_gurobipy
+        return grb_model, visitor.var_map
 
 
 # ESJ TODO: We should probably not do this and actually tack this on to another

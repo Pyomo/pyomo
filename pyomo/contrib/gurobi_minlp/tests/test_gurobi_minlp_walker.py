@@ -61,7 +61,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((e, e, 0))
+        expr = visitor.walk_expression(e)
 
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
@@ -110,7 +110,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((e, e, 0))
+        expr = visitor.walk_expression(e)
 
         x2 = visitor.var_map[id(m.x2)]
         x3 = visitor.var_map[id(m.x3)]
@@ -140,7 +140,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1 + m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -148,7 +148,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1 - m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -156,7 +156,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1 * m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -164,7 +164,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -172,7 +172,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -180,7 +180,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=2**m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -188,7 +188,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=abs(m.x1) >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -197,7 +197,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m.p = Param(initialize=4, mutable=True)
         m.c = Constraint(expr=m.p**m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -210,9 +210,9 @@ class TestGurobiMINLPWalker(CommonTest):
         pow_expr = (m.p ** (0.5)) * m.x1
 
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((const_expr, const_expr, 0))
-        expr = visitor.walk_expression((nested_expr, nested_expr, 0))
-        expr = visitor.walk_expression((pow_expr, pow_expr, 0))
+        expr = visitor.walk_expression(const_expr)
+        expr = visitor.walk_expression(nested_expr)
+        expr = visitor.walk_expression(pow_expr)
 
         # TODO
 
@@ -220,7 +220,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=log(m.x1) >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
 
@@ -231,7 +231,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m.p = Param(initialize=3, mutable=True)
         m.c = Constraint(expr=sqrt(-m.p) + m.x1 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
+        expr = visitor.walk_expression(m.c.body)
 
         # TODO
     
