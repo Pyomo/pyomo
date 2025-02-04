@@ -1414,7 +1414,7 @@ class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
         # Stack of named expressions. This holds the tuple
         #     (eid, _seen, _exprs)
         # where eid is the id() of the subexpression we are currently
-        # processing, and _seen and _exprs are from the parent context..
+        # processing, and _seen and _exprs are from the parent context.
         self._expr_stack = []
         # The following attributes will be added by initializeWalker:
         # self._seen: dict(eid: obj)
