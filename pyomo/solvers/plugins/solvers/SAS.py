@@ -735,83 +735,80 @@ class SASCAS(SASAbc):
             ostreams.append(sys.stdout)
 
         # Connect to CAS server
-        with TeeStream(*ostreams) as t:
-            with capture_output(output=t.STDOUT, capture_fd=False):
-                s = self._sas_session
-                if s == None:
-                    s = self._sas_session = self._sas.CAS(**self._session_options)
-                try:
-                    # Load the optimization action set
-                    s.loadactionset("optimization")
+        with capture_output(output=TeeStream(*ostreams), capture_fd=False):
+            s = self.start_sas_session()
+            try:
+                # Load the optimization action set
+                s.loadactionset("optimization")
 
-                    mpsdata_table_name = self._uploadMpsFile(s, unique)
+                mpsdata_table_name = self._uploadMpsFile(s, unique)
 
-                    primalin_table_name = None
-                    if self.warmstart_flag:
-                        primalin_table_name = self._uploadPrimalin(s, unique)
+                primalin_table_name = None
+                if self.warmstart_flag:
+                    primalin_table_name = self._uploadPrimalin(s, unique)
 
-                    # Define output table names
-                    primalout_table_name = "pout" + unique
-                    dualout_table_name = None
+                # Define output table names
+                primalout_table_name = "pout" + unique
+                dualout_table_name = None
 
-                    # Solve the problem in CAS
-                    if action == "solveMilp":
-                        r = s.optimization.solveMilp(
-                            data={"name": mpsdata_table_name},
-                            primalOut={"name": primalout_table_name, "replace": True},
-                            **self.options
-                        )
-                    else:
-                        dualout_table_name = "dout" + unique
-                        r = s.optimization.solveLp(
-                            data={"name": mpsdata_table_name},
-                            primalOut={"name": primalout_table_name, "replace": True},
-                            dualOut={"name": dualout_table_name, "replace": True},
-                            **self.options
-                        )
+                # Solve the problem in CAS
+                if action == "solveMilp":
+                    r = s.optimization.solveMilp(
+                        data={"name": mpsdata_table_name},
+                        primalOut={"name": primalout_table_name, "replace": True},
+                        **self.options
+                    )
+                else:
+                    dualout_table_name = "dout" + unique
+                    r = s.optimization.solveLp(
+                        data={"name": mpsdata_table_name},
+                        primalOut={"name": primalout_table_name, "replace": True},
+                        dualOut={"name": dualout_table_name, "replace": True},
+                        **self.options
+                    )
 
-                    # Prepare the solver results
-                    if r:
-                        # Get back the primal and dual solution data sets
-                        results = self.results = self._create_results_from_status(
-                            r.get("status", "ERROR"), r.get("solutionStatus", "ERROR")
-                        )
+                # Prepare the solver results
+                if r:
+                    # Get back the primal and dual solution data sets
+                    results = self.results = self._create_results_from_status(
+                        r.get("status", "ERROR"), r.get("solutionStatus", "ERROR")
+                    )
 
-                        if results.solver.status != SolverStatus.error:
-                            if r.ProblemSummary["cValue1"][1] == "Maximization":
-                                results.problem.sense = ProblemSense.maximize
-                            else:
-                                results.problem.sense = ProblemSense.minimize
-
-                            # Prepare the solution information
-                            if results.solver.hasSolution:
-                                self._retrieveSolution(
-                                    s,
-                                    r,
-                                    results,
-                                    action,
-                                    primalout_table_name,
-                                    dualout_table_name,
-                                )
+                    if results.solver.status != SolverStatus.error:
+                        if r.ProblemSummary["cValue1"][1] == "Maximization":
+                            results.problem.sense = ProblemSense.maximize
                         else:
-                            raise ValueError("The SAS solver returned an error status.")
-                    else:
-                        results = self.results = SolverResults()
-                        results.solver.name = "SAS"
-                        results.solver.status = SolverStatus.error
-                        raise ValueError(
-                            "An option passed to the SAS solver caused a syntax error."
-                        )
+                            results.problem.sense = ProblemSense.minimize
 
-                finally:
-                    if mpsdata_table_name:
-                        s.dropTable(name=mpsdata_table_name, quiet=True)
-                    if primalin_table_name:
-                        s.dropTable(name=primalin_table_name, quiet=True)
-                    if primalout_table_name:
-                        s.dropTable(name=primalout_table_name, quiet=True)
-                    if dualout_table_name:
-                        s.dropTable(name=dualout_table_name, quiet=True)
+                        # Prepare the solution information
+                        if results.solver.hasSolution:
+                            self._retrieveSolution(
+                                s,
+                                r,
+                                results,
+                                action,
+                                primalout_table_name,
+                                dualout_table_name,
+                            )
+                    else:
+                        raise ValueError("The SAS solver returned an error status.")
+                else:
+                    results = self.results = SolverResults()
+                    results.solver.name = "SAS"
+                    results.solver.status = SolverStatus.error
+                    raise ValueError(
+                        "An option passed to the SAS solver caused a syntax error."
+                    )
+
+            finally:
+                if mpsdata_table_name:
+                    s.dropTable(name=mpsdata_table_name, quiet=True)
+                if primalin_table_name:
+                    s.dropTable(name=primalin_table_name, quiet=True)
+                if primalout_table_name:
+                    s.dropTable(name=primalout_table_name, quiet=True)
+                if dualout_table_name:
+                    s.dropTable(name=dualout_table_name, quiet=True)
 
         self._log = self._log.getvalue()
         self._rc = 0
