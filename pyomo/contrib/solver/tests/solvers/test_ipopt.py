@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import os
+import subprocess
 
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
@@ -92,6 +93,18 @@ class TestIpoptSolutionLoader(unittest.TestCase):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestIpoptInterface(unittest.TestCase):
+    def test_command_line_options(self):
+        result = subprocess.run(
+            ['ipopt', '-='], capture_output=True, text=True, check=True
+        )
+        output = result.stdout
+        options = []
+        for line in output.splitlines():
+            option_name = line.split()[0] if line.strip() else ''
+            if option_name:
+                options.append(option_name)
+        self.assertEqual(sorted(ipopt.ipopt_command_line_options), sorted(options))
+
     def test_class_member_list(self):
         opt = ipopt.Ipopt()
         expected_list = [

@@ -332,6 +332,5 @@ are no longer achievable:
     ):
         if results.solution_status == SolutionStatus.feasible:
             return LegacySolutionStatus.feasible
-        else:
-            return LegacySolutionStatus.optimal
+        return LegacySolutionStatus.optimal
     return LegacySolutionStatus.unknown
