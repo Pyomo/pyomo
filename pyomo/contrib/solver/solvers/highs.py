@@ -13,15 +13,12 @@ import logging
 import datetime
 import io
 from typing import List, Optional
-from threading import Thread
-import time
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream, capture_output
-from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
 from pyomo.core.base.constraint import ConstraintData
@@ -146,7 +143,6 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         self._objective_helpers = []
         self._last_results_object: Optional[Results] = None
         self._sol = None
-        self.log_buffer_interval = 2
 
     def available(self):
         if highspy_available:
@@ -175,59 +171,24 @@ class Highs(PersistentSolverUtils, PersistentSolverBase):
         options = config.solver_options
         ostreams = [io.StringIO()] + config.tee
 
-        class LogReader:
-            def __init__(self, logfile, ostreams, sleep_time):
-                self.fname = logfile
-                self.ostreams = ostreams
-                self.stop = False
-                self.sleep_time = sleep_time
-                self.pos = 0
-                self.file = open(self.fname, 'r')
+        with capture_output(output=TeeStream(*ostreams), capture_fd=True):
+            self._solver_model.setOptionValue('log_to_console', True)
 
-            def run(self):
-                try:
-                    while not self.stop:
-                        self.file.seek(self.pos)
-                        msg = self.file.read()
-                        self.pos = self.file.tell()
-                        for s in self.ostreams:
-                            s.write(msg)
-                        time.sleep(self.sleep_time)
+            if config.threads is not None:
+                self._solver_model.setOptionValue('threads', config.threads)
+            if config.time_limit is not None:
+                self._solver_model.setOptionValue('time_limit', config.time_limit)
+            if config.rel_gap is not None:
+                self._solver_model.setOptionValue('mip_rel_gap', config.rel_gap)
+            if config.abs_gap is not None:
+                self._solver_model.setOptionValue('mip_abs_gap', config.abs_gap)
 
-                    self.file.seek(self.pos)
-                    msg = self.file.read()
-                    for s in self.ostreams:
-                        s.write(msg)
-                finally:
-                    self.file.close()
-
-        with TempfileManager.new_context() as context:
-            log_fname = context.create_tempfile()
-            reader = LogReader(log_fname, ostreams, self.log_buffer_interval)
-            thread = Thread(target=reader.run)
-            thread.start()
-
-            try:
-                self._solver_model.setOptionValue('log_to_console', False)
-                self._solver_model.setOptionValue('log_file', log_fname)
-
-                if config.threads is not None:
-                    self._solver_model.setOptionValue('threads', config.threads)
-                if config.time_limit is not None:
-                    self._solver_model.setOptionValue('time_limit', config.time_limit)
-                if config.rel_gap is not None:
-                    self._solver_model.setOptionValue('mip_rel_gap', config.rel_gap)
-                if config.abs_gap is not None:
-                    self._solver_model.setOptionValue('mip_abs_gap', config.abs_gap)
-
-                for key, option in options.items():
-                    self._solver_model.setOptionValue(key, option)
-                timer.start('optimize')
-                self._solver_model.run()
-                timer.stop('optimize')
-            finally:
-                reader.stop = True
-                thread.join()
+            for key, option in options.items():
+                self._solver_model.setOptionValue(key, option)
+            timer.start('optimize')
+            self._solver_model.HandleKeyboardInterrupt = True
+            self._solver_model.run()
+            timer.stop('optimize')
 
         return self._postsolve()
 
