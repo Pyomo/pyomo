@@ -135,7 +135,7 @@ class redirect_fd(object):
         os.dup2(out_fd, self.fd, inheritable=bool(self.std))
 
         # We no longer need this original file descriptor
-        if out_fd is not self.target:
+        if not isinstance(self.target, int):
             os.close(out_fd)
 
         if self.std:
