@@ -8,8 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""Functionality for identifying variables that participate in expressions
-"""
+"""Functionality for identifying variables that participate in expressions"""
 
 from contextlib import nullcontext
 

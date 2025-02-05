@@ -8,8 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""Configuration options for incidence graph generation
-"""
+"""Configuration options for incidence graph generation"""
 
 import enum
 from pyomo.common.config import ConfigDict, ConfigValue, InEnum
