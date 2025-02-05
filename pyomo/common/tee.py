@@ -116,9 +116,9 @@ class redirect_fd(object):
 
     def __enter__(self):
         if self.std:
-            # important: flush the current file buffer when redirecting
-            getattr(sys, self.std).flush()
             self.original_file = getattr(sys, self.std)
+            # important: flush the current file buffer when redirecting
+            self.original_file.flush()
         # Duplicate the original standard file descriptor(file
         # descriptor 1 or 2) to a different file descriptor number
         self.original_fd = os.dup(self.fd)
