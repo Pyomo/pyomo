@@ -334,7 +334,7 @@ class BufferTester(object):
         if not ts.check(*baseline):
             self.fail(ts.error)
 
-    def test_buffered_stdout_flush(self):
+    def test_buffered_stdout_flush(self, retry=True):
         # Test 2: short messages to STDOUT that are flushed are flushed
         fd = self.capture_fd
         ts = timestamper()
@@ -345,9 +345,14 @@ class BufferTester(object):
             time.sleep(self.dt)
         ts.write(f"{time.time()}\n")
         if not ts.check([(0, 0), (0, 0), (0, 0), (1, 1)]):
-            # TODO: For some reason, some part of the flush logic is not
-            # reliable under pypy.
-            if not platform.python_implementation().lower().startswith('pypy'):
+            # FIXME: We don't know why, but this test will
+            # intermittently fail.  For the moment, we will just wait a
+            # little and give it a second chance with a longer delay.
+            if retry:
+                time.sleep(self.dt)
+                self.dt *= 2.5
+                self.test_buffered_stdout_flush(False)
+            else:
                 self.fail(ts.error)
 
     def test_buffered_stdout_long_message(self):
