@@ -41,6 +41,7 @@ from pyomo.contrib.pynumero.interfaces.tests.compare_utils import (
     check_sparse_matrix_specific_order,
 )
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
+from pyomo.common.errors import EmptyModelError
 
 
 class TestExternalGreyBoxModel(unittest.TestCase):
@@ -615,7 +616,7 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.egb = ExternalGreyBoxBlock()
         m.egb.set_external_model(ex_models.PressureDropSingleOutput())
         m.obj = pyo.Objective(expr=1)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EmptyModelError):
             pyomo_nlp = PyomoGreyBoxNLP(m)
 
     def test_error_fixed_inputs_outputs(self):
