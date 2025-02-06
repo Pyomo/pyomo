@@ -16,18 +16,29 @@ Test separation problem construction methods.
 
 import logging
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import numpy as np, numpy_available, scipy_available
 from pyomo.core.base import ConcreteModel, Constraint, Objective, Param, Var
-from pyomo.core.expr import exp, RangedExpression
+from pyomo.core.expr import exp, RangedExpression, value
 from pyomo.core.expr.compare import assertExpressionsEqual
 
+from pyomo.contrib.pyros.master_problem_methods import (
+    MasterProblemData,
+    add_scenario_block_to_master_problem,
+)
 from pyomo.contrib.pyros.separation_problem_methods import (
     construct_separation_problem,
     group_ss_ineq_constraints_by_priority,
+    SeparationProblemData,
+    initialize_separation,
 )
-from pyomo.contrib.pyros.uncertainty_sets import BoxSet, FactorModelSet
+from pyomo.contrib.pyros.uncertainty_sets import (
+    BoxSet,
+    FactorModelSet,
+    DiscreteScenarioSet,
+)
 from pyomo.contrib.pyros.util import (
     ModelData,
     preprocess_model_data,
@@ -43,7 +54,7 @@ if not (numpy_available and scipy_available):
 logger = logging.getLogger(__name__)
 
 
-def build_simple_model_data(objective_focus="worst_case"):
+def build_simple_model_data(objective_focus="worst_case", uncertainty_set=None):
     """
     Build simple model data object for master problem construction.
     """
@@ -60,13 +71,16 @@ def build_simple_model_data(objective_focus="worst_case"):
 
     m.obj = Objective(expr=m.x1 + m.x2 / 2 + m.x3 / 3 + m.u + m.u2)
 
+    if uncertainty_set is None:
+        uncertainty_set = BoxSet([[0, 1], [0, 0]])
+
     config = Bunch(
         uncertain_params=[m.u, m.u2],
         objective_focus=ObjectiveType[objective_focus],
         decision_rule_order=1,
         progress_logger=logger,
         nominal_uncertain_param_vals=[0.5, 0],
-        uncertainty_set=BoxSet([[0, 1], [0, 0]]),
+        uncertainty_set=uncertainty_set,
         separation_priority_order=dict(con=2),
     )
     model_data = ModelData(original_model=m, timing=None, config=config)
@@ -299,6 +313,293 @@ class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
                 ss_ineq_cons["epigraph_con"],
             ],
         )
+
+
+class TestInitializeSeparation(unittest.TestCase):
+    """
+    Tests for separation subproblem initialization.
+    """
+
+    def test_initialize_separation(self):
+        model_data = build_simple_model_data(
+            objective_focus="worst_case",
+            uncertainty_set=FactorModelSet(
+                # note: origin is chosen to be different
+                #       from the nominal value so that
+                #       initialization of auxiliary uncertain
+                #       parameters is meaningfully tested
+                origin=[1, 0.5],
+                psi_mat=[[1, 1], [1, 0]],
+                beta=0.5,
+                number_of_factors=2,
+            ),
+        )
+
+        master_data = MasterProblemData(model_data)
+        nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+        nom_scenario_blk.user_model.x1.set_value(10)
+        nom_scenario_blk.user_model.x2.set_value(1)
+        nom_scenario_blk.user_model.x3.set_value(5)
+        nom_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(5)
+        nom_scenario_blk.first_stage.epigraph_var.set_value(
+            value(nom_scenario_blk.full_objective)
+        )
+
+        # set up new scenario block
+        new_master_param_realization = [1.5, 1]
+        add_scenario_block_to_master_problem(
+            master_model=master_data.master_model,
+            scenario_idx=(1, 0),
+            param_realization=new_master_param_realization,
+            from_block=nom_scenario_blk,
+            clone_first_stage_components=False,
+        )
+        new_scenario_blk = master_data.master_model.scenarios[1, 0]
+        new_scenario_blk.first_stage.epigraph_var.set_value(
+            # objective for new block is higher,
+            # so update the epigraph variable
+            value(new_scenario_blk.full_objective)
+        )
+        # different value for the adjustable variable
+        # so we also adjust the DR variables
+        # to ensure the DR equations are satisfied
+        new_scenario_blk.user_model.x3.set_value(6)
+        new_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(4.5)
+        new_scenario_blk.first_stage.decision_rule_vars[0][1].set_value(1)
+
+        separation_data = SeparationProblemData(model_data)
+
+        ss_ineq_con_to_maximize = (
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
+        )
+        separation_data.points_added_to_master[1, 0] = new_master_param_realization
+        separation_data.auxiliary_values_for_master_points[(1, 0)] = (
+            model_data.config.uncertainty_set.compute_auxiliary_uncertain_param_vals(
+                point=new_master_param_realization, solver=None
+            )
+        )
+
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            initialize_separation(
+                ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+                separation_data=separation_data,
+                master_data=master_data,
+            )
+
+        # the constraint violation being maximized for
+        # has a higher value in the newer master block
+        init_from_scenario_blk = new_scenario_blk
+
+        # all active constraints of the separation problem
+        # should be satisfied post initialization, so expect
+        # no logging messages stating otherwise
+        log_output = LOG.getvalue()
+        self.assertFalse(log_output, "DEBUG-level log output should be empty.")
+
+        sep_usr_blk = separation_data.separation_model.user_model
+        sep_model = separation_data.separation_model
+
+        # first-stage variables added by PyROS
+        self.assertEqual(
+            value(sep_model.first_stage.epigraph_var),
+            value(init_from_scenario_blk.first_stage.epigraph_var),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][0]),
+            value(init_from_scenario_blk.first_stage.decision_rule_vars[0][0]),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][1]),
+            value(init_from_scenario_blk.first_stage.decision_rule_vars[0][1]),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][2]),
+            value(init_from_scenario_blk.first_stage.decision_rule_vars[0][2]),
+        )
+
+        # variables of original user model
+        self.assertEqual(
+            value(sep_usr_blk.x1), value(init_from_scenario_blk.user_model.x1)
+        )
+        self.assertEqual(
+            value(sep_usr_blk.x2), value(init_from_scenario_blk.user_model.x2)
+        )
+        self.assertEqual(
+            value(sep_usr_blk.x3), value(init_from_scenario_blk.user_model.x3)
+        )
+
+        # main uncertain parameter variables
+        self.assertEqual(
+            value(sep_model.uncertainty.uncertain_param_indexed_var[0]),
+            value(init_from_scenario_blk.uncertain_params[0]),
+        )
+        self.assertEqual(
+            value(sep_model.uncertainty.uncertain_param_indexed_var[1]),
+            value(init_from_scenario_blk.uncertain_params[1]),
+        )
+
+        # auxiliary uncertain parameter variables
+        expected_aux_var_vals = separation_data.auxiliary_values_for_master_points[
+            (1, 0)
+        ]
+        self.assertEqual(
+            value(sep_model.uncertainty.auxiliary_var_list[0]), expected_aux_var_vals[0]
+        )
+        self.assertEqual(
+            value(sep_model.uncertainty.auxiliary_var_list[1]), expected_aux_var_vals[1]
+        )
+
+    def test_initialize_separation_infeasibility_logging(self):
+        """
+        Test initialization of a separation problem for which
+        one of the active separation model constraints is
+        not satisfied.
+        """
+        model_data = build_simple_model_data(
+            objective_focus="worst_case",
+            uncertainty_set=FactorModelSet(
+                # note: origin is chosen to be different
+                #       from the nominal value so that
+                #       initialization of auxiliary uncertain
+                #       parameters is meaningfully tested
+                origin=[1, 0.5],
+                psi_mat=[[1, 1], [1, 0]],
+                beta=0.5,
+                number_of_factors=2,
+            ),
+        )
+
+        master_data = MasterProblemData(model_data)
+        nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+        nom_scenario_blk.user_model.x1.set_value(10)
+        nom_scenario_blk.user_model.x2.set_value(1)
+
+        # this results in a violation of the DR equality constraint
+        nom_scenario_blk.user_model.x3.set_value(5 + 1.5e-5)
+        nom_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(5)
+
+        nom_scenario_blk.first_stage.epigraph_var.set_value(
+            value(nom_scenario_blk.full_objective)
+        )
+
+        separation_data = SeparationProblemData(model_data)
+        ss_ineq_con_to_maximize = (
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
+        )
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            initialize_separation(
+                ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+                separation_data=separation_data,
+                master_data=master_data,
+            )
+        log_output = LOG.getvalue()
+        log_output_lines = log_output.split("\n")[:-1]
+        self.assertEqual(
+            len(log_output_lines),
+            1,
+            "Expected DEBUG-level output for separation problem initialization "
+            "test to have exactly 1 line.",
+        )
+        self.assertRegex(
+            log_output,
+            r"Initial point for separation of .*violates the model constraint "
+            r"'second_stage.decision_rule_eqns\[0\].*' by more than.*",
+        )
+
+    def test_initialize_separation_discrete_uncertainty(self):
+        """
+        Test initialization of a separation problem
+        with a discrete uncertainty set.
+        """
+        model_data = build_simple_model_data(
+            objective_focus="worst_case",
+            uncertainty_set=DiscreteScenarioSet(scenarios=[[0.5, 0], [1, 0.5]]),
+        )
+
+        master_data = MasterProblemData(model_data)
+        nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+        nom_scenario_blk.user_model.x1.set_value(10)
+        nom_scenario_blk.user_model.x2.set_value(1)
+
+        # this results in a violation of the DR equality constraint,
+        # which is not logged, since the uncertainty set is discrete
+        nom_scenario_blk.user_model.x3.set_value(5 + 1.1e-5)
+        nom_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(5)
+
+        nom_scenario_blk.first_stage.epigraph_var.set_value(
+            value(nom_scenario_blk.full_objective)
+        )
+
+        separation_data = SeparationProblemData(model_data)
+        ss_ineq_con_to_maximize = (
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
+        )
+
+        sep_usr_blk = separation_data.separation_model.user_model
+        sep_model = separation_data.separation_model
+
+        # fix uncertain parameters to off-nominal value;
+        # these should not be modified by the initialization
+        off_nominal_scenario = model_data.config.uncertainty_set.scenarios[1]
+        sep_model.uncertainty.uncertain_param_var_list[0].set_value(
+            off_nominal_scenario[0]
+        )
+        sep_model.uncertainty.uncertain_param_var_list[1].set_value(
+            off_nominal_scenario[1]
+        )
+        sep_model.uncertainty.uncertain_param_var_list[0].fix()
+        sep_model.uncertainty.uncertain_param_var_list[1].fix()
+
+        with LoggingIntercept(module=__name__, level=logging.DEBUG) as LOG:
+            initialize_separation(
+                ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+                separation_data=separation_data,
+                master_data=master_data,
+            )
+        log_output = LOG.getvalue()
+        self.assertFalse(log_output, "DEBUG-level log output should be empty.")
+
+        # first-stage variables added by PyROS
+        self.assertEqual(
+            value(sep_model.first_stage.epigraph_var),
+            value(nom_scenario_blk.first_stage.epigraph_var),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][0]),
+            value(nom_scenario_blk.first_stage.decision_rule_vars[0][0]),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][1]),
+            value(nom_scenario_blk.first_stage.decision_rule_vars[0][1]),
+        )
+        self.assertEqual(
+            value(sep_model.first_stage.decision_rule_vars[0][2]),
+            value(nom_scenario_blk.first_stage.decision_rule_vars[0][2]),
+        )
+
+        # variables of original user model
+        self.assertEqual(value(sep_usr_blk.x1), value(nom_scenario_blk.user_model.x1))
+        self.assertEqual(value(sep_usr_blk.x2), value(nom_scenario_blk.user_model.x2))
+        self.assertEqual(value(sep_usr_blk.x3), value(nom_scenario_blk.user_model.x3))
+
+        # uncertain parameter variable state should not have been
+        # modified by the initialization
+        self.assertEqual(
+            value(sep_model.uncertainty.uncertain_param_indexed_var[0]),
+            off_nominal_scenario[0],
+        )
+        self.assertEqual(
+            value(sep_model.uncertainty.uncertain_param_indexed_var[1]),
+            off_nominal_scenario[1],
+        )
+        self.assertTrue(sep_model.uncertainty.uncertain_param_var_list[0].fixed)
+        self.assertTrue(sep_model.uncertainty.uncertain_param_var_list[1].fixed)
 
 
 if __name__ == "__main__":
