@@ -177,7 +177,7 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
             visitor.var_map[_id] = grb_var
         return False, (_VARIABLE, visitor.var_map[_id])
 
-    
+
 def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
     return (data[0], visitor._eval_expr_visitor.visit(node, data[1]))
 
@@ -187,7 +187,7 @@ def _handle_node_with_eval_expr_visitor_unknown(visitor, node, *data):
     expr_type = max(map(itemgetter(0), data))
     return (expr_type, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
 
-    
+
 def _handle_node_with_eval_expr_visitor_constant(visitor, node, *data):
     return (_CONSTANT, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
 
@@ -264,9 +264,7 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         None: _handle_node_with_eval_expr_visitor_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
     }
-    _exit_node_handlers[UnaryFunctionExpression] = {
-        None: _handle_unary,
-    }
+    _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
 
     ## TODO: named expressions, ExprIf, RangedExpressions (if we do exprif...
 
@@ -275,7 +273,7 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     _exit_node_handlers[AbsExpression] = {
         None: _handle_abs_expression,
         (_CONSTANT,): _handle_abs_constant,
-        (_VARIABLE,): _handle_abs_var
+        (_VARIABLE,): _handle_abs_var,
     }
 
     return _exit_node_handlers
