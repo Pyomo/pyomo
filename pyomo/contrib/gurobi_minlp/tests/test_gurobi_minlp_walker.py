@@ -391,13 +391,13 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(expr.getConstant(), 0.0)
         self.assertIs(expr.getVar(0), x1)
         self.assertEqual(expr.getCoeff(0), 3)
-        
+
         expr = visitor.walk_expression(nested_expr)
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 0.0)
         self.assertIs(expr.getVar(0), x1)
-        self.assertAlmostEqual(expr.getCoeff(0), 1/4)
-        
+        self.assertAlmostEqual(expr.getCoeff(0), 1 / 4)
+
         expr = visitor.walk_expression(pow_expr)
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 0.0)
