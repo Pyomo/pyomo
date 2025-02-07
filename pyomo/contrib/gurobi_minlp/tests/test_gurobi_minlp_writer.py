@@ -79,6 +79,8 @@ class TestGurobiMINLPWriter(CommonTest):
 
         grb_model.printStats()
 
+        grb_model.write("nonlinear_stuff.lp")
+
         lin_constrs = grb_model.getConstrs()
         self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()

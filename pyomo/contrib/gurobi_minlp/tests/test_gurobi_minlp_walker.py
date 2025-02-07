@@ -142,7 +142,16 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        x1 = visitor.var_map[id(m.x1)]
+        x2 = visitor.var_map[id(m.x2)]
+
+        # This is a linear expression
+        self.assertEqual(expr.size(), 2)
+        self.assertEqual(expr.getCoeff(0), 1.0)
+        self.assertEqual(expr.getCoeff(1), 1.0)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertIs(expr.getVar(1), x2)
+        self.assertEqual(expr.getConstant(), 0.0)
 
     def test_write_subtraction(self):
         m = self.get_model()
@@ -150,7 +159,16 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        x1 = visitor.var_map[id(m.x1)]
+        x2 = visitor.var_map[id(m.x2)]        
+
+        # Also linear, whoot!
+        self.assertEqual(expr.size(), 2)
+        self.assertEqual(expr.getCoeff(0), 1.0)
+        self.assertEqual(expr.getCoeff(1), -1.0)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertIs(expr.getVar(1), x2)
+        self.assertEqual(expr.getConstant(), 0.0)        
 
     def test_write_product(self):
         m = self.get_model()
@@ -158,23 +176,99 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        x1 = visitor.var_map[id(m.x1)]
+        x2 = visitor.var_map[id(m.x2)]        
 
-    def test_write_power_expression_var_const(self):
+        # This is quadratic
+        self.assertEqual(expr.size(), 1)
+        lin_expr = expr.getLinExpr()
+        self.assertEqual(lin_expr.size(), 0)
+        self.assertIs(expr.getVar1(0), x1)
+        self.assertIs(expr.getVar2(0), x2)
+        self.assertEqual(expr.getCoeff(0), 1.0)
+        
+    def test_write_quadratic_power_expression_var_const(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**2 >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        # This is also quadratic
+        x1 = visitor.var_map[id(m.x1)]
+        
+        self.assertEqual(expr.size(), 1)
+        lin_expr = expr.getLinExpr()
+        self.assertEqual(lin_expr.size(), 0)
+        self.assertIs(expr.getVar1(0), x1)
+        self.assertIs(expr.getVar2(0), x1)
+        self.assertEqual(expr.getCoeff(0), 1.0)
 
+    def test_write_nonquadratic_power_expression_var_const(self):
+        m = self.get_model()
+        m.c = Constraint(expr=m.x1**3 >= 3)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression(m.c.body)
+
+        # This is general nonlinear
+        x1 = visitor.var_map[id(m.x1)]
+
+        # TODO: It looks like this representation gets printed to the LP file,
+        # so I can get it publicly that way... But I need to figure out how
+        # to intercept writing to a file because they don't let me give the
+        # string. It's also the transpose of this, but whatever...
+        opcode, data, parent = expr._to_array_repr()
+
+        # three nodes
+        self.assertEqual(len(opcode), 3)
+
+        # the root is a power expression
+        self.assertEqual(parent[0], -1) # means root
+        self.assertEqual(opcode[0], GRB.OPCODE_POW)
+        # pow has no additional data
+        self.assertEqual(data[0], -1)
+
+        # first child is x1
+        self.assertEqual(parent[1], 0)
+        self.assertIs(data[1], x1)
+        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
+
+        # second child is 3
+        self.assertEqual(parent[2], 0)
+        self.assertEqual(opcode[2], GRB.OPCODE_CONSTANT)
+        self.assertEqual(data[2], 3.0) # the data is the constant's value
+        
     def test_write_power_expression_var_var(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**m.x2 >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        # You can't actually use this in a model in Gurobi 12, but you can build the
+        # expression... (It fails during the solve for some reason.)
+
+        x1 = visitor.var_map[id(m.x1)]
+        x2 = visitor.var_map[id(m.x2)]
+
+        opcode, data, parent = expr._to_array_repr()
+        
+        # three nodes
+        self.assertEqual(len(opcode), 3)
+
+        # the root is a power expression
+        self.assertEqual(parent[0], -1) # means root
+        self.assertEqual(opcode[0], GRB.OPCODE_POW)
+        # pow has no additional data
+        self.assertEqual(data[0], -1)
+
+        # first child is x1
+        self.assertEqual(parent[1], 0)
+        self.assertIs(data[1], x1)
+        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
+
+        # second child is x2
+        self.assertEqual(parent[2], 0)
+        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[2], x2)
 
     def test_write_power_expression_const_var(self):
         m = self.get_model()
@@ -182,16 +276,75 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        x2 = visitor.var_map[id(m.x2)]
 
-    def test_write_absolute_value_expression(self):
-        # TODO: Gurobi doesn't support abs, I don't think.
+        opcode, data, parent = expr._to_array_repr()
+        
+        # three nodes
+        self.assertEqual(len(opcode), 3)
+
+        # the root is a power expression
+        self.assertEqual(parent[0], -1) # means root
+        self.assertEqual(opcode[0], GRB.OPCODE_POW)
+        # pow has no additional data
+        self.assertEqual(data[0], -1)
+
+        # first child is 2
+        self.assertEqual(parent[1], 0)
+        self.assertEqual(data[1], 2.0)
+        self.assertEqual(opcode[1], GRB.OPCODE_CONSTANT)
+
+        # second child is x2
+        self.assertEqual(parent[2], 0)
+        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[2], x2)
+
+    def test_write_absolute_value_of_var(self):
+        # Gurobi doesn't support abs of expressions, so we have to do a factorable
+        # programming thing...
         m = self.get_model()
         m.c = Constraint(expr=abs(m.x1) >= 3)
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
+        # expr is actually an auxiliary variable. We should
+        # get a constraint:
+        # expr == abs(x1)
+
+        self.assertIsInstance(expr, gurobipy.Var)
+        grb_model = visitor.grb_model
+        self.assertEqual(grb_model.numVars, 2)
+        self.assertEqual(grb_model.numGenConstrs, 1)
+        self.assertEqual(grb_model.numConstrs, 0)
+        self.assertEqual(grb_model.numQConstrs, 0)
+        
+        # we're going to have to write the resulting model to an lp file to test that we
+        # have what we expect
+        
         # TODO
+
+    def test_write_absolute_value_of_expression(self):
+        m = self.get_model()
+        m.c = Constraint(expr=abs(m.x1 + 2*m.x2) >= 3)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression(m.c.body)
+
+        # expr is actually an auxiliary variable. We should
+        # get three constraints:
+        # aux1 == x1 + 2 * x2
+        # expr == abs(aux1)
+
+        # we're going to have to write the resulting model to an lp file to test that we
+        # have what we expect
+        self.assertIsInstance(expr, gurobipy.Var)
+        grb_model = visitor.grb_model
+        self.assertEqual(grb_model.numVars, 4)
+        self.assertEqual(grb_model.numGenConstrs, 1)
+        self.assertEqual(grb_model.numConstrs, 1)
+        self.assertEqual(grb_model.numQConstrs, 0)
+        
+        # TODO        
+
 
     def test_write_expression_with_mutable_param(self):
         m = self.get_model()

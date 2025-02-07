@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from operator import itemgetter
+
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
@@ -56,8 +58,10 @@ from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     apply_node_operation,
     ExprType,
+    ExitNodeDispatcher,
     BeforeChildDispatcher,
     complex_number_error,
+    initialize_exit_node_dispatcher,
     OrderedVarRecorder,
 )
 
@@ -86,6 +90,10 @@ Let's not use the '.nl' attribute at all for now--seems like the exception rathe
 the rule that you would want to specifically tell Gurobi *not* to expand the expression.
 """
 
+_CONSTANT = ExprType.CONSTANT
+_GENERAL = ExprType.GENERAL
+_LINEAR = ExprType.LINEAR
+_VARIABLE = ExprType.VARIABLE
 
 _function_map = {}
 
@@ -95,26 +103,26 @@ if gurobipy_available:
 
     _function_map.update(
         {
-            'exp': nlfunc.exp,
-            'log': nlfunc.log,
-            'log10': nlfunc.log10,
-            'sin': nlfunc.sin,
-            'cos': nlfunc.cos,
-            'tan': nlfunc.tan,
-            'sqrt': nlfunc.sqrt,
+            'exp': (_GENERAL, nlfunc.exp),
+            'log': (_GENERAL, nlfunc.log),
+            'log10': (_GENERAL, nlfunc.log10),
+            'sin': (_GENERAL, nlfunc.sin),
+            'cos': (_GENERAL, nlfunc.cos),
+            'tan': (_GENERAL, nlfunc.tan),
+            'sqrt': (_GENERAL, nlfunc.sqrt),
             # TODO: We'll have to do functional programming things if we want to support
             # any of these...
-            'asin': None,
-            'sinh': None,
-            'asinh': None,
-            'acos': None,
-            'cosh': None,
-            'acosh': None,
-            'atan': None,
-            'tanh': None,
-            'atanh': None,
-            'ceil': None,
-            'floor': None,
+            # 'asin': None,
+            # 'sinh': None,
+            # 'asinh': None,
+            # 'acos': None,
+            # 'cosh': None,
+            # 'acosh': None,
+            # 'atan': None,
+            # 'tanh': None,
+            # 'atanh': None,
+            # 'ceil': None,
+            # 'floor': None,
         }
     )
 
@@ -167,48 +175,117 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
                 name=child.name if visitor.symbolic_solver_labels else "",
             )
             visitor.var_map[_id] = grb_var
-        return False, visitor.var_map[_id]
+        return False, (_VARIABLE, visitor.var_map[_id])
 
-    @staticmethod
-    def _before_native_numeric(visitor, child):
-        return False, child
+    
+def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
+    return (data[0], visitor._eval_expr_visitor.visit(node, data[1]))
 
-    @staticmethod
-    def _before_native_logical(visitor, child):
-        return False, InvalidNumber(
-            child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
-        )
 
-    @staticmethod
-    def _before_complex(visitor, child):
-        return False, complex_number_error(child, visitor, child)
+def _handle_node_with_eval_expr_visitor_unknown(visitor, node, *data):
+    # ESJ: Is this cheating?
+    expr_type = max(map(itemgetter(0), data))
+    return (expr_type, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
 
-    @staticmethod
-    def _before_invalid(visitor, child):
-        return False, InvalidNumber(
-            child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
-        )
+    
+def _handle_node_with_eval_expr_visitor_constant(visitor, node, *data):
+    return (_CONSTANT, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
 
-    @staticmethod
-    def _before_string(visitor, child):
-        return False, InvalidNumber(
-            child, f"{child!r} ({type(child).__name__}) is not a valid numeric type"
-        )
 
-    @staticmethod
-    def _before_npv(visitor, child):
-        try:
-            return False, visitor.check_constant(visitor.evaluate(child), child)
-        except (ValueError, ArithmeticError):
-            return True, None
+def _handle_node_with_eval_expr_visitor_linear(visitor, node, *data):
+    return (_LINEAR, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
 
-    @staticmethod
-    def _before_param(visitor, child):
-        return False, visitor.check_constant(child.value, child)
+
+def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
+    return (_GENERAL, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
+
+
+def _handle_unary(visitor, node, data):
+    if node._name in _function_map:
+        expr_type, fcn = _function_map[node._name]
+        return expr_type, fcn(data[0])
+    raise ValueError(
+        "The unary function '%s' is not supported by the gurobi MINLP writer."
+        % node._name
+    )
+
+
+def _handle_abs_constant(visitor, node, arg1):
+    return (_CONSTANT, abs(arg1[1]))
+
+
+def _handle_abs_var(visitor, node, arg1):
+    aux_abs = visitor.grb_model.addVar()
+    visitor.grb_model.addConstr(aux_abs == gurobipy.abs_(arg1[1]))
+
+    return (_VARIABLE, aux_abs)
+
+
+def _handle_abs_expression(visitor, node, arg1):
+    # we need auxiliary variable
+    aux_arg = visitor.grb_model.addVar()
+    visitor.grb_model.addConstr(aux_arg == arg1[1])
+    aux_abs = visitor.grb_model.addVar()
+    visitor.grb_model.addConstr(aux_abs == gurobipy.abs_(aux_arg))
+
+    return (_VARIABLE, aux_abs)
+
+
+def define_exit_node_handlers(_exit_node_handlers=None):
+    if _exit_node_handlers is None:
+        _exit_node_handlers = {}
+
+    # We can rely on operator overloading for many, but not all expressions.
+    _exit_node_handlers[SumExpression] = {
+        None: _handle_node_with_eval_expr_visitor_unknown
+    }
+    _exit_node_handlers[LinearExpression] = {
+        None: _handle_node_with_eval_expr_visitor_linear
+    }
+    _exit_node_handlers[NegationExpression] = {
+        None: _handle_node_with_eval_expr_visitor_invariant
+    }
+    _exit_node_handlers[ProductExpression] = {
+        None: _handle_node_with_eval_expr_visitor_nonlinear,
+        (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
+        (_CONSTANT, _LINEAR): _handle_node_with_eval_expr_visitor_linear,
+        (_LINEAR, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+        (_CONSTANT, _VARIABLE): _handle_node_with_eval_expr_visitor_linear,
+        (_VARIABLE, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+    }
+    _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
+    _exit_node_handlers[DivisionExpression] = {
+        None: _handle_node_with_eval_expr_visitor_nonlinear,
+        (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
+        (_LINEAR, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+        (_VARIABLE, _CONSTANT): _handle_node_with_eval_expr_visitor_linear,
+    }
+    _exit_node_handlers[PowExpression] = {
+        None: _handle_node_with_eval_expr_visitor_nonlinear,
+        (_CONSTANT, _CONSTANT): _handle_node_with_eval_expr_visitor_constant,
+    }
+    _exit_node_handlers[UnaryFunctionExpression] = {
+        None: _handle_unary,
+    }
+
+    ## TODO: named expressions, ExprIf, RangedExpressions (if we do exprif...
+
+    # There are special becuase of quirks of Gurobi's current support for general
+    # nonlinear:
+    _exit_node_handlers[AbsExpression] = {
+        None: _handle_abs_expression,
+        (_CONSTANT,): _handle_abs_constant,
+        (_VARIABLE,): _handle_abs_var
+    }
+
+    return _exit_node_handlers
 
 
 class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     before_child_dispatcher = GurobiMINLPBeforeChildDispatcher()
+    exit_node_dispatcher = ExitNodeDispatcher(
+        initialize_exit_node_dispatcher(define_exit_node_handlers())
+    )
 
     def __init__(self, grb_model, symbolic_solver_labels=False):
         super().__init__()
@@ -226,23 +303,20 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        # Return native types
-        if child.__class__ in EXPR.native_types:
-            return False, child
+        # # Return native types
+        # if child.__class__ in EXPR.native_types:
+        #     return False, child
 
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        if node.__class__ is EXPR.UnaryFunctionExpression:
-            return _function_map[node._name](data[0])
-            # import pdb
-            # pdb.set_trace()
-            # return apply_node_operation(node, data)
-        return self._eval_expr_visitor.visit(node, data)
+        return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
+            self, node, *data
+        )
 
     def finalizeResult(self, result):
         self.grb_model.update()
-        return result
+        return result[1]
 
     # ESJ TODO: THIS IS COPIED FROM THE LINEAR WALKER--CAN WE PUT IT IN UTIL OR
     # SOMETHING?
