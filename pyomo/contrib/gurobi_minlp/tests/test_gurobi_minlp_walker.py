@@ -352,7 +352,29 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        # expr is nonlinear
+        x2 = visitor.var_map[id(m.x2)]
+
+        opcode, data, parent = expr._to_array_repr()
+
+        # three nodes
+        self.assertEqual(len(opcode), 3)
+
+        # the root is a power expression
+        self.assertEqual(parent[0], -1)  # means root
+        self.assertEqual(opcode[0], GRB.OPCODE_POW)
+        # pow has no additional data
+        self.assertEqual(data[0], -1)
+
+        # first child is 4
+        self.assertEqual(parent[1], 0)
+        self.assertEqual(data[1], 4.0)
+        self.assertEqual(opcode[1], GRB.OPCODE_CONSTANT)
+
+        # second child is x2
+        self.assertEqual(parent[2], 0)
+        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[2], x2)
 
     def test_monomial_expression(self):
         m = self.get_model()
@@ -364,18 +386,49 @@ class TestGurobiMINLPWalker(CommonTest):
 
         visitor = self.get_visitor()
         expr = visitor.walk_expression(const_expr)
+        x1 = visitor.var_map[id(m.x1)]
+        self.assertEqual(expr.size(), 1)
+        self.assertEqual(expr.getConstant(), 0.0)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertEqual(expr.getCoeff(0), 3)
+        
         expr = visitor.walk_expression(nested_expr)
+        self.assertEqual(expr.size(), 1)
+        self.assertEqual(expr.getConstant(), 0.0)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertAlmostEqual(expr.getCoeff(0), 1/4)
+        
         expr = visitor.walk_expression(pow_expr)
-
-        # TODO
+        self.assertEqual(expr.size(), 1)
+        self.assertEqual(expr.getConstant(), 0.0)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertEqual(expr.getCoeff(0), 2)
 
     def test_log_expression(self):
         m = self.get_model()
         m.c = Constraint(expr=log(m.x1) >= 3)
+        m.pprint()
         visitor = self.get_visitor()
         expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        # expr is nonlinear
+        x1 = visitor.var_map[id(m.x1)]
+
+        opcode, data, parent = expr._to_array_repr()
+        print(expr._to_array_repr())
+
+        # two nodes
+        self.assertEqual(len(opcode), 2)
+
+        # the root is a power expression
+        self.assertEqual(parent[0], -1)  # means root
+        self.assertEqual(opcode[0], GRB.OPCODE_LOG)
+        self.assertEqual(data[0], -1)
+
+        # child is x1
+        self.assertEqual(parent[1], 0)
+        self.assertIs(data[1], x1)
+        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
 
     # TODO: what other unary expressions?
 

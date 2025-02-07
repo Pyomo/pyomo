@@ -203,9 +203,9 @@ def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
 def _handle_unary(visitor, node, data):
     if node._name in _function_map:
         expr_type, fcn = _function_map[node._name]
-        return expr_type, fcn(data[0])
+        return expr_type, fcn(data[1])
     raise ValueError(
-        "The unary function '%s' is not supported by the gurobi MINLP writer."
+        "The unary function '%s' is not supported by the Gurobi MINLP writer."
         % node._name
     )
 
