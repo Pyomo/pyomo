@@ -87,20 +87,27 @@ class GUROBI(OptSolver):
         else:
             logger.error('Unknown IO type: %s' % mode)
             return
-        # The Gurobi ASL solver was 'gurobi_ampl' through Gurobi 11, then
-        # was renamed to 'gurobi'
+        # The Gurobi ASL solver was 'gurobi_ampl' through Gurobi 11,
+        # then was renamed to 'gurobi'.  Check 'gurobi' frst, then
+        # 'gurobi_ampl'.
         for exe_name in ('gurobi', 'gurobi_ampl'):
             exe = Executable(exe_name)
-            if exe.available() and b'[-AMPL]' in subprocess.run(
-                exe.executable,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=1,
-            ).stdout:
+            if (
+                exe.available()
+                and b'[-AMPL]'
+                in subprocess.run(
+                    exe.executable,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=1,
+                ).stdout
+            ):
                 opt.set_options(f'solver={exe_name}')
                 break
         else:
+            # Fall back on 'gurobi' (matching the current Gurobi
+            # release) if neither appears to be available.
             opt.set_options('solver=gurobi')
         return opt
 
