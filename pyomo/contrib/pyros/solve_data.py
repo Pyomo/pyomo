@@ -278,7 +278,7 @@ class DiscreteSeparationSolveCallResults:
     def subsolver_error(self):
         """
         bool : True if there is a subsolver error status for all
-        of the the ``SeparationSolveCallResults`` objects listed
+        of the ``SeparationSolveCallResults`` objects listed
         in `self`, False otherwise.
         """
         return all(res.subsolver_error for res in self.solver_call_results.values())
