@@ -88,7 +88,7 @@ class GUROBI(OptSolver):
             logger.error('Unknown IO type: %s' % mode)
             return
         # The Gurobi ASL solver was 'gurobi_ampl' through Gurobi 11,
-        # then was renamed to 'gurobi'.  Check 'gurobi' frst, then
+        # then was renamed to 'gurobi'.  Check 'gurobi' first, then
         # 'gurobi_ampl'.
         for exe_name in ('gurobi', 'gurobi_ampl'):
             exe = Executable(exe_name)
