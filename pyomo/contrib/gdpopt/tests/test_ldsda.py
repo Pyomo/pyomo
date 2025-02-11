@@ -35,7 +35,7 @@ class TestGDPoptLDSDA(unittest.TestCase):
                 model,
                 direction_norm=direction_norm,
                 minlp_solver='gams',
-                minlp_solver_args=dict(solver='knitro'),
+                minlp_solver_args=dict(solver='ipopth'),
                 starting_point=[1, 2],
                 logical_constraint_list=[
                     model.mode_transfer_lc1.name,
