@@ -50,7 +50,7 @@ def get_random_open_issues(repository, number_to_return):
     repo = gh.get_repo(repository)
     # Get all open issues
     open_issues = repo.get_issues(state='open')
-    open_issues_list = [issue for issue in open_issues]
+    open_issues_list = [issue for issue in open_issues if "pull" not in issue.html_url]
 
     # Randomly select the specified number of issues
     random_issues = random.sample(
