@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-''' 
+'''
 Example from Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
 
 This example shows:

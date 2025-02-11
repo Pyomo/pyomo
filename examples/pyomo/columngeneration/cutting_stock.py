@@ -16,7 +16,7 @@ Method from Section 12.8 of
 Bradley, S.P., A.C. Hax, and T.L. Magnanti. 1977. Applied Mathematical Programming,
 Addison-Wesley, Reading, MA. Available: http://web.mit.edu/15.053/www/AMP.htm.
 
-Data from https://en.wikipedia.org/wiki/Cutting_stock_problem 
+Data from https://en.wikipedia.org/wiki/Cutting_stock_problem
 '''
 
 import pyomo.environ as pyo

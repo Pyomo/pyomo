@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-""" Example in the online doc.
+"""Example in the online doc.
 
 The expected optimal solution value is 2.438447187191098.
 

@@ -22,8 +22,8 @@
 # at the URL "https://github.com/IDAES/idaes-pse".
 ##############################################################################
 """
-Rooney Biegler model, based on Rooney, W. C. and Biegler, L. T. (2001). Design for 
-model parameter uncertainty using nonlinear confidence regions. AIChE Journal, 
+Rooney Biegler model, based on Rooney, W. C. and Biegler, L. T. (2001). Design for
+model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 47(8), 1794-1804.
 """
 from pyomo.common.dependencies import pandas as pd
