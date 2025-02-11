@@ -1674,6 +1674,12 @@ class _ToStringVisitor(ExpressionValueVisitor):
             for i, (val, arg) in enumerate(zip(values, node.args)):
                 arg_prec = getattr(arg, 'PRECEDENCE', None)
                 if arg_prec is None:
+                    # This embedded constant (4) is evil, but to actually
+                    # import the NegationExpression.PRECEDENCE from
+                    # numeric_expr would create a circular dependency.
+                    #
+                    # FIXME: rework the dependencies between
+                    # numeric_expr and visitor
                     if val[0] == '-' and node_prec < 4:
                         values[i] = f"({val})"
                 else:
@@ -1703,7 +1709,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         Return True if the node is not expanded.
         """
         if node is None:
-            return True, None
+            return True, 'Undefined'
 
         if node.__class__ in native_numeric_types:
             return True, str(node)
