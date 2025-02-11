@@ -140,10 +140,6 @@ tree:
     seven event callbacks that users can hook into, providing very
     fine-grained control over the expression walker.
 
-:class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
-    A :func:`visitor` method is called for each node in the tree,
-    and the visitor class collects information about the tree.
-
 :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>`
     When the :func:`visitor` method is called on each node in the
     tree, the *values* of its children have been computed.  The
@@ -166,12 +162,6 @@ These classes define a variety of suitable tree search methods:
 
   * ``walk_expression``: depth-first traversal of the expression tree.
 
-* :class:`SimpleExpressionVisitor <pyomo.core.expr.SimpleExpressionVisitor>`
-
-  * ``xbfs``: breadth-first search where leaf nodes are immediately visited
-  * ``xbfs_yield_leaves``: breadth-first search where leaf nodes are
-    immediately visited, and the visit method yields a value
-
 * :class:`ExpressionValueVisitor <pyomo.core.expr.ExpressionValueVisitor>`
 
   * ``dfs_postorder_stack``: postorder depth-first search using a
@@ -179,12 +169,11 @@ These classes define a variety of suitable tree search methods:
 
 
 To implement a visitor object, a user needs to provide specializations
-for specific events.  For legacy visitors based on the PyUtilib
-visitor pattern (e.g., :class:`SimpleExpressionVisitor` and
-:class:`ExpressionValueVisitor`), one must create a subclass of one of these
-classes and override at least one of the following:
+for specific events.  For legacy visitors based on the PyUtilib visitor
+pattern (e.g., :class:`ExpressionValueVisitor`), one must create a
+subclass and override at least one of the following:
 
-:func:`visitor`
+:func:`visit`
     Defines the operation that is performed when a node is visited.  In
     the :class:`ExpressionValueVisitor
     <pyomo.core.expr.ExpressionValueVisitor>` and
@@ -196,10 +185,7 @@ classes and override at least one of the following:
     Checks if the search should terminate with this node.  If no,
     then this method returns the tuple ``(False, None)``.  If yes,
     then this method returns ``(False, value)``, where *value* is
-    computed by this method.  This method is not used in the
-    :class:`SimpleExpressionVisitor
-    <pyomo.core.expr.SimpleExpressionVisitor>` visitor
-    class.
+    computed by this method.
 
 :func:`finalize`
     This method defines the final value that is returned from the
@@ -216,8 +202,8 @@ callbacks, which are documented in the class documentation.
 Detailed documentation of the APIs for these methods is provided
 with the class documentation for these visitors.
 
-SimpleExpressionVisitor Example
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+StreamBasedExpressionVisitor Example
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this example, we describe an visitor class that counts the number
 of nodes in an expression (including leaf nodes).  Consider the following
@@ -225,10 +211,11 @@ class:
 
 .. literalinclude:: /src/expr/managing_visitor1.spy
 
-The class constructor creates a counter, and the :func:`visit` method
-increments this counter for every node that is visited.  The :func:`finalize`
-method returns the value of this counter after the tree has been walked.  The
-following function illustrates this use of this visitor class:
+The :func:`initializeWalker` method creates a counter, and the
+:func:`exitNode` method increments this counter for every node that is
+visited.  The :func:`finalizeResult` method returns the value of this
+counter after the tree has been walked.  The following function
+illustrates this use of this visitor class:
 
 .. literalinclude:: /src/expr/managing_visitor2.spy
 
