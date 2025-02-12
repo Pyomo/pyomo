@@ -66,10 +66,8 @@ where:
     PyROS accepts models in which there are:
 
     1. Bounds declared on the ``Var`` objects representing
-       components of the variable vectors :math:`z` and :math:`y`.
-       These bounds are reformulated to inequality constraints.
-    2. Ranged inequality constraints. These are easily reformulated to
-       single inequality constraints.
+       components of the variable vectors
+    2. Ranged inequality constraints
 
 In order to cast the robust optimization counterpart of the
 :ref:`deterministic model <deterministic-model>`,
