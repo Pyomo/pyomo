@@ -1669,35 +1669,33 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
-        for i, val in enumerate(values):
-            arg = node.arg(i)
-
-            if arg is None:
-                values[i] = 'Undefined'
-            elif arg.__class__ in native_numeric_types:
-                pass
-            elif arg.__class__ in nonpyomo_leaf_types:
-                values[i] = f"{val}"
-            else:
-                parens = False
-                if (
-                    not self.verbose
-                    and arg.is_expression_type()
-                    and node.PRECEDENCE is not None
-                ):
-                    if arg.PRECEDENCE is None:
-                        pass
-                    elif node.PRECEDENCE < arg.PRECEDENCE:
+        node_prec = node.PRECEDENCE
+        if node_prec is not None and not self.verbose:
+            for i, (val, arg) in enumerate(zip(values, node.args)):
+                arg_prec = getattr(arg, 'PRECEDENCE', None)
+                if arg_prec is None:
+                    # This embedded constant (4) is evil, but to actually
+                    # import the NegationExpression.PRECEDENCE from
+                    # numeric_expr would create a circular dependency.
+                    #
+                    # FIXME: rework the dependencies between
+                    # numeric_expr and visitor
+                    if val[0] == '-' and node_prec < 4:
+                        values[i] = f"({val})"
+                else:
+                    if node_prec < arg_prec:
                         parens = True
-                    elif node.PRECEDENCE == arg.PRECEDENCE:
+                    elif node_prec == arg_prec:
                         if i == 0:
                             parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
                         elif i == node.nargs() - 1:
                             parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
-                if parens:
-                    values[i] = f"({val})"
+                    else:
+                        parens = False
+                    if parens:
+                        values[i] = f"({val})"
 
         if self._expression_handlers and node.__class__ in self._expression_handlers:
             return self._expression_handlers[node.__class__](self, node, values)
@@ -1711,7 +1709,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         Return True if the node is not expanded.
         """
         if node is None:
-            return True, None
+            return True, 'Undefined'
 
         if node.__class__ in native_numeric_types:
             return True, str(node)
