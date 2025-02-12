@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from pyomo.common.config import document_kwargs_from_configdict
@@ -133,7 +133,8 @@ class PyROS(object):
         logger.log(
             msg=(
                 f"{' ' * len('PyROS:')} "
-                f"Invoked at UTC {datetime.utcnow().isoformat()}"
+                "Invoked at UTC "
+                f"{datetime.now(timezone.utc).isoformat()}"
             ),
             **log_kwargs,
         )
