@@ -21,7 +21,7 @@
 #  ___________________________________________________________________________
 
 """
-Try to import PySide6, which is the current official Qt 6 Python interface. Then, 
+Try to import PySide6, which is the current official Qt 6 Python interface. Then,
 try PyQt5 if that doesn't work. If no compatible Qt Python interface is found,
 use some dummy classes to allow some testing.
 """
