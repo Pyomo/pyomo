@@ -61,7 +61,14 @@ def _get_pyomo_version_info():
     ]
     try:
         commit_hash = (
-            subprocess.check_output(commit_hash_command_args).decode("ascii").strip()
+            subprocess.check_output(
+                commit_hash_command_args,
+                # suppress git error if Pyomo installation
+                # is not a git repo
+                stderr=subprocess.DEVNULL,
+            )
+            .decode("ascii")
+            .strip()
         )
     except subprocess.CalledProcessError:
         commit_hash = "unknown"
