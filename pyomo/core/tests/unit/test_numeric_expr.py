@@ -3367,7 +3367,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         #
         # A fraction with a variable in the denominator has degree None.
-        # This indicates that it is not a polyomial.
+        # This indicates that it is not a polynomial.
         #
         expr = self.model.c / self.model.a
         self.assertEqual(expr.polynomial_degree(), None)
