@@ -828,9 +828,7 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
     in general, be feasible, provided the set does not have a
     discrete geometry (as there is no master model block corresponding
     to any of the remaining discrete scenarios against which we
-    separate). If the uncertainty set constraints involve
-    auxiliary variables, then some uncertainty set constraints
-    may be violated.
+    separate).
     """
     config = separation_data.config
     master_model = master_data.master_model
@@ -870,16 +868,11 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
             worst_master_block_idx
         ]
         for aux_param_var, aux_val in zip(aux_param_vars, aux_param_values):
-            aux_param_var.set_value(val)
+            aux_param_var.set_value(aux_val)
 
     # confirm the initial point is feasible for cases where
     # we expect it to be (i.e. non-discrete uncertainty sets).
     # otherwise, log the violated constraints
-    # NOTE: some uncertainty set constraints may be violated
-    #       at the initial point if there are auxiliary variables
-    #       (e.g. factor model, cardinality sets).
-    #       revisit initialization of auxiliary uncertainty set
-    #       variables later
     tol = ABS_CON_CHECK_FEAS_TOL
     ss_ineq_con_name_repr = get_con_name_repr(
         separation_model=sep_model, con=ss_ineq_con_to_maximize, with_obj_name=True
@@ -890,14 +883,10 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
     for con in sep_model.component_data_objects(Constraint, active=True):
         lslack, uslack = con.lslack(), con.uslack()
         if (lslack < -tol or uslack < -tol) and not uncertainty_set_is_discrete:
-            con_name_repr = get_con_name_repr(
-                separation_model=sep_model, con=con, with_obj_name=False
-            )
             config.progress_logger.debug(
                 f"Initial point for separation of second-stage ineq constraint "
                 f"{ss_ineq_con_name_repr} violates the model constraint "
-                f"{con_name_repr} by more than {tol}. "
-                f"(lslack={con.lslack()}, uslack={con.uslack()})"
+                f"{con.name!r} by more than {tol} ({lslack=}, {uslack=})"
             )
 
 
