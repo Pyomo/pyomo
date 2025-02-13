@@ -24,7 +24,7 @@ runtime:
   logfile: null                  # Redirect output to the specified file.
   catch errors: true            # Trigger failures for exceptions to print
                                  #   the program stack.
-  disable gc: false              # Disable the garbage collecter.
+  disable gc: false              # Disable the garbage collector.
   interactive: false             # After executing Pyomo, launch an
                                  #   interactive Python shell. If IPython is
                                  #   installed, this shell is an IPython
