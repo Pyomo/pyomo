@@ -13,6 +13,8 @@ from pyomo.core.expr.logical_expr import BooleanExpression
 
 
 class PrecedenceExpression(BooleanExpression):
+    PRECEDENCE = None
+
     def nargs(self):
         return 3
 

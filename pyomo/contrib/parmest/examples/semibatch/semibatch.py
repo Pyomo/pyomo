@@ -9,9 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """
-Semibatch model, based on Nicholson et al. (2018). pyomo.dae: A modeling and 
+Semibatch model, based on Nicholson et al. (2018). pyomo.dae: A modeling and
 automatic discretization framework for optimization with di
-erential and 
+erential and
 algebraic equations. Mathematical Programming Computation, 10(2), 187-223.
 """
 import json

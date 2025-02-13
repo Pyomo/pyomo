@@ -10,7 +10,7 @@
 #  __________________________________________________________________________
 #
 #
-""" Pyomo Units Checking Module
+"""Pyomo Units Checking Module
 This module has some helpful methods to support checking units on Pyomo
 module objects.
 """

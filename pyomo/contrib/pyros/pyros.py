@@ -33,7 +33,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-__version__ = "1.3.1"
+__version__ = "1.3.4"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -299,10 +299,12 @@ class PyROS(object):
             First-stage model variables (or design variables).
         second_stage_variables: VarData, Var, or iterable of VarData/Var
             Second-stage model variables (or control variables).
-        uncertain_params: ParamData, Param, or iterable of ParamData/Param
+        uncertain_params: (iterable of) Param, Var, ParamData, or VarData
             Uncertain model parameters.
-            The `mutable` attribute for all uncertain parameter objects
-            must be set to True.
+            Of every constituent `Param` object,
+            the `mutable` attribute must be set to True.
+            All constituent `Var`/`VarData` objects should be
+            fixed.
         uncertainty_set: UncertaintySet
             Uncertainty set against which the solution(s) returned
             will be confirmed to be robust.
