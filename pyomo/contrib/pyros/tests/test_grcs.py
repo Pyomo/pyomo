@@ -19,9 +19,10 @@ import time
 
 from parameterized import parameterized
 import pyomo.common.unittest as unittest
-from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.errors import InvalidValueError
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 import pyomo.repn.ampl as pyomo_ampl_repn
@@ -2740,8 +2741,13 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         Test logging of PyROS solver introductory messages.
         """
         pyros_solver = SolverFactory("pyros")
-        with LoggingIntercept(level=logging.INFO) as LOG:
-            pyros_solver._log_intro(logger=logger, level=logging.INFO)
+        with capture_output(capture_fd=True) as OUT:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                pyros_solver._log_intro(logger=logger, level=logging.INFO)
+
+        # ensure git repo commit check error messages suppressed
+        err_msgs = OUT.getvalue()
+        self.assertEqual(err_msgs, "")
 
         intro_msgs = LOG.getvalue()
 
