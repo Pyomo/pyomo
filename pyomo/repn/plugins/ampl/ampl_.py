@@ -22,6 +22,7 @@ from math import isclose
 
 from pyomo.common.fileutils import find_library
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.errors import EmptyModelError
 from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numvalue import (
@@ -1361,7 +1362,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.reset()
 
         if len(full_var_list) < 1:
-            raise ValueError(
+            raise EmptyModelError(
                 "No variables appear in the Pyomo model constraints or"
                 " objective. This is not supported by the NL file interface"
             )
