@@ -169,7 +169,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Returns
         -------
         bool
-            weather the primal bound is improved
+            True if the primal bound is improved
         """
         self.fix_disjunctions_with_external_var(external_var_value)
         subproblem = self.working_model.clone()
