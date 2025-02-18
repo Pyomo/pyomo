@@ -2374,31 +2374,37 @@ class EllipsoidalSet(UncertaintySet):
     center : (N,) array-like
         Center of the ellipsoid.
     shape_matrix : (N, N) array-like
-        A positive definite matrix characterizing the shape
-        and orientation of the ellipsoid.
+        A symmetric positive definite matrix characterizing
+        the shape and orientation of the ellipsoid.
     scale : numeric type, optional
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
+    gaussian_conf_lvl : numeric type, optional
+        (Fractional) confidence level of the multivariate
+        normal distribution with mean `center` and covariance
+        matrix `shape_matrix`.
+        Exactly one of `scale` and `gaussian_conf_lvl` should be
+        None; otherwise, an exception is raised.
 
     Examples
     --------
-    3D origin-centered unit hypersphere:
+    A 3D origin-centered unit ball:
 
     >>> from pyomo.contrib.pyros import EllipsoidalSet
     >>> import numpy as np
-    >>> hypersphere = EllipsoidalSet(
+    >>> ball = EllipsoidalSet(
     ...     center=[0, 0, 0],
     ...     shape_matrix=np.eye(3),
     ...     scale=1,
     ... )
-    >>> hypersphere.center
+    >>> ball.center
     array([0, 0, 0])
-    >>> hypersphere.shape_matrix
+    >>> ball.shape_matrix
     array([[1., 0., 0.],
            [0., 1., 0.],
            [0., 0., 1.]])
-    >>> hypersphere.scale
+    >>> ball.scale
     1
 
     A 2D ellipsoid with custom rotation and scaling:
@@ -2416,13 +2422,42 @@ class EllipsoidalSet(UncertaintySet):
     >>> rotated_ellipsoid.scale
     0.5
 
+    A 4D 95% confidence ellipsoid:
+
+    >>> conf_ellipsoid = EllipsoidalSet(
+    ...     center=np.zeros(4),
+    ...     shape_matrix=np.diag(range(1, 5)),
+    ...     scale=None,
+    ...     gaussian_conf_lvl=0.95,
+    ... )
+    >>> conf_ellipsoid.center
+    array([0, 0, 0, 0])
+    >>> conf_ellipsoid.shape_matrix
+    array([[1, 0, 0, 0]],
+           [0, 2, 0, 0]],
+           [0, 0, 3, 0]],
+           [0, 0, 0. 4]])
+    >>> conf_ellipsoid.scale
+    ...9.4877...
+    >>> conf_ellipsoid.gaussian_conf_lvl
+    0.95
+
     """
 
-    def __init__(self, center, shape_matrix, scale=1):
+    def __init__(self, center, shape_matrix, scale=1, gaussian_conf_lvl=None):
         """Initialize self (see class docstring)."""
         self.center = center
         self.shape_matrix = shape_matrix
-        self.scale = scale
+
+        if scale is not None and gaussian_conf_lvl is None:
+            self.scale = scale
+        elif scale is None and gaussian_conf_lvl is not None:
+            self.gaussian_conf_lvl = gaussian_conf_lvl
+        else:
+            raise ValueError(
+                "Exactly one of `scale` and `gaussian_conf_lvl` should be "
+                f"None (got {scale=}, {gaussian_conf_lvl=})"
+            )
 
     @property
     def type(self):
@@ -2456,7 +2491,7 @@ class EllipsoidalSet(UncertaintySet):
             if val_arr.size != self.dim:
                 raise ValueError(
                     "Attempting to set attribute 'center' of "
-                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                    f"{type(self).__name__} of dimension {self.dim} "
                     f"to value of dimension {val_arr.size}"
                 )
 
@@ -2535,7 +2570,7 @@ class EllipsoidalSet(UncertaintySet):
         if hasattr(self, "_center"):
             if not all(size == self.dim for size in shape_mat_arr.shape):
                 raise ValueError(
-                    f"EllipsoidalSet attribute 'shape_matrix' "
+                    f"{type(self).__name__} attribute 'shape_matrix' "
                     f"must be a square matrix of size "
                     f"{self.dim} to match set dimension "
                     f"(provided matrix with shape {shape_mat_arr.shape})"
@@ -2558,12 +2593,40 @@ class EllipsoidalSet(UncertaintySet):
         validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
         if val < 0:
             raise ValueError(
-                "EllipsoidalSet attribute "
+                f"{type(self).__name__} attribute "
                 f"'scale' must be a non-negative real "
                 f"(provided value {val})"
             )
 
         self._scale = val
+        self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
+
+    @property
+    def gaussian_conf_lvl(self):
+        """
+        numeric type : (Fractional) confidence level of the
+        multivariate Gaussian distribution with mean ``self.origin``
+        and covariance ``self.shape_matrix`` for ellipsoidal region
+        with square magnification factor ``self.scale``.
+        """
+        return self._gaussian_conf_lvl
+
+    @gaussian_conf_lvl.setter
+    def gaussian_conf_lvl(self, val):
+        validate_arg_type(
+            "gaussian_conf_lvl", val, valid_num_types, "a valid numeric type", False
+        )
+
+        scale_val = sp.stats.chi2.isf(q=1 - val, df=self.dim)
+        if np.isnan(scale_val) or np.isinf(scale_val):
+            raise ValueError(
+                f"Squared scaling factor calculation for confidence level {val} "
+                f"and set dimension {self.dim} returned {scale_val}. "
+                "Ensure the confidence level is a value in [0, 1)."
+            )
+
+        self._gaussian_conf_lvl = val
+        self._scale = scale_val
 
     @property
     def dim(self):

@@ -845,7 +845,9 @@ def solver_call_master(master_data):
     )
     deterministic_msg = (
         (
-            " Please ensure your deterministic model "
+            " Please ensure that your deterministic model, "
+            "subject to the nominal uncertain parameter realization "
+            "you have provided, "
             f"is solvable by at least one of the subordinate {solve_mode} "
             "optimizers provided."
         )
