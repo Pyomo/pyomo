@@ -121,8 +121,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
 
         # We will use the working_model to perform the LDSDA search.
         self.working_model = model.clone()
-        # TODO: I don't like the name way, try something else?
-        self.working_model_util_block = self.working_model.component(util_block.name)
+        self.working_model_util_block = self.working_model.find_component(util_block)
 
         add_disjunction_list(self.working_model_util_block)
         TransformationFactory('core.logical_to_linear').apply_to(self.working_model)
