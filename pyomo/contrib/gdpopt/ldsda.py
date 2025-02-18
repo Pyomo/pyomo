@@ -350,11 +350,6 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             directions = list(it.product([-1, 0, 1], repeat=dimension))
             directions.remove((0,) * dimension)
             return directions
-        else:
-            raise ValueError(
-                "The direction_norm option must be 'L2' or 'Linf', "
-                "but received %s" % config.direction_norm
-            )
 
     def _check_valid_neighbor(self, neighbor):
         """Function that checks if a given neighbor is valid.
