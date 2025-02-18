@@ -299,7 +299,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         )
         if self.number_of_external_variables != len(config.starting_point):
             raise ValueError(
-                "The length of the provided starting point doesn't equal to the number of disjunctions."
+                "The length of the provided starting point doesn't equal the number of disjunctions."
             )
 
     def fix_disjunctions_with_external_var(self, external_var_values_list):
