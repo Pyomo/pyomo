@@ -222,12 +222,12 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         util_block : Block
             The GDPopt utility block of the model.
         config : ConfigBlock
-            GDPopt configuration block
+            GDPopt configuration block.
 
         Raises
         ------
         ValueError
-            exactly_number is greater than 1
+            The exactly_number of the exactly constraint is greater than 1.
         """
         util_block.external_var_info_list = []
         model = util_block.parent_block()
