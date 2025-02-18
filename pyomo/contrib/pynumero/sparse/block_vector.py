@@ -798,7 +798,7 @@ class BlockVector(BaseBlockVector, np.ndarray):
 
     def argmax(self, axis=None, out=None):
         """
-        Returns the index of the larges element.
+        Returns the index of the largest element.
         """
         assert_block_structure(self)
         return self.flatten().argmax(axis=axis, out=out)
