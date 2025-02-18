@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections import namedtuple
+import itertools as it
 import traceback
 from pyomo.common.config import document_kwargs_from_configdict
 from pyomo.common.errors import InfeasibleConstraintException
@@ -39,7 +40,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.logical_expr import ExactlyExpression
 from pyomo.common.dependencies import attempt_import
 
-it, it_available = attempt_import('itertools')
+
 tabulate, tabulate_available = attempt_import('tabulate')
 
 # Data tuple for external variables.
@@ -56,7 +57,7 @@ ExternalVarInfo = namedtuple(
 
 @SolverFactory.register(
     'gdpopt.ldsda',
-    doc="The LD-SDA (Logic-based Discrete-Steepest Descent Algorithm)"
+    doc="The LD-SDA (Logic-based Discrete-Steepest Descent Algorithm) "
     "Generalized Disjunctive Programming (GDP) solver",
 )
 class GDP_LDSDA_Solver(_GDPoptAlgorithm):
@@ -525,7 +526,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                 'External Variables',
                 'Lower Bound',
                 'Upper Bound',
-                ' Gap ',
+                'Gap',
                 'Time(s)',
             )
         )
