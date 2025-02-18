@@ -220,7 +220,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         Parameters
         ----------
         util_block : Block
-            The GDPOPT utility block of the model.
+            The GDPopt utility block of the model.
         config : ConfigBlock
             GDPopt configuration block
 
