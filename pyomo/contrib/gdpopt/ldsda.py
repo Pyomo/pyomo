@@ -371,16 +371,12 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         """
         if neighbor in self.explored_point_set:
             return False
-        if all(
+        return all(
             external_var_value >= external_var_info.LB
             and external_var_value <= external_var_info.UB
             for external_var_value, external_var_info in zip(
                 neighbor, self.working_model_util_block.external_var_info_list
             )
-        ):
-            return True
-        else:
-            return False
 
     def neighbor_search(self, config):
         """Function that evaluates a group of given points and returns the best
