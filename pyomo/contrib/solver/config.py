@@ -44,7 +44,7 @@ def TextIO_or_Logger(val):
             ans.append(LogStream(level=logging.INFO, logger=v))
         else:
             raise ValueError(
-                "Expected bool, TextIOBase, or Logger, but received {v.__class__}"
+                f"Expected bool, TextIOBase, or Logger, but received {v.__class__}"
             )
     return ans
 
