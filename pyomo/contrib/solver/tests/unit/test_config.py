@@ -36,7 +36,7 @@ class TestTextIO_or_LoggerValidator(unittest.TestCase):
         self.assertEqual(ans, [])
 
     def test_logger(self):
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger('contrib.solver.config.test.1')
         ans = TextIO_or_Logger(logger)
         self.assertTrue(isinstance(ans[0], LogStream))
 
@@ -44,7 +44,7 @@ class TestTextIO_or_LoggerValidator(unittest.TestCase):
     def test_real_example(self):
         log_stream = io.StringIO()
         logging.basicConfig(stream=log_stream, level=logging.DEBUG)
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger('contrib.solver.config.test.1')
 
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2], initialize=1, bounds=(0, None))
