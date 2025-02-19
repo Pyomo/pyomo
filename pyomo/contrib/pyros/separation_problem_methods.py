@@ -15,7 +15,6 @@ and related objects.
 """
 
 from itertools import product
-import math
 import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap

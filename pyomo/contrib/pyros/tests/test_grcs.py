@@ -17,7 +17,6 @@ import logging
 import math
 import time
 
-from parameterized import parameterized
 import pyomo.common.unittest as unittest
 from pyomo.common.collections import Bunch
 from pyomo.common.errors import InvalidValueError
