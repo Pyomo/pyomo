@@ -550,8 +550,7 @@ def _add_ldsda_configs(CONFIG):
             description="""
             The list of logical constraints to be reformulated into external variables.
             The logical constraints should be in the same order of provided starting point.
-            The provide logical constraints should be ExactlyExpression.
-            TODO: Maybe we can find a better design for this.""",
+            The provided logical constraints should be ExactlyExpressions.""",
         ),
     )
     CONFIG.declare(
