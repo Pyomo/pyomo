@@ -22,6 +22,9 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.gdpopt.discrete_problem_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.nlp_initialization import restore_vars_to_original_values
 from pyomo.contrib.gdpopt.util import a_logger, _DoNothing
+from pyomo.util.config_domains import ComponentDataSet
+from pyomo.core.base import LogicalConstraint
+from pyomo.gdp.disjunct import Disjunction
 
 _supported_algorithms = {
     'LOA': ('gdpopt.loa', 'Logic-based Outer Approximation'),
@@ -547,6 +550,7 @@ def _add_ldsda_configs(CONFIG):
         "logical_constraint_list",
         ConfigValue(
             default=None,
+            domain=ComponentDataSet(LogicalConstraint),
             description="""
             The list of logical constraints to be reformulated into external variables.
             The logical constraints should be in the same order of provided starting point.
@@ -557,6 +561,7 @@ def _add_ldsda_configs(CONFIG):
         "disjunction_list",
         ConfigValue(
             default=None,
+            domain=ComponentDataSet(Disjunction),
             description="""
             The list of disjunctions to be reformulated into external variables.
             The disjunctions should be in the same order of provided starting point.
