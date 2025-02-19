@@ -56,7 +56,7 @@ class TestTextIO_or_LoggerValidator(unittest.TestCase):
             solver.solve(m, tee=True, timelimit=5)
 
         log_contents = log_stream.getvalue()
-        self.assertIn('DEBUG:', log_contents)
+        self.assertIn('EXIT: Optimal Solution Found.', log_contents)
 
 
 class TestSolverConfig(unittest.TestCase):
