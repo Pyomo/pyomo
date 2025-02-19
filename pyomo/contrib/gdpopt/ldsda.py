@@ -372,6 +372,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
             for external_var_value, external_var_info in zip(
                 neighbor, self.working_model_util_block.external_var_info_list
             )
+        )
 
     def neighbor_search(self, config):
         """Function that evaluates a group of given points and returns the best
