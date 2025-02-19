@@ -252,7 +252,7 @@ setup_kwargs = dict(
         # the dependencies.
         'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
         'docs': [
-            'Sphinx>4',
+            'Sphinx>4,!=8.2.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
