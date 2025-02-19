@@ -9,13 +9,54 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+import io
+
+import pyomo.environ as pyo
 from pyomo.common import unittest
+from pyomo.common.log import LogStream
+from pyomo.common.tee import capture_output
+from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.solver.config import (
     SolverConfig,
     BranchAndBoundConfig,
     AutoUpdateConfig,
     PersistentSolverConfig,
+    TextIO_or_Logger,
 )
+
+ipopt, ipopt_available = attempt_import('ipopt')
+
+
+class TestTextIO_or_LoggerValidator(unittest.TestCase):
+    def test_booleans(self):
+        ans = TextIO_or_Logger(True)
+        self.assertTrue(isinstance(ans[0], io._io.TextIOWrapper))
+        ans = TextIO_or_Logger(False)
+        self.assertEqual(ans, [])
+
+    def test_logger(self):
+        logger = logging.getLogger(__name__)
+        ans = TextIO_or_Logger(logger)
+        self.assertTrue(isinstance(ans[0], LogStream))
+
+    @unittest.skipIf(not ipopt_available, 'ipopt is not available')
+    def test_real_example(self):
+        log_stream = io.StringIO()
+        logging.basicConfig(stream=log_stream, level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2], initialize=1, bounds=(0, None))
+        m.eq = pyo.Constraint(expr=m.x[1] * m.x[2] ** 1.5 == 3)
+        m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2)
+
+        solver = pyo.SolverFactory("ipopt_v2")
+        with capture_output(logger):
+            solver.solve(m, tee=True, timelimit=5)
+
+        log_contents = log_stream.getvalue()
+        self.assertIn('DEBUG:', log_contents)
 
 
 class TestSolverConfig(unittest.TestCase):
