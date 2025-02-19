@@ -1755,6 +1755,145 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
+    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
+    def test_coefficient_matching_certain_param(self):
+        m = ConcreteModel()
+        m.q1 = Param(mutable=True, initialize=1)
+        m.q2 = Param(mutable=True, initialize=1)
+        m.x1 = Var(bounds=[0, 1])
+        m.x2 = Var(bounds=[0, 1])
+        m.eq_con = Constraint(expr=m.q1 * m.x1 - m.x2 + m.q2 == 0)
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        # makes q2 a certain param
+        # so the equality constraint should be coefficient matched
+        # with respect to q1 only
+        interval = BoxSet(bounds=[(1, 2), (1, 1)])
+
+        pyros_solver = SolverFactory("pyros")
+        local_subsolver = SolverFactory('scip')
+        global_subsolver = SolverFactory("scip")
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(results.iterations, 1)
+        self.assertAlmostEqual(first=results.final_objective_value, second=1, places=2)
+        self.assertEqual(m.x1.value, 0)
+        self.assertEqual(m.x2.value, 1)
+
+    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
+    def test_coefficient_matching_singleton_set(self):
+        m = build_leyffer()
+        # when uncertainty set is singleton,
+        # this should be robust feasible in 1 iteration,
+        # as coefficient matching should not be applicable
+        m.eq_con = Constraint(
+            expr=m.u * (m.x1**3 + 0.5)
+            - 5 * m.u * m.x1 * m.x2
+            + m.u * (m.x1 + 2)
+            + m.u**2
+            == 0
+        )
+        interval = BoxSet(bounds=[(value(m.u), value(m.u))])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('scip')
+        global_subsolver = SolverFactory("scip")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(results.iterations, 1)
+        self.assertAlmostEqual(
+            first=results.final_objective_value,
+            second=2.4864,
+            places=2,
+            msg="Incorrect objective function value.",
+        )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT not available")
+    def test_pyros_certain_params_ipopt_degrees_of_freedom(self):
+        """
+        Test PyROS with IPOPT as subsolver does not run into
+        subproblems not solved successfully due to too few
+        degrees of freedom.
+        """
+        # choose a value of 2 or more
+        num_uncertain_params = 5
+
+        m = ConcreteModel()
+        m.x = Var(bounds=[1, 2])
+        m.q = Param(range(num_uncertain_params), initialize=1, mutable=True)
+        m.obj = Objective(expr=m.x + sum(m.q.values()))
+
+        # only the first uncertain parameter is effectively uncertain
+        box_set = BoxSet([[1, 2]] + [[1, 1]] * (num_uncertain_params - 1))
+
+        pyros_solver = SolverFactory("pyros")
+
+        # IPOPT is sensitive to models with too few degrees of freedom
+        ipopt = SolverFactory('ipopt')
+
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=box_set,
+            local_solver=ipopt,
+            global_solver=ipopt,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "bypass_local_separation": True,
+            },
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+        )
+        self.assertEqual(results.iterations, 2)
+        self.assertAlmostEqual(
+            first=results.final_objective_value,
+            second=2 + num_uncertain_params,
+            places=2,
+        )
+        self.assertEqual(m.x.value, 1)
+
 
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
 class TestPyROSVarsAsUncertainParams(unittest.TestCase):
