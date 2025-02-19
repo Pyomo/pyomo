@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common import unittest
-from pyomo.contrib.solver.config import (
+from pyomo.contrib.solver.common.config import (
     SolverConfig,
     BranchAndBoundConfig,
     AutoUpdateConfig,
@@ -78,7 +78,6 @@ class TestAutoUpdateConfig(unittest.TestCase):
         self.assertTrue(config.update_named_expressions)
         self.assertTrue(config.update_objective)
         self.assertTrue(config.update_objective)
-        self.assertTrue(config.treat_fixed_vars_as_params)
 
     def test_interface_custom_instantiation(self):
         config = AutoUpdateConfig(description="A description")
@@ -109,7 +108,6 @@ class TestPersistentSolverConfig(unittest.TestCase):
         self.assertTrue(config.auto_updates.update_named_expressions)
         self.assertTrue(config.auto_updates.update_objective)
         self.assertTrue(config.auto_updates.update_objective)
-        self.assertTrue(config.auto_updates.treat_fixed_vars_as_params)
 
     def test_interface_custom_instantiation(self):
         config = PersistentSolverConfig(description="A description")
