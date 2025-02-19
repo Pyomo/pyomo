@@ -322,19 +322,13 @@ class SCIPDirect(DirectSolver):
             if type(con_lower) != float and type(con_lower) != int:
                 logger.warning(
                     f"Constraint {conname} has LHS type {type(value(con.lower))}. "
-                    f"Converting to float as type is not allowed for SCIP."
+                    f"Converting to float as SCIP fails otherwise."
                 )
                 con_lower = float(con_lower)
         if con.has_ub():
             if not is_fixed(con.upper):
                 raise ValueError(f"Upper bound of constraint {con} is not constant.")
             con_upper = value(con.upper)
-            if type(con_upper) != float and type(con_upper) != int:
-                logger.warning(
-                    f"Constraint {conname} has RHS type {type(value(con.upper))}. "
-                    f"Converting to float as type is not allowed for SCIP."
-                )
-                con_upper = float(con_upper)
 
         if con.equality:
             scip_cons = self._solver_model.addCons(scip_expr == con_lower, name=conname)
@@ -642,7 +636,6 @@ class SCIPDirect(DirectSolver):
                 soln.gap = None
 
         self.results.problem.number_of_constraints = scip.getNConss(transformed=False)
-        # self.results.problem.number_of_nonzeros = None
         self.results.problem.number_of_variables = scip.getNVars(transformed=False)
         self.results.problem.number_of_binary_variables = n_bin_vars
         self.results.problem.number_of_integer_variables = n_int_vars
