@@ -45,8 +45,14 @@ class ASL(SystemCallSolver):
         # If yes, use the knitroampl executable from the package instead of searching in PATH.
         #
         if 'executable' in kwds and kwds['executable'] == 'knitroampl':
-            candidate_knitroampl_dir = Path(__file__).resolve().parents[4] / 'knitro' / 'knitroampl'
-            if find_executable('knitroampl', include_PATH=False, pathlist=[str(candidate_knitroampl_dir)]):
+            candidate_knitroampl_dir = (
+                Path(__file__).resolve().parents[4] / 'knitro' / 'knitroampl'
+            )
+            if find_executable(
+                'knitroampl',
+                include_PATH=False,
+                pathlist=[str(candidate_knitroampl_dir)],
+            ):
                 kwds['executable'] = str(candidate_knitroampl_dir / 'knitroampl')
         #
         # Call base constructor
