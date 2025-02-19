@@ -119,6 +119,8 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         add_disjunct_list(util_block)
         add_algebraic_variable_list(util_block)
         add_boolean_variable_lists(util_block)
+        util_block.config_disjunction_list = config.disjunction_list
+        util_block.config_logical_constraint_list = config.logical_constraint_list
 
         # We will use the working_model to perform the LDSDA search.
         self.working_model = model.clone()
@@ -238,10 +240,12 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
         # for c in util_block.logical_constraint_list:
         #     if isinstance(c.body, ExactlyExpression):
         if config.logical_constraint_list is not None:
-            for constraint_name in config.logical_constraint_list:
+            for c in util_block.config_logical_constraint_list:
+                if not isinstance(c.body, ExactlyExpression):
+                    raise ValueError(
+                        "The logical_constraint_list config should be a list of ExactlyExpression logical constraints."
+                    )
                 # TODO: in the first version, we don't support more than one exactly constraint.
-                # TODO: if we use component instead of model.find_component, it will fail.
-                c = model.find_component(constraint_name)
                 exactly_number = c.body.args[0]
                 if exactly_number > 1:
                     raise ValueError("The function only works for exactly_number = 1")
@@ -262,10 +266,7 @@ class GDP_LDSDA_Solver(_GDPoptAlgorithm):
                     ]
                 )
         if config.disjunction_list is not None:
-            for disjunction_name in config.disjunction_list:
-                # TODO: in the first version, we don't support more than one exactly constraint.
-                # TODO: if we use component instead of model.find_component, it will fail.
-                disjunction = model.find_component(disjunction_name)
+            for disjunction in util_block.config_disjunction_list:
                 sorted_boolean_var_list = [
                     disjunct.indicator_var for disjunct in disjunction.disjuncts
                 ]

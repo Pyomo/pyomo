@@ -49,8 +49,8 @@ class TestGDPoptLDSDA(unittest.TestCase):
                 minlp_solver_args=dict(solver='ipopth'),
                 starting_point=[1, 2],
                 logical_constraint_list=[
-                    model.mode_transfer_lc1.name,
-                    model.mode_transfer_lc2.name,
+                    model.mode_transfer_lc1,
+                    model.mode_transfer_lc2,
                 ],
                 time_limit=100,
             )
