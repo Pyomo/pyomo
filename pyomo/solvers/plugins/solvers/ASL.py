@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 
+from pathlib import Path
 import os
 import subprocess
 
@@ -17,6 +18,7 @@ from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.fileutils import find_executable
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -38,6 +40,14 @@ class ASL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications."""
 
     def __init__(self, **kwds):
+        #
+        # If solving with knitroampl, check if Knitro Python package is installed in the same environment.
+        # If yes, use the knitroampl executable from the package instead of searching in PATH.
+        #
+        if 'executable' in kwds and kwds['executable'] == 'knitroampl':
+            candidate_knitroampl_dir = Path(__file__).resolve().parents[4] / 'knitro' / 'knitroampl'
+            if find_executable('knitroampl', include_PATH=False, pathlist=[str(candidate_knitroampl_dir)]):
+                kwds['executable'] = str(candidate_knitroampl_dir / 'knitroampl')
         #
         # Call base constructor
         #
