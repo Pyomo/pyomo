@@ -42,9 +42,6 @@ class TestTextIO_or_LoggerValidator(unittest.TestCase):
 
     @unittest.skipIf(not ipopt_available, 'ipopt is not available')
     def test_real_example(self):
-        log_stream = io.StringIO()
-        logging.basicConfig(stream=log_stream, level=logging.DEBUG)
-        logger = logging.getLogger('contrib.solver.config.test.1')
 
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2], initialize=1, bounds=(0, None))
@@ -52,13 +49,11 @@ class TestTextIO_or_LoggerValidator(unittest.TestCase):
         m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2)
 
         solver = pyo.SolverFactory("ipopt_v2")
-        with capture_output(logger):
+        with capture_output() as OUT:
             solver.solve(m, tee=True, timelimit=5)
 
-        for handler in logger.handlers:
-            handler.flush()
-        log_contents = log_stream.getvalue()
-        self.assertIn('EXIT: Optimal Solution Found.', log_contents)
+        contents = OUT.getvalue()
+        self.assertIn('EXIT: Optimal Solution Found.', contents)
 
 
 class TestSolverConfig(unittest.TestCase):

@@ -46,10 +46,7 @@ def TextIO_or_Logger(val):
     Raises:
       - ValueError if an invalid type is provided.
     """
-    if isinstance(val, (sys.stdout.__class__, io.TextIOBase, logging.Logger)):
-        val = [val]
-
-    elif isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
+    if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
         val = list(val)
 
     else:
@@ -62,6 +59,9 @@ def TextIO_or_Logger(val):
             if v:
                 ans.append(sys.stdout)
         elif isinstance(v, (sys.stdout.__class__, io.TextIOBase)):
+            # We are guarding against file-like classes that do not derive from
+            # TextIOBase but are assigned to stdout / stderr.
+            # We still want to accept those classes.
             ans.append(v)
         elif isinstance(v, logging.Logger):
             ans.append(LogStream(level=logging.INFO, logger=v))
