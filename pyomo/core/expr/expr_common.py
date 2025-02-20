@@ -16,10 +16,6 @@ from pyomo.common.deprecation import deprecated
 
 TO_STRING_VERBOSE = False
 
-_eq = 0
-_le = 1
-_lt = 2
-
 # logical propositions
 _and = 0
 _or = 1

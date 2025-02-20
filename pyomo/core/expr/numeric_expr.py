@@ -32,9 +32,6 @@ from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_common import (
     OperatorAssociativity,
     ExpressionType,
-    _lt,
-    _le,
-    _eq,
     _unary_op_dispatcher_type_mapping,
     _binary_op_dispatcher_type_mapping,
     _invalid,
@@ -44,6 +41,14 @@ from pyomo.core.expr.expr_common import (
 
 # Note: pyggyback on expr.base's use of attempt_import(visitor)
 from pyomo.core.expr.base import ExpressionBase, NPV_Mixin, visitor
+
+# Note: There is a circular dependency between relational_expr and this
+# module: relational_expr would like to reuse/build on
+# _categorize_arg_type(), and NumericValue needs to call the relational
+# dispatchers from relational_expr.  Instead of ensuring that one of the
+# modules is fully declared before importing into the other, we will
+# have BOTH modules assume that the other module has NOT been declared.
+import pyomo.core.expr.relational_expr as relational_expr
 
 
 _ndarray, _ = attempt_import('pyomo.core.expr.ndarray')
@@ -104,11 +109,6 @@ relocated_module_attribute(
 )
 
 _zero_one_optimizations = {1}
-
-
-# Stub in the dispatchers
-def _generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")
 
 
 def enable_expression_optimizations(zero=None, one=None):
@@ -385,7 +385,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self < other
             other > self
         """
-        return _generate_relational_expression(_lt, self, other)
+        return relational_expr._lt_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
     def __gt__(self, other):
         """
@@ -396,7 +398,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self > other
             other < self
         """
-        return _generate_relational_expression(_lt, other, self)
+        return relational_expr._lt_dispatcher[other.__class__, self.__class__](
+            other, self
+        )
 
     def __le__(self, other):
         """
@@ -407,7 +411,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self <= other
             other >= self
         """
-        return _generate_relational_expression(_le, self, other)
+        return relational_expr._le_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
     def __ge__(self, other):
         """
@@ -418,7 +424,9 @@ explicitly resolving the numeric value using the Pyomo value() function.
             self >= other
             other <= self
         """
-        return _generate_relational_expression(_le, other, self)
+        return relational_expr._le_dispatcher[other.__class__, self.__class__](
+            other, self
+        )
 
     def __eq__(self, other):
         """
@@ -428,7 +436,13 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self == other
         """
-        return _generate_relational_expression(_eq, self, other)
+        # Note: While it would appear that keeping the attribute lookup
+        # into the relational_expr module would be a performance hit, we
+        # want that indirection as it allows us to selectively disable
+        # operator overloading for comparisons.
+        return relational_expr._eq_dispatcher[self.__class__, other.__class__](
+            self, other
+        )
 
     def __add__(self, other):
         """
