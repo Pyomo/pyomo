@@ -45,6 +45,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # this is done over *all* variables in active blocks, even
         # if they are not included in this model
         self._pyomo_model_var_names_to_datas = None
+        self._number_of_objectives = 0
         try:
             # We support Pynumero's ExternalGreyBoxBlock modeling
             # objects that are provided through ExternalGreyBoxBlock objects
@@ -59,6 +60,11 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
             # store the pyomo model
             self._pyomo_model = pyomo_model
+
+            # count the number of objectives excluding grey box objectives
+            for obj in self._pyomo_model.component_data_objects(pyo.Objective, active=True, descend_into=True):
+                self._number_of_objectives += 1
+
             # build a PyomoNLP object (will include the "pyomo"
             # part of the model only)
             self._pyomo_nlp = PyomoNLP(pyomo_model)
@@ -88,7 +94,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                 " PyomoGreyBoxModel requires at least one variable"
                 " to be active in a Pyomo objective or constraint"
             )
-
+        
         # build the list of NLP wrappers for the greybox objects
         greybox_nlps = []
         fixed_vars = []
@@ -100,7 +106,14 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
                     greybox_nlp = _ExternalGreyBoxAsNLP(data)
+                    if greybox_nlp._ex_model.has_objective():
+                        self._number_of_objectives += 1
                     greybox_nlps.append(greybox_nlp)
+
+        if self._number_of_objectives > 1:
+            raise ValueError(
+                f'Found {self._number_of_objectives} active objectives. Expected 1.'
+            )
 
         if fixed_vars:
             logging.getLogger(__name__).error(

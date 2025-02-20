@@ -333,7 +333,8 @@ class ExternalGreyBoxModel(object):
         input_values
         """
         raise NotImplementedError(
-            'evaluate_objective called but not ' 'implemented in the derived class.'
+            'evaluate_objective called but '
+            'not implemented in the derived class.'
         )
 
     def evaluate_grad_objective(self, out=None):
