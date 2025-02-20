@@ -38,7 +38,7 @@ def TextIO_or_Logger(val):
       - sys.stdout
       - Instances of io.TextIOBase
       - logging.Logger (wrapped as LogStream)
-      - Boolean values (`True` → sys.stdout)
+      - Boolean values (`True` -> sys.stdout)
 
     Returns:
       - A list of validated output streams.
