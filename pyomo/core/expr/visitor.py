@@ -682,7 +682,7 @@ class StreamBasedExpressionVisitor(object):
 @deprecated(
     "The SimpleExpressionVisitor is deprecated.  "
     "Please use the StreamBasedExpressionVisitor instead.",
-    version='6.9.0.dev0',
+    version='6.9.0',
 )
 class SimpleExpressionVisitor(object):
     """
