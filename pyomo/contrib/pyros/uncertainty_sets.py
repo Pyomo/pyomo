@@ -1410,7 +1410,7 @@ class PolyhedralSet(UncertaintySet):
     :math:`A \\in \\mathbb{R}^{m \\times n}` refers to
     ``lhs_coefficients_mat``,
     and
-    :math:`b \\in \\mathbb{R}^n` refers to ``rhs_vec``.
+    :math:`b \\in \\mathbb{R}^m` refers to ``rhs_vec``.
 
     Examples
     --------
