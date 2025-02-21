@@ -955,6 +955,24 @@ class BoxSet(UncertaintySet):
     bounds : (N, 2) array_like
         Lower and upper bounds for each dimension of the set.
 
+    Notes
+    -----
+    The :math:`n`-dimensional box set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,|
+            \\,q^\\text{L} \\leq q \\leq q^\\text{U}
+        \\right\\}
+
+    in which
+    :math:`q^\\text{L} \\in \\mathbb{R}^n` refers to
+    ``np.array(bounds[:, 0])``,
+    and
+    :math:`q^\\text{U} \\in \\mathbb{R}^n` refers to
+    ``np.array(bounds[:, 1])``.
+
     Examples
     --------
     1D box set (interval):
@@ -1097,6 +1115,29 @@ class CardinalitySet(UncertaintySet):
         Upper bound for the number of uncertain parameters which
         may realize their maximal deviations from the origin
         simultaneously.
+
+    Notes
+    -----
+    The :math:`n`-dimensional cardinality set is defined by
+
+    .. math::
+
+        \\left\\{ q \\in \\mathbb{R}^n\\,\\middle|
+             \\,\\exists\\, \\xi \\in [0, 1]^n \\,:\\,
+             \\left[
+                 \\begin{array}{l}
+                    q = q^0 + \\hat{q} \\circ \\xi \\\\
+                    \\displaystyle \\sum_{i=1}^n \\xi_i \\leq \\Gamma
+                 \\end{array}
+             \\right]
+        \\right\\}
+
+    in which
+    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`\\hat{q} \\in \\mathbb{R}_{+}^n`
+    refers to ``positive_deviation``,
+    and :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
+    The operator :math:`\\circ` denotes the element-wise product.
 
     Examples
     --------
@@ -1354,6 +1395,23 @@ class PolyhedralSet(UncertaintySet):
         ``lhs_coefficients_mat @ x``, where `x` is an (N,)
         array representing any point in the polyhedral set.
 
+    Notes
+    -----
+    The :math:`n`-dimensional polyhedral set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,
+            \\middle| \\, A q \\leq b
+        \\right\\}
+
+    in which
+    :math:`A \\in \\mathbb{R}^{m \\times n}` refers to
+    ``lhs_coefficients_mat``,
+    and
+    :math:`b \\in \\mathbb{R}^n` refers to ``rhs_vec``.
+
     Examples
     --------
     2D polyhedral set with 4 defining inequalities:
@@ -1576,6 +1634,28 @@ class BudgetSet(UncertaintySet):
     origin : (N,) array_like or None, optional
         Origin of the budget set. If `None` is provided, then
         the origin is set to the zero vector.
+
+    Notes
+    -----
+    The :math:`n`-dimensional budget set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,\\middle|
+            \\begin{pmatrix} B \\\\ -I \\end{pmatrix} q
+            \\leq \\begin{pmatrix} b + Bq^0 \\\\ -q^0 \\end{pmatrix}
+        \\right\\}
+
+    in which
+    :math:`B \\in \\{0, 1\\}^{\\ell \\times n}` refers to
+    ``budget_membership_mat``,
+    the quantity
+    :math:`I` denotes the :math:`n \\times n` identity matrix,
+    the quantity
+    :math:`b \\in \\mathbb{R}_{+}^\\ell` refers to ``budget_rhs``,
+    and
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``origin``.
 
     Examples
     --------
@@ -1868,6 +1948,33 @@ class FactorModelSet(UncertaintySet):
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
         their extreme values.
+
+    Notes
+    -----
+    The :math:`n`-dimensional factor model set is defined by
+
+    .. math::
+
+        \\left\\{ q \\in \\mathbb{R}^n\\,
+            \\middle|
+             \\,
+            \\exists\\, \\xi \\in [-1, 1]^n \\,:\\,
+            \\left[
+            \\begin{array}{l}
+                q = q^0 + \\Psi \\xi \\\\
+                \\displaystyle
+                    \\bigg| \\sum_{i=1}^n \\xi_i \\bigg|
+                    \\leq \\beta F
+            \\end{array}
+            \\right]
+        \\right\\}
+
+    in which
+    :math:`q^\\text{0} \\in \\mathbb{R}^n` refers to ``origin``,
+    the quantity :math:`\\Psi \\in \\mathbb{R}^{n \\times F}`
+    refers to ``psi_mat``,
+    and :math:`\\beta \\in [0, 1]` refers to ``beta``.
+
 
     Examples
     --------
@@ -2190,7 +2297,7 @@ class FactorModelSet(UncertaintySet):
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
     """
-    An axis-aligned ellipsoid.
+    An axis-aligned ellipsoidal region.
 
     Parameters
     ----------
@@ -2199,9 +2306,37 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     half_lengths : (N,) array_like
         Semi-axis lengths of the ellipsoid.
 
+    See Also
+    --------
+    EllipsoidalSet : A general ellipsoidal region.
+
+    Notes
+    -----
+    The :math:`n`-dimensional axis-aligned ellipsoidal set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,
+            \\middle|\\,
+            \\begin{array}{l}
+                \\displaystyle
+                    \\sum_{\\substack{i = 1 \\\\ \\alpha_i > 0}}^n
+                    \\bigg( \\frac{q_i - q_i^0}{\\alpha_i}\\bigg)^2
+                    \\leq 1
+                    \\\\
+                q_i = q_i^0\\quad\\forall\\,i \\,:\\,\\alpha_i = 0
+            \\end{array}
+        \\right\\}
+
+    in which
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    and :math:`\\alpha \\in \\mathbb{R}_{+}^n` refers to
+    ``half_lengths``.
+
     Examples
     --------
-    3D origin-centered unit hypersphere:
+    3D origin-centered unit ball:
 
     >>> from pyomo.contrib.pyros import AxisAlignedEllipsoidalSet
     >>> sphere = AxisAlignedEllipsoidalSet(
@@ -2367,7 +2502,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
 class EllipsoidalSet(UncertaintySet):
     """
-    A general ellipsoid.
+    A general ellipsoidal region.
 
     Parameters
     ----------
@@ -2386,6 +2521,34 @@ class EllipsoidalSet(UncertaintySet):
         matrix `shape_matrix`.
         Exactly one of `scale` and `gaussian_conf_lvl` should be
         None; otherwise, an exception is raised.
+
+    See Also
+    --------
+    AxisAlignedEllipsoidalSet : An axis-aligned ellipsoidal region.
+
+    Notes
+    -----
+    The :math:`n`-dimensional ellipsoidal set is defined by
+
+    .. math::
+
+        \\left\\{
+            q \\in \\mathbb{R}^n\\,|
+            \\,(q - q^0)^\\intercal P^{-1}(q - q^0) \\leq s
+        \\right\\}
+
+    in which
+    :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
+    the quantity
+    :math:`P \\in \\mathbb{R}^{n \\times n}`
+    refers to ``shape_matrix``,
+    and :math:`s \\geq 0` refers to ``scale``.
+
+    The quantity :math:`s` is related to the Gaussian confidence level
+    (``gaussian_conf_lvl``) :math:`p \\in [0, 1)`
+    by :math:`s = \\chi_{n}^2(p)`, in which
+    :math:`\\chi_{n}^2(\\cdot)` is the quantile function
+    of the chi-squared distribution with :math:`n` degrees of freedom.
 
     Examples
     --------
@@ -2727,6 +2890,19 @@ class DiscreteScenarioSet(UncertaintySet):
     scenarios : (M, N) array_like
         A sequence of `M` distinct uncertain parameter realizations.
 
+    Notes
+    -----
+    The :math:`n`-dimensional discrete set is defined by
+
+    .. math::
+
+        \\left\\{
+                q^1, q^2, \\dots, q^m
+        \\right\\}
+
+    in which :math:`q^i \\in \\mathbb{R}^n`
+    refers to ``scenarios[i - 1]`` for :math:`i = 1, 2, \\dots, m`.
+
     Examples
     --------
     2D set with three scenarios:
@@ -2894,6 +3070,19 @@ class IntersectionSet(UncertaintySet):
         PyROS `UncertaintySet` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
+
+    Notes
+    -----
+    The :math:`n`-dimensional intersection set is defined by
+
+    .. math::
+
+        \\mathcal{Q}_1 \\cap \\mathcal{Q}_2 \\cap \\cdots
+            \\cap \\mathcal{Q}_m
+
+    in which :math:`\\mathcal{Q}_i \\subset \\mathbb{R}^n`
+    refers to the uncertainty set ``list(unc_sets.values())[i - 1]``
+    for :math:`i = 1, 2, \\dots, m`.
 
     Examples
     --------
