@@ -25,7 +25,7 @@ from pyomo.common.config import (
     document_kwargs_from_configdict,
 )
 from pyomo.common.deprecation import relocated_module_attribute
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
+from pyomo.common.errors import InfeasibleConstraintException, EmptyModelError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
 
@@ -320,7 +320,7 @@ class NLWriter(object):
             if config.symbolic_solver_labels:
                 os.remove(row_fname)
                 os.remove(col_fname)
-            raise ValueError(
+            raise EmptyModelError(
                 "No variables appear in the Pyomo model constraints or"
                 " objective. This is not supported by the NL file interface"
             )
