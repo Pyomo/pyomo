@@ -472,8 +472,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     An object representing an uncertainty set to be passed to the
     PyROS solver.
 
-    An `UncertaintySet` object should be viewed as merely a container
-    for data needed to parameterize the set it represents,
+    `UncertaintySet` is an abstract base class for constructing
+    specific subclasses and instances of uncertainty sets.
+    Therefore, `UncertaintySet` cannot be instantiated directly.
+
+    A concrete `UncertaintySet` instance should be viewed as merely
+    a container for data needed to parameterize the set it represents,
     such that the object's attributes do not reference the
     components of a Pyomo modeling object.
     """
