@@ -2339,13 +2339,13 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     3D origin-centered unit ball:
 
     >>> from pyomo.contrib.pyros import AxisAlignedEllipsoidalSet
-    >>> sphere = AxisAlignedEllipsoidalSet(
+    >>> ball = AxisAlignedEllipsoidalSet(
     ...     center=[0, 0, 0],
-    ...     half_lengths=[1, 1, 1]
+    ...     half_lengths=[1, 1, 1],
     ... )
-    >>> sphere.center
+    >>> ball.center
     array([0, 0, 0])
-    >>> sphere.half_lengths
+    >>> ball.half_lengths
     array([1, 1, 1])
 
     """
