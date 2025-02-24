@@ -212,8 +212,10 @@ if test -z "$MODE" -o "$MODE" == test; then
             PYOMO_SOURCE_SHA=$GIT_COMMIT
         fi
         if test -n "$CODECOV_TOKEN" -a -n "$PYOMO_SOURCE_SHA"; then
-            CODECOV_JOB_NAME=$(echo ${JOB_NAME} \
-                | sed -r 's/^(.*autotest_)?Pyomo_([^\/]+).*/\2/').$BUILD_NUMBER.$python
+            _NAME=$(echo $JOB_NAME | sed -r 's/^(.*(autotest|Build)_)?([^\/]+).*/\3/')
+            _MATRIX=$(echo  $JOB_NAME | sed -r "s/,/\n/g" | grep -v host \
+                          | sed -r 's/.*=//' | tr '\n' , | sed -r 's/,+$//')
+            CODECOV_JOB_NAME=${_NAME}/${_MATRIX}.${BUILD_NUMBER}
             if test -z "$CODECOV_REPO_OWNER"; then
                 if test -n "$PYOMO_SOURCE_REPO"; then
                     CODECOV_REPO_OWNER=$(echo "$PYOMO_SOURCE_REPO" | cut -d '/' -f 4)
