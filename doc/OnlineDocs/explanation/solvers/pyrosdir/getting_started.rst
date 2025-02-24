@@ -47,7 +47,7 @@ PyROS can be installed as follows:
 
 Usage Tutorial
 --------------
-This tutorial shows how to solve robust optimization problems with PyROS.
+In this tutorial, we will solve robust optimization problems with PyROS.
 The problems are derived from the deterministic model *hydro*,
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
@@ -64,10 +64,10 @@ Moreover, there are
 12 linear equality constraints,
 6 non-linear (quadratic) equality constraints,
 and a quadratic objective.
-We have extended this model by converting one objective coefficient,
-two constraint coefficients, and one constraint right-hand side
-into :class:`~pyomo.core.base.param.Param` objects
-so that they can be considered uncertain later on.
+**All variables of the model are continuous.**
+
+.. note::
+   PyROS does not support models with discrete decision variables.
 
 .. note::
     Per our analysis, the model *hydro* satisfies the requirement that
@@ -77,6 +77,12 @@ so that they can be considered uncertain later on.
     indicates a proper partitioning of the model variables
     into (first-stage and second-stage) degrees of freedom and
     state variables.
+
+We have extended this model by converting one objective coefficient,
+two constraint coefficients, and one constraint right-hand side
+into :class:`~pyomo.core.base.param.Param` objects
+so that they can be considered uncertain later on.
+
 
 Step 0: Import Pyomo and the PyROS Module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -95,7 +101,7 @@ Step 1: Define the Deterministic Problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The deterministic Pyomo model for *hydro* is constructed as follows.
-We first construct the main model object:
+We first instantiate a Pyomo model object:
 
 .. _pyros_model_construct:
 
@@ -228,7 +234,7 @@ Finally, we declare the decision variables, objective, and constraints:
 
 Before moving on, we check that the model can be solved to optimality
 with a deterministic nonlinear programming (NLP) solver.
-For convenience, we use BARON as the solver:
+We have elected to use BARON as the solver:
 
 .. _pyros_solve_deterministic:
 
@@ -265,20 +271,14 @@ one of the following:
 * ``list(m.q.values())``
 
 .. note::
-    Any :class:`~pyomo.core.base.param.Param` object that is
-    to be considered uncertain by PyROS must have the property
-    ``mutable=True``.
-
-.. note::
-    PyROS also allows uncertain parameters to be implemented as
-    :class:`~pyomo.core.base.var.Var` objects declared on the
-    deterministic model.
-    This may be convenient for users transitioning to PyROS from
-    parameter estimation and/or uncertainty quantification workflows,
-    in which the uncertain parameters are
-    often represented by :class:`~pyomo.core.base.var.Var` objects.
-    Prior to invoking PyROS,
-    all such :class:`~pyomo.core.base.var.Var` objects should be fixed.
+    1. Any :class:`~pyomo.core.base.param.Param` object that
+       represents an uncertain parameter must be instantiated
+       with the constructor argument ``mutable=True``.
+    2. Uncertain parameters can also be represented by
+       :class:`~pyomo.core.base.var.Var`
+       objects declared on the deterministic model.
+       Prior to invoking PyROS,
+       all such :class:`~pyomo.core.base.var.Var` objects should be fixed.
 
 
 PyROS requires an uncertainty set against which to robustly
@@ -290,11 +290,12 @@ In PyROS, an uncertainty set is represented by
 an instance of a subclass of the
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet` class.
 
-Let us assume in the present example that each uncertain parameter can
+In the present example,
+let us assume that each uncertain parameter can
 independently of the other uncertain parameters
 deviate from the parameter's nominal value by up to :math:`\pm 15\%`.
-The resulting uncertainty set is a box, which we can implement
-as an instance of the
+Then the parameter values are constrained to a box region,
+which we can implement as an instance of the
 :class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet` subclass:
 
 .. doctest::
@@ -362,7 +363,7 @@ So our variable designation is as follows:
   >>> second_stage_variables = []
 
 The single-stage problem can now be solved
-:ref:`to robust optimality <pyros_robust_optimality_args>`
+to robust optimality
 by invoking the :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 method of the PyROS solver object, as follows:
 
@@ -372,6 +373,7 @@ method of the PyROS solver object, as follows:
   :skipif: not (baron.available() and baron.license_is_valid())
 
   >>> results_1 = pyros_solver.solve(
+  ...     # required arguments
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
@@ -379,6 +381,7 @@ method of the PyROS solver object, as follows:
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
+  ...     # optional arguments: solve to robust optimality
   ...     objective_focus=pyros.ObjectiveType.worst_case,
   ...     solve_master_globally=True,
   ... )
@@ -442,7 +445,7 @@ as follows:
   ...     global_solver=global_solver,
   ...     objective_focus=pyros.ObjectiveType.worst_case,
   ...     solve_master_globally=True,
-  ...     decision_rule_order=1,
+  ...     decision_rule_order=1,  # use affine decision rules
   ... )
   ==============================================================================
   PyROS: The Pyomo Robust Optimization Solver...
@@ -464,9 +467,10 @@ Specifying Arguments Indirectly Through ``options``
 """""""""""""""""""""""""""""""""""""""""""""""""""
 Like other Pyomo solver interface methods,
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
-provides support for specifying options indirectly by passing
-a keyword argument ``options``, whose value must be a :class:`dict`
-mapping names of arguments to :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+provides support for specifying optional arguments indirectly by passing
+a keyword argument ``options``, for which the value must be a :class:`dict`
+mapping names of optional arguments to
+:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
 to their desired values.
 For example, the ``solve()`` statement in the
 :ref:`two-stage problem snippet <example-two-stg>`
@@ -476,6 +480,7 @@ could have been equivalently written as:
   :skipif: not (baron.available() and baron.license_is_valid())
 
   >>> results_2 = pyros_solver.solve(
+  ...     # required arguments
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
@@ -483,6 +488,7 @@ could have been equivalently written as:
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
+  ...     # optional arguments: passed indirectly
   ...     options={
   ...         "objective_focus": pyros.ObjectiveType.worst_case,
   ...         "solve_master_globally": True,
@@ -511,6 +517,15 @@ by position or keyword, *and* indirectly through ``options``,
 the value passed directly takes precedence over the value
 passed through ``options``.
 
+.. warning::
+
+   All required arguments to the PyROS
+   :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
+   must be passed directly by position or keyword,
+   or else an exception is raised.
+   Required arguments passed indirectly through the ``options``
+   setting are ignored.
+
 
 Step 4: Check the Results
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -537,7 +552,7 @@ We can also query the results object's individual attributes:
 
    >>> results_2.iterations  # total number of iterations
    5
-   >>> results_2.time  # total wall-clock time (in seconds); may vary
+   >>> results_2.time  # total wall-clock seconds; may vary
    6.336
    >>> results_2.final_objective_value  # final objective value; may vary
    36285242.22224089
@@ -631,15 +646,7 @@ Analyzing the Price of Robustness
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 PyROS facilitates an analysis of the "price of robustness",
 which we define to be the increase in the robust optimal objective value
-relative to the deterministically optimal objective value.
-The deterministically optimal objective can be obtained as follows:
-
-.. code::
-
-   >>> pyo.assert_optimal_termination(global_solver.solve(m))
-   >>> deterministic_obj = pyo.value(m.obj)
-
-
+relative to the deterministically optimal objective value
 Let us, for example, consider optimizing robustly against a
 box uncertainty set centered on the nominal realization
 of the uncertain parameters
@@ -676,7 +683,7 @@ in a for-loop:
   ...         uncertain_params=uncertain_params,
   ...         uncertainty_set=box_uncertainty_set,
   ...         local_solver=local_solver,
-  ...         global_solver=pyo.SolverFactory("scip"),
+  ...         global_solver=global_solver,
   ...         objective_focus=pyros.ObjectiveType.worst_case,
   ...         solve_master_globally=True,
   ...         decision_rule_order=1,
@@ -695,7 +702,9 @@ in a for-loop:
   All done.
 
 Using the :py:obj:`dict` populated in the loop,
-we can print a summary of the results:
+and the 
+:ref:`previously evaluated deterministically optimal objective value <pyros_solve_deterministic>`,
+we can print a tabular summary of the results:
 
 .. code::
 
@@ -737,12 +746,20 @@ we can print a summary of the results:
    ====================================================================================
 
 
-The summary table gives the PyROS termination condition,
-final objective value, and relative increase in objective value
-(compared to the deterministically optimal value),
-for each relative deviation.
+The table shows the response of the PyROS termination condition,
+final objective value, and price of robustness
+to the relative half-length :math:`p`.
+Observe that:
 
-This example clearly illustrates the potential impact of the uncertainty
-set size on the robust optimal objective function value
-and demonstrates the ease of implementing a price of robustness study
+* The optimal objective value for the box set of relative half-length
+  :math:`p=0` is equal to the optimal deterministic objective value
+* The objective value (and thus, the price of robustness)
+  increases with the half-length
+* For large enough half-length (:math:`p=0.4`) the problem
+  is robust infeasible
+
+Therefore, this example clearly illustrates the potential
+impact of the uncertainty set size on the robust optimal
+objective function value
+and the ease of analyzing the price of robustness
 for a given optimization problem under uncertainty.

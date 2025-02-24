@@ -171,8 +171,10 @@ Observe that the log contains the following information:
   * ``main.preprocessing``: Preprocessing time.
   * ``main.other``: Overhead time.
 
-* **Termination statistics** (lines 88--93). Summary of statistics related to the
-  iterate at which PyROS terminates.
+* **Final result** (lines 88--93).
+  A printout of the
+  :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
+  object that is finally returned
 * **Exit message** (lines 94--95).
 
 The iteration log table (lines 62--68) is designed to provide, in a concise manner,
