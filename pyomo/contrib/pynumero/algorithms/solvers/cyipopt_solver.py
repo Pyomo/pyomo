@@ -23,7 +23,7 @@ import abc
 
 from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.common.dependencies import attempt_import, numpy as np, numpy_available
-from pyomo.common.tee import redirect_fd, TeeStream
+from pyomo.common.tee import capture_output
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.base.objective import Objective
 
@@ -228,23 +228,8 @@ class CyIpoptSolver(object):
         for k, v in self._options.items():
             add_option(k, v)
 
-        # We preemptively set up the TeeStream, even if we aren't
-        # going to use it: the implementation is such that the
-        # context manager does nothing (i.e., doesn't start up any
-        # processing threads) until after a client accesses
-        # STDOUT/STDERR
-        with TeeStream(sys.stdout) as _teeStream:
-            if tee:
-                try:
-                    fd = sys.stdout.fileno()
-                except (io.UnsupportedOperation, AttributeError):
-                    # If sys,stdout doesn't have a valid fileno,
-                    # then create one using the TeeStream
-                    fd = _teeStream.STDOUT.fileno()
-            else:
-                fd = None
-            with redirect_fd(fd=1, output=fd, synchronize=False):
-                x, info = cyipopt_solver.solve(xstart)
+        with capture_output(sys.stdout if tee else None, capture_fd=True):
+            x, info = cyipopt_solver.solve(xstart)
 
         return x, info
 
@@ -394,23 +379,8 @@ class PyomoCyIpoptSolver(object):
 
         timer = TicTocTimer()
         try:
-            # We preemptively set up the TeeStream, even if we aren't
-            # going to use it: the implementation is such that the
-            # context manager does nothing (i.e., doesn't start up any
-            # processing threads) until after a client accesses
-            # STDOUT/STDERR
-            with TeeStream(sys.stdout) as _teeStream:
-                if config.tee:
-                    try:
-                        fd = sys.stdout.fileno()
-                    except (io.UnsupportedOperation, AttributeError):
-                        # If sys,stdout doesn't have a valid fileno,
-                        # then create one using the TeeStream
-                        fd = _teeStream.STDOUT.fileno()
-                else:
-                    fd = None
-                with redirect_fd(fd=1, output=fd, synchronize=False):
-                    x, info = cyipopt_solver.solve(problem.x_init())
+            with capture_output(sys.stdout if config.tee else None, capture_fd=True):
+                x, info = cyipopt_solver.solve(problem.x_init())
             solverStatus = SolverStatus.ok
         except:
             msg = "Exception encountered during cyipopt solve:"

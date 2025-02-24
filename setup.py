@@ -234,7 +234,6 @@ setup_kwargs = dict(
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -245,7 +244,7 @@ setup_kwargs = dict(
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     install_requires=['ply'],
     extras_require={
         # There are certain tests that also require pytest-qt, but because those
@@ -253,7 +252,7 @@ setup_kwargs = dict(
         # the dependencies.
         'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
         'docs': [
-            'Sphinx>4',
+            'Sphinx>4,!=8.2.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
