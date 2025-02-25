@@ -8,3 +8,16 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
+#
+# declare deprecation paths for removed modules
+#
+from pyomo.common.deprecation import moved_module
+
+moved_module(
+    'pyomo.repn.tests.ampl.nl_diff',
+    'pyomo.repn.tests.nl_diff',
+    version='6.6.0',
+    remove_in='6.6.1',
+)
+del moved_module

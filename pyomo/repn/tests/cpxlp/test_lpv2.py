@@ -76,7 +76,7 @@ LP writer cannot export suffixes to LP files.  Skipping.
         )
 
     def test_deterministic_unordered_sets(self):
-        ref = """\\* Source Pyomo model name=unknown *\\
+        ref = r"""\* Source Pyomo model name=unknown *\
 
 min 
 o:

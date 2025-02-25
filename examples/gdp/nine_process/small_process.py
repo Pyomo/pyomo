@@ -9,9 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Small process synthesis-inspired toy GDP example.
-
-"""
+"""Small process synthesis-inspired toy GDP example."""
 
 from pyomo.core import ConcreteModel, RangeSet, Var, Constraint, Objective
 from pyomo.core.expr.current import exp, log, sqrt

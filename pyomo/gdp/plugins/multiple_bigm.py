@@ -72,6 +72,14 @@ _trusted_solvers = {
 }
 
 
+def Solver(val):
+    if isinstance(val, str):
+        return SolverFactory(val)
+    if not hasattr(val, 'solve'):
+        raise ValueError("Expected a string or solver object (with solve() method)")
+    return val
+
+
 @TransformationFactory.register(
     'gdp.mbigm',
     doc="Relax disjunctive model using big-M terms specific to each disjunct",
@@ -127,7 +135,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     CONFIG.declare(
         'solver',
         ConfigValue(
-            default=SolverFactory('gurobi'),
+            default='gurobi',
+            domain=Solver,
             description="A solver to use to solve the continuous subproblems for "
             "calculating the M values",
         ),

@@ -2525,7 +2525,7 @@ class TestBlock(unittest.TestCase):
             "'unknown' contains an uncopyable field 'bad1'", OUTPUT.getvalue()
         )
         self.assertIn("'b' contains an uncopyable field 'bad2'", OUTPUT.getvalue())
-        self.assertIn("'__paranoid__'", OUTPUT.getvalue())
+        self.assertIn("outside the scope of Block.clone()", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
         self.assertIsNotNone(m.b.bad2)
         self.assertTrue(hasattr(nb, 'bad2'))

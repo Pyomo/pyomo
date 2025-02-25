@@ -42,7 +42,7 @@ logger = logging.getLogger('pyomo.solvers')
 
 
 def _validate_file_name(cplex, filename, description):
-    """Validate filenames against the set of allowable chaacters in CPLEX.
+    """Validate filenames against the set of allowable characters in CPLEX.
 
     Returns the filename, possibly enclosed in double-quotes, or raises
     a ValueError is unallowable characters are found.

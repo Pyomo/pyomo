@@ -110,8 +110,17 @@ class NonNumericValue(PyomoObject):
     def __str__(self):
         return str(self.value)
 
+    def __repr__(self):
+        return repr(self.value)
+
     def __call__(self, exception=None):
         return self.value
+
+    def is_constant(self):
+        return True
+
+    def is_fixed(self):
+        return True
 
 
 nonpyomo_leaf_types.add(NonNumericValue)

@@ -79,9 +79,6 @@ class TestKestrel(unittest.TestCase):
         doc = pyomo.neos.doc
         dockeys = set(doc.keys())
 
-        # Octeract interface is disabled, see #3321
-        amplsolvers.remove('octeract')
-
         self.assertEqual(amplsolvers, dockeys)
 
         # gamssolvers = set(v[0].lower() for v in tmp if v[1]=='GAMS')
@@ -100,6 +97,14 @@ class TestKestrel(unittest.TestCase):
             )
         finally:
             pyomo.neos.kestrel.NEOS.host = orig_host
+
+    def test_check_all_ampl_solvers(self):
+        kestrel = kestrelAMPL()
+        solvers = kestrel.getAvailableSolvers()
+        for solver in solvers:
+            name = solver.lower().replace('-', '')
+            if not hasattr(RunAllNEOSSolvers, 'test_' + name):
+                self.fail(f"RunAllNEOSSolvers missing test for '{solver}'")
 
 
 class RunAllNEOSSolvers(object):
@@ -152,8 +157,9 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
-    # [16 Jul 24] Octeract is erroring.  We will disable the interface
+    # [16 Jul 24]: Octeract is erroring.  We will disable the interface
     # (and testing) until we have time to resolve #3321
+    # [20 Sep 24]: and appears to have been removed from NEOS
     #
     # def test_octeract(self):
     #     self._run('octeract')
@@ -167,10 +173,10 @@ class RunAllNEOSSolvers(object):
         else:
             self._run('ooqp')
 
-    # The simple tests aren't complementarity
-    # problems
-    # def test_path(self):
-    #    self._run('path')
+    def test_path(self):
+        # The simple tests aren't complementarity
+        # problems
+        self.skipTest("The simple NEOS test is not a complementarity problem")
 
     def test_snopt(self):
         self._run('snopt')

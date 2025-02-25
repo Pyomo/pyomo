@@ -131,12 +131,15 @@ class Connector(IndexedComponent):
     constraints that involve the original variables contained within the
     Connector.
 
-    Constructor
-        Arguments:
-           name         The name of this connector
-           index        The index set that defines the distinct connectors.
-                          By default, this is None, indicating that there
-                          is a single connector.
+    Parameters
+    ----------
+    name : str
+        The name of this connector
+
+    index
+        The index set that defines the distinct connectors.  By default,
+        this is None, indicating that there is a single connector.
+
     """
 
     def __new__(cls, *args, **kwds):

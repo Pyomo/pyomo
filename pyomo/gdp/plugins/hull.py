@@ -20,7 +20,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet, DefaultComponen
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr as EXPR
-from pyomo.core.base import TransformationFactory, Reference
+from pyomo.core.base import TransformationFactory
 from pyomo.core import (
     Block,
     BooleanVar,
@@ -86,18 +86,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     This transformation accepts the following keyword arguments:
 
-    Parameters
-    ----------
-    perspective_function : str
-        The perspective function used for the disaggregated variables.
-        Must be one of 'FurmanSawayaGrossmann' (default),
-        'LeeGrossmann', or 'GrossmannLee'
-    EPS : float
-        The value to use for epsilon [default: 1e-4]
-    targets : (block, disjunction, or list of those types)
-        The targets to transform. This can be a block, disjunction, or a
-        list of blocks and Disjunctions [default: the instance]
-
     The transformation will create a new Block with a unique
     name beginning "_pyomo_gdp_hull_reformulation". It will contain an
     indexed Block named "relaxedDisjuncts" that will hold the relaxed
@@ -106,6 +94,18 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     have a pointer to the block their transformed constraints are on,
     and all transformed Disjunctions will have a pointer to the
     corresponding OR or XOR constraint.
+
+    Parameters
+    ----------
+    perspective_function : str
+        The perspective function used for the disaggregated variables.
+        Must be one of 'FurmanSawayaGrossmann' (default),
+        'LeeGrossmann', or 'GrossmannLee'
+    EPS : float
+        The value to use for epsilon [default: 1e-4]
+    targets : block, disjunction, or list of those types
+        The targets to transform. This can be a block, disjunction, or a
+        list of blocks and Disjunctions [default: the instance]
     """
 
     CONFIG = cfg.ConfigDict('gdp.hull')
@@ -447,19 +447,11 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     disaggregatedVar=disaggregated_var,
                     disjunct=obj,
                     bigmConstraint=disaggregated_var_bounds,
-                    lb_idx=(idx, 'lb'),
-                    ub_idx=(idx, 'ub'),
                     var_free_indicator=var_free,
+                    var_idx=idx,
                 )
-                # Update mappings:
-                var_info = var.parent_block().private_data()
-                disaggregated_var_map = var_info.disaggregated_var_map
-                dis_var_info = disaggregated_var.parent_block().private_data()
-
-                dis_var_info.bigm_constraint_map[disaggregated_var][obj] = Reference(
-                    disaggregated_var_bounds[idx, :]
-                )
-                dis_var_info.original_var_map[disaggregated_var] = var
+                original_var_info = var.parent_block().private_data()
+                disaggregated_var_map = original_var_info.disaggregated_var_map
 
                 # For every Disjunct the Var does not appear in, we want to map
                 # that this new variable is its disaggreggated variable.
@@ -544,8 +536,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregatedVar=disaggregatedVar,
                 disjunct=obj,
                 bigmConstraint=bigmConstraint,
-                lb_idx='lb',
-                ub_idx='ub',
                 var_free_indicator=obj.indicator_var.get_associated_binary(),
             )
             # update the bigm constraint mappings
@@ -573,8 +563,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                 disaggregatedVar=var,
                 disjunct=obj,
                 bigmConstraint=bigmConstraint,
-                lb_idx='lb',
-                ub_idx='ub',
                 var_free_indicator=obj.indicator_var.get_associated_binary(),
             )
             # update the bigm constraint mappings
@@ -607,10 +595,16 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         disaggregatedVar,
         disjunct,
         bigmConstraint,
-        lb_idx,
-        ub_idx,
         var_free_indicator,
+        var_idx=None,
     ):
+        # For updating mappings:
+        original_var_info = original_var.parent_block().private_data()
+        disaggregated_var_map = original_var_info.disaggregated_var_map
+        disaggregated_var_info = disaggregatedVar.parent_block().private_data()
+
+        disaggregated_var_info.bigm_constraint_map[disaggregatedVar][disjunct] = {}
+
         lb = original_var.lb
         ub = original_var.ub
         if lb is None or ub is None:
@@ -624,13 +618,21 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         disaggregatedVar.setub(max(0, ub))
 
         if lb:
+            lb_idx = 'lb'
+            if var_idx is not None:
+                lb_idx = (var_idx, 'lb')
             bigmConstraint.add(lb_idx, var_free_indicator * lb <= disaggregatedVar)
+            disaggregated_var_info.bigm_constraint_map[disaggregatedVar][disjunct][
+                'lb'
+            ] = bigmConstraint[lb_idx]
         if ub:
+            ub_idx = 'ub'
+            if var_idx is not None:
+                ub_idx = (var_idx, 'ub')
             bigmConstraint.add(ub_idx, disaggregatedVar <= ub * var_free_indicator)
-
-        original_var_info = original_var.parent_block().private_data()
-        disaggregated_var_map = original_var_info.disaggregated_var_map
-        disaggregated_var_info = disaggregatedVar.parent_block().private_data()
+            disaggregated_var_info.bigm_constraint_map[disaggregatedVar][disjunct][
+                'ub'
+            ] = bigmConstraint[ub_idx]
 
         # store the mappings from variables to their disaggregated selves on
         # the transformation block
@@ -928,10 +930,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     def get_var_bounds_constraint(self, v, disjunct=None):
         """
-        Returns the IndexedConstraint which sets a disaggregated
-        variable to be within its bounds when its Disjunct is active and to
-        be 0 otherwise. (It is always an IndexedConstraint because each
-        bound becomes a separate constraint.)
+        Returns a dictionary mapping keys 'lb' and/or 'ub' to the Constraints that
+        set a disaggregated variable to be within its lower and upper bounds
+        (respectively) when its Disjunct is active and to be 0 otherwise.
 
         Parameters
         ----------

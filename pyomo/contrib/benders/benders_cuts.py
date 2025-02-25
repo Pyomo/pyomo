@@ -9,71 +9,76 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.block import BlockData, declare_custom_block
-import pyomo.environ as pyo
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet
-
-try:
-    from mpi4py import MPI
-
-    mpi4py_available = True
-except:
-    mpi4py_available = False
-try:
-    import numpy as np
-
-    numpy_available = True
-except:
-    numpy_available = False
 import logging
 
+from pyomo.common.collections import ComponentSet
+from pyomo.common.dependencies import (
+    mpi4py,
+    mpi4py_available,
+    numpy as np,
+    numpy_available,
+)
+from pyomo.core.base.block import BlockData, declare_custom_block
+from pyomo.core.expr.visitor import identify_variables
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+import pyomo.environ as pyo
+
+MPI = mpi4py.MPI
 logger = logging.getLogger(__name__)
 
 
-"""
-It is easier to understand this code after reading "A note on feasibility in Benders Decomposition" by 
-Grothey et al.
+# Note: because of the LaTeX math, it is critical that this is a raw string.
+__doc__ = r"""General purpose Benders Cut Generator.
+
+It is easier to understand this code after reading Grothey, Leyffer,
+and McKinnon "A note on feasibility in Benders Decomposition" [GLM99]_
 
 Original problem:
 
-min f(x, y) + h0(y)
-s.t.
-    g(x, y) <= 0
-    h(y) <= 0
-    
-where y are the complicating variables. Reformulate to 
+.. math::
 
-min h0(y) + eta
-s.t.
-    g(x, y) <= 0
-    f(x, y) <= eta
-    h(y) <= 0
-    
+    \min\ & f(x, y) + h0(y) \\
+    s.t.\ & g(x, y) <= 0 \\
+              & h(y) <= 0
+
+where y are the complicating variables. Reformulate to
+
+.. math::
+
+    \min\ & h0(y) + \eta \\
+    s.t.\ & g(x, y) <= 0 \\
+          & f(x, y) <= \eta \\
+          & h(y) <= 0
+
 Root problem must be of the form
 
-min h0(y) + eta
-s.t.
-    h(y) <= 0
-    benders cuts
-    
-where the last constraint will be generated automatically with BendersCutGenerators. The BendersCutGenerators
-must be handed a subproblem of the form
+.. math::
 
-min f(x, y)
-s.t.
-    g(x, y) <= 0
-    
-except the constraints don't actually have to be in this form. The subproblem will automatically be transformed to
+    \min\ & h0(y) + \eta \\
+    s.t.\ & h(y) <= 0 \\
+          & benders\ cuts
 
-min _z
-s.t.
-    g(x, y) - z <= 0             (alpha)
-    f(x, y) - eta - z <= 0       (beta)
-    y - y_k = 0                  (gamma)
-    eta - eta_k = 0              (delta)
+where the last constraint will be generated automatically with
+BendersCutGenerators. The BendersCutGenerators must be handed a
+subproblem of the form
+
+.. math::
+
+    \min\ & f(x, y) \\
+    s.t.\ & g(x, y) <= 0
+
+except the constraints don't actually have to be in this form. The
+subproblem will automatically be transformed to
+
+.. math::
+
+    \min\ & _z & \\
+    s.t.\ & g(x, y) - z <= 0        & \quad (\alpha) \\
+          & f(x, y) - \eta - z <= 0 & \quad (\beta)  \\
+          & y - y_k = 0             & \quad (\gamma) \\
+          & \eta - \eta_k = 0       & \quad (\delta) \\
+
 """
 
 

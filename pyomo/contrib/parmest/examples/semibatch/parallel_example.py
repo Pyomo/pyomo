@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 """
-The following script can be used to run semibatch parameter estimation in 
+The following script can be used to run semibatch parameter estimation in
 parallel and save results to files for later analysis and graphics.
 Example command: mpiexec -n 4 python parallel_example.py
 """

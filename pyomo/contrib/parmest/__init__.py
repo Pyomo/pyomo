@@ -9,8 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import relocated_module_attribute
+#
+# declare deprecation paths for removed modules
+#
+from pyomo.common.deprecation import relocated_module_attribute, moved_module
 
+moved_module(
+    'pyomo.contrib.parmest.ipopt_solver_wrapper',
+    'pyomo.contrib.parmest.utils.ipopt_solver_wrapper',
+    version='6.4.2',
+)
 relocated_module_attribute(
     'create_ef', 'pyomo.contrib.parmest.utils.create_ef', version='6.4.2'
 )
@@ -25,3 +33,4 @@ relocated_module_attribute(
 relocated_module_attribute(
     'scenario_tree', 'pyomo.contrib.parmest.utils.scenario_tree', version='6.4.2'
 )
+del relocated_module_attribute, moved_module

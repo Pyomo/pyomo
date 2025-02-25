@@ -10,24 +10,26 @@
 #  ___________________________________________________________________________
 
 # TODO: Disabled until we can confirm application to Pyomo models
-import pyomo.solvers.plugins.solvers.CBCplugin
-import pyomo.solvers.plugins.solvers.GLPK
-import pyomo.solvers.plugins.solvers.CPLEX
-import pyomo.solvers.plugins.solvers.GUROBI
-import pyomo.solvers.plugins.solvers.BARON
-import pyomo.solvers.plugins.solvers.ASL
-import pyomo.solvers.plugins.solvers.pywrapper
-import pyomo.solvers.plugins.solvers.SCIPAMPL
-import pyomo.solvers.plugins.solvers.CONOPT
-import pyomo.solvers.plugins.solvers.XPRESS
-import pyomo.solvers.plugins.solvers.IPOPT
-import pyomo.solvers.plugins.solvers.gurobi_direct
-import pyomo.solvers.plugins.solvers.gurobi_persistent
-import pyomo.solvers.plugins.solvers.cplex_direct
-import pyomo.solvers.plugins.solvers.cplex_persistent
-import pyomo.solvers.plugins.solvers.GAMS
-import pyomo.solvers.plugins.solvers.mosek_direct
-import pyomo.solvers.plugins.solvers.mosek_persistent
-import pyomo.solvers.plugins.solvers.xpress_direct
-import pyomo.solvers.plugins.solvers.xpress_persistent
-import pyomo.solvers.plugins.solvers.SAS
+from pyomo.solvers.plugins.solvers import (
+    CBCplugin,
+    GLPK,
+    CPLEX,
+    GUROBI,
+    BARON,
+    ASL,
+    pywrapper,
+    SCIPAMPL,
+    CONOPT,
+    XPRESS,
+    IPOPT,
+    gurobi_direct,
+    gurobi_persistent,
+    cplex_direct,
+    cplex_persistent,
+    GAMS,
+    mosek_direct,
+    mosek_persistent,
+    xpress_direct,
+    xpress_persistent,
+    SAS,
+)

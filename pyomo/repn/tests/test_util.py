@@ -242,7 +242,7 @@ class TestRepnUtils(unittest.TestCase):
             pyomo.repn.util.HALT_ON_EVALUATION_ERROR = False
             with LoggingIntercept() as LOG:
                 val = apply_node_operation(div, [1, 0])
-                self.assertEqual(str(val), "InvalidNumber(nan)")
+                self.assertStructuredAlmostEqual(val, InvalidNumber(float('nan')))
             self.assertEqual(
                 LOG.getvalue(),
                 "Exception encountered evaluating expression 'div(1, 0)'\n"
@@ -293,7 +293,7 @@ class TestRepnUtils(unittest.TestCase):
             pyomo.repn.util.HALT_ON_EVALUATION_ERROR = False
             with LoggingIntercept() as LOG:
                 val = complex_number_error(1j, visitor, exp)
-                self.assertEqual(str(val), "InvalidNumber(1j)")
+                self.assertEqual(val, InvalidNumber(1j))
             self.assertEqual(
                 LOG.getvalue(),
                 "Complex number returned from expression\n"
