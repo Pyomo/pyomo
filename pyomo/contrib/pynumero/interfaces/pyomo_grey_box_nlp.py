@@ -63,7 +63,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             self._pyomo_model = pyomo_model
 
             # count the number of objectives excluding grey box objectives
-            for obj in self._pyomo_model.component_data_objects(pyo.Objective, active=True, descend_into=True):
+            for obj in self._pyomo_model.component_data_objects(
+                pyo.Objective, active=True, descend_into=True
+            ):
                 self._number_of_objectives += 1
 
             # build a PyomoNLP object (will include the "pyomo"
@@ -103,7 +105,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                 " PyomoGreyBoxModel requires at least one variable"
                 " to be active in a Pyomo objective or constraint"
             )
-        
+
         # build the list of NLP wrappers for the greybox objects
         greybox_nlps = []
         fixed_vars = []
