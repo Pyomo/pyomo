@@ -189,6 +189,11 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> print([value(m.y1.indicator_var), value(m.y2.indicator_var)])
   [True, False]
 
+Logic-based Discrete-Steepest Descent Algorithm (LD-SDA)
+--------------------------------------------------------
+
+The GDPopt-LDSDA solver exploits the ordered Boolean variables in the disjunctions to solve the GDP model.
+
 GDPopt implementation and optional arguments
 --------------------------------------------
 
