@@ -204,4 +204,5 @@ GDPopt implementation and optional arguments
    ~pyomo.contrib.gdpopt.gloa.GDP_GLOA_Solver
    ~pyomo.contrib.gdpopt.ric.GDP_RIC_Solver
    ~pyomo.contrib.gdpopt.branch_and_bound.GDP_LBB_Solver
+   ~pyomo.contrib.gdpopt.ldsda.GDP_LDSDA_Solver
 
