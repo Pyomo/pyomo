@@ -149,6 +149,11 @@ class ExtendedEnumType(_EnumType):
         # the __base_enum__ (necessary for good auto-enum[sphinx] docs)
         return super().__contains__(member) or member in cls.__base_enum__
 
+    def __dir__(self):
+        _dir = set(super().__dir__())
+        _dir.update(e.name for e in self)
+        return _dir
+
     def __instancecheck__(cls, instance):
         if cls.__subclasscheck__(type(instance)):
             return True
