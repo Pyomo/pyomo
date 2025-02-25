@@ -21,6 +21,7 @@ from scipy.sparse import coo_matrix, identity
 from pyomo.common.deprecation import deprecated
 import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap
+from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
@@ -67,7 +68,15 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
             # build a PyomoNLP object (will include the "pyomo"
             # part of the model only)
-            self._pyomo_nlp = PyomoNLP(pyomo_model)
+            if self._number_of_objectives == 0:
+                objname = unique_component_name(pyomo_model, "_obj")
+                objective = pyomo_model.add_component(objname, pyo.Objective(expr=0.0))
+            try:
+                self._pyomo_nlp = PyomoNLP(pyomo_model)
+            finally:
+                if self._number_of_objectives == 0:
+                    pyomo_model.del_component(objective)
+
             self._pyomo_model_var_names_to_datas = {
                 v.getname(fully_qualified=True): v
                 for v in pyomo_model.component_data_objects(
