@@ -209,17 +209,32 @@ latex_elements = {
     # 'pointsize': '10pt',
     # Additional stuff for the LaTeX preamble.
     #
-    # 'preamble': '',
+    'preamble': r'''
+\usepackage{enumitem}
+\setlistdepth{99}
+\DeclareUnicodeCharacter{2227}{$\wedge$}
+\DeclareUnicodeCharacter{2228}{$\vee$}
+''',
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
+    # necessary for unicode charactacters in pdf output
+    'inputenc': '',
+    'utf8extra': '',
+    # remove blank pages (e.g., between chapters)
+    'classoptions': ',openany,oneside',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [(master_doc, 'pyomo.tex', 'Pyomo Documentation', 'Pyomo', 'manual')]
+latex_documents = [
+    (master_doc, 'pyomo.tex', 'Pyomo Documentation', 'Pyomo Development Team', 'manual')
+]
 
+# The name of an image file (relative to this directory) to place at the top of
+# the title page.
+latex_logo = '../logos/pyomo/PyomoNewBlue.jpg'
 
 # -- Options for manual page output ---------------------------------------
 
