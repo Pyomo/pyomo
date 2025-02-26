@@ -3068,7 +3068,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
 class IntersectionSet(UncertaintySet):
     """
-    An intersection of a sequence of uncertainty sets, each of which
+    An intersection of uncertainty sets, each of which
     is represented by an `UncertaintySet` object.
 
     Parameters
