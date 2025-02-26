@@ -972,10 +972,10 @@ class BoxSet(UncertaintySet):
 
     in which
     :math:`q^\\text{L} \\in \\mathbb{R}^n` refers to
-    ``np.array(bounds[:, 0])``,
+    ``np.array(bounds)[:, 0]``,
     and
     :math:`q^\\text{U} \\in \\mathbb{R}^n` refers to
-    ``np.array(bounds[:, 1])``.
+    ``np.array(bounds)[:, 1]``.
 
     Examples
     --------
