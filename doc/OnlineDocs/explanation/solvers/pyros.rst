@@ -30,11 +30,13 @@ Supported deterministic models can be written in the general form
 .. _deterministic-model:
 
 .. math::
-    \begin{array}{clll}
+   :nowrap:
+
+   \[\begin{array}{clll}
     \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2(x,z,y; q^{\text{nom}}) & \\
     \displaystyle \text{s.t.} & ~~ g_i(x, z, y; q^{\text{nom}}) \leq 0 & \forall\,i \in \mathcal{I} \\
     & ~~ h_j(x,z,y; q^{\text{nom}}) = 0 & \forall\,j \in \mathcal{J} \\
-    \end{array}
+   \end{array}\]
 
 where:
 
@@ -81,13 +83,15 @@ Based on the above notation,
 the form of the robust counterpart addressed by PyROS is
 
 .. math::
-    \begin{array}{ccclll}
+   :nowrap:
+
+   \[\begin{array}{ccclll}
     \displaystyle \min_{x \in \mathcal{X}}
     & \displaystyle \max_{q \in \mathcal{Q}}
     & \displaystyle \min_{\substack{z \in \mathbb{R}^{n_z},\\y \in \mathbb{R}^{n_y}}} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) \\
     & & \text{s.t.}~ & \displaystyle ~~ g_i\left(x, z, y, q\right) \leq 0 &  & \forall\, i \in \mathcal{I}\\
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall\,j \in \mathcal{J}
-    \end{array}
+   \end{array}\]
 
 PyROS accepts a deterministic model and accompanying uncertainty set
 and then, using the Generalized Robust Cutting-Set algorithm developed

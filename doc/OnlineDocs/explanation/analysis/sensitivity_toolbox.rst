@@ -17,12 +17,14 @@ Using the Sensitivity Toolbox
 We will start with a motivating example:
 
 .. math::
-  \begin{align*}
-  \min_{x_1,x_2,x_3} \quad & x_1^2 + x_2^2 + x_3^2 \\
-  \mathrm{s.t.} \qquad & 6 x_1 + 3 x_2 + 2 x_3 - p_1 = 0 \\
-  & p_2 x_1 + x_2 - x_3 - 1 = 0 \\
-  & x_1, x_2, x_3 \geq 0
-  \end{align*}
+   :nowrap:
+
+   \[\begin{array}{ll}
+     \min_{x_1,x_2,x_3} & x_1^2 + x_2^2 + x_3^2 \\
+     \mathrm{s.t.} & 6 x_1 + 3 x_2 + 2 x_3 - p_1 = 0 \\
+     & p_2 x_1 + x_2 - x_3 - 1 = 0 \\
+     & x_1, x_2, x_3 \geq 0
+   \end{array}\]
 
 Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while :math:`p_1` and :math:`p_2` are parameters. At first, let's consider :math:`p_1 = 4.5` and :math:`p_2 = 1.0`. Below is the model implemented in Pyomo.
 
