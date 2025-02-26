@@ -995,7 +995,7 @@ class BoxSet(UncertaintySet):
 
     5D hypercube with bounds 0 and 1 in each dimension:
 
-    >>> hypercube_5d = BoxSet(bounds=[[0, 1] for idx in range(5)])
+    >>> hypercube_5d = BoxSet(bounds=[[0, 1]] * 5)
     >>> hypercube_5d.bounds
     array([[0, 1],
            [0, 1],
@@ -1141,7 +1141,7 @@ class CardinalitySet(UncertaintySet):
     the quantity :math:`\\hat{q} \\in \\mathbb{R}_{+}^n`
     refers to ``positive_deviation``,
     and :math:`\\Gamma \\in [0, n]` refers to ``gamma``.
-    The operator :math:`\\circ` denotes the element-wise product.
+    The operator ":math:`\\circ`" denotes the element-wise product.
 
     Examples
     --------
@@ -1208,7 +1208,7 @@ class CardinalitySet(UncertaintySet):
     def positive_deviation(self):
         """
         (N,) numpy.ndarray : Maximal coordinate deviations from the
-        origin in each dimension. All entries are nonnegative.
+        origin in each dimension. All entries should be nonnegative.
         """
         return self._positive_deviation
 
@@ -1246,15 +1246,16 @@ class CardinalitySet(UncertaintySet):
     def gamma(self):
         """
         numeric type : Upper bound for the number of uncertain
-        parameters which may maximally deviate from their respective
+        parameters that may maximally deviate from their respective
         origin values simultaneously. Must be a numerical value ranging
         from 0 to the set dimension `N`.
 
         Note that, mathematically, setting `gamma` to 0 reduces the set
-        to a singleton containing the center, while setting `gamma` to
+        to a singleton containing the point represented by
+        ``self.origin``, while setting `gamma` to
         the set dimension `N` makes the set mathematically equivalent
         to a `BoxSet` with bounds
-        ``numpy.array([origin, origin + positive_deviation]).T``.
+        ``numpy.array([self.origin, self.origin + self.positive_deviation]).T``.
         """
         return self._gamma
 
@@ -1743,6 +1744,7 @@ class BudgetSet(UncertaintySet):
         constraints.  Each row corresponds to a single budget
         constraint and defines which uncertain parameters
         participate in that row's constraint.
+        All entries should be of value 0 or 1.
         """
         return self._budget_membership_mat
 
@@ -1962,7 +1964,7 @@ class FactorModelSet(UncertaintySet):
         \\left\\{ q \\in \\mathbb{R}^n\\,
             \\middle|
              \\,
-            \\exists\\, \\xi \\in [-1, 1]^n \\,:\\,
+            \\exists\\, \\xi \\in [-1, 1]^F \\,:\\,
             \\left[
             \\begin{array}{l}
                 q = q^0 + \\Psi \\xi \\\\
@@ -2135,8 +2137,8 @@ class FactorModelSet(UncertaintySet):
         Note that, mathematically, setting ``beta = 0`` will enforce
         that as many factors will be above 0 as there will be below 0
         (i.e., "zero-net-alpha" model). If ``beta = 1``,
-        then the set is numerically equivalent to a `BoxSet` with bounds
-        ``[self.origin - psi @ np.ones(F), self.origin + psi @ np.ones(F)].T``.
+        then any number of factors can be above 0 or below 0
+        simultaneously.
         """
         return self._beta
 
@@ -2538,13 +2540,13 @@ class EllipsoidalSet(UncertaintySet):
 
         \\left\\{
             q \\in \\mathbb{R}^n\\,|
-            \\,(q - q^0)^\\intercal P^{-1}(q - q^0) \\leq s
+            \\,(q - q^0)^\\intercal \\Sigma^{-1}(q - q^0) \\leq s
         \\right\\}
 
     in which
     :math:`q^0 \\in \\mathbb{R}^n` refers to ``center``,
     the quantity
-    :math:`P \\in \\mathbb{R}^{n \\times n}`
+    :math:`\\Sigma \\in \\mathbb{R}^{n \\times n}`
     refers to ``shape_matrix``,
     and :math:`s \\geq 0` refers to ``scale``.
 
@@ -2574,7 +2576,7 @@ class EllipsoidalSet(UncertaintySet):
     >>> ball.scale
     1
 
-    A 2D ellipsoid with custom rotation and scaling:
+    A 2D ellipsoidal region with custom rotation and scaling:
 
     >>> rotated_ellipsoid = EllipsoidalSet(
     ...     center=[1, 1],
@@ -2589,7 +2591,7 @@ class EllipsoidalSet(UncertaintySet):
     >>> rotated_ellipsoid.scale
     0.5
 
-    A 4D 95% confidence ellipsoid:
+    A 4D 95% confidence ellipsoidal region:
 
     >>> conf_ellipsoid = EllipsoidalSet(
     ...     center=np.zeros(4),
@@ -3101,7 +3103,8 @@ class IntersectionSet(UncertaintySet):
     ...     center=[0, 0],
     ...     half_lengths=[2, 2],
     ... )
-    >>> # to construct intersection, pass sets as keyword arguments
+    >>> # to construct intersection, pass sets as keyword arguments.
+    >>> # keywords are arbitrary
     >>> intersection = IntersectionSet(set1=square, set2=circle)
     >>> intersection.all_sets
     UncertaintySetList([...])
