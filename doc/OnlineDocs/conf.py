@@ -84,6 +84,7 @@ extensions = [
     # Our version of 'autoenum', designed to work with autosummary.
     # This adds 'sphinx.ext.autosummary', and 'sphinx.ext.autodoc':
     'pyomo_autosummary_autoenum',
+    'pyomo_tocref',
 ]
 
 viewcode_follow_imported_members = True
