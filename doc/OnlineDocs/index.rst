@@ -69,7 +69,7 @@ See the Pyomo Forum for online discussions of Pyomo or to ask a question:
 
 Ask a question on StackOverflow using the ``#pyomo`` tag:
 
-* https://stackoverflow.com/questions/ask?tags=pyomo 
+* https://stackoverflow.com/questions/ask?tags=pyomo
 
 Additional Pyomo tutorials and examples can be found at the following links:
 

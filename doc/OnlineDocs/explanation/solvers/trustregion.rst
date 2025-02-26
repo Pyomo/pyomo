@@ -107,7 +107,7 @@ TRF Solver Interface
 
 TRF Usage Example
 ------------------
-Two examples can be found in the examples_ subdirectory. One of them is 
+Two examples can be found in the examples_ subdirectory. One of them is
 implemented below.
 
 .. _examples: https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/trustregion/examples
@@ -144,14 +144,14 @@ Step 2: Create the model
    ...     m.z = pyo.Var(range(3), domain=pyo.Reals, initialize=2.)
    ...     m.x = pyo.Var(range(2), initialize=2.)
    ...     m.x[1] = 1.0
-   ... 
+   ...
    ...     m.ext_fcn = pyo.ExternalFunction(ext_fcn, grad_ext_fcn)
-   ... 
+   ...
    ...     m.obj = pyo.Objective(
    ...         expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
    ...            + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6
    ...     )
-   ... 
+   ...
    ...     m.c1 = pyo.Constraint(
    ...         expr=m.x[0] * m.z[0]**2 + m.ext_fcn(m.x[0], m.x[1]) == 2*pyo.sqrt(2.0)
    ...         )

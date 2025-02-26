@@ -278,7 +278,7 @@ PyROS Usage Example
 -----------------------------
 
 In this section, we illustrate the usage of PyROS with a modeling example.
-The deterministic problem of interest is called *hydro* 
+The deterministic problem of interest is called *hydro*
 (available `here <https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_hydro.html>`_),
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
@@ -952,6 +952,7 @@ Observe that the log contains the following information:
 .. _solver-log-snippet:
 
 .. code-block:: text
+
    :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
    :linenos:
 
@@ -960,12 +961,12 @@ Observe that the log contains the following information:
           Pyomo version: 6.9.0
           Commit hash: unknown
           Invoked at UTC 2025-02-13T00:00:00.000000
-   
+
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
    (1) Carnegie Mellon University, Department of Chemical Engineering
    (2) Sandia National Laboratories, Center for Computing Research
-   
+
    The developers gratefully acknowledge support from the U.S. Department
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
@@ -1026,7 +1027,7 @@ Observe that the log contains the following information:
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-   
+
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
    main                           1     3.509     3.509  100.0
@@ -1040,7 +1041,7 @@ Observe that the log contains the following information:
         other                   n/a     0.394       n/a   11.2
         ======================================================
    ===========================================================
-   
+
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 4

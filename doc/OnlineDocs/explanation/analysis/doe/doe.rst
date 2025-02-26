@@ -8,8 +8,8 @@ project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
 If you use Pyomo.DoE, please cite:
 
-[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling. 
-"Pyomo.DOE: An open‐source package for model‐based design of experiments in Python." 
+[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling.
+"Pyomo.DOE: An open‐source package for model‐based design of experiments in Python."
 AIChE Journal 68.12 (2022): e17813. `https://doi.org/10.1002/aic.17813`
 
 Methodology Overview
@@ -206,7 +206,7 @@ This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build th
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, 
+Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable,
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
 Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` function.

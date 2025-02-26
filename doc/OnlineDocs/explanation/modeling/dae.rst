@@ -346,7 +346,7 @@ showing a double integral over the
 and implementation in Pyomo are shown below:
 
 .. math::
-    \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
+   \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
 
 .. doctest::
 
