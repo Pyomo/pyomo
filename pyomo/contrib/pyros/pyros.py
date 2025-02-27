@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from pyomo.common.config import document_kwargs_from_configdict
@@ -33,7 +33,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-__version__ = "1.3.2"
+__version__ = "1.3.5"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -61,7 +61,14 @@ def _get_pyomo_version_info():
     ]
     try:
         commit_hash = (
-            subprocess.check_output(commit_hash_command_args).decode("ascii").strip()
+            subprocess.check_output(
+                commit_hash_command_args,
+                # suppress git error if Pyomo installation
+                # is not a git repo
+                stderr=subprocess.DEVNULL,
+            )
+            .decode("ascii")
+            .strip()
         )
     except subprocess.CalledProcessError:
         commit_hash = "unknown"
@@ -133,7 +140,8 @@ class PyROS(object):
         logger.log(
             msg=(
                 f"{' ' * len('PyROS:')} "
-                f"Invoked at UTC {datetime.utcnow().isoformat()}"
+                "Invoked at UTC "
+                f"{datetime.now(timezone.utc).isoformat()}"
             ),
             **log_kwargs,
         )

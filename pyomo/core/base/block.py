@@ -921,11 +921,7 @@ class BlockData(ActiveComponentData):
             a matching component is not found, None is returned.
 
         """
-        if type(label_or_component) is ComponentUID:
-            cuid = label_or_component
-        else:
-            cuid = ComponentUID(label_or_component)
-        return cuid.find_component_on(self)
+        return ComponentUID(label_or_component).find_component_on(self)
 
     @contextmanager
     def _declare_reserved_components(self):

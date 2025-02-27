@@ -31,22 +31,41 @@ from pyomo.common.timing import HierarchicalTimer
 
 def TextIO_or_Logger(val):
     """
-    Domain validator for tee options in SolverConfig
+
+    Validates and converts input into a list of valid output streams.
+
+    Accepts:
+      - sys.stdout
+      - Instances of io.TextIOBase
+      - logging.Logger (wrapped as LogStream)
+      - Boolean values (`True` -> sys.stdout)
+
+    Returns:
+      - A list of validated output streams.
+
+    Raises:
+      - ValueError if an invalid type is provided.
     """
-    ans = []
-    if not isinstance(val, Sequence):
+    if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
+        val = list(val)
+    else:
         val = [val]
-    for value in val:
-        if value.__class__ in native_logical_types:
-            if value:
+
+    ans = []
+    for v in val:
+        if v.__class__ in native_logical_types:
+            if v:
                 ans.append(sys.stdout)
-        elif isinstance(value, io.TextIOBase):
-            ans.append(value)
-        elif isinstance(value, logging.Logger):
-            ans.append(LogStream(level=logging.INFO, logger=value))
+        elif isinstance(v, (sys.stdout.__class__, io.TextIOBase)):
+            # We are guarding against file-like classes that do not derive from
+            # TextIOBase but are assigned to stdout / stderr.
+            # We still want to accept those classes.
+            ans.append(v)
+        elif isinstance(v, logging.Logger):
+            ans.append(LogStream(level=logging.INFO, logger=v))
         else:
             raise ValueError(
-                "Expected bool, TextIOBase, or Logger, but received {value.__class__}"
+                f"Expected sys.stdout, io.TextIOBase, Logger, or bool, but received {v.__class__}"
             )
     return ans
 

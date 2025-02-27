@@ -17,10 +17,12 @@ import logging
 import math
 import time
 
+from parameterized import parameterized
 import pyomo.common.unittest as unittest
-from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.errors import InvalidValueError
+from pyomo.common.log import LoggingIntercept
+from pyomo.common.tee import capture_output
 from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.repn.plugins import nl_writer as pyomo_nl_writer
 import pyomo.repn.ampl as pyomo_ampl_repn
@@ -2739,8 +2741,13 @@ class TestPyROSSolverLogIntros(unittest.TestCase):
         Test logging of PyROS solver introductory messages.
         """
         pyros_solver = SolverFactory("pyros")
-        with LoggingIntercept(level=logging.INFO) as LOG:
-            pyros_solver._log_intro(logger=logger, level=logging.INFO)
+        with capture_output(capture_fd=True) as OUT:
+            with LoggingIntercept(level=logging.INFO) as LOG:
+                pyros_solver._log_intro(logger=logger, level=logging.INFO)
+
+        # ensure git repo commit check error messages suppressed
+        err_msgs = OUT.getvalue()
+        self.assertEqual(err_msgs, "")
 
         intro_msgs = LOG.getvalue()
 
@@ -3002,8 +3009,9 @@ class SimpleTestSolver:
 
 class TestPyROSSolverAdvancedValidation(unittest.TestCase):
     """
-    Test PyROS solver returns expected exception messages
-    when arguments are invalid.
+    Test PyROS solver validation routines result in
+    expected normal or exceptional solver behavior
+    depending on the arguments.
     """
 
     def build_simple_test_model(self):
@@ -3412,6 +3420,348 @@ class TestPyROSSolverAdvancedValidation(unittest.TestCase):
                 global_solver=global_solver,
                 bypass_local_separation=True,
                 bypass_global_separation=True,
+            )
+
+    @unittest.skipUnless(ipopt_available, "IPOPT not available")
+    def test_pyros_fixed_var_scope(self):
+        """
+        Test PyROS solver on an instance such that the outcome
+        is clearly affected by whether a fixed variable
+        is treated as a decision variable (as it should be)
+        rather than a constant.
+        """
+        model = ConcreteModel()
+        model.q = Param(initialize=1, mutable=True)
+        model.x1 = Var(bounds=(0, 1), initialize=0)
+        model.x2 = Var(bounds=(model.q, 1))
+        model.x2.fix(1)
+        model.obj = Objective(expr=model.x1 + model.x2)
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        res = pyros_solver.solve(
+            model=model,
+            first_stage_variables=[model.x1],
+            second_stage_variables=[],
+            uncertain_params=[model.q],
+            uncertainty_set=BoxSet([[1, 2]]),
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+
+        # fixed variable is considered decision variable,
+        # so the bounds must be honored
+        # (or else this problem is trivially robust feasible)
+        # infeasibility as uncertain lower bound may exceed upper bound
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_infeasible
+        )
+        self.assertEqual(res.iterations, 2)
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT not available.")
+class TestResolveAndValidatePyROSInputs(unittest.TestCase):
+    def test_validate_pyros_inputs_config(self):
+        """
+        Test PyROS solver input validation sets up the
+        final config (options) as expected.
+        """
+        model = build_leyffer_two_cons()
+        box_set = BoxSet(bounds=[[0.25, 2]])
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        config, _ = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(config.first_stage_variables, [model.x1, model.x2])
+        self.assertFalse(config.second_stage_variables)
+        self.assertEqual(config.uncertain_params, [model.u])
+        self.assertIs(config.uncertainty_set, box_set)
+        self.assertIs(config.local_solver, ipopt_solver)
+        self.assertIs(config.global_solver, ipopt_solver)
+
+    def test_validate_pyros_inputs_user_var_partitioning(self):
+        """
+        Test PyROS solver input validation sets up the user
+        variable partitioning/scope as expected.
+        """
+        model = build_leyffer_two_cons()
+        box_set = BoxSet([[0.25, 2]])
+        # so we can check treatment of fixed variables
+        # note: x3 does not appear in the objective
+        model.x3.fix()
+        # so we can check treatment of variables not in the
+        # active objective or constraints
+        model.x4 = Var()
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        _, user_var_partitioning = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(
+            user_var_partitioning.first_stage_variables, [model.x1, model.x2]
+        )
+        self.assertFalse(user_var_partitioning.second_stage_variables)
+        self.assertEqual(user_var_partitioning.state_variables, [model.x3])
+
+    def test_validate_pyros_inputs_user_var_partitioning_obj_only(self):
+        """
+        Test PyROS solver input validation sets up the user
+        variable partitioning/scope as expected.
+        """
+        model = build_leyffer_two_cons()
+        # so we can check that variables in objective but not
+        # constraints are in scope
+        model.con1.deactivate()
+        model.con2.deactivate()
+        box_set = BoxSet([[0.25, 2]])
+
+        ipopt_solver = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+        _, user_var_partitioning = pyros_solver._resolve_and_validate_pyros_args(
+            model=model,
+            first_stage_variables=[model.x1, model.x2],
+            second_stage_variables=[],
+            uncertain_params=model.u,
+            uncertainty_set=box_set,
+            local_solver=ipopt_solver,
+            global_solver=ipopt_solver,
+        )
+        self.assertEqual(
+            user_var_partitioning.first_stage_variables, [model.x1, model.x2]
+        )
+        self.assertFalse(user_var_partitioning.second_stage_variables)
+        self.assertFalse(user_var_partitioning.state_variables)
+
+
+# @SolverFactory.register("subsolver_error__solver")
+class SubsolverErrorSolver(object):
+    """
+    Solver that returns a bad termination condition
+    to purposefully create an SP subsolver error.
+
+    Parameters
+    ----------
+    sub_solver: SolverFactory
+        The wrapped solver object
+    all_fail: bool
+        Set to true to always return a subsolver error.
+        Otherwise, the solver checks `failed_flag` to see if it should behave normally or error.
+        The solver sets `failed_flag=True` after returning an error, and subsequent solves
+        should behave normally unless `failed_flag` is manually toggled off again.
+
+    Attributes
+    ----------
+    failed_flag
+    """
+
+    def __init__(self, sub_solver, all_fail):
+        self.sub_solver = sub_solver
+        self.all_fail = all_fail
+
+        self.failed_flag = False
+        self.options = Bunch()
+
+    def available(self, exception_flag=True):
+        return True
+
+    def license_is_valid(self):
+        return True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        pass
+
+    def solve(self, model, **kwargs):
+        """
+        'Solve' a model.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Model of interest.
+
+        Returns
+        -------
+        results : SolverResults
+            Solver results.
+        """
+
+        # ensure only one active objective
+        active_objs = [
+            obj for obj in model.component_data_objects(Objective, active=True)
+        ]
+        assert len(active_objs) == 1
+
+        # check if a separation problem is being solved
+        # this is done by checking if there is a separation objective
+        sp_check = hasattr(model, 'separation_obj_0')
+        if sp_check:
+            # check if the problem needs to fail
+            if not self.failed_flag or self.all_fail:
+                # set up results.solver
+                results = SolverResults()
+
+                results.solver.termination_condition = TerminationCondition.error
+                results.solver.status = SolverStatus.error
+
+                # record that a failure has been produced
+                self.failed_flag = True
+
+                return results
+
+        # invoke subsolver
+        results = self.sub_solver.solve(model, **kwargs)
+
+        return results
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT is not available.")
+@unittest.skipUnless(
+    baron_available and baron_license_is_valid,
+    "Global NLP solver is not available and licensed.",
+)
+class TestPyROSSubsolverErrorEfficiency(unittest.TestCase):
+    """
+    Test PyROS subsolver error efficiency for continuous and discrete uncertainty sets.
+    """
+
+    @parameterized.expand(
+        [
+            ("failed_but_recovered_local", 7, False),
+            ("failed_and_terminated_local", 10, False),
+            ("failed_and_terminated_global", 7, True),
+        ]
+    )
+    def test_continuous_set_subsolver_error_recovery(
+        self, name, sec_con_UB, test_global_error
+    ):
+        m = build_leyffer_two_cons()
+        # the following constraint is unviolated/violated depending on the UB
+        # if the constraint is unviolated, no other violations are found, and
+        # PyROS should terminate with subsolver error.
+        # if the constraint is violated, PyROS can continue to the next iteration
+        # despite subsolver errors.
+        m.sec_con = Constraint(expr=m.u * m.x1 <= sec_con_UB)
+        m.sec_con.pprint()
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
+        local_subsolver = SubsolverErrorSolver(
+            sub_solver=SolverFactory('ipopt'), all_fail=False
+        )
+        if test_global_error:
+            global_subsolver = SubsolverErrorSolver(
+                sub_solver=SolverFactory('baron'), all_fail=False
+            )
+        else:
+            global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        if 'recovered' in name:
+            # check successful termination
+            self.assertEqual(
+                results.pyros_termination_condition,
+                pyrosTerminationCondition.robust_optimal,
+                msg="Did not identify robust optimal solution to problem instance.",
+            )
+        else:
+            # check unsuccessful termination
+            self.assertEqual(
+                results.pyros_termination_condition,
+                pyrosTerminationCondition.subsolver_error,
+                msg="Did not report subsolver error to problem instance.",
+            )
+
+    @parameterized.expand(
+        [("failed_but_recovered_local", 7), ("failed_and_terminated_local", 10)]
+    )
+    def test_discrete_set_subsolver_error_recovery(self, name, sec_con_UB):
+        m = build_leyffer_two_cons()
+        # the following constraint is unviolated/violated depending on the UB
+        # if the constraint is unviolated, no other violations are found, and
+        # PyROS should terminate with subsolver error.
+        # if the constraint is violated, PyROS can continue to the next iteration
+        # despite subsolver errors.
+        m.sec_con = Constraint(expr=m.u * m.x1 <= sec_con_UB)
+
+        # Define the uncertainty set
+        discrete_set = DiscreteScenarioSet(scenarios=[[0.25], [1.125], [2]])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        # the error solver will cause the first separation problem to fail
+        local_subsolver = SubsolverErrorSolver(
+            sub_solver=SolverFactory('ipopt'), all_fail=False
+        )
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_set,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+
+        if 'recovered' in name:
+            # check successful termination
+            self.assertEqual(
+                results.pyros_termination_condition,
+                pyrosTerminationCondition.robust_optimal,
+                msg="Did not identify robust optimal solution to problem instance.",
+            )
+        else:
+            # check unsuccessful termination
+            self.assertEqual(
+                results.pyros_termination_condition,
+                pyrosTerminationCondition.subsolver_error,
+                msg="Did not report subsolver error to problem instance.",
             )
 
 
