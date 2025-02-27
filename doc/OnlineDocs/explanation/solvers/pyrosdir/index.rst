@@ -1,3 +1,4 @@
+============
 PyROS Solver 
 ============
 
@@ -22,12 +23,12 @@ The developers gratefully acknowledge support from the U.S. Department of Energy
 
 
 Citing PyROS
-------------
+============
 If you use PyROS in your research,
 please acknowledge PyROS by citing [IAE+21]_.
 
 
 Feedback and Reporting Issues
------------------------------
+=============================
 Please provide feedback and/or report any problems by
 `opening an issue on the Pyomo GitHub page <https://github.com/Pyomo/pyomo/issues/new/choose>`_.
