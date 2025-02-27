@@ -627,8 +627,6 @@ class GurobiPersistent(
 
     def _add_sos_constraints(self, cons: List[SOSConstraintData]):
         for con in cons:
-            # NOTE: This seems like an unnecessary local variable because it's
-            # never used or called again. But when removed, it causes KeyErrors.
             conname = self._symbol_map.getSymbol(con, self._labeler)
             level = con.level
             if level == 1:

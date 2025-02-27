@@ -118,10 +118,25 @@ class SolverBase:
     def available(self) -> Availability:
         """Test if the solver is available on this system.
 
+        Nominally, this will return `True` if the solver interface is
+        valid and can be used to solve problems and `False` if it cannot.
+        Note that for licensed solvers there are a number of "levels" of
+        available: depending on the license, the solver may be available
+        with limitations on problem size or runtime (e.g., 'demo'
+        vs. 'community' vs. 'full').  In these cases, the solver may
+        return a subclass of enum.IntEnum, with members that resolve to
+        True if the solver is available (possibly with limitations).
+        The Enum may also have multiple members that all resolve to
+        False indicating the reason why the interface is not available
+        (not found, bad license, unsupported version, etc).
+
         Returns
         -------
         available: Availability
             An enum that indicates "how available" the solver is.
+            Note that the enum can be cast to bool, which will
+            be True if the solver is runable at all and False
+            otherwise.
         """
         raise NotImplementedError(
             f"Derived class {self.__class__.__name__} failed to implement required method 'available'."

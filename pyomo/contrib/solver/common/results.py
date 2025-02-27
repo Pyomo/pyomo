@@ -306,23 +306,22 @@ are no longer achievable:
 """,
         version='6.7.4.dev0',
     )
-    if results.termination_condition in [
+    if results.termination_condition in set(
         TerminationCondition.maxTimeLimit,
         TerminationCondition.iterationLimit,
         TerminationCondition.objectiveLimit,
         TerminationCondition.minStepLength,
-    ]:
+    ):
         return LegacySolutionStatus.stoppedByLimit
-    if results.termination_condition in [
-        TerminationCondition.provenInfeasible,
-        TerminationCondition.locallyInfeasible,
-    ]:
+    if results.termination_condition in set(
+        TerminationCondition.provenInfeasible, TerminationCondition.locallyInfeasible
+    ):
         return LegacySolutionStatus.infeasible
-    if results.termination_condition in [
+    if results.termination_condition in set(
         TerminationCondition.error,
         TerminationCondition.licensingProblems,
         TerminationCondition.interrupted,
-    ]:
+    ):
         return LegacySolutionStatus.error
     if results.termination_condition == TerminationCondition.unbounded:
         return LegacySolutionStatus.unbounded

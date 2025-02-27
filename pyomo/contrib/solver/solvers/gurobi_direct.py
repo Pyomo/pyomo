@@ -223,7 +223,7 @@ class GurobiSolverMixin:
 
 class GurobiDirect(GurobiSolverMixin, SolverBase):
     """
-    Interface to Gurobi direct (not persistent)
+    Interface to Gurobi using gurobipy
     """
 
     CONFIG = GurobiConfig()
