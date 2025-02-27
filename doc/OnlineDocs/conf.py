@@ -231,7 +231,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'pyomo.tex', 'Pyomo Documentation', author, 'manual'),
-    ('code', 'pyomo_reference.tex', 'Pyomo Code Reference', author, 'manual')
+    ('code', 'pyomo_reference.tex', 'Pyomo Code Reference', author, 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
