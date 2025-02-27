@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # -*- coding: utf-8 -*-
-""" Example 1 in Paper 'Using regularization and second order information in outer approximation for convex MINLP'
+"""Example 1 in Paper 'Using regularization and second order information in outer approximation for convex MINLP'
 
 The expected optimal solution value is -56.981.
 
