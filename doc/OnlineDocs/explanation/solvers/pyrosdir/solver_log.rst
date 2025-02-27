@@ -1,5 +1,6 @@
 .. _pyros_solver_log:
 
+=======================
 PyROS Solver Output Log
 =======================
 
@@ -11,7 +12,7 @@ PyROS Solver Output Log
 .. _pyros_solver_log_appearance:
 
 Default Format
---------------
+==============
 
 When the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
@@ -252,7 +253,7 @@ table below:
 .. _pyros_solver_log_verbosity:
 
 Configuring the Output Log
---------------------------
+==========================
 
 For a given call to the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method,
