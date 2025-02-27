@@ -214,6 +214,7 @@ latex_elements = {
 \setlistdepth{99}
 \DeclareUnicodeCharacter{2227}{$\wedge$}
 \DeclareUnicodeCharacter{2228}{$\vee$}
+\DeclareUnicodeCharacter{22BB}{$\veebar$}
 ''',
     # Latex figure (float) alignment
     #
