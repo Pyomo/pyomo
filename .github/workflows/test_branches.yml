@@ -714,7 +714,7 @@ jobs:
           scheme: full
           run: |
             cd doc/OnlineDocs/_build/latex
-            for TEX in *.tex; do latexmk $TEX; done
+            for TEX in *.tex; do pdflatex $TEX; done
 
     - name: Run documentation tests
       if: matrix.test_docs != 0
