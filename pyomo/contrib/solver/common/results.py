@@ -304,7 +304,7 @@ are no longer achievable:
     - `LegacySolutionStatus.globallyOptimal` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.optimal`
     - `LegacySolutionStatus.bestSoFar` -> `TerminationCondition.convergenceCriteriaSatisfied`, `SolutionStatus.feasible`
 """,
-        version='6.7.4.dev0',
+        version='6.9.1.dev0',
     )
     if results.termination_condition in set(
         [
