@@ -193,6 +193,8 @@ Logic-based Discrete-Steepest Descent Algorithm (LD-SDA)
 --------------------------------------------------------
 
 The GDPopt-LDSDA solver exploits the ordered Boolean variables in the disjunctions to solve the GDP model.
+It requires an **exclusive OR (XOR) logical constraint** to ensure that exactly one disjunct is active in each disjunction. 
+The solver also requires a **starting point** for the discrete variables and allows users to choose between two **direction norms**, `'L2'` and `'Linf'`, to guide the search process.
 
 To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
 
