@@ -16,23 +16,26 @@ Programming (GDP) [RG94]_, an extension of Disjunctive Programming
 relationships. The classic form for a GDP is given by:
 
 .. math::
+   :nowrap:
 
-    \min\ obj = &\ f(x, z) \\
-    \text{s.t.} \quad &\ Ax+Bz \leq d\\
-    &\ g(x,z) \leq 0\\
-    &\ \bigvee_{i\in D_k} \left[
+   \[\begin{array}{ll}
+    \min & f(x, z) \\
+    \mathrm{s.t.} \quad & Ax+Bz \leq d\\
+    & g(x,z) \leq 0\\
+    & \bigvee_{i\in D_k} \left[
         \begin{gathered}
         Y_{ik} \\
         M_{ik} x + N_{ik} z \leq e_{ik} \\
         r_{ik}(x,z)\leq 0\\
         \end{gathered}
     \right] \quad k \in K\\
-    &\ \Omega(Y) = True \\
-    &\ x \in X \subseteq \mathbb{R}^n\\
-    &\ Y \in \{True, False\}^{p}\\
-    &\ z \in Z \subseteq \mathbb{Z}^m
+    & \Omega(Y) = True \\
+    & x \in X \subseteq \mathbb{R}^n\\
+    & Y \in \{True, False\}^{p}\\
+    & z \in Z \subseteq \mathbb{Z}^m
+   \end{array}\]
 
-Here, we have the minimization of an objective :math:`obj` subject to global linear constraints :math:`Ax+Bz \leq d` and nonlinear constraints :math:`g(x,z) \leq 0`, with conditional linear constraints :math:`M_{ik} x + N_{ik} z \leq e_{ik}` and nonlinear constraints :math:`r_{ik}(x,z)\leq 0`.
+Here, we have the minimization of an objective :math:`f(x, z)` subject to global linear constraints :math:`Ax+Bz \leq d` and nonlinear constraints :math:`g(x,z) \leq 0`, with conditional linear constraints :math:`M_{ik} x + N_{ik} z \leq e_{ik}` and nonlinear constraints :math:`r_{ik}(x,z)\leq 0`.
 These conditional constraints are collected into disjuncts :math:`D_k`, organized into disjunctions :math:`K`. Finally, there are logical propositions :math:`\Omega(Y) = True`.
 Decision/state variables can be continuous :math:`x`, Boolean :math:`Y`, and/or integer :math:`z`.
 

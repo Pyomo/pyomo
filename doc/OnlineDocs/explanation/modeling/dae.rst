@@ -346,7 +346,7 @@ showing a double integral over the
 and implementation in Pyomo are shown below:
 
 .. math::
-    \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
+   \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
 
 .. doctest::
 
@@ -403,14 +403,16 @@ called Implicit or Backward Euler) has been implemented. The
 discretization equations for this method are shown below:
 
 .. math::
-    \begin{array}{l}
+   :nowrap:
+
+   \[\begin{array}{l}
     \mathrm{Given: } \\
     \frac{dx}{dt} = f(t, x) , \quad x(t_0) = x_{0} \\
     \text{discretize $t$ and $x$ such that } \\
     x(t_0 + kh) = x_{k} \\
     x_{k + 1} = x_{k} + h * f(t_{k + 1}, x_{k + 1}) \\
     t_{k + 1} = t_{k} + h
-    \end{array}
+   \end{array}\]
 
 where :math:`h` is the step size between discretization points or the size of
 each finite element. These equations are generated automatically as
@@ -772,10 +774,12 @@ Using the Simulator
 We now show how to use the Simulator to simulate the following system of ODEs:
 
 .. math::
-    \begin{array}{l}
+   :nowrap:
+
+   \[\begin{array}{l}
     \frac{d\theta}{dt} = \omega \\
     \frac{d\omega}{dt} = -b*\omega -c*sin(\theta)
-    \end{array}
+   \end{array}\]
 
 We begin by formulating the model using pyomo.DAE
 

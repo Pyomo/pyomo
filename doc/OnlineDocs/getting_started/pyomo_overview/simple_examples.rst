@@ -15,11 +15,11 @@ Given the following model from the previous section:
 .. math::
    :nowrap:
 
-    \begin{array}{ll}
+   \[\begin{array}{ll}
      \min       & 2 x_1 + 3 x_2\\
      \mathrm{s.t.} & 3 x_1 + 4 x_2 \geq 1\\
                 & x_1, x_2 \geq 0
-     \end{array}
+   \end{array}\]
 
 This can be implemented as a concrete model as follows:
 
@@ -48,11 +48,11 @@ We repeat the abstract model from the previous section:
 .. math::
    :nowrap:
 
-    \begin{array}{lll}
-    \min       & \sum_{j=1}^n c_j x_j &\\
+    \[\begin{array}{lll}
+     \min      & \sum_{j=1}^n c_j x_j &\\
      \mathrm{s.t.} & \sum_{j=1}^n a_{ij} x_j \geq b_i & \forall i = 1 \ldots m\\
                & x_j \geq 0 & \forall j = 1 \ldots n
-    \end{array}
+    \end{array}\]
 
 One way to implement this in Pyomo is as shown as follows:
 
