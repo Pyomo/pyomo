@@ -1,7 +1,16 @@
 .. _pyros_uncertainty_sets:
 
+======================
 PyROS Uncertainty Sets
 ======================
+
+.. contents:: Table of Contents
+   :depth: 1
+   :local:
+
+
+Overview
+========
 In PyROS, the uncertainty set of a robust optimization problem
 is represented by an instance of a subclass of the
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
@@ -11,7 +20,12 @@ PyROS provides a suite of pre-implemented concrete
 subclasses to facilitate instantiation of uncertainty sets
 that are commonly used in the optimization literature.
 Custom uncertainty set types can be implemented by subclassing
-:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`.
+:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`,
+though there are limitations.
+
+
+Pre-Implemented Uncertainty Set Types
+=====================================
 The pre-implemented subclasses are enumerated below:
 
 .. autosummary::
@@ -26,8 +40,6 @@ The pre-implemented subclasses are enumerated below:
    ~pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
    ~pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
 
-.. 
-   Everything inside this block is commented out.
 
 Mathematical definitions of the pre-implemented 
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
@@ -69,3 +81,16 @@ subclasses are provided below.
    * - :class:`~pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet`
      - :math:`\begin{array}{l} A \in \mathbb{R}^{m \times n}, \\ b \in \mathbb{R}^{m}\end{array}`
      - :math:`\{q \in \mathbb{R}^{n} \mid A q \leq b\}`
+
+
+Custom Uncertainty Set Types
+============================
+A custom uncertainty set type
+in which all uncertain parameters
+are modeled as continuous quantities
+can be implemented by subclassing
+:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`.
+For discrete sets, we recommend using the pre-implemented
+:class:`~pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet`
+subclass instead of implementing a new set type.
+PyROS does not support mixed-integer uncertainty set types.
