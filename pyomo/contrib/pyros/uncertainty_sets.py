@@ -952,7 +952,7 @@ class UncertaintySetList(MutableSequence):
 
 class BoxSet(UncertaintySet):
     """
-    A hyper-rectangle (i.e., "box").
+    A hyperrectangle (or box).
 
     Parameters
     ----------
@@ -2889,8 +2889,7 @@ class EllipsoidalSet(UncertaintySet):
 
 class DiscreteScenarioSet(UncertaintySet):
     """
-    A discrete set of finitely many uncertain parameter realizations
-    (or scenarios).
+    A set of finitely many distinct points (or scenarios).
 
     Parameters
     ----------
