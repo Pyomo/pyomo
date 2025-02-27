@@ -1,9 +1,6 @@
 PyROS Solver 
 ============
 
-Introduction
-------------
-
 PyROS (Pyomo Robust Optimization Solver) is a Pyomo-based meta-solver
 for non-convex, two-stage adjustable robust optimization problems.
 
@@ -13,12 +10,9 @@ in collaboration with **John D. Siirola** of Sandia National Labs.
 The developers gratefully acknowledge support from the U.S. Department of Energy's
 `Institute for the Design of Advanced Energy Systems (IDAES) <https://idaes.org>`_.
 
-
-Contents
---------
-
 .. toctree::
    :maxdepth: 1
+   :caption: Index of PyROS Documentation
 
    Overview <overview.rst>
    Getting Started <getting_started.rst>
@@ -29,7 +23,8 @@ Contents
 
 Citing PyROS
 ------------
-If you use PyROS, please consider citing the publication [IAE+21]_.
+If you use PyROS in your research,
+please acknowledge PyROS by citing [IAE+21]_.
 
 
 Feedback and Reporting Issues
