@@ -742,7 +742,16 @@ jobs:
       if: matrix.build_docs != 0
       run: |
         make -C doc/OnlineDocs html
-        make -C doc/OnlineDocs latexpdf
+        make -C doc/OnlineDocs latex
+
+    - name: Generate PDF documents
+      if: matrix.build_docs != 0
+      uses: xu-cheng/texlive-action@v2
+      with:
+          scheme: full
+          run: |
+            cd doc/OnlineDocs/_build/latex
+            for TEX in *.tex; do latexmk $TEX; done
 
     - name: Run documentation tests
       if: matrix.test_docs != 0
