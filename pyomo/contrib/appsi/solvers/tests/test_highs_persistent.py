@@ -179,7 +179,7 @@ class TestBugs(unittest.TestCase):
         m.x3 = True
 
         # solving process
-        with Highs() as opt, capture_output() as output:
-            opt.solve(m, tee=True, warmstart=True)
+        with capture_output() as output:
+            pe.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
         log = output.getvalue()
         self.assertIn("MIP start solution is feasible, objective value is 25", log)
