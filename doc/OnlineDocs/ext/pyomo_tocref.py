@@ -16,7 +16,7 @@ creating duplicate TOC entries
 
 from docutils import nodes
 from sphinx.directives.other import TocTree
-from sphinx.environment.adapters.toctree import _resolve_toctree
+from sphinx.environment.adapters.toctree import TocTree as TocTree_Adapter
 
 
 def setup(app):
@@ -45,10 +45,10 @@ class TocRef(TocTree):
 
 
 def expand_tocrefs(app, doctree, docname):
+    toctree_adapter = TocTree_Adapter(app.env)
     for node in doctree.findall(tocref):
         node.replace_self(
-            _resolve_toctree(
-                app.env,
+            toctree_adapter.resolve(
                 docname,
                 app.builder,
                 node,
