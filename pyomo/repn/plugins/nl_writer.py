@@ -44,7 +44,6 @@ from pyomo.core.base import (
     SortComponents,
     minimize,
 )
-from pyomo.mpec import Complementarity
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.expression import ScalarExpression, ExpressionData
@@ -557,9 +556,9 @@ class _NLWriter_impl(object):
                 Set,
                 RangeSet,
                 Port,
-                # TODO: Piecewise
+                # TODO: Piecewise, Complementarity
             },
-            targets={Suffix, SOSConstraint, Complementarity},
+            targets={Suffix, SOSConstraint},
         )
         if unknown:
             raise ValueError(
@@ -664,7 +663,14 @@ class _NLWriter_impl(object):
         all_constraints = []
         n_ranges = 0
         n_equality = 0
-
+        n_complementarity_nonlin = 0
+        n_complementarity_lin = 0
+        # TODO: update the writer to tabulate and report the range and
+        # nzlb values.  Low priority, as they do not appear to be
+        # required for solvers like PATH.
+        n_complementarity_range = 0
+        n_complementarity_nz_var_lb = 0
+        #
         last_parent = None
         for con in ordered_active_constraints(model, self.config):
             if with_debug_timing and con.parent_component() is not last_parent:
@@ -703,70 +709,6 @@ class _NLWriter_impl(object):
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
         else:
             timer.toc('Processed %s constraints', len(all_constraints))
-
-        # Complementarity handling
-        n_complementarity_nonlin = 0
-        n_complementarity_lin = 0
-        n_complementarity_range = 0
-        n_complementarity_nz_var_lb = 0
-
-        for block in component_map[Complementarity]:
-            for comp in block.component_data_objects(
-                Complementarity, active=True, descend_into=False, sort=sorter
-            ):
-                # Transform the complementarity condition into standard form
-                comp.to_standard_form()
-
-                # If a new variable was created, add it to var_map
-                if hasattr(comp, 'v'):
-                    _id = id(comp.v)
-                    if _id not in var_map:
-                        var_map[_id] = comp.v
-
-                    lb, ub = comp.v.bounds
-                    if lb is not None and ub is not None:
-                        n_complementarity_range += 1
-                    elif (lb is not None and lb != 0) or ub is not None:
-                        n_complementarity_nz_var_lb += 1
-
-                # Process the complementarity constraint
-                if hasattr(comp, 'c'):
-                    con = comp.c
-                    con._vid = _id
-                    if hasattr(con, '_complementarity_type'):
-                        con._complementarity = con._complementarity_type
-                    lb, body, ub = con.to_bounded_expression(True)
-                    expr_info = visitor.walk_expression(
-                        (body, comp, 0, scaling_factor(comp))
-                    )
-                    if expr_info.named_exprs:
-                        self._record_named_expression_usage(
-                            expr_info.named_exprs, comp, 0
-                        )
-
-                    if expr_info.nonlinear:
-                        n_complementarity_nonlin += 1
-                    else:
-                        n_complementarity_lin += 1
-
-                    all_constraints.append((con, expr_info, lb, ub))
-
-                # Process the variable equation if it exists
-                if hasattr(comp, 've'):
-                    ve = comp.ve
-                    lb, body, ub = ve.to_bounded_expression(True)
-                    expr_info = visitor.walk_expression(
-                        (body, comp, 0, scaling_factor(comp))
-                    )
-                    if expr_info.named_exprs:
-                        self._record_named_expression_usage(
-                            expr_info.named_exprs, comp, 0
-                        )
-                    all_constraints.append((ve, expr_info, lb, ub))
-                    if linear_presolve:
-                        con_id = id(ve)
-                        for _id in expr_info.linear:
-                            comp_by_linear_var[_id].append((con_id, expr_info))
 
         # We have identified all the external functions (resolving them
         # by name).  Now we may need to resolve the function by the
@@ -1185,6 +1127,10 @@ class _NLWriter_impl(object):
             if hasattr(con, '_complementarity'):
                 # _type = 5
                 r_lines[idx] = f"5 {con._complementarity} {1+column_order[con._vid]}"
+                if expr_info.nonlinear:
+                    n_complementarity_nonlin += 1
+                else:
+                    n_complementarity_lin += 1
         if symbolic_solver_labels:
             for idx in range(len(constraints)):
                 r_lines[idx] += row_comments[idx]
