@@ -64,15 +64,6 @@ commercial and open-source solvers.
 
              reference/index
 
-..
-   toctree::
-   :maxdepth: 1
-   :titlesonly:
-   :hidden:
-
-   genindex
-   modindex
-
 
 Pyomo Resources
 ===============

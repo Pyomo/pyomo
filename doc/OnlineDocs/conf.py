@@ -108,7 +108,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'Pyomo'
 copyright = u'2008-2024, Sandia National Laboratories'
-author = u'Pyomo Developers'
+author = u'Pyomo Development Team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -130,7 +130,7 @@ language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-# This patterns also effect to html_static_path and html_extra_path
+# These patterns also effect to html_static_path and html_extra_path
 # Notes:
 #  - _build : this is the Sphinx build (output) dir
 #
@@ -229,12 +229,20 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyomo.tex', 'Pyomo Documentation', 'Pyomo Development Team', 'manual')
+    (master_doc, 'pyomo.tex', 'Pyomo Documentation', author, 'manual'),
+    ('code', 'pyomo_reference.tex', 'Pyomo Code Reference', author, 'manual')
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
 latex_logo = '../logos/pyomo/PyomoNewBlue.jpg'
+
+# Disable the domain indices (i.e., the module index) for LaTeX targets:
+# because we are splitting the socumentation, the module index in the
+# main document would be completely broken, and having one in the
+# reference document seems redundant (JDS: and I haven't figured out how
+# to have it in only one of the documents)
+latex_domain_indices = False
 
 # -- Options for manual page output ---------------------------------------
 

@@ -1,5 +1,8 @@
 :orphan:
 
+This document is a reference containint all Pyomo module, class, and
+function documentation.
+
 .. autosummary::
    :toctree: api
    :caption: Library Reference
@@ -7,3 +10,8 @@
    :recursive:
 
    pyomo
+
+.. toctree::
+
+   modindex
+   genindex
