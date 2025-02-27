@@ -72,6 +72,10 @@ dl.py.method dt em span.n {
    padding-right: 8px !important;
 }
 
+.rst-content table.scrollwide {
+    overflow: scroll !important;
+    display: block;
+}
 
 /* OLD theme overrides
 
