@@ -1,6 +1,6 @@
 :orphan:
 
-This document is a reference containint all Pyomo module, class, and
+This document is a reference containing all Pyomo module, class, and
 function documentation.
 
 .. autosummary::
