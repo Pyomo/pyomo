@@ -741,17 +741,9 @@ jobs:
     - name: Build documentation
       if: matrix.build_docs != 0
       run: |
+        sudo apt-get -y install graphviz texlive-full
         make -C doc/OnlineDocs html
-        make -C doc/OnlineDocs latex
-
-    - name: Generate PDF documents
-      if: matrix.build_docs != 0
-      uses: xu-cheng/texlive-action@v2
-      with:
-          scheme: full
-          run: |
-            cd doc/OnlineDocs/_build/latex
-            for TEX in *.tex; do pdflatex $TEX; done
+        make -C doc/OnlineDocs latexpdf
 
     - name: Run documentation tests
       if: matrix.test_docs != 0
