@@ -15,7 +15,7 @@ The developers gratefully acknowledge support from the U.S. Department of Energy
    :maxdepth: 1
    :caption: Index of PyROS Documentation
 
-   Overview <overview.rst>
+   Methodology Overview <overview.rst>
    Getting Started <getting_started.rst>
    Solver Interface <solver_interface.rst>
    Uncertainty Sets <uncertainty_sets.rst>

@@ -1,7 +1,8 @@
 .. _pyros_overview:
 
-PyROS Overview
-==============
+==========================
+PyROS Methodology Overview
+==========================
 
 PyROS (Pyomo Robust Optimization Solver) is a Pyomo-based meta-solver
 for non-convex, two-stage adjustable robust optimization problems.
@@ -86,7 +87,7 @@ and then, using the Generalized Robust Cutting-Set algorithm developed
 in [IAE+21]_, seeks a solution to the robust counterpart.
 When using PyROS, please consider citing [IAE+21]_.
 
-.. _unique-mapping:
+.. _pyros_unique_state_vars:
 
 .. note::
     A key assumption of PyROS is that

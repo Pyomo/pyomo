@@ -1,15 +1,16 @@
 .. _pyros_installation:
 
+==========================
 Getting Started with PyROS
 ==========================
 
 .. contents:: Table of Contents
-   :depth: 2
+   :depth: 3
    :local:
 
 
 Installation
-------------
+============
 PyROS can be installed as follows:
 
 1. :ref:`Install Pyomo <pyomo_installation>`.
@@ -46,8 +47,9 @@ PyROS can be installed as follows:
    that you have pre-installed and licensed on your system.
 
 Usage Tutorial
---------------
-In this tutorial, we will solve robust optimization problems with PyROS.
+==============
+In this tutorial, we will use PyROS to solve a few robust
+optimization problems.
 The problems are derived from the deterministic model *hydro*,
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
@@ -66,18 +68,6 @@ Moreover, there are
 and a quadratic objective.
 **All variables of the model are continuous.**
 
-.. note::
-   PyROS does not support models with discrete decision variables.
-
-.. note::
-    Per our analysis, the model *hydro* satisfies the requirement that
-    each value of :math:`\left(x, z, q \right)` maps to a unique
-    value of :math:`y`, which, in accordance with
-    :ref:`our assumption on the equality constraints <unique-mapping>`,
-    indicates a proper partitioning of the model variables
-    into (first-stage and second-stage) degrees of freedom and
-    state variables.
-
 We have extended this model by converting one objective coefficient,
 two constraint coefficients, and one constraint right-hand side
 into :class:`~pyomo.core.base.param.Param` objects
@@ -85,7 +75,7 @@ so that they can be considered uncertain later on.
 
 
 Step 0: Import Pyomo and the PyROS Module
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------------------
 
 In anticipation of using the PyROS solver and building the deterministic Pyomo
 model:
@@ -97,8 +87,11 @@ model:
   >>> import pyomo.environ as pyo
   >>> import pyomo.contrib.pyros as pyros
 
-Step 1: Define the Deterministic Problem
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Step 1: Define the Solver Inputs
+--------------------------------
+
+Deterministic Model
+^^^^^^^^^^^^^^^^^^^
 
 The deterministic Pyomo model for *hydro* is constructed as follows.
 We first instantiate a Pyomo model object:
@@ -123,39 +116,11 @@ These are represented by mutable :class:`~pyomo.core.base.param.Param` objects:
   ... )
 
 .. note::
-    Primitive data (Python literals) that have been hard-coded within a
-    deterministic model (:class:`~pyomo.core.base.PyomoModel.ConcreteModel`)
-    cannot be later considered uncertain,
-    unless they are first converted to Pyomo
-    :class:`~pyomo.core.base.param.Param` instances declared on the
-    :class:`~pyomo.core.base.PyomoModel.ConcreteModel` object.
-    Furthermore, any :class:`~pyomo.core.base.param.Param`
-    object that is to be later considered uncertain must be instantiated
-    with the argument ``mutable=True``.
-
-.. note::
-    If specifying/modifying the ``mutable`` argument in the
-    :class:`~pyomo.core.base.param.Param` declarations
-    of your deterministic model source code
-    is not straightforward in your context, then
-    you may consider adding **after** the
-    :ref:`Pyomo/PyROS module imports <pyros_module_imports>`
-    but **before**
-    :ref:`instantiating the model object <pyros_model_construct>`
-    the statement:
-
-    .. code::
-
-       pyo.Param.DefaultMutable = True
-
-    For all :class:`~pyomo.core.base.param.Param`
-    objects declared after this statement,
-    the attribute ``mutable`` is set to True by default.
-    Hence, non-mutable :class:`~pyomo.core.base.param.Param`
-    objects are now declared by explicitly passing the argument
-    ``mutable=False`` to the :class:`~pyomo.core.base.param.Param`
-    constructor.
-
+    Uncertain parameters cannot be represented directly by
+    primitive data (Python literals) that have been hard-coded within a
+    deterministic model (:class:`~pyomo.core.base.PyomoModel.ConcreteModel`).
+    See the
+    :ref:`Uncertain parameters section of the solver interface overview <pyros_uncertain_params>`.
 
 Finally, we declare the decision variables, objective, and constraints:
 
@@ -248,9 +213,14 @@ We have elected to use BARON as the solver:
   Optimal deterministic objective value: 3.5838e+07
 
 
-Step 2: Define the Uncertainty Quantification
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+First-Stage and Second-Stage Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+We will define the first-stage and second-stage variables
+later for each of two separate cases.
 
+
+Uncertain Parameters
+^^^^^^^^^^^^^^^^^^^^
 We first collect the components of our model that represent the
 uncertain parameters.
 In this example, we assume that the quantities
@@ -270,16 +240,8 @@ one of the following:
 * ``[m.q[0], m.q[1], m.q[2], m.q[3]]``
 * ``list(m.q.values())``
 
-.. note::
-    1. Any :class:`~pyomo.core.base.param.Param` object that
-       represents an uncertain parameter must be instantiated
-       with the constructor argument ``mutable=True``.
-    2. Uncertain parameters can also be represented by
-       :class:`~pyomo.core.base.var.Var`
-       objects declared on the deterministic model.
-       Prior to invoking PyROS,
-       all such :class:`~pyomo.core.base.var.Var` objects should be fixed.
-
+Uncertainty Set
+^^^^^^^^^^^^^^^
 
 PyROS requires an uncertainty set against which to robustly
 optimize the model.
@@ -292,8 +254,7 @@ an instance of a subclass of the
 
 In the present example,
 let us assume that each uncertain parameter can
-independently of the other uncertain parameters
-deviate from the parameter's nominal value by up to :math:`\pm 15\%`.
+independently deviate from its nominal value by up to :math:`\pm 15\%`.
 Then the parameter values are constrained to a box region,
 which we can implement as an instance of the
 :class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet` subclass:
@@ -309,21 +270,14 @@ which we can implement as an instance of the
 Further information on PyROS uncertainty sets is presented in the
 :ref:`Uncertainty Sets section <pyros_uncertainty_sets>`.
 
-
-Step 3: Solve With PyROS
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-PyROS can be instantiated through the Pyomo
-:class:`~pyomo.opt.base.solvers.SolverFactory`:
-
-.. doctest::
-
-  >>> pyros_solver = pyo.SolverFactory("pyros")
-
-PyROS requires the user to supply one subordinate local NLP optimizer
+Subordinate NLP Solvers
+^^^^^^^^^^^^^^^^^^^^^^^
+PyROS requires at least one subordinate local NLP optimizer
 and one subordinate global NLP optimizer for solving subproblems.
 For convenience, we shall have PyROS use
 :ref:`the previously instantiated BARON solver <pyros_solve_deterministic>`
 as both the subordinate local and global NLP solvers:
+
 
 .. doctest::
   :skipif: not (baron.available() and baron.license_is_valid())
@@ -339,14 +293,23 @@ as both the subordinate local and global NLP solvers:
     condition. These alternative solvers are provided through the optional
     keyword arguments ``backup_local_solvers`` and ``backup_global_solvers``.
 
+
+Step 2: Solve With PyROS
+------------------------
+PyROS can be instantiated through the Pyomo
+:class:`~pyomo.opt.base.solvers.SolverFactory`:
+
+.. doctest::
+
+  >>> pyros_solver = pyo.SolverFactory("pyros")
+
 The final step in solving a model with PyROS is to construct the
 remaining required inputs, namely
 ``first_stage_variables`` and ``second_stage_variables``.
 Below, we present two separate cases.
 
-
 A Single-Stage Problem
-"""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^
 We can use PyROS to solve a single-stage robust optimization problem,
 in which all independent variables are designated to be first-stage.
 In the present example, the independent variables are
@@ -408,7 +371,7 @@ For further information on the output log,
 see the :ref:`Solver Output Log section <pyros_solver_log>`.
 
 A Two-Stage Problem
-""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^
 Let us now assume that some of the independent variables are second-stage:
 
 .. doctest::
@@ -416,6 +379,14 @@ Let us now assume that some of the independent variables are second-stage:
 
   >>> first_stage_variables = [m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]
   >>> second_stage_variables = [m.x1, m.x2, m.x3, m.x4, m.x20, m.x21]
+
+
+.. note::
+    Per our analysis, our selections of first-stage variables
+    and second-stage variables for the model *hydro*
+    in both the single-stage problem and the two-stage problem
+    satisfy our
+    :ref:`assumption that the state variable values are uniquely defined <pyros_unique_state_vars>`.
 
 
 PyROS uses polynomial decision rules to approximate the adjustability
@@ -527,8 +498,8 @@ passed through ``options``.
    setting are ignored.
 
 
-Step 4: Check the Results
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Step 3: Check the Outputs
+--------------------------
 The PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
 returns a results object,
 of type :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`,
@@ -560,50 +531,10 @@ We can also query the results object's individual attributes:
    pyrosTerminationCondition.robust_optimal
 
 
-The ``pyros_termination_condition`` attribute of the resuls object
-is a member of the
-:class:`~pyomo.contrib.pyros.util.pyrosTerminationCondition` enumeration.
-
-.. _pyros_robust_optimality_args:
-
-.. note::
-
-    When the PyROS :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-    has successfully solved a given robust optimization problem,
-    the :attr:`~pyomo.contrib.pyros.solve_data.ROSolveResults.pyros_termination_condition`
-    attribute of the returned
-    :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
-    object is set to
-    :attr:`~pyomo.contrib.pyros.util.pyrosTerminationCondition.robust_optimal`
-    only if:
-
-    1. Master problems are solved to global optimality
-       (by specifying ``solve_master_globally=True``)
-    2. A worst-case objective focus is chosen
-       (by specifying ``objective_focus=pyros.ObjectiveType.worst_case``)
-
-    Otherwise, the termination condition is set to
-    :attr:`~pyomo.contrib.pyros.util.pyrosTerminationCondition.robust_feasible`.
-
-.. note::
-
-    The reported objective and variable values
-    depend on the value of the option ``objective_focus``:
-
-    * If ``objective_focus=pyros.ObjectiveType.nominal``,
-      then the objective, second-stage variables, and
-      state variables are evaluated at
-      the nominal uncertain parameter realization.
-    * If ``objective_focus=pyros.ObjectiveType.worst_case``,
-      then the objective, second-stage variables, and
-      state variables are evaluated at
-      the worst-case uncertain parameter realization.
-
-
 We expect that adding second-stage recourse to the
 single-stage *hydro* problem results in
 a reduction in the robust optimal objective value.
-To confirm our expectation, the final objectives can be compared as follows:
+To confirm our expectation, the final objectives can be compared:
 
 .. doctest::
   :skipif: not (baron.available() and baron.license_is_valid())
@@ -625,33 +556,28 @@ Our check confirms that there is a ~25% decrease in the final objective
 value when switching from a static decision rule
 (no second-stage recourse) to an affine decision rule.
 
-We can also inspect the state of the model after the solution
-has been loaded by invoking ``m.display()`` or ``m.pprint()``.
+Since PyROS has successfully solved our problem,
+the final solution has been automatically loaded to the model.
+We can inspect the resulting state of the model
+by invoking, for example, ``m.display()`` or ``m.pprint()``.
 
-.. note::
-
-   PyROS loads the final solution to the deterministic model only if:
-
-   1. The argument ``load_solution=True`` has been passed to PyROS
-      (occurs by default)
-   2. The termination condition is either
-      :attr:`~pyomo.contrib.pyros.util.pyrosTerminationCondition.robust_optimal`
-      or 
-      :attr:`~pyomo.contrib.pyros.util.pyrosTerminationCondition.robust_feasible`
-
-   Otherwise, the final solution is lost.
-
+For a general discussion of the PyROS solver outputs,
+see the
+:ref:`Overview of Outputs section of the Solver Interface documentation <pyros_solver_outputs>`.
 
 Analyzing the Price of Robustness
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------
+In conjunction with standard Pyomo control flow tools,
 PyROS facilitates an analysis of the "price of robustness",
 which we define to be the increase in the robust optimal objective value
-relative to the deterministically optimal objective value
+relative to the deterministically optimal objective value.
+
 Let us, for example, consider optimizing robustly against a
 box uncertainty set centered on the nominal realization
 of the uncertain parameters
 and parameterized by a value :math:`p \geq 0`
-specifying the half-lengths of the box relative to the nominal realization.
+specifying the half-length of the box relative to the nominal realization
+in each dimension.
 Then the box set is defined by:
 
 .. math::
@@ -661,11 +587,10 @@ Then the box set is defined by:
 in which :math:`q^\text{nom}` denotes the nominal realization.
 We can optimize against box sets of increasing
 normalized half-length :math:`p`
-by constructing a corresponding
-:class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet`
-instance and invoking the
-:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
-in a for-loop:
+by iterating over select values of :math:`p` in a ``for`` loop,
+and in each iteration, solving a robust optimization problem
+subject to a corresponding
+:class:`~pyomo.contrib.pyros.uncertainty_sets.BoxSet` instance:
 
 .. code::
 
@@ -708,6 +633,7 @@ we can print a tabular summary of the results:
 
 .. code::
 
+   >>> # table header
    >>> print("=" * 80)
    >>> print(
    ...     f"{'Relative Half-Len.':20s}",
@@ -723,6 +649,7 @@ we can print a tabular summary of the results:
    ...         == pyros.pyrosTerminationCondition.robust_optimal
    ...     )
    ...     if is_robust_optimal:
+   ...         # compute the price of robustness
    ...         obj_value = res.final_objective_value
    ...         price_of_robustness = (
    ...             (res.final_objective_value - deterministic_obj)
