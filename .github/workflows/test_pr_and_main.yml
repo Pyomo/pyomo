@@ -740,10 +740,13 @@ jobs:
 
     - name: Build documentation
       if: matrix.build_docs != 0
-      run: |
-        sudo apt-get -y install graphviz texlive-full
-        make -C doc/OnlineDocs html
-        make -C doc/OnlineDocs latexpdf
+      uses: xu-cheng/texlive-action@v2
+      with:
+          scheme: full
+          run: |
+            sudo apt-get -y install graphviz
+            make -C doc/OnlineDocs html
+            make -C doc/OnlineDocs latexpdf
 
     - name: Run documentation tests
       if: matrix.test_docs != 0
