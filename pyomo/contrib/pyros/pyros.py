@@ -78,15 +78,25 @@ def _get_pyomo_version_info():
 
 @SolverFactory.register(
     "pyros",
-    doc="Robust optimization (RO) solver implementing "
-    "the generalized robust cutting-set algorithm (GRCS)",
+    doc="Pyomo Robust Optimization Solver (PyROS): "
+    "implementation of a generalized robust cutting-set algorithm (GRCS)",
 )
 class PyROS(object):
-    '''
-    PyROS (Pyomo Robust Optimization Solver) implementing a
+    """
+    Pyomo Robust Optimization Solver (PyROS): implementation of a
     generalized robust cutting-set algorithm (GRCS)
-    to solve two-stage NLP optimization models under uncertainty.
-    '''
+    for the solution of two-stage nonlinear programs
+    under uncertainty.
+
+    We recommend instantiating this class as follows:
+
+    .. code::
+
+       >>> import pyomo.environ as pyo
+       >>> import pyomo.contrib.pyros as pyros
+       >>> pyros_solver = pyo.SolverFactory("pyros")
+
+    """
 
     CONFIG = pyros_config()
     _LOG_LINE_LENGTH = 78
