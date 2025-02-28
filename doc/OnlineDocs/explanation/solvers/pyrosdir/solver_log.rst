@@ -17,7 +17,8 @@ Default Format
 When the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
 is invoked on a robust optimization problem,
-your console output will, by default, look like this:
+your console output will, by default, look like this
+(line numbers added for reference):
 
 
 .. _solver-log-snippet:
