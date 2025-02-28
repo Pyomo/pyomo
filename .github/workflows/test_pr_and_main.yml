@@ -744,7 +744,7 @@ jobs:
       with:
           scheme: full
           run: |
-            sudo apt-get -y install graphviz
+            apt-get -y install make graphviz
             make -C doc/OnlineDocs html
             make -C doc/OnlineDocs latexpdf
 
