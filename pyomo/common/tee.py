@@ -391,15 +391,13 @@ class _StreamHandle(object):
         if not ostring:
             return
 
-        for local_stream, user_stream in ostreams:
+        for stream in ostreams:
             try:
-                written = local_stream.write(ostring)
+                written = stream.write(ostring)
             except:
                 written = 0
             if flush or (written and not self.buffering):
-                local_stream.flush()
-                if local_stream is not user_stream:
-                    user_stream.flush()
+                stream.flush()
             # Note: some derived file-like objects fail to return the
             # number of characters written (and implicitly return None).
             # If we get None, we will just assume that everything was
@@ -408,13 +406,13 @@ class _StreamHandle(object):
                 logger.error(
                     "Output stream (%s) closed before all output was "
                     "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (local_stream, ostring[written:])
+                    "the output buffer:\n\t%r" % (stream, ostring[written:])
                 )
 
 
 class TeeStream(object):
     def __init__(self, *ostreams, encoding=None, buffering=-1):
-        self.ostreams = []
+        self.ostreams = ostreams
         self.encoding = encoding
         self.buffering = buffering
         self._stdout = None
@@ -422,16 +420,6 @@ class TeeStream(object):
         self._handles = []
         self._active_handles = []
         self._threads = []
-        for user_stream in ostreams:
-            try:
-                fileno = user_stream.fileno()
-            except:
-                self.ostreams.append((user_stream, user_stream))
-                continue
-            local_stream = os.fdopen(
-                os.dup(fileno), mode=getattr(user_stream, 'mode', None), closefd=True
-            )
-            self.ostreams.append((local_stream, user_stream))
 
     @property
     def STDOUT(self):
@@ -512,9 +500,6 @@ class TeeStream(object):
         self._active_handles.clear()
         self._stdout = None
         self._stderr = None
-        for local, orig in self.ostreams:
-            if orig is not local:
-                local.close()
 
     def __enter__(self):
         return self
