@@ -2149,7 +2149,7 @@ def standardize_active_objective(model_data):
     The epigraph constraint is considered a first-stage
     inequality provided that it is independent of the
     adjustable (i.e., effective second-stage and effective state)
-    variables and the uncertain parameters.
+    variables and the effective uncertain parameters.
 
     Parameters
     ----------
@@ -2350,7 +2350,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
 
     The state variable-independent second-stage equality
     constraints that can be rewritten as polynomials
-    in terms of the uncertain parameters
+    in terms of the effective uncertain parameters
     are reformulated to first-stage equalities
     through matching of the polynomial coefficients.
     Hence, this reformulation technique is referred to as
@@ -2441,7 +2441,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
             )
 
             # analyze the expression with respect to the
-            # uncertain parameters only. thus, only the proxy
+            # effective uncertain parameters only. thus, only the proxy
             # variables for the uncertain parameters are unfixed
             # during the analysis
             visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
@@ -2553,8 +2553,20 @@ def reformulate_state_var_independent_eq_cons(model_data):
 
 def get_effective_uncertain_dimensions(model_data):
     """
-    Determine uncertain parameters of the model that
-    are constrained to a single value by the uncertainty set.
+    Determine the positional indices of the effective uncertain
+    parameters, i.e., the uncertain parameters
+    of a model that are not constrained to a single value
+    by the uncertainty set constraints.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        PyROS model data object.
+
+    Returns
+    -------
+    list of int
+        Positional indices of interest.
     """
     param_bounds = model_data.config.uncertainty_set.parameter_bounds
     if not param_bounds:
