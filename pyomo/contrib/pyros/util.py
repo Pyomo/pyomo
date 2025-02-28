@@ -2568,18 +2568,10 @@ def get_effective_uncertain_dimensions(model_data):
     list of int
         Positional indices of interest.
     """
-    param_bounds = model_data.config.uncertainty_set.parameter_bounds
-    if not param_bounds:
-        param_bounds = model_data.config.uncertainty_set._compute_parameter_bounds(
-            solver=model_data.config.global_solver
-        )
-    return [
-        idx
-        for idx, (lb, ub) in enumerate(param_bounds)
-        if not math.isclose(
-            lb, ub, rel_tol=PARAM_IS_CERTAIN_ABS_TOL, abs_tol=PARAM_IS_CERTAIN_REL_TOL
-        )
-    ]
+    are_coordinates_fixed = model_data.config.uncertainty_set._is_coordinate_fixed(
+        config=model_data.config,
+    )
+    return [idx for idx, is_fixed in enumerate(are_coordinates_fixed) if not is_fixed]
 
 
 def preprocess_model_data(model_data, user_var_partitioning):
