@@ -703,13 +703,13 @@ jobs:
 
     - name: Build documentation
       if: matrix.build_docs != 0
-      uses: xu-cheng/texlive-action@v2
-      with:
-          scheme: full
-          run: |
-            apt-get -y install graphviz make
-            make -C doc/OnlineDocs html
-            make -C doc/OnlineDocs latexpdf
+      run: |
+        apt-get -y install graphviz texlive texlive-fncychap texlive-wrapfig \
+           texlive-capt-of texlive-framed texlive-upquote texlive-needspace \
+           texlive-tabulary texlive-pict2e texlive-xecyr texlive-pdftex \
+           texlive-pgfplots texlive-luatex85 texlive-ctablestack
+        make -C doc/OnlineDocs html
+        make -C doc/OnlineDocs latexpdf
 
     - name: Run documentation tests
       if: matrix.test_docs != 0
