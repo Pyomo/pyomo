@@ -395,7 +395,18 @@ class _StreamHandle(object):
             try:
                 written = stream.write(ostring)
             except:
-                written = 0
+                et, e, tb = sys.exc_info()
+                msg = "Error writing to output stream (%s):\n    %s: %s\n" % (
+                    stream, et.__name__, e)
+                if getattr(stream, 'closed', False):
+                    msg += "Output stream closed before all output was written to it."
+                else:
+                    msg += "Is this a writeable TextIOBase object?"
+                logger.error(
+                    f"{msg}\nThe following was left in the output buffer:\n"
+                    f"    {ostring!r}"
+                )
+                continue
             if flush or (written and not self.buffering):
                 stream.flush()
             # Note: some derived file-like objects fail to return the
@@ -404,9 +415,8 @@ class _StreamHandle(object):
             # fine (as opposed to tossing the incomplete write error).
             if written is not None and written != len(ostring):
                 logger.error(
-                    "Output stream (%s) closed before all output was "
-                    "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (stream, ostring[written:])
+                    "Incomplete write to output stream (%s).\nThe following was "
+                    "left in the output buffer:\n    %r" % (stream, ostring[written:])
                 )
 
 

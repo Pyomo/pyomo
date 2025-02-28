@@ -12,6 +12,7 @@
 
 import gc
 import itertools
+import logging
 import os
 import platform
 import time
@@ -218,8 +219,36 @@ class TestTeeStream(unittest.TestCase):
                 t.STDOUT.write("hi\n")
         self.assertRegex(
             log.getvalue(),
-            r"^Output stream \(<.*?>\) closed before all output was written "
-            r"to it. The following was left in the output buffer:\n\t'hi\\n'\n$",
+            r"Error writing to output stream.*:\n.*\n"
+            r"Output stream closed before all output was written to it.\n"
+            r"The following was left in the output buffer:\n    'hi\\n'\n$",
+        )
+
+        # TeeStream expects stream-like objects
+        log = StringIO()
+        with LoggingIntercept(log):
+            with tee.TeeStream(logging.getLogger()) as t:
+                t.STDOUT.write("hi\n")
+        self.assertRegex(
+            log.getvalue(),
+            r"Error writing to output stream.*:\n.*\n"
+            r"Is this a writeable TextIOBase object\?\n"
+            r"The following was left in the output buffer:\n    'hi\\n'\n$",
+        )
+
+        # Catch partial writes
+        class fake_stream:
+            def write(self, data):
+                return 1
+
+        log = StringIO()
+        with LoggingIntercept(log):
+            with tee.TeeStream(fake_stream()) as t:
+                t.STDOUT.write("hi\n")
+        self.assertRegex(
+            log.getvalue(),
+            r"Incomplete write to output stream.*\.\n"
+            r"The following was left in the output buffer:\n    'i\\n'\n$",
         )
 
     def test_capture_output(self):
