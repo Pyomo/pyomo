@@ -746,11 +746,6 @@ jobs:
         make -C doc/OnlineDocs html
         make -C doc/OnlineDocs latexpdf
 
-        # texlive-fncychap texlive-wrapfig \
-        # texlive-capt-of texlive-framed texlive-upquote texlive-needspace \
-        # texlive-tabulary texlive-pict2e texlive-xecyr texlive-pdftex \
-        # texlive-pgfplots texlive-luatex85 texlive-ctablestack
-
     - name: Run documentation tests
       if: matrix.test_docs != 0
       run: |
