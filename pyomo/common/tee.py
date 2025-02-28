@@ -194,10 +194,12 @@ class capture_output(object):
 
     capture_fd : bool
 
-        If True, we will also redirect the low-level file descriptors
-        associated with stdout (1) and stderr (2) to the ``output``.
-        This is useful for capturing output emitted directly to the
-        process stdout / stderr by external compiled modules.
+        If True, we will also redirect the process file descriptors
+        ``1`` (stdout), ``2`` (stderr), and the file descriptors from
+        ``sys.stdout.fileno()`` and ``sys.stderr.fileno()`` to the
+        ``output``.  This is useful for capturing output emitted
+        directly to the process stdout / stderr by external compiled
+        modules.
 
     Returns
     -------
@@ -231,18 +233,29 @@ class capture_output(object):
         sys.stdout = self.tee.STDOUT
         sys.stderr = self.tee.STDERR
         if self.capture_fd:
-            self.fd_redirect = (
-                redirect_fd(1, self.tee.STDOUT.fileno(), synchronize=False),
-                redirect_fd(2, self.tee.STDERR.fileno(), synchronize=False),
-            )
-            self.fd_redirect[0].__enter__()
-            self.fd_redirect[1].__enter__()
+            tee_fd = (self.tee.STDOUT.fileno(), self.tee.STDERR.fileno())
+            self.fd_redirect = [
+                redirect_fd(1, tee_fd[0], synchronize=False),
+                redirect_fd(2, tee_fd[1], synchronize=False),
+            ]
+            for i in range(2):
+                try:
+                    fd = self.old[i].fileno()
+                except (AttributeError, OSError):
+                    pass
+                else:
+                    if fd != i + 1:
+                        self.fd_redirect.append(
+                            redirect_fd(fd, tee_fd[i], synchronize=False)
+                        )
+            for fdr in self.fd_redirect:
+                fdr.__enter__()
         return self.output_stream
 
     def __exit__(self, et, ev, tb):
         if self.fd_redirect is not None:
-            self.fd_redirect[1].__exit__(et, ev, tb)
-            self.fd_redirect[0].__exit__(et, ev, tb)
+            for fdr in reversed(self.fd_redirect):
+                fdr.__exit__(et, ev, tb)
             self.fd_redirect = None
         FAIL = self.tee.STDOUT is not sys.stdout
         self.tee.__exit__(et, ev, tb)
