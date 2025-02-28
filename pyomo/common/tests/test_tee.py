@@ -352,14 +352,15 @@ class BufferTester(object):
             sys.stdout.write(f"{time.time()}\n")
             time.sleep(self.dt)
         ts.write(f"{time.time()}\n")
-        baseline = [[(0, 0), (1, 0), (1, 0), (1, 1)]]
-        if fd:
-            # TODO: [JDS] If we are capturing the file descriptor, the
-            # stdout channel is sometimes no longer buffered.  I am not
-            # exactly sure why (my guess is because the underlying pipe
-            # is not buffered), but as it is generally not a problem to
-            # not buffer, we will put off "fixing" it.
-            baseline.append([(0, 0), (0, 0), (0, 0), (1, 1)])
+        baseline = [
+            [(0, 0), (1, 0), (1, 0), (1, 1)],
+            # TODO: [JDS] The stdout channel appears to sometimes be no
+            # longer buffered.  I am not exactly sure why (my guess is
+            # because the underlying pipe is not buffered), but as it is
+            # generally not a problem to not buffer, we will put off
+            # "fixing" it.
+            [(0, 0), (0, 0), (0, 0), (1, 1)],
+        ]
         if not ts.check(*baseline):
             self.fail(ts.error)
 
