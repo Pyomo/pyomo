@@ -239,7 +239,7 @@ latex_documents = [
 latex_logo = '../logos/pyomo/PyomoNewBlue.jpg'
 
 # Disable the domain indices (i.e., the module index) for LaTeX targets:
-# because we are splitting the socumentation, the module index in the
+# because we are splitting the documentation, the module index in the
 # main document would be completely broken, and having one in the
 # reference document seems redundant (JDS: and I haven't figured out how
 # to have it in only one of the documents)
