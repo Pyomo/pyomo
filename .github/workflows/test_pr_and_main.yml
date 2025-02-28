@@ -693,7 +693,7 @@ jobs:
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
-      if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim && matrix.category != 'notests' }}
       run: |
         echo ""
         echo "Pyomo download-extensions"
