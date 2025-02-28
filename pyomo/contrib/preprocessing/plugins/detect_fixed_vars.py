@@ -23,6 +23,8 @@ from pyomo.common.config import (
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.core.base.block import Block
+from pyomo.gdp import Disjunct
 
 
 @TransformationFactory.register(
@@ -67,7 +69,9 @@ class FixedVarDetector(IsomorphicTransformation):
         if config.tmp:
             instance._xfrm_detect_fixed_vars_old_values = ComponentMap()
 
-        for var in instance.component_data_objects(ctype=Var, descend_into=True):
+        for var in instance.component_data_objects(
+            ctype=Var, descend_into=[Block, Disjunct]
+        ):
             if var.fixed or var.lb is None or var.ub is None:
                 # if the variable is already fixed, or if it is missing a
                 # bound, we skip it.
