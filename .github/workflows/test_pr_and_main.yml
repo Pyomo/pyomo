@@ -741,7 +741,8 @@ jobs:
     - name: Build documentation
       if: matrix.build_docs != 0
       run: |
-        sudo apt-get -y install graphviz texlive latexmk
+        sudo apt-get -y install graphviz latexmk texlive texlive-latex-extra \
+            texlive-pictures texlive-xetex texlive-luatex
         make -C doc/OnlineDocs html
         make -C doc/OnlineDocs latexpdf
 
