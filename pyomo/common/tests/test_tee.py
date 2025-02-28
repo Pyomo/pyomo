@@ -36,7 +36,10 @@ class timestamper:
 
     def write(self, data):
         for line in data.splitlines():
-            self.buf.append((time.time(), float(line.strip())))
+            line = line.strip()
+            if not line:
+                continue
+            self.buf.append((time.time(), float(line)))
 
     def writelines(self, data):
         for line in data:
@@ -217,22 +220,25 @@ class TestTeeStream(unittest.TestCase):
             with tee.TeeStream(out) as t:
                 out.close()
                 t.STDOUT.write("hi\n")
+        _id = hex(id(out))
         self.assertRegex(
             log.getvalue(),
-            r"Error writing to output stream.*:\n.*\n"
-            r"Output stream closed before all output was written to it.\n"
+            f"Error writing to output stream <_?io.StringIO @ {_id}>:"
+            r"\n.*\nOutput stream closed before all output was written to it.\n"
             r"The following was left in the output buffer:\n    'hi\\n'\n$",
         )
 
         # TeeStream expects stream-like objects
+        out = logging.getLogger()
         log = StringIO()
         with LoggingIntercept(log):
-            with tee.TeeStream(logging.getLogger()) as t:
+            with tee.TeeStream(out) as t:
                 t.STDOUT.write("hi\n")
+        _id = hex(id(out))
         self.assertRegex(
             log.getvalue(),
-            r"Error writing to output stream.*:\n.*\n"
-            r"Is this a writeable TextIOBase object\?\n"
+            f"Error writing to output stream <logging.RootLogger @ {_id}>:"
+            r"\n.*\nIs this a writeable TextIOBase object\?\n"
             r"The following was left in the output buffer:\n    'hi\\n'\n$",
         )
 
@@ -241,14 +247,16 @@ class TestTeeStream(unittest.TestCase):
             def write(self, data):
                 return 1
 
+        out = fake_stream()
         log = StringIO()
         with LoggingIntercept(log):
-            with tee.TeeStream(fake_stream()) as t:
+            with tee.TeeStream(out) as t:
                 t.STDOUT.write("hi\n")
+        _id = hex(id(out))
         self.assertRegex(
             log.getvalue(),
-            r"Incomplete write to output stream.*\.\n"
-            r"The following was left in the output buffer:\n    'i\\n'\n$",
+            f"Incomplete write to output stream <.*fake_stream @ {_id}>."
+            r"\nThe following was left in the output buffer:\n    'i\\n'\n$",
         )
 
     def test_capture_output(self):
@@ -295,6 +303,32 @@ class TestTeeStream(unittest.TestCase):
             b.tee = None
         finally:
             sys.stdout, sys.stderr = old
+
+    def test_capture_output_invalid_ostream(self):
+        # Test that capture_output does not suppress errors from the tee
+        # module
+        _id = hex(id(15))
+        with tee.capture_output(capture_fd=True) as OUT:
+            with tee.capture_output(15):
+                sys.stderr.write("hi\n")
+        self.assertEqual(
+            OUT.getvalue(),
+            f"Error writing to output stream <builtins.int @ {_id}>:\n"
+            "    AttributeError: 'int' object has no attribute 'write'\n"
+            "Is this a writeable TextIOBase object?\n"
+            "The following was left in the output buffer:\n    'hi\\n'\n",
+        )
+
+        with tee.capture_output(capture_fd=True) as OUT:
+            with tee.capture_output(15, capture_fd=True):
+                print("hi")
+        self.assertEqual(
+            OUT.getvalue(),
+            f"Error writing to output stream <builtins.int @ {_id}>:\n"
+            "    AttributeError: 'int' object has no attribute 'write'\n"
+            "Is this a writeable TextIOBase object?\n"
+            "The following was left in the output buffer:\n    'hi\\n'\n",
+        )
 
     def test_deadlock(self):
         class MockStream(object):
