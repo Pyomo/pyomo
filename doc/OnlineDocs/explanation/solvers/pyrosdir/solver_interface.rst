@@ -39,6 +39,8 @@ or both.
 Any variable of the model that is excluded from the lists
 of first-stage and second-stage variables
 is automatically considered to be a state variable.
+PyROS assumes that the state variables are
+:ref:`uniquely defined by the equality constraints <pyros_unique_state_vars>`.
 
 
 .. _pyros_uncertain_params:
@@ -119,7 +121,7 @@ if and only if:
    (by passing ``solve_master_globally=True``)
 2. A worst-case objective focus is chosen
    (by setting ``objective_focus``
-   to :attr:`~pyomo.contrib.pyros.util.ObjectiveType.worst_case``)
+   to :attr:`~pyomo.contrib.pyros.util.ObjectiveType.worst_case`)
 
 Otherwise, the termination condition is set to
 :attr:`~pyomo.contrib.pyros.util.pyrosTerminationCondition.robust_feasible`.
