@@ -309,7 +309,7 @@ jobs:
         conda config --append channels nodefaults
         conda config --append channels conda-forge
         # Try to install mamba
-        conda install --update-deps -q -y -n base libffi
+        conda install --update-deps -q -y -n base ply
         conda install --update-deps -q -y -n base conda-libmamba-solver \
             || MAMBA_FAILED=1
         if test -z "$MAMBA_FAILED"; then
