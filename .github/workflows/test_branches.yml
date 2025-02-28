@@ -704,7 +704,7 @@ jobs:
     - name: Build documentation
       if: matrix.build_docs != 0
       run: |
-        apt-get -y install graphviz texlive texlive-fncychap texlive-wrapfig \
+        sudo apt-get -y install graphviz texlive texlive-fncychap texlive-wrapfig \
            texlive-capt-of texlive-framed texlive-upquote texlive-needspace \
            texlive-tabulary texlive-pict2e texlive-xecyr texlive-pdftex \
            texlive-pgfplots texlive-luatex85 texlive-ctablestack
