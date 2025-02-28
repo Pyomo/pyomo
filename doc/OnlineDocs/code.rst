@@ -11,7 +11,6 @@ function documentation.
 
    pyomo
 
-.. toctree::
 
-   modindex
-   genindex
+* :ref:`genindex`
+* :ref:`modindex`
