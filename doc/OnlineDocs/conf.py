@@ -229,10 +229,11 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, 'pyomo.tex', 'Pyomo Documentation', author, 'manual'),
-    ('code', 'pyomo_reference.tex', 'Pyomo Code Reference', author, 'manual'),
-]
+latex_documents = [(master_doc, 'pyomo.tex', 'Pyomo Documentation', author, 'manual')]
+if not on_rtd:
+    latex_documents.append(
+        ('code', 'pyomo_reference.tex', 'Pyomo Code Reference', author, 'manual')
+    )
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
