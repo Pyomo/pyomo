@@ -402,7 +402,12 @@ jobs:
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
                         echo ""
                         echo "... INSTALLING $PKG"
-                        conda install -y "$PKG" || _BUILDS=""
+                        # Because SCIP frequently causes conda to hang
+                        # indefinitely, we will run "conda insta;;" kin
+                        # a subprocess with a 2.5-minute timeout.
+                        python -c "import sys, subprocess; sys.exit( \
+                            subprocess.run(['conda', 'install', '-y', '$PKG'], \
+                            timeout=150))" || _BUILDS=""
                     fi
                 fi
                 echo ""
@@ -412,6 +417,8 @@ jobs:
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
+        echo ""
+        echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
