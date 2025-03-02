@@ -341,7 +341,9 @@ jobs:
         conda config --append channels nodefaults
         conda config --append channels conda-forge
         # Try to install mamba
-        conda install --update-deps -q -y -n base conda-libmamba-solver \
+        # Note: removed '--update-deps' on 2025-02-28 to work around
+        #       broken libffi(?)
+        conda install -q -y -n base conda-libmamba-solver \
             || MAMBA_FAILED=1
         if test -z "$MAMBA_FAILED"; then
             echo "*** Activating the mamba environment solver ***"
