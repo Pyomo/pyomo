@@ -435,11 +435,11 @@ jobs:
                         echo ""
                         echo "... INSTALLING $PKG"
                         # Because SCIP frequently causes conda to hang
-                        # indefinitely, we will run "conda insta;;" kin
+                        # indefinitely, we will run "conda install" in
                         # a subprocess with a 2.5-minute timeout.
                         python -c "import sys, subprocess; sys.exit( \
                             subprocess.run(['conda', 'install', '-y', '$PKG'], \
-                            timeout=150))" || _BUILDS=""
+                            timeout=150, shell=True))" || _BUILDS=""
                     fi
                 fi
                 echo ""
