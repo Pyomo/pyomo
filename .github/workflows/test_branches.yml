@@ -303,30 +303,31 @@ jobs:
       if: matrix.PYENV == 'conda'
       run: |
         # Set up environment
-        conda config --set always_yes yes
-        conda config --set auto_update_conda false
-        conda config --remove channels defaults
-        conda config --append channels nodefaults
-        conda config --append channels conda-forge
+        CONDA=`which conda`
+        $CONDA config --set always_yes yes
+        $CONDA config --set auto_update_conda false
+        $CONDA config --remove channels defaults
+        $CONDA config --append channels nodefaults
+        $CONDA config --append channels conda-forge
         # Try to install mamba
         # Note: removed '--update-deps' on 2025-02-28 to work around
         #       broken libffi(?)
-        conda install -q -y -n base conda-libmamba-solver \
+        $CONDA install -q -y -n base conda-libmamba-solver \
             || MAMBA_FAILED=1
         if test -z "$MAMBA_FAILED"; then
             echo "*** Activating the mamba environment solver ***"
-            conda config --set solver libmamba
+            $CONDA config --set solver libmamba
         fi
         # Add the rest of the channels
-        conda config --append channels gurobi
-        conda config --append channels ibmdecisionoptimization
-        conda config --append channels fico-xpress
+        $CONDA config --append channels gurobi
+        $CONDA config --append channels ibmdecisionoptimization
+        $CONDA config --append channels fico-xpress
         # Print environment info
         echo "*** CONDA environment: ***"
-        conda info
-        conda config --show-sources
-        conda config --show channels
-        conda list --show-channel-urls
+        $CONDA info
+        $CONDA config --show-sources
+        $CONDA config --show channels
+        $CONDA list --show-channel-urls
         which python
         python --version
         # Note: some pypi packages are not available through conda
@@ -365,7 +366,7 @@ jobs:
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        $CONDA install --update-deps -q -y $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (from conda) hangs indefinitely on GHA/Windows under
             # Python 3.10 and 3.11.  Exclude that release on that platform.
@@ -389,7 +390,7 @@ jobs:
                 # if the package is available for this interpreter before
                 # attempting an install.
                 # NOTE: conda search will attempt approximate matches.
-                _PKGLIST=$(conda search -f "$PKG") || echo "Package $PKG not found"
+                _PKGLIST=$($CONDA search -f "$PKG") || echo "Package $PKG not found"
                 echo "$_PKGLIST"
                 _BASE=$(echo "$PKG" | sed 's/[=<>].*//')
                 _BUILDS=$(echo "$_PKGLIST" | grep "^$_BASE " \
@@ -405,9 +406,11 @@ jobs:
                         # Because SCIP frequently causes conda to hang
                         # indefinitely, we will run "conda install" in
                         # a subprocess with a 2.5-minute timeout.
-                        python -c "import sys, subprocess; sys.exit( \
-                            subprocess.run(['conda', 'install', '-y', '$PKG'], \
-                            timeout=150, shell=True).returncode)" || _BUILDS=""
+                        python -c "import sys, subprocess; \
+                            CMD=['$CONDA', 'install', '-y', '$PKG']; \
+                            print(CMD); \
+                            sys.exit(subprocess.run(CMD, timeout=150).returncode)" \
+                            || _BUILDS=""
                     fi
                 fi
                 echo ""
@@ -440,7 +443,7 @@ jobs:
         done
         echo ""
         echo "Final conda environment:"
-        conda list | sed 's/^/    /'
+        $CONDA list | sed 's/^/    /'
 
     - name: Setup TPL package directories
       run: |
