@@ -406,7 +406,7 @@ jobs:
                         # indefinitely, we will run "conda install" in
                         # a subprocess with a 2.5-minute timeout.
                         python -c "import sys, subprocess; sys.exit( \
-                            subprocess.run(['conda', 'install', '-y', '$PKG'], \
+                            subprocess.run(['$CONDA_EXE', 'install', '-y', '$PKG'], \
                             timeout=150, shell=True).returncode)" || _BUILDS=""
                     fi
                 fi
