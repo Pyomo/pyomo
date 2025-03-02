@@ -406,7 +406,7 @@ jobs:
                         # indefinitely (lately while installing SCIP),
                         # we will run "conda install" in a subshell and
                         # kill it after 5-minutes.
-                        (conda install -y $PKG) &
+                        (conda install -q -y $PKG) &
                         conda_pid=$!
                         (sleep 300 && kill "$conda_pid" 2>/dev/null) &
                         timeout_pid=$!
