@@ -9,6 +9,12 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.11"
+  apt-packages:
+    - graphviz
+    - latexmk
+    - texlive
+    - texlive-latex-extra
+    - texlive-pictures
 
 sphinx:
    configuration: doc/OnlineDocs/conf.py
