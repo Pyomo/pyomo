@@ -436,10 +436,13 @@ jobs:
                         echo "... INSTALLING $PKG"
                         # Because SCIP frequently causes conda to hang
                         # indefinitely, we will run "conda install" in
-                        # a subprocess with a 2.5-minute timeout.
-                        python -c "import sys, subprocess; sys.exit( \
-                            subprocess.run(['$CONDA_EXE', 'install', '-y', '$PKG'], \
-                            timeout=150, shell=True).returncode)" || _BUILDS=""
+                        # a subshell and kill it after 2.5-minutes.
+                        (conda install -y $PKG) &
+                        conda_pid=$!
+                        (sleep 150 && kill -9 "$conda_pid" 2>/dev/null) &
+                        timeout_pid=$!
+                        wait "$conda_pid" || _BUILDS=""
+                        kill "$timeout_pid" 2>/dev/null
                     fi
                 fi
                 echo ""
