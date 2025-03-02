@@ -15,13 +15,14 @@ build:
     - texlive
     - texlive-latex-extra
     - texlive-pictures
-  post-build:
-    - |
-      for pdf in $READTHEDOCS_OUTPUT/pdf/*.pdf; do
-          if test [[ `basename $pdf` == graphviz* ]]; then
-              rm -v $pdf;
-          fi;
-      done
+  jobs:
+    post_build:
+      - |
+        for pdf in $READTHEDOCS_OUTPUT/pdf/*.pdf; do
+            if test [[ `basename $pdf` == graphviz* ]]; then
+                rm -v $pdf;
+            fi;
+        done
 
 sphinx:
    configuration: doc/OnlineDocs/conf.py
