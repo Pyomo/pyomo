@@ -402,15 +402,17 @@ jobs:
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
                         echo ""
                         echo "... INSTALLING $PKG"
-                        # Because SCIP frequently causes conda to hang
-                        # indefinitely, we will run "conda install" in
-                        # a subshell and kill it after 2.5-minutes.
+                        # Because conda can occasionally hang
+                        # indefinitely (lately while installing SCIP),
+                        # we will run "conda install" in a subshell and
+                        # kill it after 5-minutes.
                         (conda install -y $PKG) &
                         conda_pid=$!
-                        (sleep 150 && kill -9 "$conda_pid" 2>/dev/null) &
+                        (sleep 300 && kill -9 "$conda_pid" 2>/dev/null) &
                         timeout_pid=$!
                         wait "$conda_pid" || _BUILDS=""
-                        kill "$timeout_pid" 2>/dev/null
+                        kill "$timeout_pid" 2>/dev/null \
+                            || echo "TIMEOUT: killed conda install process"
                     fi
                 fi
                 echo ""
