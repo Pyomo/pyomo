@@ -319,6 +319,12 @@ jobs:
             python -m pip install --cache-dir cache/pip maingopy \
                 || echo "WARNING: MAiNGO is not available"
             if [[ ${{matrix.python}} == pypy* ]]; then
+                echo "skipping SCIP for pypy"
+            else
+                python -m pip install --cache-dir cache/pip pyscipopt \
+                    || echo "WARNING: SCIP is not available"
+            fi
+            if [[ ${{matrix.python}} == pypy* ]]; then
                 echo "skipping wntr for pypy"
             else
                 python -m pip install wntr \
@@ -412,7 +418,7 @@ jobs:
             fi
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip pyscipopt; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
