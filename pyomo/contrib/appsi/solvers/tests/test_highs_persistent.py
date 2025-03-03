@@ -155,3 +155,31 @@ class TestBugs(unittest.TestCase):
         self.assertIn("HiGHS run time", OUT.getvalue())
         ref = "10.0 5.0\n"
         self.assertEqual(ref, OUT.getvalue()[-len(ref) :])
+
+    def test_warm_start(self):
+        m = pe.ConcreteModel()
+
+        # decision variables
+        m.x1 = pe.Var(domain=pe.Integers, name="x1", bounds=(0, 10))
+        m.x2 = pe.Var(domain=pe.Reals, name="x2", bounds=(0, 10))
+        m.x3 = pe.Var(domain=pe.Binary, name="x3")
+
+        # objective function
+        m.OBJ = pe.Objective(expr=(3 * m.x1 + 2 * m.x2 + 4 * m.x3), sense=pe.maximize)
+
+        # constraints
+        m.C1 = pe.Constraint(expr=m.x1 + m.x2 <= 9)
+        m.C2 = pe.Constraint(expr=3 * m.x1 + m.x2 <= 18)
+        m.C3 = pe.Constraint(expr=m.x1 <= 7)
+        m.C4 = pe.Constraint(expr=m.x2 <= 6)
+
+        # MIP start
+        m.x1 = 4
+        m.x2 = 4.5
+        m.x3 = True
+
+        # solving process
+        with capture_output() as output:
+            pe.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
+        log = output.getvalue()
+        self.assertIn("MIP start solution is feasible, objective value is 25", log)
