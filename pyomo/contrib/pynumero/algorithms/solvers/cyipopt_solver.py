@@ -327,7 +327,11 @@ class PyomoCyIpoptSolver(object):
         )
         # if there is no objective, add one temporarily so we can construct an NLP
         objectives = list(model.component_data_objects(Objective, active=True))
-        if not objectives:
+        n_obj = len(objectives)
+        for gbb in grey_box_blocks:
+            if gbb.get_external_model().has_objective():
+                n_obj += 1
+        if n_obj == 0:
             objname = unique_component_name(model, "_obj")
             objective = model.add_component(objname, Objective(expr=0.0))
         try:
@@ -339,7 +343,7 @@ class PyomoCyIpoptSolver(object):
         finally:
             # We only need the objective to construct the NLP, so we delete
             # it from the model ASAP
-            if not objectives:
+            if n_obj == 0:
                 model.del_component(objective)
 
         problem = cyipopt_interface.CyIpoptNLP(
