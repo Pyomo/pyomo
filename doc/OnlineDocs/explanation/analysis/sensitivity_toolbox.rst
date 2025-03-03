@@ -1,7 +1,7 @@
 Sensitivity Toolbox
 ===================
 
-The sensitivity toolbox provides a Pyomo interface to sIPOPT and k_aug to very quickly compute approximate solutions to nonlinear programs with a small perturbation in model parameters. 
+The sensitivity toolbox provides a Pyomo interface to sIPOPT and k_aug to very quickly compute approximate solutions to nonlinear programs with a small perturbation in model parameters.
 
 See the `sIPOPT documentation <https://projects.coin-or.org/Ipopt/wiki/sIpopt>`_ or the `following paper <https://link.springer.com/article/10.1007/s12532-012-0043-2>`_ for additional details:
 
@@ -17,12 +17,14 @@ Using the Sensitivity Toolbox
 We will start with a motivating example:
 
 .. math::
-  \begin{align*}
-  \min_{x_1,x_2,x_3} \quad & x_1^2 + x_2^2 + x_3^2 \\
-  \mathrm{s.t.} \qquad & 6 x_1 + 3 x_2 + 2 x_3 - p_1 = 0 \\
-  & p_2 x_1 + x_2 - x_3 - 1 = 0 \\
-  & x_1, x_2, x_3 \geq 0
-  \end{align*}
+   :nowrap:
+
+   \[\begin{array}{ll}
+     \min_{x_1,x_2,x_3} & x_1^2 + x_2^2 + x_3^2 \\
+     \mathrm{s.t.} & 6 x_1 + 3 x_2 + 2 x_3 - p_1 = 0 \\
+     & p_2 x_1 + x_2 - x_3 - 1 = 0 \\
+     & x_1, x_2, x_3 \geq 0
+   \end{array}\]
 
 Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while :math:`p_1` and :math:`p_2` are parameters. At first, let's consider :math:`p_1 = 4.5` and :math:`p_2 = 1.0`. Below is the model implemented in Pyomo.
 
@@ -79,11 +81,11 @@ And finally we call sIPOPT or k_aug:
    if f'{m_sipopt.sens_sol_state_1[m_sipopt.x3]:.3f}' == '-0.000':
        m_sipopt.sens_sol_state_1[m_sipopt.x3] = 0.
 
-The first argument specifies the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. It's important that these two lists are the same length and in the same order. 
+The first argument specifies the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. It's important that these two lists are the same length and in the same order.
 
 First, we can inspect the initial point:
 
-.. doctest:: python    
+.. doctest:: python
     :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
 
     >>> print("eta1 = %0.3f" % m.eta1())
@@ -127,7 +129,7 @@ Note that k_aug does not save the solution with the original parameter values. F
 
 .. doctest:: python
     :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
-    
+
     # *sIPOPT*
     # New parameter values:
     >>> print("eta1 = %0.3f" %m_sipopt.perturbed_eta1())
@@ -187,7 +189,7 @@ The sensitivity toolbox requires either sIPOPT or k_aug to be installed and avai
 * https://coin-or.github.io/coinbrew/
 * https://github.com/dthierry/k_aug
 
-.. note:: 
+.. note::
    If you get an error that ``ipopt_sens`` or ``k_aug`` and ``dot_sens`` cannot be found, double check your installation and make sure the build directories containing the executables were added to your system PATH.
 
 

@@ -31,11 +31,13 @@ Methodology Overview
 The formulation of the original hybrid problem is:
 
 .. math::
-    \begin{align*}
-    \displaystyle \min_{} & ~~ f\left(z, w, d\left(w\right)\right) & \\
-    \displaystyle \text{s.t.} \quad \: & ~~ h\left(z, w, d\left(w\right)\right) = 0 \\
-    \displaystyle & ~~ g\left(z, w, d\left(w\right)\right) \leq 0
-    \end{align*}
+   :nowrap:
+
+   \[\begin{array}{ll}
+    \min_{} & f\left(z, w, d\left(w\right)\right) \\
+    \text{s.t.} & h\left(z, w, d\left(w\right)\right) = 0 \\
+    & g\left(z, w, d\left(w\right)\right) \leq 0
+   \end{array}\]
 
 where:
 
@@ -48,12 +50,14 @@ This formulation is reworked to separate all external function information as
 follows to enable the usage of the trust region method:
 
 .. math::
-    \begin{align*}
-    \displaystyle \min_{x} & ~~ f\left(x\right) & \\
-    \displaystyle \text{s.t.} \quad \: & ~~ h\left(x\right) = 0 \\
-    \displaystyle & ~~ g\left(x\right) \leq 0 \\
-    \displaystyle & ~~ y = d\left(w\right)
-    \end{align*}
+   :nowrap:
+
+   \[\begin{array}{ll}
+     \min_{x} & f\left(x\right) \\
+     \text{s.t.} & h\left(x\right) = 0 \\
+     & g\left(x\right) \leq 0 \\
+     & y = d\left(w\right)
+   \end{array}\]
 
 where:
 
@@ -65,9 +69,7 @@ Using this formulation and a user-supplied low-fidelity/ideal model basis functi
 the surrogate model:
 
 .. math::
-    \begin{align*}
     r_k\left(w\right) = b\left(w\right) + \left( d\left(w_k\right) - b\left(w_k\right) \right) + \left( \nabla d\left(w_k\right) - \nabla b\left(w_k\right) \right)^T \left( w - w_k \right)
-    \end{align*}
 
 This acts similarly to Newton's method in that small, incremental steps are taken
 towards an optimal solution. At each iteration, the current solution of the
@@ -107,7 +109,7 @@ TRF Solver Interface
 
 TRF Usage Example
 ------------------
-Two examples can be found in the examples_ subdirectory. One of them is 
+Two examples can be found in the examples_ subdirectory. One of them is
 implemented below.
 
 .. _examples: https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/trustregion/examples
@@ -144,14 +146,14 @@ Step 2: Create the model
    ...     m.z = pyo.Var(range(3), domain=pyo.Reals, initialize=2.)
    ...     m.x = pyo.Var(range(2), initialize=2.)
    ...     m.x[1] = 1.0
-   ... 
+   ...
    ...     m.ext_fcn = pyo.ExternalFunction(ext_fcn, grad_ext_fcn)
-   ... 
+   ...
    ...     m.obj = pyo.Objective(
    ...         expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
    ...            + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6
    ...     )
-   ... 
+   ...
    ...     m.c1 = pyo.Constraint(
    ...         expr=m.x[0] * m.z[0]**2 + m.ext_fcn(m.x[0], m.x[1]) == 2*pyo.sqrt(2.0)
    ...         )

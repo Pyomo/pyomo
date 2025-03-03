@@ -22,10 +22,15 @@ help:
 
 clean:
 	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	@echo "Removing *.spy, *.out"
+	@echo "Removing *.spy"
 	@find . -name \*.spy -delete
 	@for D in $(BUILDDIR) $(SOURCEDIR)/$(APIDIR); do \
 	    if test -d "$$D"; then echo "Removing $$D"; rm -r "$$D"; fi \
+	 done
+	@for D in ext src; do \
+	    if test -d "$$D/__pycache__"; then \
+                echo "Removing $$D/__pycache__"; rm -r "$$D/__pycache__" ; \
+            fi \
 	 done
 
 rebuild: clean html

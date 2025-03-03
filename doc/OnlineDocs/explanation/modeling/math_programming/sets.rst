@@ -277,12 +277,12 @@ Consider the following simple version of minimum cost flow problem:
 .. math::
    :nowrap:
 
-	\begin{array}{lll}
-	\mbox{minimize} & \sum_{a \in \mathcal{A}} c_{a}x_{a} \\
-	\mbox{subject to:} & S_{n} + \sum_{(i,n) \in \mathcal{A}}x_{(i,n)} &  \\
-					& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} \\
-					& x_{a} \geq 0, &  a \in \mathcal{A}
-	\end{array}
+   \[\begin{array}{lll}
+     \mbox{minimize} & \sum_{a \in \mathcal{A}} c_{a}x_{a} \\
+     \mbox{subject to:} & S_{n} + \sum_{(i,n) \in \mathcal{A}}x_{(i,n)} &  \\
+			& -D_{n} - \sum_{(n,j) \in \mathcal{A}}x_{(n,j)} & n \in \mathcal{N} \\
+			& x_{a} \geq 0, &  a \in \mathcal{A}
+   \end{array}\]
 
 where
 
