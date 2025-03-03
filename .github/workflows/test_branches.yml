@@ -379,7 +379,7 @@ jobs:
             fi
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
-            for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
+            for PKG in scip 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps; do
                 echo ""
                 echo "*** Install $PKG ***"
                 echo ""
