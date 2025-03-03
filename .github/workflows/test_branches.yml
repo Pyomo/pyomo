@@ -401,7 +401,17 @@ jobs:
                     if test -z "$_ISPY" -o -n "$_PYOK"; then
                         echo ""
                         echo "... INSTALLING $PKG"
-                        conda install -y "$PKG" || _BUILDS=""
+                        # Because conda can occasionally hang
+                        # indefinitely (lately while installing SCIP),
+                        # we will run "conda install" in a subshell and
+                        # kill it after 5-minutes.
+                        (conda install -q -y $PKG) &
+                        conda_pid=$!
+                        (sleep 300 && kill "$conda_pid" 2>/dev/null) &
+                        timeout_pid=$!
+                        wait "$conda_pid" || _BUILDS=""
+                        kill "$timeout_pid" 2>/dev/null \
+                            || echo "TIMEOUT: killed conda install process"
                     fi
                 fi
                 echo ""
@@ -411,6 +421,8 @@ jobs:
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
+        echo ""
+        echo "Installing packages only available on PyPI"
         if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
