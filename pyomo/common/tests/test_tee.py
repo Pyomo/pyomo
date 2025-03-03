@@ -12,6 +12,7 @@
 
 import gc
 import itertools
+import logging
 import os
 import platform
 import time
@@ -35,7 +36,10 @@ class timestamper:
 
     def write(self, data):
         for line in data.splitlines():
-            self.buf.append((time.time(), float(line.strip())))
+            line = line.strip()
+            if not line:
+                continue
+            self.buf.append((time.time(), float(line)))
 
     def writelines(self, data):
         for line in data:
@@ -216,10 +220,43 @@ class TestTeeStream(unittest.TestCase):
             with tee.TeeStream(out) as t:
                 out.close()
                 t.STDOUT.write("hi\n")
+        _id = hex(id(out))
         self.assertRegex(
             log.getvalue(),
-            r"^Output stream \(<.*?>\) closed before all output was written "
-            r"to it. The following was left in the output buffer:\n\t'hi\\n'\n$",
+            f"Error writing to output stream <_?io.StringIO @ {_id}>:"
+            r"\n.*\nOutput stream closed before all output was written to it.\n"
+            r"The following was left in the output buffer:\n    'hi\\n'\n$",
+        )
+
+        # TeeStream expects stream-like objects
+        out = logging.getLogger()
+        log = StringIO()
+        with LoggingIntercept(log):
+            with tee.TeeStream(out) as t:
+                t.STDOUT.write("hi\n")
+        _id = hex(id(out))
+        self.assertRegex(
+            log.getvalue(),
+            f"Error writing to output stream <logging.RootLogger @ {_id}>:"
+            r"\n.*\nIs this a writeable TextIOBase object\?\n"
+            r"The following was left in the output buffer:\n    'hi\\n'\n$",
+        )
+
+        # Catch partial writes
+        class fake_stream:
+            def write(self, data):
+                return 1
+
+        out = fake_stream()
+        log = StringIO()
+        with LoggingIntercept(log):
+            with tee.TeeStream(out) as t:
+                t.STDOUT.write("hi\n")
+        _id = hex(id(out))
+        self.assertRegex(
+            log.getvalue(),
+            f"Incomplete write to output stream <.*fake_stream @ {_id}>."
+            r"\nThe following was left in the output buffer:\n    'i\\n'\n$",
         )
 
     def test_capture_output(self):
@@ -266,6 +303,32 @@ class TestTeeStream(unittest.TestCase):
             b.tee = None
         finally:
             sys.stdout, sys.stderr = old
+
+    def test_capture_output_invalid_ostream(self):
+        # Test that capture_output does not suppress errors from the tee
+        # module
+        _id = hex(id(15))
+        with tee.capture_output(capture_fd=True) as OUT:
+            with tee.capture_output(15):
+                sys.stderr.write("hi\n")
+        self.assertEqual(
+            OUT.getvalue(),
+            f"Error writing to output stream <builtins.int @ {_id}>:\n"
+            "    AttributeError: 'int' object has no attribute 'write'\n"
+            "Is this a writeable TextIOBase object?\n"
+            "The following was left in the output buffer:\n    'hi\\n'\n",
+        )
+
+        with tee.capture_output(capture_fd=True) as OUT:
+            with tee.capture_output(15, capture_fd=True):
+                print("hi")
+        self.assertEqual(
+            OUT.getvalue(),
+            f"Error writing to output stream <builtins.int @ {_id}>:\n"
+            "    AttributeError: 'int' object has no attribute 'write'\n"
+            "Is this a writeable TextIOBase object?\n"
+            "The following was left in the output buffer:\n    'hi\\n'\n",
+        )
 
     def test_deadlock(self):
         class MockStream(object):
@@ -323,14 +386,15 @@ class BufferTester(object):
             sys.stdout.write(f"{time.time()}\n")
             time.sleep(self.dt)
         ts.write(f"{time.time()}\n")
-        baseline = [[(0, 0), (1, 0), (1, 0), (1, 1)]]
-        if fd:
-            # TODO: [JDS] If we are capturing the file descriptor, the
-            # stdout channel is sometimes no longer buffered.  I am not
-            # exactly sure why (my guess is because the underlying pipe
-            # is not buffered), but as it is generally not a problem to
-            # not buffer, we will put off "fixing" it.
-            baseline.append([(0, 0), (0, 0), (0, 0), (1, 1)])
+        baseline = [
+            [(0, 0), (1, 0), (1, 0), (1, 1)],
+            # TODO: [JDS] The stdout channel appears to sometimes be no
+            # longer buffered.  I am not exactly sure why (my guess is
+            # because the underlying pipe is not buffered), but as it is
+            # generally not a problem to not buffer, we will put off
+            # "fixing" it.
+            [(0, 0), (0, 0), (0, 0), (1, 1)],
+        ]
         if not ts.check(*baseline):
             self.fail(ts.error)
 
