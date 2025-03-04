@@ -936,5 +936,5 @@ jobs:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
         name: ${{ matrix.TARGET }}/other
-        flags: ${{ matrix.TARGET }},other
+        flags: ${{ matrix.TARGET }}_other
         fail_ci_if_error: true
