@@ -163,7 +163,7 @@ class MOSEKDirect(DirectSolver):
         for key, option in self.options.items():
             try:
                 param = key.split('.')
-                if (key == param[0]):
+                if key == param[0]:
                     self._solver_model.putparam(key, option)
                 else:
                     if param[0] == 'mosek':
