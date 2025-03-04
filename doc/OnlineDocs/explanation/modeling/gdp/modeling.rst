@@ -220,13 +220,36 @@ logical propositions.
 Here, we demonstrate this capability with a toy example:
 
 .. math::
+   :nowrap:
 
-    \min~&x\\
-    \text{s.t.}~&\left[\begin{gathered}Y_1\\x \geq 2\end{gathered}\right] \vee \left[\begin{gathered}Y_2\\x \geq 3\end{gathered}\right]\\
-    &\left[\begin{gathered}Y_3\\x \leq 8\end{gathered}\right] \vee \left[\begin{gathered}Y_4\\x = 2.5\end{gathered}\right] \\
-    &Y_1 \veebar Y_2\\
-    &Y_3 \veebar Y_4\\
-    &Y_1 \Rightarrow Y_4
+   \[\begin{array}{ll}
+    \min & x \\
+    \text{s.t.} & \left[
+      \begin{gathered}
+        Y_1\\
+        x \geq 2
+      \end{gathered}
+    \right] \vee \left[
+      \begin{gathered}
+        Y_2 \\
+        x \geq 3
+      \end{gathered}
+    \right]\\
+    & \left[
+      \begin{gathered}
+        Y_3 \\
+        x \leq 8
+      \end{gathered}
+    \right] \vee \left[
+      \begin{gathered}
+        Y_4 \\
+        x = 2.5
+      \end{gathered}
+    \right] \\
+    & Y_1 \veebar Y_2 \\
+    & Y_3 \veebar Y_4 \\
+    & Y_1 \Rightarrow Y_4
+   \end{array}\]
 
 .. doctest::
     :skipif: not glpk_available
@@ -302,9 +325,9 @@ Expressions within CP-type operators
 Here, augmented variables may be automatically added to the model as follows:
 
 .. math::
-    \text{atleast}(3, &Y_1, Y_A, Y_B, Y_6)\\
-    &Y_A \Leftrightarrow Y_2 \vee Y_3\\
-    &Y_B \Leftrightarrow (Y_4 \Rightarrow Y_5)
+    \text{atleast}(3, Y_1, Y_A, Y_B, Y_6)\\
+    Y_A \Leftrightarrow Y_2 \vee Y_3\\
+    Y_B \Leftrightarrow (Y_4 \Rightarrow Y_5)
 
 .. code::
 
