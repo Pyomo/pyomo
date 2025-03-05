@@ -30,11 +30,13 @@ Supported deterministic models can be written in the general form
 .. _deterministic-model:
 
 .. math::
-    \begin{array}{clll}
+   :nowrap:
+
+   \[\begin{array}{clll}
     \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2(x,z,y; q^{\text{nom}}) & \\
     \displaystyle \text{s.t.} & ~~ g_i(x, z, y; q^{\text{nom}}) \leq 0 & \forall\,i \in \mathcal{I} \\
     & ~~ h_j(x,z,y; q^{\text{nom}}) = 0 & \forall\,j \in \mathcal{J} \\
-    \end{array}
+   \end{array}\]
 
 where:
 
@@ -81,13 +83,15 @@ Based on the above notation,
 the form of the robust counterpart addressed by PyROS is
 
 .. math::
-    \begin{array}{ccclll}
+   :nowrap:
+
+   \[\begin{array}{ccclll}
     \displaystyle \min_{x \in \mathcal{X}}
     & \displaystyle \max_{q \in \mathcal{Q}}
     & \displaystyle \min_{\substack{z \in \mathbb{R}^{n_z},\\y \in \mathbb{R}^{n_y}}} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) \\
     & & \text{s.t.}~ & \displaystyle ~~ g_i\left(x, z, y, q\right) \leq 0 &  & \forall\, i \in \mathcal{I}\\
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall\,j \in \mathcal{J}
-    \end{array}
+   \end{array}\]
 
 PyROS accepts a deterministic model and accompanying uncertainty set
 and then, using the Generalized Robust Cutting-Set algorithm developed
@@ -278,7 +282,7 @@ PyROS Usage Example
 -----------------------------
 
 In this section, we illustrate the usage of PyROS with a modeling example.
-The deterministic problem of interest is called *hydro* 
+The deterministic problem of interest is called *hydro*
 (available `here <https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_hydro.html>`_),
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
@@ -952,6 +956,7 @@ Observe that the log contains the following information:
 .. _solver-log-snippet:
 
 .. code-block:: text
+
    :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
    :linenos:
 
@@ -960,12 +965,12 @@ Observe that the log contains the following information:
           Pyomo version: 6.9.0
           Commit hash: unknown
           Invoked at UTC 2025-02-13T00:00:00.000000
-   
+
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
    (1) Carnegie Mellon University, Department of Chemical Engineering
    (2) Sandia National Laboratories, Center for Computing Research
-   
+
    The developers gratefully acknowledge support from the U.S. Department
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
@@ -1026,7 +1031,7 @@ Observe that the log contains the following information:
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-   
+
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
    main                           1     3.509     3.509  100.0
@@ -1040,7 +1045,7 @@ Observe that the log contains the following information:
         other                   n/a     0.394       n/a   11.2
         ======================================================
    ===========================================================
-   
+
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 4

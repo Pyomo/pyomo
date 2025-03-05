@@ -139,12 +139,14 @@ class SolverConfig(ConfigDict):
         )
 
         self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
+        self.declare('warmstart', ConfigValue(domain=bool))
         self.declare('stream_solver', ConfigValue(domain=bool))
         self.declare('load_solution', ConfigValue(domain=bool))
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
         self.declare('report_timing', ConfigValue(domain=bool))
 
         self.time_limit: Optional[float] = None
+        self.warmstart: bool = False
         self.stream_solver: bool = False
         self.load_solution: bool = True
         self.symbolic_solver_labels: bool = False
@@ -1525,6 +1527,7 @@ class LegacySolverInterface(object):
         options: Optional[Dict] = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
+        warmstart: bool = False,
     ):
         original_config = self.config
         self.config = self.config()
@@ -1532,6 +1535,7 @@ class LegacySolverInterface(object):
         self.config.load_solution = load_solutions
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
+        self.config.warmstart = warmstart
         self.config.report_timing = report_timing
         if solver_io is not None:
             raise NotImplementedError('Still working on this')
