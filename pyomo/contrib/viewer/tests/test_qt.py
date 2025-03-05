@@ -23,6 +23,13 @@
 """
 UI Tests
 """
+# The pytest-qt plugin can generate exceptions / core dumps when it is
+# run in a terminal (without an active X11 screen).  Setting the
+# QT_QPA_PLATFORM environment variable *before* initializing Qt can work
+# around this error (see https://stackoverflow.com/a/74719383):
+import os
+
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
 from pyomo.environ import (
     ConcreteModel,
@@ -44,6 +51,7 @@ import pyomo.common.unittest as unittest
 import pyomo.contrib.viewer.qt as myqt
 import pyomo.contrib.viewer.pyomo_viewer as pv
 from pyomo.contrib.viewer.qt import available
+from pyomo.core.base.units_container import pint_available
 
 if available:
     import contextvars
@@ -56,6 +64,18 @@ else:
     def qtbot():
         """Overwrite qtbot - remove test failure"""
         return
+
+    pytestmark = unittest.pytest.mark.skip("Qt components are not available.")
+
+if not pint_available:
+    pytestmark = unittest.pytest.mark.skip(
+        "contrib.viewer requires pint, which is not available."
+    )
+
+if not pv.qtconsole_available:
+    pytestmark = unittest.pytest.mark.skip(
+        "contrib.viewer requires qtconsole, which is not available."
+    )
 
 
 def get_model():
@@ -100,7 +120,6 @@ def get_model():
     return m
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw = get_mainwindow(model=m, testing=True)
@@ -111,13 +130,11 @@ def test_get_mainwindow(qtbot):
     assert isinstance(mw.parameters, ModelBrowser)
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_close_mainwindow(qtbot):
     mw = get_mainwindow(model=None, testing=True)
     mw.exit_action()
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_show_model_select_no_models(qtbot):
     mw = get_mainwindow(model=None, testing=True)
     ms = mw.show_model_select()
@@ -125,7 +142,6 @@ def test_show_model_select_no_models(qtbot):
     ms.select_model()
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_model_information(qtbot):
     m = get_model()
     mw = get_mainwindow(model=m, testing=True)
@@ -146,7 +162,6 @@ def test_model_information(qtbot):
     assert isinstance(mw.parameters, ModelBrowser)
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_tree_expand_collapse(qtbot):
     m = get_model()
     mw = get_mainwindow(model=m, testing=True)
@@ -154,7 +169,6 @@ def test_tree_expand_collapse(qtbot):
     mw.variables.treeView.collapseAll()
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_residual_table(qtbot):
     m = get_model()
     mw = get_mainwindow(model=m, testing=True)
@@ -181,7 +195,6 @@ def test_residual_table(qtbot):
     assert dm.data(dm.index(0, 0)) == "c5"
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_var_tree(qtbot):
     m = get_model()
     mw = get_mainwindow(model=m, testing=True)
@@ -215,7 +228,6 @@ def test_var_tree(qtbot):
     mw.variables.treeView.closePersistentEditor(z1_val_index)
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_bad_view(qtbot):
     m = get_model()
     mw = get_mainwindow(model=m, testing=True)
@@ -229,7 +241,6 @@ def test_bad_view(qtbot):
     assert err == "ValueError"
 
 
-@unittest.skipIf(not available, "Qt packages are not available.")
 def test_qtconsole_app(qtbot):
     app = pv.QtApp()
     # empty list to prevent picking up args from pytest

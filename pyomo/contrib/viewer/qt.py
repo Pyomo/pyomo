@@ -21,7 +21,7 @@
 #  ___________________________________________________________________________
 
 """
-Try to import PySide6, which is the current official Qt 6 Python interface. Then, 
+Try to import PySide6, which is the current official Qt 6 Python interface. Then,
 try PyQt5 if that doesn't work. If no compatible Qt Python interface is found,
 use some dummy classes to allow some testing.
 """
@@ -29,6 +29,8 @@ __author__ = "John Eslick"
 
 import enum
 import importlib
+
+from pyomo.common.flags import building_documentation
 
 # Supported Qt wrappers in preferred order
 supported = ["PySide6", "PyQt5"]
@@ -127,3 +129,14 @@ else:
         from PyQt5.QtWidgets import QAction
         from PyQt5.QtCore import pyqtSignal as Signal
         from PyQt5 import uic
+
+    # Note that QAbstractTableModel and QAbstractItemModel have
+    # signatures that are not parsable by Sphinx, so we will hide them
+    # if we are building the API documentation.
+    if building_documentation():
+
+        class QAbstractItemModel(object):
+            pass
+
+        class QAbstractTableModel(object):
+            pass

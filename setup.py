@@ -53,19 +53,30 @@ def get_version():
     return import_pyomo_module('pyomo', 'version', 'info.py')['__version__']
 
 
+def check_config_arg(name):
+    if name in sys.argv:
+        sys.argv.remove(name)
+        return True
+    if name in os.getenv('PYOMO_SETUP_ARGS', '').split():
+        return True
+    return False
+
+
 CYTHON_REQUIRED = "required"
 if not any(
-    arg.startswith(cmd) for cmd in ('build', 'install', 'bdist') for arg in sys.argv
+    arg.startswith(cmd)
+    for cmd in ('build', 'install', 'bdist', 'wheel')
+    for arg in sys.argv
 ):
     using_cython = False
-else:
+elif sys.version_info[:2] < (3, 11):
     using_cython = "automatic"
-if '--with-cython' in sys.argv:
-    using_cython = CYTHON_REQUIRED
-    sys.argv.remove('--with-cython')
-if '--without-cython' in sys.argv:
+else:
     using_cython = False
-    sys.argv.remove('--without-cython')
+if check_config_arg('--with-cython'):
+    using_cython = CYTHON_REQUIRED
+if check_config_arg('--without-cython'):
+    using_cython = False
 
 ext_modules = []
 if using_cython:
@@ -107,14 +118,7 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
             raise
         using_cython = False
 
-if ('--with-distributable-extensions' in sys.argv) or (
-    os.getenv('PYOMO_SETUP_ARGS') is not None
-    and '--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS')
-):
-    try:
-        sys.argv.remove('--with-distributable-extensions')
-    except:
-        pass
+if check_config_arg('--with-distributable-extensions'):
     #
     # Import the APPSI extension builder
     # NOTE: There is inconsistent behavior in Windows for APPSI.
@@ -200,7 +204,7 @@ class DependenciesCommand(Command):
 
 
 setup_kwargs = dict(
-    name='Pyomo',
+    name='pyomo',
     #
     # Note: the release number is set in pyomo/version/info.py
     #
@@ -230,17 +234,17 @@ setup_kwargs = dict(
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     install_requires=['ply'],
     extras_require={
         # There are certain tests that also require pytest-qt, but because those
@@ -248,20 +252,20 @@ setup_kwargs = dict(
         # the dependencies.
         'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
         'docs': [
-            'Sphinx>4',
+            'Sphinx>4,!=8.2.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
             'sphinx-toolbox>=2.16.0',
             'sphinx-jinja2-compat>=0.1.1',
-            'enum_tools',
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
         'optional': [
             'dill',  # No direct use, but improves lambda pickle
             'ipython',  # contrib.viewer
+            'linear-tree',  # contrib.piecewise
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
             # Note: minimum version from community_detection use of

@@ -9,16 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# ______________________________________________________________________________
-#
-# Pyomo: Python Optimization Modeling Objects
-# Copyright (c) 2008-2024
-#  National Technology and Engineering Solutions of Sandia, LLC
-# Under the terms of Contract DE-NA0003525 with National Technology and
-# Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-# rights in this software.
-# This software is distributed under the 3-clause BSD License
-# ______________________________________________________________________________
 from pyomo.environ import (
     Param,
     Var,
@@ -34,8 +24,10 @@ from pyomo.environ import (
 
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr import ExpressionReplacementVisitor
+from pyomo.core.expr.numvalue import is_potentially_variable
 
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.dependencies import numpy as np, scipy
 from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
@@ -44,8 +36,6 @@ import logging
 import os
 import io
 import shutil
-from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy, scipy_available
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
@@ -240,22 +230,27 @@ def sensitivity_calculation(
 
 
 def get_dsdp(model, theta_names, theta, tee=False):
-    """This function calculates gradient vector of the variables
-        with respect to the parameters (theta_names).
+    r"""This function calculates gradient vector of the variables with
+    respect to the parameters (theta_names).
 
-    e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
-         s.t  c1: x1 + x2 = p1
-              c2: x2 + x3 = p2
-              0 <= x1, x2, x3 <= 10
-              p1 = 10
-              p2 = 5
+    For example, given:
+
+    .. math::
+
+        \min f:\ & p1*x1 + p2*(x2^2) + p1*p2 \\
+        s.t.\ & c1: x1 + x2 = p1 \\
+              & c2: x2 + x3 = p2 \\
+              & 0 <= x1, x2, x3 <= 10 \\
+              & p1 = 10 \\
+              & p2 = 5
+
     the function returns dx/dp and dp/dp, and column orders.
 
     The following terms are used to define the output dimensions:
-    Ncon   = number of constraints
-    Nvar   = number of variables (Nx + Ntheta)
-    Nx     = number of decision (primal) variables
-    Ntheta = number of uncertain parameters.
+    - Ncon   = number of constraints
+    - Nvar   = number of variables (Nx + Ntheta)
+    - Nx     = number of decision (primal) variables
+    - Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
@@ -277,6 +272,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
         columns = len(col)
     col: list
         List of variable names
+
     """
     # Get parameters from names. In SensitivityInterface, we expect
     # these to be parameters on the original model.
@@ -331,54 +327,66 @@ def get_dsdp(model, theta_names, theta, tee=False):
 
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
-    """This function calculates gradient vector of the objective function
-       and constraints with respect to the variables and parameters.
+    r"""This function calculates gradient vector of the objective function
+    and constraints with respect to the variables and parameters.
 
-    e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
-         s.t  c1: x1 + x2 = p1
-              c2: x2 + x3 = p2
-              0 <= x1, x2, x3 <= 10
-              p1 = 10
-              p2 = 5
+    For example, given:
+
+    .. math::
+
+        \min f:\ & p1*x1 + p2*(x2^2) + p1*p2 \\
+        s.t.\ & c1: x1 + x2 = p1 \\
+              & c2: x2 + x3 = p2 \\
+              & 0 <= x1, x2, x3 <= 10 \\
+              & p1 = 10 \\
+              & p2 = 5
+
     - Variables = (x1, x2, x3, p1, p2)
     - Fix p1 and p2 with estimated values
 
     The following terms are used to define the output dimensions:
-    Ncon   = number of constraints
-    Nvar   = number of variables (Nx + Ntheta)
-    Nx     = number of decision (primal) variables
-    Ntheta = number of uncertain parameters.
+    - Ncon   = number of constraints
+    - Nvar   = number of variables (Nx + Ntheta)
+    - Nx     = number of decision (primal) variables
+    - Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
-    model: Pyomo ConcreteModel
+    model : Pyomo ConcreteModel
         model should include an objective function
-    theta_names: list of strings
+
+    theta_names : list of strings
         List of Var names
-    tee: bool, optional
+
+    tee : bool, optional
         Indicates that ef solver output should be teed
-    solver_options: dict, optional
+
+    solver_options : dict, optional
         Provides options to the solver (also the name of an attribute)
 
     Returns
     -------
-    gradient_f: numpy.ndarray
+    gradient_f : numpy.ndarray
         Length Nvar array. A gradient vector of the objective function
         with respect to the (decision variables, parameters) at the optimal
         solution
-    gradient_c: scipy.sparse.csr.csr_matrix
+
+    gradient_c : scipy.sparse.csr.csr_matrix
         Ncon by Nvar size sparse matrix. A Jacobian matrix of the
         constraints with respect to the (decision variables, parameters)
         at the optimal solution. Each row contains [row number,
         column number, and value], column order follows variable order in col
         and index starts from 0. Note that it follows k_aug.
         If no constraint exists, return []
-    col: list
+
+    col : list
         Size Nvar list of variable names
-    row: list
+
+    row : list
         Size Ncon+1 list of constraints and objective function names.
         The final element is the objective function name.
-    line_dic: dict
+
+    line_dic : dict
         column numbers of the theta_names in the model. Index starts from 1
 
     Raises
@@ -684,25 +692,29 @@ class SensitivityInterface(object):
         )
         last_idx = 0
         for con in old_con_list:
-            if con.equality or con.lower is None or con.upper is None:
-                new_expr = param_replacer.walk_expression(con.expr)
-                block.constList.add(expr=new_expr)
+            new_expr = param_replacer.walk_expression(con.expr)
+            # TODO: We could only create new constraints for expressions
+            # where substitution actually happened, but that breaks some
+            # current tests:
+            #
+            # if new_expr is con.expr:
+            #     # No params were substituted.  We can ignore this constraint
+            #     continue
+            if new_expr.nargs() == 3 and (
+                is_potentially_variable(new_expr.arg(0))
+                or is_potentially_variable(new_expr.arg(2))
+            ):
+                # This is a potentially "invalid" range constraint: it
+                # may now have variables in the bounds.  For safety, we
+                # will split it into two simple inequalities.
+                block.constList.add(expr=(new_expr.arg(0) <= new_expr.arg(1)))
+                last_idx += 1
+                new_old_comp_map[block.constList[last_idx]] = con
+                block.constList.add(expr=(new_expr.arg(1) <= new_expr.arg(2)))
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
             else:
-                # Constraint must be a ranged inequality, break into
-                # separate constraints
-                new_body = param_replacer.walk_expression(con.body)
-                new_lower = param_replacer.walk_expression(con.lower)
-                new_upper = param_replacer.walk_expression(con.upper)
-
-                # Add constraint for lower bound
-                block.constList.add(expr=(new_lower <= new_body))
-                last_idx += 1
-                new_old_comp_map[block.constList[last_idx]] = con
-
-                # Add constraint for upper bound
-                block.constList.add(expr=(new_body <= new_upper))
+                block.constList.add(expr=new_expr)
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
             con.deactivate()

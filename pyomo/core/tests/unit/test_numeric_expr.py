@@ -1934,6 +1934,22 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = 5 * model.a / model.a / 2
         self.assertEqual("div(div(mon(5, a), a), 2)", str(expr))
 
+    def test_pow(self):
+        model = ConcreteModel()
+
+        model.x = Var()
+        model.A = Expression(initialize=1)
+        model.B = Expression(initialize=-2)
+
+        expr = model.A**2 + model.B**2
+        self.assertEqual("sum(pow(A{1}, 2), pow(B{-2}, 2))", str(expr))
+
+        expr = model.A**2 - model.B**2
+        self.assertEqual("sum(pow(A{1}, 2), neg(pow(B{-2}, 2)))", str(expr))
+
+        expr = (1) ** model.x + (-1) ** model.x
+        self.assertEqual("sum(pow(1, x), pow(-1, x))", str(expr))
+
     def test_other(self):
         #
         # Print other stuff
@@ -1943,7 +1959,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.x = ExternalFunction(library='foo.so', function='bar')
 
         expr = model.x(model.a, 1, "foo", [])
-        self.assertEqual("x(a, 1, 'foo', '[]')", str(expr))
+        self.assertEqual("x(a, 1, 'foo', [])", str(expr))
 
     def test_inequality(self):
         #
@@ -2166,6 +2182,22 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = 1
         model.a.fixed = True
         self.assertEqual("b", expression_to_string(expr, compute_values=True))
+
+    def test_pow(self):
+        model = ConcreteModel()
+
+        model.x = Var()
+        model.A = Expression(initialize=1)
+        model.B = Expression(initialize=-2)
+
+        expr = model.A**2 + model.B**2
+        self.assertEqual("1**2 + (-2)**2", str(expr))
+
+        expr = model.A**2 - model.B**2
+        self.assertEqual("1**2 - (-2)**2", str(expr))
+
+        expr = (1) ** model.x + (-1) ** model.x
+        self.assertEqual("1**x + (-1)**x", str(expr))
 
     def test_inequality(self):
         #
@@ -3335,7 +3367,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         #
         # A fraction with a variable in the denominator has degree None.
-        # This indicates that it is not a polyomial.
+        # This indicates that it is not a polynomial.
         #
         expr = self.model.c / self.model.a
         self.assertEqual(expr.polynomial_degree(), None)
@@ -3477,7 +3509,7 @@ class TestPolynomialDegree(unittest.TestCase):
     def test_Expr_if(self):
         m = self.instance
         #
-        # When IF conditional is constant, then polynomial degree is propigated
+        # When IF conditional is constant, then polynomial degree is propagated
         #
         expr = Expr_if(1, m.a**3, m.a**2)
         self.assertEqual(expr.polynomial_degree(), 3)
@@ -4312,6 +4344,18 @@ class TestCloneExpression(unittest.TestCase):
             #
             total = counter.count - start
             self.assertEqual(total, 1)
+
+    def test_create_node_with_local_data(self):
+        e = self.m.p * self.m.a
+        self.assertIs(type(e), MonomialTermExpression)
+
+        f = e.create_node_with_local_data([self.m.b, self.m.p])
+        self.assertIs(type(f), MonomialTermExpression)
+        self.assertStructuredAlmostEqual(f._args_, [self.m.p, self.m.b])
+
+        g = e.create_node_with_local_data([self.m.b, self.m.p], ProductExpression)
+        self.assertIs(type(g), ProductExpression)
+        self.assertStructuredAlmostEqual(g._args_, [self.m.b, self.m.p])
 
 
 #

@@ -500,13 +500,13 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             .. math::
                :nowrap:
 
-               \begin{array}{ll}
-               \min          & 2x + y           \\
-               \mathrm{s.t.} & y \geq (x-2)^2   \\
-                             & 0 \leq x \leq 4  \\
-                             & y \geq 0         \\
-                             & y \in \mathbb{Z}
-               \end{array}
+               \[\begin{array}{ll}
+                 \min          & 2x + y           \\
+                 \mathrm{s.t.} & y \geq (x-2)^2   \\
+                               & 0 \leq x \leq 4  \\
+                               & y \geq 0         \\
+                               & y \in \mathbb{Z}
+               \end{array}\]
 
             as an MILP using extended cutting planes in callbacks.
 
@@ -578,7 +578,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if is_fixed(con.body):
             raise ValueError('cbCut expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
         )
 
@@ -656,7 +656,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if is_fixed(con.body):
             raise ValueError('cbLazy expected a non-trivial constraint')
 
-        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(
+        gurobi_expr, referenced_vars, degree = self._get_expr_from_pyomo_expr(
             con.body, self._max_constraint_degree
         )
 

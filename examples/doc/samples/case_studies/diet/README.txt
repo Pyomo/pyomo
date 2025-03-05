@@ -68,7 +68,7 @@ model.nutrient_value=Param(model.nutrients, model.foods)
 
 The comma indicates that this parameter is over two different sets, and thus is in two dimensions.  When we create the data file, we will be able to fill in how much of each nutrient each food contains.
 
-At this point we have defined our sets and parameters.  However, we have yet to cosnider the amount of food to be bought and eaten.  This is the variable we're trying to solve for, and thus we create an object of the variable class.  Since this is just recording how much food to purchase, we create a one dimensional variable over food:
+At this point we have defined our sets and parameters.  However, we have yet to consider the amount of food to be bought and eaten.  This is the variable we're trying to solve for, and thus we create an object of the variable class.  Since this is just recording how much food to purchase, we create a one dimensional variable over food:
 
 {{{
 #!python

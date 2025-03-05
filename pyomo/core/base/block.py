@@ -361,7 +361,7 @@ class PseudoMap(AutoSlots.Mixin):
         TODO
         """
         # Return True is the underlying Block contains the component
-        # name.  Note, if this Pseudomap soecifies a ctype or the
+        # name.  Note, if this Pseudomap specifies a ctype or the
         # active flag, we need to check that the underlying
         # component matches those flags
         if key in self._block._decl:
@@ -921,11 +921,7 @@ class BlockData(ActiveComponentData):
             a matching component is not found, None is returned.
 
         """
-        if type(label_or_component) is ComponentUID:
-            cuid = label_or_component
-        else:
-            cuid = ComponentUID(label_or_component)
-        return cuid.find_component_on(self)
+        return ComponentUID(label_or_component).find_component_on(self)
 
     @contextmanager
     def _declare_reserved_components(self):
@@ -960,13 +956,8 @@ class BlockData(ActiveComponentData):
                 % (name, type(val), self.name, type(getattr(self, name)))
             )
         #
-        # Skip the add_component() logic if this is a
-        # component type that is suppressed.
-        #
         _component = self.parent_component()
         _type = val.ctype
-        if _type in _component._suppress_ctypes:
-            return
         #
         # Raise an exception if the component already has a parent.
         #
@@ -1047,12 +1038,6 @@ component, use the block del_component() and add_component() methods.
             idx_info[2] += 1
         else:
             self._ctypes[_type] = [_new_idx, _new_idx, 1]
-        #
-        # Propagate properties to sub-blocks:
-        #   suppressed ctypes
-        #
-        if _type is Block:
-            val._suppress_ctypes |= _component._suppress_ctypes
         #
         # Error, for disabled support implicit rule names
         #
@@ -1953,14 +1938,15 @@ component, use the block del_component() and add_component() methods.
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
             # Blocks (and block-like things) need to pre-populate all
             # Components / ComponentData objects to help prevent
             # deepcopy() from violating the Python recursion limit.
             # This step is recursive; however, we do not expect "super
             # deep" Pyomo block hierarchies, so should be okay.
-            for comp in self.component_map().values():
-                comp._create_objects_for_deepcopy(memo, component_list)
+            for comp, _ in self._decl_order:
+                if comp is not None:
+                    comp._create_objects_for_deepcopy(memo, component_list)
         return _ans
 
     def private_data(self, scope=None):
@@ -2029,7 +2015,6 @@ class Block(ActiveIndexedComponent):
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
-        self._suppress_ctypes = set()
         _rule = kwargs.pop('rule', None)
         _options = kwargs.pop('options', None)
         # As concrete applies to the Block at declaration time, we will

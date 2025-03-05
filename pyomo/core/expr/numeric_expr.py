@@ -10,13 +10,13 @@
 #  ___________________________________________________________________________
 
 import collections
-import enum
 import logging
 import math
 import operator
 
 logger = logging.getLogger('pyomo.core')
 
+from pyomo.common import enums
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.errors import PyomoException, DeveloperError
@@ -216,14 +216,14 @@ class NumericValue(PyomoObject):
     # This is required because we define __eq__
     __hash__ = None
 
-    def getname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, *args, **kwargs):
         """
         If this is a component, return the component's name on the owning
         block; otherwise return the value converted to a string
         """
         _base = super(NumericValue, self)
         if hasattr(_base, 'getname'):
-            return _base.getname(fully_qualified, name_buffer)
+            return _base.getname(*args, **kwargs)
         else:
             return str(type(self))
 
@@ -1094,7 +1094,7 @@ class MonomialTermExpression(ProductExpression):
             # types, the simplest / fastest thing to do is just defer to
             # the operator dispatcher.
             return operator.mul(*args)
-        return self.__class__(args)
+        return classtype(args)
 
 
 class DivisionExpression(NumericExpression):
@@ -1638,7 +1638,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 # -------------------------------------------------------
 
 
-class ARG_TYPE(enum.IntEnum):
+class ARG_TYPE(enums.IntEnum):
     MUTABLE = -2
     ASNUMERIC = -1
     INVALID = 0

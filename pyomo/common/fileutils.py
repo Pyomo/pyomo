@@ -286,10 +286,17 @@ def find_dir(
     )
 
 
-_exeExt = {'linux': None, 'windows': '.exe', 'cygwin': '.exe', 'darwin': None}
+_exeExt = {
+    'linux': None,
+    'freebsd': None,
+    'windows': '.exe',
+    'cygwin': '.exe',
+    'darwin': None,
+}
 
 _libExt = {
     'linux': ('.so', '.so.*'),
+    'freebsd': ('.so', '.so.*'),
     'windows': ('.dll', '.pyd'),
     'cygwin': ('.dll', '.so', '.so.*'),
     'darwin': ('.dylib', '.so', '.so.*'),
@@ -706,7 +713,7 @@ class PathManager(object):
 
     The ``Executable`` singleton uses :py:class:`ExecutableData`, an
     extended form of the :py:class:`PathData` class, which provides the
-    ``executable`` property as an alais for :py:meth:`path()` and
+    ``executable`` property as an alias for :py:meth:`path()` and
     :py:meth:`set_path()`:
 
     .. doctest::

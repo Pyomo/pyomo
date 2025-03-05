@@ -14,6 +14,8 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.errors import ApplicationError
+from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
@@ -207,3 +209,16 @@ class IPOPT(SystemCallSolver):
                             res.solver.message = line.split(':')[2].strip()
                             assert "degrees of freedom" in res.solver.message
             return res
+
+    def has_linear_solver(self, linear_solver):
+        import pyomo.core as AML
+
+        m = AML.ConcreteModel()
+        m.x = AML.Var()
+        m.o = AML.Objective(expr=(m.x - 2) ** 2)
+        try:
+            with capture_output() as OUT:
+                self.solve(m, tee=True, options={'linear_solver': linear_solver})
+        except ApplicationError:
+            return False
+        return 'running with linear solver' in OUT.getvalue()

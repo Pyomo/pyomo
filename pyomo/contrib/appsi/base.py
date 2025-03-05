@@ -11,6 +11,10 @@
 
 import abc
 import enum
+import os
+import re
+import weakref
+
 from typing import (
     Sequence,
     Dict,
@@ -21,6 +25,12 @@ from typing import (
     Tuple,
     MutableMapping,
 )
+
+from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
+from pyomo.common.errors import ApplicationError
+from pyomo.common.enums import IntEnum
+from pyomo.common.factory import Factory
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.constraint import ConstraintData, Constraint
 from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData, Var
@@ -30,12 +40,7 @@ from pyomo.core.base.objective import ObjectiveData
 from pyomo.common.collections import ComponentMap
 from .utils.get_objective import get_objective
 from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
-from pyomo.common.timing import HierarchicalTimer
-from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
-from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
-from pyomo.common.factory import Factory
-import os
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import (
     Solution as LegacySolution,
@@ -47,7 +52,6 @@ from pyomo.opt.results.solver import (
 )
 from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
-import weakref
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
@@ -97,6 +101,9 @@ class TerminationCondition(enum.Enum):
 
 class SolverConfig(ConfigDict):
     """
+    Common configuration options for all APPSI solver interfaces
+
+
     Attributes
     ----------
     time_limit: float
@@ -132,12 +139,14 @@ class SolverConfig(ConfigDict):
         )
 
         self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
+        self.declare('warmstart', ConfigValue(domain=bool))
         self.declare('stream_solver', ConfigValue(domain=bool))
         self.declare('load_solution', ConfigValue(domain=bool))
         self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
         self.declare('report_timing', ConfigValue(domain=bool))
 
         self.time_limit: Optional[float] = None
+        self.warmstart: bool = False
         self.stream_solver: bool = False
         self.load_solution: bool = True
         self.symbolic_solver_labels: bool = False
@@ -146,6 +155,8 @@ class SolverConfig(ConfigDict):
 
 class MIPSolverConfig(SolverConfig):
     """
+    Configuration options common to all MIP solvers
+
     Attributes
     ----------
     mip_gap: float
@@ -370,6 +381,8 @@ class SolutionLoader(SolutionLoaderBase):
 
 class Results(object):
     """
+    Base class for all APPSI solver results
+
     Attributes
     ----------
     termination_condition: TerminationCondition
@@ -385,6 +398,8 @@ class Results(object):
         For solvers that do not provide an objective bound, this should be -inf
         (minimization) or inf (maximization)
 
+    Example
+    -------
     Here is an example workflow:
 
         >>> import pyomo.environ as pe
@@ -427,6 +442,8 @@ class Results(object):
 
 class UpdateConfig(ConfigDict):
     """
+    Config options common to all persistent solvers
+
     Attributes
     ----------
     check_for_new_or_removed_constraints: bool
@@ -594,7 +611,7 @@ class UpdateConfig(ConfigDict):
 
 
 class Solver(abc.ABC):
-    class Availability(enum.IntEnum):
+    class Availability(IntEnum):
         NotFound = 0
         BadVersion = -1
         BadLicense = -2
@@ -632,7 +649,7 @@ class Solver(abc.ABC):
 
         Returns
         -------
-        results: Results
+        results: ~pyomo.contrib.appsi.base.Results
             A results object
         """
         pass
@@ -681,7 +698,7 @@ class Solver(abc.ABC):
 
         Returns
         -------
-        SolverConfig
+        ~pyomo.contrib.appsi.base.SolverConfig
             An object for configuring pyomo solve options such as the time limit.
             These options are mostly independent of the solver.
         """
@@ -1007,7 +1024,7 @@ class PersistentBase(abc.ABC):
                 raise ValueError(
                     'constraint {name} has already been added'.format(name=con.name)
                 )
-            self._active_constraints[con] = (con.lower, con.body, con.upper)
+            self._active_constraints[con] = con.expr
             if self.use_extensions and cmodel_available:
                 tmp = cmodel.prep_for_repn(con.body, self._expr_types)
             else:
@@ -1363,40 +1380,13 @@ class PersistentBase(abc.ABC):
         cons_to_remove_and_add = dict()
         need_to_set_objective = False
         if config.update_constraints:
-            cons_to_update = list()
-            sos_to_update = list()
             for c in current_cons_dict.keys():
-                if c not in new_cons_set:
-                    cons_to_update.append(c)
+                if c not in new_cons_set and c.expr is not self._active_constraints[c]:
+                    cons_to_remove_and_add[c] = None
+            sos_to_update = []
             for c in current_sos_dict.keys():
                 if c not in new_sos_set:
                     sos_to_update.append(c)
-            for c in cons_to_update:
-                lower, body, upper = self._active_constraints[c]
-                new_lower, new_body, new_upper = c.lower, c.body, c.upper
-                if new_body is not body:
-                    cons_to_remove_and_add[c] = None
-                    continue
-                if new_lower is not lower:
-                    if (
-                        type(new_lower) is NumericConstant
-                        and type(lower) is NumericConstant
-                        and new_lower.value == lower.value
-                    ):
-                        pass
-                    else:
-                        cons_to_remove_and_add[c] = None
-                        continue
-                if new_upper is not upper:
-                    if (
-                        type(new_upper) is NumericConstant
-                        and type(upper) is NumericConstant
-                        and new_upper.value == upper.value
-                    ):
-                        pass
-                    else:
-                        cons_to_remove_and_add[c] = None
-                        continue
             self.remove_sos_constraints(sos_to_update)
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')
@@ -1537,6 +1527,7 @@ class LegacySolverInterface(object):
         options: Optional[Dict] = None,
         keepfiles: bool = False,
         symbolic_solver_labels: bool = False,
+        warmstart: bool = False,
     ):
         original_config = self.config
         self.config = self.config()
@@ -1544,6 +1535,7 @@ class LegacySolverInterface(object):
         self.config.load_solution = load_solutions
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
+        self.config.warmstart = warmstart
         self.config.report_timing = report_timing
         if solver_io is not None:
             raise NotImplementedError('Still working on this')

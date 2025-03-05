@@ -8,7 +8,40 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from .measurements import MeasurementVariables, DesignVariables, VariablesWithIndices
-from .doe import DesignOfExperiments, CalculationMode, ObjectiveLib, ModelOptionLib
-from .scenario import ScenarioGenerator, FiniteDifferenceStep
-from .result import FisherResults, GridSearchResult
+from .doe import DesignOfExperiments, ObjectiveLib, FiniteDifferenceStep
+from .utils import rescale_FIM
+
+# Deprecation errors for old Pyomo.DoE interface classes and structures
+from pyomo.common.deprecation import deprecated
+
+deprecation_message = (
+    "Pyomo.DoE has been refactored. The current interface utilizes Experiment "
+    "objects that label unknown parameters, experiment inputs, experiment outputs "
+    "and measurement error. This avoids fragile string-based naming. For "
+    "instructions on using the new interface, please see the Pyomo.DoE documentation "
+    "`https://pyomo.readthedocs.io/en/latest/explanation/analysis/doe/doe.html`"
+)
+
+
+@deprecated(
+    "Use of MeasurementVariables in Pyomo.DoE is no longer supported.", version='6.8.0'
+)
+class MeasurementVariables:
+    def __init__(self, *args):
+        raise RuntimeError(deprecation_message)
+
+
+@deprecated(
+    "Use of DesignVariables in Pyomo.DoE is no longer supported.", version='6.8.0'
+)
+class DesignVariables:
+    def __init__(self, *args):
+        raise RuntimeError(deprecation_message)
+
+
+@deprecated(
+    "Use of ModelOptionLib in Pyomo.DoE is no longer supported.", version='6.8.0'
+)
+class ModelOptionLib:
+    def __init__(self, *args):
+        raise RuntimeError(deprecation_message)

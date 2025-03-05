@@ -1,4 +1,4 @@
-[![Github Actions Status](https://github.com/Pyomo/pyomo/workflows/GitHub%20CI/badge.svg?event=push)](https://github.com/Pyomo/pyomo/actions?query=event%3Apush+workflow%3A%22GitHub+CI%22)
+[![GitHub Actions Status](https://github.com/Pyomo/pyomo/actions/workflows/test_pr_and_main.yml/badge.svg?branch=main&event=push)](https://github.com/Pyomo/pyomo/actions/workflows/test_pr_and_main.yml?query=branch%3Amain+event%3Apush)
 [![Jenkins Status](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_main.svg)](https://pyomo-jenkins.sandia.gov/)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/main/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
@@ -51,8 +51,8 @@ Pyomo is available under the BSD License - see the
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 3.8, 3.9, 3.10, 3.11, 3.12
-* PyPy: 3.9
+* CPython: 3.9, 3.10, 3.11, 3.12, 3.13
+* PyPy: 3.10
 
 _Testing and support policy_:
 
