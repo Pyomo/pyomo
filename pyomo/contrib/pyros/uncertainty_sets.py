@@ -480,6 +480,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     components of a Pyomo modeling object.
     """
 
+    # True if parameter_bounds attribute returns
+    # exact bounding box, False otherwise
     _PARAMETER_BOUNDS_EXACT = False
 
     @property
@@ -819,9 +821,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 a, b, rel_tol=PARAM_IS_CERTAIN_ABS_TOL, abs_tol=PARAM_IS_CERTAIN_REL_TOL
             )
 
-        # solve bounding problems, as we need the exact bounding box
         param_bounds = self.parameter_bounds
         if not (param_bounds and self._PARAMETER_BOUNDS_EXACT):
+            # we need the exact bounding box
             param_bounds = self._compute_parameter_bounds(
                 solver=config.global_solver, index=index
             )
