@@ -798,7 +798,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        config : Bunch
+        config : ConfigDict
             PyROS solver options. Should at least contain attribute
             `global_solver`.
         index : iterable of int, optional
