@@ -15,18 +15,21 @@ In PyROS, the uncertainty set of a robust optimization problem
 is represented by an instance of a subclass of the
 :class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
 abstract base class.
-PyROS provides a suite of pre-implemented concrete
-:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
-subclasses to facilitate instantiation of uncertainty sets
+PyROS provides a suite of
+:ref:`pre-implemented concrete subclasses <pyros_pre_implemented_types>`
+to facilitate instantiation of uncertainty sets
 that are commonly used in the optimization literature.
-Custom uncertainty set types can be implemented by subclassing
-:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`,
-though there are limitations.
+:ref:`Custom uncertainty set types <pyros_custom_sets>`
+can be implemented by subclassing
+:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`.
 
+.. _pyros_pre_implemented_types:
 
 Pre-Implemented Uncertainty Set Types
 =====================================
-The pre-implemented subclasses are enumerated below:
+The pre-implemented 
+:class:`~pyomo.contrib.pyros.uncertainty_sets.UncertaintySet`
+subclasses are enumerated below:
 
 .. autosummary::
 
@@ -82,6 +85,8 @@ subclasses are provided below.
      - :math:`\begin{array}{l} A \in \mathbb{R}^{m \times n}, \\ b \in \mathbb{R}^{m}\end{array}`
      - :math:`\{q \in \mathbb{R}^{n} \mid A q \leq b\}`
 
+
+.. _pyros_custom_sets:
 
 Custom Uncertainty Set Types
 ============================
