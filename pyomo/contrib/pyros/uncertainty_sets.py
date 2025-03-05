@@ -813,20 +813,17 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             coordinate is constrained to a single value,
             False otherwise.
         """
+
         def _values_close(a, b):
             return math.isclose(
-                a,
-                b,
-                rel_tol=PARAM_IS_CERTAIN_ABS_TOL,
-                abs_tol=PARAM_IS_CERTAIN_REL_TOL
+                a, b, rel_tol=PARAM_IS_CERTAIN_ABS_TOL, abs_tol=PARAM_IS_CERTAIN_REL_TOL
             )
 
         # solve bounding problems, as we need the exact bounding box
         param_bounds = self.parameter_bounds
         if not (param_bounds and self._PARAMETER_BOUNDS_EXACT):
             param_bounds = self._compute_parameter_bounds(
-                solver=config.global_solver,
-                index=index,
+                solver=config.global_solver, index=index
             )
         else:
             index = list(range(len(param_bounds))) if index is None else index

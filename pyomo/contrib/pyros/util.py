@@ -2569,7 +2569,7 @@ def get_effective_uncertain_dimensions(model_data):
         Positional indices of interest.
     """
     are_coordinates_fixed = model_data.config.uncertainty_set._is_coordinate_fixed(
-        config=model_data.config,
+        config=model_data.config
     )
     return [idx for idx, is_fixed in enumerate(are_coordinates_fixed) if not is_fixed]
 
