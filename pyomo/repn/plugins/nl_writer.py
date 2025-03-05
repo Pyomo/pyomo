@@ -11,10 +11,12 @@
 
 import ctypes
 import logging
+import math
+import operator
 import os
 from collections import deque, defaultdict, namedtuple
 from contextlib import nullcontext
-from itertools import filterfalse, product
+from itertools import filterfalse, product, chain
 from math import log10 as _log10
 from operator import itemgetter, attrgetter, setitem
 
@@ -542,15 +544,15 @@ class _NLWriter_impl(object):
         else:
             self.template = text_nl_template
         self.subexpression_cache = {}
-        self.subexpression_order = []
+        self.subexpression_order = None  # set to [] later
         self.external_functions = {}
         self.used_named_expressions = set()
         self.var_map = {}
+        self.var_id_to_nl_map = {}
         self.sorter = FileDeterminism_to_SortComponents(config.file_determinism)
         self.visitor = AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
-            self.subexpression_order,
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
@@ -620,6 +622,7 @@ class _NLWriter_impl(object):
         ostream = self.ostream
         linear_presolve = self.config.linear_presolve
 
+        nl_map = self.var_id_to_nl_map
         var_map = self.var_map
         initialize_var_map_from_column_order(model, self.config, var_map)
         timer.toc('Initialized column order', level=logging.DEBUG)
@@ -700,8 +703,7 @@ class _NLWriter_impl(object):
         objectives.extend(linear_objs)
         n_objs = len(objectives)
 
-        constraints = []
-        linear_cons = []
+        all_constraints = []
         n_ranges = 0
         n_equality = 0
         n_complementarity_nonlin = 0
@@ -738,22 +740,7 @@ class _NLWriter_impl(object):
                     ub = ub * scale
                 if scale < 0:
                     lb, ub = ub, lb
-            if expr_info.nonlinear:
-                constraints.append((con, expr_info, lb, ub))
-            elif expr_info.linear:
-                linear_cons.append((con, expr_info, lb, ub))
-            elif not self.config.skip_trivial_constraints:
-                linear_cons.append((con, expr_info, lb, ub))
-            else:  # constant constraint and skip_trivial_constraints
-                c = expr_info.const
-                if (lb is not None and lb - c > TOL) or (
-                    ub is not None and ub - c < -TOL
-                ):
-                    raise InfeasibleConstraintException(
-                        "model contains a trivially infeasible "
-                        f"constraint '{con.name}' (fixed body value "
-                        f"{c} outside bounds [{lb}, {ub}])."
-                    )
+            all_constraints.append((con, expr_info, lb, ub))
             if linear_presolve:
                 con_id = id(con)
                 if not expr_info.nonlinear and lb == ub and lb is not None:
@@ -764,28 +751,68 @@ class _NLWriter_impl(object):
             # report the last constraint
             timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
         else:
-            timer.toc('Processed %s constraints', len(constraints))
+            timer.toc('Processed %s constraints', len(all_constraints))
+
+        # We have identified all the external functions (resolving them
+        # by name).  Now we may need to resolve the function by the
+        # (local) FID, which we know is indexed by integers starting at
+        # 0.  We will convert the dict to a list for efficient lookup.
+        self.external_functions = list(self.external_functions.values())
 
         # This may fetch more bounds than needed, but only in the cases
         # where variables were completely eliminated while walking the
         # expressions, or when users provide superfluous variables in
         # the column ordering.
         var_bounds = {_id: v.bounds for _id, v in var_map.items()}
+        var_values = {_id: v.value for _id, v in var_map.items()}
 
         eliminated_cons, eliminated_vars = self._linear_presolve(
-            comp_by_linear_var, lcon_by_linear_nnz, var_bounds
+            comp_by_linear_var, lcon_by_linear_nnz, var_bounds, var_values
         )
         del comp_by_linear_var
         del lcon_by_linear_nnz
 
+        # Note: defer categorizing constraints until after presolve, as
+        # the presolver could result in nonlinear constraints becoming
+        # linear (or trivial)
+        constraints = []
+        linear_cons = []
+        if eliminated_cons:
+            _removed = eliminated_cons.__contains__
+            _constraints = filterfalse(lambda c: _removed(id(c[0])), all_constraints)
+        else:
+            _constraints = all_constraints
+        for info in _constraints:
+            expr_info = info[1]
+            if expr_info.nonlinear:
+                nl, args = expr_info.nonlinear
+                if any(vid not in nl_map for vid in args):
+                    constraints.append(info)
+                    continue
+                expr_info.const += _evaluate_constant_nl(
+                    nl % tuple(nl_map[i] for i in args), self.external_functions
+                )
+                expr_info.nonlinear = None
+            if expr_info.linear:
+                linear_cons.append(info)
+            elif not self.config.skip_trivial_constraints:
+                linear_cons.append(info)
+            else:  # constant constraint and skip_trivial_constraints
+                c = expr_info.const
+                con, expr_info, lb, ub = info
+                if (lb is not None and lb - c > TOL) or (
+                    ub is not None and ub - c < -TOL
+                ):
+                    raise InfeasibleConstraintException(
+                        "model contains a trivially infeasible "
+                        f"constraint '{con.name}' (fixed body value "
+                        f"{c} outside bounds [{lb}, {ub}])."
+                    )
+
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
         n_nonlinear_cons = len(constraints)
-        if eliminated_cons:
-            _removed = eliminated_cons.__contains__
-            constraints.extend(filterfalse(lambda c: _removed(id(c[0])), linear_cons))
-        else:
-            constraints.extend(linear_cons)
+        constraints.extend(linear_cons)
         n_cons = len(constraints)
 
         #
@@ -798,7 +825,7 @@ class _NLWriter_impl(object):
 
         # Filter out any unused named expressions
         self.subexpression_order = list(
-            filter(self.used_named_expressions.__contains__, self.subexpression_order)
+            filter(self.used_named_expressions.__contains__, self.subexpression_cache)
         )
 
         # linear contribution by (constraint, objective, variable) component.
@@ -820,10 +847,7 @@ class _NLWriter_impl(object):
         # We need to categorize the named subexpressions first so that
         # we know their linear / nonlinear vars when we encounter them
         # in constraints / objectives
-        self._categorize_vars(
-            map(self.subexpression_cache.__getitem__, self.subexpression_order),
-            linear_by_comp,
-        )
+        self._categorize_vars(self.subexpression_cache.values(), linear_by_comp)
         n_subexpressions = self._count_subexpression_occurrences()
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var = self._categorize_vars(
             objectives, linear_by_comp
@@ -847,6 +871,7 @@ class _NLWriter_impl(object):
                     if _id not in var_map:
                         var_map[_id] = _v
                         var_bounds[_id] = _v.bounds
+                        var_values[_id] = _v.value
                     con_vars_nonlinear.add(_id)
 
         con_nnz = sum(con_nnz_by_var.values())
@@ -1041,8 +1066,8 @@ class _NLWriter_impl(object):
             row_comments = [f'\t#{lbl}' for lbl in row_labels]
             col_labels = [labeler(var_map[_id]) for _id in variables]
             col_comments = [f'\t#{lbl}' for lbl in col_labels]
-            self.var_id_to_nl = {
-                _id: f'v{var_idx}{col_comments[var_idx]}'
+            id2nl = {
+                _id: f'v{var_idx}{col_comments[var_idx]}\n'
                 for var_idx, _id in enumerate(variables)
             }
             # Write out the .row and .col data
@@ -1055,11 +1080,12 @@ class _NLWriter_impl(object):
         else:
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
-            self.var_id_to_nl = {
-                _id: f"v{var_idx}" for var_idx, _id in enumerate(variables)
-            }
+            id2nl = {_id: f"v{var_idx}\n" for var_idx, _id in enumerate(variables)}
 
-        _vmap = self.var_id_to_nl
+        if nl_map:
+            nl_map.update(id2nl)
+        else:
+            self.var_id_to_nl_map = nl_map = id2nl
         if scale_model:
             template = self.template
             objective_scaling = [scaling_cache[id(info[0])] for info in objectives]
@@ -1079,10 +1105,8 @@ class _NLWriter_impl(object):
                 if ub is not None:
                     ub *= scale
                 var_bounds[_id] = lb, ub
-                # Update _vmap to output scaled variables in NL expressions
-                _vmap[_id] = (
-                    template.division + _vmap[_id] + '\n' + template.const % scale
-                ).rstrip()
+                # Update nl_map to output scaled variables in NL expressions
+                nl_map[_id] = template.division + nl_map[_id] + template.const % scale
 
         # Update any eliminated variables to point to the (potentially
         # scaled) substituted variables
@@ -1091,7 +1115,7 @@ class _NLWriter_impl(object):
             for _i in args:
                 # It is possible that the eliminated variable could
                 # reference another variable that is no longer part of
-                # the model and therefore does not have a _vmap entry.
+                # the model and therefore does not have a nl_map entry.
                 # This can happen when there is an underdetermined
                 # independent linear subsystem and the presolve removed
                 # all the constraints from the subsystem.  Because the
@@ -1099,7 +1123,7 @@ class _NLWriter_impl(object):
                 # anywhere else in the model, they are not part of the
                 # `variables` list.  Implicitly "fix" it to an arbitrary
                 # valid value from the presolved domain (see #3192).
-                if _i not in _vmap:
+                if _i not in nl_map:
                     lb, ub = var_bounds[_i]
                     if lb is None:
                         lb = -inf
@@ -1110,13 +1134,13 @@ class _NLWriter_impl(object):
                     else:
                         val = lb if abs(lb) < abs(ub) else ub
                     eliminated_vars[_i] = AMPLRepn(val, {}, None)
-                    _vmap[_i] = expr_info.compile_repn(visitor)[0]
+                    nl_map[_i] = expr_info.compile_repn(visitor)[0]
                     logger.warning(
                         "presolve identified an underdetermined independent "
                         "linear subsystem that was removed from the model.  "
                         f"Setting '{var_map[_i]}' == {val}"
                     )
-            _vmap[_id] = nl.rstrip() % tuple(_vmap[_i] for _i in args)
+            nl_map[_id] = nl % tuple(nl_map[_i] for _i in args)
 
         r_lines = [None] * n_cons
         for idx, (con, expr_info, lb, ub) in enumerate(constraints):
@@ -1126,17 +1150,17 @@ class _NLWriter_impl(object):
                     r_lines[idx] = "3"
                 else:
                     # _type = 4  # L == c == U
-                    r_lines[idx] = f"4 {lb - expr_info.const!r}"
+                    r_lines[idx] = f"4 {lb - expr_info.const!s}"
                     n_equality += 1
             elif lb is None:
                 # _type = 1  # c <= U
-                r_lines[idx] = f"1 {ub - expr_info.const!r}"
+                r_lines[idx] = f"1 {ub - expr_info.const!s}"
             elif ub is None:
                 # _type = 2  # L <= c
-                r_lines[idx] = f"2 {lb - expr_info.const!r}"
+                r_lines[idx] = f"2 {lb - expr_info.const!s}"
             else:
                 # _type = 0  # L <= c <= U
-                r_lines[idx] = f"0 {lb - expr_info.const!r} {ub - expr_info.const!r}"
+                r_lines[idx] = f"0 {lb - expr_info.const!s} {ub - expr_info.const!s}"
                 n_ranges += 1
             expr_info.const = 0
             # FIXME: this is a HACK to be compatible with the NLv1
@@ -1315,7 +1339,7 @@ class _NLWriter_impl(object):
         # "F" lines (external function definitions)
         #
         amplfunc_libraries = set()
-        for fid, fcn in sorted(self.external_functions.values()):
+        for fid, fcn in self.external_functions:
             amplfunc_libraries.add(fcn._library)
             ostream.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
@@ -1351,7 +1375,7 @@ class _NLWriter_impl(object):
                 ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
                 # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {_vals[_id]!r}\n" for _id in sorted(_vals))
+                    ''.join(f"{_id} {_vals[_id]!s}\n" for _id in sorted(_vals))
                 )
 
         #
@@ -1461,7 +1485,7 @@ class _NLWriter_impl(object):
                 ostream.write(f"d{len(data.con)}\n")
                 # Note: _SuffixData.compile() guarantees the value is int/float
                 ostream.write(
-                    ''.join(f"{_id} {data.con[_id]!r}\n" for _id in sorted(data.con))
+                    ''.join(f"{_id} {data.con[_id]!s}\n" for _id in sorted(data.con))
                 )
 
         #
@@ -1469,7 +1493,7 @@ class _NLWriter_impl(object):
         #
         _init_lines = [
             (var_idx, val if val.__class__ in int_float else float(val))
-            for var_idx, val in enumerate(var_map[_id].value for _id in variables)
+            for var_idx, val in enumerate(map(var_values.__getitem__, variables))
             if val is not None
         ]
         if scale_model:
@@ -1483,7 +1507,7 @@ class _NLWriter_impl(object):
         )
         ostream.write(
             ''.join(
-                f'{var_idx} {val!r}{col_comments[var_idx]}\n'
+                f'{var_idx} {val!s}{col_comments[var_idx]}\n'
                 for var_idx, val in _init_lines
             )
         )
@@ -1524,13 +1548,13 @@ class _NLWriter_impl(object):
                 if lb is None:  # unbounded
                     ostream.write(f"3{col_comments[var_idx]}\n")
                 else:  # ==
-                    ostream.write(f"4 {lb!r}{col_comments[var_idx]}\n")
+                    ostream.write(f"4 {lb!s}{col_comments[var_idx]}\n")
             elif lb is None:  # var <= ub
-                ostream.write(f"1 {ub!r}{col_comments[var_idx]}\n")
+                ostream.write(f"1 {ub!s}{col_comments[var_idx]}\n")
             elif ub is None:  # lb <= body
-                ostream.write(f"2 {lb!r}{col_comments[var_idx]}\n")
+                ostream.write(f"2 {lb!s}{col_comments[var_idx]}\n")
             else:  # lb <= body <= ub
-                ostream.write(f"0 {lb!r} {ub!r}{col_comments[var_idx]}\n")
+                ostream.write(f"0 {lb!s} {ub!s}{col_comments[var_idx]}\n")
 
         #
         # "k" lines (column offsets in Jacobian NNZ)
@@ -1565,7 +1589,7 @@ class _NLWriter_impl(object):
                     linear[_id] /= scaling_cache[_id]
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
             for _id in sorted(linear, key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -1581,7 +1605,7 @@ class _NLWriter_impl(object):
                     linear[_id] /= scaling_cache[_id]
             ostream.write(f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(linear, key=column_order.__getitem__):
-                ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+                ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
 
         # Generate the return information
         eliminated_vars = [
@@ -1690,12 +1714,13 @@ class _NLWriter_impl(object):
                     expr_info.linear = dict.fromkeys(nonlinear_vars, 0)
                 all_nonlinear_vars.update(nonlinear_vars)
 
-            # Update the count of components that each variable appears in
-            for v in expr_info.linear:
-                if v in nnz_by_var:
-                    nnz_by_var[v] += 1
-                else:
-                    nnz_by_var[v] = 1
+            if expr_info.linear:
+                # Update the count of components that each variable appears in
+                for v in expr_info.linear:
+                    if v in nnz_by_var:
+                        nnz_by_var[v] += 1
+                    else:
+                        nnz_by_var[v] = 1
             # Record all nonzero variable ids for this component
             linear_by_comp[id(comp_info[0])] = expr_info.linear
         # Linear models (or objectives) are common.  Avoid the set
@@ -1735,7 +1760,9 @@ class _NLWriter_impl(object):
                 n_subexpressions[0] += 1
         return n_subexpressions
 
-    def _linear_presolve(self, comp_by_linear_var, lcon_by_linear_nnz, var_bounds):
+    def _linear_presolve(
+        self, comp_by_linear_var, lcon_by_linear_nnz, var_bounds, var_values
+    ):
         eliminated_vars = {}
         eliminated_cons = set()
         if not self.config.linear_presolve:
@@ -1756,6 +1783,7 @@ class _NLWriter_impl(object):
         var_map = self.var_map
         substitutions_by_linear_var = defaultdict(set)
         template = self.template
+        nl_map = self.var_id_to_nl_map
         one_var = lcon_by_linear_nnz[1]
         two_var = lcon_by_linear_nnz[2]
         while 1:
@@ -1765,6 +1793,7 @@ class _NLWriter_impl(object):
                 b, _ = var_bounds[_id]
                 logger.debug("NL presolve: bounds fixed %s := %s", var_map[_id], b)
                 eliminated_vars[_id] = AMPLRepn(b, {}, None)
+                nl_map[_id] = template.const % b
             elif one_var:
                 con_id, info = one_var.popitem()
                 expr_info, lb = info
@@ -1774,6 +1803,7 @@ class _NLWriter_impl(object):
                 b = expr_info.const = (lb - expr_info.const) / coef
                 logger.debug("NL presolve: substituting %s := %s", var_map[_id], b)
                 eliminated_vars[_id] = expr_info
+                nl_map[_id] = template.const % b
                 lb, ub = var_bounds[_id]
                 if (lb is not None and lb - b > TOL) or (
                     ub is not None and ub - b < -TOL
@@ -1808,7 +1838,7 @@ class _NLWriter_impl(object):
                     ):
                         _id, id2 = id2, _id
                         coef, coef2 = coef2, coef
-                # substituting _id with a*x + b
+                # eliminating _id and replacing it with a*x + b
                 a = -coef2 / coef
                 x = id2
                 b = expr_info.const = (lb - expr_info.const) / coef
@@ -1838,9 +1868,28 @@ class _NLWriter_impl(object):
                 var_bounds[x] = x_lb, x_ub
                 if x_lb == x_ub and x_lb is not None:
                     fixed_vars.append(x)
+                # Given that we are eliminating a variable, we want to
+                # attempt to sanely resolve the initial variable values.
+                y_init = var_values[_id]
+                if y_init is not None:
+                    # Y has a value
+                    x_init = var_values[x]
+                    if x_init is None:
+                        # X does not; just use the one calculated from Y
+                        x_init = (y_init - b) / a
+                    else:
+                        # X does too, use the average of the two values
+                        x_init = (x_init + (y_init - b) / a) / 2.0
+                    # Ensure that the initial value respects the
+                    # tightened bounds
+                    if x_ub is not None and x_init > x_ub:
+                        x_init = x_ub
+                    if x_lb is not None and x_init < x_lb:
+                        x_init = x_lb
+                    var_values[x] = x_init
                 eliminated_cons.add(con_id)
             else:
-                return eliminated_cons, eliminated_vars
+                break
             for con_id, expr_info in comp_by_linear_var[_id]:
                 # Note that if we were aggregating (i.e., _id was
                 # from two_var), then one of these info's will be
@@ -1892,6 +1941,42 @@ class _NLWriter_impl(object):
                     expr_info.linear[x] += c * a
                 elif a:
                     expr_info.linear[x] = c * a
+                elif not expr_info.linear:
+                    nl_map[resubst] = template.const % expr_info.const
+
+        # Note: the ASL will (silently) produce incorrect answers if the
+        # nonlinear portion of a defined variable is a constant
+        # expression.  This may not be the case if all the variables in
+        # the original nonlinear expression have been fixed.
+        for _id, (expr, info, sub) in self.subexpression_cache.items():
+            if info.nonlinear:
+                nl, args = info.nonlinear
+                # Note: 'not args' skips string arguments
+                # Note: 'vid in nl_map' skips eliminated
+                #   variables and defined variables reduced to constants
+                if not args or any(vid not in nl_map for vid in args):
+                    continue
+                # Ideally, we would just evaluate the named expression.
+                # However, there might be a linear portion of the named
+                # expression that still has free variables, and there is no
+                # guarantee that the user actually initialized the
+                # variables.  So, we will fall back on parsing the (now
+                # constant) nonlinear fragment and evaluating it.
+                info.nonlinear = None
+                info.const += _evaluate_constant_nl(
+                    nl % tuple(nl_map[i] for i in args), self.external_functions
+                )
+            if not info.linear:
+                # This has resolved to a constant: the ASL will fail for
+                # defined variables containing ONLY a constant.  We
+                # need to substitute the constant directly into the
+                # original constraint/objective expression(s)
+                info.linear = {}
+                self.used_named_expressions.discard(_id)
+                nl_map[_id] = template.const % info.const
+                self.subexpression_cache[_id] = (expr, info, [None, None, True])
+
+        return eliminated_cons, eliminated_vars
 
     def _record_named_expression_usage(self, named_exprs, src, comp_type):
         self.used_named_expressions.update(named_exprs)
@@ -1902,6 +1987,18 @@ class _NLWriter_impl(object):
                 info[comp_type] = src
             elif info[comp_type] != src:
                 info[comp_type] = 0
+
+    def _resolve_subexpression_args(self, nl, args):
+        final_args = []
+        for arg in args:
+            if arg in self.var_id_to_nl_map:
+                final_args.append(self.var_id_to_nl_map[arg])
+            else:
+                _nl, _ids, _ = self.subexpression_cache[arg][1].compile_repn(
+                    self.visitor
+                )
+                final_args.append(self._resolve_subexpression_args(_nl, _ids))
+        return nl % tuple(final_args)
 
     def _write_nl_expression(self, repn, include_const):
         # Note that repn.mult should always be 1 (the AMPLRepn was
@@ -1917,7 +2014,13 @@ class _NLWriter_impl(object):
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
                 nl = self.template.binary_sum + nl + self.template.const % repn.const
-            self.ostream.write(nl % tuple(map(self.var_id_to_nl.__getitem__, args)))
+            try:
+                self.ostream.write(
+                    nl % tuple(map(self.var_id_to_nl_map.__getitem__, args))
+                )
+            except KeyError:
+                self.ostream.write(self._resolve_subexpression_args(nl, args))
+
         elif include_const:
             self.ostream.write(self.template.const % repn.const)
         else:
@@ -1931,7 +2034,7 @@ class _NLWriter_impl(object):
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        self.var_id_to_nl[expr_id] = f"v{self.next_V_line_id}{lbl}"
+        self.var_id_to_nl_map[expr_id] = f"v{self.next_V_line_id}{lbl}\n"
         # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
@@ -1939,7 +2042,7 @@ class _NLWriter_impl(object):
         #
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
-            ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
+            ostream.write(f'{column_order[_id]} {linear[_id]!s}\n')
         self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
 
@@ -2014,7 +2117,7 @@ class AMPLRepn(object):
         ans.const = self.const
         ans.linear = None if self.linear is None else dict(self.linear)
         ans.nonlinear = self.nonlinear
-        ans.named_exprs = self.named_exprs
+        ans.named_exprs = None if self.named_exprs is None else set(self.named_exprs)
         return ans
 
     def compile_repn(self, visitor, prefix='', args=None, named_exprs=None):
@@ -2259,7 +2362,9 @@ class text_nl_debug_template(object):
     less_equal = 'o23\t# le\n'
     equality = 'o24\t# eq\n'
     external_fcn = 'f%d %d%s\n'
-    var = '%s\n'  # NOTE: to support scaling, we do NOT include the 'v' here
+    # NOTE: to support scaling and substitutions, we do NOT include the
+    # 'v' or the EOL here:
+    var = '%s'
     const = 'n%r\n'
     string = 'h%d:%s\n'
     monomial = product + const + var.replace('%', '%%')
@@ -2268,8 +2373,45 @@ class text_nl_debug_template(object):
     _create_strict_inequality_map(vars())
 
 
+nl_operators = {
+    0: (2, operator.add),
+    2: (2, operator.mul),
+    3: (2, operator.truediv),
+    5: (2, operator.pow),
+    15: (1, operator.abs),
+    16: (1, operator.neg),
+    54: (None, lambda *x: sum(x)),
+    35: (3, lambda a, b, c: b if a else c),
+    21: (2, operator.and_),
+    22: (2, operator.lt),
+    23: (2, operator.le),
+    24: (2, operator.eq),
+    43: (1, math.log),
+    42: (1, math.log10),
+    41: (1, math.sin),
+    46: (1, math.cos),
+    38: (1, math.tan),
+    40: (1, math.sinh),
+    45: (1, math.cosh),
+    37: (1, math.tanh),
+    51: (1, math.asin),
+    53: (1, math.acos),
+    49: (1, math.atan),
+    44: (1, math.exp),
+    39: (1, math.sqrt),
+    50: (1, math.asinh),
+    52: (1, math.acosh),
+    47: (1, math.atanh),
+    14: (1, math.ceil),
+    13: (1, math.floor),
+}
+
+
 def _strip_template_comments(vars_, base_):
-    vars_['unary'] = {k: v[: v.find('\t#')] + '\n' for k, v in base_.unary.items()}
+    vars_['unary'] = {
+        k: v[: v.find('\t#')] + '\n' if v[-1] == '\n' else ''
+        for k, v in base_.unary.items()
+    }
     for k, v in base_.__dict__.items():
         if type(v) is str and '\t#' in v:
             v_lines = v.split('\n')
@@ -2520,6 +2662,15 @@ def handle_named_expression_node(visitor, node, arg1):
         expression_source,
     )
 
+    # As we will eventually need the compiled form of any nonlinear
+    # expression, we will go ahead and compile it here.  We do not
+    # do the same for the linear component as we will only need the
+    # linear component compiled to a dict if we are emitting the
+    # original (linear + nonlinear) V line (which will not happen if
+    # the V line is part of a larger linear operator).
+    if repn.nonlinear.__class__ is list:
+        repn.compile_nonlinear_fragment(visitor)
+
     if not visitor.use_named_exprs:
         return _GENERAL, repn.duplicate()
 
@@ -2532,15 +2683,6 @@ def handle_named_expression_node(visitor, node, arg1):
     repn.nl = (visitor.template.var, (_id,))
 
     if repn.nonlinear:
-        # As we will eventually need the compiled form of any nonlinear
-        # expression, we will go ahead and compile it here.  We do not
-        # do the same for the linear component as we will only need the
-        # linear component compiled to a dict if we are emitting the
-        # original (linear + nonlinear) V line (which will not happen if
-        # the V line is part of a larger linear operator).
-        if repn.nonlinear.__class__ is list:
-            repn.compile_nonlinear_fragment(visitor)
-
         if repn.linear:
             # If this expression has both linear and nonlinear
             # components, we will follow the ASL convention and break
@@ -2563,8 +2705,10 @@ def handle_named_expression_node(visitor, node, arg1):
             nl_info = list(expression_source)
             visitor.subexpression_cache[sub_id] = (sub_node, sub_repn, nl_info)
             # It is important that the NL subexpression comes before the
-            # main named expression:
-            visitor.subexpression_order.append(sub_id)
+            # main named expression: re-insert the original named
+            # expression (so that the nonlinear sub_node comes first
+            # when iterating over subexpression_cache)
+            visitor.subexpression_cache[_id] = visitor.subexpression_cache.pop(_id)
         else:
             nl_info = expression_source
     else:
@@ -2603,14 +2747,10 @@ def handle_named_expression_node(visitor, node, arg1):
 
     if expression_source[2]:
         if repn.linear:
-            return (_MONOMIAL, next(iter(repn.linear)), 1)
+            assert len(repn.linear) == 1 and not repn.const
+            return (_MONOMIAL,) + next(iter(repn.linear.items()))
         else:
             return (_CONSTANT, repn.const)
-
-    # Defer recording this _id until after we know that this repn will
-    # not be directly substituted (and to ensure that the NL fragment is
-    # added to the order first).
-    visitor.subexpression_order.append(_id)
 
     return (_GENERAL, repn.duplicate())
 
@@ -2619,9 +2759,12 @@ def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
     # There is a special case for external functions: these are the only
     # expressions that can accept string arguments. As we currently pass
-    # these as 'precompiled' general NL fragments, the normal trap for
-    # constant subexpressions will miss constant external function calls
-    # that contain strings.  We will catch that case here.
+    # these as 'precompiled' GENERAL AMPLRepns, the normal trap for
+    # constant subexpressions will miss string arguments.  We will catch
+    # that case here by looking for NL fragments with no variable
+    # references.  Note that the NL fragment is NOT the raw string
+    # argument that we want to evaluate: the raw string is in the
+    # `const` field.
     if all(
         arg[0] is _CONSTANT or (arg[0] is _GENERAL and arg[1].nl and not arg[1].nl[1])
         for arg in args
@@ -2637,8 +2780,8 @@ def handle_external_function_node(visitor, node, *args):
                 "correctly."
                 % (
                     func,
-                    visitor.external_byFcn[func]._library,
-                    visitor.external_byFcn[func]._library.name,
+                    visitor.external_functions[func]._library,
+                    visitor.external_functions[func]._library.name,
                     node._fcn._library,
                     node._fcn.name,
                 )
@@ -2646,14 +2789,33 @@ def handle_external_function_node(visitor, node, *args):
     else:
         visitor.external_functions[func] = (len(visitor.external_functions), node._fcn)
     comment = f'\t#{node.local_name}' if visitor.symbolic_solver_labels else ''
-    nonlin = node_result_to_amplrepn(args[0]).compile_repn(
-        visitor,
-        visitor.template.external_fcn
-        % (visitor.external_functions[func][0], len(args), comment),
+    nl = visitor.template.external_fcn % (
+        visitor.external_functions[func][0],
+        len(args),
+        comment,
     )
-    for arg in args[1:]:
-        nonlin = node_result_to_amplrepn(arg).compile_repn(visitor, *nonlin)
-    return (_GENERAL, AMPLRepn(0, None, nonlin))
+    arg_ids = []
+    named_exprs = set()
+    for arg in args:
+        _id = id(arg)
+        arg_ids.append(_id)
+        visitor.subexpression_cache[_id] = (
+            arg,
+            AMPLRepn(
+                0,
+                None,
+                node_result_to_amplrepn(arg).compile_repn(
+                    visitor, named_exprs=named_exprs
+                ),
+            ),
+            (None, None, True),
+        )
+    if not named_exprs:
+        named_exprs = None
+    return (
+        _GENERAL,
+        AMPLRepn(0, None, (nl + '%s' * len(arg_ids), arg_ids, named_exprs)),
+    )
 
 
 _operator_handles = ExitNodeDispatcher(
@@ -2861,7 +3023,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self,
         template,
         subexpression_cache,
-        subexpression_order,
         external_functions,
         var_map,
         used_named_expressions,
@@ -2872,7 +3033,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
-        self.subexpression_order = subexpression_order
         self.external_functions = external_functions
         self.active_expression_source = None
         self.var_map = var_map
@@ -3021,3 +3181,60 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         self.active_expression_source = None
         return ans
+
+
+def _evaluate_constant_nl(nl, external_functions):
+    expr = nl.splitlines()
+    stack = []
+    while expr:
+        line = expr.pop()
+        tokens = line.split()
+        # remove tokens after the first comment
+        for i, t in enumerate(tokens):
+            if t.startswith('#'):
+                tokens = tokens[:i]
+                break
+        if len(tokens) != 1:
+            # skip blank lines
+            if not tokens:
+                continue
+            if tokens[0][0] == 'f':
+                # external function
+                fid, nargs = tokens
+                fid = int(fid[1:])
+                nargs = int(nargs)
+                fcn_id, ef = external_functions[fid]
+                assert fid == fcn_id
+                stack.append(ef.evaluate(tuple(stack.pop() for i in range(nargs))))
+                continue
+            raise DeveloperError(
+                f"Unsupported line format _evaluate_constant_nl() "
+                f"(we expect each line to contain a single token): '{line}'"
+            )
+        term = tokens[0]
+        # the "command" can be determined by the first character on the line
+        cmd = term[0]
+        # Note that we will unpack the line into the expected number of
+        # explicit arguments as a form of error checking
+        if cmd == 'n':
+            # numeric constant
+            stack.append(float(term[1:]))
+        elif cmd == 'o':
+            # operator
+            nargs, fcn = nl_operators[int(term[1:])]
+            if nargs is None:
+                nargs = int(stack.pop())
+            stack.append(fcn(*(stack.pop() for i in range(nargs))))
+        elif cmd in '1234567890':
+            # this is either a single int (e.g., the nargs in a nary
+            # sum) or a string argument.  Preserve it as-is until later
+            # when we know which we are expecting.
+            stack.append(term)
+        elif cmd == 'h':
+            stack.append(term.split(':', 1)[1])
+        else:
+            raise DeveloperError(
+                f"Unsupported NL operator in _evaluate_constant_nl(): '{line}'"
+            )
+    assert len(stack) == 1
+    return stack[0]

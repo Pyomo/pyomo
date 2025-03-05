@@ -25,6 +25,7 @@ from pyomo.repn.tests.nl_diff import nl_diff
 
 from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.common.errors import MouseTrap
+from pyomo.common.gsl import find_GSL
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
@@ -57,7 +58,6 @@ class INFO(object):
         else:
             self.template = nl_writer.text_nl_template
         self.subexpression_cache = {}
-        self.subexpression_order = []
         self.external_functions = {}
         self.var_map = {}
         self.used_named_expressions = set()
@@ -66,7 +66,6 @@ class INFO(object):
         self.visitor = nl_writer.AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
-            self.subexpression_order,
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
@@ -99,7 +98,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn2\n', [id(m.x)]))
 
         m.p = 2
 
@@ -151,7 +150,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o2\nn0.5\no5\n%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o2\nn0.5\no5\n%sn2\n', [id(m.x)]))
 
         info = INFO()
         with LoggingIntercept() as LOG:
@@ -161,7 +160,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o3\no43\n%s\n%s\n', [id(m.x), id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o3\no43\n%s%s', [id(m.x), id(m.x)]))
 
     def test_errors_divide_by_0(self):
         m = ConcreteModel()
@@ -256,7 +255,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn2\n', [id(m.x)]))
 
         m.p = 1
         info = INFO()
@@ -543,7 +542,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, InvalidNumber(None))
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\n%s\n%s\n%s\n')
+        self.assertEqual(repn.nonlinear[0], 'o16\no2\no2\n%s%s%s')
         self.assertEqual(repn.nonlinear[1], [id(m.z[2]), id(m.z[3]), id(m.z[4])])
 
         m.z[3].fix(float('nan'))
@@ -593,7 +592,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn0.5\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn0.5\n', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
@@ -618,7 +617,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o15\n%s\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o15\n%s', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
@@ -643,7 +642,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o43\n%s\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o43\n%s', [id(m.x)]))
 
         m.x.fix()
         info = INFO()
@@ -672,7 +671,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(
             repn.nonlinear,
-            ('o35\no23\n%s\nn4\no5\n%s\nn2\n%s\n', [id(m.x), id(m.x), id(m.y)]),
+            ('o35\no23\n%sn4\no5\n%sn2\n%s', [id(m.x), id(m.x), id(m.y)]),
         )
 
         m.x.fix()
@@ -713,7 +712,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.linear, {})
         self.assertEqual(
             repn.nonlinear,
-            ('o35\no24\n%s\nn4\no5\n%s\nn2\n%s\n', [id(m.x), id(m.x), id(m.y)]),
+            ('o35\no24\n%sn4\no5\n%sn2\n%s', [id(m.x), id(m.x), id(m.y)]),
         )
 
         m.x.fix()
@@ -755,7 +754,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(
             repn.nonlinear,
             (
-                'o35\no21\no23\nn1\n%s\no23\n%s\nn4\no5\n%s\nn2\n%s\n',
+                'o35\no21\no23\nn1\n%so23\n%sn4\no5\n%sn2\n%s',
                 [id(m.x), id(m.x), id(m.x), id(m.y)],
             ),
         )
@@ -816,7 +815,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(len(info.subexpression_cache), 1)
         obj, repn, info = info.subexpression_cache[id(m.e)]
         self.assertIs(obj, m.e)
-        self.assertEqual(repn.nl, ('%s\n', (id(m.e),)))
+        self.assertEqual(repn.nl, ('%s', (id(m.e),)))
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 3)
         self.assertEqual(repn.linear, {id(m.x): 1})
@@ -843,7 +842,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {})
-        self.assertEqual(repn.nonlinear, ('o24\no3\nn1\n%s\nn0\n', [id(m.x)]))
+        self.assertEqual(repn.nonlinear, ('o24\no3\nn1\n%sn0\n', [id(m.x)]))
 
     def test_duplicate_shared_linear_expressions(self):
         # This tests an issue where AMPLRepn.duplicate() was not copying
@@ -930,7 +929,7 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.mult, 1)
         self.assertEqual(repn.const, 0)
         self.assertEqual(repn.linear, {id(m.x[2]): 4, id(m.x[3]): 9, id(m.x[4]): 16})
-        self.assertEqual(repn.nonlinear, ('o5\n%s\nn2\n', [id(m.x[2])]))
+        self.assertEqual(repn.nonlinear, ('o5\n%sn2\n', [id(m.x[2])]))
         with self.assertRaisesRegex(
             MouseTrap, "Cannot convert nonlinear AMPLRepn to Pyomo Expression"
         ):
@@ -1764,7 +1763,11 @@ G0 1	#obj
         OUT = io.StringIO()
         with LoggingIntercept() as LOG:
             nlinfo = nl_writer.NLWriter().write(
-                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+                m,
+                OUT,
+                symbolic_solver_labels=True,
+                linear_presolve=True,
+                skip_trivial_constraints=False,
             )
         self.assertEqual(LOG.getvalue(), "")
 
@@ -1804,6 +1807,56 @@ n2
 x0	#initial guess
 r	#1 ranges (rhs's)
 1 0.5	#c1
+b	#1 bounds (on variables)
+3	#z
+k0	#intermediate Jacobian column lengths
+G0 1	#obj
+0 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        OUT = io.StringIO()
+        with LoggingIntercept() as LOG:
+            nlinfo = nl_writer.NLWriter().write(
+                m, OUT, symbolic_solver_labels=True, linear_presolve=True
+            )
+        self.assertEqual(LOG.getvalue(), "")
+
+        self.assertIs(nlinfo.eliminated_vars[0][0], m.y)
+        self.assertExpressionsEqual(
+            nlinfo.eliminated_vars[0][1], LinearExpression([-1.0 * m.z])
+        )
+        self.assertEqual(nlinfo.eliminated_vars[1], (m.x, 2))
+
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 0 1 0 0	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 1 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1	#nonzeros in Jacobian, obj. gradient
+ 3 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+O0 0	#obj
+o54	#sumlist
+3	#(n)
+o5	#^
+n2
+n2
+o5	#^
+o16	#-
+v0	#z
+n2
+o5	#^
+v0	#z
+n2
+x0	#initial guess
+r	#1 ranges (rhs's)
 b	#1 bounds (on variables)
 3	#z
 k0	#intermediate Jacobian column lengths
@@ -2304,6 +2357,417 @@ G0 8   #OBJ
 10 1
 11 1
 12 1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_fixes_nl_defined_variables(self):
+        # This tests a workaround for a bug in the ASL where defined
+        # variables with constant expressions in the NL portion are not
+        # evaluated correctly.
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(bounds=(3, None))
+        m.z = Var(bounds=(None, 3))
+        m.e = Expression(expr=m.x + m.y * m.z + m.y**2 + 3 / m.z)
+        m.c1 = Constraint(expr=m.y * m.e + m.x >= 0)
+        m.c2 = Constraint(expr=m.y == m.z)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m,
+            OUT,
+            symbolic_solver_labels=True,
+            linear_presolve=True,
+            export_defined_variables=True,
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 1 0 0 0	#vars, constraints, objectives, ranges, eqns
+ 1 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 1 0 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 1 0	#nonzeros in Jacobian, obj. gradient
+ 2 1	#max name lengths: constraints, variables
+ 0 0 0 1 0	#common exprs: b,c,o,c1,o1
+V1 1 1	#e
+0 1
+n19
+C0	#c1
+o2	#*
+n3
+v1	#e
+x0	#initial guess
+r	#1 ranges (rhs's)
+2 0	#c1
+b	#1 bounds (on variables)
+3	#x
+k0	#intermediate Jacobian column lengths
+J0 1	#c1
+0 1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m,
+            OUT,
+            symbolic_solver_labels=True,
+            linear_presolve=True,
+            export_defined_variables=False,
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 1 1 0 0 0	#vars, constraints, objectives, ranges, eqns
+ 1 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 1 0 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 1 0	#nonzeros in Jacobian, obj. gradient
+ 2 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+C0	#c1
+o2	#*
+n3
+o0	#+
+v0	#x
+o54	#sumlist
+3	#(n)
+o2	#*
+n3
+n3
+o5	#^
+n3
+n2
+o3	#/
+n3
+n3
+x0	#initial guess
+r	#1 ranges (rhs's)
+2 0	#c1
+b	#1 bounds (on variables)
+3	#x
+k0	#intermediate Jacobian column lengths
+J0 1	#c1
+0 1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m,
+            OUT,
+            symbolic_solver_labels=True,
+            linear_presolve=False,
+            export_defined_variables=True,
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	# problem unknown
+ 3 2 0 0 1	#vars, constraints, objectives, ranges, eqns
+ 1 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 3 0 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 5 0	#nonzeros in Jacobian, obj. gradient
+ 2 1	#max name lengths: constraints, variables
+ 0 0 0 2 0	#common exprs: b,c,o,c1,o1
+V3 0 1	#nl(e)
+o54	#sumlist
+3	#(n)
+o2	#*
+v0	#y
+v2	#z
+o5	#^
+v0	#y
+n2
+o3	#/
+n3
+v2	#z
+V4 1 1	#e
+1 1
+v3	#nl(e)
+C0	#c1
+o2	#*
+v0	#y
+v4	#e
+C1	#c2
+n0
+x0	#initial guess
+r	#2 ranges (rhs's)
+2 0	#c1
+4 0	#c2
+b	#3 bounds (on variables)
+2 3	#y
+3	#x
+1 3	#z
+k2	#intermediate Jacobian column lengths
+2
+3
+J0 3	#c1
+0 0
+1 1
+2 0
+J1 2	#c2
+0 1
+2 -1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_fixes_nl_external_function(self):
+        # This tests a workaround for a bug in the ASL where external
+        # functions with constant argument expressions are not
+        # evaluated correctly.
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.p = Param(initialize=1, mutable=True)
+        m.x = Var(bounds=(None, 3))
+        m.y = Var(bounds=(3, None))
+        m.z = Var(initialize=1)
+        m.o = Objective(expr=m.z**2 * m.hypot(m.p * m.x, m.p + m.y) ** 2)
+        m.c = Constraint(expr=m.x == m.y)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=False
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0       #problem unknown
+ 3 1 1 0 1     #vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 3 0 #nonlinear vars in constraints, objectives, both
+ 0 1 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3   #nonzeros in Jacobian, obj. gradient
+ 1 1   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+C0     #c
+n0
+O0 0   #o
+o2     #*
+o5     #^
+v0     #z
+n2
+o5     #^
+f0 2   #hypot
+v1     #x
+o0     #+
+v2     #y
+n1
+n2
+x1     #initial guess
+0 1    #z
+r      #1 ranges (rhs's)
+4 0    #c
+b      #3 bounds (on variables)
+3      #z
+1 3    #x
+2 3    #y
+k2     #intermediate Jacobian column lengths
+0
+1
+J0 2   #c
+1 1
+2 -1
+G0 3   #o
+0 0
+1 0
+2 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=True
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0       #problem unknown
+ 1 0 1 0 0     #vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0   #nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0   #network constraints: nonlinear, linear
+ 0 1 0 #nonlinear vars in constraints, objectives, both
+ 0 1 0 1       #linear network variables; functions; arith, flags
+ 0 0 0 0 0     #discrete variables: binary, integer, nonlinear (b,c,o)
+ 0 1   #nonzeros in Jacobian, obj. gradient
+ 1 1   #max name lengths: constraints, variables
+ 0 0 0 0 0     #common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+O0 0   #o
+o2     #*
+o5     #^
+v0     #z
+n2
+o5     #^
+f0 2   #hypot
+n3
+n4
+n2
+x1     #initial guess
+0 1    #z
+r      #0 ranges (rhs's)
+b      #1 bounds (on variables)
+3      #z
+k0     #intermediate Jacobian column lengths
+G0 1   #o
+0 0
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_defined_var_to_const(self):
+        # This test is derived from a step in an IDAES initialization
+        # where the presolver is able to fix enough variables to cause
+        # the defined variable to be reduced to a constant.  We must not
+        # emit the defined variable (because doing so generates an error
+        # in the ASL)
+        m = ConcreteModel()
+        m.eq = Var(initialize=100)
+        m.co2 = Var()
+        m.n2 = Var()
+        m.E = Expression(expr=60 / (3 * m.co2 - 4 * m.n2 - 5))
+        m.con1 = Constraint(expr=m.co2 == 6)
+        m.con2 = Constraint(expr=m.n2 == 7)
+        m.con3 = Constraint(expr=8 / m.E == m.eq)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=True
+        )
+        # Note that the presolve will end up recognizing con3 as a
+        # linear constraint; however, it does not do so until processing
+        # the constraints after presolve (so the constraint is not
+        # actually removed and the eq variable still appears in the model)
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 1 1 0 0 1	#vars, constraints, objectives, ranges, eqns
+ 0 0 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 0 0	#nonlinear vars in constraints, objectives, both
+ 0 0 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 1 0	#nonzeros in Jacobian, obj. gradient
+ 4 2	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+C0	#con3
+n0
+x1	#initial guess
+0 100	#eq
+r	#1 ranges (rhs's)
+4 2.0	#con3
+b	#1 bounds (on variables)
+3	#eq
+k0	#intermediate Jacobian column lengths
+J0 1	#con3
+0 -1
+""",
+                OUT.getvalue(),
+            )
+        )
+
+    def test_presolve_check_invalid_monomial_constraints(self):
+        # This checks issue #3272
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=m.x == 5)
+        m.d = Constraint(expr=m.x >= 10)
+
+        OUT = io.StringIO()
+        with self.assertRaisesRegex(
+            nl_writer.InfeasibleConstraintException,
+            r"model contains a trivially infeasible constraint 'd' "
+            r"\(fixed body value 5.0 outside bounds \[10, None\]\)\.",
+        ):
+            nl_writer.NLWriter().write(m, OUT, linear_presolve=True)
+
+    def test_nested_external_expressions(self):
+        # This tests nested external functions in a single expression
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.p = Param(initialize=1, mutable=True)
+        m.x = Var(bounds=(None, 3))
+        m.y = Var(bounds=(3, None))
+        m.z = Var(initialize=1)
+        m.o = Objective(expr=m.z**2 * m.hypot(m.z, m.hypot(m.x, m.y)) ** 2)
+        m.c = Constraint(expr=m.x == m.y)
+
+        OUT = io.StringIO()
+        nl_writer.NLWriter().write(
+            m, OUT, symbolic_solver_labels=True, linear_presolve=False
+        )
+        self.assertEqual(
+            *nl_diff(
+                """g3 1 1 0	#problem unknown
+ 3 1 1 0 1	#vars, constraints, objectives, ranges, eqns
+ 0 1 0 0 0 0	#nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb
+ 0 0	#network constraints: nonlinear, linear
+ 0 3 0	#nonlinear vars in constraints, objectives, both
+ 0 1 0 1	#linear network variables; functions; arith, flags
+ 0 0 0 0 0	#discrete variables: binary, integer, nonlinear (b,c,o)
+ 2 3	#nonzeros in Jacobian, obj. gradient
+ 1 1	#max name lengths: constraints, variables
+ 0 0 0 0 0	#common exprs: b,c,o,c1,o1
+F0 1 -1 gsl_hypot
+C0	#c
+n0
+O0 0	#o
+o2	#*
+o5	#^
+v0	#z
+n2
+o5	#^
+f0 2	#hypot
+v0	#z
+f0 2	#hypot
+v1	#x
+v2	#y
+n2
+x1	#initial guess
+0 1	#z
+r	#1 ranges (rhs's)
+4 0	#c
+b	#3 bounds (on variables)
+3	#z
+1 3	#x
+2 3	#y
+k2	#intermediate Jacobian column lengths
+0
+1
+J0 2	#c
+1 1
+2 -1
+G0 3	#o
+0 0
+1 0
+2 0
 """,
                 OUT.getvalue(),
             )
