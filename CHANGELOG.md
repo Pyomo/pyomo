@@ -2,6 +2,25 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.1   (5 Mar 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Remove URL and replace with full citation (#3490)
+  - Rename project "pyomo" in setup.py [PEP 625] (#3430)
+  - Resolve errors in `TeeStream` and `capture_output` (#3497)
+- Documentation
+  - Update autosummary for Sphinx 8.2.1 (#3492)
+  - Resolve errors building documentation PDF (#3495)
+- Testing
+  - conda: disable '--update-deps' to work around buggy libffi(?) (#3499)
+  - Update for March 2024 typos release (#3500)
+  - Add timeout when installing optional packages (solvers) in conda (#3501)
+  - Updates to CodeCov configuration (#3491)
+- Contributed Packages
+  - APPSI: Add warmstart for appsi_highs (issue #3450) (#3494)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.0   (21 Feb 2025)
 -------------------------------------------------------------------------------
 
