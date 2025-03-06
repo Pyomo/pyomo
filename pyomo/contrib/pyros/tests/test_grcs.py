@@ -1754,7 +1754,7 @@ class RegressionTest(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
         )
 
-    @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
+    @unittest.skipUnless(ipopt_available, "IPOPT not available.")
     def test_coefficient_matching_certain_param(self):
         m = ConcreteModel()
         m.q1 = Param(mutable=True, initialize=1)
@@ -1764,22 +1764,19 @@ class RegressionTest(unittest.TestCase):
         m.eq_con = Constraint(expr=m.q1 * m.x1 - m.x2 + m.q2 == 0)
         m.obj = Objective(expr=m.x1 + m.x2)
 
-        # makes q2 a certain param
-        # so the equality constraint should be coefficient matched
-        # with respect to q1 only
-        interval = BoxSet(bounds=[(1, 2), (1, 1)])
-
         pyros_solver = SolverFactory("pyros")
-        local_subsolver = SolverFactory('scip')
-        global_subsolver = SolverFactory("scip")
+        ipopt = SolverFactory("ipopt")
         results = pyros_solver.solve(
             model=m,
             first_stage_variables=[m.x1, m.x2],
             second_stage_variables=[],
             uncertain_params=[m.q1, m.q2],
-            uncertainty_set=interval,
-            local_solver=local_subsolver,
-            global_solver=global_subsolver,
+            # makes q2 a certain param
+            # so the equality constraint should be coefficient matched
+            # with respect to q1 only
+            uncertainty_set=BoxSet([[1, 2], [1, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
             options={
                 "objective_focus": ObjectiveType.worst_case,
                 "solve_master_globally": True,
@@ -1794,6 +1791,28 @@ class RegressionTest(unittest.TestCase):
         self.assertAlmostEqual(first=results.final_objective_value, second=1, places=2)
         self.assertEqual(m.x1.value, 0)
         self.assertEqual(m.x2.value, 1)
+
+        results2 = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.q1, m.q2],
+            # now both parameters are truly uncertain;
+            # problem should be robust infeasible
+            uncertainty_set=BoxSet([[1, 2], [1, 2]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+        self.assertEqual(
+            results2.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+        )
+        # robust infeasibility detected in coefficient matching
+        self.assertEqual(results2.iterations, 0)
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available.")
     def test_coefficient_matching_single_certain_param(self):
@@ -1818,7 +1837,6 @@ class RegressionTest(unittest.TestCase):
             local_solver=ipopt,
             global_solver=ipopt,
         )
-
         self.assertEqual(
             res.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
@@ -1827,6 +1845,39 @@ class RegressionTest(unittest.TestCase):
         self.assertAlmostEqual(res.final_objective_value, 2)
         self.assertAlmostEqual(m.x1.value, 1)
         self.assertAlmostEqual(m.x2.value, 1)
+
+        res2 = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[1, 2]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+        )
+        self.assertEqual(
+            res2.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+        )
+        self.assertEqual(res2.iterations, 1)
+
+        # when q constrained to 0, still robust infeasible,
+        # as the equality constraint fixes x2 to 0 (out of bounds)
+        res3 = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[0, 0]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            nominal_uncertain_param_vals=[0],
+        )
+        self.assertEqual(
+            res3.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+        )
+        self.assertEqual(res3.iterations, 1)
 
     @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_singleton_set(self):
@@ -1841,7 +1892,6 @@ class RegressionTest(unittest.TestCase):
             + m.u**2
             == 0
         )
-        interval = BoxSet(bounds=[(value(m.u), value(m.u))])
 
         # Instantiate the PyROS solver
         pyros_solver = SolverFactory("pyros")
@@ -1856,7 +1906,7 @@ class RegressionTest(unittest.TestCase):
             first_stage_variables=[m.x1, m.x2],
             second_stage_variables=[],
             uncertain_params=[m.u],
-            uncertainty_set=interval,
+            uncertainty_set=BoxSet(bounds=[(value(m.u), value(m.u))]),
             local_solver=local_subsolver,
             global_solver=global_subsolver,
             options={
@@ -1864,7 +1914,6 @@ class RegressionTest(unittest.TestCase):
                 "solve_master_globally": True,
             },
         )
-
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_optimal,
@@ -1876,6 +1925,26 @@ class RegressionTest(unittest.TestCase):
             places=2,
             msg="Incorrect objective function value.",
         )
+
+        results2 = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=BoxSet(bounds=[(value(m.u), 1e-3 + value(m.u))]),
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            },
+        )
+        self.assertEqual(
+            results2.pyros_termination_condition,
+            pyrosTerminationCondition.robust_infeasible,
+        )
+        self.assertEqual(results2.iterations, 0)
+        self.assertEqual(results2.final_objective_value, None)
 
     @unittest.skipUnless(ipopt_available, "IPOPT not available")
     def test_pyros_certain_params_ipopt_degrees_of_freedom(self):
