@@ -54,7 +54,7 @@ The problems are derived from the deterministic model *hydro*,
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
 We have converted the
-`GAMS implementation of hydro <https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_hydro.html>`_
+`GAMS implementation of hydro <https://www.gams.com/35/gamslib_ml/libhtml/gamslib_hydro.html>`_
 to Pyomo format using the
 `GAMS CONVERT utility <https://www.gams.com/latest/docs/S_CONVERT.html>`_.
 
