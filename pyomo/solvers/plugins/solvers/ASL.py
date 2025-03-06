@@ -41,20 +41,6 @@ class ASL(SystemCallSolver):
 
     def __init__(self, **kwds):
         #
-        # If solving with knitroampl, check if Knitro Python package is installed in the same environment.
-        # If yes, use the knitroampl executable from the package instead of searching in PATH.
-        #
-        if 'executable' in kwds and kwds['executable'] == 'knitroampl':
-            candidate_knitroampl_dir = (
-                Path(__file__).resolve().parents[4] / 'knitro' / 'knitroampl'
-            )
-            if find_executable(
-                'knitroampl',
-                include_PATH=False,
-                pathlist=[str(candidate_knitroampl_dir)],
-            ):
-                kwds['executable'] = str(candidate_knitroampl_dir / 'knitroampl')
-        #
         # Call base constructor
         #
         if not 'type' in kwds:
