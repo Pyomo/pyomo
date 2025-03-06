@@ -258,7 +258,7 @@ Configuring the Output Log
 
 For a given call to the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method,
-the solver log output is produced by the
+the solver output log is produced by the
 Python logger (:py:class:`logging.Logger`) object
 derived from the optional argument ``progress_logger``.
 By default, ``progress_logger``
@@ -283,7 +283,7 @@ are excluded from the solver log.
 
 .. _table-logging-levels:
 
-.. list-table:: PyROS solver log output at the various standard Python :py:mod:`logging` levels.
+.. list-table:: Solver output log messages at the various standard Python :py:mod:`logging` levels.
    :widths: 10 50
    :header-rows: 1
 

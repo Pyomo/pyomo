@@ -134,13 +134,13 @@ the value of the optional ``objective_focus`` argument to the
 
 * If ``objective_focus`` is set to
   :attr:`~pyomo.contrib.pyros.util.ObjectiveType.nominal`,
-  then those variables are evaluated at
+  then the objective is evaluated subject to
   the nominal uncertain parameter realization
 * If ``objective_focus`` is set to
   :attr:`~pyomo.contrib.pyros.util.ObjectiveType.worst_case`,
-  then those variables are evaluated at
+  then the objective is evaluated subject
   the uncertain parameter realization that induces the worst-case
-  objective function value
+  objective value
 
 The second-stage variable and state variable values in the
 :ref:`solution loaded to the model <pyros_output_final_solution>`
@@ -178,7 +178,7 @@ the  :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method.
 The uncertain parameter objects are left unchanged.
 
 
-Solver Log Output
+Solver Output Log
 -----------------
 See the :ref:`pyros_solver_log` section for more information on the
 PyROS solver log output.
