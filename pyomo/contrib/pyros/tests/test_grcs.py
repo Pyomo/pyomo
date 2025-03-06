@@ -1795,6 +1795,39 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(m.x1.value, 0)
         self.assertEqual(m.x2.value, 1)
 
+    @unittest.skipUnless(ipopt_available, "IPOPT not available.")
+    def test_coefficient_matching_single_certain_param(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=1, mutable=True)
+        m.x1 = Var(bounds=[1, 2])
+        m.x2 = Var(bounds=[1, 2])
+        # unless the uncertain parameter q is fixed to a single value,
+        # this constraint is subject to coefficient matching
+        m.con = Constraint(expr=m.q * m.x1 - m.x2 == 0)
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        ipopt = SolverFactory("ipopt")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=BoxSet([[1, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+        )
+
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 2)
+        self.assertAlmostEqual(m.x1.value, 1)
+        self.assertAlmostEqual(m.x2.value, 1)
+
     @unittest.skipUnless(scip_available, "Global NLP solver is not available.")
     def test_coefficient_matching_singleton_set(self):
         m = build_leyffer()
