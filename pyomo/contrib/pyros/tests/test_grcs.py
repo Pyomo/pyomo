@@ -1832,8 +1832,8 @@ class RegressionTest(unittest.TestCase):
     def test_coefficient_matching_singleton_set(self):
         m = build_leyffer()
         # when uncertainty set is singleton,
-        # this should be robust feasible in 1 iteration,
-        # as coefficient matching should not be applicable
+        # this constraint should not be coefficient matched;
+        # otherwise problem is reported robust infeasible
         m.eq_con = Constraint(
             expr=m.u * (m.x1**3 + 0.5)
             - 5 * m.u * m.x1 * m.x2
@@ -1914,6 +1914,9 @@ class RegressionTest(unittest.TestCase):
             },
         )
 
+        # if treatment of uncertainty set constraints that
+        # depend only on singleton uncertain parameters is not
+        # appropriate, then subsolver error termination may occur
         self.assertEqual(
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
