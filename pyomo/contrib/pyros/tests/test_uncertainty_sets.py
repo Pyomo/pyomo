@@ -369,6 +369,16 @@ class TestBoxSet(unittest.TestCase):
             box_set._is_coordinate_fixed(config=Bunch()), [False, True, False]
         )
 
+        # test the tolerance
+        box_set.bounds = [(1, 2), (2, 2 + 5e-5), (3, 4)]
+        self.assertEqual(
+            box_set._is_coordinate_fixed(config=Bunch()), [False, True, False]
+        )
+        box_set.bounds = [(1, 2), (2, 2 + 1e-4), (3, 4)]
+        self.assertEqual(
+            box_set._is_coordinate_fixed(config=Bunch()), [False, False, False]
+        )
+
 
 class TestBudgetSet(unittest.TestCase):
     """
