@@ -1838,8 +1838,7 @@ class RegressionTest(unittest.TestCase):
             global_solver=ipopt,
         )
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_feasible,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_feasible
         )
         self.assertEqual(res.iterations, 1)
         self.assertAlmostEqual(res.final_objective_value, 2)
