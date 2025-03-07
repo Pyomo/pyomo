@@ -195,14 +195,14 @@ class TestConstructSeparationProblem(unittest.TestCase):
         self.assertTrue(separation_model.second_stage.decision_rule_eqns[0].active)
 
         u1_var = separation_model.uncertainty.uncertain_param_var_list[0]
-        u2_var = separation_model.uncertainty.uncertain_param_var_list[1]
         assertExpressionsEqual(
             self,
             separation_model.second_stage.decision_rule_eqns[0].expr,
             (
                 separation_model.first_stage.decision_rule_vars[0][0]
+                # only one effective uncertain parameter,
+                # so only one affine DR term
                 + u1_var * separation_model.first_stage.decision_rule_vars[0][1]
-                + u2_var * separation_model.first_stage.decision_rule_vars[0][2]
                 - separation_model.user_model.x3
                 == 0
             ),
@@ -232,7 +232,8 @@ class TestConstructSeparationProblem(unittest.TestCase):
             RangedExpression((np.int_(0), paramvar2, np.int_(0)), False),
         )
         self.assertTrue(boxcon1.active)
-        self.assertTrue(boxcon2.active)
+        # constraints in fixed uncertain params should be deactivated
+        self.assertFalse(boxcon2.active)
 
         # u, bounds [0, 1]
         self.assertFalse(paramvar1.fixed)
@@ -247,9 +248,11 @@ class TestConstructSeparationProblem(unittest.TestCase):
         Test separation problem uncertainty components for uncertainty
         set requiring auxiliary variables.
         """
-        model_data = build_simple_model_data(objective_focus="worst_case")
-        model_data.config.uncertainty_set = FactorModelSet(
-            origin=[1, 0], beta=1, number_of_factors=2, psi_mat=[[1, 2.5], [0, 1]]
+        model_data = build_simple_model_data(
+            objective_focus="worst_case",
+            uncertainty_set=FactorModelSet(
+                origin=[1, 0], beta=1, number_of_factors=2, psi_mat=[[1, 2.5], [0, 1]]
+            ),
         )
         separation_model = construct_separation_problem(model_data)
         uncertainty_blk = separation_model.uncertainty
@@ -284,6 +287,19 @@ class TestConstructSeparationProblem(unittest.TestCase):
         # factor set bounds are tighter
         self.assertEqual(paramvar1.bounds, (-2.5, 4.5))
         self.assertEqual(paramvar2.bounds, (-1.0, 1.0))
+
+        # check decision rule equation
+        assertExpressionsEqual(
+            self,
+            separation_model.second_stage.decision_rule_eqns[0].expr,
+            (
+                separation_model.first_stage.decision_rule_vars[0][0]
+                + paramvar1 * separation_model.first_stage.decision_rule_vars[0][1]
+                + paramvar2 * separation_model.first_stage.decision_rule_vars[0][2]
+                - separation_model.user_model.x3
+                == 0
+            ),
+        )
 
 
 class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
@@ -509,6 +525,47 @@ class TestInitializeSeparation(unittest.TestCase):
             r"Initial point for separation of .*violates the model constraint "
             r"'second_stage.decision_rule_eqns\[0\].*' by more than.*",
         )
+
+    def test_initialize_separation_trivially_infeas_uncertainty(self):
+        """
+        Test error raised by separation problem initialization routine
+        if the routine finds violated constraints depending
+        only on fixed uncertain parameters.
+        """
+        model_data = build_simple_model_data(
+            objective_focus="worst_case",
+            # notice: the bounds mean the first uncertain
+            # parameter will be fixed
+            uncertainty_set=BoxSet(bounds=[[0.5, 0.5], [0, 1]]),
+        )
+
+        master_data = MasterProblemData(model_data)
+        nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+        nom_scenario_blk.user_model.x1.set_value(10)
+        nom_scenario_blk.user_model.x2.set_value(1)
+        nom_scenario_blk.user_model.x3.set_value(5)
+        nom_scenario_blk.first_stage.decision_rule_vars[0][0].set_value(5)
+        nom_scenario_blk.first_stage.epigraph_var.set_value(
+            value(nom_scenario_blk.full_objective)
+        )
+
+        separation_data = SeparationProblemData(model_data)
+        # notice: the artificial point is such that the box constraint
+        #         in the effectively certain parameter will be violated;
+        #         this should trigger an exception
+        separation_data.points_added_to_master[(0, 0)] = (1.5, 0)
+        ss_ineq_con_to_maximize = (
+            separation_data.separation_model.second_stage.inequality_cons[
+                "epigraph_con"
+            ]
+        )
+        exc_str = "Trivial infeasibility detected in the.*BoxSet.*constraints"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            initialize_separation(
+                ss_ineq_con_to_maximize=ss_ineq_con_to_maximize,
+                separation_data=separation_data,
+                master_data=master_data,
+            )
 
     def test_initialize_separation_discrete_uncertainty(self):
         """

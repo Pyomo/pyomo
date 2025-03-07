@@ -1358,6 +1358,24 @@ def get_effective_var_partitioning(model_data):
     # truly nonadjustable variables
     nonadjustable_var_set = ComponentSet()
 
+    effective_uncertain_params_set = ComponentSet(
+        working_model.effective_uncertain_params
+    )
+    if not effective_uncertain_params_set:
+        config.progress_logger.info(
+            "Model has no effective uncertain parameters. "
+            "All variables are considered effectively first-stage."
+        )
+        return VariablePartitioning(
+            first_stage_variables=(
+                user_var_partitioning.first_stage_variables
+                + user_var_partitioning.second_stage_variables
+                + user_var_partitioning.state_variables
+            ),
+            second_stage_variables=[],
+            state_variables=[],
+        )
+
     # the following variables are immediately known to be nonadjustable:
     # - first-stage variables
     # - (if decision rule order is 0) second-stage variables
@@ -1371,7 +1389,7 @@ def get_effective_var_partitioning(model_data):
     for vartype, varlist in var_type_list_pairs:
         for wvar in varlist:
             certain_var_bounds, _ = get_var_certain_uncertain_bounds(
-                wvar, working_model.uncertain_params
+                wvar, working_model.effective_uncertain_params
             )
 
             is_var_nonadjustable = (
@@ -1401,8 +1419,6 @@ def get_effective_var_partitioning(model_data):
             if certain_var_bounds.eq is not None:
                 config.progress_logger.debug(" the variable is fixed by domain/bounds")
 
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
-
     # determine constraints that are potentially applicable for
     # pretriangularization
     certain_eq_cons = ComponentSet()
@@ -1410,7 +1426,8 @@ def get_effective_var_partitioning(model_data):
         if not wcon.equality:
             continue
         uncertain_params_in_expr = (
-            ComponentSet(identify_mutable_parameters(wcon.expr)) & uncertain_params_set
+            ComponentSet(identify_mutable_parameters(wcon.expr))
+            & effective_uncertain_params_set
         )
         if uncertain_params_in_expr:
             continue
@@ -1616,7 +1633,7 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     """
     working_model = model_data.working_model
     nonadjustable_vars = working_model.effective_var_partitioning.first_stage_variables
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     for var in nonadjustable_vars:
         _, declared_bounds = get_var_bound_pairs(var)
         declared_bound_triple = rearrange_bound_pair_to_triple(*declared_bounds)
@@ -1676,7 +1693,7 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     )
     for var in adjustable_vars:
         cert_bound_triple, uncert_bound_triple = get_var_certain_uncertain_bounds(
-            var, working_model.uncertain_params
+            var, working_model.effective_uncertain_params
         )
         var_name = var.getname(
             relative_to=working_model.user_model, fully_qualified=True
@@ -1897,7 +1914,7 @@ def standardize_inequality_constraints(model_data):
     """
     config = model_data.config
     working_model = model_data.working_model
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_set = ComponentSet(
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
@@ -1989,7 +2006,7 @@ def standardize_equality_constraints(model_data):
         Main model data object, containing the working model.
     """
     working_model = model_data.working_model
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_set = ComponentSet(
         working_model.effective_var_partitioning.second_stage_variables
         + working_model.effective_var_partitioning.state_variables
@@ -2087,7 +2104,7 @@ def declare_objective_expressions(working_model, objective, sense=minimize):
     first_stage_var_set = ComponentSet(
         working_model.user_var_partitioning.first_stage_variables
     )
-    uncertain_param_set = ComponentSet(working_model.uncertain_params)
+    uncertain_param_set = ComponentSet(working_model.effective_uncertain_params)
 
     obj_sense = objective.sense
     for term in obj_args:
@@ -2132,7 +2149,7 @@ def standardize_active_objective(model_data):
     The epigraph constraint is considered a first-stage
     inequality provided that it is independent of the
     adjustable (i.e., effective second-stage and effective state)
-    variables and the uncertain parameters.
+    variables and the effective uncertain parameters.
 
     Parameters
     ----------
@@ -2167,7 +2184,7 @@ def standardize_active_objective(model_data):
     )
     uncertain_params_in_obj = ComponentSet(
         identify_mutable_parameters(active_obj.expr)
-    ) & ComponentSet(working_model.uncertain_params)
+    ) & ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_in_obj = (
         ComponentSet(identify_variables(active_obj.expr)) & adjustable_vars
     )
@@ -2333,7 +2350,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
 
     The state variable-independent second-stage equality
     constraints that can be rewritten as polynomials
-    in terms of the uncertain parameters
+    in terms of the effective uncertain parameters
     are reformulated to first-stage equalities
     through matching of the polynomial coefficients.
     Hence, this reformulation technique is referred to as
@@ -2379,7 +2396,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
     # but the uncertain params are implemented as mutable Param objects
     # so we temporarily define Var components to be briefly substituted
     # for the uncertain parameters as the constraints are analyzed
-    uncertain_params_set = ComponentSet(working_model.uncertain_params)
+    uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     working_model.temp_param_vars = temp_param_vars = Var(
         range(len(uncertain_params_set)),
         initialize={
@@ -2424,7 +2441,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
             )
 
             # analyze the expression with respect to the
-            # uncertain parameters only. thus, only the proxy
+            # effective uncertain parameters only. thus, only the proxy
             # variables for the uncertain parameters are unfixed
             # during the analysis
             visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
@@ -2534,6 +2551,29 @@ def reformulate_state_var_independent_eq_cons(model_data):
     return False
 
 
+def get_effective_uncertain_dimensions(model_data):
+    """
+    Determine the positional indices of the effective uncertain
+    parameters, i.e., the uncertain parameters
+    of a model that are not constrained to a single value
+    by the uncertainty set constraints.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        PyROS model data object.
+
+    Returns
+    -------
+    list of int
+        Positional indices of interest.
+    """
+    are_coordinates_fixed = model_data.config.uncertainty_set._is_coordinate_fixed(
+        config=model_data.config
+    )
+    return [idx for idx, is_fixed in enumerate(are_coordinates_fixed) if not is_fixed]
+
+
 def preprocess_model_data(model_data, user_var_partitioning):
     """
     Preprocess user inputs to modeling objects from which
@@ -2555,6 +2595,17 @@ def preprocess_model_data(model_data, user_var_partitioning):
     """
     config = model_data.config
     setup_working_model(model_data, user_var_partitioning)
+
+    config.progress_logger.debug(
+        "Establishing the effective(ly) uncertain parameters..."
+    )
+    model_data.working_model.effective_uncertain_dimensions = (
+        get_effective_uncertain_dimensions(model_data)
+    )
+    model_data.working_model.effective_uncertain_params = [
+        model_data.working_model.uncertain_params[idx]
+        for idx in model_data.working_model.effective_uncertain_dimensions
+    ]
 
     # extract as many truly nonadjustable variables as possible
     # from the second-stage and state variables
@@ -2628,6 +2679,7 @@ def log_model_statistics(model_data):
 
     # uncertain parameters
     num_uncertain_params = len(working_model.uncertain_params)
+    num_eff_uncertain_params = len(working_model.effective_uncertain_params)
 
     # constraints
     num_cons = len(list(working_model.component_data_objects(Constraint, active=True)))
@@ -2668,7 +2720,10 @@ def log_model_statistics(model_data):
     )
     info_log_func(f"    Decision rule variables : {num_dr_vars}")
 
-    info_log_func(f"  Number of uncertain parameters : {num_uncertain_params}")
+    info_log_func(
+        f"  Number of uncertain parameters : {num_uncertain_params} "
+        f"({num_eff_uncertain_params} eff.)"
+    )
 
     info_log_func(f"  Number of constraints : {num_cons}")
     info_log_func(f"    Equality constraints : {num_eq_cons}")
@@ -2716,7 +2771,7 @@ def add_decision_rule_variables(model_data):
     # per effective second-stage variable
     # depends only on the DR order and uncertainty set dimension
     degree = config.decision_rule_order
-    num_uncertain_params = len(model_data.working_model.uncertain_params)
+    num_uncertain_params = len(model_data.working_model.effective_uncertain_params)
     num_dr_vars = sp.special.comb(
         N=num_uncertain_params + degree, k=degree, exact=True, repetition=False
     )
@@ -2754,7 +2809,7 @@ def add_decision_rule_constraints(model_data):
         model_data.working_model.effective_var_partitioning.second_stage_variables
     )
     indexed_dr_var_list = model_data.working_model.first_stage.decision_rule_vars
-    uncertain_params = model_data.working_model.uncertain_params
+    uncertain_params = model_data.working_model.effective_uncertain_params
     degree = config.decision_rule_order
 
     model_data.working_model.second_stage.decision_rule_eqns = decision_rule_eqns = (
