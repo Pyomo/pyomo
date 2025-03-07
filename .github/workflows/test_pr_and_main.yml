@@ -444,7 +444,7 @@ jobs:
                         # kill it after 5-minutes.
                         (conda install -q -y $PKG) &
                         conda_pid=$!
-                        (sleep 300 && kill "$conda_pid" 2>/dev/null) &
+                        (sleep 450 && kill "$conda_pid" 2>/dev/null) &
                         timeout_pid=$!
                         wait "$conda_pid" || _BUILDS=""
                         kill "$timeout_pid" 2>/dev/null \
