@@ -9,11 +9,13 @@ values.  For example, the following equations represent a linear program
 .. math::
    :nowrap:
 
+    \[
     \begin{array}{lll}
-    \min       & \sum_{j=1}^n c_j x_j &\\
-     \mathrm{s.t.} & \sum_{j=1}^n a_{ij} x_j \geq b_i & \forall i = 1 \ldots m\\
-               & x_j \geq 0 & \forall j = 1 \ldots n
-     \end{array}
+      \min      & \sum_{j=1}^n c_j x_j &\\
+      \mathrm{s.t.} & \sum_{j=1}^n a_{ij} x_j \geq b_i & \forall i = 1 \ldots m\\
+                & x_j \geq 0 & \forall j = 1 \ldots n
+    \end{array}
+    \]
 
 .. note::
 
@@ -36,11 +38,13 @@ model:
 .. math::
    :nowrap:
 
+    \[
     \begin{array}{ll}
-    \min       & 2 x_1 + 3 x_2\\
+     \min      & 2 x_1 + 3 x_2\\
      \mathrm{s.t.} & 3 x_1 + 4 x_2 \geq 1\\
                & x_1, x_2 \geq 0
     \end{array}
+    \]
 
 The ``ConcreteModel`` class is used to define concrete optimization
 models in Pyomo.
