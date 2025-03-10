@@ -32,4 +32,5 @@ from pyomo.solvers.plugins.solvers import (
     xpress_direct,
     xpress_persistent,
     SAS,
+    KNITROAMPL,
 )
