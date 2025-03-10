@@ -414,6 +414,7 @@ jobs:
             else
                 XPRESS='xpress'
             fi
+            TIMEOUT_MSG="TIMEOUT: killing conda install process"
             PYVER=$(echo "py${{matrix.python}}" | sed 's/\.//g')
             echo "Installing for $PYVER"
             for PKG in 'cplex>=12.10' docplex gurobi "$XPRESS" cyipopt pymumps scip; do
@@ -442,13 +443,22 @@ jobs:
                         # indefinitely (lately while installing SCIP),
                         # we will run "conda install" in a subshell and
                         # kill it after 5-minutes.
-                        (conda install -q -y $PKG) &
-                        conda_pid=$!
-                        (sleep 300 && kill "$conda_pid" 2>/dev/null) &
+                        (conda install -q -y $PKG |& tee conda.log) &
+                        conda_subshell_pid=$!
+                        sleep 1
+                        conda_pid=$(ps | grep conda | sed 's/^ *//' | sed 's/ .*//')
+                        # Only timeout the conda process if it's not to
+                        # the installation phase yet.  Signalling conda
+                        # after it has started the installation process
+                        # can irrecoverably corrupt the environment.
+                        (sleep 300 \
+                            && if test `grep 'Package Plan' conda.log | wc -l` -eq 0; \
+                            then echo "$TIMEOUT_MSG $conda_pid (TERM)" \
+                            && kill -TERM $conda_pid 2>/dev/null ; fi) &
                         timeout_pid=$!
-                        wait "$conda_pid" || _BUILDS=""
-                        kill "$timeout_pid" 2>/dev/null \
-                            || echo "TIMEOUT: killed conda install process"
+                        wait $conda_subshell_pid || _BUILDS=""
+                        kill $timeout_pid 2>/dev/null \
+                            || echo "TIMEOUT: time limit expired"
                     fi
                 fi
                 echo ""
