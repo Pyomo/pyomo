@@ -309,7 +309,7 @@ class Estimator(object):
         for experiment in self.exp_list:
             model = experiment.get_labeled_model()
             theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
-        self.estimator_theta_names = list(set(theta_names))
+        self.estimator_theta_names = list(dict.fromkeys(theta_names))
 
         self._second_stage_cost_exp = "SecondStageCost"
         # boolean to indicate if model is initialized using a square solve

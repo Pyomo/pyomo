@@ -498,7 +498,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_output_values`",
         ):
             doe_obj.get_experiment_output_values()
 
@@ -517,7 +517,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_unknown_parameter_values`",
         ):
             doe_obj.get_unknown_parameter_values()
 
@@ -536,7 +536,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
+            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_measurement_error_values`",
         ):
             doe_obj.get_measurement_error_values()
 
