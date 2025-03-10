@@ -359,9 +359,9 @@ jobs:
         echo ""
         echo "*** Install Pyomo dependencies ***"
         # For windows, cannot use newer setuptools because of APPSI compilation issues
-        if test "${{matrix.TARGET}}" == 'win'; then
-            CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
-        fi
+        #if test "${{matrix.TARGET}}" == 'win'; then
+        #    CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES setuptools<74.0.0"
+        #fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
         conda install --update-deps -q -y $CONDA_DEPENDENCIES
@@ -373,7 +373,8 @@ jobs:
                 #  - "!=9.5.1" (conda errors)
                 #  - "<9.5.1|>9.5.1" (conda installs 9.1.2, which also hangs)
                 #  - "<=9.5.0|>9.5.1" (conda seg faults)
-                XPRESS='xpress=9.5.0'
+                # XPRESS='xpress>9.5.0'
+                XPRESS=xpress
             else
                 XPRESS='xpress'
             fi
