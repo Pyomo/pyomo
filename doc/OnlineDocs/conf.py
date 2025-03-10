@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -107,7 +107,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Pyomo'
-copyright = u'2008-2024, Sandia National Laboratories'
+copyright = u'2008-2025, Sandia National Laboratories'
 author = u'Pyomo Development Team'
 
 # The version info for the project you're documenting, acts as replacement for
