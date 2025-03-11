@@ -273,7 +273,8 @@ class Highs(PersistentBase, PersistentSolver):
                 self._warm_start()
             timer.start('optimize')
             ostreams[-1].write("RUN!\n")
-            self._solver_model.HandleKeyboardInterrupt = True
+            if self.version()[:2] >= (1, 8):
+                self._solver_model.HandleKeyboardInterrupt = True
             self._solver_model.run()
             timer.stop('optimize')
 
