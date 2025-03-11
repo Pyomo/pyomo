@@ -221,6 +221,29 @@ class Highs(PersistentBase, PersistentSolver):
         return SymbolMap()
         # raise RuntimeError('Highs interface does not have a symbol map')
 
+    def warm_start_capable(self):
+        return True
+
+    def _warm_start(self):
+        # Collect all variable values
+        col_value = np.zeros(len(self._pyomo_var_to_solver_var_map))
+        has_values = False
+
+        for var_id, col_ndx in self._pyomo_var_to_solver_var_map.items():
+            var = self._vars[var_id][0]
+            if var.value is not None:
+                col_value[col_ndx] = value(var)
+                has_values = True
+
+        if has_values:
+            solution = highspy.HighsSolution()
+            solution.col_value = col_value
+            solution.value_valid = True
+            solution.dual_valid = False
+
+            # Set the solution as a MIP start
+            self._solver_model.setSolution(solution)
+
     def _solve(self, timer: HierarchicalTimer):
         config = self.config
         options = self.highs_options
@@ -245,9 +268,13 @@ class Highs(PersistentBase, PersistentSolver):
 
             for key, option in options.items():
                 self._solver_model.setOptionValue(key, option)
+
+            if config.warmstart:
+                self._warm_start()
             timer.start('optimize')
             ostreams[-1].write("RUN!\n")
-            self._solver_model.HandleKeyboardInterrupt = True
+            if self.version()[:2] >= (1, 8):
+                self._solver_model.HandleKeyboardInterrupt = True
             self._solver_model.run()
             timer.stop('optimize')
 
