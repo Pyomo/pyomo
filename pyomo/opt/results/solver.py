@@ -150,15 +150,11 @@ def check_optimal_termination(results):
     `bool`
     """
     from pyomo.contrib.solver.common.results import (
-        TerminationCondition as FutureTerminationCondition,
         SolutionStatus as FutureSolutionStatus,
     )
 
     if hasattr(results, 'solution_status'):
-        if results.solution_status == FutureSolutionStatus.optimal and (
-            results.termination_condition
-            == FutureTerminationCondition.convergenceCriteriaSatisfied
-        ):
+        if results.solution_status == FutureSolutionStatus.optimal:
             return True
     else:
         if results.solver.status == SolverStatus.ok and (
