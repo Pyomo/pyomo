@@ -333,7 +333,9 @@ class TestTeeStream(unittest.TestCase):
     def test_deadlock(self):
         class MockStream(object):
             def write(self, data):
-                time.sleep(0.2)
+                # This test will kill the write before this sleep is
+                # done, so a long sleep won't impact suite run time.
+                time.sleep(1)
 
             def flush(self):
                 pass
