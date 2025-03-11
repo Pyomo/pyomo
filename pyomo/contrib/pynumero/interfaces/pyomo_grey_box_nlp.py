@@ -46,7 +46,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # this is done over *all* variables in active blocks, even
         # if they are not included in this model
         self._pyomo_model_var_names_to_datas = None
-        self._number_of_objectives = 0
+        number_of_objectives = 0
         try:
             # We support Pynumero's ExternalGreyBoxBlock modeling
             # objects that are provided through ExternalGreyBoxBlock objects
@@ -66,17 +66,17 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             for obj in self._pyomo_model.component_data_objects(
                 pyo.Objective, active=True, descend_into=True
             ):
-                self._number_of_objectives += 1
+                number_of_objectives += 1
 
             # build a PyomoNLP object (will include the "pyomo"
             # part of the model only)
-            if self._number_of_objectives == 0:
+            if number_of_objectives == 0:
                 objname = unique_component_name(pyomo_model, "_obj")
                 objective = pyomo_model.add_component(objname, pyo.Objective(expr=0.0))
             try:
                 self._pyomo_nlp = PyomoNLP(pyomo_model)
             finally:
-                if self._number_of_objectives == 0:
+                if number_of_objectives == 0:
                     pyomo_model.del_component(objective)
 
             self._pyomo_model_var_names_to_datas = {
@@ -118,12 +118,12 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
                     greybox_nlp = _ExternalGreyBoxAsNLP(data)
                     if greybox_nlp._ex_model.has_objective():
-                        self._number_of_objectives += 1
+                        number_of_objectives += 1
                     greybox_nlps.append(greybox_nlp)
 
-        if self._number_of_objectives > 1:
+        if number_of_objectives > 1:
             raise ValueError(
-                f'Found {self._number_of_objectives} active objectives. Expected 1.'
+                f'Found {number_of_objectives} active objectives. Expected 1.'
             )
 
         if fixed_vars:
@@ -387,7 +387,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
     # overloaded from NLP
     def evaluate_objective(self):
-        # objective is owned by the pyomo model
+        # There is a check in the constructor to ensure
+        # that there is only one objective. The rest of 
+        # the nlps will return zero.
         obj = 0
         for nlp in self._nlps:
             obj += nlp.evaluate_objective()
@@ -395,6 +397,9 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
     # overloaded from NLP
     def evaluate_grad_objective(self, out=None):
+        # There is a check in the constructor to ensure
+        # that there is only one objective. The rest of 
+        # the nlps will return arrays of zero.
         ret = np.zeros(self.n_primals(), dtype=float)
         for nlp in self._nlps:
             ret += nlp.evaluate_grad_objective()
