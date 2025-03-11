@@ -82,6 +82,8 @@ class TestIpoptSolutionLoader(unittest.TestCase):
 
         loader._nl_info = NLInfo()
         loader._nl_info.eliminated_vars = [1, 2, 3]
+        # This test may need to be altered if we enable returning duals
+        # when presolve is on
         with self.assertRaises(NotImplementedError):
             loader.get_reduced_costs()
         # Reset _nl_info so we can ensure we get an error
