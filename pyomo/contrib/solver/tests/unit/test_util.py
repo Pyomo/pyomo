@@ -17,11 +17,7 @@ from pyomo.opt.results.solver import (
     TerminationCondition as LegacyTerminationCondition,
 )
 from pyomo.opt.results import SolverResults as LegacySolverResults
-from pyomo.contrib.solver.common.results import (
-    Results,
-    SolutionStatus,
-    TerminationCondition,
-)
+from pyomo.contrib.solver.common.results import Results, SolutionStatus
 from typing import Callable
 from pyomo.common.gsl import find_GSL
 
