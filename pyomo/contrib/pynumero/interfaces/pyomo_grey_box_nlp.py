@@ -388,7 +388,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     # overloaded from NLP
     def evaluate_objective(self):
         # There is a check in the constructor to ensure
-        # that there is only one objective. The rest of 
+        # that there is only one objective. The rest of
         # the nlps will return zero.
         obj = 0
         for nlp in self._nlps:
@@ -398,7 +398,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     # overloaded from NLP
     def evaluate_grad_objective(self, out=None):
         # There is a check in the constructor to ensure
-        # that there is only one objective. The rest of 
+        # that there is only one objective. The rest of
         # the nlps will return arrays of zero.
         ret = np.zeros(self.n_primals(), dtype=float)
         for nlp in self._nlps:
