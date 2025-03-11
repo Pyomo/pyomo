@@ -87,15 +87,9 @@ class TestGenericUtils(unittest.TestCase):
     def test_check_optimal_termination_new_interface(self):
         results = Results()
         results.solution_status = SolutionStatus.optimal
-        results.termination_condition = (
-            TerminationCondition.convergenceCriteriaSatisfied
-        )
-        # Both items satisfied
+        # Optimal solution
         self.assertTrue(pyo.check_optimal_termination(results))
-        # Termination condition not satisfied
-        results.termination_condition = TerminationCondition.iterationLimit
-        self.assertFalse(pyo.check_optimal_termination(results))
-        # Both not satisfied
+        # Anything other than optimal
         results.solution_status = SolutionStatus.noSolution
         self.assertFalse(pyo.check_optimal_termination(results))
 
@@ -115,15 +109,8 @@ class TestGenericUtils(unittest.TestCase):
     def test_assert_optimal_termination_new_interface(self):
         results = Results()
         results.solution_status = SolutionStatus.optimal
-        results.termination_condition = (
-            TerminationCondition.convergenceCriteriaSatisfied
-        )
         pyo.assert_optimal_termination(results)
-        # Termination condition not satisfied
-        results.termination_condition = TerminationCondition.iterationLimit
-        with self.assertRaises(RuntimeError):
-            pyo.assert_optimal_termination(results)
-        # Both not satisfied
+        # No solution
         results.solution_status = SolutionStatus.noSolution
         with self.assertRaises(RuntimeError):
             pyo.assert_optimal_termination(results)
