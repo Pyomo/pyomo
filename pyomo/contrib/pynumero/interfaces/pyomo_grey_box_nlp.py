@@ -117,7 +117,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
                     greybox_nlp = _ExternalGreyBoxAsNLP(data)
-                    if greybox_nlp._ex_model.has_objective():
+                    if data.get_external_model().has_objective():
                         number_of_objectives += 1
                     greybox_nlps.append(greybox_nlp)
 
