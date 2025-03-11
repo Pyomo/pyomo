@@ -304,8 +304,8 @@ jobs:
         # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        conda config --remove channels defaults
-        conda config --append channels nodefaults
+        #conda config --remove channels defaults
+        #conda config --append channels nodefaults
         conda config --append channels conda-forge
         # Try to install mamba
         # Note: removed '--update-deps' on 2025-02-28 to work around
