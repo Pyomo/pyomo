@@ -304,17 +304,21 @@ jobs:
         # Set up environment
         conda config --set always_yes yes
         conda config --set auto_update_conda false
-        #conda config --remove channels defaults
-        #conda config --append channels nodefaults
+        conda config --set channel_priority strict
+        conda config --remove channels defaults
+        conda config --append channels nodefaults
         conda config --append channels conda-forge
         # Try to install mamba
-        # Note: removed '--update-deps' on 2025-02-28 to work around
-        #       broken libffi(?)
-        conda install -q -y -n base conda-libmamba-solver \
-            || MAMBA_FAILED=1
-        if test -z "$MAMBA_FAILED"; then
-            echo "*** Activating the mamba environment solver ***"
-            conda config --set solver libmamba
+        CONDA_VER=$(conda --version | cut -d\  -f2)
+        if test 23.10 = "`echo -e "23.10\n$CONDA_VER" | sort -V | tail -1`"; then
+            # Note: removed '--update-deps' on 2025-02-28 to work around
+            #       broken libffi(?)
+            conda install -q -y -n base conda-libmamba-solver \
+                || MAMBA_FAILED=1
+            if test -z "$MAMBA_FAILED"; then
+                echo "*** Activating the mamba environment solver ***"
+                conda config --set solver libmamba
+            fi
         fi
         # Add the rest of the channels
         conda config --append channels gurobi
