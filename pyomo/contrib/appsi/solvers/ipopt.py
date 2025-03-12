@@ -73,7 +73,7 @@ class IpoptConfig(SolverConfig):
         self.executable = Executable('ipopt')
         self.filename = None
         self.keepfiles = False
-        self.solver_output_logger = logger
+        self.solver_output_logger = None
         self.log_level = logging.INFO
 
 
@@ -440,11 +440,13 @@ class Ipopt(PersistentSolver):
         else:
             timeout = None
 
-        ostreams = [
-            LogStream(
-                level=self.config.log_level, logger=self.config.solver_output_logger
+        ostreams = []
+        if self.config.solver_output_logger is not None:
+            ostreams.append(
+                LogStream(
+                    level=self.config.log_level, logger=self.config.solver_output_logger
+                )
             )
-        ]
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 

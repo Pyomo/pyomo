@@ -64,7 +64,7 @@ class CplexConfig(MIPSolverConfig):
 
         self.filename = None
         self.keepfiles = False
-        self.solver_output_logger = logger
+        self.solver_output_logger = None
         self.log_level = logging.INFO
 
 
@@ -253,18 +253,27 @@ class Cplex(PersistentSolver):
         cplex_model.read(self._filename + '.lp')
         timer.stop('cplex read lp')
 
-        log_stream = LogStream(
-            level=self.config.log_level, logger=self.config.solver_output_logger
-        )
-        if config.stream_solver:
-
-            def _process_stream(arg):
-                sys.stdout.write(arg)
-                return arg
-
-            cplex_model.set_results_stream(log_stream, _process_stream)
+        if config.solver_output_logger is not None:
+            log_stream = LogStream(
+                level=self.config.log_level, logger=self.config.solver_output_logger
+            )
         else:
-            cplex_model.set_results_stream(log_stream)
+            log_stream = None
+
+        def _process_stream(arg):
+            sys.stdout.write(arg)
+            return arg
+
+        if config.stream_solver:
+            if log_stream is not None:
+                cplex_model.set_results_stream(log_stream, _process_stream)
+            else:
+                cplex_model.set_results_stream(sys.stdout)
+        else:
+            if log_stream is not None:
+                cplex_model.set_results_stream(log_stream)
+            else:
+                cplex_model.set_results_stream(None)
 
         for key, option in self.cplex_options.items():
             opt_cmd = cplex_model.parameters

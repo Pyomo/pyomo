@@ -86,7 +86,7 @@ class GurobiConfig(MIPSolverConfig):
         self.declare('log_level', ConfigValue(domain=NonNegativeInt))
 
         self.logfile = ''
-        self.solver_output_logger = logger
+        self.solver_output_logger = None
         self.log_level = logging.INFO
 
 
@@ -359,11 +359,13 @@ class Gurobi(PersistentBase, PersistentSolver):
         return self._symbol_map
 
     def _solve(self, timer: HierarchicalTimer):
-        ostreams = [
-            LogStream(
-                level=self.config.log_level, logger=self.config.solver_output_logger
+        ostreams = []
+        if self.config.solver_output_logger is not None:
+            ostreams.append(
+                LogStream(
+                    level=self.config.log_level, logger=self.config.solver_output_logger
+                )
             )
-        ]
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 

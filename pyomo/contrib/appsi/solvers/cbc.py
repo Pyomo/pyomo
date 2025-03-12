@@ -70,7 +70,7 @@ class CbcConfig(SolverConfig):
         self.executable = Executable('cbc')
         self.filename = None
         self.keepfiles = False
-        self.solver_output_logger = logger
+        self.solver_output_logger = None
         self.log_level = logging.INFO
 
 
@@ -389,11 +389,13 @@ class Cbc(PersistentSolver):
         cmd.extend(['-solve'])
         cmd.extend(['-solu', self._filename + '.soln'])
 
-        ostreams = [
-            LogStream(
-                level=self.config.log_level, logger=self.config.solver_output_logger
+        ostreams = []
+        if self.config.solver_output_logger is not None:
+            ostreams.append(
+                LogStream(
+                    level=self.config.log_level, logger=self.config.solver_output_logger
+                )
             )
-        ]
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 

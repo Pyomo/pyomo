@@ -118,7 +118,7 @@ class MAiNGOConfig(MIPSolverConfig):
             ),
         )
         self.declare("logfile", ConfigValue(domain=str, default=""))
-        self.declare("solver_output_logger", ConfigValue(default=logger))
+        self.declare("solver_output_logger", ConfigValue(default=None))
         self.declare(
             "log_level", ConfigValue(domain=NonNegativeInt, default=logging.INFO)
         )
@@ -209,11 +209,13 @@ class MAiNGO(PersistentBase, PersistentSolver):
         return self._symbol_map
 
     def _solve(self, timer: HierarchicalTimer):
-        ostreams = [
-            LogStream(
-                level=self.config.log_level, logger=self.config.solver_output_logger
+        ostreams = []
+        if self.config.solver_output_logger is not None:
+            ostreams.append(
+                LogStream(
+                    level=self.config.log_level, logger=self.config.solver_output_logger
+                )
             )
-        ]
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
