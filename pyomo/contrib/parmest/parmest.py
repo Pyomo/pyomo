@@ -309,7 +309,9 @@ class Estimator(object):
         for experiment in self.exp_list:
             model = experiment.get_labeled_model()
             theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
-        # Utilize list(dict.fromkeys(theta_names)) to preserve parameter order compared with list(set(theta_names)), which had nondeterministic ordering of parameters
+        # Utilize list(dict.fromkeys(theta_names)) to preserve parameter
+        # order compared with list(set(theta_names)), which had
+        # nondeterministic ordering of parameters
         self.estimator_theta_names = list(dict.fromkeys(theta_names))
 
         self._second_stage_cost_exp = "SecondStageCost"
