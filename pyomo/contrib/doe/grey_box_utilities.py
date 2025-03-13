@@ -38,12 +38,20 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxM
 
 import pyomo.environ as pyo
 
+# Remove this and utilize pyomo.contrib.doe 
+# but resolve the circular import issue.
+class ObjectiveLib(Enum):
+    determinant = "determinant"
+    trace = "trace"
+    minimum_eigenvalue = "minimum_eigenvalue"
+    zero = "zero"
+
 
 class FIMExternalGreyBox(ExternalGreyBoxModel):
     def __init__(
             self,
             doe_object,
-            objective_option="determinant",
+            objective_option=ObjectiveLib.determinant,
             logger_level=None,
     ):
         """
@@ -77,7 +85,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Check if the doe_object has model components that are required
         # TODO: add checks for the model --> doe_object.model needs FIM; all other checks should
         #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
-        self.objective_option = objective_option.name  # Add failsafe to make sure this is ObjectiveLib object?
+        self.objective_option = objective_option  # Add failsafe to make sure this is ObjectiveLib object?
         # Will anyone ever call this without calling DoE? --> intended to be no; but maybe more utility?
 
         # Create logger for FIM egb object
@@ -108,7 +116,12 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # an input from the user. Or it could depend on the usage of
         # the ObjectiveLib Enum object, which should have an associated
         # name for the objective function at all times.
-        return ["log_det", ]  # Change for hard-coded D-optimality
+        from pyomo.contrib.doe import ObjectiveLib
+        if self.objective_option == ObjectiveLib.determinant:
+            obj_name = "log10-D-opt"
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            obj_name = "log10-E-opt"
+        return [obj_name, ]
 
     def set_input_values(self, input_values):
         # Set initial values to be flattened initial FIM (aligns with input names)
@@ -120,21 +133,21 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         return None
 
     def evaluate_outputs(self):
-        # ToDo: Take the objective function option and perform the
-        # mathematical action to get the objective.
-
-        # CALCULATE THE INVERSE VALUE
-        # CHANGE HARD-CODED LOG DET
+        # Evaluates the objective value for the specified
+        # ObjectiveLib type.
         current_FIM = self._input_values
         M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
-
-        # Trying symmetry calculation?
-        #M = np.multiply(M, np.tril(np.ones((len(self._param_names), len(self._param_names)))))
-        #M = M + M.transpose() - np.multiply(M, np.eye(len(self._param_names)))
         
-        (sign, logdet) = np.linalg.slogdet(M)
+        # Change objective value based on ObjectiveLib type.
+        from pyomo.contrib.doe import ObjectiveLib
+        if self.objective_option == ObjectiveLib.determinant:
+            (sign, logdet) = np.linalg.slogdet(M)
+            obj_value = logdet
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            eig, _ = np.linalg.eig(M)
+            obj_value = np.min(eig)
         
-        return np.asarray([logdet, ], dtype=np.float64)
+        return np.asarray([obj_value, ], dtype=np.float64)
 
     def finalize_block_construction(self, pyomo_block):
         # Set bounds on the inputs/outputs
@@ -146,7 +159,11 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             pyomo_block.inputs[val] = self.doe_object.fim_initial.flatten()[ind]
 
         # Initialize log_determinant value
-        pyomo_block.outputs["log_det"] = 0  # Remember to change hardcoded name
+        from pyomo.contrib.doe import ObjectiveLib
+        if self.objective_option == ObjectiveLib.determinant:
+            pyomo_block.outputs["log10-D-opt"] = 0
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            pyomo_block.outputs["log10-E-opt"] = 0
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
@@ -155,7 +172,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         return None
         
     def evaluate_jacobian_outputs(self):
-        # ToDo: compute the jacobian of the objective function with
+        # Compute the jacobian of the objective function with
         # respect to the fisher information matrix. Then return
         # a coo_matrix that aligns with what IPOPT will expect.
         #
@@ -163,31 +180,40 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # complicated objective functions and the Hessian        
         current_FIM = self._input_values
         M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
-
-        # Trying symmetry calculation?
-        #M = np.multiply(M, np.tril(np.ones((len(self._param_names), len(self._param_names)))))
-        #M = M + M.transpose() - np.multiply(M, np.eye(len(self._param_names)))
         
-        Minv = np.linalg.pinv(M)
-        eig, _ = np.linalg.eig(M)
-        if min(eig) <= 1:
-            print("Warning: {:0.6f}".format(min(eig)))
+        # May remove this warning. If so, we
+        # should put the eigenvalue computation
+        # within the eigenvalue-dependent
+        # objective options...
+        eig_vals, eig_vecs = np.linalg.eig(M)
+        if min(eig_vals) <= 1:
+            pass
+            print("Warning: {:0.6f}".format(min(eig_vals)))
 
-        # Since M is symmetric, the derivative of logdet(M) w.r.t M is
-        # 2*inverse(M) - diagonal(inverse(M)) ADD SOURCE
-        #jac_M = 2*Minv - np.diagonal(Minv)
-        #jac_M = Minv
+        from pyomo.contrib.doe import ObjectiveLib
+        if self.objective_option == ObjectiveLib.determinant:
+            Minv = np.linalg.pinv(M)
+            # Derivative formula derived using tensor
+            # calculus. Add reference to pyomo.DoE 2.0
+            # manuscript S.I.
+            jac_M = 0.5*(Minv + Minv.transpose())
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            # Obtain minimum eigenvalue location
+            min_eig_loc = np.argmin(eig_vals)
 
-        jac_M = 0.5*(Minv + Minv.transpose())
+            # Grab eigenvector associated with
+            # the minimum eigenvalue and make
+            # it a matrix. This is so we can
+            # use matrix operations later in
+            # the code.
+            min_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
+        
+            # Calculate the derivative matrix.
+            # This is the hadamard product of
+            # the eigenvector we grabbed in
+            # the previous line of code.
+            jac_M = min_eig_vec * np.transpose(min_eig_vec)
 
-        #print("M")
-        #print(M)
-        #print("Jac_M")
-        #print(jac_M)
-        #print("Eigenvalues")
-        #print(eig)
-        #print("Eigenvectors")
-        #print(_)
 
         # Rows are the integer division by number of columns
         M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]

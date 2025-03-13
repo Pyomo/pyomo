@@ -307,9 +307,15 @@ class DesignOfExperiments:
             
             # ToDo: Add naming convention to adjust name of objective output
             # to conincide with the ObjectiveLib type
-            # Proposal --> Use alphabetic opt e.g., ``A-opt``, ``D-opt``, etc.
-            # Add objective function from FIM grey box calculation
-            model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log_det"], sense=pyo.maximize)  # Must change hardcoding
+            # ToDo: Write test for each option successfully building
+            if self.objective_option == ObjectiveLib.determinant:
+                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log10-D-opt"], sense=pyo.maximize)
+            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log10-E-opt"], sense=pyo.maximize)
+            else:
+                raise AttributeError(
+                    "Objective option not recognized. Please contact the developers as you should not see this error."
+                )
         else:
             self.create_objective_function(model=model)
 
