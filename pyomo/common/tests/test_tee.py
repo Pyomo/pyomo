@@ -353,8 +353,7 @@ class TestTeeStream(unittest.TestCase):
                 RuntimeError, 'deadlock'
             ):
                 with tee.TeeStream(MockStream()) as t:
-                    err = t.STDERR
-                    err.write('*')
+                    t.STDERR.write('*')
             self.assertEqual(
                 'Significant delay observed waiting to join reader '
                 'threads, possible output stream deadlock\n',
