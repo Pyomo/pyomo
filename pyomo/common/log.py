@@ -357,6 +357,8 @@ class LogStream(io.TextIOBase):
         self._buffer = ''
 
     def write(self, s: str) -> int:
+        if not s:
+            return 0
         res = len(s)
         if self._buffer:
             s = self._buffer + s
