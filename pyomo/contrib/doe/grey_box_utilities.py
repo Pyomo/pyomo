@@ -38,20 +38,12 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxM
 
 import pyomo.environ as pyo
 
-# Remove this and utilize pyomo.contrib.doe 
-# but resolve the circular import issue.
-class ObjectiveLib(Enum):
-    determinant = "determinant"
-    trace = "trace"
-    minimum_eigenvalue = "minimum_eigenvalue"
-    zero = "zero"
-
 
 class FIMExternalGreyBox(ExternalGreyBoxModel):
     def __init__(
             self,
             doe_object,
-            objective_option=ObjectiveLib.determinant,
+            objective_option="determinant",
             logger_level=None,
     ):
         """
@@ -99,11 +91,13 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Set initial values for inputs
         self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
-        print(self._input_values)
+        #print(self._input_values)
 
     
     def input_names(self):
         # Cartesian product gives us matrix indicies flattened in row-first format
+        # Can use itertools.combinations(self._param_names, 2) with added
+        # diagonal elements, or do double for loops if we switch to upper triangular
         input_names_list = list(itertools.product(self._param_names, self._param_names))
         return input_names_list
 
@@ -186,6 +180,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # within the eigenvalue-dependent
         # objective options...
         eig_vals, eig_vecs = np.linalg.eig(M)
+        #print("Conditon number:")
+        #print(np.linalg.cond(M))
         if min(eig_vals) <= 1:
             pass
             print("Warning: {:0.6f}".format(min(eig_vals)))

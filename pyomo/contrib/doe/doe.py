@@ -211,7 +211,7 @@ class DesignOfExperiments:
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             #grey_box_solver.config.options["linear_solver"] = "ma57" 
             grey_box_solver.config.options['max_iter'] = 3000
-            grey_box_solver.config.options['tol'] = 1e-4
+            grey_box_solver.config.options['tol'] = 2e-3
             #grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
@@ -342,6 +342,9 @@ class DesignOfExperiments:
         #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(model, tee=self.tee)
+        from idaes.core.util import DiagnosticsToolbox
+        dt = DiagnosticsToolbox(model)
+        dt.display_extreme_jacobian_entries()
 
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
@@ -387,6 +390,9 @@ class DesignOfExperiments:
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
             res = self.grey_box_solver.solve(model, tee=self.tee)
+            # from idaes.core.util import DiagnosticsToolbox
+            # dt = DiagnosticsToolbox(model)
+            # dt.report_numerical_issues()
         else:
             res = self.solver.solve(model, tee=self.tee)
 
