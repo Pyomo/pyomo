@@ -124,7 +124,7 @@ def compare_reactor_doe():
 
     doe_obj_grey_box.run_doe()
     # Print out a results summary                                                                                                                      
-    print("Optimal experiment values: ")
+    print("Optimal experiment values with grey-box: ")
     print(
         "\tInitial concentration: {:.2f}".format(
             doe_obj_grey_box.results["Experiment Design"][0]
@@ -135,9 +135,9 @@ def compare_reactor_doe():
             *doe_obj_grey_box.results["Experiment Design"][1:]
         )
     )
-    print("FIM at optimal design:\n {}".format(np.array(doe_obj_grey_box.results["FIM"])))
+    print("FIM at optimal design with grey-box:\n {}".format(np.array(doe_obj_grey_box.results["FIM"])))
     print(
-        "Objective value at optimal design: {:.2f}".format(
+        "Objective value at optimal design with grey-box: {:.2f}".format(
             pyo.value(doe_obj_grey_box.model.objective)
         )
     )
