@@ -291,6 +291,7 @@ class TestTeeStream(unittest.TestCase):
         OUT1 = StringIO()
         OUT2 = StringIO()
         old = (sys.stdout, sys.stderr)
+        old_fd = os.dup(1), os.dup(2)
         try:
             a = tee.capture_output(OUT1)
             a.setup()
@@ -302,7 +303,10 @@ class TestTeeStream(unittest.TestCase):
                 a.reset()
             b.tee = None
         finally:
+            os.dup2(old_fd[0], 1)
+            os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old
+            logging.getLogger('pyomo.common.tee').handlers.clear()
 
     def test_capture_output_invalid_ostream(self):
         # Test that capture_output does not suppress errors from the tee
