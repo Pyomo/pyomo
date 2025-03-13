@@ -130,8 +130,8 @@ class redirect_fd(object):
             out_fd = os.open(self.target, os.O_WRONLY)
 
         # Duplicate the file descriptor for the opened file, closing and
-        # overwriting the value for stdout (file descriptor 1).  Only
-        # make the new FD inheritable if it is stdout/stderr
+        # overwriting/replacingx the original fd.  Only make the new FD
+        # inheritable if it is stdout/stderr
         os.dup2(out_fd, self.fd, inheritable=bool(self.std))
 
         # We no longer need this original file descriptor
@@ -145,12 +145,12 @@ class redirect_fd(object):
             else:
                 # IF we are not synchronizing the std file object with
                 # the redirected file descriptor, and IF the current
-                # file object is pointing to the original file
-                # descriptor that we just redirected, then we want to
-                # retarget the std file to the original (duplicated)
-                # target file descriptor.  This allows, e.g. Python to
-                # still write to stdout when we redirect fd=1 to
-                # /dev/null
+                # file object that we are going to emit text to is
+                # pointing to the original file descriptor that we just
+                # redirected, then we want to retarget the std file to
+                # the original (duplicated) target file descriptor.
+                # This allows, e.g. Python to still write to stdout when
+                # we redirect fd=1 to /dev/null
                 try:
                     old_std_fd = getattr(sys, self.std).fileno()
                     fd = self.original_fd if old_std_fd == self.fd else None
