@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -204,7 +204,7 @@ class DependenciesCommand(Command):
 
 
 setup_kwargs = dict(
-    name='Pyomo',
+    name='pyomo',
     #
     # Note: the release number is set in pyomo/version/info.py
     #
@@ -252,7 +252,7 @@ setup_kwargs = dict(
         # the dependencies.
         'tests': ['coverage', 'parameterized', 'pybind11', 'pytest', 'pytest-parallel'],
         'docs': [
-            'Sphinx>4',
+            'Sphinx>4,!=8.2.0',
             'sphinx-copybutton',
             'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',

@@ -2,12 +2,17 @@
 Pyomo Documentation |release|
 =============================
 
-About Pyomo
------------
+.. Note: using rubric here so that the actual content from the toctree
+   is not considered to be sub-sections of "about" in LaTeX
 
-.. image:: /../logos/pyomo/PyomoNewBlue3.png
-   :scale: 10%
-   :align: right
+.. rubric:: About Pyomo
+   :heading-level: 2
+
+.. only:: html
+
+   .. image:: /../logos/pyomo/PyomoNewBlue3.png
+      :scale: 10%
+      :align: right
 
 Pyomo is a Python-based open-source software package that supports a
 diverse set of optimization capabilities for formulating, solving, and
@@ -18,46 +23,50 @@ applications.  Pyomo can be used to define general symbolic problems,
 create specific problem instances, and solve these instances using
 commercial and open-source solvers.
 
+.. only:: latex or text
 
-Contents
---------
-.. list-table::
-   :width: 100%
-   :class: diataxis
+   .. toctree::
+      :maxdepth: 3
 
-   * - .. toctree::
-          :maxdepth: 2
-          :titlesonly:
+      getting_started/index
+      howto/index
+      explanation/index
+      reference/index
 
-          getting_started/index
-     - .. toctree::
-          :maxdepth: 2
-          :titlesonly:
 
-          howto/index
-   * - .. toctree::
-          :maxdepth: 3
-          :titlesonly:
+.. only:: html
 
-          explanation/index
-     - .. toctree::
-          :maxdepth: 3
-          :titlesonly:
+   Contents
+   ========
 
-          reference/index
+   .. list-table::
+      :width: 100%
+      :class: diataxis
 
-..
-   toctree::
-   :maxdepth: 1
-   :titlesonly:
-   :hidden:
+      * - .. tocref::
+             :maxdepth: 2
+             :titlesonly:
 
-   genindex
-   modindex
+             getting_started/index
+        - .. tocref::
+             :maxdepth: 2
+             :titlesonly:
+
+             howto/index
+      * - .. tocref::
+             :maxdepth: 3
+             :titlesonly:
+
+             explanation/index
+        - .. tocref::
+             :maxdepth: 3
+             :titlesonly:
+
+             reference/index
 
 
 Pyomo Resources
----------------
+===============
 
 Pyomo development is hosted at GitHub:
 
@@ -69,7 +78,7 @@ See the Pyomo Forum for online discussions of Pyomo or to ask a question:
 
 Ask a question on StackOverflow using the ``#pyomo`` tag:
 
-* https://stackoverflow.com/questions/ask?tags=pyomo 
+* https://stackoverflow.com/questions/ask?tags=pyomo
 
 Additional Pyomo tutorials and examples can be found at the following links:
 
@@ -89,13 +98,13 @@ Additional Pyomo tutorials and examples can be found at the following links:
 
 
 Contributing to Pyomo
----------------------
+=====================
 
 Interested in contributing code or documentation to the project? Check out our
 :doc:`Contribution Guide <contribution_guide>`
 
 Related Packages
-----------------
+================
 
 Pyomo is a key dependency for a number of other software packages for
 specific domains or customized solution strategies. A non-comprehensive
@@ -103,7 +112,7 @@ list of Pyomo-related packages may be found :doc:`here <related_packages>`.
 
 
 Citing Pyomo
-------------
+============
 
 If you use Pyomo in your work, please cite:
 
