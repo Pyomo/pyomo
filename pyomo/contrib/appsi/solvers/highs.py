@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -273,7 +273,7 @@ class Highs(PersistentBase, PersistentSolver):
                 self._warm_start()
             timer.start('optimize')
             ostreams[-1].write("RUN!\n")
-            if self.version()[0] >= 1 and self.version()[1] >= 8:
+            if self.version()[:2] >= (1, 8):
                 self._solver_model.HandleKeyboardInterrupt = True
             self._solver_model.run()
             timer.stop('optimize')
