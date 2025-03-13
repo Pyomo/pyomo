@@ -30,11 +30,13 @@ Supported deterministic models can be written in the general form
 .. _deterministic-model:
 
 .. math::
-    \begin{array}{clll}
+   :nowrap:
+
+   \[\begin{array}{clll}
     \displaystyle \min_{\substack{x \in \mathcal{X}, \\ z \in \mathbb{R}^{n_z}, y\in\mathbb{R}^{n_y}}} & ~~ f_1\left(x\right) + f_2(x,z,y; q^{\text{nom}}) & \\
     \displaystyle \text{s.t.} & ~~ g_i(x, z, y; q^{\text{nom}}) \leq 0 & \forall\,i \in \mathcal{I} \\
     & ~~ h_j(x,z,y; q^{\text{nom}}) = 0 & \forall\,j \in \mathcal{J} \\
-    \end{array}
+   \end{array}\]
 
 where:
 
@@ -66,10 +68,8 @@ where:
     PyROS accepts models in which there are:
 
     1. Bounds declared on the ``Var`` objects representing
-       components of the variable vectors :math:`z` and :math:`y`.
-       These bounds are reformulated to inequality constraints.
-    2. Ranged inequality constraints. These are easily reformulated to
-       single inequality constraints.
+       components of the variable vectors
+    2. Ranged inequality constraints
 
 In order to cast the robust optimization counterpart of the
 :ref:`deterministic model <deterministic-model>`,
@@ -83,13 +83,15 @@ Based on the above notation,
 the form of the robust counterpart addressed by PyROS is
 
 .. math::
-    \begin{array}{ccclll}
+   :nowrap:
+
+   \[\begin{array}{ccclll}
     \displaystyle \min_{x \in \mathcal{X}}
     & \displaystyle \max_{q \in \mathcal{Q}}
     & \displaystyle \min_{\substack{z \in \mathbb{R}^{n_z},\\y \in \mathbb{R}^{n_y}}} \ \ & \displaystyle ~~ f_1\left(x\right) + f_2\left(x, z, y, q\right) \\
     & & \text{s.t.}~ & \displaystyle ~~ g_i\left(x, z, y, q\right) \leq 0 &  & \forall\, i \in \mathcal{I}\\
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall\,j \in \mathcal{J}
-    \end{array}
+   \end{array}\]
 
 PyROS accepts a deterministic model and accompanying uncertainty set
 and then, using the Generalized Robust Cutting-Set algorithm developed
@@ -186,9 +188,9 @@ The PyROS solver is invoked through the
     Upon successful convergence of PyROS, the solution returned is
     certified to be robust optimal only if:
 
-    1. master problems are solved to global optimality
+    1. Master problems are solved to global optimality
        (by specifying ``solve_master_globally=True``)
-    2. a worst-case objective focus is chosen
+    2. A worst-case objective focus is chosen
        (by specifying ``objective_focus=ObjectiveType.worst_case``)
 
     Otherwise, the solution returned is certified to only be robust feasible.
@@ -280,7 +282,7 @@ PyROS Usage Example
 -----------------------------
 
 In this section, we illustrate the usage of PyROS with a modeling example.
-The deterministic problem of interest is called *hydro* 
+The deterministic problem of interest is called *hydro*
 (available `here <https://www.gams.com/latest/gamslib_ml/libhtml/gamslib_hydro.html>`_),
 a QCQP taken from the
 `GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_.
@@ -329,23 +331,30 @@ The deterministic Pyomo model for *hydro* is shown below.
 
 .. note::
     Primitive data (Python literals) that have been hard-coded within a
-    deterministic model cannot be later considered uncertain,
-    unless they are first converted to ``Param`` objects within
-    the ``ConcreteModel`` object.
-    Furthermore, any ``Param`` object that is to be later considered
-    uncertain must have the property ``mutable=True``.
+    deterministic model (:class:`~pyomo.core.base.PyomoModel.ConcreteModel`)
+    cannot be later considered uncertain,
+    unless they are first converted to Pyomo
+    :class:`~pyomo.core.base.param.Param` instances declared on the
+    :class:`~pyomo.core.base.PyomoModel.ConcreteModel` object.
+    Furthermore, any :class:`~pyomo.core.base.param.Param`
+    object that is to be later considered uncertain must be instantiated
+    with the argument ``mutable=True``.
 
 .. note::
-    In case modifying the ``mutable`` property inside the deterministic
-    model object itself is not straightforward in your context,
-    you may consider adding the following statement **after**
+    If specifying/modifying the ``mutable`` argument in the
+    :class:`~pyomo.core.base.param.Param` declarations
+    of your deterministic model source code
+    is not straightforward in your context, then
+    you may consider adding **after** the line
     ``import pyomo.environ as pyo`` but **before** defining the model
-    object: ``pyo.Param.DefaultMutable = True``.
-    For all ``Param`` objects declared after this statement,
-    the attribute ``mutable`` is set to ``True`` by default.
-    Hence, non-mutable ``Param`` objects are now declared by
-    explicitly passing the argument ``mutable=False`` to the
-    ``Param`` constructor.
+    object the statement: ``pyo.Param.DefaultMutable = True``.
+    For all :class:`~pyomo.core.base.param.Param`
+    objects declared after this statement,
+    the attribute ``mutable`` is set to True by default.
+    Hence, non-mutable :class:`~pyomo.core.base.param.Param`
+    objects are now declared by explicitly passing the argument
+    ``mutable=False`` to the :class:`~pyomo.core.base.param.Param`
+    constructor.
 
 .. doctest::
 
@@ -428,22 +437,37 @@ The deterministic Pyomo model for *hydro* is shown below.
 Step 2: Define the Uncertainty
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-First, we need to collect into a list those ``Param`` objects of our model
-that represent potentially uncertain parameters.
-For the purposes of our example, we shall assume uncertainty in the model
-parameters ``[m.p[0], m.p[1], m.p[2], m.p[3]]``, for which we can
-conveniently utilize the object ``m.p`` (itself an indexed ``Param`` object).
+We first collect the components of our model that represent the
+uncertain parameters.
+In this example, we assume uncertainty in
+the parameter objects ``m.p[0]``, ``m.p[1]``, ``m.p[2]``, and ``m.p[3]``.
+Since these objects comprise the mutable :class:`~pyomo.core.base.param.Param`
+object ``m.p``, we can conveniently specify:
 
 .. doctest::
 
-  >>> # === Specify which parameters are uncertain ===
-  >>> # We can pass IndexedParams this way to PyROS,
-  >>> #   or as an expanded list per index
-  >>> uncertain_parameters = [m.p]
+  >>> uncertain_params = m.p
+
+Equivalently, we may instead set ``uncertain_params`` to
+either ``[m.p]``, ``[m.p[0], m.p[1], m.p[2], m.p[3]]``,
+or ``list(m.p.values())``.
 
 .. note::
-    Any ``Param`` object that is to be considered uncertain by PyROS
-    must have the property ``mutable=True``.
+    Any :class:`~pyomo.core.base.param.Param` object that is
+    to be considered uncertain by PyROS must have the property
+    ``mutable=True``.
+
+.. note::
+    PyROS also allows uncertain parameters to be implemented as
+    :class:`~pyomo.core.base.var.Var` objects declared on the
+    deterministic model.
+    This may be convenient for users transitioning to PyROS from
+    parameter estimation and/or uncertainty quantification workflows,
+    in which the uncertain parameters are
+    often represented by :class:`~pyomo.core.base.var.Var` objects.
+    Prior to invoking PyROS,
+    all such :class:`~pyomo.core.base.var.Var` objects should be fixed.
+
 
 PyROS will seek to identify solutions that remain feasible for any
 realization of these parameters included in an uncertainty set.
@@ -555,7 +579,7 @@ correspond to first-stage degrees of freedom.
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
-  ...     uncertain_params=uncertain_parameters,
+  ...     uncertain_params=uncertain_params,
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
@@ -648,7 +672,7 @@ In this example, we select affine decision rules by setting
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
-  ...     uncertain_params=uncertain_parameters,
+  ...     uncertain_params=uncertain_params,
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
@@ -702,7 +726,7 @@ could have been equivalently written as:
   ...     model=m,
   ...     first_stage_variables=first_stage_variables,
   ...     second_stage_variables=second_stage_variables,
-  ...     uncertain_params=uncertain_parameters,
+  ...     uncertain_params=uncertain_params,
   ...     uncertainty_set=box_uncertainty_set,
   ...     local_solver=local_solver,
   ...     global_solver=global_solver,
@@ -768,7 +792,7 @@ instance and invoking the PyROS solver:
   ...         model=m,
   ...         first_stage_variables=first_stage_variables,
   ...         second_stage_variables=second_stage_variables,
-  ...         uncertain_params=uncertain_parameters,
+  ...         uncertain_params=uncertain_params,
   ...         uncertainty_set= box_uncertainty_set,
   ...         local_solver=local_solver,
   ...         global_solver=global_solver,
@@ -860,7 +884,8 @@ for a basic tutorial, see the :doc:`logging HOWTO <python:howto/logging>`.
        * Iteration log table
        * Termination details: message, timing breakdown, summary of statistics
    * - :py:obj:`logging.DEBUG`
-     - * Termination outcomes and summary of statistics for
+     - * Progress through the various preprocessing subroutines
+       * Termination outcomes and summary of statistics for
          every master feasility, master, and DR polishing problem
        * Progress updates for the separation procedure
        * Separation subproblem initial point infeasibilities
@@ -931,20 +956,21 @@ Observe that the log contains the following information:
 .. _solver-log-snippet:
 
 .. code-block:: text
+
    :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.0.
-          Pyomo version: 6.8.1
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.4.
+          Pyomo version: 6.9.0
           Commit hash: unknown
-          Invoked at UTC 2024-11-01T00:00:00.000000
-   
+          Invoked at UTC 2025-02-13T00:00:00.000000
+
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
    (1) Carnegie Mellon University, Department of Chemical Engineering
    (2) Sandia National Laboratories, Center for Computing Research
-   
+
    The developers gratefully acknowledge support from the U.S. Department
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
@@ -975,7 +1001,7 @@ Observe that the log contains the following information:
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.018s.
+   Done preprocessing; required wall time of 0.009s.
    ------------------------------------------------------------------------------
    Model Statistics:
      Number of variables : 62
@@ -997,34 +1023,33 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            1       2.7000e+02   0.657
-   1     3.6087e+07  8.0199e-01   1.2807e-01   5       4.1852e+04   1.460
-   2     3.6125e+07  8.7068e-01   2.7098e-01   8       2.7711e+01   3.041
-   3     3.6174e+07  7.6526e-01   2.2357e-01   4       1.3893e+02   4.186
-   4     3.6285e+07  2.8923e-01   3.4064e-01   0       1.2670e-09g  7.162
+   0     3.5838e+07  -            -            5       1.8832e+04   0.412
+   1     3.5838e+07  1.2289e-09   1.5886e-12   5       2.8919e+02   0.992
+   2     3.6269e+07  3.1647e-01   1.0432e-01   4       2.9020e+02   1.865
+   3     3.6285e+07  7.6526e-01   2.2258e-01   0       2.3874e-12g  3.508
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-   
+
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     7.163     7.163  100.0
+   main                           1     3.509     3.509  100.0
         ------------------------------------------------------
-        dr_polishing              4     0.293     0.073    4.1
-        global_separation        27     1.106     0.041   15.4
-        local_separation        135     3.385     0.025   47.3
-        master                    5     1.396     0.279   19.5
-        master_feasibility        4     0.155     0.039    2.2
-        preprocessing             1     0.018     0.018    0.2
-        other                   n/a     0.811       n/a   11.3
+        dr_polishing              3     0.209     0.070    6.0
+        global_separation        27     0.590     0.022   16.8
+        local_separation        108     1.569     0.015   44.7
+        master                    4     0.654     0.163   18.6
+        master_feasibility        3     0.083     0.028    2.4
+        preprocessing             1     0.009     0.009    0.3
+        other                   n/a     0.394       n/a   11.2
         ======================================================
    ===========================================================
-   
+
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 5
-    Solve time (wall s)   : 7.163
+    Iterations            : 4
+    Solve time (wall s)   : 3.509
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------

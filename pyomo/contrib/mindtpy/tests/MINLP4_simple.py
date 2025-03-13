@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # -*- coding: utf-8 -*-
-""" Example 1 in Paper 'Using regularization and second order information in outer approximation for convex MINLP'
+"""Example 1 in Paper 'Using regularization and second order information in outer approximation for convex MINLP'
 
 The expected optimal solution value is -56.981.
 

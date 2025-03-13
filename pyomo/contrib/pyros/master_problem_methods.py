@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -845,7 +845,9 @@ def solver_call_master(master_data):
     )
     deterministic_msg = (
         (
-            " Please ensure your deterministic model "
+            " Please ensure that your deterministic model, "
+            "subject to the nominal uncertain parameter realization "
+            "you have provided, "
             f"is solvable by at least one of the subordinate {solve_mode} "
             "optimizers provided."
         )

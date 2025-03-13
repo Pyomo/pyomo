@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,7 +17,7 @@ not used in any expressions and it does not care if the Vars it finds are
 actually in the subtree or not.
 """
 from pyomo.core import Block
-import pyomo.core.expr as EXPR
+from pyomo.core.expr.visitor import IdentifyVariableVisitor
 
 
 def get_vars_from_components(
@@ -42,8 +42,8 @@ def get_vars_from_components(
         descend_into: Ctypes to descend into when finding Constraints
         descent_order: Traversal strategy for finding the objects of type ctype
     """
+    visitor = IdentifyVariableVisitor(include_fixed, {})
     seen = set()
-    named_expression_cache = {}
     for constraint in block.component_data_objects(
         ctype,
         active=active,
@@ -51,11 +51,7 @@ def get_vars_from_components(
         descend_into=descend_into,
         descent_order=descent_order,
     ):
-        for var in EXPR.identify_variables(
-            constraint.expr,
-            include_fixed=include_fixed,
-            named_expression_cache=named_expression_cache,
-        ):
+        for var in visitor.walk_expression(constraint.expr):
             if id(var) not in seen:
                 seen.add(id(var))
                 yield var

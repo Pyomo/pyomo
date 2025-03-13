@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1934,6 +1934,22 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr = 5 * model.a / model.a / 2
         self.assertEqual("div(div(mon(5, a), a), 2)", str(expr))
 
+    def test_pow(self):
+        model = ConcreteModel()
+
+        model.x = Var()
+        model.A = Expression(initialize=1)
+        model.B = Expression(initialize=-2)
+
+        expr = model.A**2 + model.B**2
+        self.assertEqual("sum(pow(A{1}, 2), pow(B{-2}, 2))", str(expr))
+
+        expr = model.A**2 - model.B**2
+        self.assertEqual("sum(pow(A{1}, 2), neg(pow(B{-2}, 2)))", str(expr))
+
+        expr = (1) ** model.x + (-1) ** model.x
+        self.assertEqual("sum(pow(1, x), pow(-1, x))", str(expr))
+
     def test_other(self):
         #
         # Print other stuff
@@ -2166,6 +2182,22 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = 1
         model.a.fixed = True
         self.assertEqual("b", expression_to_string(expr, compute_values=True))
+
+    def test_pow(self):
+        model = ConcreteModel()
+
+        model.x = Var()
+        model.A = Expression(initialize=1)
+        model.B = Expression(initialize=-2)
+
+        expr = model.A**2 + model.B**2
+        self.assertEqual("1**2 + (-2)**2", str(expr))
+
+        expr = model.A**2 - model.B**2
+        self.assertEqual("1**2 - (-2)**2", str(expr))
+
+        expr = (1) ** model.x + (-1) ** model.x
+        self.assertEqual("1**x + (-1)**x", str(expr))
 
     def test_inequality(self):
         #
@@ -3335,7 +3367,7 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         #
         # A fraction with a variable in the denominator has degree None.
-        # This indicates that it is not a polyomial.
+        # This indicates that it is not a polynomial.
         #
         expr = self.model.c / self.model.a
         self.assertEqual(expr.polynomial_degree(), None)

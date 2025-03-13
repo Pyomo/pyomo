@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,9 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import os
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -31,8 +31,11 @@ if not AmplInterface.available():
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import cyipopt_available
 
-from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
-from ..pyomo_nlp import PyomoGreyBoxNLP
+from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+    ExternalGreyBoxModel,
+    ExternalGreyBoxBlock,
+)
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoGreyBoxNLP
 from pyomo.contrib.pynumero.interfaces.tests.compare_utils import (
     check_vectors_specific_order,
     check_sparse_matrix_specific_order,
@@ -2074,24 +2077,23 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.scaling_factor[m.mu] = 1.9
         m.scaling_factor[m.pincon] = 2.2
 
-        solver = pyo.SolverFactory('cyipopt')
-        solver.config.options = {
-            'hessian_approximation': 'limited-memory',
-            'nlp_scaling_method': 'user-scaling',
-            'output_file': '_cyipopt-external-greybox-scaling.log',
-            'file_print_level': 10,
-            'max_iter': 0,
-        }
-        status = solver.solve(m, tee=False)
+        with TempfileManager.new_context() as temp:
+            logfile = temp.create_tempfile('_cyipopt-external-greybox-scaling.log')
+            solver = pyo.SolverFactory('cyipopt')
+            solver.config.options = {
+                'hessian_approximation': 'limited-memory',
+                'nlp_scaling_method': 'user-scaling',
+                'output_file': logfile,
+                'file_print_level': 10,
+                'max_iter': 0,
+            }
+            status = solver.solve(m, tee=False)
 
-        with open('_cyipopt-external-greybox-scaling.log', 'r') as fd:
-            solver_trace = fd.read()
-        os.remove('_cyipopt-external-greybox-scaling.log')
+            with open(logfile, 'r') as fd:
+                solver_trace = fd.read()
 
         self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn(
-            'output_file = _cyipopt-external-greybox-scaling.log', solver_trace
-        )
+        self.assertIn(f'output_file = {logfile}', solver_trace)
         self.assertIn('objective scaling factor = 0.1', solver_trace)
         self.assertIn('x scaling provided', solver_trace)
         self.assertIn('c scaling provided', solver_trace)
@@ -2149,4 +2151,4 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    TestPyomoGreyBoxNLP().test_external_greybox_solve(self)
+    TestPyomoGreyBoxNLP().test_external_greybox_solve()

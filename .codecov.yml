@@ -5,6 +5,7 @@ codecov:
     # Potential to change when Python versions change
     after_n_builds: 16
     wait_for_ci: true
+  require_ci_to_pass: false
 coverage:
   range:
   - 50.0

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -39,8 +39,11 @@ from pyomo.core.base import (
     Objective,
     maximize,
     minimize,
+    Param,
+    ParamData,
     Reals,
     Var,
+    VarData,
     value,
 )
 from pyomo.core.expr.numeric_expr import SumExpression
@@ -558,12 +561,53 @@ def standardize_component_data(
     from_iterable=None,
 ):
     """
-    Standardize object to a list of component data objects.
+    Cast an object to a list of Pyomo ComponentData objects.
+
+    Parameters
+    ----------
+    obj : Component, ComponentData, or iterable
+        Object from which component data objects
+        are cast.
+    valid_ctype : type or tuple of type
+        Valid Component type(s).
+    valid_cdatatype : type or tuple of type
+        Valid ComponentData type(s).
+    ctype_validator : None or callable, optional
+        Validator for component objects derived from `obj`.
+    cdatatype_validator : None or callable, optional
+        Validator for component data objects derived from `obj`.
+    allow_repeats : bool, optional
+        True to allow for nonunique component data objects
+        derived from `obj`, False otherwise.
+    from_iterable : str, optional
+        Description of the object to include in error messages.
+        Meant to be used if the object is an iterable from which
+        to derive component data objects.
+
+    Returns
+    -------
+    list of ComponentData
+        The ComponentData objects derived from `obj`.
+        Note: If `obj` is a valid ComponentData type,
+        then ``[obj]`` is returned.
+
+    Raises
+    ------
+    TypeError
+        If `obj` is not an iterable and not an instance of
+        `valid_ctype` or `valid_cdatatype`.
+    ValueError
+        If ``allow_repeats=False`` and there are duplicates
+        among the component data objects derived from `obj`.
     """
     if isinstance(obj, valid_ctype):
         if ctype_validator is not None:
             ctype_validator(obj)
-        return list(obj.values())
+        ans = list(obj.values())
+        if cdatatype_validator is not None:
+            for entry in ans:
+                cdatatype_validator(entry)
+        return ans
     elif isinstance(obj, valid_cdatatype):
         if cdatatype_validator is not None:
             cdatatype_validator(obj)
@@ -745,9 +789,8 @@ VariablePartitioning = namedtuple(
 
 def validate_variable_partitioning(model, config):
     """
-    Check that partitioning of the first-stage variables,
-    second-stage variables, and uncertain parameters
-    is valid.
+    Check that the partitioning of the in-scope variables of the
+    model is valid.
 
     Parameters
     ----------
@@ -791,15 +834,17 @@ def validate_variable_partitioning(model, config):
             "contain at least one common Var object."
         )
 
+    # uncertain parameters can be VarData objects;
+    # ensure they are not considered decision variables here
     active_model_vars = ComponentSet(
         get_vars_from_components(
             block=model,
             active=True,
-            include_fixed=False,
+            include_fixed=True,
             descend_into=True,
             ctype=(Objective, Constraint),
         )
-    )
+    ) - ComponentSet(config.uncertain_params)
     check_components_descended_from_model(
         model=model,
         components=active_model_vars,
@@ -820,6 +865,45 @@ def validate_variable_partitioning(model, config):
     )
 
 
+def _get_uncertain_param_val(var_or_param_data):
+    """
+    Get value of VarData/ParamData object
+    that is considered an uncertain parameter.
+
+    For any unfixed VarData object, we assume that
+    the `lower` and `upper` attributes are identical,
+    so the value of `lower` is returned in lieu of
+    the level value.
+
+    Parameters
+    ----------
+    var_or_param_data : VarData or ParamData
+        Object to be evaluated.
+
+    Returns
+    -------
+    object
+        Value of the VarData/ParamData object.
+        The value is typically of a numeric type.
+    """
+    if isinstance(var_or_param_data, ParamData):
+        expr_to_evaluate = var_or_param_data
+    elif isinstance(var_or_param_data, VarData):
+        if var_or_param_data.fixed:
+            expr_to_evaluate = var_or_param_data
+        else:
+            expr_to_evaluate = var_or_param_data.lower
+    else:
+        raise ValueError(
+            f"Uncertain parameter object {var_or_param_data!r}"
+            f"is of type {type(var_or_param_data).__name__!r}, "
+            "but should be of type "
+            f"{ParamData.__name__} or {VarData.__name__}."
+        )
+
+    return value(expr_to_evaluate, exception=True)
+
+
 def validate_uncertainty_specification(model, config):
     """
     Validate specification of uncertain parameters and uncertainty
@@ -837,6 +921,9 @@ def validate_uncertainty_specification(model, config):
     ValueError
         If at least one of the following holds:
 
+        - there are entries of `config.uncertain_params`
+          that are also in `config.first_stage_variables` or
+          `config.second_stage_variables`
         - dimension of uncertainty set does not equal number of
           uncertain parameters
         - uncertainty set `is_valid()` method does not return
@@ -849,6 +936,26 @@ def validate_uncertainty_specification(model, config):
         components_name="uncertain parameters",
         config=config,
     )
+
+    first_stg_vars = config.first_stage_variables
+    second_stg_vars = config.second_stage_variables
+    for stg_str, vars in zip(["first", "second"], [first_stg_vars, second_stg_vars]):
+        overlapping_uncertain_params = ComponentSet(vars) & ComponentSet(
+            config.uncertain_params
+        )
+        if overlapping_uncertain_params:
+            overlapping_var_list = "\n ".join(
+                f"{var.name!r}" for var in overlapping_uncertain_params
+            )
+            config.progress_logger.error(
+                f"The following Vars were found in both `{stg_str}_stage_variables`"
+                f"and `uncertain_params`:\n {overlapping_var_list}"
+                "\nEnsure no Vars are included in both arguments."
+            )
+            raise ValueError(
+                f"Arguments `{stg_str}_stage_variables` and `uncertain_params` "
+                "contain at least one common Var object."
+            )
 
     if len(config.uncertain_params) != config.uncertainty_set.dim:
         raise ValueError(
@@ -868,7 +975,14 @@ def validate_uncertainty_specification(model, config):
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
         config.nominal_uncertain_param_vals = [
-            value(param, exception=True) for param in config.uncertain_params
+            # NOTE: this allows uncertain parameters that are of type
+            #       VarData and implicitly fixed by identical bounds
+            #       that are mutable expressions in ParamData-type
+            #       uncertain parameters;
+            #       the bounds expressions are evaluated to
+            #       to get the nominal realization
+            _get_uncertain_param_val(param)
+            for param in config.uncertain_params
         ]
     elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
         raise ValueError(
@@ -1598,6 +1712,69 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     # the interface for separation priority ordering
 
 
+def _replace_vars_in_component_exprs(block, substitution_map, ctype):
+    """
+    Substitute other objects for Vars in the expression attributes
+    of the component objects of a given type in a given block.
+
+    For efficiency purposes, only components whose expressions
+    contain the Vars to remove via the substitution are acted upon.
+
+    Named expressions in the components acted upon are descended
+    into, but not removed.
+
+    Parameters
+    ----------
+    block : BlockData
+        Block on which to perform the replacement.
+    substitution_map : ComponentMap
+        First entry of each tuple is a Var to remove,
+        second entry is an object to introduce in its place.
+    ctype : type or tuple of type
+        Type(s) of the components whose expressions are to be
+        modified.
+    """
+    vars_to_be_replaced = ComponentSet([var for var, _ in substitution_map.items()])
+    substitution_map = {id(var): dest for var, dest in substitution_map.items()}
+    for cdata in block.component_data_objects(ctype, active=None, descend_into=True):
+        # efficiency: act only on components containing
+        #             the Vars to be substituted
+        if ComponentSet(identify_variables(cdata.expr)) & vars_to_be_replaced:
+            cdata.set_value(
+                replace_expressions(
+                    expr=cdata.expr,
+                    substitution_map=substitution_map,
+                    descend_into_named_expressions=True,
+                    remove_named_expressions=False,
+                )
+            )
+
+
+def replace_vars_with_params(block, var_to_param_map):
+    """
+    Substitute ParamData objects for VarData objects
+    in the Expression, Constraint, and Objective components
+    declared on a block and all its sub-blocks.
+
+    Note that when performing the substitutions in the
+    Constraint and Objective components,
+    named Expressions are descended into, but not replaced.
+
+    Parameters
+    ----------
+    block : BlockData
+        Block on which to perform the substitution.
+    var_to_param_map : ComponentMap
+        Mapping from VarData objects to be replaced
+        to the ParamData objects to be introduced.
+    """
+    _replace_vars_in_component_exprs(
+        block=block,
+        substitution_map=var_to_param_map,
+        ctype=(Expression, Constraint, Objective),
+    )
+
+
 def setup_working_model(model_data, user_var_partitioning):
     """
     Set up (construct) the working model based on user inputs,
@@ -1619,7 +1796,7 @@ def setup_working_model(model_data, user_var_partitioning):
     temp_util_block_attr_name = unique_component_name(original_model, "util")
     original_model.add_component(temp_util_block_attr_name, Block())
     orig_temp_util_block = getattr(original_model, temp_util_block_attr_name)
-    orig_temp_util_block.uncertain_params = config.uncertain_params
+    orig_temp_util_block.orig_uncertain_params = config.uncertain_params
     orig_temp_util_block.user_var_partitioning = VariablePartitioning(
         **user_var_partitioning._asdict()
     )
@@ -1643,8 +1820,8 @@ def setup_working_model(model_data, user_var_partitioning):
     working_temp_util_block = getattr(
         working_model.user_model, temp_util_block_attr_name
     )
-    model_data.working_model.uncertain_params = (
-        working_temp_util_block.uncertain_params.copy()
+    model_data.working_model.orig_uncertain_params = (
+        working_temp_util_block.orig_uncertain_params.copy()
     )
     working_model.user_var_partitioning = VariablePartitioning(
         **working_temp_util_block.user_var_partitioning._asdict()
@@ -1653,6 +1830,47 @@ def setup_working_model(model_data, user_var_partitioning):
     # we are done with the util blocks
     delattr(original_model, temp_util_block_attr_name)
     delattr(working_model.user_model, temp_util_block_attr_name)
+
+    uncertain_param_var_idxs = []
+    for idx, obj in enumerate(working_model.orig_uncertain_params):
+        if isinstance(obj, VarData):
+            obj.fix()
+            uncertain_param_var_idxs.append(idx)
+    temp_params = working_model.temp_uncertain_params = Param(
+        uncertain_param_var_idxs,
+        within=Reals,
+        initialize={
+            idx: config.nominal_uncertain_param_vals[idx]
+            for idx in uncertain_param_var_idxs
+        },
+        mutable=True,
+    )
+    working_model.uncertain_params = [
+        temp_params[idx] if idx in uncertain_param_var_idxs else orig_param
+        for idx, orig_param in enumerate(working_model.orig_uncertain_params)
+    ]
+
+    # don't want to pass over the model components unless
+    # at least one Var is to be replaced
+    if uncertain_param_var_idxs:
+        uncertain_var_to_param_map = ComponentMap(
+            (working_model.orig_uncertain_params[idx], temp_param)
+            for idx, temp_param in temp_params.items()
+        )
+        replace_vars_with_params(
+            working_model, var_to_param_map=uncertain_var_to_param_map
+        )
+        for var, param in uncertain_var_to_param_map.items():
+            config.progress_logger.debug(
+                "Uncertain parameter with name "
+                f"{var.name!r} (relative to the working model clone) "
+                f"is of type {VarData.__name__}. "
+                f"A newly declared {ParamData.__name__} object "
+                f"with name {param.name!r} "
+                f"has been substituted for the {VarData.__name__} object "
+                "in all named expressions, constraints, and objectives "
+                "of the working model clone. "
+            )
 
     # keep track of the original active constraints
     working_model.original_active_equality_cons = []

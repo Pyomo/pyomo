@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -327,7 +327,7 @@ class Gurobi(PersistentSolverUtils, PersistentSolverBase):
         timer = config.timer
         ostreams = [io.StringIO()] + config.tee
 
-        with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
+        with capture_output(TeeStream(*ostreams), capture_fd=False):
             options = config.solver_options
 
             self._solver_model.setParam('LogToConsole', 1)

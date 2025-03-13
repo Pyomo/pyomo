@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -344,7 +344,7 @@ class IndexedComponent(Component):
             # For indexed components, we will pre-emptively clone all
             # component data objects as well (as those are the objects
             # that will be referenced by things like expressions).  It
-            # is important to only clone "normal" ComponentData obects:
+            # is important to only clone "normal" ComponentData objects:
             # so we will want to skip this for all scalar components
             # (where the _data points back to self) and references
             # (where the data may be stored outside this block tree and

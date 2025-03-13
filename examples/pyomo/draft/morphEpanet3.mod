@@ -25,7 +25,7 @@ set ID;
 param pipe := 1;
 param pump := 2;
 param valve := 3;
-param typ {ID};
+param type {ID};
 param source {ID};
 param sink {ID};
 param demand {V};
@@ -436,19 +436,19 @@ let DA := setof {(id,i,j,l,d,f,h) in Pipes} (id,i,j)
 let ID := setof {(id,i,j) in DA} id;
 
 for {(idd,i,j,l,d,f,h) in Pipes} {
-	let typ[idd] := pipe;
+	let type[idd] := pipe;
 	let source[idd] := i;
 	let sink[idd] := j;
 }
 
 for {(id,i,j,d,f,h) in Valves} {
-	let typ[id] := valve;
+	let type[id] := valve;
 	let source[id] := i;
 	let sink[id] := j;
 }
 
 for {(id,i,j,f,h) in Pumps} {
-	let typ[id] := pump;
+	let type[id] := pump;
 	let source[id] := i;
 	let sink[id] := j;
 }

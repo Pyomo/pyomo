@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -101,17 +101,17 @@ assert set(id(v) for v in EXPR.identify_variables(e, include_fixed=False)) == se
 import pyomo.core.expr as EXPR
 
 
-class SizeofVisitor(EXPR.SimpleExpressionVisitor):
-    def __init__(self):
+class SizeofVisitor(EXPR.StreamBasedExpressionVisitor):
+    def initializeWalker(self, expr):
         self.counter = 0
+        return True, expr
 
-    def visit(self, node):
+    def exitNode(self, node, data):
         self.counter += 1
 
-    def finalize(self):
+    def finalizeResult(self, result):
         return self.counter
-
-    # @visitor1
+        # @visitor1
 
 
 # ---------------------------------------------
@@ -122,11 +122,19 @@ def sizeof_expression(expr):
     #
     visitor = SizeofVisitor()
     #
-    # Compute the value using the :func:`xbfs` search method.
+    # Compute the value using the :func:`walk_expression` search method.
     #
-    return visitor.xbfs(expr)
+    return visitor.walk_expression(expr)
     # @visitor2
 
+
+# Test:
+m = ConcreteModel()
+m.x = Var()
+m.p = Param(mutable=True)
+assert sizeof_expression(m.x) == 1
+assert sizeof_expression(m.x + m.p) == 3
+assert sizeof_expression(2 * m.x + m.p) == 5
 
 # ---------------------------------------------
 # @visitor3

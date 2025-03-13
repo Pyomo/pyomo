@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -846,7 +846,9 @@ class CPLEXDirect(DirectSolver):
 
                 if extract_slacks:
                     linear_slacks = self._solver_model.solution.get_linear_slacks()
-                    qudratic_slacks = self._solver_model.solution.get_quadratic_slacks()
+                    quadratic_slacks = (
+                        self._solver_model.solution.get_quadratic_slacks()
+                    )
                     for i, con_name in enumerate(
                         self._solver_model.linear_constraints.get_names()
                     ):
@@ -869,7 +871,7 @@ class CPLEXDirect(DirectSolver):
                     for i, con_name in enumerate(
                         self._solver_model.quadratic_constraints.get_names()
                     ):
-                        soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
+                        soln_constraints[con_name]["Slack"] = quadratic_slacks[i]
         elif self._load_solutions:
             if cpxprob.solution.get_solution_type() > 0:
                 self.load_vars()
