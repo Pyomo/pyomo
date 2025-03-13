@@ -356,7 +356,8 @@ class TestTeeStream(unittest.TestCase):
                     t.STDERR.write('*')
             self.assertEqual(
                 'Significant delay observed waiting to join reader '
-                'threads, possible output stream deadlock\n',
+                'threads, possible output stream deadlock\n'
+                'TeeStream: deadlock observed joining reader threads\n',
                 LOG.getvalue(),
             )
         finally:
