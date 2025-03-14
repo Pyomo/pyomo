@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2022
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,13 +17,13 @@ def build_cspline_external(user_args=[], parallel=None):
     return build_cmake_project(
         targets=["src"],
         package_name="cspline_1d_external",
-        description="AMPL external interpolation function library",
+        description="ASL external cubic spline interpolation function library",
         user_args=["-DBUILD_AMPLASL_IF_NEEDED=ON"] + user_args,
         parallel=parallel,
     )
 
 
-class AMPLCsplineExternalBuilder(object):
+class ASLCsplineExternalBuilder(object):
     def __call__(self, parallel):
         return build_cspline_external(parallel=parallel)
 

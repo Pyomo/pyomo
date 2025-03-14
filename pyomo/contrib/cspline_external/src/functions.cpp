@@ -8,7 +8,9 @@
  * This software is distributed under the 3-clause BSD License.
  * ___________________________________________________________________________
 */
+#include<iostream>
 #include<fstream>
+#include<sstream>
 #include<unordered_map>
 #include<vector>
 #include<string>
@@ -52,15 +54,27 @@ static int read_parameters_cspline(std::string file_path) {
    }
    catch(std::out_of_range const&){} // Not read so read it.
    unsigned int i, idx, n; //loop counter, curve index, and number of segs
-   std::ifstream param_file; // parameter input file
-
+   
    // Set index for cspline param file and increment curve count
    idx_cspline[file_path] = n_cspline;
    idx = n_cspline;
    ++n_cspline;
 
    // open the parameter file for input
-   param_file.open(file_path);
+   // Assume if there is a newline in the file_path, that it is actually
+   // a string with the file contents.
+   std::ifstream file_stream;
+   std::istringstream string_stream(file_path);
+
+   bool is_fname = false;
+   if(file_path.find('\n') == std::string::npos){
+      file_stream.open(file_path);
+      is_fname = true;
+   }
+
+   std::istream& param_file = is_fname ? 
+      static_cast<std::istream&>(file_stream)
+      : static_cast<std::istream&>(string_stream);
 
    // get the number of segments and size to vectors
    param_file >> n;
@@ -102,7 +116,7 @@ static int read_parameters_cspline(std::string file_path) {
       param_file >> a4_cspline[idx][i];
    }
 
-   param_file.close();
+   file_stream.close();
 
    // Returns curve index
    return idx;

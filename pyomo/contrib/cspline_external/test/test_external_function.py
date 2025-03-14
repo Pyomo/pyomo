@@ -61,6 +61,44 @@ class CsplineExternal1DTest(unittest.TestCase):
         # check a little more in model context
         self.assertAlmostEqual(pyo.value(m.e), 3, 8)
 
+    def test_function_call_form2(self):
+        """Test that the cspline can take the full parameter file contents in str"""
+        params = os.path.join(this_file_dir(), "test_params.txt")
+        with open(params, "r") as fptr:
+            params = fptr.read()   
+        # this is that data that was used to generate the params
+        x_data = [1, 2, 3, 4, 5]
+        y_data = [2, 3, 5, 2, 1]
+        # Model with the cspline function
+        m = pyo.ConcreteModel()
+        m.f = pyo.ExternalFunction(library=_lib, function="cspline")
+        m.x = pyo.Var(initialize=2)
+        m.e = pyo.Expression(expr=m.f(m.x, params))
+        # We know that spline should go through the data points
+        # and that f(x) f'(x) and f''(x) for the right and left
+        # segment at a knot should be the same.
+        for x, y in zip(x_data, y_data):
+            delta = 1e-5
+            f, fx, fxx = m.f.evaluate_fgh(args=(x, params))
+            f_left, fx_left, fxx_left = m.f.evaluate_fgh(args=(x - delta, params))
+            f_right, fx_right, fxx_right = m.f.evaluate_fgh(args=(x + delta, params))
+            self.assertAlmostEqual(f, y, 8)
+            # check left/right
+            self.assertAlmostEqual(f_left, y, 3)
+            self.assertAlmostEqual(f_right, y, 3)
+            # check left/right derivatives
+            self.assertAlmostEqual(fx_left[0], fx[0], 3)
+            self.assertAlmostEqual(fx_right[0], fx[0], 3)
+            self.assertAlmostEqual(fxx_left[0], fxx[0], 3)
+            self.assertAlmostEqual(fxx_right[0], fxx[0], 3)
+        # we know the endpoint constraints are that f''(0) = 0
+        f, fx, fxx = m.f.evaluate_fgh(args=(x_data[0], params))
+        self.assertAlmostEqual(fxx[0], 0, 8)
+        f, fx, fxx = m.f.evaluate_fgh(args=(x_data[-1], params))
+        self.assertAlmostEqual(fxx[0], 0, 8)
+        # check a little more in model context
+        self.assertAlmostEqual(pyo.value(m.e), 3, 8)
+
     def test_ampl_derivatives(self):
         # Make sure the function values and derivatives are right
         # based on parameters. This time look at segment mid-points

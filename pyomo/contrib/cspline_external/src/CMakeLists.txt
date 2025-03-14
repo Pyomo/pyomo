@@ -15,7 +15,7 @@ cmake_minimum_required(VERSION 3.0)
 PROJECT( cspline_external )
 
 INCLUDE(
-  "${CMAKE_CURRENT_SOURCE_DIR}/../../cspline_external/src/FindASL.cmake")
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../ampl_function_demo/src/FindASL.cmake")
 
 # Targets in this project
 OPTION(BUILD_EXTERNAL_FCN_LIBRARY

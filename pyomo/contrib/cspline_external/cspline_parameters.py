@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,16 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import numpy as np
 import pyomo.environ as pyo
-
-np, numpy_available = attempt_import("numpy")
-
-if numpy_available:
-    searchsorted = np.searchsorted
-else:
-
-    def searchsorted(x, y):
-        raise NotImplementedError("cubic_parameters_model() currently relies on Numpy")
 
 
 def _f_cubic(x, alpha, s=None):
@@ -91,6 +83,152 @@ def _fxx_cubic(x, alpha, s=None):
     return 2 * alpha[s, 3] + 6 * alpha[s, 4] * x
 
 
+class CsplineParameters(object):
+    def __init__(self, model=None, fptr=None):
+        """Cubic spline parameters class.  This can be used to read and
+        write parameters or calculate cubic spline function values and 
+        derivatives for testing.
+        """
+        if model is not None and fptr is not None:
+            raise ValueError("Please specify at most one of m or fptr.")
+        if model is not None:
+            self.get_parameters_from_model(model)
+        elif fptr is not None:
+            self.get_parameters_from_file(fptr)
+        else:
+            self.knots = np.array([])
+            self.a1 = np.array([])
+            self.a2 = np.array([])
+            self.a3 = np.array([])
+            self.a4 = np.array([])
+
+    @property
+    def n_knots(self):
+        """Number of knots"""
+        return len(self.knots)
+
+    @property
+    def n_segments(self):
+        """Number of segments"""
+        return len(self.knots) - 1
+
+    @property
+    def valid(self):
+        """Ensure that the number of knots and cubic parameters is valid"""
+        return (
+            len(self.a1) == self.n_segments
+            and len(self.a2) == self.n_segments
+            and len(self.a3) == self.n_segments
+            and len(self.a4) == self.n_segments
+        )
+
+    def get_parameters_from_model(self, m):
+        """Read parameters from a Pyomo model used to calculate them"""
+        self.knots = [pyo.value(x) for x in m.x.values()]
+        self.a1 = [None] * len(m.seg_idx)
+        self.a2 = [None] * len(m.seg_idx)
+        self.a3 = [None] * len(m.seg_idx)
+        self.a4 = [None] * len(m.seg_idx)
+        for s in m.seg_idx:
+            self.a1[s - 1] = pyo.value(m.alpha[s, 1])
+            self.a2[s - 1] = pyo.value(m.alpha[s, 2])
+            self.a3[s - 1] = pyo.value(m.alpha[s, 3])
+            self.a4[s - 1] = pyo.value(m.alpha[s, 4])
+        self.knots = np.array(self.knots)
+        self.a1 = np.array(self.a1)
+        self.a2 = np.array(self.a2)
+        self.a3 = np.array(self.a3)
+        self.a4 = np.array(self.a4)
+
+    def get_parameters_from_file(self, fptr):
+        """Read parameters from a file"""
+        # line 1: number of segments
+        ns = int(fptr.readline())
+        # Make param lists
+        self.knots = [None] * (ns + 1)
+        self.a1 = [None] * ns
+        self.a2 = [None] * ns
+        self.a3 = [None] * ns
+        self.a4 = [None] * ns
+        # Read params
+        for i in range(ns + 1):
+            self.knots[i] = float(fptr.readline())
+        for a in [self.a1, self.a2, self.a3, self.a4]:
+            for i in range(ns):
+                a[i] = float(fptr.readline())
+        self.knots = np.array(self.knots)
+        self.a1 = np.array(self.a1)
+        self.a2 = np.array(self.a2)
+        self.a3 = np.array(self.a3)
+        self.a4 = np.array(self.a4)
+
+    def write_parameters(self, fptr):
+        """Write parameters to a file"""
+        assert self.valid
+        fptr.write(f"{self.n_segments}\n")
+        for l in [self.knots, self.a1, self.a2, self.a3, self.a4]:
+            for x in l:
+                fptr.write(f"{x}\n")
+
+    def segment(self, x):
+        """Get the spline segment containing x.
+
+        Args:
+            x: location, float or numpy array
+
+        Returns:
+            segment(s) containing x, if x is a numpy array a numpy 
+            array of integers is returned otherwise return an integer
+        """
+        s = np.searchsorted(self.knots, x)
+        # If x is past the last knot, use the last segment
+        # this could happen just due to round-off even if
+        # you don't intend to extrapolate
+        s[s >= self.n_segments] = self.n_segments - 1
+        return s
+
+    def f(self, x):
+        """Get f(x)
+
+        Args:
+            x: location, numpy array float
+
+        Returns:
+            f(x) numpy array if x is numpy array or float
+        """
+        s = self.segment(x)
+        return (
+            self.a1[s]
+            + self.a2[s] * x 
+            + self.a3[s] * x**2 
+            + self.a4[s] * x**3
+        )
+
+    def f_x(self, x):
+        """Get the first derivative of f(x)
+
+        Args:
+            x: location, numpy array float
+
+        Returns:
+            df(x)/dx numpy array if x is numpy array or float
+        """
+        s = self.segment(x)
+        return self.a2[s] + 2 * self.a2[s] * x + 3 * self.a3[s] * x**2
+
+    def f_xx(self, x):
+        """Get the  second derivative of f(x)
+
+        Args:
+            x: location, numpy array float
+
+        Returns:
+            d2f(x)/dx2 numpy array if x is numpy array or float
+        """
+        s = self.segment(x)
+        return 2 * self.a2[s] + 6 * self.a3[s] * x
+
+
 def cubic_parameters_model(
     x_data,
     y_data,
@@ -102,8 +240,8 @@ def cubic_parameters_model(
     """Create a Pyomo model to calculate parameters for a cubic spline.  By default
     this creates a square linear model, but optionally it can leave off the endpoint
     second derivative constraints and add an objective function for fitting data
-    instead.  The purpose of alternative least squares form is to allow the spline to
-    be constrained in other wats that don't require a perfect data match. The knots
+    instead.  The purpose of the alternative least squares form is to allow the spline 
+    to be constrained in other ways that don't require a perfect data match. The knots
     don't need to be the same as the x data to allow, for example, additional segments
     for extrapolation. This is not the most computationally efficient way to calculate
     parameters, but since it is used to precalculate parameters, speed is not important.
@@ -168,7 +306,7 @@ def cubic_parameters_model(
     # Identify segments used to predict y_data at each x_data.  We use search in
     # instead of a dict lookup, since we don't want to require the data to be at
     # the knots, even though that is almost always the case.
-    idx = searchsorted(x_knots, x_data)
+    idx = np.searchsorted(x_knots, x_data)
 
     if end_point_constraint:
         add_endpoint_second_derivative_constraints(m)
@@ -206,39 +344,3 @@ def add_endpoint_second_derivative_constraints(m):
             j = s
         return _fxx_cubic(m.x[j], m.alpha, s) == 0
 
-
-def get_parameters(m, file_name=None):
-    """Once the model has been solved, this function can be used to extract
-    the cubic spline parameters.
-    """
-    knots = [pyo.value(x) for x in m.x.values()]
-    a1 = [None] * len(m.seg_idx)
-    a2 = [None] * len(m.seg_idx)
-    a3 = [None] * len(m.seg_idx)
-    a4 = [None] * len(m.seg_idx)
-    for s in m.seg_idx:
-        a1[s - 1] = pyo.value(m.alpha[s, 1])
-        a2[s - 1] = pyo.value(m.alpha[s, 2])
-        a3[s - 1] = pyo.value(m.alpha[s, 3])
-        a4[s - 1] = pyo.value(m.alpha[s, 4])
-
-    if file_name is not None:
-        with open(file_name, "w") as fptr:
-            fptr.write(f"{len(a1)}\n")
-            for l in [knots, a1, a2, a3, a4]:
-                for x in l:
-                    fptr.write(f"{x}\n")
-
-    return knots, a1, a2, a3, a4
-
-
-def _extract_params(m):
-    """Extract alpha as a plain dict of floats to play nice with vectorized functions"""
-    alpha = {}
-    for s in m.seg_idx:
-        alpha[s] = {}
-        alpha[s][1] = pyo.value(m.alpha[s, 1])
-        alpha[s][2] = pyo.value(m.alpha[s, 2])
-        alpha[s][3] = pyo.value(m.alpha[s, 3])
-        alpha[s][4] = pyo.value(m.alpha[s, 4])
-    return alpha

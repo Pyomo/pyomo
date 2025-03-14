@@ -9,19 +9,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import os
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.cspline_external.cspline_parameters import (
     cubic_parameters_model,
-    get_parameters,
+    CsplineParameters,
 )
 from pyomo.opt import check_available_solvers
+from pyomo.common.dependencies import numpy as np, numpy_available
 import pyomo.environ as pyo
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
-
-np, numpy_available = attempt_import("numpy")
 
 
 @unittest.skipUnless(
@@ -39,37 +39,34 @@ class CsplineExternalParamsTest(unittest.TestCase):
         # is not needed, it works perfectly well.
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
+        
+        params = CsplineParameters(model=m)
 
-        params = os.path.join(this_file_dir(), "test.txt")
-        knots, a0, a1, a2, a3 = get_parameters(m, params)
-        assert len(knots) == 5
-        assert len(a0) == 4
-        assert len(a1) == 4
-        assert len(a2) == 4
-        assert len(a3) == 4
+        # Make sure we have the expected number of parameters
+        assert params.n_knots == 5
+        assert params.n_segments == 4
+        assert params.valid
 
-        # Read parameters
-        with open(params, "r") as fptr:
-            # line 1: number of knots
-            ns = int(fptr.readline())
-            # Make param lists
-            knots = [None] * (ns + 1)
-            a = [None] * 4
-            for j in range(4):
-                a[j] = [None] * ns
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data))
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 8)
 
-            # Read params
-            for i in range(ns + 1):
-                knots[i] = float(fptr.readline())
-            for j in range(4):
-                for i in range(ns):
-                    a[j][i] = float(fptr.readline())
-        # Check the value calculated by from parameters
-        for i, x in enumerate(x_data):
-            seg = i - 1
-            if seg < 0:
-                seg = 0
-            y = a[0][seg] + a[1][seg] * x + a[2][seg] * x**2 + a[3][seg] * x**3
-            self.assertAlmostEqual(y, y_data[i], 8)
+        # Make sure reading and writing parameters
+        # to/from files works right.
 
-        os.remove(params)
+        fptr = io.StringIO("")
+        params.write_parameters(fptr)
+        # Go to start of string stream
+        fptr.seek(0, os.SEEK_SET)
+
+        params.knots = np.array([1,3])
+        assert not params.valid
+        params.get_parameters_from_file(fptr)
+        assert params.valid
+
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data))
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 8)
+
