@@ -237,7 +237,7 @@ class capture_output(object):
         One would usually use the contextlib.ExitStack to implement/manage
         the collection of context managers we are putting together.  The
         problem is that ExitStack will only call the __exit__ handlers
-        up to teh first one that returns an exception.  As we are
+        up to the first one that returns an exception.  As we are
         expecting the possibility of one of the CMs here to raise an
         exception (usually from TeeStream when joining the reader
         threads), we will explicitly implement the stack management here
