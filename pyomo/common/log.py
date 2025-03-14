@@ -286,13 +286,21 @@ class LoggingIntercept(object):
     ----------
     output: io.TextIOBase
         the file stream to send log messages to
+
     module: str
-        the target logger name to intercept
+        the target logger name to intercept. `logger` and `module` are
+        mutually exclusive.
+
     level: int
         the logging level to intercept
+
     formatter: logging.Formatter
         the formatter to use when rendering the log messages.  If not
         specified, uses `'%(message)s'`
+
+    logger: logging.Logger
+        the target logger to intercept. `logger` and `module` are
+        mutually exclusive.
 
     Examples
     --------
@@ -306,10 +314,24 @@ class LoggingIntercept(object):
 
     """
 
-    def __init__(self, output=None, module=None, level=logging.WARNING, formatter=None):
+    def __init__(
+        self,
+        output=None,
+        module=None,
+        level=logging.WARNING,
+        formatter=None,
+        logger=None,
+    ):
         self.handler = None
         self.output = output
-        self.module = module
+        if logger is not None:
+            if module is not None:
+                raise ValueError(
+                    "LoggingIntercept: only one of 'module' and 'logger' is allowed"
+                )
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger(module)
         self._level = level
         if formatter is None:
             formatter = logging.Formatter('%(message)s')
@@ -317,6 +339,9 @@ class LoggingIntercept(object):
         self._save = None
 
     def __enter__(self):
+        # Get the logger for the scope we will be overriding
+        logger = self._logger
+        self._save = logger.level, logger.propagate, logger.handlers
         # Set up the handler
         output = self.output
         if output is None:
@@ -326,22 +351,24 @@ class LoggingIntercept(object):
         self.handler.setFormatter(self._formatter)
         self.handler.setLevel(self._level)
         # Register the handler with the appropriate module scope
-        logger = logging.getLogger(self.module)
-        self._save = logger.level, logger.propagate, logger.handlers
         logger.handlers = []
-        logger.propagate = 0
+        logger.propagate = False
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
         return output
 
     def __exit__(self, et, ev, tb):
-        logger = logging.getLogger(self.module)
+        logger = self._logger
         logger.removeHandler(self.handler)
         self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
         assert not logger.handlers
         logger.handlers.extend(self._save[2])
+
+    @property
+    def module(self):
+        return self._logger.name
 
 
 class LogStream(io.TextIOBase):
