@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -22,7 +22,8 @@ from pyomo.common.errors import ApplicationError
 from pyomo.core.base.param import Param, ParamData
 from pyomo.contrib.pyros.config import (
     InputDataStandardizer,
-    mutable_param_validator,
+    uncertain_param_validator,
+    uncertain_param_data_validator,
     logger_domain,
     SolverNotResolvable,
     positive_int_or_minus_one,
@@ -32,8 +33,6 @@ from pyomo.contrib.pyros.config import (
 )
 from pyomo.contrib.pyros.util import ObjectiveType
 from pyomo.opt import SolverFactory, SolverResults
-from pyomo.contrib.pyros.uncertainty_sets import BoxSet
-from pyomo.common.dependencies import numpy_available
 
 
 class TestInputDataStandardizer(unittest.TestCase):
@@ -212,7 +211,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         uninitialized entries passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=uncertain_param_validator
         )
 
         mdl = ConcreteModel()
@@ -228,7 +227,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         Param object(s) passed.
         """
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=uncertain_param_validator
         )
 
         mdl = ConcreteModel()
@@ -237,6 +236,19 @@ class TestInputDataStandardizer(unittest.TestCase):
         exc_str = r"Param object with name .*immutable"
         with self.assertRaisesRegex(ValueError, exc_str):
             standardizer_func(mdl.p)
+
+    def test_standardizer_invalid_vars_not_constructed(self):
+        """
+        Test standardizer with uncertain param validator
+        raises exception when Var that is not constructed is passed.
+        """
+        standardizer_func = InputDataStandardizer(
+            ctype=Var, cdatatype=VarData, ctype_validator=uncertain_param_validator
+        )
+        bad_var = Var()
+        exc_str = r"Length of .*does not match that of.*index set"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            standardizer_func(bad_var)
 
     def test_standardizer_valid_mutable_params(self):
         """
@@ -248,7 +260,7 @@ class TestInputDataStandardizer(unittest.TestCase):
         mdl.p2 = Param(["a", "b"], initialize=1, mutable=True)
 
         standardizer_func = InputDataStandardizer(
-            ctype=Param, cdatatype=ParamData, ctype_validator=mutable_param_validator
+            ctype=Param, cdatatype=ParamData, ctype_validator=uncertain_param_validator
         )
 
         standardizer_input = [mdl.p1[0], mdl.p2]
@@ -280,6 +292,132 @@ class TestInputDataStandardizer(unittest.TestCase):
                     f"(id {id(output)})"
                 ),
             )
+
+    def test_standardizer_multiple_ctypes_with_validator(self):
+        """
+        Test input data standardizer when there are
+        multiple component/component data types.
+        """
+        mdl = ConcreteModel()
+        mdl.p = Param([0, 1], initialize=0, mutable=True)
+        mdl.v = Var(["a", "b"], initialize=1)
+
+        standardizer_func = InputDataStandardizer(
+            ctype=(Var, Param),
+            cdatatype=(VarData, ParamData),
+            ctype_validator=uncertain_param_validator,
+        )
+        standardizer_input = [mdl.p, mdl.v]
+        standardizer_output = standardizer_func(standardizer_input)
+        expected_standardizer_output = [mdl.p[0], mdl.p[1], mdl.v["a"], mdl.v["b"]]
+
+        self.assertIsInstance(
+            standardizer_output,
+            list,
+            msg=(
+                "Standardized output should be of type list, "
+                f"but is of type {standardizer_output.__class__.__name__}."
+            ),
+        )
+        self.assertEqual(
+            len(standardizer_output),
+            len(expected_standardizer_output),
+            msg="Length of standardizer output is not as expected.",
+        )
+        enum_zip = enumerate(zip(expected_standardizer_output, standardizer_output))
+        for idx, (input, output) in enum_zip:
+            self.assertIs(
+                input,
+                output,
+                msg=(
+                    f"Entry {input} (id {id(input)}) "
+                    "is not identical to "
+                    f"input component data object {output} "
+                    f"(id {id(output)})"
+                ),
+            )
+
+    def test_standardizer_with_both_validators(self):
+        """
+        Test input data standardizer when there is
+        a validator for the component and component data types.
+        """
+        mdl = ConcreteModel()
+        mdl.p = Param([0, 1], initialize=0, mutable=True)
+        mdl.v = Var(["a", "b"], initialize=1)
+
+        standardizer_func = InputDataStandardizer(
+            ctype=(Var, Param),
+            cdatatype=(VarData, ParamData),
+            ctype_validator=uncertain_param_validator,
+            cdatatype_validator=uncertain_param_data_validator,
+        )
+
+        err_str_a = r".*VarData object with name 'v\[a\]' is not fixed"
+        err_str_b = r".*VarData object with name 'v\[b\]' is not fixed"
+
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v])
+
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func(mdl.v["a"])
+
+        mdl.v["a"].fix()
+        va_output = standardizer_func(mdl.v["a"])
+        self.assertEqual(va_output, [mdl.v["a"]])
+
+        with self.assertRaisesRegex(ValueError, err_str_b):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        mdl.v["b"].fix()
+        va_vb_output = standardizer_func([mdl.v["a"], mdl.v["b"]])
+        self.assertEqual(va_vb_output, [mdl.v["a"], mdl.v["b"]])
+
+        va_vb_unraveled_output = standardizer_func(mdl.v)
+        self.assertEqual(va_vb_unraveled_output, [mdl.v["a"], mdl.v["b"]])
+
+        # the param data validator supports unfixed Vars that
+        # have identical bounds
+        mdl.v["a"].unfix()
+        mdl.v["a"].setlb(1)
+        mdl.v["a"].setub(1)
+        va_vb_unraveled_output_2 = standardizer_func(mdl.v)
+        self.assertEqual(va_vb_unraveled_output_2, [mdl.v["a"], mdl.v["b"]])
+
+        # ensure exception raised if the bounds are not identical
+        # (even if equal in value)
+        mdl.v["a"].setlb(1.0)
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        mdl.q = Param(initialize=1, mutable=True)
+        mdl.v["a"].setlb(mdl.q)
+        with self.assertRaisesRegex(ValueError, err_str_a):
+            standardizer_func([mdl.p, mdl.v["a"], mdl.v["b"]])
+
+        # support fixing by bounds that are identical mutable expressions
+        mdl.v["a"].setub(mdl.q)
+        va_vb_unraveled_output_2 = standardizer_func(mdl.v)
+        self.assertEqual(va_vb_unraveled_output_2, [mdl.v["a"], mdl.v["b"]])
+
+    def test_standardizer_domain_name(self):
+        """
+        Test domain name function works as expected.
+        """
+        std1 = InputDataStandardizer(ctype=Param, cdatatype=ParamData)
+        self.assertEqual(
+            std1.domain_name(), f"(iterable of) {Param.__name__}, {ParamData.__name__}"
+        )
+
+        std2 = InputDataStandardizer(ctype=(Param, Var), cdatatype=(ParamData, VarData))
+        self.assertEqual(
+            std2.domain_name(),
+            f"(iterable of) {Param.__name__}, {Var.__name__}, "
+            f"{ParamData.__name__}, {VarData.__name__}",
+        )
 
 
 AVAILABLE_SOLVER_TYPE_NAME = "available_pyros_test_solver"

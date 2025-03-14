@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-""" Example from Section 3.2 in paper of Pseudo Basic Steps
+"""Example from Section 3.2 in paper of Pseudo Basic Steps
 
 Ref:
-    Pseudo basic steps: bound improvement guarantees from Lagrangian 
+    Pseudo basic steps: bound improvement guarantees from Lagrangian
     decomposition in convex disjunctive programming
     Papageorgiou and Trespalacios, 2017
 

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -195,7 +195,7 @@ def minlp_config_block(init=False):
         ),
     ).declare_as_argument('-c', '--catch-errors', dest="catch")
     runtime.declare(
-        'disable gc', ConfigValue(False, bool, 'Disable the garbage collecter.', None)
+        'disable gc', ConfigValue(False, bool, 'Disable the garbage collector.', None)
     ).declare_as_argument('--disable-gc', dest='disable_gc')
     runtime.declare(
         'interactive',

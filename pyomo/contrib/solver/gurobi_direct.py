@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -278,7 +278,7 @@ class GurobiDirect(SolverBase):
             orig_cwd = os.getcwd()
             if config.working_dir:
                 os.chdir(config.working_dir)
-            with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=False):
+            with capture_output(TeeStream(*ostreams), capture_fd=False):
                 gurobi_model = gurobipy.Model()
 
                 timer.start('transfer_model')

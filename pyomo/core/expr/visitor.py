@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -679,6 +679,11 @@ class StreamBasedExpressionVisitor(object):
                 ptr = ptr[0]
 
 
+@deprecated(
+    "The SimpleExpressionVisitor is deprecated.  "
+    "Please use the StreamBasedExpressionVisitor instead.",
+    version='6.9.0',
+)
 class SimpleExpressionVisitor(object):
     """
     Note:
@@ -736,6 +741,14 @@ class SimpleExpressionVisitor(object):
             The return value is determined by the :func:`finalize` function,
             which may be defined by the user.  Defaults to :const:`None`.
         """
+        if (
+            node.__class__ in nonpyomo_leaf_types
+            or not node.is_expression_type()
+            or node.nargs() == 0
+        ):
+            self.visit(node)
+            return self.finalize()
+
         dq = deque([node])
         while dq:
             current = dq.popleft()
@@ -1335,20 +1348,25 @@ evaluate_expression.visitor_active = False
 # =====================================================
 
 
-class _ComponentVisitor(SimpleExpressionVisitor):
+class _ComponentVisitor(StreamBasedExpressionVisitor):
     def __init__(self, types):
-        self.seen = set()
-        if types.__class__ is set:
-            self.types = types
-        else:
-            self.types = set(types)
+        super().__init__()
+        if types.__class__ is not set:
+            types = set(types)
+        self._types = types
 
-    def visit(self, node):
-        if node.__class__ in self.types:
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-            return node
+    def initializeWalker(self, expr):
+        self._objs = []
+        self._seen = set()
+        return True, None
+
+    def finalizeResult(self, result):
+        return self._objs
+
+    def exitNode(self, node, data):
+        if node.__class__ in self._types and id(node) not in self._seen:
+            self._seen.add(id(node))
+            self._objs.append(node)
 
 
 def identify_components(expr, component_types):
@@ -1370,7 +1388,7 @@ def identify_components(expr, component_types):
     # in the expression.
     #
     visitor = _ComponentVisitor(component_types)
-    yield from visitor.xbfs_yield_leaves(expr)
+    yield from visitor.walk_expression(expr)
 
 
 # =====================================================
@@ -1378,7 +1396,7 @@ def identify_components(expr, component_types):
 # =====================================================
 
 
-class _VariableVisitor(StreamBasedExpressionVisitor):
+class IdentifyVariableVisitor(StreamBasedExpressionVisitor):
     def __init__(self, include_fixed=False, named_expression_cache=None):
         """Visitor that collects all unique variables participating in an
         expression
@@ -1392,108 +1410,83 @@ class _VariableVisitor(StreamBasedExpressionVisitor):
         """
         super().__init__()
         self._include_fixed = include_fixed
-        if named_expression_cache is None:
-            # This cache will map named expression ids to the
-            # tuple: ([variables], {variable ids})
-            named_expression_cache = {}
-        self._named_expression_cache = named_expression_cache
-        # Stack of active named expressions. This holds the id of
-        # expressions we are currently in.
-        self._active_named_expressions = []
+        self._cache = named_expression_cache
+        # Stack of named expressions. This holds the tuple
+        #     (eid, _seen, _exprs)
+        # where eid is the id() of the subexpression we are currently
+        # processing, and _seen and _exprs are from the parent context.
+        self._expr_stack = []
+        # The following attributes will be added by initializeWalker:
+        # self._seen: dict(eid: obj)
+        # self._exprs: list of (e, e.expr) for any (nested) named expressions
 
     def initializeWalker(self, expr):
-        if expr.__class__ in native_types:
-            return False, []
-        elif expr.is_named_expression_type():
-            eid = id(expr)
-            if eid in self._named_expression_cache:
-                # If we were given a named expression that is already cached,
-                # just do nothing and return the expression's variables
-                variables, var_set = self._named_expression_cache[eid]
-                return False, variables
-            else:
-                # We were given a named expression that is not cached.
-                # Initialize data structures and add this expression to the
-                # stack. This expression will get popped in exitNode.
-                self._variables = []
-                self._seen = set()
-                self._named_expression_cache[eid] = [], set()
-                self._active_named_expressions.append(eid)
-                return True, expr
-        elif expr.is_variable_type():
-            return False, [expr]
-        else:
-            self._variables = []
-            self._seen = set()
-            return True, expr
+        assert not self._expr_stack
+        self._seen = {}
+        self._exprs = None
+        if not self.beforeChild(None, expr, 0)[0]:
+            return False, self.finalizeResult(None)
+        return True, expr
 
     def beforeChild(self, parent, child, index):
         if child.__class__ in native_types:
             return False, None
-        elif child.is_named_expression_type():
-            eid = id(child)
-            if eid in self._named_expression_cache:
-                # We have already encountered this named expression. We just add
-                # the cached variables to our list and don't descend.
-                if self._active_named_expressions:
-                    # If we are in another named expression, we update the
-                    # parent expression's cache. We don't need to update the
-                    # global list as we will do this when we exit the active
-                    # named expression.
-                    parent_eid = self._active_named_expressions[-1]
-                    variables, var_set = self._named_expression_cache[parent_eid]
-                else:
-                    # If we are not in a named expression, we update the global
-                    # list.
-                    variables = self._variables
-                    var_set = self._seen
-                for var in self._named_expression_cache[eid][0]:
-                    if id(var) not in var_set:
-                        var_set.add(id(var))
-                        variables.append(var)
-                return False, None
+        elif child.is_expression_type():
+            if child.is_named_expression_type():
+                return self._process_named_expr(child)
             else:
-                # If we are descending into a new named expression, initialize
-                # a cache to store the expression's local variables.
-                self._named_expression_cache[id(child)] = ([], set())
-                self._active_named_expressions.append(id(child))
                 return True, None
         elif child.is_variable_type() and (self._include_fixed or not child.fixed):
-            if self._active_named_expressions:
-                # If we are in a named expression, add new variables to the cache.
-                eid = self._active_named_expressions[-1]
-                variables, var_set = self._named_expression_cache[eid]
-            else:
-                variables = self._variables
-                var_set = self._seen
-            if id(child) not in var_set:
-                var_set.add(id(child))
-                variables.append(child)
-            return False, None
-        else:
-            return True, None
+            if id(child) not in self._seen:
+                self._seen[id(child)] = child
+        return False, None
 
     def exitNode(self, node, data):
-        if node.is_named_expression_type():
-            # If we are returning from a named expression, we have at least one
-            # active named expression. We must make sure that we properly
-            # handle the variables for the named expression we just exited.
-            eid = self._active_named_expressions.pop()
-            if self._active_named_expressions:
-                # If we still are in a named expression, we update that expression's
-                # cache with any new variables encountered.
-                parent_eid = self._active_named_expressions[-1]
-                variables, var_set = self._named_expression_cache[parent_eid]
-            else:
-                variables = self._variables
-                var_set = self._seen
-            for var in self._named_expression_cache[eid][0]:
-                if id(var) not in var_set:
-                    var_set.add(id(var))
-                    variables.append(var)
+        if node.is_named_expression_type() and self._cache is not None:
+            # If we are returning from a named expression, we must make
+            # sure that we properly restore the "outer" context and then
+            # merge the objects from the named expression we just exited
+            # into the list for the parent expression context.
+            _seen = self._seen
+            _exprs = self._exprs
+            eid, self._seen, self._exprs = self._expr_stack.pop()
+            assert eid == id(node)
+            self._merge_obj_lists(_seen, _exprs)
 
     def finalizeResult(self, result):
-        return self._variables
+        assert not self._expr_stack
+        return self._seen.values()
+
+    def _merge_obj_lists(self, _seen, _exprs):
+        self._seen.update(_seen)
+        if self._exprs is not None:
+            self._exprs.update(_exprs)
+
+    def _process_named_expr(self, child):
+        if self._cache is None:
+            return True, None
+        eid = id(child)
+        if eid in self._cache:
+            _seen, _exprs = self._cache[eid]
+            if all(c.expr is e for c, e in _exprs.values()):
+                # We have already encountered this named expression. We just add
+                # the cached objects to our list and don't descend.
+                #
+                # Note that a cache hit requires not only that we have seen
+                # this expression before, but also that none of the named
+                # expressions have changed.  If they have, then the cache
+                # miss will fall over to the else clause below and descend
+                # into the expression, (implicitly) rebuilding the cache.
+                self._merge_obj_lists(_seen, _exprs)
+                return False, None
+        # If we are descending into a new named expression or a cached
+        # named expression where the cache is now invalid.  Initialize a
+        # cache to store the expression's local objects.
+        self._expr_stack.append((eid, self._seen, self._exprs))
+        self._seen = {}
+        self._exprs = {eid: (child, child.expr)}
+        self._cache[eid] = (self._seen, self._exprs)
+        return True, None
 
 
 def identify_variables(expr, include_fixed=True, named_expression_cache=None):
@@ -1510,13 +1503,17 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
     Yields:
         Each variable that is found.
     """
-    if named_expression_cache is None:
-        named_expression_cache = {}
-    visitor = _VariableVisitor(
-        named_expression_cache=named_expression_cache, include_fixed=include_fixed
-    )
-    variables = visitor.walk_expression(expr)
-    yield from variables
+    v = identify_variables.visitor
+    save = v._include_fixed, v._cache
+    try:
+        v._include_fixed = include_fixed
+        v._cache = named_expression_cache
+        yield from v.walk_expression(expr)
+    finally:
+        v._include_fixed, v._cache = save
+
+
+identify_variables.visitor = IdentifyVariableVisitor()
 
 
 # =====================================================
@@ -1524,20 +1521,27 @@ def identify_variables(expr, include_fixed=True, named_expression_cache=None):
 # =====================================================
 
 
-class _MutableParamVisitor(SimpleExpressionVisitor):
+class IdentifyMutableParamVisitor(IdentifyVariableVisitor):
     def __init__(self):
-        self.seen = set()
+        # Hide the IdentifyVariableVisitor API (not relevant here)
+        super().__init__()
 
-    def visit(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return
-
-        # TODO: Confirm that this has the right semantics
-        if not node.is_variable_type() and node.is_fixed() and not node.is_constant():
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-            return node
+    def beforeChild(self, parent, child, index):
+        if child.__class__ in native_types:
+            return False, None
+        elif child.is_expression_type():
+            if child.is_named_expression_type():
+                return self._process_named_expr(child)
+            else:
+                return True, None
+        if (
+            not child.is_variable_type()
+            and child.is_fixed()
+            and not child.is_constant()
+        ):
+            if id(child) not in self._seen:
+                self._seen[id(child)] = child
+        return False, None
 
 
 def identify_mutable_parameters(expr):
@@ -1551,9 +1555,10 @@ def identify_mutable_parameters(expr):
     Yields:
         Each mutable parameter that is found.
     """
-    visitor = _MutableParamVisitor()
-    yield from visitor.xbfs_yield_leaves(expr)
+    yield from identify_mutable_parameters.visitor.walk_expression(expr)
 
+
+identify_mutable_parameters.visitor = IdentifyMutableParamVisitor()
 
 # =====================================================
 #  polynomial_degree
@@ -1664,35 +1669,33 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
     def visit(self, node, values):
         """Visit nodes that have been expanded"""
-        for i, val in enumerate(values):
-            arg = node.arg(i)
-
-            if arg is None:
-                values[i] = 'Undefined'
-            elif arg.__class__ in native_numeric_types:
-                pass
-            elif arg.__class__ in nonpyomo_leaf_types:
-                values[i] = f"{val}"
-            else:
-                parens = False
-                if (
-                    not self.verbose
-                    and arg.is_expression_type()
-                    and node.PRECEDENCE is not None
-                ):
-                    if arg.PRECEDENCE is None:
-                        pass
-                    elif node.PRECEDENCE < arg.PRECEDENCE:
+        node_prec = node.PRECEDENCE
+        if node_prec is not None and not self.verbose:
+            for i, (val, arg) in enumerate(zip(values, node.args)):
+                arg_prec = getattr(arg, 'PRECEDENCE', None)
+                if arg_prec is None:
+                    # This embedded constant (4) is evil, but to actually
+                    # import the NegationExpression.PRECEDENCE from
+                    # numeric_expr would create a circular dependency.
+                    #
+                    # FIXME: rework the dependencies between
+                    # numeric_expr and visitor
+                    if val[0] == '-' and node_prec < 4:
+                        values[i] = f"({val})"
+                else:
+                    if node_prec < arg_prec:
                         parens = True
-                    elif node.PRECEDENCE == arg.PRECEDENCE:
+                    elif node_prec == arg_prec:
                         if i == 0:
                             parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
                         elif i == node.nargs() - 1:
                             parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
-                if parens:
-                    values[i] = f"({val})"
+                    else:
+                        parens = False
+                    if parens:
+                        values[i] = f"({val})"
 
         if self._expression_handlers and node.__class__ in self._expression_handlers:
             return self._expression_handlers[node.__class__](self, node, values)
@@ -1706,7 +1709,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
         Return True if the node is not expanded.
         """
         if node is None:
-            return True, None
+            return True, 'Undefined'
 
         if node.__class__ in native_numeric_types:
             return True, str(node)

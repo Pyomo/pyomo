@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -273,6 +273,13 @@ def ROSolver_iterative_solve(model_data):
 
         # terminate on time limit
         if separation_results.time_out or separation_results.subsolver_error:
+            # report PyROS failure to find violated constraint for subsolver error
+            if separation_results.subsolver_error:
+                config.progress_logger.warning(
+                    "PyROS failed to find a constraint violation and "
+                    "will terminate with sub-solver error."
+                )
+
             pyros_term_cond = (
                 pyrosTerminationCondition.time_out
                 if separation_results.time_out

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from pyomo.common.config import document_kwargs_from_configdict
@@ -33,7 +33,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-__version__ = "1.3.1"
+__version__ = "1.3.6"
 
 
 default_pyros_solver_logger = setup_pyros_logger()
@@ -61,7 +61,14 @@ def _get_pyomo_version_info():
     ]
     try:
         commit_hash = (
-            subprocess.check_output(commit_hash_command_args).decode("ascii").strip()
+            subprocess.check_output(
+                commit_hash_command_args,
+                # suppress git error if Pyomo installation
+                # is not a git repo
+                stderr=subprocess.DEVNULL,
+            )
+            .decode("ascii")
+            .strip()
         )
     except subprocess.CalledProcessError:
         commit_hash = "unknown"
@@ -133,7 +140,8 @@ class PyROS(object):
         logger.log(
             msg=(
                 f"{' ' * len('PyROS:')} "
-                f"Invoked at UTC {datetime.utcnow().isoformat()}"
+                "Invoked at UTC "
+                f"{datetime.now(timezone.utc).isoformat()}"
             ),
             **log_kwargs,
         )
@@ -299,10 +307,12 @@ class PyROS(object):
             First-stage model variables (or design variables).
         second_stage_variables: VarData, Var, or iterable of VarData/Var
             Second-stage model variables (or control variables).
-        uncertain_params: ParamData, Param, or iterable of ParamData/Param
+        uncertain_params: (iterable of) Param, Var, ParamData, or VarData
             Uncertain model parameters.
-            The `mutable` attribute for all uncertain parameter objects
-            must be set to True.
+            Of every constituent `Param` object,
+            the `mutable` attribute must be set to True.
+            All constituent `Var`/`VarData` objects should be
+            fixed.
         uncertainty_set: UncertaintySet
             Uncertainty set against which the solution(s) returned
             will be confirmed to be robust.

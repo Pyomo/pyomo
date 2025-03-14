@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,8 +10,8 @@
 #  ___________________________________________________________________________
 
 """
-Rooney Biegler model, based on Rooney, W. C. and Biegler, L. T. (2001). Design for 
-model parameter uncertainty using nonlinear confidence regions. AIChE Journal, 
+Rooney Biegler model, based on Rooney, W. C. and Biegler, L. T. (2001). Design for
+model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 47(8), 1794-1804.
 """
 

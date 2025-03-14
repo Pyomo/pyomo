@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -921,11 +921,7 @@ class BlockData(ActiveComponentData):
             a matching component is not found, None is returned.
 
         """
-        if type(label_or_component) is ComponentUID:
-            cuid = label_or_component
-        else:
-            cuid = ComponentUID(label_or_component)
-        return cuid.find_component_on(self)
+        return ComponentUID(label_or_component).find_component_on(self)
 
     @contextmanager
     def _declare_reserved_components(self):

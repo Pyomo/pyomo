@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -42,6 +42,8 @@ from pyomo.core.util import quicksum, dot_product
 from pyomo.opt.results import check_optimal_termination
 from pyomo.contrib.pyros.util import (
     copy_docstring,
+    PARAM_IS_CERTAIN_REL_TOL,
+    PARAM_IS_CERTAIN_ABS_TOL,
     POINT_IN_UNCERTAINTY_SET_TOL,
     standardize_component_data,
 )
@@ -478,6 +480,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     components of a Pyomo modeling object.
     """
 
+    # True if parameter_bounds attribute returns
+    # exact bounding box, False otherwise
+    _PARAMETER_BOUNDS_EXACT = False
+
     @property
     @abc.abstractmethod
     def dim(self):
@@ -661,14 +667,45 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         return is_in_set
 
-    def _compute_parameter_bounds(self, solver):
+    def _compute_parameter_bounds(self, solver, index=None):
         """
-        Compute coordinate value bounds for every dimension
-        of `self` by solving a bounding model.
+        Compute lower and upper coordinate value bounds
+        for every dimension of `self` by solving a bounding model.
+
+        Parameters
+        ----------
+        solver : Pyomo solver type
+            Optimizer to invoke on the bounding problems.
+        index : list of int, optional
+            Positional indices of the coordinates for which
+            to compute bounds. If None is passed,
+            then the argument is set to ``list(range(self.dim))``,
+            so that the bounds for all coordinates are computed.
+
+        Returns
+        -------
+        param_bounds : list of tuple of float
+            Each entry of the list is a 2-tuple
+            containing the lower and upper bound for
+            the corresponding dimension.
+
+        Raises
+        ------
+        ValueError
+            If solver failed to compute a bound for a
+            coordinate.
         """
+        if index is None:
+            index = list(range(self.dim))
+
         bounding_model = self._create_bounding_model()
+        objs_to_optimize = (
+            (idx, obj)
+            for idx, obj in bounding_model.param_var_objectives.items()
+            if idx in index
+        )
         param_bounds = []
-        for idx, obj in bounding_model.param_var_objectives.items():
+        for idx, obj in objs_to_optimize:
             # activate objective for corresponding dimension
             obj.activate()
             bounds = []
@@ -753,6 +790,47 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         raise NotImplementedError(
             f"Auxiliary parameter computation not supported for {type(self).__name__}."
         )
+
+    def _is_coordinate_fixed(self, config, index=None):
+        """
+        Test whether each Cartesian coordinate of interest
+        of the uncertainty set is constrained to a single value.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver options. Should at least contain attribute
+            `global_solver`.
+        index : iterable of int, optional
+            Positional indices of the coordinates to check.
+            If `None` is passed, then `index` is set to
+            ``list(range(self.dim))``, so that all coordinates
+            are checked.
+
+        Returns
+        -------
+        list of bool
+            Same length as ``index``.
+            An entry of the list is True if the corresponding
+            coordinate is constrained to a single value,
+            False otherwise.
+        """
+
+        def _values_close(a, b):
+            return math.isclose(
+                a, b, rel_tol=PARAM_IS_CERTAIN_ABS_TOL, abs_tol=PARAM_IS_CERTAIN_REL_TOL
+            )
+
+        param_bounds = self.parameter_bounds
+        if not (param_bounds and self._PARAMETER_BOUNDS_EXACT):
+            # we need the exact bounding box
+            param_bounds = self._compute_parameter_bounds(
+                solver=config.global_solver, index=index
+            )
+        else:
+            index = list(range(len(param_bounds))) if index is None else index
+            param_bounds = [param_bounds[idx] for idx in index]
+        return [_values_close(lb, ub) for lb, ub in param_bounds]
 
 
 class UncertaintySetList(MutableSequence):
@@ -982,6 +1060,8 @@ class BoxSet(UncertaintySet):
            [0, 1]])
     """
 
+    _PARAMETER_BOUNDS_EXACT = True
+
     def __init__(self, bounds):
         """Initialize self (see class docstring)."""
         self.bounds = bounds
@@ -1115,6 +1195,8 @@ class CardinalitySet(UncertaintySet):
     >>> gamma_set.gamma
     1
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, origin, positive_deviation, gamma):
         """Initialize self (see class docstring)."""
@@ -1610,6 +1692,8 @@ class BudgetSet(UncertaintySet):
     array([2, 2, 2])
     """
 
+    _PARAMETER_BOUNDS_EXACT = True
+
     def __init__(self, budget_membership_mat, rhs_vec, origin=None):
         """Initialize self (see class docstring)."""
         self.budget_membership_mat = budget_membership_mat
@@ -1893,6 +1977,8 @@ class FactorModelSet(UncertaintySet):
     >>> fset.beta
     0.5
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
         """Initialize self (see class docstring)."""
@@ -2215,6 +2301,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     """
 
+    _PARAMETER_BOUNDS_EXACT = True
+
     def __init__(self, center, half_lengths):
         """Initialize self (see class docstring)."""
         self.center = center
@@ -2443,6 +2531,8 @@ class EllipsoidalSet(UncertaintySet):
     0.95
 
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, center, shape_matrix, scale=1, gaussian_conf_lvl=None):
         """Initialize self (see class docstring)."""
@@ -2739,6 +2829,8 @@ class DiscreteScenarioSet(UncertaintySet):
     [(1, 1), (2, 1), (1, 2)]
 
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, scenarios):
         """Initialize self (see class docstring)."""

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,6 +17,7 @@ from pyomo.contrib.cp.interval_var import (
 )
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.logical_expr import BooleanExpression
+from pyomo.core.expr.numeric_expr import SumExpression
 
 
 def _sum_two_units(_self, _other):
@@ -119,6 +120,7 @@ class StepFunction(ExpressionBase):
     """
 
     __slots__ = ()
+    PRECEDENCE = None
 
     def __add__(self, other):
         return _generate_sum_expression(self, other)
@@ -287,6 +289,7 @@ class CumulativeFunction(StepFunction):
     """
 
     __slots__ = ('_args_', '_nargs')
+    PRECEDENCE = SumExpression.PRECEDENCE
 
     def __init__(self, args, nargs=None):
         # We make sure args are a list because we might add to them later, if
@@ -363,7 +366,7 @@ class AlwaysIn(BooleanExpression):
         return 5
 
     def _to_string(self, values, verbose, smap):
-        return "(%s).within(bounds=(%s, %s), times=(%s, %s))" % (
+        return "%s.within(bounds=(%s, %s), times=(%s, %s))" % (
             values[0],
             values[1],
             values[2],

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -550,6 +550,9 @@ class DesignOfExperiments:
                 raise RuntimeError(
                     "Model from experiment did not solve appropriately. Make sure the model is well-posed."
                 )
+
+            # Reset value of parameter to default value before computing finite difference perturbation
+            param.set_value(model.unknown_parameters[param])
 
             # Extract the measurement values for the scenario and append
             measurement_vals.append(
@@ -1458,7 +1461,7 @@ class DesignOfExperiments:
             }
         )
 
-        succeses = 0
+        successes = 0
         failures = 0
         total_points = np.prod(
             np.array([len(v) for k, v in design_ranges_enum.items()])
@@ -1477,14 +1480,14 @@ class DesignOfExperiments:
 
             # Compute FIM with given options
             try:
-                curr_point = succeses + failures + 1
+                curr_point = successes + failures + 1
 
                 # Logging information for each run
                 self.logger.info("This is run %s out of %s.", curr_point, total_points)
 
                 # Attempt the FIM computation
                 self.compute_FIM(model=model, method=method)
-                succeses += 1
+                successes += 1
 
                 # iteration time
                 iter_t = iter_timer.toc(msg=None)
@@ -2140,7 +2143,7 @@ class DesignOfExperiments:
         if not hasattr(model, "unknown_parameters"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_unknown_parameter_values`"
                 )
 
             theta_vals = [
@@ -2174,15 +2177,15 @@ class DesignOfExperiments:
         if not hasattr(model, "experiment_outputs"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_output_values`"
                 )
 
             y_hat_vals = [
                 pyo.value(k)
-                for k, v in model.scenario_blocks[0].measurement_error.items()
+                for k, v in model.scenario_blocks[0].experiment_outputs.items()
             ]
         else:
-            y_hat_vals = [pyo.value(k) for k, v in model.measurement_error.items()]
+            y_hat_vals = [pyo.value(k) for k, v in model.experiment_outputs.items()]
 
         return y_hat_vals
 
@@ -2210,7 +2213,7 @@ class DesignOfExperiments:
         if not hasattr(model, "measurement_error"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_measurement_error_values`"
                 )
 
             sigma_vals = [

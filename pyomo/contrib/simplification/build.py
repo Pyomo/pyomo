@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -63,7 +63,7 @@ def build_ginac_library(parallel=None, argv=None, env=None):
         assert subprocess.run(make_cmd, cwd=cln_dir, env=env).returncode == 0
         assert subprocess.run(install_cmd, cwd=cln_dir, env=env).returncode == 0
 
-        url = 'https://www.ginac.de/ginac-1.8.7.tar.bz2'
+        url = 'https://www.ginac.de/ginac-1.8.8.tar.bz2'
         ginac_dir = os.path.join(tmpdir, 'ginac')
         downloader.set_destination_filename(ginac_dir)
         logger.info(

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -148,6 +148,11 @@ class ExtendedEnumType(_EnumType):
         # This enum "contains" both its local members and the members in
         # the __base_enum__ (necessary for good auto-enum[sphinx] docs)
         return super().__contains__(member) or member in cls.__base_enum__
+
+    def __dir__(self):
+        _dir = set(super().__dir__())
+        _dir.update(e.name for e in self)
+        return _dir
 
     def __instancecheck__(cls, instance):
         if cls.__subclasscheck__(type(instance)):
