@@ -39,7 +39,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         # is not needed, it works perfectly well.
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
-        
+
         params = CsplineParameters(model=m)
 
         # Make sure we have the expected number of parameters
@@ -60,7 +60,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         # Go to start of string stream
         fptr.seek(0, os.SEEK_SET)
 
-        params.knots = np.array([1,3])
+        params.knots = np.array([1, 3])
         assert not params.valid
         params.get_parameters_from_file(fptr)
         assert params.valid
@@ -69,4 +69,3 @@ class CsplineExternalParamsTest(unittest.TestCase):
         y_pred = params.f(np.array(x_data))
         for yd, yp in zip(y_data, y_pred):
             self.assertAlmostEqual(yd, yp, 8)
-

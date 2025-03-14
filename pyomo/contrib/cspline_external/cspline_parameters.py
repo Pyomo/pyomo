@@ -86,7 +86,7 @@ def _fxx_cubic(x, alpha, s=None):
 class CsplineParameters(object):
     def __init__(self, model=None, fptr=None):
         """Cubic spline parameters class.  This can be used to read and
-        write parameters or calculate cubic spline function values and 
+        write parameters or calculate cubic spline function values and
         derivatives for testing.
         """
         if model is not None and fptr is not None:
@@ -177,7 +177,7 @@ class CsplineParameters(object):
             x: location, float or numpy array
 
         Returns:
-            segment(s) containing x, if x is a numpy array a numpy 
+            segment(s) containing x, if x is a numpy array a numpy
             array of integers is returned otherwise return an integer
         """
         s = np.searchsorted(self.knots, x)
@@ -197,12 +197,7 @@ class CsplineParameters(object):
             f(x) numpy array if x is numpy array or float
         """
         s = self.segment(x)
-        return (
-            self.a1[s]
-            + self.a2[s] * x 
-            + self.a3[s] * x**2 
-            + self.a4[s] * x**3
-        )
+        return self.a1[s] + self.a2[s] * x + self.a3[s] * x**2 + self.a4[s] * x**3
 
     def f_x(self, x):
         """Get the first derivative of f(x)
@@ -240,7 +235,7 @@ def cubic_parameters_model(
     """Create a Pyomo model to calculate parameters for a cubic spline.  By default
     this creates a square linear model, but optionally it can leave off the endpoint
     second derivative constraints and add an objective function for fitting data
-    instead.  The purpose of the alternative least squares form is to allow the spline 
+    instead.  The purpose of the alternative least squares form is to allow the spline
     to be constrained in other ways that don't require a perfect data match. The knots
     don't need to be the same as the x data to allow, for example, additional segments
     for extrapolation. This is not the most computationally efficient way to calculate
@@ -343,4 +338,3 @@ def add_endpoint_second_derivative_constraints(m):
         else:
             j = s
         return _fxx_cubic(m.x[j], m.alpha, s) == 0
-

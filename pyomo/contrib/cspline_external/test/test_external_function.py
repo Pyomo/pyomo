@@ -65,7 +65,7 @@ class CsplineExternal1DTest(unittest.TestCase):
         """Test that the cspline can take the full parameter file contents in str"""
         params = os.path.join(this_file_dir(), "test_params.txt")
         with open(params, "r") as fptr:
-            params = fptr.read()   
+            params = fptr.read()
         # this is that data that was used to generate the params
         x_data = [1, 2, 3, 4, 5]
         y_data = [2, 3, 5, 2, 1]
