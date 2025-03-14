@@ -558,3 +558,46 @@ class TestPreformatted(unittest.TestCase):
         self.assertIs(msg.msg, ref)
         self.assertEqual(str(msg), '2')
         self.assertEqual(repr(msg), "Preformatted(2)")
+
+
+class TestLoggingIntercept(unittest.TestCase):
+    def test_init(self):
+        li = LoggingIntercept()
+        self.assertEqual(li.module, 'root')
+
+        li = LoggingIntercept(module='pyomo.core')
+        self.assertEqual(li.module, 'pyomo.core')
+
+        li = LoggingIntercept(logger=logger)
+        self.assertEqual(li.module, 'pyomo.common.log.testing')
+
+        with self.assertRaisesRegex(
+            ValueError, "LoggingIntercept: only one of 'module' and 'logger' is allowed"
+        ):
+            li = LoggingIntercept(module='pyomo', logger=logger)
+
+    def test_propagate(self):
+        self.assertEqual(logger.propagate, True)
+        with LoggingIntercept(logger=logger):
+            self.assertEqual(logger.propagate, False)
+        self.assertEqual(logger.propagate, True)
+
+    def test_propagate(self):
+        self.assertEqual(logger.level, 30)
+        try:
+            with LoggingIntercept(logger=logger, level=None):
+                self.assertEqual(logger.level, 30)
+            self.assertEqual(logger.level, 30)
+            with LoggingIntercept(logger=logger, level=40):
+                self.assertEqual(logger.level, 40)
+            self.assertEqual(logger.level, 30)
+
+            logger.setLevel(40)
+            with LoggingIntercept(logger=logger, level=None):
+                self.assertEqual(logger.level, 40)
+            self.assertEqual(logger.level, 40)
+            with LoggingIntercept(logger=logger, level=30):
+                self.assertEqual(logger.level, 30)
+            self.assertEqual(logger.level, 40)
+        finally:
+            logger.setLevel(30)
