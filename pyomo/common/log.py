@@ -342,6 +342,8 @@ class LoggingIntercept(object):
         # Get the logger for the scope we will be overriding
         logger = self._logger
         self._save = logger.level, logger.propagate, logger.handlers
+        if self._level is None:
+            self._level = logger.getEffectiveLevel()
         # Set up the handler
         output = self.output
         if output is None:
