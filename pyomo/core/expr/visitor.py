@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -682,7 +682,7 @@ class StreamBasedExpressionVisitor(object):
 @deprecated(
     "The SimpleExpressionVisitor is deprecated.  "
     "Please use the StreamBasedExpressionVisitor instead.",
-    version='6.9.0.dev0',
+    version='6.9.0',
 )
 class SimpleExpressionVisitor(object):
     """
