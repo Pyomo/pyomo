@@ -354,3 +354,49 @@ implemented. For example, for ``ipopt``:
    :members:
    :show-inheritance:
    :inherited-members:
+
+
+Dual Sign Convention
+--------------------
+Regardless of the solver, Pyomo adopts the following sign convention. Given the problem
+
+.. math::
+
+   \begin{align}
+   \min & f(x) \\
+   \text{s.t.} \\
+   & c_i(x) = 0 && \forall i \in \mathcal{E} \\
+   & g_i(x) \leq 0 && \forall i \in \mathcal{U} \\
+   & h_i(x) \geq 0 && \forall i \in \mathcal{L}
+   \end{align}
+
+We define the Lagrangian as
+
+.. math::
+
+   \begin{align}
+   L(x, \lambda, \nu, \delta) = f(x) - \sum_{i \in \mathcal{E}} \lambda_i c_i(x) - \sum_{i \in \mathcal{U}} \nu_i g_i(x) - \sum_{i \in \mathcal{L}} \delta_i h_i(x)
+   \end{align}
+
+Then, the KKT conditions are [NW99]_
+
+.. math::
+
+   \begin{align}
+   \nabla_x L(x, \lambda, \nu, \delta) = 0 \\
+   c(x) = 0 \\
+   g(x) \leq 0 \\
+   h(x) \geq 0 \\
+   \nu \leq 0 \\
+   \delta \geq 0 \\
+   \nu_i g_i(x) = 0 \\
+   \delta_i h_i(x) = 0
+   \end{align}
+
+Note that this sign convention is based on the ``(lower, body, upper)``
+representation of constraints rather than the expression provided by a
+user. Users can specify constraints with variables on both the left- and
+right-hand sides of equalities and inequalities. However, the
+``(lower, body, upper)`` representation ensures that all variables
+appear in the ``body``, matching the form of the problem above.
+
