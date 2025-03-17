@@ -1,6 +1,6 @@
 /* ___________________________________________________________________________
  * Pyomo: Python Optimization Modeling Objects
- * Copyright (c) 2008-2022
+ * Copyright (c) 2008-2025
  *  National Technology and Engineering Solutions of Sandia, LLC
  * Under the terms of Contract DE-NA0003525 with National Technology and
  * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -143,7 +143,7 @@ extern real cspline(arglist *al) {
    // 1 is above first knot..., so > 0 we need to decrement to get the 
    // segment index)
    if(seg > 0) --seg;
-   // In off the curve on the high side, use last segment
+   // If off the curve on the high side, use last segment
    if(seg >= n_seg_cspline[idx]) seg = n_seg_cspline[idx] - 1;
 
    // Get the parameters for the correct segment 

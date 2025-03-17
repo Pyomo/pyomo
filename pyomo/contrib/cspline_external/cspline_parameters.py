@@ -199,30 +199,6 @@ class CsplineParameters(object):
         s = self.segment(x)
         return self.a1[s] + self.a2[s] * x + self.a3[s] * x**2 + self.a4[s] * x**3
 
-    def f_x(self, x):
-        """Get the first derivative of f(x)
-
-        Args:
-            x: location, numpy array float
-
-        Returns:
-            df(x)/dx numpy array if x is numpy array or float
-        """
-        s = self.segment(x)
-        return self.a2[s] + 2 * self.a2[s] * x + 3 * self.a3[s] * x**2
-
-    def f_xx(self, x):
-        """Get the  second derivative of f(x)
-
-        Args:
-            x: location, numpy array float
-
-        Returns:
-            d2f(x)/dx2 numpy array if x is numpy array or float
-        """
-        s = self.segment(x)
-        return 2 * self.a2[s] + 6 * self.a3[s] * x
-
 
 def cubic_parameters_model(
     x_data,
@@ -252,7 +228,7 @@ def cubic_parameters_model(
         name: optional model name
 
     Returns:
-        Poymo ConcreteModel
+        Pyomo ConcreteModel
     """
     n_data = len(x_data)
     assert n_data == len(y_data)
