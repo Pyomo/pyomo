@@ -1460,6 +1460,7 @@ class DesignOfExperiments:
                 "eigval_min": [],
                 "eigval_max": [],
                 "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1551,8 +1552,9 @@ class DesignOfExperiments:
             fim_factorial_results["eigval_min"].append(E_vals.min())
             fim_factorial_results["eigval_max"].append(E_vals.max())
             fim_factorial_results["det_FIM"].append(np.linalg.det(FIM))
+            fim_factorial_results["trace_FIM"].append(np.trace(FIM))
             fim_factorial_results["solve_time"].append(time_set[-1])
-
+            
         self.fim_factorial_results = fim_factorial_results
 
         return self.fim_factorial_results
