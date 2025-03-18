@@ -189,7 +189,8 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             for key, option in options.items():
                 self._solver_model.setOptionValue(key, option)
             timer.start('optimize')
-            self._solver_model.HandleKeyboardInterrupt = True
+            if self.version()[:2] >= (1, 8):
+                self._solver_model.HandleKeyboardInterrupt = True
             self._solver_model.run()
             timer.stop('optimize')
 
