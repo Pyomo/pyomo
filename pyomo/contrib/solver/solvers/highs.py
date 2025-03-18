@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -37,7 +37,10 @@ from pyomo.contrib.solver.common.results import (
     SolutionStatus,
 )
 from pyomo.contrib.solver.common.config import PersistentBranchAndBoundConfig
-from pyomo.contrib.solver.common.persistent import PersistentSolverUtils
+from pyomo.contrib.solver.common.persistent import (
+    PersistentSolverUtils,
+    PersistentSolverMixin,
+)
 from pyomo.contrib.solver.common.solution_loader import PersistentSolutionLoader
 from pyomo.contrib.solver.common.util import (
     NoFeasibleSolutionError,
@@ -119,7 +122,7 @@ class _MutableConstraintBounds:
         self.highs.changeRowBounds(row_ndx, lb, ub)
 
 
-class Highs(PersistentSolverUtils, PersistentSolverBase):
+class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
     """
     Interface to HiGHS
     """
