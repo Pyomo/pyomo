@@ -1525,7 +1525,7 @@ class DesignOfExperiments:
             # Compute and record metrics on FIM
             D_opt = np.log10(np.linalg.det(FIM))
             A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eigh(FIM)  # Grab eigenvalues
+            E_vals = np.linalg.eigvalsh(FIM)  # Grab eigenvalues
             E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
             # Warn the user if there is a ``large`` imaginary component (should not be)
             if abs(E_vals.imag[E_ind]) > 1e-8:
@@ -1549,8 +1549,8 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
-            fim_factorial_results["eigval_min"].append(E_vals.min())
-            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["eigval_min"].append(E_vals[0])
+            fim_factorial_results["eigval_max"].append(E_vals[-1])
             fim_factorial_results["det_FIM"].append(np.linalg.det(FIM))
             fim_factorial_results["trace_FIM"].append(np.trace(FIM))
             fim_factorial_results["solve_time"].append(time_set[-1])
