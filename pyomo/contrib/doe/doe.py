@@ -1412,6 +1412,10 @@ class DesignOfExperiments:
         design_ranges: dict of lists, of the form {<var_name>: [start, stop, numsteps]}
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
+        Returns
+        ----------
+        fim_factorial_results: dict of lists, containing the results of the full factorial exploration
+          
 
         """
         # Start timer
@@ -1457,7 +1461,9 @@ class DesignOfExperiments:
                 "log10 A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
-                "solve_time": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "solve_time": [],                
             }
         )
 
@@ -1519,9 +1525,11 @@ class DesignOfExperiments:
             FIM = self._computed_FIM
 
             # Compute and record metrics on FIM
+            #??????
+            Deter = np.linalg.det(FIM)
             D_opt = np.log10(np.linalg.det(FIM))
             A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
+            E_vals, E_vecs = np.linalg.eigh(FIM)  # Grab eigenvalues
             E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
             # Warn the user if there is a ``large`` imaginary component (should not be)
             if abs(E_vals.imag[E_ind]) > 1e-8:
@@ -1537,6 +1545,12 @@ class DesignOfExperiments:
 
             ME_opt = np.log10(np.linalg.cond(FIM))
 
+            #==============================================================================
+            # Compute the minimum and maximum eigenvalues of the FIM
+            eigval_min = np.min(E_vals)  # Grab minimum eigenvalue
+            eigval_max = np.max(E_vals)  # Grab maximum eigenvalue
+            #==============================================================================
+
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
                 fim_factorial_results[k.name].append(pyo.value(k))
@@ -1545,7 +1559,10 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["eigval_min"].append(eigval_min)
+            fim_factorial_results["eigval_max"].append(eigval_max)
             fim_factorial_results["solve_time"].append(time_set[-1])
+
 
         self.fim_factorial_results = fim_factorial_results
 

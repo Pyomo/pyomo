@@ -17,7 +17,7 @@ import pyomo.environ as pyo
 
 import json
 from pathlib import Path
-
+import idaes
 
 # Example for sensitivity analysis on the reactor experiment
 # After sensitivity analysis is done, we perform optimal DoE
@@ -121,6 +121,8 @@ def run_reactor_doe():
     )
 
     print(doe_obj.results["Experiment Design Names"])
+    print("\n Measurement Error: \n\t", doe_obj.results['Measurement Error'])
+    print("\n Experiment Outputs: \n\t", doe_obj.results['Experiment Outputs'])
 
     ###################
     # End optimal DoE
