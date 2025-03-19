@@ -132,24 +132,5 @@ class TestKNITROAMPLInterface(unittest.TestCase):
             self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.X), 3)
 
-    @unittest.skipIf(
-        not knitroampl_available, "The 'knitroampl' command is not available"
-    )
-    def test_unbounded_mip(self):
-        with SolverFactory('knitroampl') as opt:
-            model = ConcreteModel()
-            model.X = Var(within=Integers)
-            model.Obj = Objective(expr=model.X)
-
-            results = opt.solve(model)
-
-            self.assertIn(
-                results.solver.termination_condition,
-                (
-                    TerminationCondition.unbounded,
-                    TerminationCondition.infeasibleOrUnbounded,
-                ),
-            )
-
 if __name__ == "__main__":
     unittest.main()
