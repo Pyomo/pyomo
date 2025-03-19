@@ -141,31 +141,14 @@ class redirect_fd(object):
         if not isinstance(self.target, int):
             os.close(out_fd)
 
-        if self.std:
-            if self.synchronize:
-                # Cause Python's stdout to point to our new file
-                fd = self.fd
-            else:
-                # IF we are not synchronizing the std file object with
-                # the redirected file descriptor, and IF the current
-                # file object that we are going to emit text to is
-                # pointing to the original file descriptor that we just
-                # redirected, then we want to retarget the std file to
-                # the original (duplicated) target file descriptor.
-                # This allows, e.g. Python to still write to stdout when
-                # we redirect fd=1 to /dev/null
-                try:
-                    old_std_fd = getattr(sys, self.std).fileno()
-                    fd = self.original_fd if old_std_fd == self.fd else None
-                except (io.UnsupportedOperation, AttributeError):
-                    fd = None
-            if fd is not None:
-                self.target_file = os.fdopen(fd, 'w', closefd=False)
-                setattr(sys, self.std, self.target_file)
+        if self.synchronize and self.std:
+            # Cause Python's stdout to point to our new file
+            self.target_file = os.fdopen(self.fd, 'w', closefd=False)
+            setattr(sys, self.std, self.target_file)
 
         return self
 
-    def __exit__(self, t, v, traceback):
+    def __exit__(self, et, ev, tb):
         # Close output: this either closes the new file that we opened,
         # or else the new file that points to the original (duplicated)
         # file descriptor
