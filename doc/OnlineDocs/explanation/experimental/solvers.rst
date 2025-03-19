@@ -40,14 +40,14 @@ with existing interfaces).
    :header-rows: 1
 
    * - Solver
-     - Name registered in the |br| ``pyomo.contrib.solver.factory.SolverFactory``
+     - Name registered in the |br| ``pyomo.contrib.solver.common.factory.SolverFactory``
      - Name registered in the |br| ``pyomo.opt.base.solvers.LegacySolverFactory``
    * - Ipopt
      - ``ipopt``
      - ``ipopt_v2``
    * - Gurobi (persistent)
-     - ``gurobi``
-     - ``gurobi_v2``
+     - ``gurobi_persistent``
+     - ``gurobi_persistent_v2``
    * - Gurobi (direct)
      - ``gurobi_direct``
      - ``gurobi_direct_v2``
@@ -64,7 +64,6 @@ be used with other Pyomo tools / capabilities.
    :skipif: not ipopt_available
 
    import pyomo.environ as pyo
-   from pyomo.contrib.solver.util import assert_optimal_termination
 
    model = pyo.ConcreteModel()
    model.x = pyo.Var(initialize=1.5)
@@ -76,13 +75,14 @@ be used with other Pyomo tools / capabilities.
    model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
 
    status = pyo.SolverFactory('ipopt_v2').solve(model)
-   assert_optimal_termination(status)
+   pyo.assert_optimal_termination(status)
    model.pprint()
 
 .. testoutput::
    :skipif: not ipopt_available
    :hide:
 
+   ...
    2 Var Declarations
    ...
    3 Declarations: x y obj
@@ -114,6 +114,7 @@ future methods of specifying solver options are supported:
    :skipif: not ipopt_available
    :hide:
 
+   ...
    2 Var Declarations
    ...
    3 Declarations: x y obj
@@ -128,8 +129,7 @@ Here we use the new interface by importing it directly:
 
    # Direct import
    import pyomo.environ as pyo
-   from pyomo.contrib.solver.util import assert_optimal_termination
-   from pyomo.contrib.solver.ipopt import Ipopt
+   from pyomo.contrib.solver.solvers.ipopt import Ipopt
 
    model = pyo.ConcreteModel()
    model.x = pyo.Var(initialize=1.5)
@@ -142,7 +142,7 @@ Here we use the new interface by importing it directly:
 
    opt = Ipopt()
    status = opt.solve(model)
-   assert_optimal_termination(status)
+   pyo.assert_optimal_termination(status)
    # Displays important results information; only available through the new interfaces
    status.display()
    model.pprint()
@@ -165,8 +165,7 @@ Here we use the new interface by retrieving it from the new ``SolverFactory``:
 
    # Import through new SolverFactory
    import pyomo.environ as pyo
-   from pyomo.contrib.solver.util import assert_optimal_termination
-   from pyomo.contrib.solver.factory import SolverFactory
+   from pyomo.contrib.solver.common.factory import SolverFactory
 
    model = pyo.ConcreteModel()
    model.x = pyo.Var(initialize=1.5)
@@ -179,7 +178,7 @@ Here we use the new interface by retrieving it from the new ``SolverFactory``:
 
    opt = SolverFactory('ipopt')
    status = opt.solve(model)
-   assert_optimal_termination(status)
+   pyo.assert_optimal_termination(status)
    # Displays important results information; only available through the new interfaces
    status.display()
    model.pprint()
@@ -204,7 +203,6 @@ replace the existing (legacy) SolverFactory and utilities with the new
 
    # Change default SolverFactory version
    import pyomo.environ as pyo
-   from pyomo.contrib.solver.util import assert_optimal_termination
    from pyomo.__future__ import solver_factory_v3
 
    model = pyo.ConcreteModel()
@@ -217,7 +215,7 @@ replace the existing (legacy) SolverFactory and utilities with the new
    model.obj = pyo.Objective(rule=rosenbrock, sense=pyo.minimize)
 
    status = pyo.SolverFactory('ipopt').solve(model)
-   assert_optimal_termination(status)
+   pyo.assert_optimal_termination(status)
    # Displays important results information; only available through the new interfaces
    status.display()
    model.pprint()
@@ -245,13 +243,13 @@ recently incorporated into the redesigned NL writer.  For example, you
 can control the NL writer in the new ``ipopt`` interface through the
 solver's ``writer_config`` configuration option:
 
-.. autoclass:: pyomo.contrib.solver.ipopt.Ipopt
+.. autoclass:: pyomo.contrib.solver.solvers.ipopt.Ipopt
    :noindex:
    :members: solve
 
 .. testcode::
 
-   from pyomo.contrib.solver.ipopt import Ipopt
+   from pyomo.contrib.solver.solvers.ipopt import Ipopt
    opt = Ipopt()
    opt.config.writer_config.display()
 
@@ -281,18 +279,18 @@ Interface Implementation
 ------------------------
 
 All new interfaces should be built upon one of two classes (currently):
-:class:`SolverBase<pyomo.contrib.solver.base.SolverBase>` or
-:class:`PersistentSolverBase<pyomo.contrib.solver.base.PersistentSolverBase>`.
+:class:`SolverBase<pyomo.contrib.solver.common.base.SolverBase>` or
+:class:`PersistentSolverBase<pyomo.contrib.solver.common.base.PersistentSolverBase>`.
 
 All solvers should have the following:
 
-.. autoclass:: pyomo.contrib.solver.base.SolverBase
+.. autoclass:: pyomo.contrib.solver.common.base.SolverBase
    :noindex:
    :members:
 
 Persistent solvers include additional members as well as other configuration options:
 
-.. autoclass:: pyomo.contrib.solver.base.PersistentSolverBase
+.. autoclass:: pyomo.contrib.solver.common.base.PersistentSolverBase
    :noindex:
    :show-inheritance:
    :members:
@@ -301,12 +299,12 @@ Results
 -------
 
 Every solver, at the end of a
-:meth:`solve<pyomo.contrib.solver.base.SolverBase.solve>` call, will
-return a :class:`Results<pyomo.contrib.solver.results.Results>`
+:meth:`solve<pyomo.contrib.solver.common.base.SolverBase.solve>` call, will
+return a :class:`Results<pyomo.contrib.solver.common.results.Results>`
 object.  This object is a :py:class:`pyomo.common.config.ConfigDict`,
 which can be manipulated similar to a standard ``dict`` in Python.
 
-.. autoclass:: pyomo.contrib.solver.results.Results
+.. autoclass:: pyomo.contrib.solver.common.results.Results
    :noindex:
    :show-inheritance:
    :members:
@@ -318,12 +316,12 @@ Termination Conditions
 
 Pyomo offers a standard set of termination conditions to map to solver
 returns. The intent of
-:class:`TerminationCondition<pyomo.contrib.solver.results.TerminationCondition>`
+:class:`TerminationCondition<pyomo.contrib.solver.common.results.TerminationCondition>`
 is to notify the user of why the solver exited. The user is expected
-to inspect the :class:`Results<pyomo.contrib.solver.results.Results>`
+to inspect the :class:`Results<pyomo.contrib.solver.common.results.Results>`
 object or any returned solver messages or logs for more information.
 
-.. autoclass:: pyomo.contrib.solver.results.TerminationCondition
+.. autoclass:: pyomo.contrib.solver.common.results.TerminationCondition
    :noindex:
    :show-inheritance:
 
@@ -333,13 +331,13 @@ Solution Status
 
 Pyomo offers a standard set of solution statuses to map to solver
 output. The intent of
-:class:`SolutionStatus<pyomo.contrib.solver.results.SolutionStatus>`
+:class:`SolutionStatus<pyomo.contrib.solver.common.results.SolutionStatus>`
 is to notify the user of what the solver returned at a high level. The
 user is expected to inspect the
-:class:`Results<pyomo.contrib.solver.results.Results>` object or any
+:class:`Results<pyomo.contrib.solver.common.results.Results>` object or any
 returned solver messages or logs for more information.
 
-.. autoclass:: pyomo.contrib.solver.results.SolutionStatus
+.. autoclass:: pyomo.contrib.solver.common.results.SolutionStatus
    :noindex:
    :show-inheritance:
 
@@ -351,7 +349,7 @@ Solutions can be loaded back into a model using a ``SolutionLoader``. A specific
 loader should be written for each unique case. Several have already been
 implemented. For example, for ``ipopt``:
 
-.. autoclass:: pyomo.contrib.solver.ipopt.IpoptSolutionLoader
+.. autoclass:: pyomo.contrib.solver.solvers.ipopt.IpoptSolutionLoader
    :noindex:
    :members:
    :show-inheritance:
