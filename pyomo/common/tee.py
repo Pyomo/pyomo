@@ -203,7 +203,6 @@ class capture_output(object):
         self.old = None
         self.tee = None
         self.capture_fd = capture_fd
-        self.fd_redirect = None
         self.context_stack = []
 
     def _enter_context(self, cm):
@@ -277,22 +276,18 @@ class capture_output(object):
                 self.tee = self._enter_context(TeeStream(self.output_stream))
             if self.capture_fd:
                 tee_fd = (self.tee.STDOUT.fileno(), self.tee.STDERR.fileno())
-                self.fd_redirect = []
+                fd_redirect = {}
                 for i in range(2):
                     # Redirect the standard process file descriptor (1 or 2)
-                    self.fd_redirect.append(
-                        self._enter_context(
-                            redirect_fd(i + 1, tee_fd[i], synchronize=False)
-                        )
+                    fd_redirect[i + 1] = self._enter_context(
+                        redirect_fd(i + 1, tee_fd[i], synchronize=False)
                     )
                     # Redirect the file descriptor currently associated with
                     # sys.stdout / sys.stderr
                     fd = old_fd[i]
-                    if fd and fd != i + 1:
-                        self.fd_redirect.append(
-                            self._enter_context(
-                                redirect_fd(fd, tee_fd[i], synchronize=False)
-                            )
+                    if fd and fd not in fd_redirect:
+                        fd_redirect[fd] = self._enter_context(
+                            redirect_fd(fd, tee_fd[i], synchronize=False)
                         )
         except:
             # Note: we will ignore any exceptions raised while exiting
@@ -317,7 +312,6 @@ class capture_output(object):
         #  - Close any opened files
         FAIL.extend(self._exit_context_stack(et, ev, tb))
         sys.stdout, sys.stderr = self.old
-        self.fd_redirect = None
         self.old = None
         self.tee = None
         self.output_stream = None
