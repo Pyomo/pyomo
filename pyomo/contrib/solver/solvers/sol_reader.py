@@ -143,11 +143,11 @@ class SolSolutionLoader(SolutionLoaderBase):
             cons_to_load = set(self._nl_info.constraints)
         else:
             cons_to_load = set(cons_to_load)
-        for cons, val, scale in zip(
+        for con, val, scale in zip(
             self._nl_info.constraints, self._sol_data.duals, scale_list
         ):
-            if cons in cons_to_load:
-                res[cons] = val * scale / obj_scale
+            if con in cons_to_load:
+                res[con] = val * scale / obj_scale
         return res
 
 

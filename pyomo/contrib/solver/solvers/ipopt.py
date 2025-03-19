@@ -268,7 +268,7 @@ class Ipopt(SolverBase):
         for k, val in options.items():
             if k not in ipopt_command_line_options:
                 opt_file_exists = True
-                with open(filename + '.opt', 'a+') as opt_file:
+                with open(filename + '.opt', 'a+', encoding='utf-8') as opt_file:
                     opt_file.write(str(k) + ' ' + str(val) + '\n')
         return opt_file_exists
 
@@ -332,9 +332,13 @@ class Ipopt(SolverBase):
             # be terminated with '\n' regardless of platform.  We will
             # disable universal newlines in the NL file to prevent
             # Python from mapping those '\n' to '\r\n' on Windows.
-            with open(basename + '.nl', 'w', newline='\n') as nl_file, open(
-                basename + '.row', 'w'
-            ) as row_file, open(basename + '.col', 'w') as col_file:
+            with open(
+                basename + '.nl', 'w', newline='\n', encoding='utf-8'
+            ) as nl_file, open(
+                basename + '.row', 'w', encoding='utf-8'
+            ) as row_file, open(
+                basename + '.col', 'w', encoding='utf-8'
+            ) as col_file:
                 timer.start('write_nl_file')
                 self._writer.config.set_value(config.writer_config)
                 try:
@@ -415,7 +419,7 @@ class Ipopt(SolverBase):
                     results.timing_info.total_seconds = 0
             else:
                 if os.path.isfile(basename + '.sol'):
-                    with open(basename + '.sol', 'r') as sol_file:
+                    with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
                         timer.start('parse_sol')
                         results = self._parse_solution(sol_file, nl_info)
                         timer.stop('parse_sol')

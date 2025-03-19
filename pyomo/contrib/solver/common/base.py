@@ -556,8 +556,8 @@ class LegacySolverWrapper:
         delete_legacy_soln = True
         if load_solutions:
             if hasattr(model, 'dual') and model.dual.import_enabled():
-                for cons, val in results.solution_loader.get_duals().items():
-                    model.dual[cons] = val
+                for con, val in results.solution_loader.get_duals().items():
+                    model.dual[con] = val
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for var, val in results.solution_loader.get_reduced_costs().items():
                     model.rc[var] = val
@@ -566,8 +566,8 @@ class LegacySolverWrapper:
             for var, val in results.solution_loader.get_primals().items():
                 legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
-                for cons, val in results.solution_loader.get_duals().items():
-                    legacy_soln.constraint[symbol_map.getSymbol(cons)] = {'Dual': val}
+                for con, val in results.solution_loader.get_duals().items():
+                    legacy_soln.constraint[symbol_map.getSymbol(con)] = {'Dual': val}
             if hasattr(model, 'rc') and model.rc.import_enabled():
                 for var, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val

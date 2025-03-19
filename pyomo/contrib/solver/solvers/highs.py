@@ -10,14 +10,12 @@
 #  ___________________________________________________________________________
 
 import logging
-import datetime
 import io
 from typing import List, Optional
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
-from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
