@@ -1389,7 +1389,7 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
@@ -1448,8 +1448,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1525,17 +1525,22 @@ class DesignOfExperiments:
             # Compute and record metrics on FIM
             D_opt = np.log10(np.linalg.det(FIM))
             A_opt = np.log10(np.trace(FIM))
-            E_vals = np.linalg.eigvalsh(FIM)  # Grab eigenvalues
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            E_vals =np.linalg.eigvalsh(FIM) # np.linalg.eigvalsh(FIM)  # Grab eigenvalues
+
+            #Shuvo: ????????????????????????
+            # Probably not required?
+            E_ind = 0 # np.argmin(E_vals.real)  # Grab index of minima to check imaginary
             # Warn the user if there is a ``large`` imaginary component (should not be)
             if abs(E_vals.imag[E_ind]) > 1e-8:
                 self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
+                    "Eigenvalue has imaginary component greater than 1e-8, contact developers if this issue persists."
                 )
+            #????????????????????????
 
             # If the real value is less than or equal to zero, set the E_opt value to nan
             if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
+                E_opt = np.nan  # Shuvo: Also, instead of using nan, can we not use `E_opt = np.log10(abs(E_vals[0]))` 
+                # Shuvo: if the value is very small, e.g. 1e-10?
             else:
                 E_opt = np.log10(E_vals.real[E_ind])
 
