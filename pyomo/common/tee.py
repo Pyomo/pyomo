@@ -239,6 +239,7 @@ class capture_output(object):
         self.old = (sys.stdout, sys.stderr)
         old_fd = []
         for stream in self.old:
+            stream.flush()
             try:
                 old_fd.append(stream.fileno())
             except (AttributeError, OSError):
