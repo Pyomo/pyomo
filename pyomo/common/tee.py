@@ -298,7 +298,10 @@ class capture_output(object):
             raise
         sys.stdout = self.tee.STDOUT
         sys.stderr = self.tee.STDERR
-        return self.output_stream
+        buf = self.tee.ostreams
+        if len(buf) == 1:
+            buf = buf[0]
+        return buf
 
     def __exit__(self, et, ev, tb):
         # Check that we were nested correctly
