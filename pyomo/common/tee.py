@@ -250,15 +250,15 @@ class capture_output(object):
             # because the user gave us an invalid output stream) get
             # completely suppressed.  So, we will make an exception to the
             # output that we are catching and let messages logged to THIS
-            # logger to still be emitted.
+            # logger to still be emitted to the original stderr.
             if self.capture_fd:
                 # Because we are also comandeering the FD that underlies
-                # self.old[1], we cannot just write to that stream and
-                # instead open a new stream to the original FD.
-                #
-                # Note that we need to duplicate the FD from the redirector,
-                # as it will close the (temporary) `original_fd` descriptor
-                # when it restores the actual original descriptor
+                # sys.stderr, we cannot just write to that stream and
+                # instead will open a new stream to the "original" FD
+                # (Note that we need to duplicate that FD, as we will
+                # overwrite it when we get to redirect_fd below).  If
+                # sys.stderr doesn't have a file descriptor, we will
+                # fall back on the process stderr (FD=2).
                 log_stream = self._enter_context(
                     os.fdopen(os.dup(old_fd[1] or 2), mode="w", closefd=True)
                 )
@@ -291,7 +291,7 @@ class capture_output(object):
                         )
         except:
             # Note: we will ignore any exceptions raised while exiting
-            # the context managers and just raise the original
+            # the context managers and just reraise the original
             # exception.
             self._exit_context_stack(*sys.exc_info())
             raise
