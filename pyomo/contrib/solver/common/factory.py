@@ -12,10 +12,14 @@
 
 from pyomo.opt.base.solvers import LegacySolverFactory
 from pyomo.common.factory import Factory
-from pyomo.contrib.solver.base import LegacySolverWrapper
+from pyomo.contrib.solver.common.base import LegacySolverWrapper
 
 
 class SolverFactoryClass(Factory):
+    """
+    Registers new interfaces in the legacy SolverFactory
+    """
+
     def register(self, name, legacy_name=None, doc=None):
         if legacy_name is None:
             legacy_name = name
