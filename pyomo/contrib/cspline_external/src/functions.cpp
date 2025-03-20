@@ -133,7 +133,7 @@ extern real cspline(arglist *al) {
    size_t seg; // segment index
    real a1, a2, a3, a4; // segment parameters
 
-   //find segment index
+   // Find segment index
    auto lit = std::lower_bound(knots_cspline[idx].begin(), knots_cspline[idx].end(), x);
    seg = lit - knots_cspline[idx].begin();
 
