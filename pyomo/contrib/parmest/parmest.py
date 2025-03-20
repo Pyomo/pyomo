@@ -234,6 +234,21 @@ def SSE(model):
     expr = sum((y - y_hat) ** 2 for y, y_hat in model.experiment_outputs.items())
     return expr
 
+def regularize_term(model, FIM, theta_ref):
+    """
+    Regularization term for the objective function, which is used to penalize deviation from a 
+    reference theta
+    (theta - theta_ref).transpose() * FIM * (theta - theta_ref)
+
+    theta_ref: Reference parameter value, element of matrix
+    FIM: Fisher Information Matrix, matrix
+    theta: Parameter value, matrix
+
+    Added to SSE objective function
+    """
+    expr = ((theta - theta_ref).transpose() * FIM * (model - theta_ref) for theta in model.unknown_parameters.items())
+    return expr
+
 
 class Estimator(object):
     """
@@ -270,6 +285,8 @@ class Estimator(object):
         self,
         experiment_list,
         obj_function=None,
+        FIM=None,
+        theta_ref=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
@@ -428,6 +445,9 @@ class Estimator(object):
             # custom functions
             if self.obj_function == 'SSE':
                 second_stage_rule = SSE
+                if self.FIM and self.theta_ref is not None:
+
+            
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
