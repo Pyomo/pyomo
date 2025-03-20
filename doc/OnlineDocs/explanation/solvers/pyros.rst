@@ -924,6 +924,9 @@ Observe that the log contains the following information:
   are included in parentheses, next to the total numbers
   of second-stage variables and state variables, respectively;
   note that "adjustable" has been abbreviated as "adj."
+  The number of truly uncertain parameters detected during preprocessing
+  is also noted in parentheses
+  (in which "eff." is an abbreviation for "effective").
 * **Iteration log table** (lines 59--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
@@ -961,21 +964,21 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.4.
-          Pyomo version: 6.9.0
-          Commit hash: unknown
-          Invoked at UTC 2025-02-13T00:00:00.000000
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.6.
+          Pyomo version: 6.9.2.dev0 (devel {pyros-effective-uncertain-params})
+          Commit hash: 41cd797e0
+          Invoked at UTC 2025-03-13T16:20:31.105320+00:00
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
    (1) Carnegie Mellon University, Department of Chemical Engineering
    (2) Sandia National Laboratories, Center for Computing Research
-
+   
    The developers gratefully acknowledge support from the U.S. Department
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
    ================================= DISCLAIMER =================================
-   PyROS is still under development.
+   PyROS is still under development. 
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
@@ -1001,7 +1004,7 @@ Observe that the log contains the following information:
     p_robustness={}
    ------------------------------------------------------------------------------
    Preprocessing...
-   Done preprocessing; required wall time of 0.009s.
+   Done preprocessing; required wall time of 0.013s.
    ------------------------------------------------------------------------------
    Model Statistics:
      Number of variables : 62
@@ -1010,7 +1013,7 @@ Observe that the log contains the following information:
        Second-stage variables : 6 (6 adj.)
        State variables : 18 (7 adj.)
        Decision rule variables : 30
-     Number of uncertain parameters : 4
+     Number of uncertain parameters : 4 (4 eff.)
      Number of constraints : 52
        Equality constraints : 24
          Coefficient matching constraints : 0
@@ -1023,33 +1026,34 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   0.412
-   1     3.5838e+07  1.2289e-09   1.5886e-12   5       2.8919e+02   0.992
-   2     3.6269e+07  3.1647e-01   1.0432e-01   4       2.9020e+02   1.865
-   3     3.6285e+07  7.6526e-01   2.2258e-01   0       2.3874e-12g  3.508
+   0     3.5838e+07  -            -            5       1.8832e+04   0.693        
+   1     3.5838e+07  1.2289e-09   1.5876e-12   5       3.7762e+04   1.514        
+   2     3.6129e+07  2.7244e-01   3.6878e-01   3       1.1093e+02   2.486        
+   3     3.6269e+07  3.7352e-01   4.3227e-01   1       2.7711e+01   3.667        
+   4     3.6285e+07  7.6526e-01   2.8426e-11   0       4.3364e-05g  6.291        
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-
+   
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     3.509     3.509  100.0
+   main                           1     6.291     6.291  100.0
         ------------------------------------------------------
-        dr_polishing              3     0.209     0.070    6.0
-        global_separation        27     0.590     0.022   16.8
-        local_separation        108     1.569     0.015   44.7
-        master                    4     0.654     0.163   18.6
-        master_feasibility        3     0.083     0.028    2.4
-        preprocessing             1     0.009     0.009    0.3
-        other                   n/a     0.394       n/a   11.2
+        dr_polishing              4     0.334     0.083    5.3
+        global_separation        27     0.954     0.035   15.2
+        local_separation        135     3.046     0.023   48.4
+        master                    5     1.027     0.205   16.3
+        master_feasibility        4     0.133     0.033    2.1
+        preprocessing             1     0.013     0.013    0.2
+        other                   n/a     0.785       n/a   12.5
         ======================================================
    ===========================================================
-
+   
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 4
-    Solve time (wall s)   : 3.509
+    Iterations            : 5
+    Solve time (wall s)   : 6.291
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
