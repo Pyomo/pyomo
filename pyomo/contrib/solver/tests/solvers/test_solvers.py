@@ -78,9 +78,7 @@ def _load_tests(solver_list):
 
 class TestDualSignConvention(unittest.TestCase):
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_equality(
-        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
-    ):
+    def test_equality(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -88,7 +86,9 @@ class TestDualSignConvention(unittest.TestCase):
         # for now, we don't support getting duals if linear_presolve = True
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
-                raise unittest.SkipTest(f'cannot yet get duals if NLWriter presolve is on')
+                raise unittest.SkipTest(
+                    f'cannot yet get duals if NLWriter presolve is on'
+                )
             else:
                 opt.config.writer_config.linear_presolve = False
 
@@ -140,7 +140,9 @@ class TestDualSignConvention(unittest.TestCase):
         # for now, we don't support getting duals if linear_presolve = True
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
-                raise unittest.SkipTest(f'cannot yet get duals if NLWriter presolve is on')
+                raise unittest.SkipTest(
+                    f'cannot yet get duals if NLWriter presolve is on'
+                )
             else:
                 opt.config.writer_config.linear_presolve = False
 
@@ -190,9 +192,7 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], 0.5)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_bounds(
-        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
-    ):
+    def test_bounds(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -200,7 +200,9 @@ class TestDualSignConvention(unittest.TestCase):
         # for now, we don't support getting duals if linear_presolve = True
         if any(name.startswith(i) for i in nl_solvers_set):
             if use_presolve:
-                raise unittest.SkipTest(f'cannot yet get duals if NLWriter presolve is on')
+                raise unittest.SkipTest(
+                    f'cannot yet get duals if NLWriter presolve is on'
+                )
             else:
                 opt.config.writer_config.linear_presolve = False
 
