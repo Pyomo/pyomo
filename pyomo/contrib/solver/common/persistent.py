@@ -10,6 +10,7 @@
 #  __________________________________________________________________________
 
 import abc
+import datetime
 from typing import List
 
 from pyomo.core.base.constraint import ConstraintData, Constraint
@@ -17,14 +18,29 @@ from pyomo.core.base.sos import SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import VarData
 from pyomo.core.base.param import ParamData, Param
 from pyomo.core.base.objective import ObjectiveData
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.common.collections import ComponentMap
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.expr.numvalue import NumericConstant
-from pyomo.contrib.solver.util import collect_vars_and_named_exprs, get_objective
+from pyomo.contrib.solver.common.results import Results
+from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs, get_objective
 
 
 class PersistentSolverUtils(abc.ABC):
-    def __init__(self):
+    def __init__(self, treat_fixed_vars_as_params=True):
+        """
+        Parameters
+        ----------
+        treat_fixed_vars_as_params: bool
+            This is an advanced option that should only be used in special circumstances.
+            With the default setting of True, fixed variables will be treated like parameters.
+            This means that z == x*y will be linear if x or y is fixed and the constraint
+            can be written to an LP file. If the value of the fixed variable gets changed, we have
+            to completely reprocess all constraints using that variable. If
+            treat_fixed_vars_as_params is False, then constraints will be processed as if fixed
+            variables are not fixed, and the solver will be told the variable is fixed. This means
+            z == x*y could not be written to an LP file even if x and/or y is fixed. However,
+            updating the values of fixed variables is much faster this way.
+        """
         self._model = None
         self._active_constraints = {}  # maps constraint to (lower, body, upper)
         self._vars = {}  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -43,11 +59,15 @@ class PersistentSolverUtils(abc.ABC):
         self._vars_referenced_by_con = {}
         self._vars_referenced_by_obj = []
         self._expr_types = None
+        self._treat_fixed_vars_as_params = treat_fixed_vars_as_params
+        self._active_config = self.config
 
     def set_instance(self, model):
         saved_config = self.config
+        saved_active_config = self._active_config
         self.__init__()
         self.config = saved_config
+        self._active_config = saved_active_config
         self._model = model
         self.add_block(model)
         if self._objective is None:
@@ -60,9 +80,7 @@ class PersistentSolverUtils(abc.ABC):
     def add_variables(self, variables: List[VarData]):
         for v in variables:
             if id(v) in self._referenced_variables:
-                raise ValueError(
-                    'variable {name} has already been added'.format(name=v.name)
-                )
+                raise ValueError(f'Variable {v.name} has already been added')
             self._referenced_variables[id(v)] = [{}, {}, None]
             self._vars[id(v)] = (
                 v,
@@ -108,9 +126,7 @@ class PersistentSolverUtils(abc.ABC):
         all_fixed_vars = {}
         for con in cons:
             if con in self._named_expressions:
-                raise ValueError(
-                    'constraint {name} has already been added'.format(name=con.name)
-                )
+                raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = con.expr
             tmp = collect_vars_and_named_exprs(con.expr)
             named_exprs, variables, fixed_vars, external_functions = tmp
@@ -121,7 +137,7 @@ class PersistentSolverUtils(abc.ABC):
             self._vars_referenced_by_con[con] = variables
             for v in variables:
                 self._referenced_variables[id(v)][0][con] = None
-            if not self.config.auto_updates.treat_fixed_vars_as_params:
+            if not self._treat_fixed_vars_as_params:
                 for v in fixed_vars:
                     v.unfix()
                     all_fixed_vars[id(v)] = v
@@ -136,9 +152,7 @@ class PersistentSolverUtils(abc.ABC):
     def add_sos_constraints(self, cons: List[SOSConstraintData]):
         for con in cons:
             if con in self._vars_referenced_by_con:
-                raise ValueError(
-                    'constraint {name} has already been added'.format(name=con.name)
-                )
+                raise ValueError(f'Constraint {con.name} has already been added')
             self._active_constraints[con] = tuple()
             variables = con.get_variables()
             self._check_for_new_vars(variables)
@@ -171,7 +185,7 @@ class PersistentSolverUtils(abc.ABC):
             self._vars_referenced_by_obj = variables
             for v in variables:
                 self._referenced_variables[id(v)][2] = obj
-            if not self.config.auto_updates.treat_fixed_vars_as_params:
+            if not self._treat_fixed_vars_as_params:
                 for v in fixed_vars:
                     v.unfix()
             self._set_objective(obj)
@@ -217,9 +231,7 @@ class PersistentSolverUtils(abc.ABC):
         for con in cons:
             if con not in self._named_expressions:
                 raise ValueError(
-                    'cannot remove constraint {name} - it was not added'.format(
-                        name=con.name
-                    )
+                    f'Cannot remove constraint {con.name} - it was not added'
                 )
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][0].pop(con)
@@ -238,9 +250,7 @@ class PersistentSolverUtils(abc.ABC):
         for con in cons:
             if con not in self._vars_referenced_by_con:
                 raise ValueError(
-                    'cannot remove constraint {name} - it was not added'.format(
-                        name=con.name
-                    )
+                    f'Cannot remove constraint {con.name} - it was not added'
                 )
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][1].pop(con)
@@ -259,16 +269,12 @@ class PersistentSolverUtils(abc.ABC):
             v_id = id(v)
             if v_id not in self._referenced_variables:
                 raise ValueError(
-                    'cannot remove variable {name} - it has not been added'.format(
-                        name=v.name
-                    )
+                    f'Cannot remove variable {v.name} - it has not been added'
                 )
             cons_using, sos_using, obj_using = self._referenced_variables[v_id]
             if cons_using or sos_using or (obj_using is not None):
                 raise ValueError(
-                    'cannot remove variable {name} - it is still being used by constraints or the objective'.format(
-                        name=v.name
-                    )
+                    f'Cannot remove variable {v.name} - it is still being used by constraints or the objective'
                 )
             del self._referenced_variables[v_id]
             del self._vars[v_id]
@@ -331,7 +337,7 @@ class PersistentSolverUtils(abc.ABC):
     def update(self, timer: HierarchicalTimer = None):
         if timer is None:
             timer = HierarchicalTimer()
-        config = self.config.auto_updates
+        config = self._active_config.auto_updates
         new_vars = []
         old_vars = []
         new_params = []
@@ -340,7 +346,6 @@ class PersistentSolverUtils(abc.ABC):
         old_cons = []
         old_sos = []
         new_sos = []
-        current_vars_dict = {}
         current_cons_dict = {}
         current_sos_dict = {}
         timer.start('vars')
@@ -381,7 +386,7 @@ class PersistentSolverUtils(abc.ABC):
             for c in current_sos_dict.keys():
                 if c not in self._vars_referenced_by_con:
                     new_sos.append(c)
-            for c in self._vars_referenced_by_con.keys():
+            for c in self._vars_referenced_by_con:
                 if c not in current_cons_dict and c not in current_sos_dict:
                     if (c.ctype is Constraint) or (
                         c.ctype is None and isinstance(c, ConstraintData)
@@ -413,7 +418,6 @@ class PersistentSolverUtils(abc.ABC):
         self.add_sos_constraints(new_sos)
         new_cons_set = set(new_cons)
         new_sos_set = set(new_sos)
-        new_vars_set = set(id(v) for v in new_vars)
         cons_to_remove_and_add = {}
         need_to_set_objective = False
         if config.update_constraints:
@@ -437,7 +441,7 @@ class PersistentSolverUtils(abc.ABC):
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
                 if (fixed != v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
-                    if self.config.auto_updates.treat_fixed_vars_as_params:
+                    if self._treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
                             cons_to_remove_and_add[c] = None
                         if self._referenced_variables[id(v)][2] is not None:
@@ -473,13 +477,13 @@ class PersistentSolverUtils(abc.ABC):
                     break
         timer.stop('named expressions')
         timer.start('objective')
-        if self.config.auto_updates.check_for_new_objective:
+        if self._active_config.auto_updates.check_for_new_objective:
             pyomo_obj = get_objective(self._model)
             if pyomo_obj is not self._objective:
                 need_to_set_objective = True
         else:
             pyomo_obj = self._objective
-        if self.config.auto_updates.update_objective:
+        if self._active_config.auto_updates.update_objective:
             if pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
                 need_to_set_objective = True
             elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:
@@ -494,3 +498,41 @@ class PersistentSolverUtils(abc.ABC):
         timer.start('vars')
         self.remove_variables(old_vars)
         timer.stop('vars')
+
+
+class PersistentSolverMixin:
+    """
+    The `solve` method in Gurobi and Highs is exactly the same, so this Mixin
+    minimizes the duplicate code
+    """
+
+    def solve(self, model, **kwds) -> Results:
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self._active_config = config = self.config(value=kwds, preserve_implicit=True)
+        StaleFlagManager.mark_all_as_stale()
+
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+
+        if model is not self._model:
+            timer.start('set_instance')
+            self.set_instance(model)
+            timer.stop('set_instance')
+        else:
+            timer.start('update')
+            self.update(timer=timer)
+            timer.stop('update')
+
+        res = self._solve()
+        self._last_results_object = res
+
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        self._active_config = self.config
+
+        return res
