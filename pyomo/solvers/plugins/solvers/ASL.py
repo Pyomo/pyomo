@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 
+from pathlib import Path
 import os
 import subprocess
 
@@ -17,6 +18,7 @@ from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.fileutils import find_executable
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
