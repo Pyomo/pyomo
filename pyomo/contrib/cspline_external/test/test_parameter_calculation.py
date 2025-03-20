@@ -12,7 +12,6 @@
 import io
 import os
 
-from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.cspline_external.cspline_parameters import (
     cubic_parameters_model,
     CsplineParameters,

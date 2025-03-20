@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import attempt_import
 from pyomo.common.dependencies import numpy as np
 import pyomo.environ as pyo
 
@@ -83,14 +82,14 @@ def _fxx_cubic(x, alpha, s=None):
     return 2 * alpha[s, 3] + 6 * alpha[s, 4] * x
 
 
-class CsplineParameters(object):
+class CsplineParameters:
     def __init__(self, model=None, fptr=None):
         """Cubic spline parameters class.  This can be used to read and
         write parameters or calculate cubic spline function values and
         derivatives for testing.
         """
         if model is not None and fptr is not None:
-            raise ValueError("Please specify at most one of m or fptr.")
+            raise ValueError("Please specify at most one of model or fptr.")
         if model is not None:
             self.get_parameters_from_model(model)
         elif fptr is not None:
