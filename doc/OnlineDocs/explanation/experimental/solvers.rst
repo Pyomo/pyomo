@@ -361,7 +361,7 @@ implemented. For example, for ``ipopt``:
 
 Dual Sign Convention
 --------------------
-Regardless of the solver, Pyomo adopts the following sign convention. Given the problem
+For all future solver interfaces, Pyomo adopts the following sign convention. Given the problem
 
 .. math::
 
