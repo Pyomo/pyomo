@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,13 +9,51 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+import io
+
+import pyomo.environ as pyo
 from pyomo.common import unittest
-from pyomo.contrib.solver.config import (
+from pyomo.common.log import LogStream
+from pyomo.common.tee import capture_output
+from pyomo.common.dependencies import attempt_import
+from pyomo.contrib.solver.common.config import (
     SolverConfig,
     BranchAndBoundConfig,
     AutoUpdateConfig,
     PersistentSolverConfig,
+    TextIO_or_Logger,
 )
+
+ipopt, ipopt_available = attempt_import('ipopt')
+
+
+class TestTextIO_or_LoggerValidator(unittest.TestCase):
+    def test_booleans(self):
+        ans = TextIO_or_Logger(True)
+        self.assertTrue(isinstance(ans[0], io._io.TextIOWrapper))
+        ans = TextIO_or_Logger(False)
+        self.assertEqual(ans, [])
+
+    def test_logger(self):
+        logger = logging.getLogger('contrib.solver.config.test.1')
+        ans = TextIO_or_Logger(logger)
+        self.assertTrue(isinstance(ans[0], LogStream))
+
+    @unittest.skipIf(not ipopt_available, 'ipopt is not available')
+    def test_real_example(self):
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2], initialize=1, bounds=(0, None))
+        m.eq = pyo.Constraint(expr=m.x[1] * m.x[2] ** 1.5 == 3)
+        m.obj = pyo.Objective(expr=m.x[1] ** 2 + m.x[2] ** 2)
+
+        solver = pyo.SolverFactory("ipopt_v2")
+        with capture_output() as OUT:
+            solver.solve(m, tee=True, timelimit=5)
+
+        contents = OUT.getvalue()
+        self.assertIn('EXIT: Optimal Solution Found.', contents)
 
 
 class TestSolverConfig(unittest.TestCase):
@@ -78,7 +116,6 @@ class TestAutoUpdateConfig(unittest.TestCase):
         self.assertTrue(config.update_named_expressions)
         self.assertTrue(config.update_objective)
         self.assertTrue(config.update_objective)
-        self.assertTrue(config.treat_fixed_vars_as_params)
 
     def test_interface_custom_instantiation(self):
         config = AutoUpdateConfig(description="A description")
@@ -109,7 +146,6 @@ class TestPersistentSolverConfig(unittest.TestCase):
         self.assertTrue(config.auto_updates.update_named_expressions)
         self.assertTrue(config.auto_updates.update_objective)
         self.assertTrue(config.auto_updates.update_objective)
-        self.assertTrue(config.auto_updates.treat_fixed_vars_as_params)
 
     def test_interface_custom_instantiation(self):
         config = PersistentSolverConfig(description="A description")

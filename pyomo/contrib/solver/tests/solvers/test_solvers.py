@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,11 +17,21 @@ import pyomo.environ as pe
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-from pyomo.contrib.solver.results import TerminationCondition, SolutionStatus, Results
-from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.ipopt import Ipopt
-from pyomo.contrib.solver.gurobi import Gurobi
-from pyomo.contrib.solver.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.common.results import (
+    TerminationCondition,
+    SolutionStatus,
+    Results,
+)
+from pyomo.contrib.solver.common.util import (
+    NoDualsError,
+    NoSolutionError,
+    NoReducedCostsError,
+)
+from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.solvers.ipopt import Ipopt
+from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
+from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.core.expr.numeric_expr import LinearExpression
 
 
@@ -33,11 +43,20 @@ parameterized = parameterized.parameterized
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect), ('ipopt', Ipopt)]
-mip_solvers = [('gurobi', Gurobi), ('gurobi_direct', GurobiDirect)]
+all_solvers = [
+    ('gurobi', GurobiPersistent),
+    ('gurobi_direct', GurobiDirect),
+    ('ipopt', Ipopt),
+    ('highs', Highs),
+]
+mip_solvers = [
+    ('gurobi', GurobiPersistent),
+    ('gurobi_direct', GurobiDirect),
+    ('highs', Highs),
+]
 nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt)]
-miqcqp_solvers = [('gurobi', Gurobi)]
+qcp_solvers = [('gurobi', GurobiPersistent), ('ipopt', Ipopt)]
+miqcqp_solvers = [('gurobi', GurobiPersistent)]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
 
@@ -547,15 +566,15 @@ class TestSolvers(unittest.TestCase):
             # even if it did not converge; raise_exception_on_nonoptimal_result
             # is set to False, so we are free to load infeasible solutions
             with self.assertRaisesRegex(
-                RuntimeError, '.*does not currently have a valid solution.*'
+                NoSolutionError, '.*does not currently have a valid solution.*'
             ):
                 res.solution_loader.load_vars()
             with self.assertRaisesRegex(
-                RuntimeError, '.*does not currently have valid duals.*'
+                NoDualsError, '.*does not currently have valid duals.*'
             ):
                 res.solution_loader.get_duals()
             with self.assertRaisesRegex(
-                RuntimeError, '.*does not currently have valid reduced costs.*'
+                NoReducedCostsError, '.*does not currently have valid reduced costs.*'
             ):
                 res.solution_loader.get_reduced_costs()
 
@@ -655,9 +674,7 @@ class TestSolvers(unittest.TestCase):
         for treat_fixed_vars_as_params in [True, False]:
             opt: SolverBase = opt_class()
             if opt.is_persistent():
-                opt.config.auto_updates.treat_fixed_vars_as_params = (
-                    treat_fixed_vars_as_params
-                )
+                opt = opt_class(treat_fixed_vars_as_params=treat_fixed_vars_as_params)
             if not opt.available():
                 raise unittest.SkipTest(f'Solver {opt.name} not available.')
             if any(name.startswith(i) for i in nl_solvers_set):
@@ -702,7 +719,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = True
+            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -747,7 +764,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = True
+            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -771,7 +788,7 @@ class TestSolvers(unittest.TestCase):
     ):
         opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = True
+            opt = opt_class(treat_fixed_vars_as_params=True)
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
         if any(name.startswith(i) for i in nl_solvers_set):
@@ -1325,9 +1342,10 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
 
-        opt: SolverBase = opt_class()
         if opt.is_persistent():
-            opt.config.auto_updates.treat_fixed_vars_as_params = False
+            opt: SolverBase = opt_class(treat_fixed_vars_as_params=False)
+        else:
+            opt = opt_class()
         m.x.fix(0)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
@@ -1483,6 +1501,8 @@ class TestSolvers(unittest.TestCase):
         """
         for fixed_var_option in [True, False]:
             opt: SolverBase = opt_class()
+            if opt.is_persistent():
+                opt = opt_class(treat_fixed_vars_as_params=fixed_var_option)
             if not opt.available():
                 raise unittest.SkipTest(f'Solver {opt.name} not available.')
             if any(name.startswith(i) for i in nl_solvers_set):
@@ -1490,8 +1510,6 @@ class TestSolvers(unittest.TestCase):
                     opt.config.writer_config.linear_presolve = True
                 else:
                     opt.config.writer_config.linear_presolve = False
-            if opt.is_persistent():
-                opt.config.auto_updates.treat_fixed_vars_as_params = fixed_var_option
 
             m = pe.ConcreteModel()
             m.x = pe.Var(bounds=(-10, 10))

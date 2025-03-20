@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -973,15 +973,16 @@ class svec_psdcone(_ConicBase):
     of length :math:`n = d(d+1)/2` belongs to this cone, then the matrix:
 
     .. math::
+       :nowrap:
 
-       \begin{array}{rcclcl}
+       \[\begin{array}{rcclcl}
        sMat(x) = [\;\;
-          [&      x[1],   &  x[2]/\sqrt{2}, &...,&      x[d]/\sqrt{2} &], \\
-          [&x[2]/\sqrt{2},&         x[d+1], &...,&   x[2d-1]/\sqrt{2} &], \\
-           &              &    \vdots       &    &                    &   \\
-          [&x[d]/\sqrt{2},&x[2d-1]/\sqrt{2},&...,&x[d(d+1)/2]/\sqrt{2}&]
+          {[} &      x[1],   &  x[2]/\sqrt{2}, &...,&      x[d]/\sqrt{2} & ], \\
+          {[} &x[2]/\sqrt{2},&         x[d+1], &...,&   x[2d-1]/\sqrt{2} & ], \\
+              &              &    \vdots       &    &                    &    \\
+          {[} &x[d]/\sqrt{2},&x[2d-1]/\sqrt{2},&...,&x[d(d+1)/2]/\sqrt{2}& ]
        \;\;]
-       \end{array}
+       \end{array}\]
 
     will be restricted to be a positive-semidefinite matrix.
 
