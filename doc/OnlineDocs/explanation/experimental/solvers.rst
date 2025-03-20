@@ -51,6 +51,9 @@ with existing interfaces).
    * - Gurobi (direct)
      - ``gurobi_direct``
      - ``gurobi_direct_v2``
+   * - HiGHS
+     - ``highs``
+     - ``highs``
 
 Using the new interfaces through the legacy interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
