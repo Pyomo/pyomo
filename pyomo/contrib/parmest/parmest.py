@@ -246,7 +246,7 @@ def regularize_term(model, FIM, theta_ref):
 
     Added to SSE objective function
     """
-    expr = ((theta - theta_ref).transpose() * FIM * (model - theta_ref) for theta in model.unknown_parameters.items())
+    expr = ((theta - theta_ref).transpose() * FIM * (theta - theta_ref) for theta in model.unknown_parameters.items())
     return expr
 
 
@@ -446,6 +446,8 @@ class Estimator(object):
             if self.obj_function == 'SSE':
                 second_stage_rule = SSE
                 if self.FIM and self.theta_ref is not None:
+                    # Regularize the objective function
+                    second_stage_rule = SSE + regularize_term
 
             
             else:
