@@ -616,7 +616,7 @@ class Highs(PersistentBase, PersistentSolver):
                 )
 
             repn = generate_standard_repn(
-                obj.expr, quadratic=False, compute_values=False
+                obj.expr, quadratic=True, compute_values=False
             )
             if repn.nonlinear_expr is not None:
                 raise DegreeError(
