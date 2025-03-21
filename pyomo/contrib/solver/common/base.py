@@ -9,8 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import abc
-from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
+from typing import Sequence, Dict, Optional, Mapping, List, Tuple
 import os
 
 from pyomo.core.base.constraint import ConstraintData
@@ -29,9 +28,10 @@ from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
-from pyomo.contrib.solver.config import SolverConfig, PersistentSolverConfig
-from pyomo.contrib.solver.util import get_objective
-from pyomo.contrib.solver.results import (
+from pyomo.scripting.solve_config import default_config_block
+from pyomo.contrib.solver.common.config import SolverConfig, PersistentSolverConfig
+from pyomo.contrib.solver.common.util import get_objective
+from pyomo.contrib.solver.common.results import (
     Results,
     legacy_solver_status_map,
     legacy_termination_condition_map,
@@ -39,7 +39,30 @@ from pyomo.contrib.solver.results import (
 )
 
 
-class SolverBase(abc.ABC):
+class Availability(IntEnum):
+    """
+    Class to capture different statuses in which a solver can exist in
+    order to record its availability for use.
+    """
+
+    FullLicense = 2
+    LimitedLicense = 1
+    NotFound = 0
+    BadVersion = -1
+    BadLicense = -2
+    NeedsCompiledExtension = -3
+
+    def __bool__(self):
+        return self._value_ > 0
+
+    def __format__(self, format_spec):
+        return format(self.name, format_spec)
+
+    def __str__(self):
+        return self.name
+
+
+class SolverBase:
     """
     This base class defines the methods required for all solvers:
         - available: Determines whether the solver is able to be run,
@@ -48,68 +71,29 @@ class SolverBase(abc.ABC):
         - version: The version of the solver
         - is_persistent: Set to false for all non-persistent solvers.
 
-    Additionally, solvers should have a :attr:`config<SolverBase.config>` attribute that
-    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.config.SolverConfig>`,
-    :class:`BranchAndBoundConfig<pyomo.contrib.solver.config.BranchAndBoundConfig>`,
-    :class:`PersistentSolverConfig<pyomo.contrib.solver.config.PersistentSolverConfig>`, or
-    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.config.PersistentBranchAndBoundConfig>`.
+    Additionally, solvers should have a :attr:`CONFIG<SolverBase.CONFIG>` attribute that
+    inherits from one of :class:`SolverConfig<pyomo.contrib.solver.common.config.SolverConfig>`,
+    :class:`BranchAndBoundConfig<pyomo.contrib.solver.common.config.BranchAndBoundConfig>`,
+    :class:`PersistentSolverConfig<pyomo.contrib.solver.common.config.PersistentSolverConfig>`, or
+    :class:`PersistentBranchAndBoundConfig<pyomo.contrib.solver.common.config.PersistentBranchAndBoundConfig>`.
     """
 
     CONFIG = SolverConfig()
 
     def __init__(self, **kwds) -> None:
-        # We allow the user and/or developer to name the solver something else,
-        # if they really desire.
-        # Otherwise it defaults to the name defined when the solver was registered
-        # in the SolverFactory or the class name (all lowercase), whichever is
-        # applicable
         if "name" in kwds:
             self.name = kwds.pop('name')
         elif not hasattr(self, 'name'):
             self.name = type(self).__name__.lower()
         self.config = self.CONFIG(value=kwds)
 
-    #
-    # Support "with" statements. Forgetting to call deactivate
-    # on Plugins is a common source of memory leaks
-    #
     def __enter__(self):
         return self
 
-    def __exit__(self, t, v, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
-    class Availability(IntEnum):
-        """
-        Class to capture different statuses in which a solver can exist in
-        order to record its availability for use.
-        """
-
-        FullLicense = 2
-        LimitedLicense = 1
-        NotFound = 0
-        BadVersion = -1
-        BadLicense = -2
-        NeedsCompiledExtension = -3
-
-        def __bool__(self):
-            return self._value_ > 0
-
-        def __format__(self, format_spec):
-            # We want general formatting of this Enum to return the
-            # formatted string value and not the int (which is the
-            # default implementation from IntEnum)
-            return format(self.name, format_spec)
-
-        def __str__(self):
-            # Note: Python 3.11 changed the core enums so that the
-            # "mixin" type for standard enums overrides the behavior
-            # specified in __format__.  We will override str() here to
-            # preserve the previous behavior
-            return self.name
-
     @document_kwargs_from_configdict(CONFIG)
-    @abc.abstractmethod
     def solve(self, model: BlockData, **kwargs) -> Results:
         """
         Solve a Pyomo model.
@@ -124,17 +108,18 @@ class SolverBase(abc.ABC):
 
         Returns
         -------
-        results: :class:`Results<pyomo.contrib.solver.results.Results>`
+        results: :class:`Results<pyomo.contrib.solver.common.results.Results>`
             A results object
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
+        )
 
-    @abc.abstractmethod
-    def available(self) -> bool:
+    def available(self) -> Availability:
         """Test if the solver is available on this system.
 
-        Nominally, this will return True if the solver interface is
-        valid and can be used to solve problems and False if it cannot.
-
+        Nominally, this will return `True` if the solver interface is
+        valid and can be used to solve problems and `False` if it cannot.
         Note that for licensed solvers there are a number of "levels" of
         available: depending on the license, the solver may be available
         with limitations on problem size or runtime (e.g., 'demo'
@@ -147,14 +132,16 @@ class SolverBase(abc.ABC):
 
         Returns
         -------
-        available: SolverBase.Availability
+        available: Availability
             An enum that indicates "how available" the solver is.
             Note that the enum can be cast to bool, which will
             be True if the solver is runable at all and False
             otherwise.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'available'."
+        )
 
-    @abc.abstractmethod
     def version(self) -> Tuple:
         """
         Returns
@@ -162,6 +149,9 @@ class SolverBase(abc.ABC):
         version: tuple
             A tuple representing the version
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'version'."
+        )
 
     def is_persistent(self) -> bool:
         """
@@ -182,12 +172,35 @@ class PersistentSolverBase(SolverBase):
     Example usage can be seen in the Gurobi interface.
     """
 
-    @document_kwargs_from_configdict(PersistentSolverConfig())
-    @abc.abstractmethod
-    def solve(self, model: BlockData, **kwargs) -> Results:
-        super().solve(model, kwargs)
+    CONFIG = PersistentSolverConfig()
 
-    def is_persistent(self):
+    def __init__(self, **kwds) -> None:
+        super().__init__(**kwds)
+        self._active_config = self.config
+
+    @document_kwargs_from_configdict(CONFIG)
+    def solve(self, model: BlockData, **kwargs) -> Results:
+        """
+        Solve a Pyomo model.
+
+        Parameters
+        ----------
+        model: BlockData
+            The Pyomo model to be solved
+        **kwargs
+            Additional keyword arguments (including solver_options - passthrough
+            options; delivered directly to the solver (with no validation))
+
+        Returns
+        -------
+        results: :class:`Results<pyomo.contrib.solver.common.results.Results>`
+            A results object
+        """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'solve'."
+        )
+
+    def is_persistent(self) -> bool:
         """
         Returns
         -------
@@ -196,21 +209,20 @@ class PersistentSolverBase(SolverBase):
         """
         return True
 
-    def _load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> NoReturn:
+    def _load_vars(self, vars_to_load: Optional[Sequence[VarData]] = None) -> None:
         """
         Load the solution of the primal variables into the value attribute of the variables.
 
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
-            to all primal variables will be loaded.
+            A list of the variables whose solution should be loaded. If vars_to_load
+            is None, then the solution to all primal variables will be loaded.
         """
-        for v, val in self._get_primals(vars_to_load=vars_to_load).items():
-            v.set_value(val, skip_validation=True)
+        for var, val in self._get_primals(vars_to_load=vars_to_load).items():
+            var.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
-    @abc.abstractmethod
     def _get_primals(
         self, vars_to_load: Optional[Sequence[VarData]] = None
     ) -> Mapping[VarData, float]:
@@ -240,8 +252,8 @@ class PersistentSolverBase(SolverBase):
         Parameters
         ----------
         cons_to_load: list
-            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
-            constraints will be loaded.
+            A list of the constraints whose duals should be loaded. If cons_to_load
+            is None, then the duals for all constraints will be loaded.
 
         Returns
         -------
@@ -257,8 +269,8 @@ class PersistentSolverBase(SolverBase):
         Parameters
         ----------
         vars_to_load: list
-            A list of the variables whose reduced cost should be loaded. If vars_to_load is None, then all reduced costs
-            will be loaded.
+            A list of the variables whose reduced cost should be loaded. If vars_to_load
+            is None, then all reduced costs will be loaded.
 
         Returns
         -------
@@ -269,77 +281,101 @@ class PersistentSolverBase(SolverBase):
             f'{type(self)} does not support the get_reduced_costs method'
         )
 
-    @abc.abstractmethod
-    def set_instance(self, model):
+    def set_instance(self, model: BlockData):
         """
-        Set an instance of the model
+        Set an instance of the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'set_instance'."
+        )
 
-    @abc.abstractmethod
     def set_objective(self, obj: ObjectiveData):
         """
-        Set current objective for the model
+        Set current objective for the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'set_objective'."
+        )
 
-    @abc.abstractmethod
     def add_variables(self, variables: List[VarData]):
         """
-        Add variables to the model
+        Add variables to the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_variables'."
+        )
 
-    @abc.abstractmethod
     def add_parameters(self, params: List[ParamData]):
         """
-        Add parameters to the model
+        Add parameters to the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_parameters'."
+        )
 
-    @abc.abstractmethod
     def add_constraints(self, cons: List[ConstraintData]):
         """
-        Add constraints to the model
+        Add constraints to the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_constraints'."
+        )
 
-    @abc.abstractmethod
     def add_block(self, block: BlockData):
         """
-        Add a block to the model
+        Add a block to the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'add_block'."
+        )
 
-    @abc.abstractmethod
     def remove_variables(self, variables: List[VarData]):
         """
-        Remove variables from the model
+        Remove variables from the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_variables'."
+        )
 
-    @abc.abstractmethod
     def remove_parameters(self, params: List[ParamData]):
         """
-        Remove parameters from the model
+        Remove parameters from the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_parameters'."
+        )
 
-    @abc.abstractmethod
     def remove_constraints(self, cons: List[ConstraintData]):
         """
-        Remove constraints from the model
+        Remove constraints from the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_constraints'."
+        )
 
-    @abc.abstractmethod
     def remove_block(self, block: BlockData):
         """
-        Remove a block from the model
+        Remove a block from the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'remove_block'."
+        )
 
-    @abc.abstractmethod
     def update_variables(self, variables: List[VarData]):
         """
-        Update variables on the model
+        Update variables on the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'update_variables'."
+        )
 
-    @abc.abstractmethod
     def update_parameters(self):
         """
-        Update parameters on the model
+        Update parameters on the model.
         """
+        raise NotImplementedError(
+            f"Derived class {self.__class__.__name__} failed to implement required method 'update_parameters'."
+        )
 
 
 class LegacySolverWrapper:
@@ -374,7 +410,7 @@ class LegacySolverWrapper:
     def __enter__(self):
         return self
 
-    def __exit__(self, t, v, traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         """Exit statement - enables `with` statements."""
 
     def __setattr__(self, attr, value):
@@ -426,7 +462,7 @@ class LegacySolverWrapper:
                 "Both 'options' and 'solver_options' were requested. "
                 "Please use one or the other, not both."
             )
-        elif options is not NOTSET:
+        if options is not NOTSET:
             # This block is trying to mimic the existing logic in the legacy
             # interface that allows users to pass initialized options to
             # the solver object and override them in the solve call.
@@ -473,7 +509,7 @@ class LegacySolverWrapper:
         legacy_results.solver.termination_condition = legacy_termination_condition_map[
             results.termination_condition
         ]
-        legacy_soln.status = legacy_solution_status_map[results.solution_status]
+        legacy_soln.status = legacy_solution_status_map(results)
         legacy_results.solver.termination_message = str(results.termination_condition)
         legacy_results.problem.number_of_constraints = float('nan')
         legacy_results.problem.number_of_variables = float('nan')
@@ -520,20 +556,20 @@ class LegacySolverWrapper:
         delete_legacy_soln = True
         if load_solutions:
             if hasattr(model, 'dual') and model.dual.import_enabled():
-                for c, val in results.solution_loader.get_duals().items():
-                    model.dual[c] = val
+                for con, val in results.solution_loader.get_duals().items():
+                    model.dual[con] = val
             if hasattr(model, 'rc') and model.rc.import_enabled():
-                for v, val in results.solution_loader.get_reduced_costs().items():
-                    model.rc[v] = val
+                for var, val in results.solution_loader.get_reduced_costs().items():
+                    model.rc[var] = val
         elif results.incumbent_objective is not None:
             delete_legacy_soln = False
-            for v, val in results.solution_loader.get_primals().items():
-                legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}
+            for var, val in results.solution_loader.get_primals().items():
+                legacy_soln.variable[symbol_map.getSymbol(var)] = {'Value': val}
             if hasattr(model, 'dual') and model.dual.import_enabled():
-                for c, val in results.solution_loader.get_duals().items():
-                    legacy_soln.constraint[symbol_map.getSymbol(c)] = {'Dual': val}
+                for con, val in results.solution_loader.get_duals().items():
+                    legacy_soln.constraint[symbol_map.getSymbol(con)] = {'Dual': val}
             if hasattr(model, 'rc') and model.rc.import_enabled():
-                for v, val in results.solution_loader.get_reduced_costs().items():
+                for var, val in results.solution_loader.get_reduced_costs().items():
                     legacy_soln.variable['Rc'] = val
 
         legacy_results.solution.insert(legacy_soln)
@@ -638,11 +674,16 @@ class LegacySolverWrapper:
         return bool(self.available())
 
     def config_block(self, init=False):
-        from pyomo.scripting.solve_config import default_config_block
-
+        """
+        Preserves config backwards compatibility; allows new solver interfaces
+        to be used in the pyomo solve call
+        """
         return default_config_block(self, init)[0]
 
     def set_options(self, options):
+        """
+        Method to manually set options; can be called outside of the solve method
+        """
         opts = {k: v for k, v in options.value().items() if v is not None}
         if opts:
             self._map_config(**opts)
