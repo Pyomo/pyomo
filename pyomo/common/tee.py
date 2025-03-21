@@ -23,7 +23,7 @@ import sys
 import threading
 import time
 
-from pyomo.common.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept, LogStream
 
 _poll_interval = 0.0001
 _poll_rampup_limit = 0.099
@@ -205,12 +205,15 @@ class capture_output(object):
         self.capture_fd = capture_fd
         self.context_stack = []
 
-    def _enter_context(self, cm):
+    def _enter_context(self, cm, prior_to=None):
         """Add the context manager to the context stack and return the result
         from calling the Ccontext manager's `__enter__()`
 
         """
-        self.context_stack.append(cm)
+        if prior_to is None:
+            self.context_stack.append(cm)
+        else:
+            self.context_stack.insert(self.context_stack.index(prior_to), cm)
         return cm.__enter__()
 
     def _exit_context_stack(self, et, ev, tb):
@@ -290,6 +293,36 @@ class capture_output(object):
                         fd_redirect[fd] = self._enter_context(
                             redirect_fd(fd, tee_fd[i], synchronize=False)
                         )
+                # We need to make sure that we didn't just capture the
+                # FD that underlies a stream that we are outputting to.
+                ostreams = []
+                for stream in self.tee.ostreams:
+                    if isinstance(stream, LogStream):
+                        pass
+                    else:
+                        try:
+                            fd = stream.fileno()
+                        except (AttributeError, OSError):
+                            fd = None
+                        if fd in fd_redirect:
+                            # We just redirected this file descriptor so
+                            # we can capture the output.  This makes a
+                            # loop that we really want to break.  Undo
+                            # the redirect by pointing our output stream
+                            # back to the original file descriptor.
+                            ostreams.append(
+                                self._enter_context(
+                                    os.fdopen(
+                                        os.dup(fd_redirect[fd].original_fd),
+                                        mode="w",
+                                        closefd=True,
+                                    ),
+                                    prior_to=self.tee,
+                                )
+                            )
+                            continue
+                    ostreams.append(stream)
+                self.tee.ostreams = ostreams
         except:
             # Note: we will ignore any exceptions raised while exiting
             # the context managers and just reraise the original
