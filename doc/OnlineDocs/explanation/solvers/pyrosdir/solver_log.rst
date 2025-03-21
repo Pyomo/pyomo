@@ -17,15 +17,12 @@ Default Format
 When the PyROS
 :meth:`~pyomo.contrib.pyros.pyros.PyROS.solve` method
 is invoked on a robust optimization problem,
-your console output will, by default, look like this
-(line numbers added for reference):
+your console output will, by default, look like this:
 
 
 .. _solver-log-snippet:
 
 .. code-block:: text
-   :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
-   :linenos:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver, v1.3.4.
@@ -123,21 +120,23 @@ your console output will, by default, look like this
    All done. Exiting PyROS.
    ==============================================================================
 
-Observe that the log contains the following information:
+Observe that the log contains the following information
+(listed in order of appearance):
 
 
-* **Introductory information** (lines 1--18).
+* **Introductory information and disclaimer**:
   Includes the version number, author
   information, (UTC) time at which the solver was invoked,
   and, if available, information on the local Git branch and
   commit hash.
-* **Summary of solver options** (lines 19--40).
-* **Preprocessing information** (lines 41--43).
+* **Summary of solver options**: Enumeration of
+  specifications for optional arguments to the solver.
+* **Preprocessing information**:
   Wall time required for preprocessing
   the deterministic model and associated components,
   i.e., standardizing model components and adding the decision rule
   variables and equations.
-* **Model component statistics** (lines 44--61).
+* **Model component statistics**:
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
@@ -149,12 +148,13 @@ Observe that the log contains the following information:
   are included in parentheses, next to the total numbers
   of second-stage variables and state variables, respectively;
   note that "adjustable" has been abbreviated as "adj."
-* **Iteration log table** (lines 62--68).
+* **Iteration log table**:
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
   :ref:`the table that follows <table-iteration-log-columns>`.
-* **Termination message** (lines 69--70). Very brief summary of the termination outcome.
-* **Timing statistics** (lines 71--87).
+* **Termination message**: One-line message briefly summarizing
+  the reason the solver has terminated.
+* **Timing statistics**:
   Tabulated breakdown of the solver timing statistics, based on a
   :class:`pyomo.common.timing.HierarchicalTimer` printout.
   The identifiers are as follows:
@@ -173,13 +173,13 @@ Observe that the log contains the following information:
   * ``main.preprocessing``: Preprocessing time.
   * ``main.other``: Overhead time.
 
-* **Final result** (lines 88--93).
+* **Final result**:
   A printout of the
   :class:`~pyomo.contrib.pyros.solve_data.ROSolveResults`
-  object that is finally returned
-* **Exit message** (lines 94--95).
+  object that is finally returned.
+* **Exit message**: Confirmation that the solver has been exited properly.
 
-The iteration log table (lines 62--68) is designed to provide, in a concise manner,
+The iteration log table is designed to provide, in a concise manner,
 important information about the progress of the iterative algorithm for
 the problem of interest.
 The constituent columns are defined in the
