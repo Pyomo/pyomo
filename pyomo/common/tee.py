@@ -187,6 +187,26 @@ class capture_output(object):
         directly to the process stdout / stderr by external compiled
         modules.
 
+        Capturing and redirecting the file descriptors can cause loops
+        in the output stream (where one of the `output` streams points
+        to a file descriptor we just captured.
+        :py:class:`capture_output` will attempt to locate
+        :py:class:`io.IOBase` streams in `output` that point to file
+        descriptors that we just captured and replace them with
+        temporary streams that point to (copies of) the original file
+        descriptor.  In addition, :py:class:`capture_output` will look
+        for :py:class:`~pyomo.common.log.LogStream` objects and will
+        attempt to locate :py:class:`logging.StreamHandle` objects that
+        would output to a redirected file descriptor and temporarily
+        redirecct those handlers to (copies of) the original file
+        descriptor.
+
+        Note that this process will cover the most common cases, but is
+        by no means perfect.  Use of other output classes or customized
+        log handlers may still result in output loops (usually
+        manifesting in an error message about text being left in the
+        output buffer).
+
     Returns
     -------
     io.TextIOBase
