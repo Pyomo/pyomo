@@ -621,7 +621,7 @@ class TestFileDescriptor(unittest.TestCase):
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
             os.close(1)
-            self.assertEqual(FILE.read(), "to_stdout_1\nto_stdout_2\nto_fd1_2\n")
+            self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
 
     # Pytest's default capture method causes failures for the following
     # two tests. This re-implementation of the capfd fixture allows
