@@ -21,6 +21,7 @@
 import inspect
 import io
 import logging
+import os
 import re
 import sys
 import textwrap
@@ -400,3 +401,74 @@ class LogStream(io.TextIOBase):
     def flush(self):
         if self._buffer:
             self.write('\n')
+
+    def redirect_streams(self, redirects):
+        """Redirect StreamHandler objects to the original file descriptors
+
+        This utility method for py:class:`~pyomo.common.tee.capture_output`
+        locates any StreamHandlers that would process messages from the
+        logger assigned to this :py:class:`LogStream` that would write
+        to the file descriptors redirected by `capture_output` and
+        yields context managers that will redirect those StreamHandlers
+        back to duplicates of the original file descriptors.
+
+        """
+        found = 0
+        logger = self._logger
+        while logger:
+            for handler in logger.handlers:
+                found += 1
+                if not isinstance(handler, logging.StreamHandler):
+                    continue
+                try:
+                    fd = handler.stream.fileno()
+                except (AttributeError, OSError):
+                    fd = None
+                if fd not in redirects:
+                    continue
+                yield _StreamRedirector(handler, redirects[fd].original_fd)
+            if not logger.propagate:
+                break
+            else:
+                logger = logger.parent
+        if not found:
+            fd = logging.lastResort.stream.fileno()
+            if fd in redirects:
+                yield _LastResortRedirector(redirects[fd].original_fd)
+
+
+class _StreamRedirector(object):
+    def __init__(self, handler, fd):
+        self.handler = handler
+        self.fd = fd
+        self.orig_stream = None
+
+    def __enter__(self):
+        self.orig_stream = self.handler.stream
+        self.handler.stream = os.fdopen(
+            os.dup(self.fd), mode="w", closefd=True
+        ).__enter__()
+
+    def __exit__(self, et, ev, tb):
+        try:
+            self.handler.stream.__exit__(et, ev, tb)
+        finally:
+            self.handler.stream = self.orig_stream
+
+
+class _LastResortRedirector(object):
+    def __init__(self, fd):
+        self.fd = fd
+        self.orig_stream = None
+
+    def __enter__(self):
+        self.orig = logging.lastResort
+        logging.lastResort = logging.StreamHandler(
+            os.fdopen(os.dup(self.fd), mode="w", closefd=True).__enter__()
+        )
+
+    def __exit__(self, et, ev, tb):
+        try:
+            logging.lastResort.stream.close()
+        finally:
+            logging.lastResort = self.orig

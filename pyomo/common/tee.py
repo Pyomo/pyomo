@@ -298,7 +298,8 @@ class capture_output(object):
                 ostreams = []
                 for stream in self.tee.ostreams:
                     if isinstance(stream, LogStream):
-                        pass
+                        for handler_redirect in stream.redirect_streams(fd_redirect):
+                            self._enter_context(handler_redirect, prior_to=self.tee)
                     else:
                         try:
                             fd = stream.fileno()
