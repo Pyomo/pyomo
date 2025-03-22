@@ -311,17 +311,14 @@ class capture_output(object):
                             # loop that we really want to break.  Undo
                             # the redirect by pointing our output stream
                             # back to the original file descriptor.
-                            ostreams.append(
-                                self._enter_context(
-                                    os.fdopen(
-                                        os.dup(fd_redirect[fd].original_fd),
-                                        mode="w",
-                                        closefd=True,
-                                    ),
-                                    prior_to=self.tee,
-                                )
+                            stream = self._enter_context(
+                                os.fdopen(
+                                    os.dup(fd_redirect[fd].original_fd),
+                                    mode="w",
+                                    closefd=True,
+                                ),
+                                prior_to=self.tee,
                             )
-                            continue
                     ostreams.append(stream)
                 self.tee.ostreams = ostreams
         except:
