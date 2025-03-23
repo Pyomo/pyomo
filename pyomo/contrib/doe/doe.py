@@ -314,16 +314,18 @@ class DesignOfExperiments:
                 fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
 
             # Check if the FIM is positive definite
-            # If not, add jitter to the diagonal 
+            # If not, add jitter to the diagonal
             # to ensure positive definiteness
             min_eig = np.min(np.linalg.eigvals(fim_np))
-            if min_eig < 1E-6:
+            if min_eig < 1e-6:
                 jitter = np.abs(min_eig) + 1e-6
             else:
                 jitter = 0
 
             # Add jitter to the diagonal to ensure positive definiteness
-            L_vals_sq = np.linalg.cholesky(fim_np + jitter * np.eye(len(model.parameter_names)))
+            L_vals_sq = np.linalg.cholesky(
+                fim_np + jitter * np.eye(len(model.parameter_names))
+            )
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
