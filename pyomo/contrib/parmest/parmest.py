@@ -231,9 +231,95 @@ def SSE(model):
     """
     Sum of squared error between `experiment_output` model and data values
     """
-    expr = sum((y - y_hat) ** 2 for y, y_hat in model.experiment_outputs.items())
+    expr = sum((y - y_hat) ** 2 for y_hat, y in model.experiment_outputs.items())
     return expr
 
+def SSE_weighted(model):
+    """
+    Sum of squared error between `experiment_output` model and data values
+    """
+    expr = sum(
+        ((y - y_hat) / model.measurement_error[y_hat]) ** 2
+        for y_hat, y in model.experiment_outputs.items()
+    )
+    return expr
+
+# Calculate Jacobian matrix J using finite differences
+def compute_jacobian(model):
+    """
+    Compute the Jacobian matrix using finite differences.
+    """
+    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
+    params = [k for k, v in model.unknown_parameters.items()]
+    param_values = [p.value for p in params]
+    print("Parameter values:",param_values)
+    n_params = len(param_values)
+    n_outputs = len(y_hat_list)
+
+    J = np.zeros((n_outputs, n_params))
+
+    perturbation = 1E-6  # Small perturbation for finite differences
+    for i, param in enumerate(params):
+        orig_value = param_values[i]
+
+        # Forward perturbation
+        param.set_value(orig_value + perturbation)
+        params_new = [k.value for k, v in model.unknown_parameters.items()]
+        print("New param", params_new)
+        solver = pyo.SolverFactory('ipopt')
+        res_plus = solver.solve(model)
+        y_hat_plus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
+
+        # Backward perturbation
+        param.set_value(orig_value - perturbation)
+        res_minus = solver.solve(model)
+        y_hat_minus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
+
+        # Restore original parameter value
+        param.set_value(orig_value)
+        # model.unknown_parameters[param] = orig_value
+
+        # Central difference approximation for Jacobian
+        J[:, i] = [(y_hat_plus[w] - y_hat_minus[w]) / (2 * perturbation) for w in range(len(y_hat_plus))]
+
+    return J
+
+def compute_FIM(model):
+    """
+    Calculate the covariance matrix using the Jacobian and model measurement error.
+
+    Parameters:
+    -----------
+    model: ConcreteModel
+        Pyomo model containing experiment_outputs and measurement_error.
+
+    Returns:
+    --------
+    covariance_matrix: numpy.ndarray
+        Covariance matrix of the estimated parameters.
+    """
+
+    # Extract experiment outputs and measurement error values
+    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
+    error_list = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
+
+    # Check if error list is consistent
+    if len(error_list) == 0 or len(y_hat_list) == 0:
+        raise ValueError("Experiment outputs and measurement errors cannot be empty.")
+
+    # Create the weight matrix W (inverse of variance)
+    W = np.diag([1 / (err**2) for err in error_list])
+
+    # Calculate Jacobian matrix
+    J = compute_jacobian(model)
+
+    # Calculate FIM
+    try:
+        FIM = J.T @ W @ J
+    except np.linalg.LinAlgError:
+        raise RuntimeError("Jacobian matrix is singular or ill-conditioned. Cannot calculate covariance matrix.")
+
+    return FIM
 
 class Estimator(object):
     """
@@ -428,6 +514,8 @@ class Estimator(object):
             # custom functions
             if self.obj_function == 'SSE':
                 second_stage_rule = SSE
+            elif self.obj_function == 'SSE_weighted':
+                second_stage_rule = SSE_weighted
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
@@ -578,10 +666,49 @@ class Estimator(object):
                 the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
-                cov = 2 * sse / (n - l) * inv_red_hes
-                cov = pd.DataFrame(
-                    cov, index=thetavals.keys(), columns=thetavals.keys()
-                )
+                if self.obj_function == 'SSE': # covariance calculation for measurements in the same unit
+                    model = self.exp_list[0].get_labeled_model()
+
+                    # get the measurement error
+                    meas_error = [model.measurement_error[y_hat] for y_hat in model.experiment_outputs]
+
+                    # check if the user specifies the measurement error
+                    if all(item is None for item in meas_error):
+                        cov = 2 * sse / (n - l) * inv_red_hes
+                        cov = pd.DataFrame(
+                            cov, index=thetavals.keys(), columns=thetavals.keys()
+                        )
+                    else:
+                        cov = 2 * meas_error[0] * inv_red_hes  # covariance matrix
+                        cov = pd.DataFrame(
+                            cov, index=thetavals.keys(), columns=thetavals.keys()
+                        )
+                elif self.obj_function == 'SSE_weighted': # covariance calculation for measurements in diff. units
+                    # TODO: update formula
+                    # covariance matrix
+                    FIM_all = [] # FIM of all experiments
+                    for experiment in self.exp_list: # loop through the experiments
+                        model = experiment.get_labeled_model()
+
+                        # change the parameter values to the optimal values estimated
+                        params = [k for k, v in model.unknown_parameters.items()]
+                        for param in params:
+                            param.set_value(thetavals[param.name])
+
+                        # resolve the model
+                        solver = pyo.SolverFactory("ipopt")
+                        solver.solve(model)
+
+                        # compute the FIM
+                        FIM_all.append(compute_FIM(model))
+
+                    FIM_total = np.sum(FIM_all, axis=0) # FIM of all experiments
+                    cov = np.linalg.inv(FIM_total) # covariance matrix
+                    cov = pd.DataFrame(
+                        cov, index=thetavals.keys(), columns=thetavals.keys()
+                    )
+                else:
+                    raise NotImplementedError('Covariance calculation is only supported for SSE and SSE_weighted objectives')
 
             thetavals = pd.Series(thetavals)
 
@@ -1726,10 +1853,49 @@ class _DeprecatedEstimator(object):
                 the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
-                cov = 2 * sse / (n - l) * inv_red_hes
-                cov = pd.DataFrame(
-                    cov, index=thetavals.keys(), columns=thetavals.keys()
-                )
+                if self.obj_function == 'SSE': # covariance calculation for measurements in the same unit
+                    model = self.exp_list[0].get_labeled_model()
+
+                    # get the measurement error
+                    meas_error = [model.measurement_error[y_hat] for y_hat in model.experiment_outputs]
+
+                    # check if the user specifies the measurement error
+                    if all(item is None for item in meas_error):
+                        cov = 2 * sse / (n - l) * inv_red_hes
+                        cov = pd.DataFrame(
+                            cov, index=thetavals.keys(), columns=thetavals.keys()
+                        )
+                    else:
+                        cov = 2 * meas_error[0] * inv_red_hes  # covariance matrix
+                        cov = pd.DataFrame(
+                            cov, index=thetavals.keys(), columns=thetavals.keys()
+                        )
+                elif self.obj_function == 'SSE_weighted': # covariance calculation for measurements in diff. units
+                    # TODO: update formula
+                    # covariance matrix
+                    FIM_all = [] # FIM of all experiments
+                    for experiment in self.exp_list: # loop through the experiments
+                        model = experiment.get_labeled_model()
+
+                        # change the parameter values to the optimal values estimated
+                        params = [k for k, v in model.unknown_parameters.items()]
+                        for param in params:
+                            param.set_value(thetavals[param.name])
+
+                        # resolve the model
+                        solver = pyo.SolverFactory("ipopt")
+                        solver.solve(model)
+
+                        # compute the FIM
+                        FIM_all.append(compute_FIM(model))
+
+                    FIM_total = np.sum(FIM_all, axis=0) # FIM of all experiments
+                    cov = np.linalg.inv(FIM_total) # covariance matrix
+                    cov = pd.DataFrame(
+                        cov, index=thetavals.keys(), columns=thetavals.keys()
+                    )
+                else:
+                    raise NotImplementedError('Covariance calculation is only supported for SSE and SSE_weighted objectives')
 
             thetavals = pd.Series(thetavals)
 
