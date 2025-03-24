@@ -231,6 +231,9 @@ class TestReactorExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
     def test_reactor_obj_cholesky_solve_bad_prior(self):
+
+        from pyomo.contrib.doe import _SMALL_TOLERANCE_DEFINITENESS
+
         fd_method = "central"
         obj_used = "determinant"
 
@@ -238,9 +241,10 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
-        # Specify a prior that is negative definite...
-        # The jitter term should correct this
-        DoE_args['prior_FIM'] = -1*np.eye(4)
+        # Specify a prior that is slightly negative definite
+        # Because it is less than the tolerance, it should be adjusted to be positive definite
+        # No error should be thrown
+        DoE_args['prior_FIM'] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
