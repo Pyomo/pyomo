@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -21,7 +21,7 @@
 #  ___________________________________________________________________________
 
 """
-Try to import PySide6, which is the current official Qt 6 Python interface. Then, 
+Try to import PySide6, which is the current official Qt 6 Python interface. Then,
 try PyQt5 if that doesn't work. If no compatible Qt Python interface is found,
 use some dummy classes to allow some testing.
 """

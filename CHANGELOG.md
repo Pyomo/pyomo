@@ -2,6 +2,63 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.1   (5 Mar 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Remove URL and replace with full citation (#3490)
+  - Rename project "pyomo" in setup.py [PEP 625] (#3430)
+  - Resolve errors in `TeeStream` and `capture_output` (#3497)
+- Documentation
+  - Update autosummary for Sphinx 8.2.1 (#3492)
+  - Resolve errors building documentation PDF (#3495)
+- Testing
+  - conda: disable '--update-deps' to work around buggy libffi(?) (#3499)
+  - Update for March 2024 typos release (#3500)
+  - Add timeout when installing optional packages (solvers) in conda (#3501)
+  - Updates to CodeCov configuration (#3491)
+- Contributed Packages
+  - APPSI: Add warmstart for appsi_highs (issue #3450) (#3494)
+
+-------------------------------------------------------------------------------
+Pyomo 6.9.0   (21 Feb 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Big Wheel of Misfortune - A Practice in Reviewing Old Issues (#3460, #3473)
+  - Resolve buffering issues in `TeeStream` and `capture_output` (#3449)
+  - Update GHA badges on README.md (#3457)
+  - Fix incompatibility with `imp` and `DeferredImportCallbackFinder` (#3444)
+  - Remove Python 3.8 Support (#3438)
+- Core
+  - Resolve error parenthesizing pow mantissa (#3472)
+  - Resolve OSX error accessing closed filehandle (#3467)
+  - Allow construction of CUID from another CUID (#3464)
+  - Clean up `identify_variables` / `identify_mutable_parameters`; 
+    deprecate `SimpleExpressionVisitor` (#3436)
+- Solver Interfaces
+  - Solver refactor: BUGFIX, f-string in contrib/solver (#3481)
+  - Update Gurobi NL interface for Gurobi 12.x (#3470)
+  - Defer starting the SAS session until needed (#3448)
+  - Solver refactor: Validator for `tee` in `contrib.solver.config` (#3482)
+- Testing
+  - Pin Sphinx to not 8.2.0 (#3479)
+  - Typos corrections (#3437, #3474)
+  - Address intermittent TeeStream test failure (#3465)
+  - 2025 Testing update: Black 25.1.0, testing Qt without X11 (#3463)
+  - Testing: exclude Xpress 9.5.1 on Windows/GHA/Python3.{0,1} (#3455)
+  - CY25 CI Infrastructure and typo fixes (#3453)
+  - Verify we are testing all NEOS solvers (#3433)  
+- Contributed Packages
+  - GDPOpt: Add Logic-Based Discrete-Steepest Descent Algorithm (#3331)
+  - PyROS: Fix/Tweak Documentation and Solver Output Logging (#3475)
+  - PyROS: Fix Treatment of Fixed Model Variables and Initialization of 
+           Auxiliary Uncertain Parameters (#3461)
+  - PyROS: Improve handling of separation problem sub-solver errors (#3441)
+  - PyROS: Extend valid types for solver argument `uncertain_params` (#3439)
+  - PyROS: Add Gaussian confidence level attribute to `EllipsoidalSet` (#3434)
+
+-------------------------------------------------------------------------------
 Pyomo 6.8.2   (18 Nov 2024)
 -------------------------------------------------------------------------------
 

@@ -3,13 +3,13 @@ Pyomo.DoE
 
 **Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
-Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
+Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://github.com/CCSI-Toolset/>`_.
 project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
 If you use Pyomo.DoE, please cite:
 
-[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling. 
-"Pyomo.DOE: An open‐source package for model‐based design of experiments in Python." 
+[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling.
+"Pyomo.DOE: An open‐source package for model‐based design of experiments in Python."
 AIChE Journal 68.12 (2022): e17813. `https://doi.org/10.1002/aic.17813`
 
 Methodology Overview
@@ -41,14 +41,16 @@ Below is an overview of the type of optimization models Pyomo.DoE can accommodat
 The general form of a DAE problem that can be passed into Pyomo.DoE is shown below:
 
 .. math::
-    \begin{align*}
-        & \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\theta}) \\
-        & \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta})=\mathbf{0} \\
-        & \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta}) \\
-        & \mathbf{f}^{\mathbf{0}}\left(\dot{\mathbf{x}}\left(t_{0}\right), \mathbf{x}\left(t_{0}\right), \mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta})\right)=\mathbf{0} \\
-        & \mathbf{g}^{\mathbf{0}}\left( \mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)=\mathbf{0}\\
-        &\mathbf{y}^{\mathbf{0}}\left(t_{0}\right)=\mathbf{h}\left(\mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)
-    \end{align*}
+   :nowrap:
+
+   \[\begin{array}{l}
+     \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\theta}) \\
+     \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta})=\mathbf{0} \\
+     \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta}) \\
+     \mathbf{f}^{\mathbf{0}}\left(\dot{\mathbf{x}}\left(t_{0}\right), \mathbf{x}\left(t_{0}\right), \mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta})\right)=\mathbf{0} \\
+     \mathbf{g}^{\mathbf{0}}\left( \mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{y}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)=\mathbf{0}\\
+     \mathbf{y}^{\mathbf{0}}\left(t_{0}\right)=\mathbf{h}\left(\mathbf{x}\left(t_{0}\right),\mathbf{z}(t_0), \mathbf{u}\left(t_{0}\right), \overline{\mathbf{w}}, \boldsymbol{\theta}\right)
+   \end{array}\]
 
 where:
 
@@ -69,6 +71,8 @@ where:
 Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
 .. math::
+   :nowrap:
+
     \begin{equation}
     \begin{aligned}
         \underset{\boldsymbol{\varphi}}{\max} \quad & \Psi (\mathbf{M}(\mathbf{\hat{y}}, \boldsymbol{\varphi})) \\
@@ -133,6 +137,8 @@ The Arrhenius equations model the temperature dependence of the reaction rate co
 
 
 .. math::
+   :nowrap:
+
     \begin{equation}
     \begin{aligned}
         k_1 & = A_1 e^{-\frac{E_1}{RT}} \\
@@ -206,7 +212,7 @@ This method utilizes the previous 3 steps and is used by `Pyomo.DoE` to build th
 Step 5: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, 
+Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable,
 i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
 Pyomo.DoE can perform exploratory sensitivity analysis with the ``compute_FIM_full_factorial`` function.

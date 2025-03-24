@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,16 +16,18 @@ Tests for the PyROS UncertaintySet class and subclasses.
 import itertools as it
 import pyomo.common.unittest as unittest
 
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import (
     attempt_import,
     numpy as np,
     numpy_available,
+    scipy as sp,
     scipy_available,
 )
-from pyomo.environ import SolverFactory
 from pyomo.core.base import ConcreteModel, Param, Var
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
+from pyomo.environ import SolverFactory
 
 from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
@@ -357,6 +359,26 @@ class TestBoxSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (3, 4))
 
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        box_set = BoxSet(bounds=[(1, 2), (1, 1), (3, 4)])
+        self.assertEqual(
+            box_set._is_coordinate_fixed(config=Bunch()), [False, True, False]
+        )
+
+        # test the tolerance
+        box_set.bounds = [(1, 2), (2, 2 + 5e-5), (3, 4)]
+        self.assertEqual(
+            box_set._is_coordinate_fixed(config=Bunch()), [False, True, False]
+        )
+        box_set.bounds = [(1, 2), (2, 2 + 1e-4), (3, 4)]
+        self.assertEqual(
+            box_set._is_coordinate_fixed(config=Bunch()), [False, False, False]
+        )
+
 
 class TestBudgetSet(unittest.TestCase):
     """
@@ -643,6 +665,18 @@ class TestBudgetSet(unittest.TestCase):
         )
         self.assertEqual(m.v[0].bounds, (1, 3))
         self.assertEqual(m.v[1].bounds, (3, 5))
+
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        buset = BudgetSet(
+            origin=np.zeros(3), budget_membership_mat=np.eye(3), rhs_vec=[1, 0, 2]
+        )
+        self.assertEqual(
+            buset._is_coordinate_fixed(config=Bunch()), [False, True, False]
+        )
 
 
 class TestFactorModelSet(unittest.TestCase):
@@ -1007,6 +1041,25 @@ class TestFactorModelSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[2].bounds, (-13.0, 17.0))
         self.assertEqual(m.uncertain_param_vars[3].bounds, (-12.0, 18.0))
 
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        fset = FactorModelSet(
+            origin=np.zeros(3),
+            number_of_factors=2,
+            psi_mat=[[1, 0], [1, -1], [1, 1]],
+            beta=1,
+        )
+        self.assertEqual(
+            fset._is_coordinate_fixed(config=Bunch()), [False, False, False]
+        )
+        fset.beta = 0
+        self.assertEqual(
+            fset._is_coordinate_fixed(config=Bunch()), [False, False, True]
+        )
+
 
 class TestIntersectionSet(unittest.TestCase):
     """
@@ -1366,6 +1419,20 @@ class TestIntersectionSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
             iset.point_in_set([1, 2, 3])
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        iset = IntersectionSet(
+            set1=BoxSet(bounds=[[0, 1], [0, 1]]), set2=BoxSet(bounds=[[1, 2], [0, 1]])
+        )
+        baron = SolverFactory("baron")
+        self.assertEqual(
+            iset._is_coordinate_fixed(config=Bunch(global_solver=baron)), [True, False]
+        )
+
 
 class TestCardinalitySet(unittest.TestCase):
     """
@@ -1565,6 +1632,16 @@ class TestCardinalitySet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 4))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (2, 2))
 
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        cset = CardinalitySet(origin=np.zeros(3), positive_deviation=[1, 1, 0], gamma=1)
+        self.assertEqual(
+            cset._is_coordinate_fixed(config=Bunch()), [False, False, True]
+        )
+
 
 class TestDiscreteScenarioSet(unittest.TestCase):
     """
@@ -1670,6 +1747,16 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (0, 1.0))
+
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        dset = DiscreteScenarioSet(scenarios=[[0, 0, 0], [0, 1, 2], [0, 3, 4]])
+        self.assertEqual(
+            dset._is_coordinate_fixed(config=Bunch()), [True, False, False]
+        )
 
 
 class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
@@ -1837,6 +1924,16 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.5, 3.5))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (1, 1))
 
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        aeset = AxisAlignedEllipsoidalSet(center=np.zeros(3), half_lengths=[1, 2, 0])
+        self.assertEqual(
+            aeset._is_coordinate_fixed(config=Bunch()), [False, False, True]
+        )
+
 
 class TestEllipsoidalSet(unittest.TestCase):
     """
@@ -1863,6 +1960,13 @@ class TestEllipsoidalSet(unittest.TestCase):
         np.testing.assert_allclose(
             scale, eset.scale, err_msg="EllipsoidalSet scale not as expected"
         )
+        np.testing.assert_allclose(
+            # evaluate chisquare CDF for 2 degrees of freedom
+            # using simplified formula
+            1 - np.exp(-scale / 2),
+            eset.gaussian_conf_lvl,
+            err_msg="EllipsoidalSet Gaussian confidence level not as expected",
+        )
 
         # check attributes update
         new_center = [-1, -3]
@@ -1885,6 +1989,42 @@ class TestEllipsoidalSet(unittest.TestCase):
         )
         np.testing.assert_allclose(
             new_scale, eset.scale, err_msg="EllipsoidalSet scale update not as expected"
+        )
+        np.testing.assert_allclose(
+            # evaluate chisquare CDF for 2 degrees of freedom
+            # using simplified formula
+            1 - np.exp(-new_scale / 2),
+            eset.gaussian_conf_lvl,
+            err_msg="EllipsoidalSet Gaussian confidence level update not as expected",
+        )
+
+    def test_normal_construction_and_update_gaussian_conf_lvl(self):
+        """
+        Test EllipsoidalSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        init_conf_lvl = 0.95
+        eset = EllipsoidalSet(
+            center=[0, 0, 0],
+            shape_matrix=np.eye(3),
+            scale=None,
+            gaussian_conf_lvl=init_conf_lvl,
+        )
+
+        self.assertEqual(eset.gaussian_conf_lvl, init_conf_lvl)
+        np.testing.assert_allclose(
+            sp.stats.chi2.isf(q=1 - init_conf_lvl, df=eset.dim),
+            eset.scale,
+            err_msg="EllipsoidalSet scale not as expected",
+        )
+
+        new_conf_lvl = 0.99
+        eset.gaussian_conf_lvl = new_conf_lvl
+        self.assertEqual(eset.gaussian_conf_lvl, new_conf_lvl)
+        np.testing.assert_allclose(
+            sp.stats.chi2.isf(q=1 - new_conf_lvl, df=eset.dim),
+            eset.scale,
+            err_msg="EllipsoidalSet scale not as expected",
         )
 
     def test_error_on_ellipsoidal_dim_change(self):
@@ -1925,6 +2065,48 @@ class TestEllipsoidalSet(unittest.TestCase):
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
             eset.scale = neg_scale
+
+    def test_error_invalid_gaussian_conf_lvl(self):
+        """
+        Test error when attempting to initialize with Gaussian
+        confidence level outside range.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        invalid_conf_lvl = 1.001
+
+        exc_str = r"Ensure the confidence level is a value in \[0, 1\)."
+
+        # error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(
+                center=center,
+                shape_matrix=shape_matrix,
+                scale=None,
+                gaussian_conf_lvl=invalid_conf_lvl,
+            )
+
+        # error on updating valid ellipsoid
+        eset = EllipsoidalSet(center, shape_matrix, scale=None, gaussian_conf_lvl=0.95)
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.gaussian_conf_lvl = invalid_conf_lvl
+
+        # negative confidence level
+        eset = EllipsoidalSet(center, shape_matrix, scale=None, gaussian_conf_lvl=0.95)
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.gaussian_conf_lvl = -0.1
+
+    def test_error_scale_gaussian_conf_lvl_construction(self):
+        """
+        Test exception raised if neither or both of
+        `scale` and `gaussian_conf_lvl` are None.
+        """
+        exc_str = r"Exactly one of `scale` and `gaussian_conf_lvl` should be None"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet([0], [[1]], scale=None, gaussian_conf_lvl=None)
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet([0], [[1]], scale=1, gaussian_conf_lvl=0.95)
 
     def test_error_on_shape_matrix_with_wrong_size(self):
         """
@@ -2123,6 +2305,20 @@ class TestEllipsoidalSet(unittest.TestCase):
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0.5, 1.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 2))
+
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        eset = EllipsoidalSet(
+            center=np.zeros(3), shape_matrix=np.diag([1, 2, 3]), scale=1
+        )
+        self.assertEqual(
+            eset._is_coordinate_fixed(config=Bunch()), [False, False, False]
+        )
+        eset.scale = 0
+        self.assertEqual(eset._is_coordinate_fixed(config=Bunch()), [True, True, True])
 
 
 class TestPolyhedralSet(unittest.TestCase):
@@ -2335,6 +2531,21 @@ class TestPolyhedralSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1, 1))
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        pset = PolyhedralSet(
+            lhs_coefficients_mat=[[1, 0], [-1, 0], [0, 1], [0, -1]],
+            rhs_vec=[1, 1, 1, -1],
+        )
+        baron = SolverFactory("baron")
+        self.assertEqual(
+            pset._is_coordinate_fixed(config=Bunch(global_solver=baron)), [False, True]
+        )
+
 
 class CustomUncertaintySet(UncertaintySet):
     """
@@ -2410,6 +2621,25 @@ class TestCustomUncertaintySet(unittest.TestCase):
         custom_set = CustomUncertaintySet(dim=2)
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
         self.assertEqual(custom_set._compute_parameter_bounds(baron), [(-1, 1)] * 2)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_coordinate_fixed(self):
+        """
+        Test method for checking whether there are coordinates
+        constrained to a single value.
+        """
+        custom_set = CustomUncertaintySet(dim=3)
+        custom_set._PARAMETER_BOUNDS_EXACT = True
+        self.assertEqual(
+            custom_set._is_coordinate_fixed(config=Bunch()), [False, False, False]
+        )
+
+        custom_set._PARAMETER_BOUNDS_EXACT = False
+        baron = SolverFactory("baron")
+        self.assertEqual(
+            custom_set._is_coordinate_fixed(config=Bunch(global_solver=baron)),
+            [False, False, False],
+        )
 
 
 if __name__ == "__main__":

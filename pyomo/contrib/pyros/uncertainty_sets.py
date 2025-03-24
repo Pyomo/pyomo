@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -42,6 +42,8 @@ from pyomo.core.util import quicksum, dot_product
 from pyomo.opt.results import check_optimal_termination
 from pyomo.contrib.pyros.util import (
     copy_docstring,
+    PARAM_IS_CERTAIN_REL_TOL,
+    PARAM_IS_CERTAIN_ABS_TOL,
     POINT_IN_UNCERTAINTY_SET_TOL,
     standardize_component_data,
 )
@@ -478,6 +480,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     components of a Pyomo modeling object.
     """
 
+    # True if parameter_bounds attribute returns
+    # exact bounding box, False otherwise
+    _PARAMETER_BOUNDS_EXACT = False
+
     @property
     @abc.abstractmethod
     def dim(self):
@@ -661,14 +667,45 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         return is_in_set
 
-    def _compute_parameter_bounds(self, solver):
+    def _compute_parameter_bounds(self, solver, index=None):
         """
-        Compute coordinate value bounds for every dimension
-        of `self` by solving a bounding model.
+        Compute lower and upper coordinate value bounds
+        for every dimension of `self` by solving a bounding model.
+
+        Parameters
+        ----------
+        solver : Pyomo solver type
+            Optimizer to invoke on the bounding problems.
+        index : list of int, optional
+            Positional indices of the coordinates for which
+            to compute bounds. If None is passed,
+            then the argument is set to ``list(range(self.dim))``,
+            so that the bounds for all coordinates are computed.
+
+        Returns
+        -------
+        param_bounds : list of tuple of float
+            Each entry of the list is a 2-tuple
+            containing the lower and upper bound for
+            the corresponding dimension.
+
+        Raises
+        ------
+        ValueError
+            If solver failed to compute a bound for a
+            coordinate.
         """
+        if index is None:
+            index = list(range(self.dim))
+
         bounding_model = self._create_bounding_model()
+        objs_to_optimize = (
+            (idx, obj)
+            for idx, obj in bounding_model.param_var_objectives.items()
+            if idx in index
+        )
         param_bounds = []
-        for idx, obj in bounding_model.param_var_objectives.items():
+        for idx, obj in objs_to_optimize:
             # activate objective for corresponding dimension
             obj.activate()
             bounds = []
@@ -753,6 +790,47 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         raise NotImplementedError(
             f"Auxiliary parameter computation not supported for {type(self).__name__}."
         )
+
+    def _is_coordinate_fixed(self, config, index=None):
+        """
+        Test whether each Cartesian coordinate of interest
+        of the uncertainty set is constrained to a single value.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver options. Should at least contain attribute
+            `global_solver`.
+        index : iterable of int, optional
+            Positional indices of the coordinates to check.
+            If `None` is passed, then `index` is set to
+            ``list(range(self.dim))``, so that all coordinates
+            are checked.
+
+        Returns
+        -------
+        list of bool
+            Same length as ``index``.
+            An entry of the list is True if the corresponding
+            coordinate is constrained to a single value,
+            False otherwise.
+        """
+
+        def _values_close(a, b):
+            return math.isclose(
+                a, b, rel_tol=PARAM_IS_CERTAIN_ABS_TOL, abs_tol=PARAM_IS_CERTAIN_REL_TOL
+            )
+
+        param_bounds = self.parameter_bounds
+        if not (param_bounds and self._PARAMETER_BOUNDS_EXACT):
+            # we need the exact bounding box
+            param_bounds = self._compute_parameter_bounds(
+                solver=config.global_solver, index=index
+            )
+        else:
+            index = list(range(len(param_bounds))) if index is None else index
+            param_bounds = [param_bounds[idx] for idx in index]
+        return [_values_close(lb, ub) for lb, ub in param_bounds]
 
 
 class UncertaintySetList(MutableSequence):
@@ -982,6 +1060,8 @@ class BoxSet(UncertaintySet):
            [0, 1]])
     """
 
+    _PARAMETER_BOUNDS_EXACT = True
+
     def __init__(self, bounds):
         """Initialize self (see class docstring)."""
         self.bounds = bounds
@@ -1115,6 +1195,8 @@ class CardinalitySet(UncertaintySet):
     >>> gamma_set.gamma
     1
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, origin, positive_deviation, gamma):
         """Initialize self (see class docstring)."""
@@ -1610,6 +1692,8 @@ class BudgetSet(UncertaintySet):
     array([2, 2, 2])
     """
 
+    _PARAMETER_BOUNDS_EXACT = True
+
     def __init__(self, budget_membership_mat, rhs_vec, origin=None):
         """Initialize self (see class docstring)."""
         self.budget_membership_mat = budget_membership_mat
@@ -1893,6 +1977,8 @@ class FactorModelSet(UncertaintySet):
     >>> fset.beta
     0.5
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
         """Initialize self (see class docstring)."""
@@ -2215,6 +2301,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     """
 
+    _PARAMETER_BOUNDS_EXACT = True
+
     def __init__(self, center, half_lengths):
         """Initialize self (see class docstring)."""
         self.center = center
@@ -2374,31 +2462,37 @@ class EllipsoidalSet(UncertaintySet):
     center : (N,) array-like
         Center of the ellipsoid.
     shape_matrix : (N, N) array-like
-        A positive definite matrix characterizing the shape
-        and orientation of the ellipsoid.
+        A symmetric positive definite matrix characterizing
+        the shape and orientation of the ellipsoid.
     scale : numeric type, optional
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
+    gaussian_conf_lvl : numeric type, optional
+        (Fractional) confidence level of the multivariate
+        normal distribution with mean `center` and covariance
+        matrix `shape_matrix`.
+        Exactly one of `scale` and `gaussian_conf_lvl` should be
+        None; otherwise, an exception is raised.
 
     Examples
     --------
-    3D origin-centered unit hypersphere:
+    A 3D origin-centered unit ball:
 
     >>> from pyomo.contrib.pyros import EllipsoidalSet
     >>> import numpy as np
-    >>> hypersphere = EllipsoidalSet(
+    >>> ball = EllipsoidalSet(
     ...     center=[0, 0, 0],
     ...     shape_matrix=np.eye(3),
     ...     scale=1,
     ... )
-    >>> hypersphere.center
+    >>> ball.center
     array([0, 0, 0])
-    >>> hypersphere.shape_matrix
+    >>> ball.shape_matrix
     array([[1., 0., 0.],
            [0., 1., 0.],
            [0., 0., 1.]])
-    >>> hypersphere.scale
+    >>> ball.scale
     1
 
     A 2D ellipsoid with custom rotation and scaling:
@@ -2416,13 +2510,44 @@ class EllipsoidalSet(UncertaintySet):
     >>> rotated_ellipsoid.scale
     0.5
 
+    A 4D 95% confidence ellipsoid:
+
+    >>> conf_ellipsoid = EllipsoidalSet(
+    ...     center=np.zeros(4),
+    ...     shape_matrix=np.diag(range(1, 5)),
+    ...     scale=None,
+    ...     gaussian_conf_lvl=0.95,
+    ... )
+    >>> conf_ellipsoid.center
+    array([0, 0, 0, 0])
+    >>> conf_ellipsoid.shape_matrix
+    array([[1, 0, 0, 0]],
+           [0, 2, 0, 0]],
+           [0, 0, 3, 0]],
+           [0, 0, 0. 4]])
+    >>> conf_ellipsoid.scale
+    ...9.4877...
+    >>> conf_ellipsoid.gaussian_conf_lvl
+    0.95
+
     """
 
-    def __init__(self, center, shape_matrix, scale=1):
+    _PARAMETER_BOUNDS_EXACT = True
+
+    def __init__(self, center, shape_matrix, scale=1, gaussian_conf_lvl=None):
         """Initialize self (see class docstring)."""
         self.center = center
         self.shape_matrix = shape_matrix
-        self.scale = scale
+
+        if scale is not None and gaussian_conf_lvl is None:
+            self.scale = scale
+        elif scale is None and gaussian_conf_lvl is not None:
+            self.gaussian_conf_lvl = gaussian_conf_lvl
+        else:
+            raise ValueError(
+                "Exactly one of `scale` and `gaussian_conf_lvl` should be "
+                f"None (got {scale=}, {gaussian_conf_lvl=})"
+            )
 
     @property
     def type(self):
@@ -2456,7 +2581,7 @@ class EllipsoidalSet(UncertaintySet):
             if val_arr.size != self.dim:
                 raise ValueError(
                     "Attempting to set attribute 'center' of "
-                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                    f"{type(self).__name__} of dimension {self.dim} "
                     f"to value of dimension {val_arr.size}"
                 )
 
@@ -2535,7 +2660,7 @@ class EllipsoidalSet(UncertaintySet):
         if hasattr(self, "_center"):
             if not all(size == self.dim for size in shape_mat_arr.shape):
                 raise ValueError(
-                    f"EllipsoidalSet attribute 'shape_matrix' "
+                    f"{type(self).__name__} attribute 'shape_matrix' "
                     f"must be a square matrix of size "
                     f"{self.dim} to match set dimension "
                     f"(provided matrix with shape {shape_mat_arr.shape})"
@@ -2558,12 +2683,40 @@ class EllipsoidalSet(UncertaintySet):
         validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
         if val < 0:
             raise ValueError(
-                "EllipsoidalSet attribute "
+                f"{type(self).__name__} attribute "
                 f"'scale' must be a non-negative real "
                 f"(provided value {val})"
             )
 
         self._scale = val
+        self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
+
+    @property
+    def gaussian_conf_lvl(self):
+        """
+        numeric type : (Fractional) confidence level of the
+        multivariate Gaussian distribution with mean ``self.origin``
+        and covariance ``self.shape_matrix`` for ellipsoidal region
+        with square magnification factor ``self.scale``.
+        """
+        return self._gaussian_conf_lvl
+
+    @gaussian_conf_lvl.setter
+    def gaussian_conf_lvl(self, val):
+        validate_arg_type(
+            "gaussian_conf_lvl", val, valid_num_types, "a valid numeric type", False
+        )
+
+        scale_val = sp.stats.chi2.isf(q=1 - val, df=self.dim)
+        if np.isnan(scale_val) or np.isinf(scale_val):
+            raise ValueError(
+                f"Squared scaling factor calculation for confidence level {val} "
+                f"and set dimension {self.dim} returned {scale_val}. "
+                "Ensure the confidence level is a value in [0, 1)."
+            )
+
+        self._gaussian_conf_lvl = val
+        self._scale = scale_val
 
     @property
     def dim(self):
@@ -2676,6 +2829,8 @@ class DiscreteScenarioSet(UncertaintySet):
     [(1, 1), (2, 1), (1, 2)]
 
     """
+
+    _PARAMETER_BOUNDS_EXACT = True
 
     def __init__(self, scenarios):
         """Initialize self (see class docstring)."""

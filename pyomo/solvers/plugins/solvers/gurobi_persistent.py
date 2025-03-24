@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -500,13 +500,13 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             .. math::
                :nowrap:
 
-               \begin{array}{ll}
-               \min          & 2x + y           \\
-               \mathrm{s.t.} & y \geq (x-2)^2   \\
-                             & 0 \leq x \leq 4  \\
-                             & y \geq 0         \\
-                             & y \in \mathbb{Z}
-               \end{array}
+               \[\begin{array}{ll}
+                 \min          & 2x + y           \\
+                 \mathrm{s.t.} & y \geq (x-2)^2   \\
+                               & 0 \leq x \leq 4  \\
+                               & y \geq 0         \\
+                               & y \in \mathbb{Z}
+               \end{array}\]
 
             as an MILP using extended cutting planes in callbacks.
 

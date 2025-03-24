@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,11 +10,11 @@
 #  ___________________________________________________________________________
 
 """
-This example shows how to represent a piecewise function using 
+This example shows how to represent a piecewise function using
 Pyomo's built SOSConstraint component. The function is defined as:
 
        / 3x-2 , 1 <= x <= 2
-f(x) = | 
+f(x) = |
        \ 5x-6 , 2 <= x <= 3
 """
 

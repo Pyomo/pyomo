@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -23,6 +23,13 @@
 """
 UI Tests
 """
+# The pytest-qt plugin can generate exceptions / core dumps when it is
+# run in a terminal (without an active X11 screen).  Setting the
+# QT_QPA_PLATFORM environment variable *before* initializing Qt can work
+# around this error (see https://stackoverflow.com/a/74719383):
+import os
+
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
 
 from pyomo.environ import (
     ConcreteModel,

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -27,6 +27,7 @@ from pyomo.core.base import (
     Any,
     Var,
     Constraint,
+    Expression,
     Objective,
     ConcreteModel,
     Param,
@@ -35,9 +36,10 @@ from pyomo.core.base import (
     Block,
 )
 from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
-from pyomo.core.expr import log, sin, exp, RangedExpression
+from pyomo.core.expr import LinearExpression, log, sin, exp, RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 
+from pyomo.contrib.pyros.uncertainty_sets import BoxSet
 from pyomo.contrib.pyros.util import (
     ModelData,
     ObjectiveType,
@@ -83,14 +85,15 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         Build simple model for effective variable partitioning tests.
         """
         m = ConcreteModel()
-        m.x1 = Var(bounds=(2, 2))
+        m.q = Param(mutable=True, initialize=1)
+        m.q2 = Param(mutable=True, initialize=2)
+        m.x1 = Var(bounds=(m.q2, m.q2))
         m.x2 = Var()
         m.z = Var()
         m.y = Var(range(1, 5))
-        m.q = Param(mutable=True, initialize=1)
 
         m.c0 = Constraint(expr=m.q + m.x1 + m.z == 0)
-        m.c1 = Constraint(expr=(0, m.x1 - m.z, 0))
+        m.c1 = Constraint(expr=(0, m.x1 - m.z * (m.q2 - 1), 0))
         m.c2 = Constraint(expr=m.x1**2 - m.z + m.y[1] == 0)
         m.c2_dupl = Constraint(expr=m.x1**2 - m.z + m.y[1] == 0)
         m.c3 = Constraint(expr=m.x1**3 + m.y[1] + 2 * m.y[2] == 0)
@@ -101,7 +104,8 @@ class TestEffectiveVarPartitioning(unittest.TestCase):
         model_data.config = Bunch()
         model_data.working_model = ConcreteModel()
         model_data.working_model.user_model = mdl = m.clone()
-        model_data.working_model.uncertain_params = [mdl.q]
+        model_data.working_model.uncertain_params = [mdl.q, mdl.q2]
+        model_data.working_model.effective_uncertain_params = [mdl.q]
 
         user_var_partitioning = model_data.working_model.user_var_partitioning = Bunch()
         user_var_partitioning.first_stage_variables = [mdl.x1, mdl.x2]
@@ -348,9 +352,17 @@ class TestSetupModelData(unittest.TestCase):
         #       Objective and Constraint objects
         m.y3 = Var(domain=RangeSet(0, 1, 0), bounds=(0.2, 0.5))
 
+        # Var to represent an uncertain Param;
+        # bounds will be ignored
+        m.q2var = Var(bounds=(0, None), initialize=3.2)
+
         # fix some variables
         m.z4.fix()
         m.y2.fix()
+
+        # NAMED EXPRESSIONS: mainly to test
+        # Var -> Param substitution for uncertain params
+        m.nexpr = Expression(expr=log(m.y2) + m.q2var)
 
         # EQUALITY CONSTRAINTS
         m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
@@ -362,7 +374,7 @@ class TestSetupModelData(unittest.TestCase):
         m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
         m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
         m.ineq3 = Constraint(expr=(2 * m.q, 2 * (m.z3 + m.y1), 2 * m.q))
-        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + log(m.y2))
+        m.ineq4 = Constraint(expr=-m.q <= m.y2**2 + m.nexpr)
 
         # out of scope: deactivated
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
@@ -383,6 +395,10 @@ class TestSetupModelData(unittest.TestCase):
             )
         )
 
+        # inactive objective
+        m.inactive_obj = Objective(expr=1 + m.q2var + m.x1)
+        m.inactive_obj.deactivate()
+
         # set up the var partitioning
         user_var_partitioning = VariablePartitioning(
             first_stage_variables=[m.x1, m.x2],
@@ -400,7 +416,9 @@ class TestSetupModelData(unittest.TestCase):
         model_data, user_var_partitioning = self.build_test_model_data()
         om = model_data.original_model
         config = model_data.config
-        config.uncertain_params = [om.q]
+        config.uncertain_params = [om.q, om.q2var]
+        config.progress_logger = logger
+        config.nominal_uncertain_param_vals = [om.q.value, om.q2var.value]
 
         setup_working_model(model_data, user_var_partitioning)
         working_model = model_data.working_model
@@ -418,6 +436,7 @@ class TestSetupModelData(unittest.TestCase):
 
         # active objective
         self.assertTrue(m.obj.active)
+        self.assertFalse(m.inactive_obj.active)
 
         # user var partitioning
         up = working_model.user_var_partitioning
@@ -432,7 +451,15 @@ class TestSetupModelData(unittest.TestCase):
 
         # uncertain params
         self.assertEqual(
-            ComponentSet(working_model.uncertain_params), ComponentSet([m.q])
+            ComponentSet(working_model.orig_uncertain_params),
+            ComponentSet([m.q, m.q2var]),
+        )
+
+        self.assertEqual(list(working_model.temp_uncertain_params.index_set()), [1])
+        temp_uncertain_param = working_model.temp_uncertain_params[1]
+        self.assertEqual(
+            ComponentSet(working_model.uncertain_params),
+            ComponentSet([m.q, temp_uncertain_param]),
         )
 
         # ensure original model unchanged
@@ -445,6 +472,49 @@ class TestSetupModelData(unittest.TestCase):
         self.assertFalse(working_model.first_stage.equality_cons)
         self.assertFalse(working_model.second_stage.inequality_cons)
         self.assertFalse(working_model.second_stage.equality_cons)
+
+        # ensure uncertain Param substitutions carried out properly
+        ublk = model_data.working_model.user_model
+        self.assertExpressionsEqual(
+            ublk.nexpr.expr, log(ublk.y2) + temp_uncertain_param
+        )
+        self.assertExpressionsEqual(
+            ublk.inactive_obj.expr, LinearExpression([1, temp_uncertain_param, m.x1])
+        )
+        self.assertExpressionsEqual(ublk.ineq4.expr, -ublk.q <= ublk.y2**2 + ublk.nexpr)
+
+        # other component expressions should remain as declared
+        self.assertExpressionsEqual(ublk.eq1.expr, ublk.q * (ublk.z3 + ublk.x2) == 0)
+        self.assertExpressionsEqual(ublk.eq2.expr, ublk.x1 - ublk.z1 == 0)
+        self.assertExpressionsEqual(
+            ublk.eq3.expr, ublk.x1**2 + ublk.x2 + ublk.p * ublk.z2 == ublk.p
+        )
+        self.assertExpressionsEqual(ublk.eq4.expr, ublk.z3 + ublk.y1 == ublk.q)
+        self.assertExpressionsEqual(
+            ublk.ineq1.expr,
+            RangedExpression((-ublk.p, ublk.x1 + ublk.z1, exp(ublk.q)), False),
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq2.expr, RangedExpression((0, ublk.x1 + ublk.x2, 10), False)
+        )
+        self.assertExpressionsEqual(
+            ublk.ineq3.expr,
+            RangedExpression((2 * ublk.q, 2 * (ublk.z3 + ublk.y1), 2 * ublk.q), False),
+        )
+        self.assertExpressionsEqual(ublk.ineq5.expr, ublk.y3 <= ublk.q)
+        self.assertExpressionsEqual(
+            ublk.obj.expr,
+            (
+                ublk.p**2
+                + 2 * ublk.p * ublk.q
+                + log(ublk.x1)
+                + 2 * ublk.p * ublk.x1
+                + ublk.q**2 * ublk.x1
+                + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
+                + ublk.z4
+                + ublk.z5
+            ),
+        )
 
 
 class TestResolveVarBounds(unittest.TestCase):
@@ -583,7 +653,8 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         m.z9 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p1])
         m.z10 = Var(domain=RangeSet(0, 5, 0), bounds=[m.q1, m.p2])
 
-        model_data.working_model.uncertain_params = [m.q1, m.q2]
+        model_data.working_model.uncertain_params = [m.q1, m.q2, m.p1]
+        model_data.working_model.effective_uncertain_params = [m.q1, m.q2]
 
         model_data.working_model.second_stage = Block()
         model_data.working_model.second_stage.inequality_cons = Constraint(Any)
@@ -963,9 +1034,10 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
 
         m.p = Param(initialize=2, mutable=True)
         m.q = Param(mutable=True, initialize=1)
+        m.q_cert = Param(mutable=True, initialize=1)
 
         m.c1 = Constraint(expr=m.x1 <= 1)
-        m.c2 = Constraint(expr=(1, m.x1, 2))
+        m.c2 = Constraint(expr=(1, m.x1, 2 * m.q_cert))
         m.c3 = Constraint(expr=m.q <= m.x1)
         m.c3_up = Constraint(expr=m.x1 - 2 * m.q <= 0)
         m.c4 = Constraint(expr=(log(m.p), m.x2, m.q))
@@ -976,11 +1048,12 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         m.c9 = Constraint(expr=m.y1 - m.q <= 0)
         m.c10 = Constraint(expr=m.y1 <= m.q**2)
         m.c11 = Constraint(expr=m.z2 <= m.q)
-        m.c12 = Constraint(expr=(m.q**2, m.x1, sin(m.p)))
+        m.c12 = Constraint(expr=(m.q**2, m.x1, sin(m.p) * m.q_cert))
 
         m.c11.deactivate()
 
-        model_data.working_model.uncertain_params = [m.q]
+        model_data.working_model.uncertain_params = [m.q, m.q_cert]
+        model_data.working_model.effective_uncertain_params = [m.q]
 
         model_data.working_model.first_stage = Block()
         model_data.working_model.first_stage.inequality_cons = Constraint(Any)
@@ -1038,7 +1111,7 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         new_c2_con = fs_ineq_cons["ineq_con_c2"]
         self.assertTrue(new_c2_con.active)
         assertExpressionsEqual(
-            self, new_c2_con.expr, RangedExpression((1, m.x1, 2), False)
+            self, new_c2_con.expr, RangedExpression((1, m.x1, 2 * m.q_cert), False)
         )
 
         # m.q <= m.x1; single second-stage inequality. modify in place
@@ -1134,7 +1207,9 @@ class TestStandardizeInequalityConstraints(unittest.TestCase):
         self.assertTrue(new_c12_lower_bound_con.active)
         self.assertTrue(new_c12_upper_bound_con.active)
         assertExpressionsEqual(self, new_c12_lower_bound_con.expr, -m.x1 <= -m.q**2)
-        assertExpressionsEqual(self, new_c12_upper_bound_con.expr, m.x1 <= sin(m.p))
+        assertExpressionsEqual(
+            self, new_c12_upper_bound_con.expr, m.x1 <= sin(m.p) * m.q_cert
+        )
 
         # check separation priorities
         for con_name in ss_ineq_cons:
@@ -1189,9 +1264,10 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
 
         m.p = Param(initialize=2, mutable=True)
         m.q = Param(mutable=True, initialize=1)
+        m.q_cert = Param(mutable=True, initialize=1)
 
         # first-stage equalities
-        m.eq1 = Constraint(expr=m.x1 + log(m.p) == 1)
+        m.eq1 = Constraint(expr=m.x1 + log(m.p) == m.q_cert + 1)
         m.eq2 = Constraint(expr=(1, m.x2, 1))
 
         # second-stage equalities
@@ -1204,7 +1280,8 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         # make eq7 out of scope
         m.eq7.deactivate()
 
-        model_data.working_model.uncertain_params = [m.q]
+        model_data.working_model.uncertain_params = [m.q, m.q_cert]
+        model_data.working_model.effective_uncertain_params = [m.q]
 
         model_data.working_model.first_stage = Block()
         model_data.working_model.first_stage.equality_cons = Constraint(Any)
@@ -1246,7 +1323,7 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         self.assertFalse(m.eq1.active)
         new_eq1_con = first_stage_eq_cons["eq_con_eq1"]
         self.assertTrue(new_eq1_con.active)
-        assertExpressionsEqual(self, new_eq1_con.expr, m.x1 + log(m.p) == 1)
+        assertExpressionsEqual(self, new_eq1_con.expr, m.x1 + log(m.p) == m.q_cert + 1)
 
         self.assertFalse(m.eq2.active)
         new_eq2_con = first_stage_eq_cons["eq_con_eq2"]
@@ -1304,15 +1381,24 @@ class TestStandardizeActiveObjective(unittest.TestCase):
 
         m.p = Param(initialize=1, mutable=True)
         m.q = Param(initialize=1, mutable=True)
+        m.q_cert = Param(initialize=1, mutable=True)
 
         m.obj1 = Objective(
             expr=(
-                10 + m.p + m.q + m.p * m.x + m.z * m.p + m.y**2 * m.q + m.y + log(m.x)
+                10
+                + m.p
+                + m.q
+                + m.p * m.q_cert * m.x
+                + m.z * m.p
+                + m.y**2 * m.q
+                + m.y
+                + log(m.x)
             )
         )
         m.obj2 = Objective(expr=m.p + m.x * m.z + m.z**2)
 
-        model_data.working_model.uncertain_params = [m.q]
+        model_data.working_model.uncertain_params = [m.q, m.q_cert]
+        model_data.working_model.effective_uncertain_params = [m.q]
 
         up = model_data.working_model.user_var_partitioning = Bunch()
         up.first_stage_variables = [m.x]
@@ -1346,7 +1432,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.first_stage_objective.expr,
-            10 + m.p + m.p * m.x + log(m.x),
+            10 + m.p + m.p * m.q_cert * m.x + log(m.x),
         )
         assertExpressionsEqual(
             self,
@@ -1369,7 +1455,7 @@ class TestStandardizeActiveObjective(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.first_stage_objective.expr,
-            -10 - m.p - m.p * m.x - log(m.x),
+            -10 - m.p - m.p * m.q_cert * m.x - log(m.x),
         )
         assertExpressionsEqual(
             self,
@@ -1514,7 +1600,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         model_data.working_model.user_model = m = Block()
 
         # uncertain parameters
-        m.q = Param(range(3), initialize=0, mutable=True)
+        m.q = Param(range(4), initialize=0, mutable=True)
 
         # second-stage variables
         m.x = Var()
@@ -1523,6 +1609,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         m.y = Var()
 
         model_data.working_model.uncertain_params = list(m.q.values())
+        model_data.working_model.effective_uncertain_params = [m.q[0], m.q[1], m.q[2]]
 
         up = model_data.working_model.user_var_partitioning = Bunch()
         up.first_stage_variables = [m.x]
@@ -1601,7 +1688,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
         for indexed_dr_var in model_data.working_model.first_stage.decision_rule_vars:
             self.assertEqual(
                 len(indexed_dr_var),
-                1 + len(model_data.working_model.uncertain_params),
+                1 + len(model_data.working_model.effective_uncertain_params),
                 msg=(
                     "Number of decision rule coefficient variables "
                     f"in indexed Var object {indexed_dr_var.name!r}"
@@ -1648,7 +1735,7 @@ class TestAddDecisionRuleVars(unittest.TestCase):
 
         add_decision_rule_variables(model_data)
 
-        num_params = len(model_data.working_model.uncertain_params)
+        num_params = len(model_data.working_model.effective_uncertain_params)
 
         for indexed_dr_var in model_data.working_model.first_stage.decision_rule_vars:
             self.assertEqual(
@@ -1714,7 +1801,7 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         model_data.working_model.user_model = m = Block()
 
         # uncertain parameters
-        m.q = Param(range(3), initialize=0, mutable=True)
+        m.q = Param(range(4), initialize=0, mutable=True)
 
         # second-stage variables
         m.x = Var()
@@ -1723,6 +1810,7 @@ class TestAddDecisionRuleConstraints(unittest.TestCase):
         m.y = Var()
 
         model_data.working_model.uncertain_params = list(m.q.values())
+        model_data.working_model.effective_uncertain_params = [m.q[0], m.q[1], m.q[2]]
 
         up = model_data.working_model.user_var_partitioning = Bunch()
         up.first_stage_variables = [m.x]
@@ -1867,11 +1955,16 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         m.x1 = Var(initialize=0, bounds=(0, None))
         m.x2 = Var(initialize=0, bounds=(0, None))
         m.u = Param(initialize=1.125, mutable=True)
+        m.u_cert = Param(initialize=1, mutable=True)
         m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
         m.eq_con = Constraint(
-            expr=m.u**2 * (m.x2 - 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2
-            == -m.u * (m.x1 + 2)
+            expr=(
+                m.u**2 * (m.x2 - 1)
+                + m.u * (m.x1**3 + 0.5)
+                - 5 * m.u * m.u_cert * m.x1 * m.x2
+                == -m.u * (m.x1 + 2)
+            )
         )
 
         # mathematically redundant, but makes the tests more rigorous
@@ -1879,7 +1972,8 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         # matching routine are exited appropriately
         m.eq_con_2 = Constraint(expr=m.u * (m.x2 - 1) == 0)
 
-        working_model.uncertain_params = [m.u]
+        working_model.uncertain_params = [m.u, m.u_cert]
+        working_model.effective_uncertain_params = [m.u]
 
         working_model.first_stage = Block()
         working_model.first_stage.equality_cons = Constraint(Any)
@@ -2031,7 +2125,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             -(
                 m.u**2 * (m.x2 - 1)
                 + m.u * (m.x1**3 + 0.5)
-                - ((5 * m.u * m.x1) * m.x2)
+                - ((5 * m.u * m.u_cert * m.x1) * m.x2)
                 - (-m.u) * (m.x1 + 2)
             )
             <= 0.0,
@@ -2042,7 +2136,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             (
                 m.u**2 * (m.x2 - 1)
                 + m.u * (m.x1**3 + 0.5)
-                - ((5 * m.u * m.x1) * m.x2)
+                - ((5 * m.u * m.u_cert * m.x1) * m.x2)
                 - (-m.u) * (m.x1 + 2)
                 <= 0.0
             ),
@@ -2118,6 +2212,7 @@ class TestPreprocessModelData(unittest.TestCase):
         # PARAMS: p uncertain, q certain
         m.p = Param(initialize=2, mutable=True)
         m.q = Param(initialize=4.5, mutable=True)
+        m.q_cert = Param(initialize=1, mutable=True)
 
         # first-stage variables
         m.x1 = Var(bounds=(0, m.q), initialize=1)
@@ -2145,23 +2240,31 @@ class TestPreprocessModelData(unittest.TestCase):
         m.z4.fix()
         m.y2.fix()
 
+        # Var representing uncertain parameter
+        m.q2var = Var(initialize=3.2)
+
+        # named Expression in terms of uncertain parameter
+        # represented by a Var
+        m.q2expr = Expression(expr=m.q2var * 10)
+
         # EQUALITY CONSTRAINTS
         # this will be reformulated by coefficient matching
-        m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2) == 0)
+        m.eq1 = Constraint(expr=m.q * (m.z3 + m.x2 * m.q_cert) == 0)
         # ranged constraints with identical bounds are considered equalities
         # this makes z1 nonadjustable
         m.eq2 = Constraint(expr=m.x1 - m.z1 == 0)
-        # pretriangular: makes z2 nonadjustable, so first-stage
-        m.eq3 = Constraint(expr=m.x1**2 + m.x2 + m.p * m.z2 == m.p)
+        # if q_cert is not effectively uncertain, then pretriangular:
+        # makes z2 nonadjustable, so first-stage
+        m.eq3 = Constraint(expr=m.x1**2 + m.x2 * m.q_cert + m.p * m.z2 == m.p)
         # second-stage equality
-        m.eq4 = Constraint(expr=m.z3 + m.y1 == m.q)
+        m.eq4 = Constraint(expr=m.z3 + m.y1 + 5 * m.q2var == m.q)
 
         # INEQUALITY CONSTRAINTS
         # since x1, z1 nonadjustable, LB is first-stage,
         # but UB second-stage due to uncertain param q
         m.ineq1 = Constraint(expr=(-m.p, m.x1 + m.z1, exp(m.q)))
         # two first-stage inequalities
-        m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10))
+        m.ineq2 = Constraint(expr=(0, m.x1 + m.x2, 10 * m.q_cert))
         # though the bounds are structurally equal, they are not
         # identical objects, so this constitutes
         # two second-stage inequalities
@@ -2177,22 +2280,36 @@ class TestPreprocessModelData(unittest.TestCase):
         m.ineq5 = Constraint(expr=m.y3 <= m.q)
         m.ineq5.deactivate()
 
+        # ineq constraint in which the only uncertain parameter
+        # is represented by a Var. will be second-stage due
+        # to the presence of the uncertain parameter
+        m.ineq6 = Constraint(expr=-m.q2var <= m.x1)
+
         # OBJECTIVE
         # contains a rich combination of first-stage and second-stage terms
         m.obj = Objective(
             expr=(
                 m.p**2
                 + 2 * m.p * m.q
-                + log(m.x1)
+                + log(m.x1) * m.q_cert
                 + 2 * m.p * m.x1
                 + m.q**2 * m.x1
                 + m.p**3 * (m.z1 + m.z2 + m.y1)
                 + m.z4
                 + m.z5
+                + m.q2expr
             )
         )
 
-        model_data = ModelData(original_model=m, timing=None, config=Bunch())
+        model_data = ModelData(
+            original_model=m,
+            timing=None,
+            config=Bunch(
+                uncertainty_set=BoxSet([[4, 5], [3, 4], [1, 1]]),
+                uncertain_params=[m.q, m.q2var, m.q_cert],
+                nominal_uncertain_param_vals=[m.q.value, m.q2var.value, m.q_cert.value],
+            ),
+        )
 
         # set up the var partitioning
         user_var_partitioning = VariablePartitioning(
@@ -2211,11 +2328,9 @@ class TestPreprocessModelData(unittest.TestCase):
         """
         # setup
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=0,
                 progress_logger=logger,
@@ -2278,11 +2393,9 @@ class TestPreprocessModelData(unittest.TestCase):
         as expected.
         """
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2348,10 +2461,8 @@ class TestPreprocessModelData(unittest.TestCase):
         for nonstatic DR.
         """
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         model_data.config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType[obj_focus],
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2370,14 +2481,19 @@ class TestPreprocessModelData(unittest.TestCase):
             coeff_matching_con_names = [
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0",
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2",
                 'coeff_matching_eq_con_eq1_coeff_1',
                 'coeff_matching_eq_con_eq1_coeff_2',
+                'coeff_matching_eq_con_eq1_coeff_3',
             ]
         else:
             coeff_matching_con_names = [
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0",
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1",
                 "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_3",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_4",
+                "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_5",
             ]
 
         self.assertEqual(
@@ -2406,6 +2522,7 @@ class TestPreprocessModelData(unittest.TestCase):
                     "ineq_con_ineq3_lower_bound_con",
                     "ineq_con_ineq3_upper_bound_con",
                     "ineq_con_ineq4_lower_bound_con",
+                    "ineq_con_ineq6_lower_bound_con",
                 ]
                 + (["epigraph_con"] if obj_focus == "worst_case" else [])
                 + (
@@ -2487,7 +2604,7 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             fs.inequality_cons["ineq_con_ineq2"].expr,
-            RangedExpression((0, m.x1 + m.x2, 10), False),
+            RangedExpression((0, m.x1 + m.x2, 10 * m.q_cert), False),
         )
         assertExpressionsEqual(
             self,
@@ -2505,6 +2622,11 @@ class TestPreprocessModelData(unittest.TestCase):
             -(m.y2**2 + log(m.y2)) <= -(-m.q),
         )
         self.assertFalse(m.ineq5.active)
+        assertExpressionsEqual(
+            self,
+            ss.inequality_cons["ineq_con_ineq6_lower_bound_con"].expr,
+            -m.x1 <= -(-1 * working_model.temp_uncertain_params[1]),
+        )
 
         assertExpressionsEqual(
             self, fs.equality_cons["eq_con_eq2"].expr, m.x1 - m.z1 == 0
@@ -2512,7 +2634,7 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             fs.equality_cons["eq_con_eq3"].expr,
-            m.x1**2 + m.x2 + m.p * m.z2 == m.p,
+            m.x1**2 + m.x2 * m.q_cert + m.p * m.z2 == m.p,
         )
         if dr_order < 2:
             # due to coefficient matching, this should have been deleted
@@ -2543,11 +2665,9 @@ class TestPreprocessModelData(unittest.TestCase):
         Check preprocessor robust infeasibility return status.
         """
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2582,7 +2702,14 @@ class TestPreprocessModelData(unittest.TestCase):
             )
             assertExpressionsEqual(
                 self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"].expr,
+                fs.decision_rule_vars[1][2] == 0,
+            )
+            assertExpressionsEqual(
+                self,
                 fs_eqs["coeff_matching_eq_con_eq1_coeff_1"].expr,
+                # note: the certain parameter was eliminated by
+                # the expression parser
                 fs.decision_rule_vars[0][0] + m.x2 == 0,
             )
             assertExpressionsEqual(
@@ -2590,17 +2717,22 @@ class TestPreprocessModelData(unittest.TestCase):
                 fs_eqs["coeff_matching_eq_con_eq1_coeff_2"].expr,
                 fs.decision_rule_vars[0][1] == 0,
             )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_eq_con_eq1_coeff_3"].expr,
+                fs.decision_rule_vars[0][2] == 0,
+            )
         if config.decision_rule_order == 2:
             # eq1 should be deactivated and refomulated to 2 inequalities
             assertExpressionsEqual(
                 self,
                 ss_ineqs["reform_lower_bound_from_eq_con_eq1"].expr,
-                -(m.q * (m.z3 + m.x2)) <= 0.0,
+                -(m.q * (m.z3 + m.x2 * m.q_cert)) <= 0.0,
             )
             assertExpressionsEqual(
                 self,
                 ss_ineqs["reform_upper_bound_from_eq_con_eq1"].expr,
-                m.q * (m.z3 + m.x2) <= 0.0,
+                m.q * (m.z3 + m.x2 * m.q_cert) <= 0.0,
             )
 
             # check coefficient matching constraint expressions
@@ -2619,6 +2751,21 @@ class TestPreprocessModelData(unittest.TestCase):
                 fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"].expr,
                 fs.decision_rule_vars[1][2] == 0,
             )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_3"].expr,
+                fs.decision_rule_vars[1][3] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_4"].expr,
+                fs.decision_rule_vars[1][4] == 0,
+            )
+            assertExpressionsEqual(
+                self,
+                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_5"].expr,
+                fs.decision_rule_vars[1][5] == 0,
+            )
 
     @parameterized.expand([["static", 0], ["affine", 1], ["quadratic", 2]])
     def test_preprocessor_objective_standardization(self, name, dr_order):
@@ -2627,11 +2774,9 @@ class TestPreprocessModelData(unittest.TestCase):
         expected.
         """
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType.worst_case,
                 decision_rule_order=dr_order,
                 progress_logger=logger,
@@ -2658,7 +2803,7 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             working_model.first_stage_objective.expr,
-            ublk.p**2 + log(ublk.x1) + 2 * ublk.p * ublk.x1,
+            ublk.p**2 + log(ublk.x1) * ublk.q_cert + 2 * ublk.p * ublk.x1,
         )
         assertExpressionsEqual(
             self,
@@ -2669,6 +2814,7 @@ class TestPreprocessModelData(unittest.TestCase):
                 + ublk.p**3 * (ublk.z1 + ublk.z2 + ublk.y1)
                 + ublk.z4
                 + ublk.z5
+                + ublk.q2expr
             ),
         )
 
@@ -2679,11 +2825,9 @@ class TestPreprocessModelData(unittest.TestCase):
         logged as expected.
         """
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType[obj_focus],
                 decision_rule_order=1,
                 progress_logger=logger,
@@ -2696,22 +2840,22 @@ class TestPreprocessModelData(unittest.TestCase):
         expected_log_str = textwrap.dedent(
             f"""
             Model Statistics:
-              Number of variables : 14
+              Number of variables : 16
                 Epigraph variable : 1
                 First-stage variables : 2
                 Second-stage variables : 5 (2 adj.)
                 State variables : 2 (1 adj.)
-                Decision rule variables : 4
-              Number of uncertain parameters : 1
-              Number of constraints : 23
-                Equality constraints : 9
-                  Coefficient matching constraints : 4
+                Decision rule variables : 6
+              Number of uncertain parameters : 3 (2 eff.)
+              Number of constraints : 26
+                Equality constraints : 11
+                  Coefficient matching constraints : 6
                   Other first-stage equations : 2
                   Second-stage equations : 1
                   Decision rule equations : 2
-                Inequality constraints : 14
+                Inequality constraints : 15
                   First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
-                  Second-stage inequalities : {11 if obj_focus == 'nominal' else 12}
+                  Second-stage inequalities : {12 if obj_focus == 'nominal' else 13}
             """
         )
 
@@ -2733,11 +2877,9 @@ class TestPreprocessModelData(unittest.TestCase):
         logged as expected.
         """
         model_data, user_var_partitioning = self.build_test_model_data()
-        om = model_data.original_model
         config = model_data.config
         config.update(
             dict(
-                uncertain_params=[om.q],
                 objective_focus=ObjectiveType[obj_focus],
                 decision_rule_order=2,
                 progress_logger=logger,
@@ -2750,22 +2892,22 @@ class TestPreprocessModelData(unittest.TestCase):
         expected_log_str = textwrap.dedent(
             f"""
             Model Statistics:
-              Number of variables : 16
+              Number of variables : 22
                 Epigraph variable : 1
                 First-stage variables : 2
                 Second-stage variables : 5 (2 adj.)
                 State variables : 2 (1 adj.)
-                Decision rule variables : 6
-              Number of uncertain parameters : 1
-              Number of constraints : 24
-                Equality constraints : 8
-                  Coefficient matching constraints : 3
+                Decision rule variables : 12
+              Number of uncertain parameters : 3 (2 eff.)
+              Number of constraints : 28
+                Equality constraints : 11
+                  Coefficient matching constraints : 6
                   Other first-stage equations : 2
                   Second-stage equations : 1
                   Decision rule equations : 2
-                Inequality constraints : 16
+                Inequality constraints : 17
                   First-stage inequalities : {3 if obj_focus == 'nominal' else 2}
-                  Second-stage inequalities : {13 if obj_focus == 'nominal' else 14}
+                  Second-stage inequalities : {14 if obj_focus == 'nominal' else 15}
             """
         )
 

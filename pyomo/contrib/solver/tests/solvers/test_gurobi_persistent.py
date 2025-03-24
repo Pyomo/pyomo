@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,12 +11,12 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
-from pyomo.contrib.solver.gurobi import Gurobi
-from pyomo.contrib.solver.results import SolutionStatus
+from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
+from pyomo.contrib.solver.common.results import SolutionStatus
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
 
-opt = Gurobi()
+opt = GurobiPersistent()
 if not opt.available():
     raise unittest.SkipTest
 import gurobipy
@@ -107,20 +107,20 @@ def create_pmedian_model():
 
     model.obj = pe.Objective(rule=rule)
 
-    def rule(model, m):
+    def rule1(model, m):
         return (sum(model.x[n, m] for n in model.Locations), 1.0)
 
-    model.single_x = pe.Constraint(model.Customers, rule=rule)
+    model.single_x = pe.Constraint(model.Customers, rule=rule1)
 
-    def rule(model, n, m):
+    def rule2(model, n, m):
         return (None, model.x[n, m] - model.y[n], 0.0)
 
-    model.bound_y = pe.Constraint(model.Locations, model.Customers, rule=rule)
+    model.bound_y = pe.Constraint(model.Locations, model.Customers, rule=rule2)
 
-    def rule(model):
+    def rule3(model):
         return (sum(model.y[n] for n in model.Locations) - model.P, 0.0)
 
-    model.num_facilities = pe.Constraint(rule=rule)
+    model.num_facilities = pe.Constraint(rule=rule3)
 
     return model
 
@@ -164,7 +164,7 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
     def test_lp(self):
         self.set_params(-1, -2, 0.1, -2)
         x, y = self.get_solution()
-        opt = Gurobi()
+        opt = GurobiPersistent()
         res = opt.solve(self.m)
         self.assertAlmostEqual(x + y, res.incumbent_objective)
         self.assertAlmostEqual(x + y, res.objective_bound)
@@ -204,7 +204,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.obj = pe.Objective(expr=-m.x**2 - m.y)
         m.c1 = pe.Constraint(expr=m.y <= -2 * m.x + 1)
         m.c2 = pe.Constraint(expr=m.y <= m.x - 2)
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.solver_options['nonconvex'] = 2
         opt.config.solver_options['BestBdStop'] = -8
         opt.config.load_solutions = False
@@ -232,7 +232,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.obj = pe.Objective(expr=-m.x**2 - m.y)
         m.c1 = pe.Constraint(expr=m.y <= -2 * m.x + 1)
         m.c2 = pe.Constraint(expr=m.y <= m.x - 2)
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.solver_options['nonconvex'] = 2
         opt.config.solver_options['MIPGap'] = 0.5
         res = opt.solve(m)
@@ -250,7 +250,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.c = pe.Constraint(expr=pe.inequality(m.xl, m.x, m.xu))
         m.obj = pe.Objective(expr=m.x)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.set_instance(m)
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -1)
@@ -279,7 +279,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.con = pe.Constraint(expr=m.y >= m.a * m.x**2 + m.b * m.x + m.c)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
         self.assertAlmostEqual(
@@ -303,7 +303,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var()
         m.obj = pe.Objective(expr=m.a * m.x**2 + m.b * m.x + m.c)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -m.b.value / (2 * m.a.value))
         self.assertAlmostEqual(
@@ -326,7 +326,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var(bounds=(-1, 1))
         m.obj = pe.Objective(expr=m.x)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -1)
 
@@ -337,7 +337,7 @@ class TestGurobiPersistent(unittest.TestCase):
         del m.obj
         m.obj = pe.Objective(expr=m.x, sense=pe.maximize)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 1)
 
@@ -356,7 +356,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.con = pe.Constraint(expr=m.y >= m.a * m.x**2 + m.b * m.x + m.c)
 
         m.x.fix(1)
-        opt = Gurobi()
+        opt = GurobiPersistent()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 3)
@@ -379,7 +379,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.y = pe.Var()
         m.c = pe.Constraint(expr=m.x + m.y == 1)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.set_instance(m)
         opt.set_linear_constraint_attr(m.c, 'Lazy', 1)
         self.assertEqual(opt.get_linear_constraint_attr(m.c, 'Lazy'), 1)
@@ -390,7 +390,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.y = pe.Var()
         m.c = pe.Constraint(expr=m.y >= m.x**2)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.set_instance(m)
         self.assertEqual(opt.get_quadratic_constraint_attr(m.c, 'QCRHS'), 0)
 
@@ -399,7 +399,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.x = pe.Var(within=pe.Binary)
         m.obj = pe.Objective(expr=m.x)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.set_instance(m)
         opt.set_var_attr(m.x, 'Start', 1)
         self.assertEqual(opt.get_var_attr(m.x, 'Start'), 1)
@@ -418,14 +418,14 @@ class TestGurobiPersistent(unittest.TestCase):
         _add_cut(0)
         _add_cut(4)
 
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.set_instance(m)
         opt.set_gurobi_param('PreCrush', 1)
         opt.set_gurobi_param('LazyConstraints', 1)
 
         def _my_callback(cb_m, cb_opt, cb_where):
             if cb_where == gurobipy.GRB.Callback.MIPSOL:
-                cb_opt.cbGetSolution(vars=[m.x, m.y])
+                cb_opt.cbGetSolution(variables=[m.x, m.y])
                 if m.y.value < (m.x.value - 2) ** 2 - 1e-6:
                     cb_opt.cbLazy(_add_cut(m.x.value))
 
@@ -442,7 +442,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.y == (m.x - 1) ** 2 - 2)
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.solver_options['nonconvex'] = 2
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
@@ -457,7 +457,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c1 = pe.Constraint(expr=0 <= -m.y + (m.x - 1) ** 2 - 2)
         m.c2 = pe.Constraint(expr=0 >= -m.y + (m.x - 1) ** 2 - 2)
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.solver_options['nonconvex'] = 2
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
@@ -465,7 +465,7 @@ class TestGurobiPersistent(unittest.TestCase):
 
     def test_solution_number(self):
         m = create_pmedian_model()
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.solver_options['PoolSolutions'] = 3
         opt.config.solver_options['PoolSearchMode'] = 2
         res = opt.solve(m)
@@ -480,7 +480,7 @@ class TestGurobiPersistent(unittest.TestCase):
 
     def test_zero_time_limit(self):
         m = create_pmedian_model()
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.time_limit = 0
         opt.config.load_solutions = False
         opt.config.raise_exception_on_nonoptimal_result = False
@@ -498,7 +498,7 @@ class TestGurobiPersistent(unittest.TestCase):
 
 class TestManualModel(unittest.TestCase):
     def setUp(self):
-        opt = Gurobi()
+        opt = GurobiPersistent()
         opt.config.auto_updates.check_for_new_or_removed_params = False
         opt.config.auto_updates.check_for_new_or_removed_vars = False
         opt.config.auto_updates.check_for_new_or_removed_constraints = False

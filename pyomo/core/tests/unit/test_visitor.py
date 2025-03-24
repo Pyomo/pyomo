@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -60,6 +60,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.core.expr.visitor import (
     FixedExpressionError,
     NonConstantExpressionError,
+    SimpleExpressionVisitor,
     StreamBasedExpressionVisitor,
     ExpressionReplacementVisitor,
     evaluate_expression,
@@ -129,6 +130,72 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual(list(identify_variables(m.b + m.e)), [m.b, m.a])
         self.assertEqual(list(identify_variables(m.E[0])), [m.a])
         self.assertEqual(list(identify_variables(m.E[1])), [m.b])
+
+    def test_identify_vars_expr_cache(self):
+        #
+        # Identify variables in named expressions
+        #
+        m = ConcreteModel()
+        m.a = Var(initialize=1)
+        m.b = Var(initialize=2)
+        m.c = Var(initialize=3)
+        m.d = Var(initialize=4)
+        m.e = Expression(expr=3 * m.a)
+
+        cache = {}
+        self.assertEqual(
+            list(identify_variables(m.b + m.e, named_expression_cache=cache)),
+            [m.b, m.a],
+        )
+        self.assertEqual(cache, {id(m.e): ({id(m.a): m.a}, {id(m.e): (m.e, m.e.expr)})})
+
+        # Check that the cache is used (to check, we will cause the cache to lie)
+        s, e = cache[id(m.e)]
+        s.clear()
+        s.update({id(m.b): m.b, id(m.c): m.c})
+        self.assertEqual(
+            list(identify_variables(m.b + m.e, named_expression_cache=cache)),
+            [m.b, m.c],
+        )
+
+        # Check that changing the expression invalidates the cache
+        m.e = 4 * m.d
+        self.assertEqual(
+            list(identify_variables(m.b + m.e, named_expression_cache=cache)),
+            [m.b, m.d],
+        )
+
+        # Check that changing a nested expression invalidates the cache
+        m.f = Expression(expr=5 * m.a * m.e * m.b)
+        self.assertEqual(
+            list(identify_variables(m.c + m.f, named_expression_cache=cache)),
+            [m.c, m.a, m.d, m.b],
+        )
+        self.assertEqual(
+            cache,
+            {
+                id(m.e): ({id(m.d): m.d}, {id(m.e): (m.e, m.e.expr)}),
+                id(m.f): (
+                    {id(m.a): m.a, id(m.d): m.d, id(m.b): m.b},
+                    {id(m.f): (m.f, m.f.expr), id(m.e): (m.e, m.e.expr)},
+                ),
+            },
+        )
+        m.e = 5
+        self.assertEqual(
+            list(identify_variables(m.c + m.f, named_expression_cache=cache)),
+            [m.c, m.a, m.b],
+        )
+        self.assertEqual(
+            cache,
+            {
+                id(m.e): ({}, {id(m.e): (m.e, m.e.expr)}),
+                id(m.f): (
+                    {id(m.a): m.a, id(m.b): m.b},
+                    {id(m.f): (m.f, m.f.expr), id(m.e): (m.e, m.e.expr)},
+                ),
+            },
+        )
 
     def test_identify_vars_vars(self):
         m = ConcreteModel()
@@ -282,7 +349,7 @@ class TestIdentifyParams(unittest.TestCase):
         )
         self.assertEqual(
             list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2])),
-            [m.b[2], m.a, m.b[1]],
+            [m.a, m.b[1], m.b[2]],
         )
         self.assertEqual(
             list(identify_mutable_parameters(m.a ** m.b[1] + m.b[2] * m.b[3] * m.b[2])),
@@ -297,17 +364,17 @@ class TestIdentifyParams(unittest.TestCase):
         #
         self.assertEqual(
             list(identify_mutable_parameters(m.x(m.a, 'string_param', 1, []) * m.b[1])),
-            [m.b[1], m.a],
+            [m.a, m.b[1]],
         )
         self.assertEqual(
             list(identify_mutable_parameters(m.x(m.p, 'string_param', 1, []) * m.b[1])),
             [m.b[1]],
         )
         self.assertEqual(
-            list(identify_mutable_parameters(tanh(m.a) * m.b[1])), [m.b[1], m.a]
+            list(identify_mutable_parameters(tanh(m.a) * m.b[1])), [m.a, m.b[1]]
         )
         self.assertEqual(
-            list(identify_mutable_parameters(abs(m.a) * m.b[1])), [m.b[1], m.a]
+            list(identify_mutable_parameters(abs(m.a) * m.b[1])), [m.a, m.b[1]]
         )
         #
         # Check logic for allowing duplicates
@@ -1836,6 +1903,58 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
 
     def test_evaluate_abex(self):
         return self.run_walker(self.evaluate_abex())
+
+
+class TestSimpleExpressionVisitor(unittest.TestCase):
+    def test_base_class(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True)
+        v = SimpleExpressionVisitor()
+
+        e = 5
+        self.assertEqual(v.xbfs(e), None)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [])
+
+        e = m.x
+        self.assertEqual(v.xbfs(e), None)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [])
+
+        e = m.x + 5 * m.y**m.p
+        self.assertEqual(v.xbfs(e), None)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [])
+
+    def test_derived_visitor(self):
+        class _Visitor(SimpleExpressionVisitor):
+            def __init__(self):
+                super().__init__()
+                self.nodes = []
+
+            def visit(self, node):
+                self.nodes.append(node)
+                return node
+
+            def finalize(self):
+                return len(self.nodes)
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True)
+        v = _Visitor()
+
+        e = 5
+        self.assertEqual(v.xbfs(e), 1)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [5])
+
+        e = m.x
+        self.assertEqual(v.xbfs(e), 3)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [m.x])
+
+        e = m.x + 5 * m.y**m.p
+        self.assertEqual(v.xbfs(e), 11)
+        self.assertEqual(list(v.xbfs_yield_leaves(e)), [m.x, 5, m.y, m.p])
 
 
 class TestEvaluateExpression(unittest.TestCase):

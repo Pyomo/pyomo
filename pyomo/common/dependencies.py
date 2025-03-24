@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,6 +11,7 @@
 
 import inspect
 import importlib
+import importlib.util
 import logging
 import sys
 import warnings
@@ -520,13 +521,22 @@ class DeferredImportCallbackFinder:
 
         spec = None
         # Continue looking for the finder that would have originally
-        # loaded the deferred import module b starting at the next
+        # loaded the deferred import module by starting at the next
         # finder in sys.meta_path (this way, we are agnostic to where
         # the module is coming from: file system, registry, etc.)
         for finder in sys.meta_path[sys.meta_path.index(self) + 1 :]:
-            spec = finder.find_spec(fullname, path, target)
-            if spec is not None:
-                break
+            if hasattr(finder, 'find_spec'):
+                # Support standard importlib MetaPathFinders
+                spec = finder.find_spec(fullname, path, target)
+                if spec is not None:
+                    break
+            else:
+                # Support for imp finders/loaders (deprecated, but
+                # supported through Python 3.11)
+                loader = finder.find_module(fullname, path)
+                if loader is not None:
+                    spec = importlib.util.spec_from_loader(fullname, loader)
+                    break
         else:
             # Module not found.  Returning None will proceed to the next
             # finder (which will eventually raise a ModuleNotFoundError)
