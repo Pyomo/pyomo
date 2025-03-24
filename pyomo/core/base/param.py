@@ -210,8 +210,7 @@ class ParamData(ComponentData, NumericValue):
         elif type(exception) is not bool:
             raise ValueError(
                 "Param '%s' was called with a non-boolean argument for "
-                "'exception': %s"
-                % (self.name, exception)
+                "'exception': %s" % (self.name, exception)
             )
         else:
             raise_exception = exception
@@ -948,8 +947,7 @@ class ScalarParam(ParamData, Param):
         elif type(exception) is not bool:
             raise ValueError(
                 "Param '%s' was called with a non-boolean argument for "
-                "'exception': %s"
-                % (self.name, exception)
+                "'exception': %s" % (self.name, exception)
             )
         else:
             raise_exception = exception
@@ -1004,8 +1002,7 @@ class IndexedParam(Param):
         elif type(exception) is not bool:
             raise ValueError(
                 "IndexedParam '%s' was called with a non-boolean argument for "
-                "'exception': %s"
-                % (self.name, exception)
+                "'exception': %s" % (self.name, exception)
             )
         else:
             raise_exception = exception
