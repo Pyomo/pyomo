@@ -183,6 +183,15 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 #
 html_theme_options = {'navigation_depth': 6, 'titles_only': True}
 
+html_sidebars = {
+    "**": [
+        "localtoc.html",
+        "relations.html",
+        "ethicalads.html",  # Put the ad below the navigation and previous/next
+        "sourcelink.html",
+        "searchbox.html",
+    ]
+}
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
