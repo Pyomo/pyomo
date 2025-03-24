@@ -1632,21 +1632,21 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
         with self.assertRaisesRegex(
             ValueError,
             r"Param 'p' was called with a non-boolean argument for 'exception': "
-            r"p \+ 2"
+            r"p \+ 2",
         ):
             m.p(m.p + 2)
 
         with self.assertRaisesRegex(
             ValueError,
             r"Param 'indexed\[1\]' was called with a non-boolean argument for "
-            r"'exception': 3.2"
+            r"'exception': 3.2",
         ):
             m.indexed[1](3.2)
 
         with self.assertRaisesRegex(
             ValueError,
             r"IndexedParam 'indexed' was called with a non-boolean argument for "
-            r"'exception': hi"
+            r"'exception': hi",
         ):
             m.indexed('hi')
 
