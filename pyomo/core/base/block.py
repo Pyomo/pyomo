@@ -1128,6 +1128,7 @@ component, use the block del_component() and add_component() methods.
         """
         # in-lining self.component(name_or_object) so that we can add the
         # additional check of whether or not name_or_object is a ComponentData
+        obj = None
         if isinstance(name_or_object, str):
             if name_or_object in self._decl:
                 obj = self._decl_order[self._decl[name_or_object]][0]
@@ -1142,11 +1143,13 @@ component, use the block del_component() and add_component() methods.
                         "only be used to delete IndexedComponents and "
                         "ScalarComponents." % name_or_object.local_name
                     )
+                if obj.parent_block() is not self:
+                    obj = None
             except AttributeError:
-                # obj is None. Maintaining current behavior, but perhaps this
-                # should raise an exception?
-                return
+                pass
         if obj is None:
+            # Maintaining current behavior, but perhaps this should raise an
+            # exception?
             return
 
         name = obj.local_name
