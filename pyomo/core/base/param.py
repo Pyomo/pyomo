@@ -201,12 +201,22 @@ class ParamData(ComponentData, NumericValue):
             self._value = old_value
             raise
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Return the value of this object.
         """
+        if exception is NOTSET:
+            raise_exception = True
+        elif type(exception) is not bool:
+            raise ValueError(
+                "Param '%s' was called with a non-boolean argument for "
+                "'exception': %s"
+                % (self.name, exception)
+            )
+        else:
+            raise_exception = exception
         if self._value is Param.NoValue:
-            if exception:
+            if raise_exception:
                 raise ValueError(
                     "Error evaluating Param value (%s):\n\tThe Param value is "
                     "currently set to an invalid value.  This is\n\ttypically "
@@ -929,10 +939,21 @@ class ScalarParam(ParamData, Param):
     # up both the Component and Data base classes.
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Return the value of this parameter.
         """
+        if exception is NOTSET:
+            raise_exception = True
+        elif type(exception) is not bool:
+            raise ValueError(
+                "Param '%s' was called with a non-boolean argument for "
+                "'exception': %s"
+                % (self.name, exception)
+            )
+        else:
+            raise_exception = exception
+
         if self._constructed:
             if not self._data:
                 if self._mutable:
@@ -943,8 +964,8 @@ class ScalarParam(ParamData, Param):
                     # Immutable Param defaults never get added to the
                     # _data dict
                     return self[None]
-            return super(ScalarParam, self).__call__(exception=exception)
-        if exception:
+            return super(ScalarParam, self).__call__(exception=raise_exception)
+        if raise_exception:
             raise ValueError(
                 "Evaluating the numeric value of parameter '%s' before\n\t"
                 "the Param has been constructed (there is currently no "
@@ -976,9 +997,20 @@ class SimpleParam(metaclass=RenamedClass):
 
 
 class IndexedParam(Param):
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of the parameter"""
-        if exception:
+        if exception is NOTSET:
+            raise_exception = True
+        elif type(exception) is not bool:
+            raise ValueError(
+                "IndexedParam '%s' was called with a non-boolean argument for "
+                "'exception': %s"
+                % (self.name, exception)
+            )
+        else:
+            raise_exception = exception
+
+        if raise_exception:
             raise TypeError(
                 'Cannot compute the value of an indexed Param (%s)' % (self.name,)
             )
