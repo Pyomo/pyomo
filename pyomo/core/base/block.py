@@ -1146,6 +1146,8 @@ component, use the block del_component() and add_component() methods.
                 # obj is None. Maintaining current behavior, but perhaps this
                 # should raise an exception?
                 return
+        if obj is None:
+            return
 
         name = obj.local_name
 
