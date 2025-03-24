@@ -230,6 +230,33 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
+    def test_reactor_obj_cholesky_solve_bad_prior(self):
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+
+        # Specify a prior that is negative definite...
+        # The jitter term should correct this
+        DoE_args['prior_FIM'] = -1*np.eye(4)
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        doe_obj.run_doe()
+
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
+
+        # assert that Q, F, and L are the same.
+        FIM, Q, L, sigma_inv = get_FIM_Q_L(doe_obj=doe_obj)
+
+        # Since Cholesky is used, there is comparison for FIM and L.T @ L
+        self.assertTrue(np.all(np.isclose(FIM, L @ L.T)))
+
+        # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
+        self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
+
     # This test ensure that compute FIM runs without error using the
     # `sequential` option with central finite differences
     def test_compute_FIM_seq_centr(self):
