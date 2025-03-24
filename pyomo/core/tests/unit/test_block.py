@@ -1359,7 +1359,19 @@ class TestBlock(unittest.TestCase):
         self.assertIn(m.x[2], ComponentSet(m.x.values()))
         self.assertIn(m.x[3], ComponentSet(m.x.values()))
 
-        m.del_component(m.x[2])
+        # This fails:
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Argument 'x\[2\]' to del_component is a ComponentData object. "
+            r"Please use the Python 'del' function to delete members of "
+            r"indexed Pyomo components. The del_component function can "
+            r"only be used to delete IndexedComponents and "
+            r"ScalarComponents.",
+        ):
+            m.del_component(m.x[2])
+
+        # But we can use del
+        del m.x[2]
         self.assertTrue(m.contains_component(Var))
         self.assertTrue('x' in m.__dict__)
         self.assertEqual(len(m.x), 1)

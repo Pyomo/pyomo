@@ -1126,23 +1126,28 @@ component, use the block del_component() and add_component() methods.
         """
         Delete a component from this block.
         """
-        obj = self.component(name_or_object)
-        # FIXME: Is this necessary?  Should this raise an exception?
-        if obj is None:
-            return
-
-        # FIXME: Is this necessary?  Should this raise an exception?
-        # if name not in self._decl:
-        #    return
+        # in-lining self.component(name_or_object) so that we can add the
+        # additional check of whether or not name_or_object is a ComponentData
+        if isinstance(name_or_object, str):
+            if name_or_object in self._decl:
+                obj = self._decl_order[self._decl[name_or_object]][0]
+        else:
+            try:
+                obj = name_or_object.parent_component()
+                if obj is not name_or_object:
+                    raise ValueError(
+                        "Argument '%s' to del_component is a ComponentData object. "
+                        "Please use the Python 'del' function to delete members of "
+                        "indexed Pyomo components. The del_component function can "
+                        "only be used to delete IndexedComponents and "
+                        "ScalarComponents." % name_or_object.local_name
+                    )
+            except AttributeError:
+                # obj is None. Maintaining current behavior, but perhaps this
+                # should raise an exception?
+                return
 
         name = obj.local_name
-        if isinstance(obj, ComponentData) and not isinstance(obj, Component):
-            raise ValueError(
-                "Argument '%s' to del_component is a ComponentData object. Please "
-                "use the Python 'del' function to delete members of indexed "
-                "Pyomo objects. The del_component function can only be used to "
-                "delete IndexedComponents and ScalarComponents." % name
-            )
 
         if name in self._Block_reserved_words:
             raise ValueError(
