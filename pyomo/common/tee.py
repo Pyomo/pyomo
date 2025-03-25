@@ -16,6 +16,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 #
+import collections.abc
 import io
 import logging
 import os
@@ -171,7 +172,7 @@ class capture_output(object):
 
     Parameters
     ----------
-    output : io.TextIOBase, TeeStream, str, or None
+    output : io.TextIOBase, Sequence[io.TextIOBase], TeeStream, str, or None
 
         Output stream where all captured stdout/stderr data is sent.  If
         a ``str`` is provided, it is used as a file name and opened
@@ -295,6 +296,8 @@ class capture_output(object):
                 self.output_stream = self.output
             if isinstance(self.output, TeeStream):
                 self.tee = self._enter_context(self.output)
+            elif isinstance(self.output_stream, collections.abc.Sequence):
+                self.tee = self._enter_context(TeeStream(*self.output_stream))
             else:
                 self.tee = self._enter_context(TeeStream(self.output_stream))
             if self.capture_fd:
