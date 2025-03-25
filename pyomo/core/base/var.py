@@ -29,6 +29,7 @@ from pyomo.core.expr.numvalue import (
     value,
     is_potentially_variable,
     native_numeric_types,
+    _type_check_exception_arg
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -197,8 +198,9 @@ class VarData(ComponentData, NumericValue):
     def value(self, val):
         self.set_value(val)
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this variable."""
+        exception = _type_check_exception_arg(self, exception)
         return self._value
 
     @property
