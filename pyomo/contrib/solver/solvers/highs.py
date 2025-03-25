@@ -620,7 +620,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             repn = generate_standard_repn(
                 obj.expr, quadratic=True, compute_values=False
             )
-            if repn.nonlinear_expr is not None and repn.polynomial_degree() > 2:
+            if repn.nonlinear_expr is not None or repn.polynomial_degree() > 2:
                 raise IncompatibleModelError(
                     f'Highs interface does not support expressions of degree {repn.polynomial_degree()}'
                 )
