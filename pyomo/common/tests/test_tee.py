@@ -113,7 +113,12 @@ class TestTeeStream(unittest.TestCase):
             err.write("err1\n")
             err.writelines(["err2\n", "err3\n"])
         self.assertEqual(a.getvalue(), "out1\nout2\nout3\nerr1\nerr2\nerr3\n")
-        with self.assertRaisesRegex(AttributeError, '.*is not writable'):
+        # Note: 'is not writable' appears to work for all platforms
+        # except PyPy, where the exception is "readonly attribute
+        # 'name'"
+        with self.assertRaisesRegex(
+            AttributeError, '.*(is not writable)|(readonly attribute)'
+        ):
             tee.TeeStream().STDOUT.name = 'foo'
 
     @unittest.skipIf(
@@ -325,7 +330,9 @@ class TestCapture(unittest.TestCase):
 
         logfile = os.path.join('path', 'to', 'nonexisting', 'file.txt')
         T = tee.capture_output(logfile)
-        with self.assertRaisesRegex(FileNotFoundError, f".*{logfile}"):
+        with self.assertRaisesRegex(
+            FileNotFoundError, f".*{logfile}".replace("\\", "\\\\")
+        ):
             T.__enter__()
         self.assertEqual(T.context_stack, [])
 
