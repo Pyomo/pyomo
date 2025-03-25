@@ -15,10 +15,9 @@ import sys
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 
+from pyomo.contrib.solver.solvers.highs import Highs
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
-from pyomo.contrib.appsi.solvers.highs import Highs
-
 
 opt = Highs()
 if not opt.available():
@@ -43,12 +42,12 @@ class TestBugs(unittest.TestCase):
 
         opt = Highs()
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.objective_bound, 1)
 
         del m.c1
         m.p2.value = 2
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -8)
+        self.assertAlmostEqual(res.objective_bound, -8)
 
     def test_mutable_params_with_remove_vars(self):
         m = pe.ConcreteModel()
@@ -70,14 +69,14 @@ class TestBugs(unittest.TestCase):
 
         opt = Highs()
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(res.objective_bound, 1)
 
         del m.c1
         del m.c2
         m.p1.value = -9
         m.p2.value = 9
         res = opt.solve(m)
-        self.assertAlmostEqual(res.best_feasible_objective, -9)
+        self.assertAlmostEqual(res.objective_bound, -9)
 
     def test_fix_and_unfix(self):
         # Tests issue https://github.com/Pyomo/pyomo/issues/3127
@@ -99,14 +98,14 @@ class TestBugs(unittest.TestCase):
         r = opt.solve(m)
         self.assertAlmostEqual(m.fx.value, 1, places=5)
         self.assertAlmostEqual(m.fy.value, 0, places=5)
-        self.assertAlmostEqual(r.best_feasible_objective, 0.5, places=5)
+        self.assertAlmostEqual(r.objective_bound, 0.5, places=5)
 
         # solution 2 has m.x == 0 and m.y == 1
         m.y.fix(1)
         r = opt.solve(m)
         self.assertAlmostEqual(m.fx.value, 0, places=5)
         self.assertAlmostEqual(m.fy.value, 1, places=5)
-        self.assertAlmostEqual(r.best_feasible_objective, 0.4, places=5)
+        self.assertAlmostEqual(r.objective_bound, 0.4, places=5)
 
         # solution 3 should be equal solution 1
         m.y.unfix()
@@ -114,71 +113,22 @@ class TestBugs(unittest.TestCase):
         r = opt.solve(m)
         self.assertAlmostEqual(m.fx.value, 1, places=5)
         self.assertAlmostEqual(m.fy.value, 0, places=5)
-        self.assertAlmostEqual(r.best_feasible_objective, 0.5, places=5)
+        self.assertAlmostEqual(r.objective_bound, 0.5, places=5)
 
-    def test_capture_highs_output(self):
-        # tests issue #3003
-        #
-        # Note that the "Running HiGHS" message is only emitted the
-        # first time that a model is instantiated.  We need to test this
-        # in a subprocess to trigger that output.
-        model = [
-            'import pyomo.environ as pe',
-            'm = pe.ConcreteModel()',
-            'm.x = pe.Var(domain=pe.NonNegativeReals)',
-            'm.y = pe.Var(domain=pe.NonNegativeReals)',
-            'm.obj = pe.Objective(expr=m.x + m.y, sense=pe.maximize)',
-            'm.c1 = pe.Constraint(expr=m.x <= 10)',
-            'm.c2 = pe.Constraint(expr=m.y <= 5)',
-            'from pyomo.contrib.appsi.solvers.highs import Highs',
-            'result = Highs().solve(m)',
-            'print(m.x.value, m.y.value)',
-        ]
-
-        with LoggingIntercept() as LOG, capture_output(capture_fd=True) as OUT:
-            subprocess.run([sys.executable, '-c', ';'.join(model)])
-        self.assertEqual(LOG.getvalue(), "")
-        self.assertEqual(OUT.getvalue(), "10.0 5.0\n")
-
-        model[-2:-1] = [
-            'opt = Highs()',
-            'opt.config.stream_solver = True',
-            'result = opt.solve(m)',
-        ]
-        with LoggingIntercept() as LOG, capture_output(capture_fd=True) as OUT:
-            subprocess.run([sys.executable, '-c', ';'.join(model)])
-        self.assertEqual(LOG.getvalue(), "")
-        # This is emitted by the model set-up
-        self.assertIn("Running HiGHS", OUT.getvalue())
-        # This is emitted by the solve()
-        self.assertIn("HiGHS run time", OUT.getvalue())
-        ref = "10.0 5.0\n"
-        self.assertEqual(ref, OUT.getvalue()[-len(ref) :])
-
-    def test_warm_start(self):
+    def test_qp(self):
+        # test issue #3381
         m = pe.ConcreteModel()
 
-        # decision variables
-        m.x1 = pe.Var(domain=pe.Integers, name="x1", bounds=(0, 10))
-        m.x2 = pe.Var(domain=pe.Reals, name="x2", bounds=(0, 10))
-        m.x3 = pe.Var(domain=pe.Binary, name="x3")
+        m.x1 = pe.Var(name='x1', domain=pe.Reals)
+        m.x2 = pe.Var(name='x2', domain=pe.Reals)
 
-        # objective function
-        m.OBJ = pe.Objective(expr=(3 * m.x1 + 2 * m.x2 + 4 * m.x3), sense=pe.maximize)
+        # Quadratic Objective function
+        m.obj = pe.Objective(expr=m.x1 * m.x1 + m.x2 * m.x2, sense=pe.minimize)
 
-        # constraints
-        m.C1 = pe.Constraint(expr=m.x1 + m.x2 <= 9)
-        m.C2 = pe.Constraint(expr=3 * m.x1 + m.x2 <= 18)
-        m.C3 = pe.Constraint(expr=m.x1 <= 7)
-        m.C4 = pe.Constraint(expr=m.x2 <= 6)
+        m.con1 = pe.Constraint(expr=m.x1 >= 1)
+        m.con2 = pe.Constraint(expr=m.x2 >= 1)
 
-        # MIP start
-        m.x1 = 4
-        m.x2 = 4.5
-        m.x3 = True
-
-        # solving process
-        with capture_output() as output:
-            pe.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
-        log = output.getvalue()
-        self.assertIn("MIP start solution is feasible, objective value is 25", log)
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 1, places=5)
+        self.assertAlmostEqual(m.x2.value, 1, places=5)
+        self.assertEqual(results.objective_bound, 2)

@@ -96,6 +96,20 @@ class _MutableObjectiveCoefficient:
         self.highs.changeColCost(col_ndx, value(self.expr))
 
 
+class _MutableQuadraticObjectiveCoefficient:
+    def __init__(self, expr, highs, value_updater):
+        self.expr = expr
+        self.highs = highs
+        self.value_updater = value_updater  # Function to call when value changes
+        self._last_value = value(expr)
+
+    def update(self):
+        new_value = value(self.expr)
+        if new_value != self._last_value:
+            self.value_updater(self._last_value, new_value)
+            self._last_value = new_value
+
+
 class _MutableObjectiveOffset:
     def __init__(self, expr, highs):
         self.expr = expr
@@ -472,6 +486,8 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         self._sol = None
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
+        self._rebuild_hessian = False
+
         for con, helpers in self._mutable_helpers.items():
             for helper in helpers:
                 helper.update()
@@ -479,6 +495,10 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             helper.update()
         for helper in self._objective_helpers:
             helper.update()
+
+        # Rebuild Hessian if needed
+        if self._rebuild_hessian:
+            self._build_and_pass_hessian()
 
     def _set_objective(self, obj):
         self._sol = None
@@ -488,9 +508,19 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         indices = np.arange(n)
         costs = np.zeros(n, dtype=np.double)
         self._objective_helpers = []
+        self._quad_coefs = {}
+
         if obj is None:
             sense = highspy.ObjSense.kMinimize
             self._solver_model.changeObjectiveOffset(0)
+            self._solver_model.passHessian(
+                0,
+                0,
+                highspy.HessianFormat.kTriangular,
+                np.array([], dtype=np.int32),
+                np.array([], dtype=np.int32),
+                np.array([], dtype=np.double),
+            )
         else:
             if obj.sense == minimize:
                 sense = highspy.ObjSense.kMinimize
@@ -500,9 +530,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                 raise ValueError(f'Objective sense is not recognized: {obj.sense}')
 
             repn = generate_standard_repn(
-                obj.expr, quadratic=False, compute_values=False
+                obj.expr, quadratic=True, compute_values=False
             )
-            if repn.nonlinear_expr is not None:
+            if repn.nonlinear_expr is not None and repn.polynomial_degree() > 2:
                 raise IncompatibleModelError(
                     f'Highs interface does not support expressions of degree {repn.polynomial_degree()}'
                 )
@@ -529,6 +559,117 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         self._solver_model.changeObjectiveSense(sense)
         self._solver_model.changeColsCost(n, indices, costs)
+
+        # Process quadratic terms if present and HiGHS has passHessian method
+
+        if repn.quadratic_vars and len(repn.quadratic_vars) > 0:
+            # Dictionary to collect quadratic coefficients
+            quad_coefs = {}  # (row, col) -> coefficient
+
+            for ndx, (v1, v2) in enumerate(repn.quadratic_vars):
+                v1_ndx = self._pyomo_var_to_solver_var_map[id(v1)]
+                v2_ndx = self._pyomo_var_to_solver_var_map[id(v2)]
+
+                # Ensure we're storing the lower triangular part
+                row = max(v1_ndx, v2_ndx)
+                col = min(v1_ndx, v2_ndx)
+
+                coef = repn.quadratic_coefs[ndx]
+                coef_val = value(coef)
+
+                # For different variables, divide by 2 since HiGHS expects the lower triangular part
+                # of Q where obj = 0.5*x^T*Q*x + c^T*x
+                if v1_ndx != v2_ndx:
+                    coef_val /= 2.0
+
+                # Add to the dictionary
+                if (row, col) in quad_coefs:
+                    quad_coefs[(row, col)] += coef_val
+                else:
+                    quad_coefs[(row, col)] = coef_val
+
+                # Handle mutable coefficients
+                if not is_constant(coef):
+                    # Create a value updater function for this specific coefficient
+                    def make_updater(row, col):
+                        def update_quad_coef(old_val, new_val):
+                            # Calculate the delta to add to the existing value
+                            if v1_ndx != v2_ndx:
+                                delta = (new_val - old_val) / 2.0
+                            else:
+                                delta = new_val - old_val
+
+                            # Update the stored coefficient
+                            self._quad_coefs[(row, col)] += delta
+
+                            # Signal that we need to rebuild the Hessian
+                            self._rebuild_hessian = True
+
+                        return update_quad_coef
+
+                    updater = make_updater(row, col)
+
+                    # Store the mutable helper
+                    helper = _MutableQuadraticObjectiveCoefficient(
+                        expr=coef, highs=self._solver_model, value_updater=updater
+                    )
+                    self._objective_helpers.append(helper)
+
+            # Store quadratic coefficients for future updates
+            self._quad_coefs = quad_coefs
+
+            # Build the CSC format arrays for HiGHS
+            self._build_and_pass_hessian()
+
+    def _build_and_pass_hessian(self):
+        # Skip if no quadratic coefficients
+        if not self._quad_coefs:
+            return
+
+        dim = len(self._pyomo_var_to_solver_var_map)
+        quad_coefs = self._quad_coefs
+
+        # Build CSC format for the lower triangular part
+        q_value = []
+        q_index = []
+        q_start = [0] * (dim + 1)
+
+        sorted_entries = sorted(quad_coefs.items(), key=lambda x: (x[0][1], x[0][0]))
+
+        last_col = -1
+        for (row, col), val in sorted_entries:
+            # Update column pointers
+            while col > last_col:
+                last_col += 1
+                q_start[last_col + 1] = len(q_value)
+
+            # Add the entry
+            q_index.append(row)
+            q_value.append(val)
+
+        # Fill in remaining column pointers
+        while last_col < dim - 1:
+            last_col += 1
+            q_start[last_col + 1] = len(q_value)
+
+        # Create NumPy arrays
+        np_q_start = np.array(q_start, dtype=np.int32)
+        np_q_index = np.array(q_index, dtype=np.int32)
+        np_q_value = np.array(q_value, dtype=np.double)
+
+        # Pass the Hessian to HiGHS
+        nnz = len(q_value)
+        self._solver_model.passHessian(
+            dim,
+            nnz,
+            highspy.HessianFormat.kTriangular,
+            np_q_start,
+            np_q_index,
+            np_q_value,
+        )
+
+        # Reset the rebuild flag
+        self._rebuild_hessian = False
 
     def _postsolve(self):
         config = self._active_config
