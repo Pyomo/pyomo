@@ -300,9 +300,9 @@ class capture_output(object):
                 self.tee = self._enter_context(TeeStream(*self.output_stream))
             else:
                 self.tee = self._enter_context(TeeStream(self.output_stream))
+            fd_redirect = {}
             if self.capture_fd:
                 tee_fd = (self.tee.STDOUT.fileno(), self.tee.STDERR.fileno())
-                fd_redirect = {}
                 for i in range(2):
                     # Redirect the standard process file descriptor (1 or 2)
                     fd_redirect[i + 1] = self._enter_context(
@@ -315,34 +315,42 @@ class capture_output(object):
                         fd_redirect[fd] = self._enter_context(
                             redirect_fd(fd, tee_fd[i], synchronize=False)
                         )
-                # We need to make sure that we didn't just capture the
-                # FD that underlies a stream that we are outputting to.
-                ostreams = []
-                for stream in self.tee.ostreams:
-                    if isinstance(stream, LogStream):
-                        for handler_redirect in stream.redirect_streams(fd_redirect):
-                            self._enter_context(handler_redirect, prior_to=self.tee)
-                    else:
-                        try:
-                            fd = stream.fileno()
-                        except (AttributeError, OSError):
-                            fd = None
-                        if fd in fd_redirect:
-                            # We just redirected this file descriptor so
-                            # we can capture the output.  This makes a
-                            # loop that we really want to break.  Undo
-                            # the redirect by pointing our output stream
-                            # back to the original file descriptor.
-                            stream = self._enter_context(
-                                os.fdopen(
-                                    os.dup(fd_redirect[fd].original_fd),
-                                    mode="w",
-                                    closefd=True,
-                                ),
-                                prior_to=self.tee,
-                            )
-                    ostreams.append(stream)
-                self.tee.ostreams = ostreams
+            # We need to make sure that we didn't just capture the FD
+            # that underlies a stream that we are outputting to.  Note
+            # that when capture_fd==False, normal streams will be left
+            # alone, but the lastResort _StderrHandler() will still be
+            # replaced (needed because that handler uses the *current*
+            # value of sys.stderr)
+            ostreams = []
+            for stream in self.tee.ostreams:
+                if isinstance(stream, LogStream):
+                    for handler_redirect in stream.redirect_streams(fd_redirect):
+                        self._enter_context(handler_redirect, prior_to=self.tee)
+                else:
+                    try:
+                        fd = stream.fileno()
+                    except AttributeError:
+                        fd = None
+                        # if not hasattr(stream, 'write'):
+                        #    raise
+                    except OSError:
+                        fd = None
+                    if fd in fd_redirect:
+                        # We just redirected this file descriptor so
+                        # we can capture the output.  This makes a
+                        # loop that we really want to break.  Undo
+                        # the redirect by pointing our output stream
+                        # back to the original file descriptor.
+                        stream = self._enter_context(
+                            os.fdopen(
+                                os.dup(fd_redirect[fd].original_fd),
+                                mode="w",
+                                closefd=True,
+                            ),
+                            prior_to=self.tee,
+                        )
+                ostreams.append(stream)
+            self.tee.ostreams = ostreams
         except:
             # Note: we will ignore any exceptions raised while exiting
             # the context managers and just reraise the original

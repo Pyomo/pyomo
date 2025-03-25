@@ -433,7 +433,9 @@ class LogStream(io.TextIOBase):
                 logger = logger.parent
         if not found:
             fd = logging.lastResort.stream.fileno()
-            if fd in redirects:
+            if not redirects:
+                yield _LastResortRedirector(fd)
+            elif fd in redirects:
                 yield _LastResortRedirector(redirects[fd].original_fd)
 
 
