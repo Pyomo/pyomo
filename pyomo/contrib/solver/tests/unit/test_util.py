@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,18 +11,15 @@
 
 from pyomo.common import unittest
 import pyomo.environ as pyo
-from pyomo.contrib.solver.util import (
-    collect_vars_and_named_exprs,
-    get_objective,
-    check_optimal_termination,
-    assert_optimal_termination,
-    SolverStatus,
-    LegacyTerminationCondition,
+from pyomo.contrib.solver.common.util import collect_vars_and_named_exprs, get_objective
+from pyomo.opt.results.solver import (
+    SolverStatus as LegacySolverStatus,
+    TerminationCondition as LegacyTerminationCondition,
 )
-from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
+from pyomo.opt.results import SolverResults as LegacySolverResults
+from pyomo.contrib.solver.common.results import Results, SolutionStatus
 from typing import Callable
 from pyomo.common.gsl import find_GSL
-from pyomo.opt.results import SolverResults
 
 
 class TestGenericUtils(unittest.TestCase):
@@ -86,57 +83,44 @@ class TestGenericUtils(unittest.TestCase):
     def test_check_optimal_termination_new_interface(self):
         results = Results()
         results.solution_status = SolutionStatus.optimal
-        results.termination_condition = (
-            TerminationCondition.convergenceCriteriaSatisfied
-        )
-        # Both items satisfied
-        self.assertTrue(check_optimal_termination(results))
-        # Termination condition not satisfied
-        results.termination_condition = TerminationCondition.iterationLimit
-        self.assertFalse(check_optimal_termination(results))
-        # Both not satisfied
+        # Optimal solution
+        self.assertTrue(pyo.check_optimal_termination(results))
+        # Anything other than optimal
         results.solution_status = SolutionStatus.noSolution
-        self.assertFalse(check_optimal_termination(results))
+        self.assertFalse(pyo.check_optimal_termination(results))
 
     def test_check_optimal_termination_condition_legacy_interface(self):
-        results = SolverResults()
-        results.solver.status = SolverStatus.ok
+        results = LegacySolverResults()
+        results.solver.status = LegacySolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
         # Both items satisfied
-        self.assertTrue(check_optimal_termination(results))
+        self.assertTrue(pyo.check_optimal_termination(results))
         # Termination condition not satisfied
         results.solver.termination_condition = LegacyTerminationCondition.unknown
-        self.assertFalse(check_optimal_termination(results))
+        self.assertFalse(pyo.check_optimal_termination(results))
         # Both not satisfied
-        results.solver.termination_condition = SolverStatus.aborted
-        self.assertFalse(check_optimal_termination(results))
+        results.solver.termination_condition = LegacySolverStatus.aborted
+        self.assertFalse(pyo.check_optimal_termination(results))
 
     def test_assert_optimal_termination_new_interface(self):
         results = Results()
         results.solution_status = SolutionStatus.optimal
-        results.termination_condition = (
-            TerminationCondition.convergenceCriteriaSatisfied
-        )
-        assert_optimal_termination(results)
-        # Termination condition not satisfied
-        results.termination_condition = TerminationCondition.iterationLimit
-        with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
-        # Both not satisfied
+        pyo.assert_optimal_termination(results)
+        # No solution
         results.solution_status = SolutionStatus.noSolution
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)
 
     def test_assert_optimal_termination_legacy_interface(self):
-        results = SolverResults()
-        results.solver.status = SolverStatus.ok
+        results = LegacySolverResults()
+        results.solver.status = LegacySolverStatus.ok
         results.solver.termination_condition = LegacyTerminationCondition.optimal
-        assert_optimal_termination(results)
+        pyo.assert_optimal_termination(results)
         # Termination condition not satisfied
         results.solver.termination_condition = LegacyTerminationCondition.unknown
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)
         # Both not satisfied
-        results.solver.termination_condition = SolverStatus.aborted
+        results.solver.termination_condition = LegacySolverStatus.aborted
         with self.assertRaises(RuntimeError):
-            assert_optimal_termination(results)
+            pyo.assert_optimal_termination(results)
