@@ -26,11 +26,12 @@ from pyomo.common.numeric_types import (
 )
 
 import pyomo.core.expr as EXPR
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
-from pyomo.core.expr.numvalue import as_numeric, _type_check_exception_arg
+from pyomo.core.expr.numvalue import as_numeric
 from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')

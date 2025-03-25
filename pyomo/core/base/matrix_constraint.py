@@ -17,7 +17,8 @@ from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.core.base.set_types import Any
-from pyomo.core.expr.numvalue import value, _type_check_exception_arg
+from pyomo.core.expr.expr_common import _type_check_exception_arg
+from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import IndexedConstraint, ConstraintData

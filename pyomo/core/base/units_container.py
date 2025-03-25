@@ -113,13 +113,13 @@ import sys
 
 from pyomo.common.dependencies import pint as pint_module, pint_available
 from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import (
     NumericValue,
     nonpyomo_leaf_types,
     value,
     native_types,
     native_numeric_types,
-    _type_check_exception_arg,
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor

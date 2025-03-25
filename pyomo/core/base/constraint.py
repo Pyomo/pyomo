@@ -31,7 +31,6 @@ from pyomo.core.expr.numvalue import (
     native_numeric_types,
     native_logical_types,
     native_types,
-    _type_check_exception_arg,
 )
 from pyomo.core.expr import (
     ExpressionType,
@@ -39,6 +38,7 @@ from pyomo.core.expr import (
     InequalityExpression,
     RangedExpression,
 )
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.template_expr import templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
