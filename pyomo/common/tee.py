@@ -219,7 +219,6 @@ class capture_output(object):
         if output is None:
             output = io.StringIO()
         self.output = output
-        self.output_file = None
         self.old = None
         self.tee = None
         self.capture_fd = capture_fd
@@ -420,9 +419,6 @@ class _StreamHandle(object):
             self.output_buffer = ''
         else:
             self.output_buffer = b''
-
-    def __repr__(self):
-        return "%s(%s)" % (self.buffering, id(self))
 
     def fileno(self):
         return self.read_pipe
