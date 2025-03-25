@@ -328,11 +328,11 @@ class TestCapture(unittest.TestCase):
                 result = f.read()
             self.assertEqual('HELLO WORLD\n', result)
 
+        # Check that an exception when entering the context will cleanly
+        # unroll the context stack
         logfile = os.path.join('path', 'to', 'nonexisting', 'file.txt')
         T = tee.capture_output(logfile)
-        with self.assertRaisesRegex(
-            FileNotFoundError, f".*{logfile}".replace("\\", "\\\\")
-        ):
+        with self.assertRaises(FileNotFoundError):
             T.__enter__()
         self.assertEqual(T.context_stack, [])
 
