@@ -251,9 +251,9 @@ class capture_output(object):
 
         """
         FAIL = []
-        for cm in reversed(self.context_stack):
+        while self.context_stack:
             try:
-                cm.__exit__(et, ev, tb)
+                self.context_stack.pop().__exit__(et, ev, tb)
             except:
                 FAIL.append(str(sys.exc_info()[1]))
         return FAIL
