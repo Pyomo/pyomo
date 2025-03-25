@@ -213,13 +213,13 @@ To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
   >>> J = [1, 2, 3, 4, 5]
 
   Define variables
-  >>> m.a = Var(bounds=(-0.1, 0.3))
+  >>> m.a = Var(bounds=(-0.3, 0.2))
   >>> m.b = Var(bounds=(-0.9, -0.5))
 
   Define disjuncts for Y1
   >>> m.Y1_disjuncts = Disjunct(I)
   >>> for i in I:
-  ...     m.Y1_disjuncts[i].y1_constraint = Constraint(expr=m.a == -0.1 + 0.1 * (i - 1))
+  ...     m.Y1_disjuncts[i].y1_constraint = Constraint(expr=m.a == -0.3 + 0.1 * (i - 1))
 
   Define disjuncts for Y2
   >>> m.Y2_disjuncts = Disjunct(J)
@@ -227,8 +227,8 @@ To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
   ...     m.Y2_disjuncts[j].y2_constraint = Constraint(expr=m.b == -0.9 + 0.1 * (j - 1))
 
   Define disjunctions
-  >>> m.y1_disjunction = Disjunction(I, expr=[m.Y1_disjuncts[i] for i in I])
-  >>> m.y2_disjunction = Disjunction(J, expr=[m.Y2_disjuncts[j] for j in J])
+  >>> m.y1_disjunction = Disjunction(expr=[m.Y1_disjuncts[i] for i in I])
+  >>> m.y2_disjunction = Disjunction(expr=[m.Y2_disjuncts[j] for j in J])
 
   Logical constraints to enforce exactly one selection
   >>> m.Y1_limit = LogicalConstraint(expr=exactly(1, [m.Y1_disjuncts[i].indicator_var for i in I]))
