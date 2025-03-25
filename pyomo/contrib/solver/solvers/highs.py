@@ -577,10 +577,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                 coef = repn.quadratic_coefs[ndx]
                 coef_val = value(coef)
 
-                # For different variables, divide by 2 since HiGHS expects the lower triangular part
-                # of Q where obj = 0.5*x^T*Q*x + c^T*x
-                if v1_ndx != v2_ndx:
-                    coef_val /= 2.0
+                # Adjust coefficient values for HiGHS's expected format
+                if v1_ndx == v2_ndx:
+                    coef_val *= 2.0
 
                 # Add to the dictionary
                 if (row, col) in quad_coefs:
@@ -632,16 +631,17 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         # Build CSC format for the lower triangular part
         q_value = []
         q_index = []
-        q_start = [0] * (dim + 1)
+        # Create q_start with length dim (not dim+1) as HiGHS expects, contrary to standard CSC
+        q_start = [0] * dim
 
         sorted_entries = sorted(quad_coefs.items(), key=lambda x: (x[0][1], x[0][0]))
 
         last_col = -1
         for (row, col), val in sorted_entries:
-            # Update column pointers
             while col > last_col:
                 last_col += 1
-                q_start[last_col + 1] = len(q_value)
+                if last_col < dim:
+                    q_start[last_col] = len(q_value)
 
             # Add the entry
             q_index.append(row)
@@ -650,7 +650,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         # Fill in remaining column pointers
         while last_col < dim - 1:
             last_col += 1
-            q_start[last_col + 1] = len(q_value)
+            q_start[last_col] = len(q_value)
 
         # Create NumPy arrays
         np_q_start = np.array(q_start, dtype=np.int32)
@@ -659,7 +659,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         # Pass the Hessian to HiGHS
         nnz = len(q_value)
-        self._solver_model.passHessian(
+        status = self._solver_model.passHessian(
             dim,
             nnz,
             highspy.HessianFormat.kTriangular,
@@ -667,6 +667,10 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             np_q_index,
             np_q_value,
         )
+        if status != highspy.HighsStatus.kOk:
+            logger.warning(
+                f"HiGHS returned non-OK status when passing Hessian: {status}"
+            )
 
         # Reset the rebuild flag
         self._rebuild_hessian = False

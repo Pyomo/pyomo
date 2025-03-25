@@ -115,7 +115,7 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(m.fy.value, 0, places=5)
         self.assertAlmostEqual(r.objective_bound, 0.5, places=5)
 
-    def test_qp(self):
+    def test_qp1(self):
         # test issue #3381
         m = pe.ConcreteModel()
 
@@ -132,3 +132,23 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(m.x1.value, 1, places=5)
         self.assertAlmostEqual(m.x2.value, 1, places=5)
         self.assertEqual(results.objective_bound, 2)
+
+    def test_qp2(self):
+        # test issue #3381
+        m = pe.ConcreteModel()
+
+        m.x1 = pe.Var(name='x1', domain=pe.Reals)
+        m.x2 = pe.Var(name='x2', domain=pe.Reals)
+
+        # Quadratic Objective function
+        m.obj = pe.Objective(
+            expr=m.x1 * m.x1 + m.x2 * m.x2 - m.x1 * m.x2, sense=pe.minimize
+        )
+
+        m.con1 = pe.Constraint(expr=m.x1 >= 1)
+        m.con2 = pe.Constraint(expr=m.x2 >= 1)
+
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 1, places=5)
+        self.assertAlmostEqual(m.x2.value, 1, places=5)
+        self.assertEqual(results.objective_bound, 1)
