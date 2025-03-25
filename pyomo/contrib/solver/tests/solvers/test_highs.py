@@ -140,15 +140,24 @@ class TestBugs(unittest.TestCase):
         m.x1 = pe.Var(name='x1', domain=pe.Reals)
         m.x2 = pe.Var(name='x2', domain=pe.Reals)
 
-        # Quadratic Objective function
+        m.p = pe.Param(initialize=1, mutable=True)
+
         m.obj = pe.Objective(
-            expr=m.x1 * m.x1 + m.x2 * m.x2 - m.x1 * m.x2, sense=pe.minimize
+            expr=m.p * m.x1 * m.x1 + m.x2 * m.x2 - m.x1 * m.x2, sense=pe.minimize
         )
 
         m.con1 = pe.Constraint(expr=m.x1 >= 1)
         m.con2 = pe.Constraint(expr=m.x2 >= 1)
 
+        opt.set_instance(m)
         results = opt.solve(m)
         self.assertAlmostEqual(m.x1.value, 1, places=5)
         self.assertAlmostEqual(m.x2.value, 1, places=5)
         self.assertEqual(results.objective_bound, 1)
+
+        m.p.value = 2.0
+        opt.update_parameters()
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 1, places=5)
+        self.assertAlmostEqual(m.x2.value, 1, places=5)
+        self.assertEqual(results.objective_bound, 2)

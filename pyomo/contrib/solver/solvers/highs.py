@@ -137,35 +137,25 @@ class _MutableObjective:
         """
         needs_quadratic_update = self._first_update
 
-        # Update linear coefficients
+        self.constant.update()
         for coef in self.linear_coefs:
             coef.update()
 
-        # Update constant term
-        self.constant.update()
-
-        # Check if quadratic coefficients changed
         for ndx, coef in enumerate(self.quadratic_coefs):
             current_val = value(coef.expr)
             if current_val != self.last_quadratic_coef_values[ndx]:
                 needs_quadratic_update = True
 
-                # Update the dictionary entry
                 v1_ndx = coef.row_idx
                 v2_ndx = coef.col_idx
                 row = max(v1_ndx, v2_ndx)
                 col = min(v1_ndx, v2_ndx)
 
-                # Calculate the delta
-                delta = current_val - self.last_quadratic_coef_values[ndx]
+                # Adjust the diagonal to match Highs' expected format
                 if v1_ndx == v2_ndx:
-                    delta *= 2.0
+                    current_val *= 2.0
 
-                # Update the stored coefficient
-                if (row, col) in self.quad_coef_dict:
-                    self.quad_coef_dict[(row, col)] += delta
-                else:
-                    self.quad_coef_dict[(row, col)] = delta
+                self.quad_coef_dict[(row, col)] = current_val
 
                 self.last_quadratic_coef_values[ndx] = current_val
 
@@ -201,25 +191,18 @@ class _MutableObjective:
             q_index.append(row)
             q_value.append(val)
 
-        # Fill in remaining column pointers
         while last_col < dim - 1:
             last_col += 1
             q_start[last_col] = len(q_value)
 
-        # Create NumPy arrays
-        np_q_start = np.array(q_start, dtype=np.int32)
-        np_q_index = np.array(q_index, dtype=np.int32)
-        np_q_value = np.array(q_value, dtype=np.double)
-
-        # Pass the Hessian to HiGHS
         nnz = len(q_value)
         status = self.highs.passHessian(
             dim,
             nnz,
             highspy.HessianFormat.kTriangular,
-            np_q_start,
-            np_q_index,
-            np_q_value,
+            np.array(q_start, dtype=np.int32),
+            np.array(q_index, dtype=np.int32),
+            np.array(q_value, dtype=np.double),
         )
 
         if status != highspy.HighsStatus.kOk:
