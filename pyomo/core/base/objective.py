@@ -22,7 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.numvalue import value, _type_check_exception_arg
 from pyomo.core.expr.template_expr import templatize_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -418,7 +418,8 @@ class ScalarObjective(ObjectiveData, Objective):
     # construction
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
+        exception = _type_check_exception_arg(self, exception)
         if self._constructed:
             if len(self._data) == 0:
                 raise ValueError(
