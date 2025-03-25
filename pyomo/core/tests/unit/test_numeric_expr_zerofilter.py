@@ -47,10 +47,10 @@ from pyomo.core.expr.numeric_expr import (
 )
 from pyomo.core.expr.numvalue import NumericValue, native_types, native_numeric_types
 
-from .test_numeric_expr_dispatcher import Base
+from .test_numeric_expr_dispatcher import BaseNumeric
 
 
-class TestExpressionGeneration_ZeroFilter(Base, unittest.TestCase):
+class TestExpressionGeneration_ZeroFilter(BaseNumeric, unittest.TestCase):
     def setUp(self):
         super().setUp()
         enable_expression_optimizations(zero=True, one=True)
