@@ -626,7 +626,6 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             return
 
         dim = len(self._pyomo_var_to_solver_var_map)
-        quad_coefs = self.quadratic_coefs
 
         # Build CSC format for the lower triangular part
         q_value = []
@@ -634,7 +633,9 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         # Create q_start with length dim (not dim+1) as HiGHS expects, contrary to standard CSC
         q_start = [0] * dim
 
-        sorted_entries = sorted(quad_coefs.items(), key=lambda x: (x[0][1], x[0][0]))
+        sorted_entries = sorted(
+            self.quadratic_coefs.items(), key=lambda x: (x[0][1], x[0][0])
+        )
 
         last_col = -1
         for (row, col), val in sorted_entries:
