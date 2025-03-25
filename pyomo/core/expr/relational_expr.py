@@ -437,7 +437,7 @@ def _invalid_relational(op_type, op_str, a, b):
             "value defined over an index that you did not specify?"
         )
     else:
-        msg = "Attempting to use a non-numeric type in a " "numeric expression context:"
+        msg = "Attempting to use a non-numeric type in a numeric expression context:"
     raise TypeError(msg + f"\n    {a}\n    {{{op_str}}}\n    {b}")
 
 

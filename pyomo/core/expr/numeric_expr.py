@@ -104,7 +104,7 @@ relocated_module_attribute(
 relocated_module_attribute(
     'register_arg_type',
     'pyomo.core.expr.expr_common',
-    version='6.8.3.dev0',
+    version='6.9.2.dev0',
     f_globals=globals(),
 )
 
