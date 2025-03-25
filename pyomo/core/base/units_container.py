@@ -119,7 +119,7 @@ from pyomo.core.expr.numvalue import (
     value,
     native_types,
     native_numeric_types,
-    _type_check_exception_arg
+    _type_check_exception_arg,
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor

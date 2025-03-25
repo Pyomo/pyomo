@@ -29,7 +29,7 @@ from pyomo.core.expr.numvalue import (
     value,
     is_potentially_variable,
     native_numeric_types,
-    _type_check_exception_arg
+    _type_check_exception_arg,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
