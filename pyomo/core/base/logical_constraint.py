@@ -21,7 +21,11 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
-from pyomo.core.expr.numvalue import native_types, native_logical_types
+from pyomo.core.expr.numvalue import (
+    native_types,
+    native_logical_types,
+    _type_check_exception_arg,
+)
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -84,8 +88,9 @@ class LogicalConstraintData(ActiveComponentData):
         if expr is not None:
             self.set_value(expr)
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of the body of this logical constraint."""
+        exception = _type_check_exception_arg(self, exception)
         if self.body is None:
             return None
         return self.body(exception=exception)
