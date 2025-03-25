@@ -508,7 +508,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         indices = np.arange(n)
         costs = np.zeros(n, dtype=np.double)
         self._objective_helpers = []
-        self._quad_coefs = {}
+        self.quadratic_coefs = {}
 
         if obj is None:
             sense = highspy.ObjSense.kMinimize
@@ -564,7 +564,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         if repn.quadratic_vars and len(repn.quadratic_vars) > 0:
             # Dictionary to collect quadratic coefficients
-            quad_coefs = {}  # (row, col) -> coefficient
+            quadratic_coefs = {}  # (row, col) -> coefficient
 
             for ndx, (v1, v2) in enumerate(repn.quadratic_vars):
                 v1_ndx = self._pyomo_var_to_solver_var_map[id(v1)]
@@ -582,10 +582,10 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     coef_val *= 2.0
 
                 # Add to the dictionary
-                if (row, col) in quad_coefs:
-                    quad_coefs[(row, col)] += coef_val
+                if (row, col) in quadratic_coefs:
+                    quadratic_coefs[(row, col)] += coef_val
                 else:
-                    quad_coefs[(row, col)] = coef_val
+                    quadratic_coefs[(row, col)] = coef_val
 
                 # Handle mutable coefficients
                 if not is_constant(coef):
@@ -599,7 +599,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                                 delta = new_val - old_val
 
                             # Update the stored coefficient
-                            self._quad_coefs[(row, col)] += delta
+                            self.quadratic_coefs[(row, col)] += delta
 
                             # Signal that we need to rebuild the Hessian
                             self._rebuild_hessian = True
@@ -615,18 +615,18 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     self._objective_helpers.append(helper)
 
             # Store quadratic coefficients for future updates
-            self._quad_coefs = quad_coefs
+            self.quadratic_coefs = quadratic_coefs
 
             # Build the CSC format arrays for HiGHS
             self._build_and_pass_hessian()
 
     def _build_and_pass_hessian(self):
         # Skip if no quadratic coefficients
-        if not self._quad_coefs:
+        if not self.quadratic_coefs:
             return
 
         dim = len(self._pyomo_var_to_solver_var_map)
-        quad_coefs = self._quad_coefs
+        quad_coefs = self.quadratic_coefs
 
         # Build CSC format for the lower triangular part
         q_value = []
