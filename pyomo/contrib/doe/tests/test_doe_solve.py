@@ -232,7 +232,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
     def test_reactor_obj_cholesky_solve_bad_prior(self):
 
-        from pyomo.contrib.doe import _SMALL_TOLERANCE_DEFINITENESS
+        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
         obj_used = "determinant"
