@@ -110,6 +110,7 @@ class clone_counter(nullcontext):
         """A property that returns the clone count value."""
         return clone_counter._count
 
+
 def _type_check_exception_arg(cls, exception):
     if exception is NOTSET:
         return True

@@ -15,10 +15,7 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.common.numeric_types import native_types
 from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
-from pyomo.core.expr.expr_common import (
-    OperatorAssociativity,
-    _type_check_exception_arg,
-)
+from pyomo.core.expr.expr_common import OperatorAssociativity, _type_check_exception_arg
 
 visitor, _ = attempt_import('pyomo.core.expr.visitor')
 
