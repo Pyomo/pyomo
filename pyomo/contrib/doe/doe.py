@@ -1381,7 +1381,7 @@ class DesignOfExperiments:
         # Check if the FIM is positive definite
         if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
             raise ValueError(
-                "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{}".format(
+                "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
                     _SMALL_TOLERANCE_DEFINITENESS
                 )
             )

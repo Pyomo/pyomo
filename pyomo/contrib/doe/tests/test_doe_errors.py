@@ -183,7 +183,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than {}".format,
+            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
+                    _SMALL_TOLERANCE_DEFINITENESS
+            ),
         ):
             doe_obj.create_doe_model()
 
@@ -194,7 +196,8 @@ class TestReactorExampleErrors(unittest.TestCase):
         obj_used = "trace"
         flag_val = 0  # Value for faulty model build mode - 0: full model
 
-        prior_FIM = -np.ones((4, 4))
+        prior_FIM = np.zeros((4, 4))
+        prior_FIM[0, 1] = 1e-3
 
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
