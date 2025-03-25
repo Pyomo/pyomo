@@ -22,10 +22,7 @@ from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
-from pyomo.core.expr.numvalue import (
-    native_types,
-    native_logical_types,
-)
+from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
