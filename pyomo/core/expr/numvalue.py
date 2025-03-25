@@ -17,6 +17,7 @@ from pyomo.common.deprecation import (
     deprecation_warning,
     relocated_module_attribute,
 )
+from pyomo.common.modeling import NOTSET
 from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.numeric_expr import NumericValue
 
@@ -436,3 +437,15 @@ _pyomo_constant_types.add(NumericConstant)
 
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
+
+
+def _type_check_exception_arg(cls, exception):
+    if exception is NOTSET:
+        return True
+    elif type(exception) is not bool:
+        raise ValueError(
+            f"{cls.ctype.__name__} '{cls.name}' was called with a non-bool "
+            f"argument for 'exception': {exception}"
+        )
+    else:
+        return exception

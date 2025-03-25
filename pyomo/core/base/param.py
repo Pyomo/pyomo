@@ -23,7 +23,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.expr.numvalue import NumericValue
+from pyomo.core.expr.numvalue import NumericValue, _type_check_exception_arg
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -205,17 +205,10 @@ class ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
-        if exception is NOTSET:
-            raise_exception = True
-        elif type(exception) is not bool:
-            raise ValueError(
-                "Param '%s' was called with a non-boolean argument for "
-                "'exception': %s" % (self.name, exception)
-            )
-        else:
-            raise_exception = exception
+        exception = _type_check_exception_arg(self, exception)
+
         if self._value is Param.NoValue:
-            if raise_exception:
+            if exception:
                 raise ValueError(
                     "Error evaluating Param value (%s):\n\tThe Param value is "
                     "currently set to an invalid value.  This is\n\ttypically "
@@ -942,15 +935,7 @@ class ScalarParam(ParamData, Param):
         """
         Return the value of this parameter.
         """
-        if exception is NOTSET:
-            raise_exception = True
-        elif type(exception) is not bool:
-            raise ValueError(
-                "Param '%s' was called with a non-boolean argument for "
-                "'exception': %s" % (self.name, exception)
-            )
-        else:
-            raise_exception = exception
+        exception = _type_check_exception_arg(self, exception)
 
         if self._constructed:
             if not self._data:
@@ -962,8 +947,8 @@ class ScalarParam(ParamData, Param):
                     # Immutable Param defaults never get added to the
                     # _data dict
                     return self[None]
-            return super(ScalarParam, self).__call__(exception=raise_exception)
-        if raise_exception:
+            return super(ScalarParam, self).__call__(exception=exception)
+        if exception:
             raise ValueError(
                 "Evaluating the numeric value of parameter '%s' before\n\t"
                 "the Param has been constructed (there is currently no "
@@ -995,23 +980,6 @@ class SimpleParam(metaclass=RenamedClass):
 
 
 class IndexedParam(Param):
-    def __call__(self, exception=NOTSET):
-        """Compute the value of the parameter"""
-        if exception is NOTSET:
-            raise_exception = True
-        elif type(exception) is not bool:
-            raise ValueError(
-                "IndexedParam '%s' was called with a non-boolean argument for "
-                "'exception': %s" % (self.name, exception)
-            )
-        else:
-            raise_exception = exception
-
-        if raise_exception:
-            raise TypeError(
-                'Cannot compute the value of an indexed Param (%s)' % (self.name,)
-            )
-
     # Because IndexedParam can use a non-standard data store (i.e., the
     # values in the _data dict may not be ComponentData objects), we
     # need to override the normal scheme for pre-allocating
