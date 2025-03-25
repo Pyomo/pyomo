@@ -453,7 +453,7 @@ def _eq_expr(a, b):
     return EqualityExpression((a, b))
 
 
-def _eq_param(a, b):
+def _eq_param_param(a, b):
     if a.is_constant():
         a = a.value
         if b.is_constant():
@@ -495,7 +495,7 @@ _eq_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _eq_invalid,
         (ARG_TYPE.NATIVE, ARG_TYPE.INVALID_RELATIONAL): _eq_invalid,
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _eq_param_any,
-        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _eq_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _eq_param_param,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _eq_param_any,
         (ARG_TYPE.PARAM, ARG_TYPE.INEQUALITY): _eq_invalid,
         (ARG_TYPE.PARAM, ARG_TYPE.INVALID_RELATIONAL): _eq_invalid,
@@ -551,7 +551,7 @@ def _le_ineq_param(a, b):
     return RangedExpression(a.args + (b,), (a._strict, False))
 
 
-def _le_param(a, b):
+def _le_param_param(a, b):
     if a.is_constant():
         a = a.value
         if b.is_constant():
@@ -593,7 +593,7 @@ _le_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _le_expr_ineq,
         (ARG_TYPE.NATIVE, ARG_TYPE.INVALID_RELATIONAL): _le_invalid,
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _le_param_any,
-        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _le_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _le_param_param,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _le_param_any,
         (ARG_TYPE.PARAM, ARG_TYPE.INEQUALITY): _le_param_ineq,
         (ARG_TYPE.PARAM, ARG_TYPE.INVALID_RELATIONAL): _le_invalid,
@@ -649,7 +649,7 @@ def _lt_ineq_param(a, b):
     return RangedExpression(a.args + (b,), (a._strict, True))
 
 
-def _lt_param(a, b):
+def _lt_param_param(a, b):
     if a.is_constant():
         a = a.value
         if b.is_constant():
@@ -691,7 +691,7 @@ _lt_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (ARG_TYPE.NATIVE, ARG_TYPE.INEQUALITY): _lt_expr_ineq,
         (ARG_TYPE.NATIVE, ARG_TYPE.INVALID_RELATIONAL): _lt_invalid,
         (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _lt_param_any,
-        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _lt_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _lt_param_param,
         (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _lt_param_any,
         (ARG_TYPE.PARAM, ARG_TYPE.INEQUALITY): _lt_param_ineq,
         (ARG_TYPE.PARAM, ARG_TYPE.INVALID_RELATIONAL): _lt_invalid,
