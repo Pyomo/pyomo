@@ -119,6 +119,7 @@ from pyomo.core.expr.numvalue import (
     value,
     native_types,
     native_numeric_types,
+    _type_check_exception_arg
 )
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
@@ -384,7 +385,7 @@ class _PyomoUnit(NumericValue):
         else:
             return _str
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Unit is treated as a constant value, and this method always returns 1.0
 
         Returns
@@ -392,6 +393,7 @@ class _PyomoUnit(NumericValue):
         : float
            Returns 1.0
         """
+        _type_check_exception_arg(self, exception)
         return 1.0
 
     @property
