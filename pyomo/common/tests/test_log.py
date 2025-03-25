@@ -527,6 +527,12 @@ class TestLogStream(unittest.TestCase):
             self.assertEqual(OUT.getvalue(), "INFO: line 1\nINFO: line 2\n")
 
         with LI as OUT:
+            # empty writes do not generate log records
+            ls.write("")
+            ls.flush()
+            self.assertEqual(OUT.getvalue(), "")
+
+        with LI as OUT:
             ls.write("line 1\nline 2")
             self.assertEqual(OUT.getvalue(), "INFO: line 1\n")
 
