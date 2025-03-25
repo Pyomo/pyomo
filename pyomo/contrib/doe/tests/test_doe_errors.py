@@ -184,7 +184,7 @@ class TestReactorExampleErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
-                    _SMALL_TOLERANCE_DEFINITENESS
+                _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
             doe_obj.create_doe_model()
