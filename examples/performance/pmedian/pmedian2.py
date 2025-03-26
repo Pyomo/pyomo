@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def pyomo_create_model(options=None, model_options=None):
@@ -37,12 +37,14 @@ def pyomo_create_model(options=None, model_options=None):
         within=pyo.Reals,
     )
 
-    model.x = pyo.Var(model.Locations, model.Customers, bounds=(0.0, 1.0), initialize=0.0)
+    model.x = pyo.Var(
+        model.Locations, model.Customers, bounds=(0.0, 1.0), initialize=0.0
+    )
 
     model.y = pyo.Var(model.Locations, bounds=(0.0, 1.0), initialize=0.0)
 
     def rule(model):
-        return Sum(
+        return sum(
             model.d[n, m] * model.x[n, m]
             for n in model.Locations
             for m in model.Customers
@@ -51,7 +53,7 @@ def pyomo_create_model(options=None, model_options=None):
     model.obj = pyo.Objective(rule=rule)
 
     def rule(model, m):
-        return (Sum(model.x[n, m] for n in model.Locations), 1.0)
+        return (sum(model.x[n, m] for n in model.Locations), 1.0)
 
     model.single_x = pyo.Constraint(model.Customers, rule=rule)
 
@@ -61,7 +63,7 @@ def pyomo_create_model(options=None, model_options=None):
     model.bound_y = pyo.Constraint(model.Locations, model.Customers, rule=rule)
 
     def rule(model):
-        return (Sum(model.y[n] for n in model.Locations) - model.P, 0.0)
+        return (sum(model.y[n] for n in model.Locations) - model.P, 0.0)
 
     model.num_facilities = pyo.Constraint(rule=rule)
 

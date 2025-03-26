@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def create_model(N):
@@ -18,7 +18,7 @@ def create_model(N):
     model.A = pyo.RangeSet(N)
     model.x = pyo.Var(model.A, bounds=(1, 2))
 
-    with nonlinear_expression as expr:
+    with pyo.nonlinear_expression as expr:
         for i in model.A:
             if not (i + 1) in model.A:
                 continue

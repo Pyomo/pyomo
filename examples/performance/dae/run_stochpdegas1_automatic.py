@@ -11,8 +11,7 @@
 
 import time
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
 from stochpdegas1_automatic import model
 
 start = time.time()
@@ -37,7 +36,7 @@ def supcost_rule(m, k):
     )
 
 
-instance.supcost = Expression(instance.SCEN, rule=supcost_rule)
+instance.supcost = pyo.Expression(instance.SCEN, rule=supcost_rule)
 
 
 def boostcost_rule(m, k):
@@ -48,7 +47,7 @@ def boostcost_rule(m, k):
     )
 
 
-instance.boostcost = Expression(instance.SCEN, rule=boostcost_rule)
+instance.boostcost = pyo.Expression(instance.SCEN, rule=boostcost_rule)
 
 
 def trackcost_rule(m, k):
@@ -59,7 +58,7 @@ def trackcost_rule(m, k):
     )
 
 
-instance.trackcost = Expression(instance.SCEN, rule=trackcost_rule)
+instance.trackcost = pyo.Expression(instance.SCEN, rule=trackcost_rule)
 
 
 def sspcost_rule(m, k):
@@ -70,7 +69,7 @@ def sspcost_rule(m, k):
     )
 
 
-instance.sspcost = Expression(instance.SCEN, rule=sspcost_rule)
+instance.sspcost = pyo.Expression(instance.SCEN, rule=sspcost_rule)
 
 
 def ssfcost_rule(m, k):
@@ -81,7 +80,7 @@ def ssfcost_rule(m, k):
     )
 
 
-instance.ssfcost = Expression(instance.SCEN, rule=ssfcost_rule)
+instance.ssfcost = pyo.Expression(instance.SCEN, rule=ssfcost_rule)
 
 
 def cost_rule(m, k):
@@ -90,14 +89,14 @@ def cost_rule(m, k):
     )
 
 
-instance.cost = Expression(instance.SCEN, rule=cost_rule)
+instance.cost = pyo.Expression(instance.SCEN, rule=cost_rule)
 
 
 def mcost_rule(m):
     return (1.0 / m.S) * sum(m.cost[k] for k in m.SCEN)
 
 
-instance.mcost = Expression(rule=mcost_rule)
+instance.mcost = pyo.Expression(rule=mcost_rule)
 
 
 def eqcvar_rule(m, k):

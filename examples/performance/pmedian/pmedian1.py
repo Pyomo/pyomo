@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def pyomo_create_model(options=None, model_options=None):
@@ -37,7 +37,9 @@ def pyomo_create_model(options=None, model_options=None):
         within=pyo.Reals,
     )
 
-    model.x = pyo.Var(model.Locations, model.Customers, bounds=(0.0, 1.0), initialize=0.0)
+    model.x = pyo.Var(
+        model.Locations, model.Customers, bounds=(0.0, 1.0), initialize=0.0
+    )
 
     model.y = pyo.Var(model.Locations, bounds=(0.0, 1.0), initialize=0.0)
 

@@ -12,7 +12,7 @@
 #
 # This is a performance test that we cannot easily execute right now
 #
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def f(N):
@@ -24,7 +24,7 @@ def f(N):
     def rule(m, i):
         if i == 3 or i == 5:
             return M.x >= i
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
     M.c = pyo.Constraint(M.A, rule=rule)
     return M

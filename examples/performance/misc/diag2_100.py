@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def create_model(N):
@@ -18,7 +18,7 @@ def create_model(N):
     model.A = pyo.RangeSet(N)
     model.x = pyo.Var(model.A)
 
-    expr = Sum(i * model.x[i] for i in model.A)
+    expr = pyo.quicksum(i * model.x[i] for i in model.A)
     model.obj = pyo.Objective(expr=expr)
 
     def c_rule(model, i):

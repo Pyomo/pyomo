@@ -14,8 +14,8 @@
 
 #
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 
 model = pyo.AbstractModel()
 
@@ -93,7 +93,9 @@ model.om = pyo.Param(initialize=(model.gam - 1.0) / model.gam, within=pyo.Positi
 model.ffac = pyo.Param(
     within=pyo.PositiveReals, initialize=(1.0e6 * model.rhon) / (24.0 * 3600.0)
 )
-model.ffac2 = pyo.Param(within=pyo.PositiveReals, initialize=(3600.0) / (1.0e4 * model.rhon))
+model.ffac2 = pyo.Param(
+    within=pyo.PositiveReals, initialize=(3600.0) / (1.0e4 * model.rhon)
+)
 model.pfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e5)
 model.pfac2 = pyo.Param(within=pyo.PositiveReals, initialize=1.0e-5)
 model.dfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e-3)
@@ -112,7 +114,9 @@ model.cs = pyo.Param(initialize=0.0, within=pyo.NonNegativeReals)
 model.TDEC = pyo.Param(within=pyo.PositiveReals)
 
 # define stochastic info
-model.rand_d = pyo.Param(model.SCEN, model.DEM, within=pyo.NonNegativeReals, mutable=True)
+model.rand_d = pyo.Param(
+    model.SCEN, model.DEM, within=pyo.NonNegativeReals, mutable=True
+)
 
 
 # convert units for input data
@@ -138,12 +142,12 @@ def rescale_rule(m):
         m.pmax[i] = m.pmax[i] * m.pfac * m.pfac2  # from bar to Pascals and then to bar
 
 
-model.rescale = BuildAction(rule=rescale_rule)
+model.rescale = pyo.BuildAction(rule=rescale_rule)
 
 
 def compute_constants(m):
     for i in m.LINK:
-        m.lam[i] = (2.0 * log10(3.7 * m.ldiam[i] / (m.eps * m.dfac))) ** (-2.0)
+        m.lam[i] = (2.0 * pyo.log10(3.7 * m.ldiam[i] / (m.eps * m.dfac))) ** (-2.0)
         m.A[i] = (1.0 / 4.0) * m.pi * m.ldiam[i] * m.ldiam[i]
         m.nu2 = m.gam * m.z * m.R * m.Tgas / m.M
         m.c1[i] = (m.pfac2 / m.ffac2) * (m.nu2 / m.A[i])
@@ -157,7 +161,7 @@ def compute_constants(m):
         m.c4 = (1 / m.ffac2) * (m.Cp * m.Tgas)
 
 
-model.compute_constants = BuildAction(rule=compute_constants)
+model.compute_constants = pyo.BuildAction(rule=compute_constants)
 
 
 # set stochastic demands
@@ -172,7 +176,7 @@ def compute_demands_rule(m):
                 m.rand_d[k, j] = 1.3 * m.d[j]
 
 
-model.compute_demands = BuildAction(rule=compute_demands_rule)
+model.compute_demands = pyo.BuildAction(rule=compute_demands_rule)
 
 
 def stochd_init(m, k, j, t):
@@ -206,7 +210,9 @@ def p_bounds_rule(m, k, j, t):
     return (pyo.value(m.pmin[j]), pyo.value(m.pmax[j]))
 
 
-model.p = pyo.Var(model.SCEN, model.NODE, model.TIME, bounds=p_bounds_rule, initialize=50.0)
+model.p = pyo.Var(
+    model.SCEN, model.NODE, model.TIME, bounds=p_bounds_rule, initialize=50.0
+)
 model.dp = pyo.Var(
     model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 100.0), initialize=10.0
 )
@@ -222,7 +228,9 @@ def s_bounds_rule(m, k, j, t):
     return (0.01, pyo.value(m.smax[j]))
 
 
-model.s = pyo.Var(model.SCEN, model.SUP, model.TIME, bounds=s_bounds_rule, initialize=10.0)
+model.s = pyo.Var(
+    model.SCEN, model.SUP, model.TIME, bounds=s_bounds_rule, initialize=10.0
+)
 model.dem = pyo.Var(model.SCEN, model.DEM, model.TIME, initialize=100.0)
 model.pow = pyo.Var(
     model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 3000.0), initialize=1000.0
@@ -269,7 +277,7 @@ def cvarcost_rule(m):
     return (1.0 / m.S) * sum((m.phi[k] / (1.0 - 0.95) + m.nu) for k in m.SCEN)
 
 
-model.cvarcost = Expression(rule=cvarcost_rule)
+model.cvarcost = pyo.Expression(rule=cvarcost_rule)
 
 
 # node balances
@@ -291,7 +299,9 @@ def flow_start_rule(m, j, i, t):
     return m.fx[j, i, t, m.DIS.first()] == m.fin[j, i, t]
 
 
-model.flow_start = pyo.Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_start_rule)
+model.flow_start = pyo.Constraint(
+    model.SCEN, model.LINK, model.TIME, rule=flow_start_rule
+)
 
 
 def flow_end_rule(m, j, i, t):
@@ -304,31 +314,35 @@ model.flow_end = pyo.Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_en
 # First PDE for gas network model
 def flow_rule(m, j, i, t, k):
     if t == m.TIME.first() or k == m.DIS.last():
-        return Constraint.Skip  # Do not apply pde at initial time or final location
+        return pyo.Constraint.Skip  # Do not apply pde at initial time or final location
     return (
         m.dpxdt[j, i, t, k] / 3600 + m.c1[i] / m.llength[i] * m.dfxdx[j, i, t, k] == 0
     )
 
 
-model.flow = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule)
+model.flow = pyo.Constraint(
+    model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule
+)
 
 
 # Second PDE for gas network model
 def press_rule(m, j, i, t, k):
     if t == m.TIME.first() or k == m.DIS.last():
-        return Constraint.Skip  # Do not apply pde at initial time or final location
+        return pyo.Constraint.Skip  # Do not apply pde at initial time or final location
     return (
         m.dfxdt[j, i, t, k] / 3600
         == -m.c2[i] / m.llength[i] * m.dpxdx[j, i, t, k] - m.slack[j, i, t, k]
     )
 
 
-model.press = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=press_rule)
+model.press = pyo.Constraint(
+    model.SCEN, model.LINK, model.TIME, model.DIS, rule=press_rule
+)
 
 
 def slackeq_rule(m, j, i, t, k):
     if t == m.TIME.last():
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return (
         m.slack[j, i, t, k] * m.px[j, i, t, k]
         == m.c3[i] * m.fx[j, i, t, k] * m.fx[j, i, t, k]
@@ -391,13 +405,15 @@ def dispress_rule(m, j, i, t):
     return m.p[j, m.lstartloc[i], t] + m.dp[j, i, t] <= m.pmax[m.lstartloc[i]]
 
 
-model.dispress = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule)
+model.dispress = pyo.Constraint(
+    model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule
+)
 
 
 # ss constraints
 def flow_ss_rule(m, j, i, k):
     if k == m.DIS.last():
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.dfxdx[j, i, m.TIME.first(), k] / m.llength[i] == 0.0
 
 
@@ -406,7 +422,7 @@ model.flow_ss = pyo.Constraint(model.SCEN, model.LINK, model.DIS, rule=flow_ss_r
 
 def pres_ss_rule(m, j, i, k):
     if k == m.DIS.last():
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return (
         0.0
         == -m.c2[i] / m.llength[i] * m.dpxdx[j, i, m.TIME.first(), k]
@@ -420,20 +436,22 @@ model.pres_ss = pyo.Constraint(model.SCEN, model.LINK, model.DIS, rule=pres_ss_r
 # non-anticipativity constraints
 def nonantdq_rule(m, j, i, t):
     if j == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     if t >= m.TDEC + 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.dp[j, i, t] == m.dp[1, i, t]
 
 
-model.nonantdq = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=nonantdq_rule)
+model.nonantdq = pyo.Constraint(
+    model.SCEN, model.LINK_A, model.TIME, rule=nonantdq_rule
+)
 
 
 def nonantde_rule(m, j, i, t):
     if j == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     if t >= m.TDEC + 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.dem[j, i, t] == m.dem[1, i, t]
 
 

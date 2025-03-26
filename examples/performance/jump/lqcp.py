@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 model = pyo.ConcreteModel()
 

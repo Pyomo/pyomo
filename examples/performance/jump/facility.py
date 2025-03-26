@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 model = pyo.AbstractModel()
 
@@ -54,14 +54,18 @@ def quaddistk1_rule(mod, i, j, f):
     return mod.r[i, j, f, 1] == (1.0 * i) / mod.G - mod.y[f, 1]
 
 
-model.quaddistk1 = pyo.Constraint(model.Grid, model.Grid, model.Facs, rule=quaddistk1_rule)
+model.quaddistk1 = pyo.Constraint(
+    model.Grid, model.Grid, model.Facs, rule=quaddistk1_rule
+)
 
 
 def quaddistk2_rule(mod, i, j, f):
     return mod.r[i, j, f, 2] == (1.0 * j) / mod.G - mod.y[f, 2]
 
 
-model.quaddistk2 = pyo.Constraint(model.Grid, model.Grid, model.Facs, rule=quaddistk2_rule)
+model.quaddistk2 = pyo.Constraint(
+    model.Grid, model.Grid, model.Facs, rule=quaddistk2_rule
+)
 
 
 def quaddist_rule(mod, i, j, f):
