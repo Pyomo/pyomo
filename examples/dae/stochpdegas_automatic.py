@@ -93,7 +93,9 @@ model.om = pyo.Param(initialize=(model.gam - 1.0) / model.gam, within=pyo.Positi
 model.ffac = pyo.Param(
     within=pyo.PositiveReals, initialize=(1.0e6 * model.rhon) / (24.0 * 3600.0)
 )
-model.ffac2 = pyo.Param(within=pyo.PositiveReals, initialize=(3600.0) / (1.0e4 * model.rhon))
+model.ffac2 = pyo.Param(
+    within=pyo.PositiveReals, initialize=(3600.0) / (1.0e4 * model.rhon)
+)
 model.pfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e5)
 model.pfac2 = pyo.Param(within=pyo.PositiveReals, initialize=1.0e-5)
 model.dfac = pyo.Param(within=pyo.PositiveReals, initialize=1.0e-3)
@@ -112,7 +114,9 @@ model.cs = pyo.Param(initialize=0.0, within=pyo.NonNegativeReals)
 model.TDEC = pyo.Param(within=pyo.PositiveReals)
 
 # define stochastic info
-model.rand_d = pyo.Param(model.SCEN, model.DEM, within=pyo.NonNegativeReals, mutable=True)
+model.rand_d = pyo.Param(
+    model.SCEN, model.DEM, within=pyo.NonNegativeReals, mutable=True
+)
 
 
 # convert units for input data
@@ -228,7 +232,9 @@ def s_bounds_rule(m, k, j, t):
     return (0.01, pyo.value(m.smax[j]))
 
 
-model.s = pyo.Var(model.SCEN, model.SUP, model.TIME, bounds=s_bounds_rule, initialize=10.0)
+model.s = pyo.Var(
+    model.SCEN, model.SUP, model.TIME, bounds=s_bounds_rule, initialize=10.0
+)
 model.dem = pyo.Var(model.SCEN, model.DEM, model.TIME, initialize=100.0)
 model.pow = pyo.Var(
     model.SCEN, model.LINK_A, model.TIME, bounds=(0.0, 3000.0), initialize=1000.0
@@ -297,7 +303,9 @@ def flow_start_rule(m, j, i, t):
     return m.fx[j, i, t, m.DIS.first()] == m.fin[j, i, t]
 
 
-model.flow_start = pyo.Constraint(model.SCEN, model.LINK, model.TIME, rule=flow_start_rule)
+model.flow_start = pyo.Constraint(
+    model.SCEN, model.LINK, model.TIME, rule=flow_start_rule
+)
 
 
 def flow_end_rule(m, j, i, t):
@@ -316,7 +324,9 @@ def flow_rule(m, j, i, t, k):
     )
 
 
-model.flow = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule)
+model.flow = pyo.Constraint(
+    model.SCEN, model.LINK, model.TIME, model.DIS, rule=flow_rule
+)
 
 
 # Second PDE for gas network model
@@ -329,7 +339,9 @@ def press_rule(m, j, i, t, k):
     )
 
 
-model.press = pyo.Constraint(model.SCEN, model.LINK, model.TIME, model.DIS, rule=press_rule)
+model.press = pyo.Constraint(
+    model.SCEN, model.LINK, model.TIME, model.DIS, rule=press_rule
+)
 
 
 def slackeq_rule(m, j, i, t, k):
@@ -397,7 +409,9 @@ def dispress_rule(m, j, i, t):
     return m.p[j, m.lstartloc[i], t] + m.dp[j, i, t] <= m.pmax[m.lstartloc[i]]
 
 
-model.dispress = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule)
+model.dispress = pyo.Constraint(
+    model.SCEN, model.LINK_A, model.TIME, rule=dispress_rule
+)
 
 
 # ss constraints
@@ -432,7 +446,9 @@ def nonantdq_rule(m, j, i, t):
     return m.dp[j, i, t] == m.dp[1, i, t]
 
 
-model.nonantdq = pyo.Constraint(model.SCEN, model.LINK_A, model.TIME, rule=nonantdq_rule)
+model.nonantdq = pyo.Constraint(
+    model.SCEN, model.LINK_A, model.TIME, rule=nonantdq_rule
+)
 
 
 def nonantde_rule(m, j, i, t):

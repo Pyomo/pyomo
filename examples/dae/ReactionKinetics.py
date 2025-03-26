@@ -153,7 +153,9 @@ def create_kinetic_model(rxnNet, time):
             rhs *= m.c[t, s] ** coef
         return m.rate[t, r] == rhs
 
-    model.reaction_rate = pyo.Constraint(model.TIME, model.REACTIONS, rule=reaction_rate)
+    model.reaction_rate = pyo.Constraint(
+        model.TIME, model.REACTIONS, rule=reaction_rate
+    )
 
     def stoichiometry(m, t, s):
         rhs = 0

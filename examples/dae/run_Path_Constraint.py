@@ -29,7 +29,9 @@ def plotter(subplot, x, *series, **kwds):
     plt.subplot(subplot)
     for i, y in enumerate(series):
         plt.plot(
-            list(x), [pyo.value(y[t]) for t in x], 'brgcmk'[i % 6] + kwds.get('points', '')
+            list(x),
+            [pyo.value(y[t]) for t in x],
+            'brgcmk'[i % 6] + kwds.get('points', ''),
         )
     plt.title(kwds.get('title', ''))
     plt.legend(tuple(y.name for y in series), frameon=True, edgecolor='k').draw_frame(
