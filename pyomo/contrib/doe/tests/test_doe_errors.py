@@ -193,7 +193,7 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{*}"
+            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{*}",
         ):
             doe_obj.create_doe_model()
 
@@ -224,8 +224,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.create_doe_model()
         '''
         with self.assertRaisesRegex(
-            ValueError,
-            "FIM provided is not symmetric using absolute tolerance {*}"
+            ValueError, "FIM provided is not symmetric using absolute tolerance {*}"
         ):
             doe_obj.create_doe_model()
 
