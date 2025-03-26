@@ -10,8 +10,6 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-import pyomo.opt
-import pyomo.environ
 
 #
 # Import model
@@ -22,7 +20,7 @@ import knapsack
 instance = knapsack.model.create_instance("knapsack.dat")
 #
 # Setup the optimizer
-opt = pyomo.opt.pyo.SolverFactory("glpk")
+opt = pyo.SolverFactory("glpk")
 #
 # Optimize
 results = opt.solve(instance, suffixes=['.*'])
