@@ -12,11 +12,12 @@ The main advantage of these techniques is their ability to solve subproblems
 in a reduced space, including nonlinear constraints only for ``True`` logical blocks.
 As a result, GDPopt is most effective for nonlinear GDP models.
 
-Three algorithms are available in GDPopt:
+Four algorithms are available in GDPopt:
 
 1. Logic-based outer approximation (LOA) [`Turkay & Grossmann, 1996`_]
 2. Global logic-based outer approximation (GLOA) [`Lee & Grossmann, 2001`_]
 3. Logic-based branch-and-bound (LBB) [`Lee & Grossmann, 2001`_]
+4. Logic-based discrete steepest descent algorithm (LD-SDA) [`Ovalle et al., 2025`_]
 
 Usage and implementation details for GDPopt can be found in the PSE 2018 paper
 (`Chen et al., 2018`_), or via its
