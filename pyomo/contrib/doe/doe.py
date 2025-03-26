@@ -1527,20 +1527,17 @@ class DesignOfExperiments:
             A_opt = np.log10(np.trace(FIM))
             E_vals =np.linalg.eigvalsh(FIM) # np.linalg.eigvalsh(FIM)  # Grab eigenvalues
 
-            #Shuvo: ????????????????????????
-            # Probably not required?
-            E_ind = 0 # np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            E_ind = 0  # Grab index of minima to check imaginary
+            img_thereshold = 1e-8  # Threshold for imaginary component
             # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
+            if abs(E_vals.imag[E_ind]) > img_thereshold:
                 self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-8, contact developers if this issue persists."
+                    f"Eigenvalue has imaginary component greater than {img_thereshold}, contact developers if this issue persists."
                 )
-            #????????????????????????
 
             # If the real value is less than or equal to zero, set the E_opt value to nan
             if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan  # Shuvo: Also, instead of using nan, can we not use `E_opt = np.log10(abs(E_vals[0]))` 
-                # Shuvo: if the value is very small, e.g. 1e-10?
+                E_opt = np.nan  
             else:
                 E_opt = np.log10(E_vals.real[E_ind])
 
