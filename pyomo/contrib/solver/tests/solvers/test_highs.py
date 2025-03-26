@@ -9,15 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import subprocess
-import sys
-
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 
 from pyomo.contrib.solver.solvers.highs import Highs
-from pyomo.common.log import LoggingIntercept
-from pyomo.common.tee import capture_output
 
 opt = Highs()
 if not opt.available():

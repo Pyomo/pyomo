@@ -600,6 +600,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         n = len(self._pyomo_var_to_solver_var_map)
+        indices = np.arange(n)
         costs = np.zeros(n, dtype=np.double)
 
         # Initialize empty lists for all coefficient types
@@ -658,6 +659,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                     )
 
         self._solver_model.changeObjectiveSense(sense)
+        self._solver_model.changeColsCost(n, indices, costs)
         self._mutable_objective = _MutableObjective(
             self._solver_model,
             mutable_constant,
