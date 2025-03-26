@@ -1521,7 +1521,19 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
             FIM = self._computed_FIM
-
+            
+            '''
+            # Alex said to makek this a function
+            # This should be a static (?) function
+            # Making it a function allows us to perform error tests
+            # on the FIM
+            def compute_metrics(FIM):
+                
+                # Compute D, A, E, ME metrics
+                # Perform error checks
+                # Return D, A, E, ME
+            
+            '''
             # Compute and record metrics on FIM
             D_opt = np.log10(np.linalg.det(FIM))
             A_opt = np.log10(np.trace(FIM))
