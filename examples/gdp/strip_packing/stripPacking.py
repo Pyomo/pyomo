@@ -79,7 +79,9 @@ def no_recs_off_bottom_rule(model, i):
     return pyo.inequality(model.Heights[i], model.y[i], model.StripWidth)
 
 
-model.no_recs_off_bottom = pyo.Constraint(model.RECTANGLES, rule=no_recs_off_bottom_rule)
+model.no_recs_off_bottom = pyo.Constraint(
+    model.RECTANGLES, rule=no_recs_off_bottom_rule
+)
 
 
 # Disjunctions to prevent overlap between rectangles

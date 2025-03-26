@@ -52,7 +52,9 @@ model.invcost = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 model.inv0 = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 
 # projected revenue/ton, per scenario.
-model.revenue = pyo.Param(model.PROD, model.WEEKS, model.SCEN, within=pyo.NonNegativeReals)
+model.revenue = pyo.Param(
+    model.PROD, model.WEEKS, model.SCEN, within=pyo.NonNegativeReals
+)
 
 
 def prob_validator(model, value, s):
@@ -84,7 +86,9 @@ model.time_price = pyo.Param(
     model.TWOPLUSWEEKS, model.SCEN, model.CUTS, default=0.0, mutable=True
 )
 
-model.bal2_price = pyo.Param(model.PROD, model.SCEN, model.CUTS, default=0.0, mutable=True)
+model.bal2_price = pyo.Param(
+    model.PROD, model.SCEN, model.CUTS, default=0.0, mutable=True
+)
 
 model.sell_lim_price = pyo.Param(
     model.PROD, model.TWOPLUSWEEKS, model.SCEN, model.CUTS, default=0.0, mutable=True

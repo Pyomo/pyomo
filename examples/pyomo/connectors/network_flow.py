@@ -45,11 +45,15 @@ def node_rule(node, i):
 
 
 def _src_rule(model, pipe):
-    return model.nodes[pyo.value(model.pipe_links[pipe, 0])].port == model.pipes[pipe].IN
+    return (
+        model.nodes[pyo.value(model.pipe_links[pipe, 0])].port == model.pipes[pipe].IN
+    )
 
 
 def _sink_rule(model, pipe):
-    return model.nodes[pyo.value(model.pipe_links[pipe, 1])].port == model.pipes[pipe].OUT
+    return (
+        model.nodes[pyo.value(model.pipe_links[pipe, 1])].port == model.pipes[pipe].OUT
+    )
 
 
 model = pyo.AbstractModel()

@@ -113,7 +113,9 @@ def build_model():
     model.RejectRateUB = pyo.Param(model.Screens)
 
     # m_rej_lo(s, k)
-    model.RejectedComponentFlowLB = pyo.Param(model.Components, model.Screens, default=0)
+    model.RejectedComponentFlowLB = pyo.Param(
+        model.Components, model.Screens, default=0
+    )
 
     def rejected_component_flow_bound(model, k, s):
         return model.InitialComponentFlow[k] * (
@@ -126,7 +128,9 @@ def build_model():
     )
 
     # m_acc_lo(s, k): lower bound of accepted individual flow
-    model.AcceptedComponentFlowLB = pyo.Param(model.Components, model.Screens, default=0)
+    model.AcceptedComponentFlowLB = pyo.Param(
+        model.Components, model.Screens, default=0
+    )
 
     def accepted_component_flow_bound(model, k, s):
         return model.InitialComponentFlow[k] * (
@@ -224,7 +228,9 @@ def build_model():
     def get_src_flow_bounds(model, j, n):
         return (0, model.InitialComponentFlow[j])
 
-    model.flowFromSource = pyo.Var(model.Components, model.Nodes, within=pyo.NonNegativeReals)
+    model.flowFromSource = pyo.Var(
+        model.Components, model.Nodes, within=pyo.NonNegativeReals
+    )
 
     # reject rate of screen s (r_s)
     def get_rej_rate_bounds(model, s):
@@ -268,7 +274,9 @@ def build_model():
             == model.acceptedComponentFlow[j, s] + model.rejectedComponentFlow[j, s]
         )
 
-    model.inlet_flow = pyo.Constraint(model.Screens, model.Components, rule=inlet_flow_rule)
+    model.inlet_flow = pyo.Constraint(
+        model.Screens, model.Components, rule=inlet_flow_rule
+    )
 
     def total_inlet_flow_rule(model, s):
         return model.inletScreenFlow[s] == sum(
@@ -346,7 +354,9 @@ def build_model():
             return model.acceptedNodeFlow[j, s, n] == 0
 
         if acceptFlow:
-            disjunct.flow_balance = pyo.Constraint(model.Components, rule=flow_balance_rule)
+            disjunct.flow_balance = pyo.Constraint(
+                model.Components, rule=flow_balance_rule
+            )
         else:
             disjunct.no_flow = pyo.Constraint(model.Components, rule=no_flow_rule)
 
@@ -373,7 +383,9 @@ def build_model():
             return model.rejectedNodeFlow[j, s, n] == 0
 
         if rejectFlow:
-            disjunct.flow_balance = pyo.Constraint(model.Components, rule=flow_balance_rule)
+            disjunct.flow_balance = pyo.Constraint(
+                model.Components, rule=flow_balance_rule
+            )
         else:
             disjunct.no_reject = pyo.Constraint(model.Components, rule=no_reject_rule)
 

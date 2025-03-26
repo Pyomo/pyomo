@@ -59,7 +59,9 @@ def EnsureBalance(M, e, t):
         return M.Inventory[e, t] == M.InitInv[e] + M.Produce[e, t] - M.Demand[e, t]
 
 
-model.InventoryBalance = pyo.Constraint(model.EngineType, model.Month, rule=EnsureBalance)
+model.InventoryBalance = pyo.Constraint(
+    model.EngineType, model.Month, rule=EnsureBalance
+)
 
 
 def EnsureLaborLimit(M, t):

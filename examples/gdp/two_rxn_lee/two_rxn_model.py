@@ -78,7 +78,9 @@ def build_model(use_mccormick=False):
             doc="McCormick underestimator",
         )
         m.max_demand = pyo.Constraint(expr=m.P <= m.d, doc="product demand")
-        m.profit = pyo.Objective(expr=m.c[1] * m.P - m.c[2] * m.F - m.C_rxn, sense=pyo.maximize)
+        m.profit = pyo.Objective(
+            expr=m.c[1] * m.P - m.c[2] * m.F - m.C_rxn, sense=pyo.maximize
+        )
     else:
         m.max_demand = pyo.Constraint(expr=m.F * m.X <= m.d, doc="product demand")
         m.profit = pyo.Objective(

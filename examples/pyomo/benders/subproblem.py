@@ -41,14 +41,18 @@ def two_plus_weeks_rule(model):
     return list(pyo.sequence(2, model.T()))
 
 
-model.TWOPLUSWEEKS = pyo.Set(initialize=two_plus_weeks_rule, within=pyo.PositiveIntegers)
+model.TWOPLUSWEEKS = pyo.Set(
+    initialize=two_plus_weeks_rule, within=pyo.PositiveIntegers
+)
 
 
 def three_plus_weeks_rule(model):
     return list(pyo.sequence(3, model.T()))
 
 
-model.THREEPLUSWEEKS = pyo.Set(initialize=three_plus_weeks_rule, within=pyo.PositiveIntegers)
+model.THREEPLUSWEEKS = pyo.Set(
+    initialize=three_plus_weeks_rule, within=pyo.PositiveIntegers
+)
 
 # tons per hour produced
 model.rate = pyo.Param(model.PROD, within=pyo.PositiveReals)

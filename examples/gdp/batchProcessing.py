@@ -222,7 +222,8 @@ def build_model():
         def volume_stage_jPlus1_rule(disjunct, i):
             return (
                 model.storageTankSize_log[j]
-                >= pyo.log(model.StorageTankSizeFactor[j]) + model.batchSize_log[i, j + 1]
+                >= pyo.log(model.StorageTankSizeFactor[j])
+                + model.batchSize_log[i, j + 1]
             )
 
         def batch_size_rule(disjunct, i):
@@ -270,7 +271,9 @@ def build_model():
             model.LogCoeffs[k] * model.outOfPhase[j, k] for k in model.PARALLELUNITS
         )
 
-    model.units_out_of_phase = pyo.Constraint(model.STAGES, rule=units_out_of_phase_rule)
+    model.units_out_of_phase = pyo.Constraint(
+        model.STAGES, rule=units_out_of_phase_rule
+    )
 
     def units_in_phase_rule(model, j):
         return model.unitsInPhase_log[j] == sum(
@@ -290,7 +293,9 @@ def build_model():
     def units_in_phase_xor_rule(model, j):
         return sum(model.inPhase[j, k] for k in model.PARALLELUNITS) == 1
 
-    model.units_in_phase_xor = pyo.Constraint(model.STAGES, rule=units_in_phase_xor_rule)
+    model.units_in_phase_xor = pyo.Constraint(
+        model.STAGES, rule=units_in_phase_xor_rule
+    )
 
     return model
 

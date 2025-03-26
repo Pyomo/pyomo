@@ -100,11 +100,15 @@ def EnsureLowMixture(M, i, j):
     return sum(M.x[k, j] for k in M.CrudeType) * M.MixtureLowBounds[i, j] <= M.x[i, j]
 
 
-model.LowCrudeBound = pyo.Constraint(model.CrudeType, model.GasType, rule=EnsureLowMixture)
+model.LowCrudeBound = pyo.Constraint(
+    model.CrudeType, model.GasType, rule=EnsureLowMixture
+)
 
 
 def EnsureUpMixture(M, i, j):
     return sum(M.x[k, j] for k in M.CrudeType) * M.MixtureUpBounds[i, j] >= M.x[i, j]
 
 
-model.UpCrudeBound = pyo.Constraint(model.CrudeType, model.GasType, rule=EnsureUpMixture)
+model.UpCrudeBound = pyo.Constraint(
+    model.CrudeType, model.GasType, rule=EnsureUpMixture
+)

@@ -1684,9 +1684,13 @@ def build_model():
     def _high_low(disjunct, i, y):
         model = disjunct.model()
         if y:
-            disjunct.c = pyo.Constraint(expr=model.logbeta_high - model.logbeta[i] == 0.0)
+            disjunct.c = pyo.Constraint(
+                expr=model.logbeta_high - model.logbeta[i] == 0.0
+            )
         else:
-            disjunct.c = pyo.Constraint(expr=model.logbeta[i] - model.logbeta_low == 0.0)
+            disjunct.c = pyo.Constraint(
+                expr=model.logbeta[i] - model.logbeta_low == 0.0
+            )
         model.BigM[disjunct.c] = bigM
 
     model.high_low = Disjunct(model.S_beta, model.y, rule=_high_low)

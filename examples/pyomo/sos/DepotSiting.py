@@ -22,7 +22,9 @@ model.Customers = pyo.Set()
 model.Sites = pyo.Set()
 
 # the cost of satisfying customer demand from each of the potential sites.
-model.SatisfactionCost = pyo.Param(model.Customers, model.Sites, within=pyo.NonNegativeReals)
+model.SatisfactionCost = pyo.Param(
+    model.Customers, model.Sites, within=pyo.NonNegativeReals
+)
 
 # indicators of which sites are selected. constraints ensure only one site is selected,
 # and allow the binary integrality to be implicit.

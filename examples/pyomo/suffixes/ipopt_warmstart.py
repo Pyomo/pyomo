@@ -51,7 +51,9 @@ model.x4 = pyo.Var(bounds=(1, 5), initialize=1.0)
 model.obj = pyo.Objective(
     expr=model.x1 * model.x4 * (model.x1 + model.x2 + model.x3) + model.x3
 )
-model.inequality = pyo.Constraint(expr=model.x1 * model.x2 * model.x3 * model.x4 >= 25.0)
+model.inequality = pyo.Constraint(
+    expr=model.x1 * model.x2 * model.x3 * model.x4 >= 25.0
+)
 model.equality = pyo.Constraint(
     expr=model.x1**2 + model.x2**2 + model.x3**2 + model.x4**2 == 40.0
 )
@@ -78,7 +80,8 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 print("   %7s %12s %12s" % ("Value", "ipopt_zL_out", "ipopt_zU_out"))
 for v in [model.x1, model.x2, model.x3, model.x4]:
     print(
-        "%s %7g %12g %12g" % (v, pyo.value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
+        "%s %7g %12g %12g"
+        % (v, pyo.value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
     )
 print("inequality.dual = " + str(model.dual[model.inequality]))
 print("equality.dual   = " + str(model.dual[model.equality]))
@@ -110,7 +113,8 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 print("   %7s %12s %12s" % ("Value", "ipopt_zL_out", "ipopt_zU_out"))
 for v in [model.x1, model.x2, model.x3, model.x4]:
     print(
-        "%s %7g %12g %12g" % (v, pyo.value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
+        "%s %7g %12g %12g"
+        % (v, pyo.value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
     )
 print("inequality.dual = " + str(model.dual[model.inequality]))
 print("equality.dual   = " + str(model.dual[model.equality]))

@@ -196,7 +196,9 @@ def build_model():
     model.CostUB_Discount = pyo.Param(
         model.Streams, model.TimePeriods, initialize=getCostUBs
     )
-    model.CostUB_Bulk = pyo.Param(model.Streams, model.TimePeriods, initialize=getCostUBs)
+    model.CostUB_Bulk = pyo.Param(
+        model.Streams, model.TimePeriods, initialize=getCostUBs
+    )
 
     ####################
     # VARIABLES
@@ -208,7 +210,9 @@ def build_model():
 
     # f(j, t) in GAMS
     # mass flow rates in tons per time interval t
-    model.FlowRate = pyo.Var(model.Streams, model.TimePeriods, within=pyo.NonNegativeReals)
+    model.FlowRate = pyo.Var(
+        model.Streams, model.TimePeriods, within=pyo.NonNegativeReals
+    )
 
     # V_jt
     # inv(j, t) in GAMS
@@ -226,7 +230,9 @@ def build_model():
     def getShortfallBounds(model, i, j):
         return (0, model.ShortfallUB[i, j])
 
-    model.Shortfall = pyo.Var(model.Products, model.TimePeriods, bounds=getShortfallBounds)
+    model.Shortfall = pyo.Var(
+        model.Products, model.TimePeriods, bounds=getShortfallBounds
+    )
 
     # amounts purchased under different contracts
 
@@ -318,9 +324,13 @@ def build_model():
     # binary variables
 
     model.BuyFPContract = pyo.RangeSet(0, 1)
-    model.BuyDiscountContract = pyo.Set(initialize=('BelowMin', 'AboveMin', 'NotSelected'))
+    model.BuyDiscountContract = pyo.Set(
+        initialize=('BelowMin', 'AboveMin', 'NotSelected')
+    )
     model.BuyBulkContract = pyo.Set(initialize=('BelowMin', 'AboveMin', 'NotSelected'))
-    model.BuyFDContract = pyo.Set(initialize=('1Month', '2Month', '3Month', 'NotSelected'))
+    model.BuyFDContract = pyo.Set(
+        initialize=('1Month', '2Month', '3Month', 'NotSelected')
+    )
 
     ################
     # CONSTRAINTS
@@ -431,14 +441,18 @@ def build_model():
     def process_balance_rule1(model, t):
         return model.FlowRate[9, t] == model.ProcessConstants[1] * model.FlowRate[2, t]
 
-    model.process_balance1 = pyo.Constraint(model.TimePeriods, rule=process_balance_rule1)
+    model.process_balance1 = pyo.Constraint(
+        model.TimePeriods, rule=process_balance_rule1
+    )
 
     def process_balance_rule2(model, t):
         return model.FlowRate[10, t] == model.ProcessConstants[2] * (
             model.FlowRate[5, t] + model.FlowRate[3, t]
         )
 
-    model.process_balance2 = pyo.Constraint(model.TimePeriods, rule=process_balance_rule2)
+    model.process_balance2 = pyo.Constraint(
+        model.TimePeriods, rule=process_balance_rule2
+    )
 
     def process_balance_rule3(model, t):
         return (
@@ -446,7 +460,9 @@ def build_model():
             == RandomConst_Line264 * model.ProcessConstants[3] * model.FlowRate[7, t]
         )
 
-    model.process_balance3 = pyo.Constraint(model.TimePeriods, rule=process_balance_rule3)
+    model.process_balance3 = pyo.Constraint(
+        model.TimePeriods, rule=process_balance_rule3
+    )
 
     def process_balance_rule4(model, t):
         return (
@@ -454,24 +470,32 @@ def build_model():
             == RandomConst_Line265 * model.ProcessConstants[3] * model.FlowRate[7, t]
         )
 
-    model.process_balance4 = pyo.Constraint(model.TimePeriods, rule=process_balance_rule4)
+    model.process_balance4 = pyo.Constraint(
+        model.TimePeriods, rule=process_balance_rule4
+    )
 
     # process capacity constraints
     # these are hardcoded based on the three processes and the process flow structure
     def process_capacity_rule1(model, t):
         return model.FlowRate[9, t] <= model.Capacity[1]
 
-    model.process_capacity1 = pyo.Constraint(model.TimePeriods, rule=process_capacity_rule1)
+    model.process_capacity1 = pyo.Constraint(
+        model.TimePeriods, rule=process_capacity_rule1
+    )
 
     def process_capacity_rule2(model, t):
         return model.FlowRate[10, t] <= model.Capacity[2]
 
-    model.process_capacity2 = pyo.Constraint(model.TimePeriods, rule=process_capacity_rule2)
+    model.process_capacity2 = pyo.Constraint(
+        model.TimePeriods, rule=process_capacity_rule2
+    )
 
     def process_capacity_rule3(model, t):
         return model.FlowRate[11, t] + model.FlowRate[8, t] <= model.Capacity[3]
 
-    model.process_capacity3 = pyo.Constraint(model.TimePeriods, rule=process_capacity_rule3)
+    model.process_capacity3 = pyo.Constraint(
+        model.TimePeriods, rule=process_capacity_rule3
+    )
 
     # Inventory balance of final products
     # again, these are hardcoded.
@@ -483,7 +507,9 @@ def build_model():
             == model.FlowRate[12, t] + model.InventoryLevel[12, t]
         )
 
-    model.inventory_balance1 = pyo.Constraint(model.TimePeriods, rule=inventory_balance1)
+    model.inventory_balance1 = pyo.Constraint(
+        model.TimePeriods, rule=inventory_balance1
+    )
 
     def inventory_balance_rule2(model, t):
         if t != 1:
@@ -526,7 +552,9 @@ def build_model():
             == model.SupplyAndDemandUBs[j, t] - model.FlowRate[j, t]
         )
 
-    model.shortfall = pyo.Constraint(model.Products, model.TimePeriods, rule=shortfall_rule)
+    model.shortfall = pyo.Constraint(
+        model.Products, model.TimePeriods, rule=shortfall_rule
+    )
 
     # maximum shortfall allowed
     def shortfall_max_rule(model, j, t):
@@ -548,13 +576,17 @@ def build_model():
     def demand_UB_rule(model, j, t):
         return model.FlowRate[j, t] <= model.SupplyAndDemandUBs[j, t]
 
-    model.demand_UB = pyo.Constraint(model.Products, model.TimePeriods, rule=demand_UB_rule)
+    model.demand_UB = pyo.Constraint(
+        model.Products, model.TimePeriods, rule=demand_UB_rule
+    )
 
     # demand lower bound
     def demand_LB_rule(model, j, t):
         return model.FlowRate[j, t] >= model.DemandLB[j, t]
 
-    model.demand_LB = pyo.Constraint(model.Products, model.TimePeriods, rule=demand_LB_rule)
+    model.demand_LB = pyo.Constraint(
+        model.Products, model.TimePeriods, rule=demand_LB_rule
+    )
 
     # FIXED PRICE CONTRACT
 
@@ -778,10 +810,14 @@ def build_model():
         disjunct.amount1 = pyo.Constraint(expr=model.AmountPurchased_FD[j, t] == 0)
         disjunct.cost1 = pyo.Constraint(expr=model.Cost_FD[j, t] == 0)
         if t < model.TimePeriods[-1]:
-            disjunct.amount2 = pyo.Constraint(expr=model.AmountPurchased_FD[j, t + 1] == 0)
+            disjunct.amount2 = pyo.Constraint(
+                expr=model.AmountPurchased_FD[j, t + 1] == 0
+            )
             disjunct.cost2 = pyo.Constraint(expr=model.Cost_FD[j, t + 1] == 0)
         if t < model.TimePeriods[-2]:
-            disjunct.amount3 = pyo.Constraint(expr=model.AmountPurchased_FD[j, t + 2] == 0)
+            disjunct.amount3 = pyo.Constraint(
+                expr=model.AmountPurchased_FD[j, t + 2] == 0
+            )
             disjunct.cost3 = pyo.Constraint(expr=model.Cost_FD[j, t + 2] == 0)
 
     model.FD_no_contract = Disjunct(

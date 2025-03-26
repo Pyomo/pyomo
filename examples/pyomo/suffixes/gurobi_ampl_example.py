@@ -68,13 +68,23 @@ model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 model.bestbound = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
 # A few Gurobi variable solution sensitivity suffixes
-model.senslblo = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # smallest variable lower bound
-model.senslbhi = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # greatest variable lower bound
-model.sensublo = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # smallest variable upper bound
-model.sensubhi = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # greatest variable upper bound
+model.senslblo = pyo.Suffix(
+    direction=pyo.Suffix.IMPORT
+)  # smallest variable lower bound
+model.senslbhi = pyo.Suffix(
+    direction=pyo.Suffix.IMPORT
+)  # greatest variable lower bound
+model.sensublo = pyo.Suffix(
+    direction=pyo.Suffix.IMPORT
+)  # smallest variable upper bound
+model.sensubhi = pyo.Suffix(
+    direction=pyo.Suffix.IMPORT
+)  # greatest variable upper bound
 
 # A Gurobi constraint solution sensitivity suffix
-model.sensrhshi = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # greatest right-hand side value
+model.sensrhshi = pyo.Suffix(
+    direction=pyo.Suffix.IMPORT
+)  # greatest right-hand side value
 ###
 
 # Tell gurobi_ampl to report solution sensitivities

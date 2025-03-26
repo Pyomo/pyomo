@@ -115,9 +115,9 @@ model.cdot_ode = pyo.Constraint(FE, CP, rule=cdot_ode_rule)
 
 
 def tdot_ode_rule(m, i, j):
-    return m.tdot[i, j] == (yf - m.t[i, j]) / theta + k10 * pyo.exp(-n / m.t[i, j]) * m.c[
-        i, j
-    ] - alpha * m.u[i] * (m.t[i, j] - yc)
+    return m.tdot[i, j] == (yf - m.t[i, j]) / theta + k10 * pyo.exp(
+        -n / m.t[i, j]
+    ) * m.c[i, j] - alpha * m.u[i] * (m.t[i, j] - yc)
 
 
 model.tdot_ode = pyo.Constraint(FE, CP, rule=tdot_ode_rule)
