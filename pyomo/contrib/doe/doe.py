@@ -1246,11 +1246,14 @@ class DesignOfExperiments:
             )
             return m.determinant == det_perm
 
-        if self.extended_objective:
+        if self.experiment_cost_weight:
+            # If the experiment cost weight is provided, add it to the objective
+            # TODO: Add error checking that the experiment object computes an experiment cost
             model.extra_objective = pyo.Expression(
                 expr=self.experiment_cost_weight*model.scenario_blocks[0].experiment_cost
                 )
         else:
+            # If no experiment cost weight is provided, set it to 0
             model.extra_objective = 0
 
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
