@@ -28,6 +28,7 @@ Credit for prototyping and development can be found in the ``GDPopt`` class docu
 .. _Lee & Grossmann, 2001: https://doi.org/10.1016/S0098-1354(01)00732-3
 .. _Lee & Grossmann, 2000: https://doi.org/10.1016/S0098-1354(00)00581-0
 .. _Chen et al., 2018: https://doi.org/10.1016/B978-0-444-64241-7.50143-9
+.. _Ovalle et al., 2025: https://doi.org/10.1016/j.compchemeng.2024.108993
 
 GDPopt can be used to solve a Pyomo.GDP concrete model in two ways.
 The simplest is to instantiate the generic GDPopt solver and specify the desired algorithm as an argument to the ``solve`` method:
