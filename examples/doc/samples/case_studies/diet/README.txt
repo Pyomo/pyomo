@@ -8,13 +8,13 @@ We begin our Pyomo model with
 
 {{{
 #!python
-from pyomo.core import *
+import pyomo.environ as pyo
 }}}
 to import the Pyomo package for use in the code.  The next step is to create an object of the model class, which by convention we call "`model`"  We implement this by writing
 
 {{{
 #!python
-model = AbstractModel() 
+model = pyo.AbstractModel() 
 }}}
 The rest of our work will be contained within this object.
 
@@ -22,8 +22,8 @@ In the diet problem, there are two main sets that we are looking at: the set of 
 
 {{{
 #!python
-model.foods = Set()
-model.nutrients = Set()
+model.foods = pyo.Set()
+model.nutrients = pyo.Set()
 }}}
 
 Both of these sets could be very large (arguably, the set of all foods is unbounded); however, for implementing the model in Pyomo, this is irrelevant.  It is in the data file that the information for these sets is filled in.
@@ -32,7 +32,7 @@ The solution to the diet problem involves minimizing the amount of money we are 
 
 {{{
 #!python
-model.costs = Param(model.foods)
+model.costs = pyo.Param(model.foods)
 }}}
 
 This says that for each food, there is a cost associated with it, which will be implemented later when we construct the data file.
@@ -41,29 +41,29 @@ Similarly, each nutrient has a minimum and maximum requirement (note that for so
 
 {{{
 #!python
-model.min_nutrient=Param(model.nutrients)
-model.max_nutrient=Param(model.nutrients)
+model.min_nutrient=pyo.Param(model.nutrients)
+model.max_nutrient=pyo.Param(model.nutrients)
 }}}
 
 For this model, we also want to consider how much food a person can reasonably consume---the solution is useless if no person can eat that much.  Thus, we add a volume parameter over the set of foods.  This is done similarly to the previous examples.
 
 {{{
 #!python
-model.volumes=Param(model.foods)
+model.volumes=pyo.Param(model.foods)
 }}}
 
 We also need a parameter for the max volume of food that can be consumed.  We do this like the previous examples but without a set that the parameter is over.  This is because the max volume of food consumed is independent of either food or nutrients.  We input
 
 {{{
 #!python
-model.max_volume=Param()
+model.max_volume=pyo.Param()
 }}}
 
 There's one last parameter that must be taken into consideration: how much of each nutrient each food contains.  Unlike the previous examples, this parameter is in two dimensions--it is over both the set of foods and the set of nutrients.  This just requires a small change in the code.
 
 {{{
 #!python
-model.nutrient_value=Param(model.nutrients, model.foods)
+model.nutrient_value=pyo.Param(model.nutrients, model.foods)
 }}}
 
 The comma indicates that this parameter is over two different sets, and thus is in two dimensions.  When we create the data file, we will be able to fill in how much of each nutrient each food contains.
@@ -72,7 +72,7 @@ At this point we have defined our sets and parameters.  However, we have yet to 
 
 {{{
 #!python
-model.amount=Var(model.foods, within = NonNegativeReals)
+model.amount=pyo.Var(model.foods, within = pyo.NonNegativeReals)
 }}}
 
 We restrict our domain to the non-negative reals.  If we accepted negative numbers than the model could tell us to buy negative amounts of food, which is an unrealistic--and thus useless--model.  We could further restrict the domain to the integers to make it more realistic, but that would make the problem much harder for little gain: if this model is used on a large scale than the difference between the integer solution and the non-integer solution is often irrelevant.
@@ -90,7 +90,7 @@ which will go through and multiply the costs and amounts of each food together a
 
 {{{
 #!python
-model.cost=Objective(rule=costRule
+model.cost=pyo.Objective(rule=costRule
 }}}
 
 This line defines the objective of the model as the costRule,  which Pyomo interprets as the value it needs to minimize; in this case it will minimize our costs.  Also, as a note, we defined the objective as "model.cost" which is not to be confused with the parameter we defined earlier as `"model.costs" despite their similar names.  These are two different values and accidentally giving them the same name will cause problems when trying to solve the problem.
@@ -102,7 +102,7 @@ We must also create a rule for the volume consumed.  The construction of this ru
 def volumeRule(model):
     return sum(model.volumes[n]*model.amount[n] for n in model.foods) <= model.max_volume
 
-model.volume = Constraint(rule=volumeRule)
+model.volume = pyo.Constraint(rule=volumeRule)
 }}}
 
 Note that here we have a constraint instead of an objective.  This requires that the rule returns true, but otherwise the value is irrelevant.  While objective looks for the least value, constraints just require that a value works.
@@ -116,7 +116,7 @@ def nutrientRule(n, model):
         for f in model.foods)
     return (model.min_nutrient[n], value, model.max_nutrient[n])
 
-model.nutrientConstraint = Constraint(model.nutrients, rule=nutrientRule)
+model.nutrientConstraint = pyo.Constraint(model.nutrients, rule=nutrientRule)
 }}}
 
 The rule itself will act much like the previous rules, but by adding an index into the constraint we will cycle through each of the nutrients.  Essentially, what we have done is compressed many "nutrient rules," each of which acts the same, into one rule that will look at each nutrient individually.

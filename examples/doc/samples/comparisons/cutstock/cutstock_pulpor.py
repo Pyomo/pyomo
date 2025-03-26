@@ -10,7 +10,17 @@
 #  ___________________________________________________________________________
 
 from pulp import *
-from cutstock_util import *
+from cutstock_util import (
+    getCutCount,
+    getPatCount,
+    getCuts,
+    getPatterns,
+    getSheetsAvail,
+    getCutDemand,
+    getPriceSheetData,
+    getCutsInPattern,
+)
+
 
 # Reading in Data using the cutstock_util
 cutcount = getCutCount()
@@ -51,7 +61,7 @@ for c in Cuts:
 # prob.writeLP("CutStock.lp")
 prob.solve()
 print("Status:", LpStatus[prob.status])
-print("Minimum total cost:", prob.objective.value())
+print("Minimum total cost:", prob.objective.pyo.value())
 for v in prob.variables():
     if v.varValue > 0:
         print(v.name, "=", v.varValue)

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 import pyomo.opt
 import pyomo.environ
 
@@ -22,7 +22,7 @@ import knapsack
 instance = knapsack.model.create_instance("knapsack.dat")
 #
 # Setup the optimizer
-opt = pyomo.opt.SolverFactory("glpk")
+opt = pyomo.opt.pyo.SolverFactory("glpk")
 #
 # Optimize
 results = opt.solve(instance, suffixes=['.*'])

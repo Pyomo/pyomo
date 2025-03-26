@@ -10,7 +10,16 @@
 #  ___________________________________________________________________________
 
 import cplex
-from cutstock_util import *
+from cutstock_util import (
+    getCutCount,
+    getPatCount,
+    getCuts,
+    getPatterns,
+    getSheetsAvail,
+    getCutDemand,
+    getPriceSheetData,
+    getCutsInPattern,
+)
 from cplex.exceptions import CplexSolverError
 
 # Reading in Data using the cutstock_util
@@ -86,7 +95,7 @@ cpx.solve()
 numcols = cpx.variables.get_num()
 x = cpx.solution.get_values()
 print(cpx.solution.status[cpx.solution.get_status()])
-print("Objective value  = ", cpx.solution.get_objective_value())
+print("Objective value  = ", cpx.solution.get_objective_pyo.value())
 for j in range(numcols):
     if x[j] >= 1:
         print("Var:", j, "Value=", x[j])
