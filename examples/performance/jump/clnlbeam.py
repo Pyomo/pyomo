@@ -11,20 +11,20 @@
 
 from pyomo.environ import *
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.N = Param(within=PositiveIntegers)
+model.N = pyo.Param(within=pyo.PositiveIntegers)
 model.h = 1.0 / model.N
 
-model.VarIdx = RangeSet(model.N + 1)
+model.VarIdx = pyo.RangeSet(model.N + 1)
 
-model.t = Var(
+model.t = pyo.Var(
     model.VarIdx, bounds=(-1.0, 1.0), initialize=lambda m, i: 0.05 * cos(i * m.h)
 )
-model.x = Var(
+model.x = pyo.Var(
     model.VarIdx, bounds=(-0.05, 0.05), initialize=lambda m, i: 0.05 * cos(i * m.h)
 )
-model.u = Var(model.VarIdx, initialize=0.01)
+model.u = pyo.Var(model.VarIdx, initialize=0.01)
 
 alpha = 350
 
@@ -40,7 +40,7 @@ def c_rule(m):
     return ex
 
 
-model.c = Objective(rule=c_rule)
+model.c = pyo.Objective(rule=c_rule)
 
 
 def cons1_rule(m, i):
@@ -49,7 +49,7 @@ def cons1_rule(m, i):
     return m.x[i + 1] - m.x[i] - (0.5 * m.h) * (sin(m.t[i + 1]) + sin(m.t[i])) == 0
 
 
-model.cons1 = Constraint(model.VarIdx, rule=cons1_rule)
+model.cons1 = pyo.Constraint(model.VarIdx, rule=cons1_rule)
 
 
 def cons2_rule(m, i):
@@ -58,4 +58,4 @@ def cons2_rule(m, i):
     return m.t[i + 1] - m.t[i] - (0.5 * m.h) * m.u[i + 1] - (0.5 * m.h) * m.u[i] == 0
 
 
-model.cons2 = Constraint(model.VarIdx, rule=cons2_rule)
+model.cons2 = pyo.Constraint(model.VarIdx, rule=cons2_rule)

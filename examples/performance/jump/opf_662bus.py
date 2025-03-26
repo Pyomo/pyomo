@@ -97,9 +97,9 @@ for i in range(nbranch):
     assert b.to >= 0 and b.to < nbus
 
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
-model.bus_voltage = Var(
+model.bus_voltage = pyo.Var(
     range(nbus),
     bounds=lambda model, i: (
         bus_voltage_min[bus[i].bustype],
@@ -107,17 +107,17 @@ model.bus_voltage = Var(
     ),
     initialize=1,
 )
-model.bus_b_shunt = Var(
+model.bus_b_shunt = pyo.Var(
     range(nbus),
     bounds=lambda model, i: (bus[i].b_shunt_min, bus[i].b_shunt_max),
     initialize=lambda model, i: bus[i].b_shunt0,
 )
-model.bus_angle = Var(range(nbus), initialize=0)
+model.bus_angle = pyo.Var(range(nbus), initialize=0)
 
-model.branch_tap = Var(
+model.branch_tap = pyo.Var(
     range(nbranch), bounds=(branch_tap_min, branch_tap_max), initialize=1
 )
-model.branch_def = Var(
+model.branch_def = pyo.Var(
     range(nbranch),
     bounds=lambda model, i: (branch[i].def_min, branch[i].def_max),
     initialize=lambda model, i: branch[i].def0,
@@ -167,7 +167,7 @@ def Bout(i):
     ) * model.branch_tap[i]
 
 
-model.obj = Objective(
+model.obj = pyo.Objective(
     expr=sum(
         (
             bus[k].p_load
@@ -228,7 +228,7 @@ def p_load_rule(model, k):
     )
 
 
-model.p_load_constr = Constraint(range(nbus), rule=p_load_rule)
+model.p_load_constr = pyo.Constraint(range(nbus), rule=p_load_rule)
 
 
 def q_load_rule(model, k):
@@ -261,7 +261,7 @@ def q_load_rule(model, k):
     )
 
 
-model.q_load_constr = Constraint(range(nbus), rule=q_load_rule)
+model.q_load_constr = pyo.Constraint(range(nbus), rule=q_load_rule)
 
 
 def q_inj_rule(model, k):
@@ -294,7 +294,7 @@ def q_inj_rule(model, k):
     )
 
 
-model.q_inj_rule = Constraint(range(nbus), rule=q_inj_rule)
+model.q_inj_rule = pyo.Constraint(range(nbus), rule=q_inj_rule)
 
 
 def p_inj_rule(model, k):
@@ -327,7 +327,7 @@ def p_inj_rule(model, k):
     )
 
 
-model.p_inj_rule = Constraint(range(nbus), rule=p_inj_rule)
+model.p_inj_rule = pyo.Constraint(range(nbus), rule=p_inj_rule)
 
 
 for i in range(nbus):

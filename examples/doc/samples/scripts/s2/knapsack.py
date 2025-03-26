@@ -22,7 +22,7 @@ model.w = pyo.Param(model.ITEMS, within=pyo.PositiveReals)
 
 model.limit = pyo.Param(within=pyo.PositiveReals)
 
-model.x = pyo.Var(model.ITEMS, within=PercentFraction)
+model.x = pyo.Var(model.ITEMS, within=pyo.PercentFraction)
 
 
 def value_rule(model):

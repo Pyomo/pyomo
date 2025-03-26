@@ -13,18 +13,18 @@ from pyomo.environ import *
 
 
 def create_model(N):
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
-    model.A = RangeSet(N)
-    model.x = Var(model.A)
+    model.A = pyo.RangeSet(N)
+    model.x = pyo.Var(model.A)
 
     expr = sum(i * model.x[i] for i in model.A)
-    model.obj = Objective(expr=expr)
+    model.obj = pyo.Objective(expr=expr)
 
     def c_rule(model, i):
         return (N - i + 1) * model.x[i] >= N
 
-    model.c = Constraint(model.A)
+    model.c = pyo.Constraint(model.A)
 
     return model
 

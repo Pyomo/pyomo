@@ -19,7 +19,7 @@ start = time.time()
 instance = model.create_instance('stochpdegas_automatic.dat')
 
 # discretize model
-discretizer = TransformationFactory('dae.finite_difference')
+discretizer = pyo.TransformationFactory('dae.finite_difference')
 discretizer.apply_to(instance, nfe=1, wrt=instance.DIS, scheme='FORWARD')
 discretizer.apply_to(instance, nfe=47, wrt=instance.TIME, scheme='BACKWARD')
 
@@ -104,14 +104,14 @@ def eqcvar_rule(m, k):
     return m.cost[k] - m.nu <= m.phi[k]
 
 
-instance.eqcvar = Constraint(instance.SCEN, rule=eqcvar_rule)
+instance.eqcvar = pyo.Constraint(instance.SCEN, rule=eqcvar_rule)
 
 
 def obj_rule(m):
     return (1.0 - m.cvar_lambda) * m.mcost + m.cvar_lambda * m.cvarcost
 
 
-instance.obj = Objective(rule=obj_rule)
+instance.obj = pyo.Objective(rule=obj_rule)
 
 endTime = time.time() - start
 print('%f seconds required to construct' % endTime)
@@ -131,13 +131,13 @@ if False:
             % (
                 i,
                 sum(
-                    sum(0.5 * value(instance.pow[i, j, k]) for j in instance.LINK_A)
+                    sum(0.5 * pyo.value(instance.pow[i, j, k]) for j in instance.LINK_A)
                     for k in instance.TIME.get_finite_elements()
                 ),
             )
         )
 
-    solver = SolverFactory('ipopt')
+    solver = pyo.SolverFactory('ipopt')
     results = solver.solve(instance, tee=True)
 
     for i in instance.SCEN:
@@ -146,7 +146,7 @@ if False:
             % (
                 i,
                 sum(
-                    sum(0.5 * value(instance.pow[i, j, k]) for j in instance.LINK_A)
+                    sum(0.5 * pyo.value(instance.pow[i, j, k]) for j in instance.LINK_A)
                     for k in instance.TIME.get_finite_elements()
                 ),
             )
