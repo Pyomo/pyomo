@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A Suffix example for the gurobi_ampl solver.
+# A pyo.Suffix example for the gurobi_ampl solver.
 #
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
@@ -21,16 +21,14 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.0.0
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the gurobi_ampl solver plugin using the ASL interface
 solver = 'gurobi_ampl'
 solver_io = 'nl'
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")
@@ -45,11 +43,11 @@ opt.options['outlev'] = 1  # tell gurobi to be verbose with output
 ###
 
 ### Create a trivial example model
-model = ConcreteModel()
-model.s = Set(initialize=[1, 2, 3])
-model.x = Var(model.s, within=NonNegativeReals)
-model.obj = Objective(expr=sum_product(model.x))
-model.con = Constraint(model.s, rule=lambda model, i: model.x[i] >= i - 1)
+model = pyo.ConcreteModel()
+model.s = pyo.Set(initialize=[1, 2, 3])
+model.x = pyo.Var(model.s, within=pyo.NonNegativeReals)
+model.obj = pyo.Objective(expr=pyo.sum_product(model.x))
+model.con = pyo.Constraint(model.s, rule=lambda model, i: model.x[i] >= i - 1)
 ###
 
 ### Declare all suffixes
@@ -63,20 +61,20 @@ sstatus_table = {
     'equ': 5,  # nonbasic at equal lower and upper bounds
     'btw': 6,
 }  # nonbasic between bounds
-model.sstatus = Suffix(direction=Suffix.IMPORT_EXPORT, datatype=Suffix.INT)
-model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
+model.sstatus = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT, datatype=pyo.Suffix.INT)
+model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 
 # Report the best known bound on the objective function
-model.bestbound = Suffix(direction=Suffix.IMPORT)
+model.bestbound = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
 # A few Gurobi variable solution sensitivity suffixes
-model.senslblo = Suffix(direction=Suffix.IMPORT)  # smallest variable lower bound
-model.senslbhi = Suffix(direction=Suffix.IMPORT)  # greatest variable lower bound
-model.sensublo = Suffix(direction=Suffix.IMPORT)  # smallest variable upper bound
-model.sensubhi = Suffix(direction=Suffix.IMPORT)  # greatest variable upper bound
+model.senslblo = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # smallest variable lower bound
+model.senslbhi = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # greatest variable lower bound
+model.sensublo = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # smallest variable upper bound
+model.sensubhi = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # greatest variable upper bound
 
 # A Gurobi constraint solution sensitivity suffix
-model.sensrhshi = Suffix(direction=Suffix.IMPORT)  # greatest right-hand side value
+model.sensrhshi = pyo.Suffix(direction=pyo.Suffix.IMPORT)  # greatest right-hand side value
 ###
 
 # Tell gurobi_ampl to report solution sensitivities
@@ -91,28 +89,28 @@ model.sstatus[model.x[1]] = sstatus_table['low']
 def print_model_suffixes(model):
     # print all suffix values for all model components in a nice table
     print("\t", end='')
-    for name, suffix in active_import_suffix_generator(model):
+    for name, suffix in pyo.active_import_suffix_generator(model):
         print("%10s" % (name), end='')
     print("")
     for i in model.s:
         print(model.x[i].name + "\t", end='')
-        for name, suffix in active_import_suffix_generator(model):
+        for name, suffix in pyo.active_import_suffix_generator(model):
             print("%10s" % (suffix.get(model.x[i])), end='')
         print("")
     for i in model.s:
         print(model.con[i].name + "\t", end='')
-        for name, suffix in active_import_suffix_generator(model):
+        for name, suffix in pyo.active_import_suffix_generator(model):
             print("%10s" % (suffix.get(model.con[i])), end='')
         print("")
     print(model.obj.name + "\t", end='')
-    for name, suffix in active_import_suffix_generator(model):
+    for name, suffix in pyo.active_import_suffix_generator(model):
         print("%10s" % (suffix.get(model.obj)), end='')
     print("")
     print("")
 
 
 print("")
-print("Suffixes Before Solve:")
+print("pyo.Suffixes Before Solve:")
 print_model_suffixes(model)
 
 ### Send the model to gurobi_ampl and collect the solution
@@ -122,5 +120,5 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 ###
 
 print("")
-print("Suffixes After Solve:")
+print("pyo.Suffixes After Solve:")
 print_model_suffixes(model)
