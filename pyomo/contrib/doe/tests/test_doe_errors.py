@@ -181,21 +181,21 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        '''
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
+            r"FIM provided is not positive definite. It has one or more negative eigenvalue\(s\) less than -{:.1e}".format(
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
             doe_obj.create_doe_model()
-        '''
 
+        '''
         with self.assertRaisesRegex(
             ValueError,
             "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{*}",
         ):
             doe_obj.create_doe_model()
+        '''
 
     def test_reactor_check_bad_prior_not_symmetric(self):
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_SYMMETRY
@@ -214,7 +214,6 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
-        '''
         with self.assertRaisesRegex(
             ValueError,
             "FIM provided is not symmetric using absolute tolerance {}".format(
@@ -226,7 +225,8 @@ class TestReactorExampleErrors(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "FIM provided is not symmetric using absolute tolerance {*}"
         ):
-            doe_obj.create_doe_model()
+            doe_obj.create_doe_model()'
+        '''
 
     def test_reactor_check_bad_jacobian_init_size(self):
         fd_method = "central"
