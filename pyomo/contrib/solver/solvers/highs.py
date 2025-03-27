@@ -609,7 +609,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
 
         if obj is None:
             sense = highspy.ObjSense.kMinimize
-            self._solver_model.changeObjectiveOffset(0)
+            mutable_constant = _MutableObjectiveOffset(expr=0, highs=self._solver_model)
         else:
             if obj.sense == minimize:
                 sense = highspy.ObjSense.kMinimize
