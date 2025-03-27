@@ -58,6 +58,7 @@ class ObjectiveLib(Enum):
     determinant = "determinant"
     trace = "trace"
     minimum_eigenvalue = "minimum_eigenvalue"
+    condition_number = "condition_number"
     zero = "zero"
 
 
@@ -211,7 +212,7 @@ class DesignOfExperiments:
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             #grey_box_solver.config.options["linear_solver"] = "ma57" 
             grey_box_solver.config.options['max_iter'] = 3000
-            grey_box_solver.config.options['tol'] = 2e-3
+            grey_box_solver.config.options['tol'] = 1e-5
             #grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
@@ -311,7 +312,9 @@ class DesignOfExperiments:
             if self.objective_option == ObjectiveLib.determinant:
                 model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log10-D-opt"], sense=pyo.maximize)
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log10-E-opt"], sense=pyo.maximize)
+                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["E-opt"], sense=pyo.maximize)
+            elif self.objective_option == ObjectiveLib.condition_number:
+                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize)
             else:
                 raise AttributeError(
                     "Objective option not recognized. Please contact the developers as you should not see this error."
@@ -342,9 +345,9 @@ class DesignOfExperiments:
         #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(model, tee=self.tee)
-        from idaes.core.util import DiagnosticsToolbox
-        dt = DiagnosticsToolbox(model)
-        dt.display_extreme_jacobian_entries()
+        # from idaes.core.util import DiagnosticsToolbox
+        # dt = DiagnosticsToolbox(model)
+        # dt.display_extreme_jacobian_entries()
 
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)

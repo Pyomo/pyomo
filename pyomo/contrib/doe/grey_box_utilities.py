@@ -114,7 +114,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         if self.objective_option == ObjectiveLib.determinant:
             obj_name = "log10-D-opt"
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            obj_name = "log10-E-opt"
+            obj_name = "E-opt"
+        elif self.objective_option == ObjectiveLib.condition_number:
+            obj_name = "ME-opt"
         return [obj_name, ]
 
     def set_input_values(self, input_values):
@@ -140,6 +142,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             eig, _ = np.linalg.eig(M)
             obj_value = np.min(eig)
+        elif self.objective_option == ObjectiveLib.condition_number:
+            eig, _ = np.linalg.eig(M)
+            obj_value = np.max(eig) / np.min(eig)
         
         return np.asarray([obj_value, ], dtype=np.float64)
 
@@ -157,7 +162,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         if self.objective_option == ObjectiveLib.determinant:
             pyomo_block.outputs["log10-D-opt"] = 0
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            pyomo_block.outputs["log10-E-opt"] = 0
+            pyomo_block.outputs["E-opt"] = 0
+        elif self.objective_option == ObjectiveLib.condition_number:
+            pyomo_block.outputs["ME-opt"] = 0
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
@@ -205,10 +212,42 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             min_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
         
             # Calculate the derivative matrix.
-            # This is the hadamard product of
+            # This is the expansion product of
             # the eigenvector we grabbed in
             # the previous line of code.
             jac_M = min_eig_vec * np.transpose(min_eig_vec)
+        elif self.objective_option == ObjectiveLib.condition_number:
+            # Obtain minimum (and maximum) eigenvalue location(s)
+            min_eig_loc = np.argmin(eig_vals)
+            max_eig_loc = np.argmax(eig_vals)
+
+            min_eig = np.min(eig_vals)
+            max_eig = np.max(eig_vals)
+
+            # Grab eigenvector associated with
+            # the min (and max) eigenvalue and make
+            # it a matrix. This is so we can
+            # use matrix operations later in
+            # the code.
+            min_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
+            max_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
+
+            # Calculate the derivative matrix.
+            # Similar to minimum eigenvalue,
+            # this computation involves two
+            # expansion products.
+            min_eig_term = min_eig_vec * np.transpose(min_eig_vec)
+            max_eig_term = min_eig_vec * np.transpose(min_eig_vec)
+
+            min_eig_epsilon = 1e-8
+
+            # Computing a (hopefully) nonsingular
+            # condition number for the jacobian
+            # expression.
+            safe_cond_number = max_eig / (min_eig + np.sign(min_eig) * min_eig_epsilon)
+
+            # Combing the expression
+            jac_M = 1 / (min_eig + np.sign(min_eig) * min_eig_epsilon) * (max_eig_term - safe_cond_number * min_eig_term)
 
 
         # Rows are the integer division by number of columns
