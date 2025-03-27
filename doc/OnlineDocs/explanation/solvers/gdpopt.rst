@@ -198,6 +198,10 @@ The GDPopt-LDSDA solver exploits the ordered Boolean variables in the disjunctio
 It requires an **exclusive OR (XOR) logical constraint** to ensure that exactly one disjunct is active in each disjunction. 
 The solver also requires a **starting point** for the discrete variables and allows users to choose between two **direction norms**, `'L2'` and `'Linf'`, to guide the search process.
 
+.. note::
+
+  The current implementation of the GDPopt-LDSDA requires an explicit LogicalConstraint to enforce the exclusive OR condition for each disjunction.
+
 To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
 
 .. doctest::
