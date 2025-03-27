@@ -306,10 +306,12 @@ class DesignOfExperiments:
                 p2: parameter 2
 
                 """
-                if list(model.parameter_names).index(p1) <= list(
+                # Using upper triangular egb to
+                # use easier naming conventions.
+                if list(model.parameter_names).index(p1) >= list(
                     model.parameter_names
                 ).index(p2):
-                    return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
+                    return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
                 else:
                     return pyo.Constraint.Skip
 
@@ -388,10 +390,10 @@ class DesignOfExperiments:
             # Initialize grey box inputs to be fim values currently
             for i in model.parameter_names:
                 for j in model.parameter_names:
-                    if list(model.parameter_names).index(i) <= list(
+                    if list(model.parameter_names).index(i) >= list(
                         model.parameter_names
                     ).index(j):
-                        model.obj_cons.egb_fim_block.inputs[(i, j)].set_value(
+                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
                             pyo.value(model.fim[(i, j)])
                         )
 

@@ -101,12 +101,15 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # This function currently assumes
         # that we use a lower triangular
         # FIM.
-        lowt_FIM = self._input_values
+        upt_FIM = self._input_values
 
         # Create FIM in the correct way
-        current_FIM = np.ones_like(self.doe_object.fim_initial)
-        current_FIM[np.tril_indices_from(current_FIM)] = lowt_FIM
-        current_FIM[np.triu_indices_from(current_FIM)] = lowt_FIM
+        current_FIM = np.zeros_like(self.doe_object.fim_initial)
+        # Utilize upper triangular portion of FIM
+        current_FIM[np.triu_indices_from(current_FIM)] = upt_FIM
+        # Construct lower triangular using the
+        # current upper triangle minus the diagonal.
+        current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         return current_FIM
 
@@ -215,8 +218,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # within the eigenvalue-dependent
         # objective options...
         eig_vals, eig_vecs = np.linalg.eig(M)
-        # print("Conditon number:")
-        # print(np.linalg.cond(M))
+        # TODO: Make this more formal and
+        # robust?
+        eig_vals = eig_vals.real
+        eig_vecs = eig_vecs.real
         if min(eig_vals) <= 1:
             pass
             print("Warning: {:0.6f}".format(min(eig_vals)))

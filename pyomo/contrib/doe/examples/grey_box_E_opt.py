@@ -96,6 +96,11 @@ def compare_reactor_doe():
         )
     )
     print(
+        "E-opt at optimal design with grey-box: {:.2f}".format(
+            pyo.value(doe_obj_grey_box.results["log10 E-opt"])
+        )
+    )
+    print(
         "Raw logdet: {:.2f}".format(
             np.log10(np.linalg.det(np.array(doe_obj_grey_box.results["FIM"])))
         )
