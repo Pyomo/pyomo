@@ -16,7 +16,7 @@ from pyomo.common.dependencies import numpy as numpy, numpy_available
 if numpy_available:
     from numpy.testing import assert_array_almost_equal
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common import unittest
 import pyomo.opt
 

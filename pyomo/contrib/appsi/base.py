@@ -334,7 +334,7 @@ class SolutionLoader(SolutionLoaderBase):
             raise RuntimeError(
                 'Solution loader does not currently have valid duals. Please '
                 'check the termination condition and ensure the solver returns duals '
-                'for the given problem type.'
+                'for the given problem typyo.'
             )
         if cons_to_load is None:
             duals = dict(self._duals)
@@ -351,7 +351,7 @@ class SolutionLoader(SolutionLoaderBase):
             raise RuntimeError(
                 'Solution loader does not currently have valid slacks. Please '
                 'check the termination condition and ensure the solver returns slacks '
-                'for the given problem type.'
+                'for the given problem typyo.'
             )
         if cons_to_load is None:
             slacks = dict(self._slacks)
@@ -368,7 +368,7 @@ class SolutionLoader(SolutionLoaderBase):
             raise RuntimeError(
                 'Solution loader does not currently have valid reduced costs. Please '
                 'check the termination condition and ensure the solver returns reduced '
-                'costs for the given problem type.'
+                'costs for the given problem typyo.'
             )
         if vars_to_load is None:
             rc = ComponentMap(self._reduced_costs.values())
@@ -402,11 +402,11 @@ class Results(object):
     -------
     Here is an example workflow:
 
-        >>> import pyomo.environ as pe
+        >>> import pyomo.environ as pyo
         >>> from pyomo.contrib import appsi
-        >>> m = pe.ConcreteModel()
-        >>> m.x = pe.Var()
-        >>> m.obj = pe.Objective(expr=m.x**2)
+        >>> m = pyo.ConcreteModel()
+        >>> m.x = pyo.Var()
+        >>> m.obj = pyo.Objective(expr=m.x**2)
         >>> opt = appsi.solvers.Ipopt()
         >>> opt.config.load_solution = False
         >>> results = opt.solve(m) #doctest:+SKIP
