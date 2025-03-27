@@ -90,8 +90,27 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         self.logger.setLevel(level=logger_level)
 
         # Set initial values for inputs
-        self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+        # Need a mask structure
+        self._masking_matrix = np.tril(np.ones_like(self.doe_object.fim_initial))
+        #self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+        self._input_values = np.asarray(self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64)
         #print(self._input_values)
+    
+
+    def _get_FIM(self):
+        # Grabs the current FIM subject
+        # to the input values.
+        # This function currently assumes
+        # that we use a lower triangular
+        # FIM.
+        lowt_FIM = self._input_values
+
+        # Create FIM in the correct way
+        current_FIM = np.ones_like(self.doe_object.fim_initial)
+        current_FIM[np.tril_indices_from(current_FIM)] = lowt_FIM
+        current_FIM[np.triu_indices_from(current_FIM)] = lowt_FIM
+
+        return current_FIM
 
     
     def input_names(self):
@@ -99,6 +118,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         input_names_list = list(itertools.product(self._param_names, self._param_names))
+        input_names_list = [(self._param_names[i[0]], self._param_names[i[1] - 1]) 
+                            for i in itertools.combinations(range(len(self._param_names) + 1), 2)]
         return input_names_list
 
     def equality_constraint_names(self):
@@ -131,7 +152,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     def evaluate_outputs(self):
         # Evaluates the objective value for the specified
         # ObjectiveLib type.
-        current_FIM = self._input_values
+        current_FIM = self._get_FIM()
+
         M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
         
         # Change objective value based on ObjectiveLib type.
@@ -179,7 +201,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         #
         # ToDo: there will be significant bookkeeping for more
         # complicated objective functions and the Hessian        
-        current_FIM = self._input_values
+        current_FIM = self._get_FIM()
         M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
         
         # May remove this warning. If so, we
@@ -230,14 +252,14 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             # use matrix operations later in
             # the code.
             min_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
-            max_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
+            max_eig_vec = np.array([eig_vecs[:, max_eig_loc]])
 
             # Calculate the derivative matrix.
             # Similar to minimum eigenvalue,
             # this computation involves two
             # expansion products.
             min_eig_term = min_eig_vec * np.transpose(min_eig_vec)
-            max_eig_term = min_eig_vec * np.transpose(min_eig_vec)
+            max_eig_term = max_eig_vec * np.transpose(max_eig_vec)
 
             min_eig_epsilon = 1e-8
 
@@ -246,21 +268,27 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             # expression.
             safe_cond_number = max_eig / (min_eig + np.sign(min_eig) * min_eig_epsilon)
 
-            # Combing the expression
+            # Combining the expression
             jac_M = 1 / (min_eig + np.sign(min_eig) * min_eig_epsilon) * (max_eig_term - safe_cond_number * min_eig_term)
 
 
-        # Rows are the integer division by number of columns
-        M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]
+        # Filter jac_M using the
+        # masking matrix
+        jac_M = jac_M[self._masking_matrix > 0]
+        M_rows = np.zeros_like(jac_M)
+        M_cols = np.arange(len(jac_M))
 
-        # Columns are the remaindar (mod) by number of rows
-        M_cols = np.arange(len(jac_M.flatten())) % jac_M.shape[0]
+        # # Rows are the integer division by number of columns
+        # M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]
 
-        # Need to be flat?
-        M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
+        # # Columns are the remaindar (mod) by number of rows
+        # M_cols = np.arange(len(jac_M.flatten())) % jac_M.shape[0]
 
-        # Need to be flat?
-        M_cols = np.arange(len(jac_M.flatten()))
+        # # Need to be flat?
+        # M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
+
+        # # Need to be flat?
+        # M_cols = np.arange(len(jac_M.flatten()))
         
         # Returns coo_matrix of the correct shape
         #print(coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))))

@@ -300,10 +300,10 @@ class DesignOfExperiments:
                 p2: parameter 2
                 
                 """
-                if list(model.parameter_names).index(p1) >= list(model.parameter_names).index(p2):
+                if list(model.parameter_names).index(p1) <= list(model.parameter_names).index(p2):
                     return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
                 else:
-                    return model.fim[(p2, p1)] == m.egb_fim_block.inputs[(p1, p2)]
+                    return pyo.Constraint.Skip
             model.obj_cons.FIM_equalities = pyo.Constraint(model.parameter_names, model.parameter_names, rule=FIM_egb_cons)
             
             # ToDo: Add naming convention to adjust name of objective output
@@ -368,7 +368,8 @@ class DesignOfExperiments:
             # Initialize grey box inputs to be fim values currently
             for i in model.parameter_names:
                 for j in model.parameter_names:
-                    model.obj_cons.egb_fim_block.inputs[(i, j)].set_value(pyo.value(model.fim[(i, j)]))
+                    if list(model.parameter_names).index(i) <= list(model.parameter_names).index(j):
+                        model.obj_cons.egb_fim_block.inputs[(i, j)].set_value(pyo.value(model.fim[(i, j)]))
         
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
