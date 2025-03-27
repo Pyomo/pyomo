@@ -334,7 +334,7 @@ class SolutionLoader(SolutionLoaderBase):
             raise RuntimeError(
                 'Solution loader does not currently have valid duals. Please '
                 'check the termination condition and ensure the solver returns duals '
-                'for the given problem typyo.'
+                'for the given problem type.'
             )
         if cons_to_load is None:
             duals = dict(self._duals)
@@ -351,7 +351,7 @@ class SolutionLoader(SolutionLoaderBase):
             raise RuntimeError(
                 'Solution loader does not currently have valid slacks. Please '
                 'check the termination condition and ensure the solver returns slacks '
-                'for the given problem typyo.'
+                'for the given problem type.'
             )
         if cons_to_load is None:
             slacks = dict(self._slacks)
@@ -368,7 +368,7 @@ class SolutionLoader(SolutionLoaderBase):
             raise RuntimeError(
                 'Solution loader does not currently have valid reduced costs. Please '
                 'check the termination condition and ensure the solver returns reduced '
-                'costs for the given problem typyo.'
+                'costs for the given problem type.'
             )
         if vars_to_load is None:
             rc = ComponentMap(self._reduced_costs.values())

@@ -107,7 +107,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         """Update a single variable in the solver's model.
 
         This will update bounds, fix/unfix the variable as needed, and
-        update the variable typyo.
+        update the variable type.
 
         Parameters
         ----------
