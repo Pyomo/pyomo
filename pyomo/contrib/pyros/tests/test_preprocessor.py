@@ -36,10 +36,17 @@ from pyomo.core.base import (
     Block,
 )
 from pyomo.core.base.set_types import NonNegativeReals, NonPositiveReals, Reals
-from pyomo.core.expr import LinearExpression, log, sin, exp, RangedExpression
+from pyomo.core.expr import (
+    LinearExpression,
+    log,
+    sin,
+    exp,
+    RangedExpression,
+    SumExpression,
+)
 from pyomo.core.expr.compare import assertExpressionsEqual
 
-from pyomo.contrib.pyros.uncertainty_sets import BoxSet
+from pyomo.contrib.pyros.uncertainty_sets import BoxSet, DiscreteScenarioSet
 from pyomo.contrib.pyros.util import (
     ModelData,
     ObjectiveType,
@@ -1942,13 +1949,13 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
     state variable-independent second-stage equality constraints.
     """
 
-    def setup_test_model_data(self):
+    def setup_test_model_data(self, uncertainty_set=None):
         """
         Set up simple test model for testing the reformulation
         routine.
         """
         model_data = Bunch()
-        model_data.config = Bunch()
+        model_data.config = Bunch(uncertainty_set=uncertainty_set or BoxSet([[0, 1]]))
         model_data.working_model = working_model = ConcreteModel()
         model_data.working_model.user_model = m = Block()
 
@@ -2153,6 +2160,83 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         )
         self.assertEqual(
             model_data.separation_priority_order["reform_upper_bound_from_eq_con"], 0
+        )
+
+    def test_reformulate_equality_cons_discrete_set(self):
+        """
+        Test routine for reformulating state-variable-independent
+        second-stage equality constraints under scenario-based
+        uncertainty works as expected.
+        """
+        model_data = self.setup_test_model_data(
+            uncertainty_set=DiscreteScenarioSet([[0], [0.7]])
+        )
+        model_data.separation_priority_order = dict()
+
+        model_data.config.decision_rule_order = 1
+        model_data.config.progress_logger = logging.getLogger(
+            self.test_reformulate_nonlinear_state_var_independent_eq_con.__name__
+        )
+        model_data.config.progress_logger.setLevel(logging.DEBUG)
+
+        add_decision_rule_variables(model_data)
+        add_decision_rule_constraints(model_data)
+
+        ep = model_data.working_model.effective_var_partitioning
+        model_data.working_model.all_nonadjustable_variables = list(
+            ep.first_stage_variables
+            + list(model_data.working_model.first_stage.decision_rule_var_0.values())
+        )
+
+        wm = model_data.working_model
+        m = model_data.working_model.user_model
+        wm.second_stage.equality_cons["eq_con_2"].set_value(m.u * (m.x1 - 1) == 0)
+
+        robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
+
+        # check constraint partitioning updated as expected
+        self.assertFalse(robust_infeasible)
+        self.assertFalse(wm.second_stage.equality_cons)
+        self.assertEqual(len(wm.second_stage.inequality_cons), 1)
+        self.assertEqual(len(wm.first_stage.equality_cons), 4)
+
+        self.assertTrue(wm.first_stage.equality_cons["scenario_0_eq_con"].active)
+        self.assertTrue(wm.first_stage.equality_cons["scenario_1_eq_con"].active)
+        self.assertTrue(wm.first_stage.equality_cons["scenario_0_eq_con_2"].active)
+        self.assertTrue(wm.first_stage.equality_cons["scenario_1_eq_con_2"].active)
+
+        # expressions for the new opposing inequalities
+        # and coefficient matching constraint
+        dr_vars = list(wm.first_stage.decision_rule_vars[0].values())
+        assertExpressionsEqual(
+            self,
+            wm.first_stage.equality_cons["scenario_0_eq_con"].expr,
+            (
+                0 * SumExpression([dr_vars[0] + 0 * dr_vars[1], -1])
+                + 0 * (m.x1**3 + 0.5)
+                - ((0 * m.u_cert * m.x1) * (dr_vars[0] + 0 * dr_vars[1]))
+                == (0 * (m.x1 + 2))
+            ),
+        )
+        assertExpressionsEqual(
+            self,
+            wm.first_stage.equality_cons["scenario_1_eq_con"].expr,
+            (
+                (0.7**2) * SumExpression([dr_vars[0] + 0.7 * dr_vars[1], -1])
+                + 0.7 * (m.x1**3 + 0.5)
+                - ((5 * 0.7 * m.u_cert * m.x1) * (dr_vars[0] + 0.7 * dr_vars[1]))
+                == (-0.7 * (m.x1 + 2))
+            ),
+        )
+        assertExpressionsEqual(
+            self,
+            wm.first_stage.equality_cons["scenario_0_eq_con_2"].expr,
+            0 * (m.x1 - 1) == 0,
+        )
+        assertExpressionsEqual(
+            self,
+            wm.first_stage.equality_cons["scenario_1_eq_con_2"].expr,
+            0.7 * (m.x1 - 1) == 0,
         )
 
     def test_coefficient_matching_robust_infeasible_proof(self):

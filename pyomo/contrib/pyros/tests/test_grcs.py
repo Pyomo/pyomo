@@ -1998,6 +1998,189 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(m.x.value, 1)
 
 
+@unittest.skipUnless(baron_available, "BARON not available")
+class TestReformulateSecondStageEqualitiesDiscrete(unittest.TestCase):
+    """
+    Test behavior of PyROS solver when the uncertainty set is
+    discrete and there are second-stage
+    equality constraints that are state-variable independent,
+    and therefore, subject to reformulation.
+    """
+
+    def build_single_stage_model(self):
+        m = ConcreteModel()
+        m.x = Var(range(3), bounds=[-2, 2], initialize=0)
+        m.q = Param(range(3), initialize=0, mutable=True)
+        m.c = Param(range(3), initialize={0: 1, 1: 0, 2: 1})
+        m.obj = Objective(expr=sum(m.x[i] * m.c[i] for i in m.x), sense=maximize)
+        # when uncertainty set is discrete, the
+        # preprocessor should write out this constraint for
+        # each scenario as a first-stage constraint
+        m.xq_con = Constraint(expr=sum(m.x[i] * m.q[i] for i in m.x) == 0)
+        return m
+
+    def build_two_stage_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=[None, None], initialize=0)
+        m.z = Var(bounds=[-2, 2], initialize=0)
+        m.q = Param(initialize=2, mutable=True)
+        m.obj = Objective(expr=m.x + m.z, sense=maximize)
+        # when uncertainty set is discrete, the
+        # preprocessor should write out this constraint for
+        # each scenario as a first-stage constraint
+        m.xz_con = Constraint(expr=m.x + m.q * m.z == 0)
+        return m
+
+    def test_single_stage_discrete_set_fullrank(self):
+        m = self.build_single_stage_model()
+        uncertainty_set = DiscreteScenarioSet(
+            # reformulating second-stage equality for these scenarios
+            # should result in first-stage equalities finally being
+            # (full-column-rank matrix) @ (x) == 0
+            # so x=0 is sole robust feasible solution
+            scenarios=[
+                [0] * len(m.q),
+                [1] * len(m.q),
+                list(range(1, len(m.q) + 1)),
+                [(idx + 1) ** 2 for idx in m.q],
+            ]
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 0, places=4)
+        self.assertAlmostEqual(m.x[0].value, 0, places=4)
+        self.assertAlmostEqual(m.x[1].value, 0, places=4)
+        self.assertAlmostEqual(m.x[2].value, 0, places=4)
+
+    def test_single_stage_discrete_set_rank2(self):
+        m = self.build_single_stage_model()
+        uncertainty_set = DiscreteScenarioSet(
+            # reformulating second-stage equality for these scenarios
+            # should make the optimal solution unique
+            scenarios=[[0] * len(m.q), [1] * len(m.q), [(idx + 1) ** 2 for idx in m.q]]
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 2, places=4)
+        # optimal solution is unique
+        self.assertAlmostEqual(m.x[0].value, 5 / 4, places=4)
+        self.assertAlmostEqual(m.x[1].value, -2, places=4)
+        self.assertAlmostEqual(m.x[2].value, 3 / 4, places=4)
+
+    def test_single_stage_discrete_set_rank1(self):
+        m = self.build_single_stage_model()
+        uncertainty_set = DiscreteScenarioSet(
+            scenarios=[[0] * len(m.q), [2] * len(m.q), [3] * len(m.q)]
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=[],
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 2, places=4)
+        # subject to these scenarios, the optimal solution is non-unique,
+        # but should satisfy this check
+        self.assertAlmostEqual(m.x[1].value, -2, places=4)
+
+    def test_two_stage_discrete_set_rank2_affine_dr(self):
+        m = self.build_two_stage_model()
+        uncertainty_set = DiscreteScenarioSet([[2], [3]])
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            decision_rule_order=1,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 0, places=4)
+        # note: this solution is suboptimal (in the context of nonstatic DRs),
+        #       but follows from the current efficiency for DRs
+        #       (i.e. in first iteration, static DRs required)
+        self.assertAlmostEqual(m.x.value, 0, places=4)
+        self.assertAlmostEqual(m.z.value, 0, places=4)
+
+    def test_two_stage_discrete_set_fullrank_affine_dr(self):
+        m = self.build_two_stage_model()
+        uncertainty_set = DiscreteScenarioSet([[2], [3], [4]])
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            decision_rule_order=1,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
+        )
+        self.assertEqual(res.iterations, 1)
+        self.assertAlmostEqual(res.final_objective_value, 0, places=4)
+        # the second-stage equalities are a full rank linear system
+        # in x and the DR variables, with RHS 0, so all
+        # variables must be 0
+        self.assertAlmostEqual(m.x.value, 0, places=4)
+        self.assertAlmostEqual(m.z.value, 0, places=4)
+
+
 @unittest.skipUnless(ipopt_available, "IPOPT not available.")
 class TestPyROSVarsAsUncertainParams(unittest.TestCase):
     """
