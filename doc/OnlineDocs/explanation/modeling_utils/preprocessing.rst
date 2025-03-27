@@ -40,7 +40,7 @@ transformation on a concrete Pyomo model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
+    >>> import pyomo.environ as pyo
     >>> m = pyo.ConcreteModel()
     >>> m.v1 = pyo.Var(initialize=1, bounds=(1, 8))
     >>> m.v2 = pyo.Var(initialize=2, bounds=(0, 3))
@@ -67,7 +67,7 @@ Explicit pyo.Constraints to Variable Bounds
 
 .. doctest::
 
-    >>> from pyomo.environ import *
+    >>> import pyomo.environ as pyo
     >>> m = pyo.ConcreteModel()
     >>> m.v1 = pyo.Var(initialize=1)
     >>> m.v2 = pyo.Var(initialize=2)

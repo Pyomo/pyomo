@@ -19,7 +19,7 @@ To use the sat solver define your pyomo model as usual:
 .. doctest::
 
   Required import
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
   >>> from pyomo.contrib.satsolver.satsolver import SMTSatSolver
 
   Create a simple model

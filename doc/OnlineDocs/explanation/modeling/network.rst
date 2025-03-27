@@ -45,8 +45,8 @@ concrete Pyomo model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port
     >>> m = pyo.ConcreteModel()
     >>> m.x = pyo.Var()
     >>> m.y = pyo.Var(['a', 'b']) # can be indexed
@@ -79,8 +79,8 @@ concrete Pyomo model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port, Arc
     >>> m = pyo.ConcreteModel()
     >>> m.x = pyo.Var()
     >>> m.y = pyo.Var(['a', 'b'])
@@ -139,8 +139,8 @@ the arcs on a model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port, Arc
     >>> m = pyo.ConcreteModel()
     >>> m.x = pyo.Var()
     >>> m.y = pyo.Var(['a', 'b'])
@@ -301,8 +301,8 @@ class:
 .. doctest::
     :skipif: not __import__("pyomo.network").network.decomposition.imports_available
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port, Arc, SequentialDecomposition
     >>> m = pyo.ConcreteModel()
     >>> m.unit1 = pyo.Block()
     >>> m.unit1.x = pyo.Var()

@@ -63,8 +63,8 @@ An example that includes the modeling approach may be found below.
   :skipif: not glpk_available
 
   Required imports
-  >>> from pyomo.environ import *
-  >>> from pyomo.gdp import *
+  >>> import pyomo.environ as pyo
+  >>> from pyomo.gdp import Disjunct, Disjunction
 
   Create a simple model
   >>> model = pyo.ConcreteModel(name='LOA example')
@@ -80,7 +80,7 @@ An example that includes the modeling approach may be found below.
   >>> model.fix_y.c = pyo.Constraint(expr=model.y == 0)
 
   >>> model.d = Disjunction(expr=[model.fix_x, model.fix_y])
-  >>> model.objective = pyo.Objective(expr=model.x + 0.1*model.y, sense=minimize)
+  >>> model.objective = pyo.Objective(expr=model.x + 0.1*model.y, sense=pyo.minimize)
 
   Solve the model using GDPopt
   >>> results = pyo.SolverFactory('gdpopt.loa').solve(
@@ -158,14 +158,14 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   :skipif: not baron_available
 
   Required imports
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
   >>> from pyomo.gdp import Disjunct, Disjunction
 
   Create a simple model
   >>> m = pyo.ConcreteModel()
   >>> m.x1 = pyo.Var(bounds = (0,8))
   >>> m.x2 = pyo.Var(bounds = (0,8))
-  >>> m.obj = pyo.Objective(expr=m.x1 + m.x2, sense=minimize)
+  >>> m.obj = pyo.Objective(expr=m.x1 + m.x2, sense=pyo.minimize)
   >>> m.y1 = Disjunct()
   >>> m.y2 = Disjunct()
   >>> m.y1.c1 = pyo.Constraint(expr=m.x1 >= 2)

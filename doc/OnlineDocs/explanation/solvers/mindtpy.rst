@@ -72,18 +72,18 @@ An example which includes the modeling approach may be found below.
 .. doctest::
 
   Required imports
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
 
   Create a simple model
   >>> model = pyo.ConcreteModel()
 
   >>> model.x = pyo.Var(bounds=(1.0,10.0),initialize=5.0)
-  >>> model.y = pyo.Var(within=Binary)
+  >>> model.y = pyo.Var(within=pyo.Binary)
 
   >>> model.c1 = pyo.Constraint(expr=(model.x-4.0)**2 - model.x <= 50.0*(1-model.y))
-  >>> model.c2 = pyo.Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
+  >>> model.c2 = pyo.Constraint(expr=model.x*pyo.log(model.x)+5.0 <= 50.0*(model.y))
 
-  >>> model.objective = pyo.Objective(expr=model.x, sense=minimize)
+  >>> model.objective = pyo.Objective(expr=model.x, sense=pyo.minimize)
 
   Solve the model using MindtPy
   >>> pyo.SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt') # doctest: +SKIP
@@ -140,7 +140,7 @@ A usage example for LP/NLP based branch-and-bound algorithm is as follows:
 
 .. code::
 
-  >>> pyo.pyo.SolverFactory('mindtpy').solve(model,
+  >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='OA',
   ...                                    mip_solver='cplex_persistent',  # or 'gurobi_persistent'
   ...                                    nlp_solver='ipopt',
@@ -160,7 +160,7 @@ A usage example for regularized OA is as follows:
 
 .. code::
 
-  >>> pyo.pyo.SolverFactory('mindtpy').solve(model,
+  >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='OA',
   ...                                    mip_solver='cplex',
   ...                                    nlp_solver='ipopt',
@@ -181,7 +181,7 @@ A usage example for OA with solution pool is as follows:
 
 .. code::
 
-  >>> pyo.pyo.SolverFactory('mindtpy').solve(model,
+  >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='OA',
   ...                                    mip_solver='cplex_persistent',
   ...                                    nlp_solver='ipopt',
@@ -202,7 +202,7 @@ A usage example for Feasibility Pump as the initialization strategy is as follow
 
 .. code::
 
-  >>> pyo.pyo.SolverFactory('mindtpy').solve(model,
+  >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='OA',
   ...                                    init_strategy='FP',
   ...                                    mip_solver='cplex',
@@ -215,7 +215,7 @@ A usage example for Feasibility Pump as the decomposition strategy is as follows
 
 .. code::
 
-  >>> pyo.pyo.SolverFactory('mindtpy').solve(model,
+  >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='FP',
   ...                                    mip_solver='cplex',
   ...                                    nlp_solver='ipopt',
@@ -282,7 +282,7 @@ A usage example for GOA is as follows:
 
 .. code::
 
-  >>> pyo.pyo.SolverFactory('mindtpy').solve(model,
+  >>> pyo.SolverFactory('mindtpy').solve(model,
   ...                                    strategy='GOA',
   ...                                    mip_solver='cplex',
   ...                                    nlp_solver='baron')

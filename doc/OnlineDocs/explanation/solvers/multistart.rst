@@ -14,7 +14,7 @@ To use the multistart solver, define your Pyomo model as usual:
 .. doctest::
 
   Required import
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
 
   Create a simple model
   >>> m = pyo.ConcreteModel()

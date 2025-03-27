@@ -69,8 +69,8 @@ concrete Pyomo model:
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
-   >>> from pyomo.dae import *
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.dae import ContinuousSet
 
    >>> model = pyo.ConcreteModel()
 
@@ -96,10 +96,10 @@ abstract Pyomo model using the example data file.
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
-   >>> from pyomo.dae import *
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.dae import ContinuousSet
 
-   >>> model = AbstractModel()
+   >>> model = pyo.AbstractModel()
 
    The ContinuousSet below will be initialized using the points
    in the data file when a model instance is created.
@@ -151,7 +151,7 @@ argument. Any keyword argument that is valid for a Pyomo
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
+   >>> import pyomo.environ as pyo
    >>> from pyomo.dae import ContinuousSet, DerivativeVar
 
    >>> model = pyo.ConcreteModel()
@@ -198,7 +198,7 @@ an ordinary or partial differential equation.
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
+   >>> fimport pyomo.environ as pyo
    >>> from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
    >>> model = pyo.ConcreteModel()
@@ -803,7 +803,7 @@ We begin by formulating the model using pyomo.DAE
     >>> m.theta[0].fix(3.14 - 0.1)
 
     >>> def _diffeq1(m, t):
-    ...     return m.domegadt[t] == -m.b * m.omega[t] - m.c * sin(m.theta[t])
+    ...     return m.domegadt[t] == -m.b * m.omega[t] - m.c * pyo.sin(m.theta[t])
     >>> m.diffeq1 = pyo.Constraint(m.t, rule=_diffeq1)
 
     >>> def _diffeq2(m, t):
@@ -886,7 +886,7 @@ example.
 
     >>> def _diffeq1(m, t):
     ...    return m.domegadt[t] == -m.b[t] * m.omega[t] - \
-    ...                             m.c[t] * sin(m.theta[t])
+    ...                             m.c[t] * pyo.sin(m.theta[t])
     >>> m.diffeq1 = pyo.Constraint(m.t, rule=_diffeq1)
 
     >>> def _diffeq2(m, t):
