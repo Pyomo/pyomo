@@ -134,7 +134,7 @@ class redirect_fd(object):
             out_fd = os.open(self.target, os.O_WRONLY)
 
         # Duplicate the file descriptor for the opened file, closing and
-        # overwriting/replacingx the original fd.  Only make the new FD
+        # overwriting/replacing the original fd.  Only make the new FD
         # inheritable if it is stdout/stderr
         os.dup2(out_fd, self.fd, inheritable=bool(self.std))
 
@@ -190,7 +190,7 @@ class capture_output(object):
 
         Capturing and redirecting the file descriptors can cause loops
         in the output stream (where one of the `output` streams points
-        to a file descriptor we just captured.
+        to a file descriptor we just captured).
         :py:class:`capture_output` will attempt to locate
         :py:class:`io.IOBase` streams in `output` that point to file
         descriptors that we just captured and replace them with
@@ -199,7 +199,7 @@ class capture_output(object):
         for :py:class:`~pyomo.common.log.LogStream` objects and will
         attempt to locate :py:class:`logging.StreamHandle` objects that
         would output to a redirected file descriptor and temporarily
-        redirecct those handlers to (copies of) the original file
+        redirect those handlers to (copies of) the original file
         descriptor.
 
         Note that this process will cover the most common cases, but is
@@ -227,7 +227,7 @@ class capture_output(object):
 
     def _enter_context(self, cm, prior_to=None):
         """Add the context manager to the context stack and return the result
-        from calling the Ccontext manager's `__enter__()`
+        from calling the context manager's `__enter__()`
 
         """
         if prior_to is None:
@@ -276,7 +276,7 @@ class capture_output(object):
             # output that we are catching and let messages logged to THIS
             # logger to still be emitted to the original stderr.
             if self.capture_fd:
-                # Because we are also comandeering the FD that underlies
+                # Because we are also commandeering the FD that underlies
                 # sys.stderr, we cannot just write to that stream and
                 # instead will open a new stream to the "original" FD
                 # (Note that we need to duplicate that FD, as we will
@@ -372,7 +372,7 @@ class capture_output(object):
         if self.tee.STDERR is not sys.stderr:
             FAIL.append('Captured output does not match sys.stderr.')
         # Exit all context managers.  This includes
-        #  - Restore any file descriptors we comandeered
+        #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
         #  - Close any opened files
         FAIL.extend(self._exit_context_stack(et, ev, tb))

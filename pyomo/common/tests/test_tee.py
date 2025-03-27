@@ -494,11 +494,11 @@ class TestCapture(unittest.TestCase):
         )
 
     def test_exit_on_del(self):
-        # THis is a weird "feature", but because things like the pyomo
+        # This is a weird "feature", but because things like the pyomo
         # script will create and "enter" a capture_output object without
         # using a context manager, it is possible that the object can be
         # deleted without calling __exit__.  Check that the context
-        # stack us correctly unwound
+        # stack is correctly unwound
         T = tee.capture_output()
         T.__enter__()
         stack = T.context_stack
