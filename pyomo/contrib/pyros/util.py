@@ -2344,7 +2344,7 @@ def check_time_limit_reached(timing_data, config):
 
 
 def _reformulate_eq_con_scenario_uncertainty(
-    working_model, discrete_set, ss_eq_con, ss_eq_con_index, ss_var_id_to_dr_expr_map
+    model_data, discrete_set, ss_eq_con, ss_eq_con_index, ss_var_id_to_dr_expr_map
 ):
     """
     Reformulate a second-stage equality constraint that
@@ -2359,21 +2359,22 @@ def _reformulate_eq_con_scenario_uncertainty(
 
     Parameters
     ----------
-    working_model : ConcreteModel
-        Mostly preprocessed working model.
+    model_data : ModelData
+        Model data object, with mostly preprocessed working model.
     discrete_set : UncertaintySet
         Uncertainty set with scenario-based geometry.
     ss_eq_con : ConstraintData
         Second-stage equality constraint to be reformulated.
         Expected to be a member of
-        ``working_model.second_stage.equality_cons``.
+        ``model_data.working_model.second_stage.equality_cons``.
     ss_eq_con_index : hashable
         Index of the equality constraint in
-        ``working_model.second_stage.equality_cons``.
+        ``model_data.working_model.second_stage.equality_cons``.
     ss_var_id_to_dr_expr_map : dict
         Mapping from object IDs of second-stage variables to
         corresponding decision rule expressions.
     """
+    working_model = model_data.working_model
     con_expr_after_dr_substitution = replace_expressions(
         expr=ss_eq_con.expr, substitution_map=ss_var_id_to_dr_expr_map
     )
@@ -2654,7 +2655,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
         if coefficient_matching_applicable:
             if config.uncertainty_set.geometry.name == "DISCRETE_SCENARIOS":
                 _reformulate_eq_con_scenario_uncertainty(
-                    working_model=working_model,
+                    model_data=model_data,
                     ss_eq_con=con,
                     ss_eq_con_index=con_idx,
                     discrete_set=config.uncertainty_set,
