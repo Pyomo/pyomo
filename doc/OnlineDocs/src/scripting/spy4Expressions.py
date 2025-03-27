@@ -77,7 +77,12 @@ f = [0, 0, 1, 1, 2, 2]
 # @f_rule_Function_examples
 
 # @Keyword_assignment_example
-kwds = {'pw_constr_type': 'EQ', 'pw_repn': 'SOS2', 'sense': pyo.maximize, 'force_pw': True}
+kwds = {
+    'pw_constr_type': 'EQ',
+    'pw_repn': 'SOS2',
+    'sense': pyo.maximize,
+    'force_pw': True,
+}
 # @Keyword_assignment_example
 
 # @Expression_objects_illustration
