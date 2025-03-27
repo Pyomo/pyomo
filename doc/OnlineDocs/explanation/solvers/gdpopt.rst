@@ -34,13 +34,13 @@ The simplest is to instantiate the generic GDPopt solver and specify the desired
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model, algorithm='LOA')
+  >>> pyo.SolverFactory('gdpopt').solve(model, algorithm='LOA')
 
 The alternative is to instantiate an algorithm-specific GDPopt solver:
 
 .. code::
 
-  >>> SolverFactory('gdpopt.loa').solve(model)
+  >>> pyo.SolverFactory('gdpopt.loa').solve(model)
 
 In the above examples, GDPopt uses the GDPopt-LOA algorithm.
 Other algorithms may be used by specifying them in the ``algorithm`` argument when using the generic solver or by instantiating the algorithm-specific GDPopt solvers. All GDPopt options are listed below.
@@ -67,23 +67,23 @@ An example that includes the modeling approach may be found below.
   >>> from pyomo.gdp import *
 
   Create a simple model
-  >>> model = ConcreteModel(name='LOA example')
+  >>> model = pyo.ConcreteModel(name='LOA example')
 
-  >>> model.x = Var(bounds=(-1.2, 2))
-  >>> model.y = Var(bounds=(-10,10))
-  >>> model.c = Constraint(expr= model.x + model.y == 1)
+  >>> model.x = pyo.Var(bounds=(-1.2, 2))
+  >>> model.y = pyo.Var(bounds=(-10,10))
+  >>> model.c = pyo.Constraint(expr= model.x + model.y == 1)
 
   >>> model.fix_x = Disjunct()
-  >>> model.fix_x.c = Constraint(expr=model.x == 0)
+  >>> model.fix_x.c = pyo.Constraint(expr=model.x == 0)
 
   >>> model.fix_y = Disjunct()
-  >>> model.fix_y.c = Constraint(expr=model.y == 0)
+  >>> model.fix_y.c = pyo.Constraint(expr=model.y == 0)
 
   >>> model.d = Disjunction(expr=[model.fix_x, model.fix_y])
-  >>> model.objective = Objective(expr=model.x + 0.1*model.y, sense=minimize)
+  >>> model.objective = pyo.Objective(expr=model.x + 0.1*model.y, sense=minimize)
 
   Solve the model using GDPopt
-  >>> results = SolverFactory('gdpopt.loa').solve(
+  >>> results = pyo.SolverFactory('gdpopt.loa').solve(
   ...     model, mip_solver='glpk') # doctest: +IGNORE_RESULT
 
   Display the final solution
@@ -103,7 +103,7 @@ An example that includes the modeling approach may be found below.
           Key  : Active : Value
           None :   True :   0.1
   <BLANKLINE>
-    Constraints:
+    pyo.Constraints:
       c : Size=1
           Key  : Lower : Body : Upper
           None :   1.0 :    1 :   1.0
@@ -115,7 +115,7 @@ An example that includes the modeling approach may be found below.
 
 .. code::
 
-  >>> SolverFactory('gdpopt.loa').solve(model, tee=True)
+  >>> pyo.SolverFactory('gdpopt.loa').solve(model, tee=True)
 
 Global Logic-based Outer Approximation (GLOA)
 ---------------------------------------------
@@ -124,7 +124,7 @@ The same algorithm can be used to solve GDPs involving nonconvex nonlinear const
 
 .. code::
 
-  >>> SolverFactory('gdpopt.gloa').solve(model)
+  >>> pyo.SolverFactory('gdpopt.gloa').solve(model)
 
 .. warning::
 
@@ -137,7 +137,7 @@ Instead of outer approximation, GDPs can be solved using the same MILP relaxatio
 
 .. code::
 
-  >>> SolverFactory('gdpopt.ric').solve(model)
+  >>> pyo.SolverFactory('gdpopt.ric').solve(model)
 
 Again, this is a global algorithm if the subproblems are solved globally, and is not otherwise.
 
@@ -162,21 +162,21 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> from pyomo.gdp import Disjunct, Disjunction
 
   Create a simple model
-  >>> m = ConcreteModel()
-  >>> m.x1 = Var(bounds = (0,8))
-  >>> m.x2 = Var(bounds = (0,8))
-  >>> m.obj = Objective(expr=m.x1 + m.x2, sense=minimize)
+  >>> m = pyo.ConcreteModel()
+  >>> m.x1 = pyo.Var(bounds = (0,8))
+  >>> m.x2 = pyo.Var(bounds = (0,8))
+  >>> m.obj = pyo.Objective(expr=m.x1 + m.x2, sense=minimize)
   >>> m.y1 = Disjunct()
   >>> m.y2 = Disjunct()
-  >>> m.y1.c1 = Constraint(expr=m.x1 >= 2)
-  >>> m.y1.c2 = Constraint(expr=m.x2 >= 2)
-  >>> m.y2.c1 = Constraint(expr=m.x1 >= 3)
-  >>> m.y2.c2 = Constraint(expr=m.x2 >= 3)
+  >>> m.y1.c1 = pyo.Constraint(expr=m.x1 >= 2)
+  >>> m.y1.c2 = pyo.Constraint(expr=m.x2 >= 2)
+  >>> m.y2.c1 = pyo.Constraint(expr=m.x1 >= 3)
+  >>> m.y2.c2 = pyo.Constraint(expr=m.x2 >= 3)
   >>> m.djn = Disjunction(expr=[m.y1, m.y2])
 
   Invoke the GDPopt-LBB solver
 
-  >>> results = SolverFactory('gdpopt.lbb').solve(m)
+  >>> results = pyo.SolverFactory('gdpopt.lbb').solve(m)
   WARNING: 09/06/22: The GDPopt LBB algorithm currently has known issues. Please
       use the results with caution and report any bugs!
 

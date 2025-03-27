@@ -18,10 +18,10 @@ later be deprecated or combined, depending on their usefulness.
     :nosignatures:
 
     var_aggregator.VariableAggregator
-    bounds_to_vars.ConstraintToVarBoundTransform
+    bounds_to_vars.pyo.ConstraintToVarBoundTransform
     induced_linearity.InducedLinearity
-    constraint_tightener.TightenConstraintFromVars
-    deactivate_trivial_constraints.TrivialConstraintDeactivator
+    constraint_tightener.Tightenpyo.ConstraintFromVars
+    deactivate_trivial_constraints.Trivialpyo.ConstraintDeactivator
     detect_fixed_vars.FixedVarDetector
     equality_propagate.FixedVarPropagator
     equality_propagate.VarBoundPropagator
@@ -41,15 +41,15 @@ transformation on a concrete Pyomo model:
 .. doctest::
 
     >>> from pyomo.environ import *
-    >>> m = ConcreteModel()
-    >>> m.v1 = Var(initialize=1, bounds=(1, 8))
-    >>> m.v2 = Var(initialize=2, bounds=(0, 3))
-    >>> m.v3 = Var(initialize=3, bounds=(-7, 4))
-    >>> m.v4 = Var(initialize=4, bounds=(2, 6))
-    >>> m.c1 = Constraint(expr=m.v1 == m.v2)
-    >>> m.c2 = Constraint(expr=m.v2 == m.v3)
-    >>> m.c3 = Constraint(expr=m.v3 == m.v4)
-    >>> TransformationFactory('contrib.aggregate_vars').apply_to(m)
+    >>> m = pyo.ConcreteModel()
+    >>> m.v1 = pyo.Var(initialize=1, bounds=(1, 8))
+    >>> m.v2 = pyo.Var(initialize=2, bounds=(0, 3))
+    >>> m.v3 = pyo.Var(initialize=3, bounds=(-7, 4))
+    >>> m.v4 = pyo.Var(initialize=4, bounds=(2, 6))
+    >>> m.c1 = pyo.Constraint(expr=m.v1 == m.v2)
+    >>> m.c2 = pyo.Constraint(expr=m.v2 == m.v3)
+    >>> m.c3 = pyo.Constraint(expr=m.v3 == m.v4)
+    >>> pyo.TransformationFactory('contrib.aggregate_vars').apply_to(m)
 
 To see the results of the transformation, you could then use the command
 
@@ -62,22 +62,22 @@ To see the results of the transformation, you could then use the command
     :members: apply_to, create_using, update_variables
 
 
-Explicit Constraints to Variable Bounds
+Explicit pyo.Constraints to Variable Bounds
 ---------------------------------------
 
 .. doctest::
 
     >>> from pyomo.environ import *
-    >>> m = ConcreteModel()
-    >>> m.v1 = Var(initialize=1)
-    >>> m.v2 = Var(initialize=2)
-    >>> m.v3 = Var(initialize=3)
-    >>> m.c1 = Constraint(expr=m.v1 == 2)
-    >>> m.c2 = Constraint(expr=m.v2 >= -2)
-    >>> m.c3 = Constraint(expr=m.v3 <= 5)
-    >>> TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
+    >>> m = pyo.ConcreteModel()
+    >>> m.v1 = pyo.Var(initialize=1)
+    >>> m.v2 = pyo.Var(initialize=2)
+    >>> m.v3 = pyo.Var(initialize=3)
+    >>> m.c1 = pyo.Constraint(expr=m.v1 == 2)
+    >>> m.c2 = pyo.Constraint(expr=m.v2 >= -2)
+    >>> m.c3 = pyo.Constraint(expr=m.v3 <= 5)
+    >>> pyo.TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
+.. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.pyo.ConstraintToVarBoundTransform
     :noindex:
     :members: apply_to, create_using
 
@@ -90,20 +90,20 @@ Induced Linearity Reformulation
     :members: apply_to, create_using
 
 
-Constraint Bounds Tightener
+pyo.Constraint Bounds Tightener
 ---------------------------
 
 This transformation was developed by `Sunjeev Kale
 <https://github.com/sjkale>`_ at Carnegie Mellon University.
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenConstraintFromVars
+.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.Tightenpyo.ConstraintFromVars
     :noindex:
     :members: apply_to, create_using
 
-Trivial Constraint Deactivation
+Trivial pyo.Constraint Deactivation
 -------------------------------
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.TrivialConstraintDeactivator
+.. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.Trivialpyo.ConstraintDeactivator
     :noindex:
     :members: apply_to, create_using, revert
 
