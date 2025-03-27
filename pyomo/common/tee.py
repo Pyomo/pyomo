@@ -329,11 +329,7 @@ class capture_output(object):
                 else:
                     try:
                         fd = stream.fileno()
-                    except AttributeError:
-                        fd = None
-                        # if not hasattr(stream, 'write'):
-                        #    raise
-                    except OSError:
+                    except (AttributeError, OSError):
                         fd = None
                     if fd in fd_redirect:
                         # We just redirected this file descriptor so
