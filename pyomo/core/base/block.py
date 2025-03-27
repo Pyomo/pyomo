@@ -1248,7 +1248,7 @@ component, use the block del_component() and add_component() methods.
         Pyomo models use :py:class:`Block` components to define a
         hierarchical structure and provide model scoping.  When modeling
         :py:class:`~pyomo.core.base.component.Component` objects are
-        assigned to a block they are automatically added to that block's
+        assigned to a block, they are automatically added to that block's
         scope.
 
         :py:meth:`clone()` implements a specialization of
