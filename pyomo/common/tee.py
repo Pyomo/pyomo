@@ -16,13 +16,15 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 #
+import collections.abc
 import io
 import logging
 import os
 import sys
 import threading
 import time
-from io import StringIO
+
+from pyomo.common.log import LoggingIntercept, LogStream
 
 _poll_interval = 0.0001
 _poll_rampup_limit = 0.099
@@ -93,13 +95,15 @@ class redirect_fd(object):
     fd: int
         The file descriptor to redirect
 
-    output: int or str
+    output: int or str or None
         The new output target for `fd`: either another valid file
-        descriptor (int) or a string with the file to open.
+        descriptor (int) or a string with the file to open.  If `None`,
+        then the fd is redirected to `os.devnull`.
 
     synchronize: bool
         If True, and `fd` is 1 or 2, then update `sys.stdout` or
         `sys.stderr` to also point to the new file descriptor
+
     """
 
     def __init__(self, fd=1, output=None, synchronize=True):
@@ -130,39 +134,22 @@ class redirect_fd(object):
             out_fd = os.open(self.target, os.O_WRONLY)
 
         # Duplicate the file descriptor for the opened file, closing and
-        # overwriting the value for stdout (file descriptor 1).  Only
-        # make the new FD inheritable if it is stdout/stderr
+        # overwriting/replacing the original fd.  Only make the new FD
+        # inheritable if it is stdout/stderr
         os.dup2(out_fd, self.fd, inheritable=bool(self.std))
 
         # We no longer need this original file descriptor
         if not isinstance(self.target, int):
             os.close(out_fd)
 
-        if self.std:
-            if self.synchronize:
-                # Cause Python's stdout to point to our new file
-                fd = self.fd
-            else:
-                # IF we are not synchronizing the std file object with
-                # the redirected file descriptor, and IF the current
-                # file object is pointing to the original file
-                # descriptor that we just redirected, then we want to
-                # retarget the std file to the original (duplicated)
-                # target file descriptor.  This allows, e.g. Python to
-                # still write to stdout when we redirect fd=1 to
-                # /dev/null
-                try:
-                    old_std_fd = getattr(sys, self.std).fileno()
-                    fd = self.original_fd if old_std_fd == self.fd else None
-                except (io.UnsupportedOperation, AttributeError):
-                    fd = None
-            if fd is not None:
-                self.target_file = os.fdopen(fd, 'w', closefd=False)
-                setattr(sys, self.std, self.target_file)
+        if self.synchronize and self.std:
+            # Cause Python's stdout to point to our new file
+            self.target_file = os.fdopen(self.fd, 'w', closefd=False)
+            setattr(sys, self.std, self.target_file)
 
         return self
 
-    def __exit__(self, t, v, traceback):
+    def __exit__(self, et, ev, tb):
         # Close output: this either closes the new file that we opened,
         # or else the new file that points to the original (duplicated)
         # file descriptor
@@ -185,7 +172,7 @@ class capture_output(object):
 
     Parameters
     ----------
-    output : io.TextIOBase, TeeStream, str, or None
+    output : io.TextIOBase, Sequence[io.TextIOBase], TeeStream, str, or None
 
         Output stream where all captured stdout/stderr data is sent.  If
         a ``str`` is provided, it is used as a file name and opened
@@ -201,6 +188,26 @@ class capture_output(object):
         directly to the process stdout / stderr by external compiled
         modules.
 
+        Capturing and redirecting the file descriptors can cause loops
+        in the output stream (where one of the `output` streams points
+        to a file descriptor we just captured).
+        :py:class:`capture_output` will attempt to locate
+        :py:class:`io.IOBase` streams in `output` that point to file
+        descriptors that we just captured and replace them with
+        temporary streams that point to (copies of) the original file
+        descriptor.  In addition, :py:class:`capture_output` will look
+        for :py:class:`~pyomo.common.log.LogStream` objects and will
+        attempt to locate :py:class:`logging.StreamHandle` objects that
+        would output to a redirected file descriptor and temporarily
+        redirect those handlers to (copies of) the original file
+        descriptor.
+
+        Note that this process will cover the most common cases, but is
+        by no means perfect.  Use of other output classes or customized
+        log handlers may still result in output loops (usually
+        manifesting in an error message about text being left in the
+        output buffer).
+
     Returns
     -------
     io.TextIOBase
@@ -211,100 +218,166 @@ class capture_output(object):
 
     def __init__(self, output=None, capture_fd=False):
         if output is None:
-            output = StringIO()
+            output = io.StringIO()
         self.output = output
-        self.output_file = None
         self.old = None
         self.tee = None
         self.capture_fd = capture_fd
-        self.fd_redirect = None
+        self.context_stack = []
+
+    def _enter_context(self, cm, prior_to=None):
+        """Add the context manager to the context stack and return the result
+        from calling the context manager's `__enter__()`
+
+        """
+        if prior_to is None:
+            self.context_stack.append(cm)
+        else:
+            self.context_stack.insert(self.context_stack.index(prior_to), cm)
+        return cm.__enter__()
+
+    def _exit_context_stack(self, et, ev, tb):
+        """Flush the context stack, calling __exit__() on all context managers
+
+        One would usually use the contextlib.ExitStack to implement/manage
+        the collection of context managers we are putting together.  The
+        problem is that ExitStack will only call the __exit__ handlers
+        up to the first one that returns an exception.  As we are
+        expecting the possibility of one of the CMs here to raise an
+        exception (usually from TeeStream when joining the reader
+        threads), we will explicitly implement the stack management here
+        so that we will guarantee that all __exit__ handlers will always
+        be called.
+
+        """
+        FAIL = []
+        while self.context_stack:
+            try:
+                self.context_stack.pop().__exit__(et, ev, tb)
+            except:
+                FAIL.append(str(sys.exc_info()[1]))
+        return FAIL
 
     def __enter__(self):
         self.old = (sys.stdout, sys.stderr)
-        if isinstance(self.output, str):
-            self.output_stream = open(self.output, 'w')
-        else:
-            self.output_stream = self.output
-        if isinstance(self.output, TeeStream):
-            self.tee = self.output
-        else:
-            self.tee = TeeStream(self.output_stream)
-        self.tee.__enter__()
-        sys.stdout = self.tee.STDOUT
-        sys.stderr = self.tee.STDERR
-        if self.capture_fd:
-            tee_fd = (self.tee.STDOUT.fileno(), self.tee.STDERR.fileno())
-            self.fd_redirect = []
-            for i in range(2):
-                # Redirect the standard process file descriptor (1 or 2)
-                self.fd_redirect.append(
-                    redirect_fd(i + 1, tee_fd[i], synchronize=False)
+        old_fd = []
+        for stream in self.old:
+            stream.flush()
+            try:
+                old_fd.append(stream.fileno())
+            except (AttributeError, OSError):
+                old_fd.append(None)
+        try:
+            # We have an issue where we are (very aggressively)
+            # commandeering the terminal.  This is what we intend, but the
+            # side effect is that any errors generated by this module (e.g.,
+            # because the user gave us an invalid output stream) get
+            # completely suppressed.  So, we will make an exception to the
+            # output that we are catching and let messages logged to THIS
+            # logger to still be emitted to the original stderr.
+            if self.capture_fd:
+                # Because we are also commandeering the FD that underlies
+                # sys.stderr, we cannot just write to that stream and
+                # instead will open a new stream to the "original" FD
+                # (Note that we need to duplicate that FD, as we will
+                # overwrite it when we get to redirect_fd below).  If
+                # sys.stderr doesn't have a file descriptor, we will
+                # fall back on the process stderr (FD=2).
+                log_stream = self._enter_context(
+                    os.fdopen(os.dup(old_fd[1] or 2), mode="w", closefd=True)
                 )
-                # Redirect the file descriptor currently associated with
-                # sys.stdout / sys.stderr
-                try:
-                    fd = self.old[i].fileno()
-                except (AttributeError, OSError):
-                    pass
-                else:
-                    if fd != i + 1:
-                        self.fd_redirect.append(
+            else:
+                log_stream = self.old[1]
+            self._enter_context(LoggingIntercept(log_stream, logger=logger, level=None))
+
+            if isinstance(self.output, str):
+                self.output_stream = self._enter_context(open(self.output, 'w'))
+            else:
+                self.output_stream = self.output
+            if isinstance(self.output, TeeStream):
+                self.tee = self._enter_context(self.output)
+            elif isinstance(self.output_stream, collections.abc.Sequence):
+                self.tee = self._enter_context(TeeStream(*self.output_stream))
+            else:
+                self.tee = self._enter_context(TeeStream(self.output_stream))
+            fd_redirect = {}
+            if self.capture_fd:
+                tee_fd = (self.tee.STDOUT.fileno(), self.tee.STDERR.fileno())
+                for i in range(2):
+                    # Redirect the standard process file descriptor (1 or 2)
+                    fd_redirect[i + 1] = self._enter_context(
+                        redirect_fd(i + 1, tee_fd[i], synchronize=False)
+                    )
+                    # Redirect the file descriptor currently associated with
+                    # sys.stdout / sys.stderr
+                    fd = old_fd[i]
+                    if fd and fd not in fd_redirect:
+                        fd_redirect[fd] = self._enter_context(
                             redirect_fd(fd, tee_fd[i], synchronize=False)
                         )
-            for fdr in self.fd_redirect:
-                fdr.__enter__()
-        # We have an issue where we are (very aggressively)
-        # commandeering the terminal.  This is what we intend, but the
-        # side effect is that any errors generated by this module (e.g.,
-        # because the user gave us an invalid output stream) get
-        # completely suppressed.  So, we will make an exception to the
-        # output that we are catching and let messages logged to THIS
-        # logger to still be emitted.
-        if self.capture_fd:
-            # Because we are also comandeering the FD that underlies
-            # self.old[1], we cannot just write to that stream and
-            # instead open a new stream to the original FD.
-            #
-            # Note that we need to duplicate the FD from the redirector,
-            # as it will close the (temporary) `original_fd` descriptor
-            # when it restores the actual original descriptor
-            self.temp_log_stream = os.fdopen(
-                os.dup(self.fd_redirect[-1].original_fd), mode="w", closefd=True
-            )
-        else:
-            self.temp_log_stream = self.old[1]
-        self.temp_log_handler = logging.StreamHandler(self.temp_log_stream)
-        logger.addHandler(self.temp_log_handler)
-        self._propagate = logger.propagate
-        logger.propagate = False
-        return self.output_stream
+            # We need to make sure that we didn't just capture the FD
+            # that underlies a stream that we are outputting to.  Note
+            # that when capture_fd==False, normal streams will be left
+            # alone, but the lastResort _StderrHandler() will still be
+            # replaced (needed because that handler uses the *current*
+            # value of sys.stderr)
+            ostreams = []
+            for stream in self.tee.ostreams:
+                if isinstance(stream, LogStream):
+                    for handler_redirect in stream.redirect_streams(fd_redirect):
+                        self._enter_context(handler_redirect, prior_to=self.tee)
+                else:
+                    try:
+                        fd = stream.fileno()
+                    except (AttributeError, OSError):
+                        fd = None
+                    if fd in fd_redirect:
+                        # We just redirected this file descriptor so
+                        # we can capture the output.  This makes a
+                        # loop that we really want to break.  Undo
+                        # the redirect by pointing our output stream
+                        # back to the original file descriptor.
+                        stream = self._enter_context(
+                            os.fdopen(
+                                os.dup(fd_redirect[fd].original_fd),
+                                mode="w",
+                                closefd=True,
+                            ),
+                            prior_to=self.tee,
+                        )
+                ostreams.append(stream)
+            self.tee.ostreams = ostreams
+        except:
+            # Note: we will ignore any exceptions raised while exiting
+            # the context managers and just reraise the original
+            # exception.
+            self._exit_context_stack(*sys.exc_info())
+            raise
+        sys.stdout = self.tee.STDOUT
+        sys.stderr = self.tee.STDERR
+        buf = self.tee.ostreams
+        if len(buf) == 1:
+            buf = buf[0]
+        return buf
 
     def __exit__(self, et, ev, tb):
-        # Restore any file descriptors we comandeered
-        if self.fd_redirect is not None:
-            for fdr in reversed(self.fd_redirect):
-                fdr.__exit__(et, ev, tb)
-            self.fd_redirect = None
-        # Check and restore sys.stderr / sys.stdout
-        FAIL = self.tee.STDOUT is not sys.stdout
-        self.tee.__exit__(et, ev, tb)
-        if self.output_stream is not self.output:
-            self.output_stream.close()
+        # Check that we were nested correctly
+        FAIL = []
+        if self.tee.STDOUT is not sys.stdout:
+            FAIL.append('Captured output does not match sys.stdout.')
+        if self.tee.STDERR is not sys.stderr:
+            FAIL.append('Captured output does not match sys.stderr.')
+        # Exit all context managers.  This includes
+        #  - Restore any file descriptors we commandeered
+        #  - Close / join the TeeStream
+        #  - Close any opened files
+        FAIL.extend(self._exit_context_stack(et, ev, tb))
         sys.stdout, sys.stderr = self.old
         self.old = None
         self.tee = None
         self.output_stream = None
-        # Clean up our temporary override of the local logger
-        self.temp_log_handler.flush()
-        logger.removeHandler(self.temp_log_handler)
-        if self.capture_fd:
-            self.temp_log_stream.flush()
-            self.temp_log_stream.close()
-        logger.propagate = self._propagate
-        self.temp_log_stream = None
-        self.temp_log_handler = None
         if FAIL:
-            raise RuntimeError('Captured output does not match sys.stdout.')
+            raise RuntimeError("\n".join(FAIL))
 
     def __del__(self):
         if self.tee is not None:
@@ -353,9 +426,6 @@ class _StreamHandle(object):
             self.output_buffer = ''
         else:
             self.output_buffer = b''
-
-    def __repr__(self):
-        return "%s(%s)" % (self.buffering, id(self))
 
     def fileno(self):
         return self.read_pipe
@@ -540,6 +610,7 @@ class TeeStream(object):
 
         # Join all stream processing threads
         _poll = _poll_interval
+        FAIL = False
         while True:
             for th in self._threads:
                 th.join(_poll)
@@ -557,9 +628,11 @@ class TeeStream(object):
                     "threads, possible output stream deadlock"
                 )
             elif _poll >= _poll_timeout_deadlock:
-                raise RuntimeError(
-                    "TeeStream: deadlock observed joining reader threads"
-                )
+                logger.error("TeeStream: deadlock observed joining reader threads")
+                # Defer raising the exception until after we have
+                # cleaned things up
+                FAIL = True
+                break
 
         for h in list(self._handles):
             h.finalize(self.ostreams)
@@ -569,6 +642,8 @@ class TeeStream(object):
         self._active_handles.clear()
         self._stdout = None
         self._stderr = None
+        if FAIL:
+            raise RuntimeError("TeeStream: deadlock observed joining reader threads")
 
     def __enter__(self):
         return self
