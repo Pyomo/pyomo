@@ -68,10 +68,14 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Grab parameter list from the doe_object model
         self._param_names = [i for i in self.doe_object.model.parameter_names]
+        self._n_params = len(self._param_names)
 
         # Check if the doe_object has model components that are required
         # TODO: add checks for the model --> doe_object.model needs FIM; all other checks should
         #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
+        if objective_option == "determinant":
+            from pyomo.contrib.doe import ObjectiveLib
+            objective_option = ObjectiveLib(objective_option)
         self.objective_option = (
             objective_option  # Add failsafe to make sure this is ObjectiveLib object?
         )
@@ -82,7 +86,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # If logger level is None, use doe_object's logger level
         if logger_level is None:
-            logger_level = doe_object.logger.getLevel()
+            logger_level = doe_object.logger.level
 
         self.logger.setLevel(level=logger_level)
 
@@ -93,6 +97,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         self._input_values = np.asarray(
             self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
         )
+        self._n_inputs = len(self._input_values)
         # print(self._input_values)
 
     def _get_FIM(self):
@@ -118,10 +123,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         input_names_list = list(itertools.product(self._param_names, self._param_names))
-        input_names_list = [
-            (self._param_names[i[0]], self._param_names[i[1] - 1])
-            for i in itertools.combinations(range(len(self._param_names) + 1), 2)
-        ]
+        input_names_list = list(itertools.combinations_with_replacement(self._param_names, 2))
         return input_names_list
 
     def equality_constraint_names(self):
@@ -158,7 +160,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         current_FIM = self._get_FIM()
 
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
-            len(self._param_names), len(self._param_names)
+            self._n_params, self._n_params
         )
 
         # Change objective value based on ObjectiveLib type.
@@ -173,6 +175,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
             obj_value = np.max(eig) / np.min(eig)
+        
+        # print(obj_value)
 
         return np.asarray([obj_value], dtype=np.float64)
 
@@ -210,7 +214,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # complicated objective functions and the Hessian
         current_FIM = self._get_FIM()
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
-            len(self._param_names), len(self._param_names)
+            self._n_params, self._n_params
         )
 
         # May remove this warning. If so, we
@@ -218,13 +222,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # within the eigenvalue-dependent
         # objective options...
         eig_vals, eig_vecs = np.linalg.eig(M)
-        # TODO: Make this more formal and
-        # robust?
-        eig_vals = eig_vals.real
-        eig_vecs = eig_vecs.real
         if min(eig_vals) <= 1:
             pass
-            print("Warning: {:0.6f}".format(min(eig_vals)))
+            #print("Warning: {:0.6f}".format(min(eig_vals)))
 
         from pyomo.contrib.doe import ObjectiveLib
 
@@ -273,7 +273,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             min_eig_term = min_eig_vec * np.transpose(min_eig_vec)
             max_eig_term = max_eig_vec * np.transpose(max_eig_vec)
 
-            min_eig_epsilon = 1e-8
+            min_eig_epsilon = 2e-16
 
             # Computing a (hopefully) nonsingular
             # condition number for the jacobian
@@ -326,18 +326,66 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             output_con_multiplier_values, dtype=np.float64
         )
 
+    def evaluate_hessian_equality_constraints(self):
+        #ToDo: Do any objectives require constraints?
+        #Returns coo_matrix of the correct shape
+        return None
 
-#    def evaluate_hessian_equality_constraints(self):
-# ToDo: Do any objectives require constraints?
+    def evaluate_hessian_outputs(self, FIM=None):
+        # ToDo: significant bookkeeping if the hessian's require vectorized
+        # operations. Just need mapping that works well and we are good.
+        if FIM is None:
+            current_FIM = self._get_FIM()
+        else:
+            current_FIM = FIM
+        M = np.asarray(current_FIM, dtype=np.float64).reshape(
+            self._n_params, self._n_params
+        )
 
-# Returns coo_matrix of the correct shape
-#        return None
+        # Hessian with correct size for using only the
+        # lower (upper) triangle of the FIM
+        hess = np.zeros((self._n_inputs, self._n_inputs))
 
-#    def evaluate_hessian_outputs(self):
-# ToDo: Add for objectives where we can define the Hessian
-#
-# ToDo: significant bookkeeping if the hessian's require vectorized
-# operations. Just need mapping that works well and we are good.
+        from pyomo.contrib.doe import ObjectiveLib
+        if self.objective_option == ObjectiveLib.determinant:
+            # Grab inverse
+            Minv = np.linalg.pinv(M)
 
-# Returns coo_matrix of the correct shape
-#        return None
+            # Equation derived, shown in greybox
+            # pyomo.DoE 2.0 paper
+            # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] + 
+            #                          Minv[i, l]Minv[k, j])
+            lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
+            for curr_location in lower_tri_inds_4D:
+                # For quadruples (i, j, k, l)...
+                # Row of hessian is sum from
+                # n - i + 1 to n minus i plus j
+                #
+                # Column of hessian is sum from
+                # n - k + 1 to n minus k plus l
+                i, j, k, l = curr_location
+                print(i, j, k, l)
+                row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
+                col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
+                hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
+            
+            print(hess)
+            # Complete the full matrix
+            hess = hess.transpose()
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            pass
+        elif self.objective_option == ObjectiveLib.condition_number:
+            pass
+        
+        # Select only lower triangular values as a flat array
+        hess_masking_matrix = np.tril(np.ones_like(hess))
+        hess_data = hess[hess_masking_matrix > 0]
+        hess_rows, hess_cols  = np.tril_indices_from(hess)
+
+        print(hess_rows)
+        print(hess_cols)
+
+        # Returns coo_matrix of the correct shape
+        return coo_matrix(
+            (hess_data, (hess_rows, hess_cols)), shape=hess.shape
+        )

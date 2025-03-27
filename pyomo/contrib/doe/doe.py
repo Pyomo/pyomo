@@ -195,8 +195,8 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             solver = pyo.SolverFactory("ipopt")
-            # solver.options["linear_solver"] = "ma57"
-            solver.options["linear_solver"] = "MUMPS"
+            solver.options["linear_solver"] = "ma57"
+            # solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
             solver.options["tol"] = 1e-4
@@ -211,8 +211,8 @@ class DesignOfExperiments:
             grey_box_solver = pyo.SolverFactory("cyipopt")
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             # grey_box_solver.config.options["linear_solver"] = "ma57"
-            grey_box_solver.config.options['max_iter'] = 3000
-            grey_box_solver.config.options['tol'] = 1e-5
+            grey_box_solver.config.options['max_iter'] = 500
+            grey_box_solver.config.options['tol'] = 1e-4
             # grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
@@ -396,6 +396,16 @@ class DesignOfExperiments:
                         model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
                             pyo.value(model.fim[(i, j)])
                         )
+            # Set objective value
+            if self.objective_option == ObjectiveLib.determinant:
+                det_val = np.linalg.det(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(np.log10(det_val))
+            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
+            elif self.objective_option == ObjectiveLib.condition_number:
+                cond_number = np.linalg.cond(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):

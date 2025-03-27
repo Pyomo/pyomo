@@ -50,6 +50,30 @@ def compare_reactor_doe():
     solver = pyo.SolverFactory("ipopt")
     solver.options["linear_solver"] = "mumps"
 
+    # DoE object to compute FIM prior
+    doe_obj = DesignOfExperiments(
+        experiment,
+        fd_formula=fd_formula,
+        step=step_size,
+        objective_option=objective_option,
+        use_grey_box_objective=True,  # New object with grey box set to True
+        scale_constant_value=1,
+        scale_nominal_param_value=scale_nominal_param_value,
+        prior_FIM=None,
+        jac_initial=None,
+        fim_initial=None,
+        L_diagonal_lower_bound=1e-7,
+        solver=solver,
+        tee=True,
+        get_labeled_model_args=None,
+        # logger_level=logging.ERROR,
+        _Cholesky_option=True,
+        _only_compute_fim_lower=True,
+    )
+
+    prior_FIM = doe_obj.compute_FIM(method="sequential")
+    # prior_FIM = None
+
     # Begin optimal grey box DoE
     ############################
     doe_obj_grey_box = DesignOfExperiments(
@@ -81,10 +105,15 @@ def compare_reactor_doe():
         )
     )
     print(
-        ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
-            *doe_obj_grey_box.results["Experiment Design"][1:]
+        ("\tTemperature values: [{:.2f}]").format(
+            doe_obj_grey_box.results["Experiment Design"][1]
         )
     )
+    # print(
+    #     ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
+    #         *doe_obj_grey_box.results["Experiment Design"][1:]
+    #     )
+    # )
     print(
         "FIM at optimal design with grey-box:\n {}".format(
             np.array(doe_obj_grey_box.results["FIM"])
@@ -100,6 +129,9 @@ def compare_reactor_doe():
             np.log10(np.linalg.det(np.array(doe_obj_grey_box.results["FIM"])))
         )
     )
+    print("Eigenvalues")
+    eig, _ = np.linalg.eig(np.array(doe_obj_grey_box.results["FIM"]))
+    print(np.max(eig), np.min(eig))
 
     print(doe_obj_grey_box.results["Experiment Design Names"])
 

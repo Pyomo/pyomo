@@ -156,6 +156,7 @@ class ReactorExperiment(Experiment):
         for t in m.t:
             if t in control_points:
                 cv = control_points[t]
+                m.T[t].fix()
             m.T[t].setlb(self.data["T_bounds"][0])
             m.T[t].setub(self.data["T_bounds"][1])
             m.T[t] = cv
@@ -203,6 +204,7 @@ class ReactorExperiment(Experiment):
         # Add experimental input label for initial concentration
         m.experiment_inputs[m.CA[m.t.first()]] = None
         # Add experimental input label for Temperature
+        # m.experiment_inputs[m.T[m.t.first()]] = None
         m.experiment_inputs.update((m.T[t], None) for t in m.t_control)
 
         # Add unknown parameter labels

@@ -47,8 +47,8 @@ def compare_reactor_doe():
     objective_option = "determinant"
     scale_nominal_param_value = True
 
-    solver = pyo.SolverFactory("ipopt")
-    solver.options["linear_solver"] = "mumps"
+    # solver = pyo.SolverFactory("ipopt")
+    # solver.options["linear_solver"] = "mumps"
     # Create the DesignOfExperiments object
     # We will not be passing any prior information in this example
     # and allow the experiment object and the DesignOfExperiments
@@ -64,7 +64,7 @@ def compare_reactor_doe():
         jac_initial=None,
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
-        solver=solver,
+        solver=None,
         tee=True,
         get_labeled_model_args=None,
         # logger_level=logging.ERROR,
@@ -114,7 +114,7 @@ def compare_reactor_doe():
         jac_initial=None,
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
-        solver=solver,
+        solver=None,
         tee=True,
         get_labeled_model_args=None,
         # logger_level=logging.ERROR,
