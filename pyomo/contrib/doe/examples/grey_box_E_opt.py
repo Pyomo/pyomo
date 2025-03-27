@@ -67,13 +67,13 @@ def compare_reactor_doe():
         solver=solver,
         tee=True,
         get_labeled_model_args=None,
-        #logger_level=logging.ERROR,
+        # logger_level=logging.ERROR,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     )
 
     doe_obj_grey_box.run_doe()
-    # Print out a results summary                                                                                                                      
+    # Print out a results summary
     print("Optimal experiment values with grey-box: ")
     print(
         "\tInitial concentration: {:.2f}".format(
@@ -85,16 +85,24 @@ def compare_reactor_doe():
             *doe_obj_grey_box.results["Experiment Design"][1:]
         )
     )
-    print("FIM at optimal design with grey-box:\n {}".format(np.array(doe_obj_grey_box.results["FIM"])))
+    print(
+        "FIM at optimal design with grey-box:\n {}".format(
+            np.array(doe_obj_grey_box.results["FIM"])
+        )
+    )
     print(
         "Objective value at optimal design with grey-box: {:.2f}".format(
             pyo.value(doe_obj_grey_box.model.objective)
         )
     )
-    print("Raw logdet: {:.2f}".format(np.log10(np.linalg.det(np.array(doe_obj_grey_box.results["FIM"])))))
+    print(
+        "Raw logdet: {:.2f}".format(
+            np.log10(np.linalg.det(np.array(doe_obj_grey_box.results["FIM"])))
+        )
+    )
 
     print(doe_obj_grey_box.results["Experiment Design Names"])
 
-    
+
 if __name__ == "__main__":
     compare_reactor_doe()

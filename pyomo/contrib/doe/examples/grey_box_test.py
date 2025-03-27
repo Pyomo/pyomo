@@ -1,7 +1,10 @@
 import numpy as np
 import pyomo.environ as pyo
 from scipy.sparse import coo_matrix
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
+from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+    ExternalGreyBoxModel,
+    ExternalGreyBoxBlock,
+)
 
 import inspect
 from pathlib import Path
@@ -12,6 +15,7 @@ try:
     print(Path(inspect.stack()[1].filename).absolute)
 except:
     print("No stack()[1]...")
+
 
 class LogDetModel(ExternalGreyBoxModel):
     def __init__(
@@ -29,7 +33,7 @@ class LogDetModel(ExternalGreyBoxModel):
         n_parameters: int
             Number of parameters in the model. The square symmetric matrix is of shape n_parameters*n_parameters
         initial_fim: dict
-            key: tuple (i,j) where i, j are the row, column number of FIM. value: FIM[i,j] 
+            key: tuple (i,j) where i, j are the row, column number of FIM. value: FIM[i,j]
             Initial value of the matrix. If None, the identity matrix is used.
         use_exact_derivatives: bool
             If True, the exact derivatives are used.
@@ -77,9 +81,9 @@ class LogDetModel(ExternalGreyBoxModel):
         ------
         input_name_list: a list of the names of inputs
         """
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
-        # store the input names as a tuple 
+        # store the input names as a tuple
         input_name_list = []
         # loop over parameters
         for i in range(self.n_parameters):
@@ -92,12 +96,12 @@ class LogDetModel(ExternalGreyBoxModel):
     def equality_constraint_names(self):
         """Return the names of the equality constraints."""
         # no equality constraints
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
         return []
 
     def output_names(self):
         """Return the names of the outputs."""
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
         return ["log_det"]
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
@@ -108,7 +112,7 @@ class LogDetModel(ExternalGreyBoxModel):
         ---------
         output_con_multiplier_values: a scalar number for the output constraint multipliers
         """
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
         # because we only have one output constraint, the length is 1
         if len(output_con_multiplier_values) != 1:
@@ -127,7 +131,7 @@ class LogDetModel(ExternalGreyBoxModel):
         """
         # ele_to_order map the input position in FIM, like (a,b), to its flattend index
         # for e.g., ele_to_order[(0,0)] = 0
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
         ele_to_order = {}
         count = 0
@@ -167,17 +171,17 @@ class LogDetModel(ExternalGreyBoxModel):
     def set_input_values(self, input_values):
         """
         Set the values of the inputs.
-        This function refers to the notebook: 
+        This function refers to the notebook:
         https://colab.research.google.com/drive/1VplaeOTes87oSznboZXoz-q5W6gKJ9zZ?usp=sharing
 
         Arguments
         ---------
         input_values: input initial values
         """
-        # see the colab link in the doc string for why this should be a list 
+        # see the colab link in the doc string for why this should be a list
         self._input_values = list(input_values)
 
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
     def evaluate_equality_constraints(self):
         """Evaluate the equality constraints.
@@ -191,14 +195,14 @@ class LogDetModel(ExternalGreyBoxModel):
         """
         Evaluate the output of the model.
         We call numpy here to compute the logdet of FIM. slogdet is used to avoid ill-conditioning issue
-        This function refers to the notebook: 
+        This function refers to the notebook:
         https://colab.research.google.com/drive/1VplaeOTes87oSznboZXoz-q5W6gKJ9zZ?usp=sharing
 
         Return
         ------
         logdet: a one-element numpy array, containing the log det value as float
         """
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
         # form matrix as a list of lists
         M = self._extract_and_assemble_fim()
@@ -219,7 +223,7 @@ class LogDetModel(ExternalGreyBoxModel):
 
     def evaluate_jacobian_equality_constraints(self):
         """Evaluate the Jacobian of the equality constraints."""
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
         return None
 
     def _extract_and_assemble_fim(self):
@@ -230,7 +234,7 @@ class LogDetModel(ExternalGreyBoxModel):
         ------
         M: a numpy array containing FIM.
         """
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
         # FIM shape Np*Np
         M = np.zeros((self.n_parameters, self.n_parameters))
@@ -256,7 +260,7 @@ class LogDetModel(ExternalGreyBoxModel):
         A sparse matrix, containing the first order gradient of the OBJ, in the shape [1,N_input]
         where N_input is the No. of off-diagonal elements//2 + Np
         """
-        #trash = input(str(inspect.stack()[0][3]))
+        # trash = input(str(inspect.stack()[0][3]))
 
         if self._use_exact_derivatives:
             M = self._extract_and_assemble_fim()
@@ -284,7 +288,7 @@ class LogDetModel(ExternalGreyBoxModel):
                         row[order], col[order], data[order] = (0, order, 2 * Minv[i, j])
             # sparse matrix
             return coo_matrix((data, (row, col)), shape=(1, self.num_input))
-        
+
 
 # import idaes
 
@@ -296,11 +300,11 @@ m.M = pyo.Var(m.params_mat, bounds=(0, 50), initialize=1)
 print('Made base model.')
 
 ex_model = LogDetModel(
-            n_parameters=2,
-            initial_fim=None,
-            #initial_fim=np.ones((2, 2)),
-            print_level=1,
-        )
+    n_parameters=2,
+    initial_fim=None,
+    # initial_fim=np.ones((2, 2)),
+    print_level=1,
+)
 
 print('Added logdet model')
 m.egb = ExternalGreyBoxBlock(external_model=ex_model)
@@ -308,10 +312,10 @@ m.egb = ExternalGreyBoxBlock(external_model=ex_model)
 print('Added as external grey box.')
 
 # constraining outputs
-m.M_con1 = pyo.Constraint(expr=(m.M[(0,0)] == m.egb.inputs[(0,0)]))
-m.M_con2 = pyo.Constraint(expr=(m.M[(0,1)] == m.egb.inputs[(0,1)]))
-m.M_con3 = pyo.Constraint(expr=(m.M[(1,1)] == m.egb.inputs[(1,1)]))
-m.M_con4 = pyo.Constraint(expr=(m.M[(1,0)] == m.M[(0,1)]))
+m.M_con1 = pyo.Constraint(expr=(m.M[(0, 0)] == m.egb.inputs[(0, 0)]))
+m.M_con2 = pyo.Constraint(expr=(m.M[(0, 1)] == m.egb.inputs[(0, 1)]))
+m.M_con3 = pyo.Constraint(expr=(m.M[(1, 1)] == m.egb.inputs[(1, 1)]))
+m.M_con4 = pyo.Constraint(expr=(m.M[(1, 0)] == m.M[(0, 1)]))
 
 print('Added constraints on symmetry for FIM.')
 
@@ -323,11 +327,11 @@ print('Added objective function. Solve is next action.')
 
 solver = pyo.SolverFactory("cyipopt")
 solver.config.options['hessian_approximation'] = 'limited-memory'
-#solver.config.options['mu_strategy'] = 'monotone'
-#solver.config.options['linear_solver'] = 'ma27'
+# solver.config.options['mu_strategy'] = 'monotone'
+# solver.config.options['linear_solver'] = 'ma27'
 
 solver.solve(m, tee=True)
 
 m.M.pprint()
 
-#m.pprint()
+# m.pprint()

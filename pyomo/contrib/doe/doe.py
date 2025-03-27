@@ -195,7 +195,7 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             solver = pyo.SolverFactory("ipopt")
-            #solver.options["linear_solver"] = "ma57"
+            # solver.options["linear_solver"] = "ma57"
             solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
@@ -210,10 +210,10 @@ class DesignOfExperiments:
         else:
             grey_box_solver = pyo.SolverFactory("cyipopt")
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
-            #grey_box_solver.config.options["linear_solver"] = "ma57" 
+            # grey_box_solver.config.options["linear_solver"] = "ma57"
             grey_box_solver.config.options['max_iter'] = 3000
             grey_box_solver.config.options['tol'] = 1e-5
-            #grey_box_solver.config.options['mu_strategy'] = "monotone"
+            # grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
 
@@ -288,33 +288,53 @@ class DesignOfExperiments:
             # ToDo: Make this naming convention robust
             model.obj_cons = pyo.Block()
             # ToDo: Add functionality for grey box objectives
-            grey_box_FIM = FIMExternalGreyBox(doe_object=self, objective_option=self.objective_option, logger_level=self.logger.getEffectiveLevel())
-            model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(external_model=grey_box_FIM)
+            grey_box_FIM = FIMExternalGreyBox(
+                doe_object=self,
+                objective_option=self.objective_option,
+                logger_level=self.logger.getEffectiveLevel(),
+            )
+            model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(
+                external_model=grey_box_FIM
+            )
 
             # Adding constraints to for all grey box input values to equate to fim values
             def FIM_egb_cons(m, p1, p2):
                 """
-                
+
                 m: Pyomo model
                 p1: parameter 1
                 p2: parameter 2
-                
+
                 """
-                if list(model.parameter_names).index(p1) <= list(model.parameter_names).index(p2):
+                if list(model.parameter_names).index(p1) <= list(
+                    model.parameter_names
+                ).index(p2):
                     return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p1, p2)]
                 else:
                     return pyo.Constraint.Skip
-            model.obj_cons.FIM_equalities = pyo.Constraint(model.parameter_names, model.parameter_names, rule=FIM_egb_cons)
-            
+
+            model.obj_cons.FIM_equalities = pyo.Constraint(
+                model.parameter_names, model.parameter_names, rule=FIM_egb_cons
+            )
+
             # ToDo: Add naming convention to adjust name of objective output
             # to conincide with the ObjectiveLib type
             # ToDo: Write test for each option successfully building
             if self.objective_option == ObjectiveLib.determinant:
-                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["log10-D-opt"], sense=pyo.maximize)
+                model.objective = pyo.Objective(
+                    expr=model.obj_cons.egb_fim_block.outputs["log10-D-opt"],
+                    sense=pyo.maximize,
+                )
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["E-opt"], sense=pyo.maximize)
+                model.objective = pyo.Objective(
+                    expr=model.obj_cons.egb_fim_block.outputs["E-opt"],
+                    sense=pyo.maximize,
+                )
             elif self.objective_option == ObjectiveLib.condition_number:
-                model.objective = pyo.Objective(expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize)
+                model.objective = pyo.Objective(
+                    expr=model.obj_cons.egb_fim_block.outputs["ME-opt"],
+                    sense=pyo.minimize,
+                )
             else:
                 raise AttributeError(
                     "Objective option not recognized. Please contact the developers as you should not see this error."
@@ -368,9 +388,13 @@ class DesignOfExperiments:
             # Initialize grey box inputs to be fim values currently
             for i in model.parameter_names:
                 for j in model.parameter_names:
-                    if list(model.parameter_names).index(i) <= list(model.parameter_names).index(j):
-                        model.obj_cons.egb_fim_block.inputs[(i, j)].set_value(pyo.value(model.fim[(i, j)]))
-        
+                    if list(model.parameter_names).index(i) <= list(
+                        model.parameter_names
+                    ).index(j):
+                        model.obj_cons.egb_fim_block.inputs[(i, j)].set_value(
+                            pyo.value(model.fim[(i, j)])
+                        )
+
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
             # Get the FIM values
@@ -1167,7 +1191,7 @@ class DesignOfExperiments:
             # Fix experiment inputs before solve (enforce square solve)
             for comp in b.experiment_inputs:
                 comp.fix()
-                
+
             res = self.solver.solve(b, tee=self.tee)
 
             # Unfix experiment inputs after square solve

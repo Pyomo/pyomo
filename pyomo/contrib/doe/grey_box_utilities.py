@@ -30,9 +30,7 @@ import itertools
 import logging
 from scipy.sparse import coo_matrix
 
-from pyomo.common.dependencies import (
-    numpy as np,
-)
+from pyomo.common.dependencies import numpy as np
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 
@@ -40,12 +38,7 @@ import pyomo.environ as pyo
 
 
 class FIMExternalGreyBox(ExternalGreyBoxModel):
-    def __init__(
-            self,
-            doe_object,
-            objective_option="determinant",
-            logger_level=None,
-    ):
+    def __init__(self, doe_object, objective_option="determinant", logger_level=None):
         """
         Grey box model for metrics on the FIM. This methodology reduces numerical complexity for the
         computation of FIM metrics related to eigenvalue decomposition.
@@ -53,12 +46,12 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         Parameters
         ----------
         doe_object:
-           Design of Experiments object that contains a built model (with sensitivity matrix, Q, and 
+           Design of Experiments object that contains a built model (with sensitivity matrix, Q, and
            fisher information matrix, FIM). The external grey box model will utilize elements of the
-           doe_object's model to build the FIM metric with consistent naming. 
+           doe_object's model to build the FIM metric with consistent naming.
         obj_option:
            String representation of the objective option. Current available option is ``determinant``.
-           Other options that are planned to be implemented soon are ``minimum_eig`` (E-optimality), 
+           Other options that are planned to be implemented soon are ``minimum_eig`` (E-optimality),
            and ``condition_number`` (modified E-optimality). default option is ``determinant``
         logger_level:
            logging level to be specified if different from doe_object's logging level. default value
@@ -67,17 +60,21 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         """
 
         if doe_object is None:
-            raise ValueError("DoE Object must be provided to build external grey box of the FIM.")
+            raise ValueError(
+                "DoE Object must be provided to build external grey box of the FIM."
+            )
 
         self.doe_object = doe_object
 
         # Grab parameter list from the doe_object model
         self._param_names = [i for i in self.doe_object.model.parameter_names]
-        
+
         # Check if the doe_object has model components that are required
         # TODO: add checks for the model --> doe_object.model needs FIM; all other checks should
         #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
-        self.objective_option = objective_option  # Add failsafe to make sure this is ObjectiveLib object?
+        self.objective_option = (
+            objective_option  # Add failsafe to make sure this is ObjectiveLib object?
+        )
         # Will anyone ever call this without calling DoE? --> intended to be no; but maybe more utility?
 
         # Create logger for FIM egb object
@@ -92,10 +89,11 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Set initial values for inputs
         # Need a mask structure
         self._masking_matrix = np.tril(np.ones_like(self.doe_object.fim_initial))
-        #self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
-        self._input_values = np.asarray(self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64)
-        #print(self._input_values)
-    
+        # self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+        self._input_values = np.asarray(
+            self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
+        )
+        # print(self._input_values)
 
     def _get_FIM(self):
         # Grabs the current FIM subject
@@ -112,14 +110,15 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         return current_FIM
 
-    
     def input_names(self):
         # Cartesian product gives us matrix indicies flattened in row-first format
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         input_names_list = list(itertools.product(self._param_names, self._param_names))
-        input_names_list = [(self._param_names[i[0]], self._param_names[i[1] - 1]) 
-                            for i in itertools.combinations(range(len(self._param_names) + 1), 2)]
+        input_names_list = [
+            (self._param_names[i[0]], self._param_names[i[1] - 1])
+            for i in itertools.combinations(range(len(self._param_names) + 1), 2)
+        ]
         return input_names_list
 
     def equality_constraint_names(self):
@@ -132,18 +131,19 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # the ObjectiveLib Enum object, which should have an associated
         # name for the objective function at all times.
         from pyomo.contrib.doe import ObjectiveLib
+
         if self.objective_option == ObjectiveLib.determinant:
             obj_name = "log10-D-opt"
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             obj_name = "E-opt"
         elif self.objective_option == ObjectiveLib.condition_number:
             obj_name = "ME-opt"
-        return [obj_name, ]
+        return [obj_name]
 
     def set_input_values(self, input_values):
         # Set initial values to be flattened initial FIM (aligns with input names)
         np.copyto(self._input_values, input_values)
-        #self._input_values = list(self.doe_object.fim_initial.flatten())
+        # self._input_values = list(self.doe_object.fim_initial.flatten())
 
     def evaluate_equality_constraints(self):
         # ToDo: are there any objectives that will have constraints?
@@ -154,10 +154,13 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # ObjectiveLib type.
         current_FIM = self._get_FIM()
 
-        M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
-        
+        M = np.asarray(current_FIM, dtype=np.float64).reshape(
+            len(self._param_names), len(self._param_names)
+        )
+
         # Change objective value based on ObjectiveLib type.
         from pyomo.contrib.doe import ObjectiveLib
+
         if self.objective_option == ObjectiveLib.determinant:
             (sign, logdet) = np.linalg.slogdet(M)
             obj_value = logdet
@@ -167,8 +170,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
             obj_value = np.max(eig) / np.min(eig)
-        
-        return np.asarray([obj_value, ], dtype=np.float64)
+
+        return np.asarray([obj_value], dtype=np.float64)
 
     def finalize_block_construction(self, pyomo_block):
         # Set bounds on the inputs/outputs
@@ -181,6 +184,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Initialize log_determinant value
         from pyomo.contrib.doe import ObjectiveLib
+
         if self.objective_option == ObjectiveLib.determinant:
             pyomo_block.outputs["log10-D-opt"] = 0
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -193,35 +197,38 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Returns coo_matrix of the correct shape
         return None
-        
+
     def evaluate_jacobian_outputs(self):
         # Compute the jacobian of the objective function with
         # respect to the fisher information matrix. Then return
         # a coo_matrix that aligns with what IPOPT will expect.
         #
         # ToDo: there will be significant bookkeeping for more
-        # complicated objective functions and the Hessian        
+        # complicated objective functions and the Hessian
         current_FIM = self._get_FIM()
-        M = np.asarray(current_FIM, dtype=np.float64).reshape(len(self._param_names), len(self._param_names))
-        
+        M = np.asarray(current_FIM, dtype=np.float64).reshape(
+            len(self._param_names), len(self._param_names)
+        )
+
         # May remove this warning. If so, we
         # should put the eigenvalue computation
         # within the eigenvalue-dependent
         # objective options...
         eig_vals, eig_vecs = np.linalg.eig(M)
-        #print("Conditon number:")
-        #print(np.linalg.cond(M))
+        # print("Conditon number:")
+        # print(np.linalg.cond(M))
         if min(eig_vals) <= 1:
             pass
             print("Warning: {:0.6f}".format(min(eig_vals)))
 
         from pyomo.contrib.doe import ObjectiveLib
+
         if self.objective_option == ObjectiveLib.determinant:
             Minv = np.linalg.pinv(M)
             # Derivative formula derived using tensor
             # calculus. Add reference to pyomo.DoE 2.0
             # manuscript S.I.
-            jac_M = 0.5*(Minv + Minv.transpose())
+            jac_M = 0.5 * (Minv + Minv.transpose())
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             # Obtain minimum eigenvalue location
             min_eig_loc = np.argmin(eig_vals)
@@ -232,7 +239,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             # use matrix operations later in
             # the code.
             min_eig_vec = np.array([eig_vecs[:, min_eig_loc]])
-        
+
             # Calculate the derivative matrix.
             # This is the expansion product of
             # the eigenvector we grabbed in
@@ -269,8 +276,11 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             safe_cond_number = max_eig / (min_eig + np.sign(min_eig) * min_eig_epsilon)
 
             # Combining the expression
-            jac_M = 1 / (min_eig + np.sign(min_eig) * min_eig_epsilon) * (max_eig_term - safe_cond_number * min_eig_term)
-
+            jac_M = (
+                1
+                / (min_eig + np.sign(min_eig) * min_eig_epsilon)
+                * (max_eig_term - safe_cond_number * min_eig_term)
+            )
 
         # Filter jac_M using the
         # masking matrix
@@ -289,33 +299,40 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # # Need to be flat?
         # M_cols = np.arange(len(jac_M.flatten()))
-        
+
         # Returns coo_matrix of the correct shape
-        #print(coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))))
-        return coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten())))
+        # print(coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))))
+        return coo_matrix(
+            (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
+        )
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
         # ToDo: Do any objectives require constraints?
         # Assert lengths match
-        self._eq_con_mult_values = np.asarray(eq_con_multiplier_values, dtype=np.float64)
+        self._eq_con_mult_values = np.asarray(
+            eq_con_multiplier_values, dtype=np.float64
+        )
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
         # ToDo: Do any objectives require constraints?
         # Assert length matches
-        self._output_con_mult_values = np.asarray(output_con_multiplier_values, dtype=np.float64)
+        self._output_con_mult_values = np.asarray(
+            output_con_multiplier_values, dtype=np.float64
+        )
+
 
 #    def evaluate_hessian_equality_constraints(self):
-        # ToDo: Do any objectives require constraints?
+# ToDo: Do any objectives require constraints?
 
-        # Returns coo_matrix of the correct shape
+# Returns coo_matrix of the correct shape
 #        return None
 
 #    def evaluate_hessian_outputs(self):
-        # ToDo: Add for objectives where we can define the Hessian
-        #
-        # ToDo: significant bookkeeping if the hessian's require vectorized
-        # operations. Just need mapping that works well and we are good.
-        
-        # Returns coo_matrix of the correct shape
+# ToDo: Add for objectives where we can define the Hessian
+#
+# ToDo: significant bookkeeping if the hessian's require vectorized
+# operations. Just need mapping that works well and we are good.
+
+# Returns coo_matrix of the correct shape
 #        return None
