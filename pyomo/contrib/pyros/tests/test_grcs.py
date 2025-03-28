@@ -33,7 +33,7 @@ from pyomo.common.dependencies import (
 )
 from pyomo.common.errors import ApplicationError, InfeasibleConstraintException
 from pyomo.core.expr import replace_expressions
-from pyomo.environ import maximize as pyo_max, units as u
+from pyomo.environ import assert_optimal_termination, maximize as pyo_max, units as u
 from pyomo.opt import (
     SolverResults,
     SolverStatus,
@@ -2006,6 +2006,49 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
     of separation priorities.
     """
 
+    def test_priority_skip_all_separation(self):
+        m = build_leyffer_two_cons()
+        m_det = m.clone()
+        m.pyros_separation_priority = Suffix()
+        m.pyros_separation_priority[None] = None
+        interval = BoxSet(bounds=[(0.25, 2)])
+        pyros_solver = SolverFactory("pyros")
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("ipopt")
+
+        with LoggingIntercept(level=logging.WARNING) as LOG:
+            res1 = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=local_subsolver,
+                global_solver=global_subsolver,
+                objective_focus="worst_case",
+                bypass_global_separation=True,
+                separation_priority_order={"con1": 2},
+            )
+
+        warning_logs = LOG.getvalue()
+        self.assertRegex(
+            warning_logs,
+            "Separation of 1.*was bypassed.*Thus, robust.*is not guaranteed",
+        )
+        self.assertEqual(
+            res1.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
+        self.assertEqual(res1.iterations, 1)
+        assert_optimal_termination(local_subsolver.solve(m_det))
+        # when all separation problems bypassed, PyROS reduces to a
+        # solving the deterministic model
+        self.assertAlmostEqual(m.x1.value, m_det.x1.value, places=4)
+        self.assertAlmostEqual(m.x2.value, m_det.x2.value, places=4)
+        self.assertAlmostEqual(m.x3.value, m_det.x3.value, places=4)
+        self.assertAlmostEqual(value(m.obj), value(m_det.obj), places=4)
+
     def test_priority_order_invariant(self):
         m = build_leyffer_two_cons()
         m2 = m.clone()
@@ -2055,6 +2098,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         self.assertEqual(res2.final_objective_value, res1.final_objective_value)
         self.assertEqual(m.x1.value, m2.x1.value)
         self.assertEqual(m.x2.value, m2.x2.value)
+        self.assertEqual(m.x3.value, m2.x3.value)
 
 
 @unittest.skipUnless(baron_available, "BARON not available")

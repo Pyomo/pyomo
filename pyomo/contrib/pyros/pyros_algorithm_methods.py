@@ -297,6 +297,15 @@ def ROSolver_iterative_solve(model_data):
         #     or in the event of bypassing global separation, no violations
         robustness_certified = separation_results.robustness_certified
         if robustness_certified:
+            if separation_data.ss_ineq_cons_to_bypass:
+                config.progress_logger.warning(
+                    "Separation of "
+                    f"{len(separation_data.ss_ineq_cons_to_bypass)} "
+                    "second-stage inequality constraints was bypassed "
+                    "due to user separation priority order specification. "
+                    "Thus, robust feasibility/optimality of the reported "
+                    "solution is not guaranteed."
+                )
             if config.bypass_global_separation:
                 config.progress_logger.warning(
                     "Option to bypass global separation was chosen. "
