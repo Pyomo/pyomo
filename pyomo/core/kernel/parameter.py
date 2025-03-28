@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import is_numeric_data, NumericValue
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.core.kernel.container_utils import define_simple_containers
@@ -19,7 +21,7 @@ class IParameter(ICategorizedObject, NumericValue):
 
     __slots__ = ()
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Computes the numeric value of this object."""
         raise NotImplementedError  # pragma:nocover
 
@@ -77,8 +79,9 @@ class parameter(IParameter):
     # Implement the IParameter abstract methods
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Computes the numeric value of this object."""
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     #
@@ -116,7 +119,8 @@ class functional_value(IParameter):
     # Implement the IParameter abstract methods
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
+        exception = _type_check_exception_arg(self, exception)
         if self._fn is None:
             return None
         try:

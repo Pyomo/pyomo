@@ -23,6 +23,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -201,10 +202,12 @@ class ParamData(ComponentData, NumericValue):
             self._value = old_value
             raise
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Return the value of this object.
         """
+        exception = _type_check_exception_arg(self, exception)
+
         if self._value is Param.NoValue:
             if exception:
                 raise ValueError(
@@ -929,10 +932,12 @@ class ScalarParam(ParamData, Param):
     # up both the Component and Data base classes.
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Return the value of this parameter.
         """
+        exception = _type_check_exception_arg(self, exception)
+
         if self._constructed:
             if not self._data:
                 if self._mutable:
@@ -976,13 +981,6 @@ class SimpleParam(metaclass=RenamedClass):
 
 
 class IndexedParam(Param):
-    def __call__(self, exception=True):
-        """Compute the value of the parameter"""
-        if exception:
-            raise TypeError(
-                'Cannot compute the value of an indexed Param (%s)' % (self.name,)
-            )
-
     # Because IndexedParam can use a non-standard data store (i.e., the
     # values in the _data dict may not be ComponentData objects), we
     # need to override the normal scheme for pre-allocating

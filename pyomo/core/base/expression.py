@@ -26,6 +26,7 @@ from pyomo.common.numeric_types import (
 )
 
 import pyomo.core.expr as EXPR
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -50,8 +51,9 @@ class NamedExpressionData(numeric_expr.NumericValue):
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.OperatorAssociativity.NON_ASSOCIATIVE
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this expression."""
+        exception = _type_check_exception_arg(self, exception)
         (arg,) = self.args
         if arg.__class__ in native_types:
             # Note: native_types includes NoneType
@@ -396,8 +398,9 @@ class ScalarExpression(ExpressionData, Expression):
     # construction
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Return expression on this expression."""
+        exception = _type_check_exception_arg(self, exception)
         if self._constructed:
             return super().__call__(exception)
         raise ValueError(

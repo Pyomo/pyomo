@@ -15,6 +15,8 @@ from pyomo.common.dependencies import (
     scipy,
     scipy_available as has_scipy,
 )
+from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.constraint import IConstraint, constraint_tuple
 
@@ -73,9 +75,10 @@ class _MatrixConstraintData(IConstraint):
     # to avoid building the body expression
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         # don't mask an exception in the terms
         # property method
+        exception = _type_check_exception_arg(self, exception)
         if self.parent.x is None:
             raise ValueError("No variable order has been assigned")
         try:
@@ -441,8 +444,9 @@ class matrix_constraint(constraint_tuple):
         assert not equality
         self._equality.fill(False)
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint"""
+        exception = _type_check_exception_arg(self, exception)
         if self.x is None:
             raise ValueError("No variable order has been assigned")
         values = numpy.array([v.value for v in self.x], dtype=float)

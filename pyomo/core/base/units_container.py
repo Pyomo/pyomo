@@ -113,6 +113,7 @@ import sys
 
 from pyomo.common.dependencies import pint as pint_module, pint_available
 from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import (
     NumericValue,
     nonpyomo_leaf_types,
@@ -384,7 +385,7 @@ class _PyomoUnit(NumericValue):
         else:
             return _str
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Unit is treated as a constant value, and this method always returns 1.0
 
         Returns
@@ -392,6 +393,7 @@ class _PyomoUnit(NumericValue):
         : float
            Returns 1.0
         """
+        _type_check_exception_arg(self, exception)
         return 1.0
 
     @property

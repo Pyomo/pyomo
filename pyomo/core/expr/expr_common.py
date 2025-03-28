@@ -13,6 +13,7 @@ from contextlib import nullcontext
 
 from pyomo.common import enums
 from pyomo.common.deprecation import deprecated
+from pyomo.common.modeling import NOTSET
 
 TO_STRING_VERBOSE = False
 
@@ -108,3 +109,15 @@ class clone_counter(nullcontext):
     def count(self):
         """A property that returns the clone count value."""
         return clone_counter._count
+
+
+def _type_check_exception_arg(cls, exception):
+    if exception is NOTSET:
+        return True
+    elif type(exception) is not bool:
+        raise ValueError(
+            f"{cls.ctype.__name__} '{cls.name}' was called with a non-bool "
+            f"argument for 'exception': {exception}"
+        )
+    else:
+        return exception
