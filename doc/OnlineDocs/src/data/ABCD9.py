@@ -9,14 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 import pyomo.common
 import sys
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.Z = Set(dimen=3)
-model.Y = Param(model.Z)
+model.Z = pyo.Set(dimen=3)
+model.Y = pyo.Param(model.Z)
 
 try:
     instance = model.create_instance('ABCD9.dat')
@@ -27,4 +27,4 @@ except pyomo.common.errors.ApplicationError as e:
 print('Z ' + str(sorted(list(instance.Z.data()))))
 print('Y')
 for key in sorted(instance.Y.keys()):
-    print(instance.Y[key] + " " + str(value(instance.Y[key])))
+    print(instance.Y[key] + " " + str(pyo.value(instance.Y[key])))

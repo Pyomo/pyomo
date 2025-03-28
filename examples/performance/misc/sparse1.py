@@ -12,21 +12,21 @@
 #
 # This is a performance test that we cannot easily execute right now
 #
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 
 def f(N):
-    M = ConcreteModel()
-    M.A = Set(initialize=range(N))
-    M.x = Var()
-    M.o = Objective(expr=M.x)
+    M = pyo.ConcreteModel()
+    M.A = pyo.Set(initialize=range(N))
+    M.x = pyo.Var()
+    M.o = pyo.Objective(expr=M.x)
 
     def rule(m, i):
         if i == 3 or i == 5:
             return M.x >= i
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
-    M.c = Constraint(M.A, rule=rule)
+    M.c = pyo.Constraint(M.A, rule=rule)
     return M
 
 

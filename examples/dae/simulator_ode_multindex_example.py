@@ -20,13 +20,13 @@
 #
 # Example modified to include time-varying values for b and c
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.simulator import Simulator
 
 
 def create_model():
-    m = ConcreteModel()
+    m = pyo.ConcreteModel()
 
     m.t = ContinuousSet(bounds=(0.0, 20.0))
 
@@ -35,17 +35,17 @@ def create_model():
             return 0.025
         return 0.25
 
-    m.b = Param(m.t, initialize=0.25, default=_b_default)
+    m.b = pyo.Param(m.t, initialize=0.25, default=_b_default)
 
     def _c_default(m, t):
         if t >= 7:
             return 50
         return 5
 
-    m.c = Param(m.t, initialize=5.0, default=_c_default)
+    m.c = pyo.Param(m.t, initialize=5.0, default=_c_default)
 
-    m.omega = Var(m.t)
-    m.theta = Var(m.t)
+    m.omega = pyo.Var(m.t)
+    m.theta = pyo.Var(m.t)
 
     m.domegadt = DerivativeVar(m.omega, wrt=m.t)
     m.dthetadt = DerivativeVar(m.theta, wrt=m.t)
@@ -55,19 +55,19 @@ def create_model():
     m.theta[0] = 3.14 - 0.1
 
     def _diffeq1(m, t):
-        return m.domegadt[t] == -m.b[t] * m.omega[t] - m.c[t] * sin(m.theta[t])
+        return m.domegadt[t] == -m.b[t] * m.omega[t] - m.c[t] * pyo.sin(m.theta[t])
 
-    m.diffeq1 = Constraint(m.t, rule=_diffeq1)
+    m.diffeq1 = pyo.Constraint(m.t, rule=_diffeq1)
 
     def _diffeq2(m, t):
         return m.dthetadt[t] == m.omega[t]
 
-    m.diffeq2 = Constraint(m.t, rule=_diffeq2)
+    m.diffeq2 = pyo.Constraint(m.t, rule=_diffeq2)
 
     b_profile = {0: 0.25, 15: 0.025}
     c_profile = {0: 5.0, 7: 50}
 
-    m.var_input = Suffix(direction=Suffix.LOCAL)
+    m.var_input = pyo.Suffix(direction=pyo.Suffix.LOCAL)
     m.var_input[m.b] = b_profile
     m.var_input[m.c] = c_profile
 
@@ -89,7 +89,7 @@ def simulate_model(m):
         )
 
     # Discretize model using Orthogonal Collocation
-    discretizer = TransformationFactory('dae.collocation')
+    discretizer = pyo.TransformationFactory('dae.collocation')
     discretizer.apply_to(m, nfe=20, ncp=3)
 
     # Initialize the discretized model using the simulator profiles
@@ -102,8 +102,8 @@ def plot_result(m, sim, tsim, profiles):
     import matplotlib.pyplot as plt
 
     time = list(m.t)
-    omega = [value(m.omega[t]) for t in m.t]
-    theta = [value(m.theta[t]) for t in m.t]
+    omega = [pyo.value(m.omega[t]) for t in m.t]
+    theta = [pyo.value(m.theta[t]) for t in m.t]
 
     varorder = sim.get_variable_order()
     for idx, v in enumerate(varorder):

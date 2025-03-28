@@ -9,18 +9,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 from distill_DAE import model
 
 instance = model.create_instance('distill.dat')
 
 # Discretize using Finite Difference Approach
-discretizer = TransformationFactory('dae.finite_difference')
+discretizer = pyo.TransformationFactory('dae.finite_difference')
 discretizer.apply_to(instance, nfe=50, scheme='BACKWARD')
 
 # Discretize using Orthogonal Collocation
-# discretizer = TransformationFactory('dae.collocation')
+# discretizer = pyo.TransformationFactory('dae.collocation')
 # discretizer.apply_to(instance,nfe=50,ncp=3)
 
 # The objective function in the manually discretized pyomo model
@@ -37,9 +37,9 @@ def obj_rule(m):
     ) + m.rho * sum((m.u1[i] - m.u1_ref) ** 2 for i in m.t if i != 1)
 
 
-instance.OBJ = Objective(rule=obj_rule)
+instance.OBJ = pyo.Objective(rule=obj_rule)
 
-solver = SolverFactory('ipopt')
+solver = pyo.SolverFactory('ipopt')
 
 results = solver.solve(instance, tee=True)
 
@@ -50,8 +50,8 @@ x5 = []
 x20 = []
 
 for i in sorted(instance.t):
-    x5.append(value(instance.x[5, i]))
-    x20.append(value(instance.x[20, i]))
+    x5.append(pyo.value(instance.x[5, i]))
+    x20.append(pyo.value(instance.x[20, i]))
     t.append(i)
 
 import matplotlib.pyplot as plt

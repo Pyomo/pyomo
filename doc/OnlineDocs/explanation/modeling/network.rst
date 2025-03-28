@@ -45,14 +45,14 @@ concrete Pyomo model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
-    >>> m = ConcreteModel()
-    >>> m.x = Var()
-    >>> m.y = Var(['a', 'b']) # can be indexed
-    >>> m.z = Var()
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port
+    >>> m = pyo.ConcreteModel()
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var(['a', 'b']) # can be indexed
+    >>> m.z = pyo.Var()
     >>> m.e = 5 * m.z # you can add Pyomo expressions too
-    >>> m.w = Var()
+    >>> m.w = pyo.Var()
 
     >>> m.p = Port()
     >>> m.p.add(m.x) # implicitly name the port member "x"
@@ -79,15 +79,15 @@ concrete Pyomo model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
-    >>> m = ConcreteModel()
-    >>> m.x = Var()
-    >>> m.y = Var(['a', 'b'])
-    >>> m.u = Var()
-    >>> m.v = Var(['a', 'b'])
-    >>> m.w = Var()
-    >>> m.z = Var(['a', 'b']) # indexes need to match
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port, Arc
+    >>> m = pyo.ConcreteModel()
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var(['a', 'b'])
+    >>> m.u = pyo.Var()
+    >>> m.v = pyo.Var(['a', 'b'])
+    >>> m.w = pyo.Var()
+    >>> m.z = pyo.Var(['a', 'b']) # indexes need to match
 
     >>> m.p = Port(initialize=[m.x, m.y])
     >>> m.q = Port(initialize={"x": m.u, "y": m.v})
@@ -139,19 +139,19 @@ the arcs on a model:
 
 .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
-    >>> m = ConcreteModel()
-    >>> m.x = Var()
-    >>> m.y = Var(['a', 'b'])
-    >>> m.u = Var()
-    >>> m.v = Var(['a', 'b'])
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port, Arc
+    >>> m = pyo.ConcreteModel()
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var(['a', 'b'])
+    >>> m.u = pyo.Var()
+    >>> m.v = pyo.Var(['a', 'b'])
 
     >>> m.p = Port(initialize=[m.x, (m.y, Port.Extensive)]) # rules must match
     >>> m.q = Port(initialize={"x": m.u, "y": (m.v, Port.Extensive)})
     >>> m.a = Arc(source=m.p, destination=m.q)
 
-    >>> TransformationFactory("network.expand_arcs").apply_to(m)
+    >>> pyo.TransformationFactory("network.expand_arcs").apply_to(m)
 
 Sequential Decomposition
 ------------------------
@@ -301,19 +301,19 @@ class:
 .. doctest::
     :skipif: not __import__("pyomo.network").network.decomposition.imports_available
 
-    >>> from pyomo.environ import *
-    >>> from pyomo.network import *
-    >>> m = ConcreteModel()
-    >>> m.unit1 = Block()
-    >>> m.unit1.x = Var()
-    >>> m.unit1.y = Var(['a', 'b'])
-    >>> m.unit2 = Block()
-    >>> m.unit2.x = Var()
-    >>> m.unit2.y = Var(['a', 'b'])
+    >>> import pyomo.environ as pyo
+    >>> from pyomo.network import Port, Arc, SequentialDecomposition
+    >>> m = pyo.ConcreteModel()
+    >>> m.unit1 = pyo.Block()
+    >>> m.unit1.x = pyo.Var()
+    >>> m.unit1.y = pyo.Var(['a', 'b'])
+    >>> m.unit2 = pyo.Block()
+    >>> m.unit2.x = pyo.Var()
+    >>> m.unit2.y = pyo.Var(['a', 'b'])
     >>> m.unit1.port = Port(initialize=[m.unit1.x, (m.unit1.y, Port.Extensive)])
     >>> m.unit2.port = Port(initialize=[m.unit2.x, (m.unit2.y, Port.Extensive)])
     >>> m.a = Arc(source=m.unit1.port, destination=m.unit2.port)
-    >>> TransformationFactory("network.expand_arcs").apply_to(m)
+    >>> pyo.TransformationFactory("network.expand_arcs").apply_to(m)
 
     >>> m.unit1.x.fix(10)
     >>> m.unit1.y['a'].fix(15)

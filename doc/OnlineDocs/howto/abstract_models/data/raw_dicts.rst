@@ -14,12 +14,12 @@ components, the required data dictionary maps the implicit index
 
  .. doctest::
 
-    >>> from pyomo.environ import *
-    >>> m = AbstractModel()
-    >>> m.I = Set()
-    >>> m.p = Param()
-    >>> m.q = Param(m.I)
-    >>> m.r = Param(m.I, m.I, default=0)
+    >>> import pyomo.environ as pyo
+    >>> m = pyo.AbstractModel()
+    >>> m.I = pyo.Set()
+    >>> m.p = pyo.Param()
+    >>> m.q = pyo.Param(m.I)
+    >>> m.r = pyo.Param(m.I, m.I, default=0)
     >>> data = {None: {
     ...     'I': {None: [1,2,3]},
     ...     'p': {None: 100},

@@ -9,25 +9,25 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
-model.I = RangeSet(1, 4)
-model.x = Var(model.I)
+model = pyo.AbstractModel()
+model.I = pyo.RangeSet(1, 4)
+model.x = pyo.Var(model.I)
 
 
 def c_rule(m, i):
     return m.x[i] >= i
 
 
-model.c = Constraint(model.I, rule=c_rule)
+model.c = pyo.Constraint(model.I, rule=c_rule)
 
 
 def foo_rule(m):
     return ((m.x[i], 3.0 * i) for i in m.I)
 
 
-model.foo = Suffix(rule=foo_rule)
+model.foo = pyo.Suffix(rule=foo_rule)
 
 # instantiate the model
 inst = model.create_instance()

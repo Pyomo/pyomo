@@ -56,7 +56,7 @@ instance.y.value = 2
 instance.y.fixed = True
 # @Equivalent_form_of_instance.x.fix(2)
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 model.obj1 = pyo.Objective(expr=0)
 model.obj2 = pyo.Objective(expr=0)
 

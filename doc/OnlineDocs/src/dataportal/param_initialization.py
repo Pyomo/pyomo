@@ -9,18 +9,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 import numpy
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
 # @decl1
-model.a = Param(initialize=1.1)
+model.a = pyo.Param(initialize=1.1)
 # @decl1
 
 # Initialize with a dictionary
 # @decl2
-model.b = Param([1, 2, 3], initialize={1: 1, 2: 2, 3: 3})
+model.b = pyo.Param([1, 2, 3], initialize={1: 1, 2: 2, 3: 3})
 # @decl2
 
 
@@ -30,7 +30,7 @@ def c(model):
     return {1: 1, 2: 2, 3: 3}
 
 
-model.c = Param([1, 2, 3], initialize=c)
+model.c = pyo.Param([1, 2, 3], initialize=c)
 # @decl3
 
 model.pprint(verbose=True)

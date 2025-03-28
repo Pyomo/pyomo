@@ -11,19 +11,17 @@
 
 """Two reactor model from literature. See README.md."""
 
-from pyomo.core import ConcreteModel, Constraint, Objective, Param, Var, maximize
-
-# from pyomo.environ import *  # NOQA
+import pyomo.environ as pyo
 from pyomo.gdp import Disjunction
 
 
 def build_model(use_mccormick=False):
     """Build the GDP model."""
-    m = ConcreteModel()
-    m.F = Var(bounds=(0, 8), doc="Flow into reactor")
-    m.X = Var(bounds=(0, 1), doc="Reactor conversion")
-    m.d = Param(initialize=2, doc="Max product demand")
-    m.c = Param(
+    m = pyo.ConcreteModel()
+    m.F = pyo.Var(bounds=(0, 8), doc="Flow into reactor")
+    m.X = pyo.Var(bounds=(0, 1), doc="Reactor conversion")
+    m.d = pyo.Param(initialize=2, doc="Max product demand")
+    m.c = pyo.Param(
         [1, 2, 'I', 'II'],
         doc="Costs",
         initialize={
@@ -33,23 +31,23 @@ def build_model(use_mccormick=False):
             'II': 1.5,  # Cost of reactor II
         },
     )
-    m.alpha = Param(
+    m.alpha = pyo.Param(
         ['I', 'II'], doc="Reactor coefficient", initialize={'I': -8, 'II': -10}
     )
-    m.beta = Param(
+    m.beta = pyo.Param(
         ['I', 'II'], doc="Reactor coefficient", initialize={'I': 9, 'II': 15}
     )
-    m.X_LB = Param(
+    m.X_LB = pyo.Param(
         ['I', 'II'],
         doc="Reactor conversion lower bound",
         initialize={'I': 0.2, 'II': 0.7},
     )
-    m.X_UB = Param(
+    m.X_UB = pyo.Param(
         ['I', 'II'],
         doc="Reactor conversion upper bound",
         initialize={'I': 0.95, 'II': 0.99},
     )
-    m.C_rxn = Var(bounds=(1.5, 2.5), doc="Cost of reactor")
+    m.C_rxn = pyo.Var(bounds=(1.5, 2.5), doc="Cost of reactor")
     m.reactor_choice = Disjunction(
         expr=[
             # Disjunct 1: Choose reactor I
@@ -70,21 +68,23 @@ def build_model(use_mccormick=False):
         xor=True,
     )
     if use_mccormick:
-        m.P = Var(bounds=(0, 8), doc="McCormick approximation of F*X")
-        m.mccormick_1 = Constraint(
+        m.P = pyo.Var(bounds=(0, 8), doc="McCormick approximation of F*X")
+        m.mccormick_1 = pyo.Constraint(
             expr=m.P <= m.F.lb * m.X + m.F * m.X.ub - m.F.lb * m.X.ub,
             doc="McCormick overestimator",
         )
-        m.mccormick_2 = Constraint(
+        m.mccormick_2 = pyo.Constraint(
             expr=m.P <= m.F.ub * m.X + m.F * m.X.lb - m.F.ub * m.X.lb,
             doc="McCormick underestimator",
         )
-        m.max_demand = Constraint(expr=m.P <= m.d, doc="product demand")
-        m.profit = Objective(expr=m.c[1] * m.P - m.c[2] * m.F - m.C_rxn, sense=maximize)
+        m.max_demand = pyo.Constraint(expr=m.P <= m.d, doc="product demand")
+        m.profit = pyo.Objective(
+            expr=m.c[1] * m.P - m.c[2] * m.F - m.C_rxn, sense=pyo.maximize
+        )
     else:
-        m.max_demand = Constraint(expr=m.F * m.X <= m.d, doc="product demand")
-        m.profit = Objective(
-            expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn, sense=maximize
+        m.max_demand = pyo.Constraint(expr=m.F * m.X <= m.d, doc="product demand")
+        m.profit = pyo.Objective(
+            expr=m.c[1] * m.F * m.X - m.c[2] * m.F - m.C_rxn, sense=pyo.maximize
         )
 
     return m

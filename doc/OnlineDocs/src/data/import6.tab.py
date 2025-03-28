@@ -9,12 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.p = Param()
+model.p = pyo.Param()
 
 instance = model.create_instance('import6.tab.dat')
 
-print('p ' + str(value(instance.p)))
+print('p ' + str(pyo.value(instance.p)))

@@ -14,27 +14,27 @@
 #
 # Specifying BigM suffix values for the gdp.bigm transformation
 
-from pyomo.core import *
-from pyomo.gdp import *
+import pyomo.environ as pyo
+from pyomo.gdp import Disjunct, Disjunction
 
 
 def build_model():
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
     # x >= 0 _|_ y>=0
-    model.x = Var(bounds=(0, None))
-    model.y = Var(bounds=(0, None))
+    model.x = pyo.Var(bounds=(0, None))
+    model.y = pyo.Var(bounds=(0, None))
 
     # Two conditions
     def _d(disjunct, flag):
         model = disjunct.model()
         if flag:
             # x == 0
-            disjunct.c = Constraint(expr=model.x == 0)
+            disjunct.c = pyo.Constraint(expr=model.x == 0)
         else:
             # y == 0
-            disjunct.c = Constraint(expr=model.y == 0)
-        disjunct.BigM = Suffix()
+            disjunct.c = pyo.Constraint(expr=model.y == 0)
+        disjunct.BigM = pyo.Suffix()
         disjunct.BigM[disjunct.c] = 1
 
     model.d = Disjunct([0, 1], rule=_d)
@@ -45,8 +45,8 @@ def build_model():
 
     model.c = Disjunction(rule=_c)
 
-    model.C = Constraint(expr=model.x + model.y <= 1)
+    model.C = pyo.Constraint(expr=model.x + model.y <= 1)
 
-    model.o = Objective(expr=2 * model.x + 3 * model.y, sense=maximize)
+    model.o = pyo.Objective(expr=2 * model.x + 3 * model.y, sense=pyo.maximize)
 
     return model

@@ -10,12 +10,13 @@
 #  ___________________________________________________________________________
 
 # Imports from Pyomo
-from pyomo.core import *
-from pyomo.common.plugin_base import *
-from pyomo.opt import *
+import copy
+import pyomo.environ as pyo
+from pyomo.common.plugin_base import alias, implements
+from pyomo.opt import SolverStatus, SolutionStatus, ProblemSense
 
 
-@plugin_factory(SolverFactory)
+@plugin_factory(pyo.SolverFactory)
 class MySolver(object):
     alias('greedy')
 
@@ -27,9 +28,9 @@ class MySolver(object):
     def solve(self, instance, **kwds):
         print("Starting greedy heuristic")
         val, instance = self._greedy(instance)
-        n = value(instance.N)
+        n = pyo.value(instance.N)
         # Setup results
-        results = SolverResults()
+        results = pyo.SolverResults()
         results.problem.name = instance.name
         results.problem.sense = ProblemSense.minimize
         results.problem.num_constraints = 1
@@ -39,31 +40,31 @@ class MySolver(object):
         soln = results.solution.add()
         soln.value = val
         soln.status = SolutionStatus.feasible
-        for j in sequence(n):
+        for j in pyo.sequence(n):
             if instance.y[j].value is 1:
                 soln.variable[instance.y[j].name] = {"Value": 1, "Id": j}
         return results
 
     # Perform a greedy search
     def _greedy(self, instance):
-        p = value(instance.P)
-        n = value(instance.N)
-        m = value(instance.M)
+        p = pyo.value(instance.P)
+        n = pyo.value(instance.N)
+        m = pyo.value(instance.M)
         fixed = set()
         # Initialize
-        for j in sequence(n):
+        for j in pyo.sequence(n):
             instance.y[j].value = 0
         # Greedily fix the next best facility
-        for i in sequence(p):
+        for i in pyo.sequence(p):
             best = None
             ndx = j
-            for j in sequence(n):
+            for j in pyo.sequence(n):
                 if j in fixed:
                     continue
                 instance.y[j].value = 1
                 # Compute value
                 val = 0.0
-                for kk in sequence(m):
+                for kk in pyo.sequence(m):
                     tmp = copy.copy(fixed)
                     tmp.add(j)
                     tbest = None

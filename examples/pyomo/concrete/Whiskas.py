@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 # Creates a list of the Ingredients
 Ingredients = ['CHICKEN', 'BEEF', 'MUTTON', 'RICE', 'WHEAT', 'GEL']
@@ -65,33 +65,33 @@ saltPercent = {
     'GEL': 0.000,
 }
 
-model = ConcreteModel(name="The Whiskas Problem")
+model = pyo.ConcreteModel(name="The Whiskas Problem")
 
-model.ingredient_vars = Var(
+model.ingredient_vars = pyo.Var(
     Ingredients, bounds=(0, None), doc="The amount of each ingredient that is used"
 )
 
-model.obj = Objective(
+model.obj = pyo.Objective(
     expr=sum(costs[i] * model.ingredient_vars[i] for i in Ingredients),
     doc="Total Cost of Ingredients per can",
 )
 
-model.c0 = Constraint(
+model.c0 = pyo.Constraint(
     expr=sum(model.ingredient_vars[i] for i in Ingredients) == 100, doc="PercentagesSum"
 )
-model.c1 = Constraint(
+model.c1 = pyo.Constraint(
     expr=sum(proteinPercent[i] * model.ingredient_vars[i] for i in Ingredients) >= 8.0,
     doc="ProteinRequirement",
 )
-model.c2 = Constraint(
+model.c2 = pyo.Constraint(
     expr=sum(fatPercent[i] * model.ingredient_vars[i] for i in Ingredients) >= 6.0,
     doc="FatRequirement",
 )
-model.c3 = Constraint(
+model.c3 = pyo.Constraint(
     expr=sum(fibrePercent[i] * model.ingredient_vars[i] for i in Ingredients) <= 2.0,
     doc="FibreRequirement",
 )
-model.c4 = Constraint(
+model.c4 = pyo.Constraint(
     expr=sum(saltPercent[i] * model.ingredient_vars[i] for i in Ingredients) <= 0.4,
     doc="SaltRequirement",
 )

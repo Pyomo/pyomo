@@ -17,8 +17,8 @@
 # ============================================
 
 # import packages
-from pyomo.environ import *
-from pyomo.gdp import *
+import pyomo.environ as pyo
+from pyomo.gdp import Disjunct, Disjunction
 import math
 
 
@@ -1596,10 +1596,8 @@ def build_model():
         26,
     ]
 
-    # from new_data_set import *
-
     # declare model name
-    model = ConcreteModel()
+    model = pyo.ConcreteModel()
 
     # declare constants
     bpy = 26  # biweeks per year
@@ -1607,9 +1605,9 @@ def build_model():
     bigM = 50.0  # big M for disjunction constraints
 
     # declare sets
-    model.S_meas = RangeSet(1, bpy * years)
-    model.S_meas_small = RangeSet(1, bpy * years - 1)
-    model.S_beta = RangeSet(1, bpy)
+    model.S_meas = pyo.RangeSet(1, bpy * years)
+    model.S_meas_small = pyo.RangeSet(1, bpy * years - 1)
+    model.S_beta = pyo.RangeSet(1, bpy)
 
     # define variable bounds
     def _gt_zero(m, i):
@@ -1621,22 +1619,22 @@ def build_model():
     # define variables
 
     # log of estimated cases
-    # model.logI = Var(model.S_meas, bounds=_gt_zero)
-    model.logI = Var(model.S_meas, bounds=(0.001, 1e7))
+    # model.logI = pyo.Var(model.S_meas, bounds=_gt_zero)
+    model.logI = pyo.Var(model.S_meas, bounds=(0.001, 1e7))
     # log of transmission parameter beta
-    # model.logbeta = Var(model.S_beta, bounds=_gt_zero)
-    model.logbeta = Var(model.S_beta, bounds=(0.0001, 5))
+    # model.logbeta = pyo.Var(model.S_beta, bounds=_gt_zero)
+    model.logbeta = pyo.Var(model.S_beta, bounds=(0.0001, 5))
     # binary variable y over all betas
-    # model.y = Var(model.S_beta, within=Binary)
+    # model.y = pyo.Var(model.S_beta, within=Binary)
     # low value of beta
-    # model.logbeta_low = Var(bounds=_beta_bounds)
-    model.logbeta_low = Var(bounds=(0.0001, 5))
+    # model.logbeta_low = pyo.Var(bounds=_beta_bounds)
+    model.logbeta_low = pyo.Var(bounds=(0.0001, 5))
     # high value of beta
-    # model.logbeta_high = Var(bounds=_beta_bounds)
-    model.logbeta_high = Var(bounds=(0.0001, 5))
+    # model.logbeta_high = pyo.Var(bounds=_beta_bounds)
+    model.logbeta_high = pyo.Var(bounds=(0.0001, 5))
     # dummy variables
-    model.p = Var(model.S_meas, bounds=_gt_zero)
-    model.n = Var(model.S_meas, bounds=_gt_zero)
+    model.p = pyo.Var(model.S_meas, bounds=_gt_zero)
+    model.n = pyo.Var(model.S_meas, bounds=_gt_zero)
 
     # define indexed constants
 
@@ -1657,7 +1655,7 @@ def build_model():
         expr = sum(m.p[i] + m.n[i] for i in m.S_meas)
         return expr
 
-    model.obj = Objective(rule=_obj_rule, sense=minimize)
+    model.obj = pyo.Objective(rule=_obj_rule, sense=pyo.minimize)
 
     # define constraints
     def _logSIR(m, i):
@@ -1669,26 +1667,30 @@ def build_model():
         )
         return (0.0, expr)
 
-    model.logSIR = Constraint(model.S_meas_small, rule=_logSIR)
+    model.logSIR = pyo.Constraint(model.S_meas_small, rule=_logSIR)
 
     # objective function constraint
     def _p_n_const(m, i):
         expr = logIstar[i - 1] - m.logI[i] - m.p[i] + m.n[i]
         return (0.0, expr)
 
-    model.p_n_const = Constraint(model.S_meas, rule=_p_n_const)
+    model.p_n_const = pyo.Constraint(model.S_meas, rule=_p_n_const)
 
     # disjuncts
 
-    model.BigM = Suffix()
-    model.y = RangeSet(0, 1)
+    model.BigM = pyo.Suffix()
+    model.y = pyo.RangeSet(0, 1)
 
     def _high_low(disjunct, i, y):
         model = disjunct.model()
         if y:
-            disjunct.c = Constraint(expr=model.logbeta_high - model.logbeta[i] == 0.0)
+            disjunct.c = pyo.Constraint(
+                expr=model.logbeta_high - model.logbeta[i] == 0.0
+            )
         else:
-            disjunct.c = Constraint(expr=model.logbeta[i] - model.logbeta_low == 0.0)
+            disjunct.c = pyo.Constraint(
+                expr=model.logbeta[i] - model.logbeta_low == 0.0
+            )
         model.BigM[disjunct.c] = bigM
 
     model.high_low = Disjunct(model.S_beta, model.y, rule=_high_low)
@@ -1707,29 +1709,29 @@ def build_model():
 def highbeta_L(m,i):
     expr = m.logbeta[i] - m.logbeta_high + bigM*(1-m.y[i])
     return (0.0, expr, None)
-model.highbeta_L = Constraint(model.S_beta, rule=highbeta_L)
+model.highbeta_L = pyo.Constraint(model.S_beta, rule=highbeta_L)
 
 def highbeta_U(m,i):
     expr = m.logbeta[i] - m.logbeta_high
     return (None, expr, 0.0)
-model.highbeta_U = Constraint(model.S_beta, rule=highbeta_U)
+model.highbeta_U = pyo.Constraint(model.S_beta, rule=highbeta_U)
 
 # low beta disjuncts
 def lowbeta_U(m,i):
     expr = m.logbeta[i] - m.logbeta_low - bigM*(m.y[i])
     return (None, expr, 0.0)
-model.lowbeta_U = Constraint(model.S_beta, rule=lowbeta_U)
+model.lowbeta_U = pyo.Constraint(model.S_beta, rule=lowbeta_U)
 
 def lowbeta_L(m,i):
     expr = m.logbeta[i] - m.logbeta_low
     return (0.0, expr, None)
-model.lowbeta_L = Constraint(model.S_beta, rule=lowbeta_L)
+model.lowbeta_L = pyo.Constraint(model.S_beta, rule=lowbeta_L)
 """
 
 if __name__ == "__main__":
     m = build_model()
-    TransformationFactory('gdp.bigm').apply_to(m)
-    SolverFactory('gams').solve(
+    pyo.TransformationFactory('gdp.bigm').apply_to(m)
+    pyo.SolverFactory('gams').solve(
         m, solver='baron', tee=True, add_options=['option optcr=1e-6;']
     )
     m.obj.display()

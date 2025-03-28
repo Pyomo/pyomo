@@ -23,16 +23,14 @@
 # are the numpy and matplotlib python modules (needed for
 # viewing results).
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the ipopt_sens solver plugin using the ASL interface
 solver = 'ipopt_sens'
 solver_io = 'nl'
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 ###
 
 if opt is None:
@@ -69,26 +67,26 @@ theta = 20.0
 yc = tc / (jj * cf)
 yf = tf / (jj * cf)
 
-model = ConcreteModel()
-model.c_init_var = Var()
-model.t_init_var = Var()
-model.cdot = Var(FE, CP)
-model.tdot = Var(FE, CP)
+model = pyo.ConcreteModel()
+model.c_init_var = pyo.Var()
+model.t_init_var = pyo.Var()
+model.cdot = pyo.Var(FE, CP)
+model.tdot = pyo.Var(FE, CP)
 
 
 def c_init_rule(m, i, j):
     return float(i) / nfe * (c_des - c_init) + c_init
 
 
-model.c = Var(FE, CP, within=NonNegativeReals, initialize=c_init_rule)
+model.c = pyo.Var(FE, CP, within=pyo.NonNegativeReals, initialize=c_init_rule)
 
 
 def t_init_rule(m, i, j):
     return float(i) / nfe * (t_des - t_init) + t_init
 
 
-model.t = Var(FE, CP, within=NonNegativeReals, initialize=t_init_rule)
-model.u = Var(FE, within=NonNegativeReals, initialize=1.0)
+model.t = pyo.Var(FE, CP, within=pyo.NonNegativeReals, initialize=t_init_rule)
+model.u = pyo.Var(FE, within=pyo.NonNegativeReals, initialize=1.0)
 
 a_init = {}
 a_init[0, 0] = 0.19681547722366
@@ -101,7 +99,7 @@ a_init[2, 0] = 0.02377097434822
 a_init[2, 1] = -0.04154875212600
 a_init[2, 2] = 0.11111111111111
 
-model.a = Param(FE, CP, initialize=a_init)
+model.a = pyo.Param(FE, CP, initialize=a_init)
 
 h = [1.0 / nfe] * nfe
 
@@ -109,20 +107,20 @@ h = [1.0 / nfe] * nfe
 def cdot_ode_rule(m, i, j):
     return (
         m.cdot[i, j]
-        == (1.0 - m.c[i, j]) / theta - k10 * exp(-n / m.t[i, j]) * m.c[i, j]
+        == (1.0 - m.c[i, j]) / theta - k10 * pyo.exp(-n / m.t[i, j]) * m.c[i, j]
     )
 
 
-model.cdot_ode = Constraint(FE, CP, rule=cdot_ode_rule)
+model.cdot_ode = pyo.Constraint(FE, CP, rule=cdot_ode_rule)
 
 
 def tdot_ode_rule(m, i, j):
-    return m.tdot[i, j] == (yf - m.t[i, j]) / theta + k10 * exp(-n / m.t[i, j]) * m.c[
-        i, j
-    ] - alpha * m.u[i] * (m.t[i, j] - yc)
+    return m.tdot[i, j] == (yf - m.t[i, j]) / theta + k10 * pyo.exp(
+        -n / m.t[i, j]
+    ) * m.c[i, j] - alpha * m.u[i] * (m.t[i, j] - yc)
 
 
-model.tdot_ode = Constraint(FE, CP, rule=tdot_ode_rule)
+model.tdot_ode = pyo.Constraint(FE, CP, rule=tdot_ode_rule)
 
 
 def fecolc_rule(m, i, j):
@@ -136,9 +134,9 @@ def fecolc_rule(m, i, j):
         )
 
 
-model.fecolc = Constraint(FE, CP, rule=fecolc_rule)
-model.c_init_def = Constraint(expr=model.c_init_var == c_init)
-model.t_init_def = Constraint(expr=model.t_init_var == t_init)
+model.fecolc = pyo.Constraint(FE, CP, rule=fecolc_rule)
+model.c_init_def = pyo.Constraint(expr=model.c_init_var == c_init)
+model.t_init_def = pyo.Constraint(expr=model.t_init_var == t_init)
 
 
 def fecolt_rule(m, i, j):
@@ -152,7 +150,7 @@ def fecolt_rule(m, i, j):
         )
 
 
-model.fecolt = Constraint(FE, CP, rule=fecolt_rule)
+model.fecolt = pyo.Constraint(FE, CP, rule=fecolt_rule)
 
 
 def obj_rule(m):
@@ -189,15 +187,15 @@ def obj_rule(m):
     )
 
 
-model.cost = Objective(rule=obj_rule)
+model.cost = pyo.Objective(rule=obj_rule)
 ###
 
 ### declare suffixes
-model.sens_state_0 = Suffix(direction=Suffix.EXPORT)
-model.sens_state_1 = Suffix(direction=Suffix.EXPORT)
-model.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
-model.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
-model.sens_init_constr = Suffix(direction=Suffix.EXPORT)
+model.sens_state_0 = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.sens_state_1 = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.sens_state_value_1 = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.sens_sol_state_1 = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+model.sens_init_constr = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 ###
 
 ### set sIPOPT data
@@ -252,10 +250,10 @@ cperturbed = np.zeros((nfe * ncp, 1))
 tnominal = np.zeros((nfe * ncp, 1))
 tperturbed = np.zeros((nfe * ncp, 1))
 for k, (i, j) in enumerate(collocation_idx(nfe, ncp)):
-    cnominal[k] = value(model.c[i, j])
-    tnominal[k] = value(model.t[i, j])
-    cperturbed[k] = value(model.sens_sol_state_1[model.c[i, j]])
-    tperturbed[k] = value(model.sens_sol_state_1[model.t[i, j]])
+    cnominal[k] = pyo.value(model.c[i, j])
+    tnominal[k] = pyo.value(model.t[i, j])
+    cperturbed[k] = pyo.value(model.sens_sol_state_1[model.c[i, j]])
+    tperturbed[k] = pyo.value(model.sens_sol_state_1[model.t[i, j]])
 
 plt.subplot(2, 1, 1)
 plt.plot(times, cnominal, label='c_nominal')

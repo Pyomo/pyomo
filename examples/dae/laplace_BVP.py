@@ -9,13 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 
-m = ConcreteModel()
+m = pyo.ConcreteModel()
 m.x = ContinuousSet(bounds=(0, 1))
 m.y = ContinuousSet(bounds=(0, 1))
-m.u = Var(m.x, m.y)
+m.u = pyo.Var(m.x, m.y)
 
 m.dudx = DerivativeVar(m.u, wrt=(m.x, m.x))
 m.dudy = DerivativeVar(m.u, wrt=(m.y, m.y))
@@ -23,63 +23,63 @@ m.dudy = DerivativeVar(m.u, wrt=(m.y, m.y))
 
 def _lowerY(m, i):
     if i == 0 or i == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.u[i, 0] == 1
 
 
-m.lowerY = Constraint(m.x, rule=_lowerY)
+m.lowerY = pyo.Constraint(m.x, rule=_lowerY)
 
 
 def _upperY(m, i):
     if i == 0 or i == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.u[i, 1] == 2
 
 
-m.upperY = Constraint(m.x, rule=_upperY)
+m.upperY = pyo.Constraint(m.x, rule=_upperY)
 
 
 def _lowerX(m, j):
     if j == 0 or j == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.u[0, j] == 1
 
 
-m.lowerX = Constraint(m.y, rule=_lowerX)
+m.lowerX = pyo.Constraint(m.y, rule=_lowerX)
 
 
 def _upperX(m, j):
     if j == 0 or j == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.u[1, j] == 2
 
 
-m.upperX = Constraint(m.y, rule=_upperX)
+m.upperX = pyo.Constraint(m.y, rule=_upperX)
 
 
 def _laplace(m, i, j):
     if i == 0 or i == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     if j == 0 or j == 1:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
 
     return m.dudx[i, j] + m.dudy[i, j] == 0
 
 
-m.laplace = Constraint(m.x, m.y, rule=_laplace)
+m.laplace = pyo.Constraint(m.x, m.y, rule=_laplace)
 
 
 def _dummy(m):
     return 1.0
 
 
-m.obj = Objective(rule=_dummy)
+m.obj = pyo.Objective(rule=_dummy)
 
-discretizer = TransformationFactory('dae.finite_difference')
+discretizer = pyo.TransformationFactory('dae.finite_difference')
 discretizer.apply_to(m, nfe=20, wrt=m.y, scheme='FORWARD')
 discretizer.apply_to(m, nfe=20, wrt=m.x, scheme='CENTRAL')
 
-solver = SolverFactory('ipopt')
+solver = pyo.SolverFactory('ipopt')
 
 results = solver.solve(m, tee=True)
 
@@ -94,7 +94,7 @@ for i in sorted(m.x):
     tempx = []
     for j in sorted(m.y):
         tempx.append(i)
-        temp.append(value(m.u[i, j]))
+        temp.append(pyo.value(m.u[i, j]))
     x.append(tempx)
     y.append(sorted(m.y))
     u.append(temp)
