@@ -484,7 +484,7 @@ class ConstraintData(ActiveComponentData):
             "relational expression. Examples:"
             "\n   sum(model.costs) == model.income"
             "\n   (0, model.price[item], 50)"
-            % (self.name, type(arg).__name__, str(expr))
+            % (self.name, type(expr).__name__, str(expr))
         )
         raise ValueError(msg)
 
