@@ -62,7 +62,7 @@ TEMPLATIZE_CONSTRAINTS = False
 
 _inf = float('inf')
 _nonfinite_values = {_inf, -_inf}
-_known_relational_expressions = {
+_known_relational_expression_types = {
     EqualityExpression,
     InequalityExpression,
     RangedExpression,
@@ -382,7 +382,7 @@ class ConstraintData(ActiveComponentData):
         """Set the expression on this constraint."""
         # Clear any previously-cached normalized constraint
         self._expr = None
-        if expr.__class__ in _known_relational_expressions:
+        if expr.__class__ in _known_relational_expression_types:
             if getattr(expr, 'strict', False) in _strict_relational_exprs:
                 raise ValueError(
                     "Constraint '%s' encountered a strict "
