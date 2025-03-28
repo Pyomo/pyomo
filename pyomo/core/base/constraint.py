@@ -448,9 +448,16 @@ class ConstraintData(ActiveComponentData):
                 del self.parent_component()[self.index()]
                 return
             elif expr is Constraint.Infeasible:
+                # Note that an inequality is sufficient to induce
+                # infeasibility and is simpler to relax (in the Big-M
+                # sense) than an equality.
                 self._expr = InequalityExpression((1, 0), False)
                 return
             elif expr is Constraint.Feasible:
+                # Note that we do not want to provide a trivial equality
+                # constraint as that can confuse solvers like Ipopt into
+                # believing that the model has fewer degrees of freedom
+                # than it actually has.
                 self._expr = InequalityExpression((0, 0), False)
                 return
             else:
