@@ -12,11 +12,12 @@ The main advantage of these techniques is their ability to solve subproblems
 in a reduced space, including nonlinear constraints only for ``True`` logical blocks.
 As a result, GDPopt is most effective for nonlinear GDP models.
 
-Three algorithms are available in GDPopt:
+Four algorithms are available in GDPopt:
 
 1. Logic-based outer approximation (LOA) [`Turkay & Grossmann, 1996`_]
 2. Global logic-based outer approximation (GLOA) [`Lee & Grossmann, 2001`_]
 3. Logic-based branch-and-bound (LBB) [`Lee & Grossmann, 2001`_]
+4. Logic-based discrete steepest descent algorithm (LD-SDA) [`Ovalle et al., 2025`_]
 
 Usage and implementation details for GDPopt can be found in the PSE 2018 paper
 (`Chen et al., 2018`_), or via its
@@ -28,6 +29,7 @@ Credit for prototyping and development can be found in the ``GDPopt`` class docu
 .. _Lee & Grossmann, 2001: https://doi.org/10.1016/S0098-1354(01)00732-3
 .. _Lee & Grossmann, 2000: https://doi.org/10.1016/S0098-1354(00)00581-0
 .. _Chen et al., 2018: https://doi.org/10.1016/B978-0-444-64241-7.50143-9
+.. _Ovalle et al., 2025: https://doi.org/10.1016/j.compchemeng.2024.108993
 
 GDPopt can be used to solve a Pyomo.GDP concrete model in two ways.
 The simplest is to instantiate the generic GDPopt solver and specify the desired algorithm as an argument to the ``solve`` method:
@@ -189,6 +191,67 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> print([value(m.y1.indicator_var), value(m.y2.indicator_var)])
   [True, False]
 
+Logic-based Discrete-Steepest Descent Algorithm (LD-SDA)
+--------------------------------------------------------
+
+The GDPopt-LDSDA solver exploits the ordered Boolean variables in the disjunctions to solve the GDP model.
+It requires an **exclusive OR (XOR) logical constraint** to ensure that exactly one disjunct is active in each disjunction. 
+The solver also requires a **starting point** for the discrete variables and allows users to choose between two **direction norms**, `'L2'` and `'Linf'`, to guide the search process.
+
+.. note::
+
+  The current implementation of the GDPopt-LDSDA requires an explicit LogicalConstraint to enforce the exclusive OR condition for each disjunction.
+
+To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
+
+.. doctest::
+  :skipif: not baron_available
+
+  Required imports
+  >>> from pyomo.environ import *
+  >>> from pyomo.gdp import Disjunct, Disjunction
+
+  Create a simple model
+  >>> m = ConcreteModel()
+
+  Define sets
+  >>> I = [1, 2, 3, 4, 5]
+  >>> J = [1, 2, 3, 4, 5]
+
+  Define variables
+  >>> m.a = Var(bounds=(-0.3, 0.2))
+  >>> m.b = Var(bounds=(-0.9, -0.5))
+
+  Define disjuncts for Y1
+  >>> m.Y1_disjuncts = Disjunct(I)
+  >>> for i in I:
+  ...     m.Y1_disjuncts[i].y1_constraint = Constraint(expr=m.a == -0.3 + 0.1 * (i - 1))
+
+  Define disjuncts for Y2
+  >>> m.Y2_disjuncts = Disjunct(J)
+  >>> for j in J:
+  ...     m.Y2_disjuncts[j].y2_constraint = Constraint(expr=m.b == -0.9 + 0.1 * (j - 1))
+
+  Define disjunctions
+  >>> m.y1_disjunction = Disjunction(expr=[m.Y1_disjuncts[i] for i in I])
+  >>> m.y2_disjunction = Disjunction(expr=[m.Y2_disjuncts[j] for j in J])
+
+  Logical constraints to enforce exactly one selection
+  >>> m.Y1_limit = LogicalConstraint(expr=exactly(1, [m.Y1_disjuncts[i].indicator_var for i in I]))
+  >>> m.Y2_limit = LogicalConstraint(expr=exactly(1, [m.Y2_disjuncts[j].indicator_var for j in J]))
+
+  Define objective function
+  >>> m.obj = Objective(
+  ...     expr=4 * m.a**2 - 2.1 * m.a**4 + (1 / 3) * m.a**6 + m.a * m.b - 4 * m.b**2 + 4 * m.b**4,
+  ...     sense=minimize
+  ... )
+
+  Invoke the GDPopt-LDSDA solver
+  >>> results = SolverFactory('gdpopt.ldsda').solve(m,
+  ...     starting_point=[1,1],
+  ...     logical_constraint_list=[m.Y1_limit, m.Y2_limit],
+  ...     direction_norm='Linf',
+  ... )
 GDPopt implementation and optional arguments
 --------------------------------------------
 
@@ -204,4 +267,5 @@ GDPopt implementation and optional arguments
    ~pyomo.contrib.gdpopt.gloa.GDP_GLOA_Solver
    ~pyomo.contrib.gdpopt.ric.GDP_RIC_Solver
    ~pyomo.contrib.gdpopt.branch_and_bound.GDP_LBB_Solver
+   ~pyomo.contrib.gdpopt.ldsda.GDP_LDSDA_Solver
 
