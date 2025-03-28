@@ -380,7 +380,7 @@ class ConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        # Clear any previously-cached normalized constraint
+        # Clear any previous constraint
         self._expr = None
         if expr.__class__ in _known_relational_expression_types:
             if getattr(expr, 'strict', False) in _strict_relational_exprs:
@@ -406,7 +406,7 @@ class ConstraintData(ActiveComponentData):
                     "Constraint expressions expressed as tuples must "
                     "contain native numeric types or Pyomo NumericValue "
                     "objects. Tuple %s contained invalid type, %s"
-                    % (self.name, expr, arg.__class__.__name__)
+                    % (self.name, expr, type(arg).__name__)
                 )
             if len(expr) == 2:
                 #
@@ -639,11 +639,11 @@ class Constraint(ActiveIndexedComponent):
 
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
-            return super(Constraint, cls).__new__(cls)
+            return super().__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return super(Constraint, cls).__new__(AbstractScalarConstraint)
+            return super().__new__(AbstractScalarConstraint)
         else:
-            return super(Constraint, cls).__new__(IndexedConstraint)
+            return super().__new__(IndexedConstraint)
 
     @overload
     def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
@@ -900,7 +900,7 @@ class ScalarConstraint(ConstraintData, Constraint):
         """Set the expression on this constraint."""
         if not self._data:
             self._data[None] = self
-        return super(ScalarConstraint, self).set_value(expr)
+        return super().set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -980,7 +980,7 @@ class ConstraintList(IndexedConstraint):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        super(ConstraintList, self).__init__(Set(dimen=1), **kwargs)
+        super().__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True
