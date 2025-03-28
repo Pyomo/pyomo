@@ -62,7 +62,7 @@ TEMPLATIZE_CONSTRAINTS = False
 
 _inf = float('inf')
 _nonfinite_values = {_inf, -_inf}
-_known_relational_expressions = {
+_known_relational_expression_types = {
     EqualityExpression,
     InequalityExpression,
     RangedExpression,
@@ -380,9 +380,9 @@ class ConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        # Clear any previously-cached normalized constraint
+        # Clear any previous constraint
         self._expr = None
-        if expr.__class__ in _known_relational_expressions:
+        if expr.__class__ in _known_relational_expression_types:
             if getattr(expr, 'strict', False) in _strict_relational_exprs:
                 raise ValueError(
                     "Constraint '%s' encountered a strict "
@@ -391,6 +391,7 @@ class ConstraintData(ActiveComponentData):
                     "using '<=', '>=', or '=='." % (self.name,)
                 )
             self._expr = expr
+            return
 
         elif expr.__class__ is tuple:  # or expr_type is list:
             for arg in expr:
@@ -405,7 +406,7 @@ class ConstraintData(ActiveComponentData):
                     "Constraint expressions expressed as tuples must "
                     "contain native numeric types or Pyomo NumericValue "
                     "objects. Tuple %s contained invalid type, %s"
-                    % (self.name, expr, arg.__class__.__name__)
+                    % (self.name, expr, type(arg).__name__)
                 )
             if len(expr) == 2:
                 #
@@ -418,6 +419,7 @@ class ConstraintData(ActiveComponentData):
                         "cannot contain None [received %s]" % (self.name, expr)
                     )
                 self._expr = EqualityExpression(expr)
+                return
             elif len(expr) == 3:
                 #
                 # Form (ranged) inequality expression
@@ -428,6 +430,7 @@ class ConstraintData(ActiveComponentData):
                     self._expr = InequalityExpression(expr[:2], False)
                 else:
                     self._expr = RangedExpression(expr, False)
+                return
             else:
                 raise ValueError(
                     "Constraint '%s' does not have a proper value. "
@@ -441,24 +444,25 @@ class ConstraintData(ActiveComponentData):
         # Ignore an 'empty' constraint
         #
         elif expr.__class__ is type:
-            del self.parent_component()[self.index()]
             if expr is Constraint.Skip:
+                del self.parent_component()[self.index()]
                 return
             elif expr is Constraint.Infeasible:
-                # TODO: create a trivial infeasible constraint.  This
-                # could be useful in the case of GDP where certain
-                # disjuncts are trivially infeasible, but we would still
-                # like to express the disjunction.
-                # del self.parent_component()[self.index()]
-                raise ValueError("Constraint '%s' is always infeasible" % (self.name,))
+                # Note that an inequality is sufficient to induce
+                # infeasibility and is simpler to relax (in the Big-M
+                # sense) than an equality.
+                self._expr = InequalityExpression((1, 0), False)
+                return
+            elif expr is Constraint.Feasible:
+                # Note that we do not want to provide a trivial equality
+                # constraint as that can confuse solvers like Ipopt into
+                # believing that the model has fewer degrees of freedom
+                # than it actually has.
+                self._expr = InequalityExpression((0, 0), False)
+                return
             else:
-                raise ValueError(
-                    "Constraint '%s' does not have a proper "
-                    "value. Found '%s'\nExpecting a tuple or "
-                    "relational expression. Examples:"
-                    "\n   sum(model.costs) == model.income"
-                    "\n   (0, model.price[item], 50)" % (self.name, str(expr))
-                )
+                del self.parent_component()[self.index()]
+                # self._expr is still None: this will raise a ValueError below
 
         elif expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
@@ -477,17 +481,19 @@ class ConstraintData(ActiveComponentData):
             try:
                 if expr.is_expression_type(ExpressionType.RELATIONAL):
                     self._expr = expr
+                    return
             except AttributeError:
                 pass
-            if self._expr is None:
-                msg = (
-                    "Constraint '%s' does not have a proper "
-                    "value. Found '%s'\nExpecting a tuple or "
-                    "relational expression. Examples:"
-                    "\n   sum(model.costs) == model.income"
-                    "\n   (0, model.price[item], 50)" % (self.name, str(expr))
-                )
-                raise ValueError(msg)
+
+        msg = (
+            "Constraint '%s' does not have a proper "
+            "value. Found %s '%s'\nExpecting a tuple or "
+            "relational expression. Examples:"
+            "\n   sum(model.costs) == model.income"
+            "\n   (0, model.price[item], 50)"
+            % (self.name, type(expr).__name__, str(expr))
+        )
+        raise ValueError(msg)
 
     def lslack(self):
         """
@@ -620,7 +626,9 @@ class Constraint(ActiveIndexedComponent):
     class Infeasible(object):
         pass
 
-    Feasible = ActiveIndexedComponent.Skip
+    class Feasible(object):
+        pass
+
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
@@ -638,11 +646,11 @@ class Constraint(ActiveIndexedComponent):
 
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
-            return super(Constraint, cls).__new__(cls)
+            return super().__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return super(Constraint, cls).__new__(AbstractScalarConstraint)
+            return super().__new__(AbstractScalarConstraint)
         else:
-            return super(Constraint, cls).__new__(IndexedConstraint)
+            return super().__new__(IndexedConstraint)
 
     @overload
     def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
@@ -899,7 +907,7 @@ class ScalarConstraint(ConstraintData, Constraint):
         """Set the expression on this constraint."""
         if not self._data:
             self._data[None] = self
-        return super(ScalarConstraint, self).set_value(expr)
+        return super().set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -979,7 +987,7 @@ class ConstraintList(IndexedConstraint):
         _rule = kwargs.pop('rule', None)
         self._starting_index = kwargs.pop('starting_index', 1)
 
-        super(ConstraintList, self).__init__(Set(dimen=1), **kwargs)
+        super().__init__(Set(dimen=1), **kwargs)
 
         self.rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True

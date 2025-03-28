@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import inspect
 import sys
 import logging
 from weakref import ref as weakref_ref
@@ -18,22 +17,24 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 
+from pyomo.core.expr import ExpressionType
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
     UnindexedComponent_set,
-    _get_indexed_component_data_name,
 )
-from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import Set
 
 logger = logging.getLogger('pyomo.core')
-
+_known_logical_expression_types = set()
 _rule_returned_none_error = """LogicalConstraint '%s': rule returned None.
 
 logical constraint rules must return a valid logical proposition.
@@ -102,31 +103,64 @@ class LogicalConstraintData(ActiveComponentData):
     @property
     def expr(self):
         """Return the expression associated with this logical constraint."""
-        return self.get_value()
+        return self._expr
 
     def set_value(self, expr):
         """Set the expression on this logical constraint."""
+        # Clear any previous expression
+        self._expr = None
+        if expr.__class__ in _known_logical_expression_types:
+            self._expr = expr
+            return
+        #
+        # Ignore an 'empty' constraint
+        #
+        if expr.__class__ is type:
+            if expr is LogicalConstraint.Skip:
+                del self.parent_component()[self.index()]
+                return
+            elif expr is LogicalConstraint.Infeasible:
+                self._expr = BooleanConstant(False)
+                return
+            elif expr is LogicalConstraint.Feasible:
+                self._expr = BooleanConstant(True)
+                return
+            else:
+                del self.parent_component()[self.index()]
+                # self._expr is still None: this will raise a ValueError below
 
-        if expr is None:
-            self._expr = BooleanConstant(True)
+        elif expr.__class__ in native_logical_types:
+            self._expr = as_boolean(expr)
             return
 
-        expr_type = type(expr)
-        if expr_type in native_types and expr_type not in native_logical_types:
-            msg = (
-                "LogicalStatement '%s' does not have a proper value. "
-                "Found '%s'.\n"
-                "Expecting a logical expression or Boolean value. Examples:"
-                "\n   (m.Y1 & m.Y2).implies(m.Y3)"
-                "\n   atleast(1, m.Y1, m.Y2)"
-            )
-            raise ValueError(msg)
+        elif expr is None:
+            raise ValueError(_rule_returned_none_error % (self.name,))
 
-        self._expr = as_boolean(expr)
+        elif expr.__class__ not in native_types:
+            try:
+                if expr.is_expression_type(ExpressionType.LOGICAL):
+                    self._expr = expr
+                    _known_logical_expression_types.add(expr.__class__)
+                    return
+            except AttributeError:
+                pass
+
+            self._expr = as_boolean(expr)
+            if self._expr is expr:
+                _known_logical_expression_types.add(expr.__class__)
+            return
+
+        raise ValueError(
+            "LogicalStatement '%s' does not have a proper value. "
+            "Found %s '%s'.\n"
+            "Expecting a logical expression or Boolean value. Examples:"
+            "\n   (m.Y1 & m.Y2).implies(m.Y3)"
+            "\n   atleast(1, m.Y1, m.Y2)" % (self.name, type(expr).__name__, str(expr))
+        )
 
     def get_value(self):
         """Get the expression on this logical constraint."""
-        return self._expr
+        return self.expr
 
 
 class _LogicalConstraintData(metaclass=RenamedClass):
@@ -186,118 +220,94 @@ class LogicalConstraint(ActiveIndexedComponent):
     class Infeasible(object):
         pass
 
-    Feasible = ActiveIndexedComponent.Skip
+    class Feasible(object):
+        pass
+
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
 
     def __new__(cls, *args, **kwds):
         if cls != LogicalConstraint:
-            return super(LogicalConstraint, cls).__new__(cls)
+            return super().__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return ScalarLogicalConstraint.__new__(ScalarLogicalConstraint)
+            return super().__new__(AbstractScalarLogicalConstraint)
         else:
-            return IndexedLogicalConstraint.__new__(IndexedLogicalConstraint)
+            return super().__new__(IndexedLogicalConstraint)
 
     def __init__(self, *args, **kwargs):
-        self.rule = kwargs.pop('rule', None)
-        self._init_expr = kwargs.pop('expr', None)
+        _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
+        self.rule = Initializer(_init)
+
         kwargs.setdefault('ctype', LogicalConstraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
-
-    #
-    # TODO: Ideally we would not override these methods and instead add
-    # the contents of _check_skip_add to the set_value() method.
-    # Unfortunately, until IndexedComponentData objects know their own
-    # index, determining the index is a *very* expensive operation.  If
-    # we refactor things so that the Data objects have their own index,
-    # then we can remove these overloads.
-    #
-
-    def _setitem_impl(self, index, obj, value):
-        if self._check_skip_add(index, value) is None:
-            del self[index]
-            return None
-        else:
-            obj.set_value(value)
-            return obj
-
-    def _setitem_when_not_present(self, index, value):
-        if self._check_skip_add(index, value) is None:
-            return None
-        else:
-            return super(LogicalConstraint, self)._setitem_when_not_present(
-                index=index, value=value
-            )
 
     def construct(self, data=None):
         """
         Construct the expression(s) for this logical constraint.
         """
-        if is_debug_set(logger):
-            logger.debug("Constructing logical constraint %s" % self.name)
         if self._constructed:
             return
-        timer = ConstructionTimer(self)
         self._constructed = True
+
+        timer = ConstructionTimer(self)
+        if is_debug_set(logger):
+            logger.debug("Constructing logical constraint %s" % self.name)
 
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        _init_expr = self._init_expr
-        _init_rule = self.rule
-        #
-        # We no longer need these
-        #
-        self._init_expr = None
-        # Utilities like DAE assume this stays around
-        # self.rule = None
+        rule = self.rule
+        try:
+            # We do not (currently) accept data for constructing LogicalConstraints
+            index = None
+            assert data is None
 
-        if (_init_rule is None) and (_init_expr is None):
-            # No construction role or expression specified.
-            return
+            if rule is None:
+                # If there is no rule, then we are immediately done.
+                return
 
-        _self_parent = self._parent()
-        if not self.is_indexed():
-            #
-            # Scalar component
-            #
-            if _init_rule is None:
-                tmp = _init_expr
-            else:
-                try:
-                    tmp = _init_rule(_self_parent)
-                except Exception:
-                    err = sys.exc_info()[1]
-                    logger.error(
-                        "Rule failed when generating expression for "
-                        "logical constraint %s:\n%s: %s"
-                        % (self.name, type(err).__name__, err)
-                    )
-                    raise
-            self._setitem_when_not_present(None, tmp)
-
-        else:
-            if _init_expr is not None:
+            if rule.constant() and self.is_indexed():
                 raise IndexError(
                     "LogicalConstraint '%s': Cannot initialize multiple indices "
-                    "of a logical constraint with a single expression" % (self.name,)
+                    "of a constraint with a single expression" % (self.name,)
                 )
 
-            for ndx in self._index_set:
-                try:
-                    tmp = apply_indexed_rule(self, _init_rule, _self_parent, ndx)
-                except Exception:
-                    err = sys.exc_info()[1]
-                    logger.error(
-                        "Rule failed when generating expression for "
-                        "logical constraint %s with index %s:\n%s: %s"
-                        % (self.name, str(ndx), type(err).__name__, err)
-                    )
-                    raise
-                self._setitem_when_not_present(ndx, tmp)
-        timer.report()
+            block = self.parent_block()
+            if rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in rule.indices():
+                    self[index] = rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                pass
+            else:
+                # Bypass the index validation and create the member directly
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, rule(block, index))
+        except Exception:
+            err = sys.exc_info()[1]
+            logger.error(
+                "Rule failed when generating expression for "
+                "LogicalConstraint %s with index %s:\n%s: %s"
+                % (self.name, str(index), type(err).__name__, err)
+            )
+            raise
+        finally:
+            timer.report()
+
+    def _getitem_when_not_present(self, idx):
+        if self.rule is None:
+            raise KeyError(idx)
+        con = self._setitem_when_not_present(idx, self.rule(self.parent_block(), idx))
+        if con is None:
+            raise KeyError(idx)
+        return con
 
     def _pprint(self):
         """
@@ -336,43 +346,6 @@ class LogicalConstraint(ActiveIndexedComponent):
             ("Body",),
             lambda k, v: [v.body()],
         )
-
-    #
-    # Checks flags like Constraint.Skip, etc. before actually creating a
-    # constraint object. Returns the ConstraintData object when it should be
-    #  added to the _data dict; otherwise, None is returned or an exception
-    # is raised.
-    #
-    def _check_skip_add(self, index, expr):
-        _expr_type = expr.__class__
-        if expr is None:
-            raise ValueError(
-                _rule_returned_none_error
-                % (_get_indexed_component_data_name(self, index),)
-            )
-
-        if expr is True:
-            raise ValueError(
-                "LogicalConstraint '%s' is always True."
-                % (_get_indexed_component_data_name(self, index),)
-            )
-        if expr is False:
-            raise ValueError(
-                "LogicalConstraint '%s' is always False."
-                % (_get_indexed_component_data_name(self, index),)
-            )
-
-        if _expr_type is tuple and len(expr) == 1:
-            if expr is LogicalConstraint.Skip:
-                # Note: LogicalConstraint.Feasible is Skip
-                return None
-            if expr is LogicalConstraint.Infeasible:
-                raise ValueError(
-                    "LogicalConstraint '%s' cannot be passed 'Infeasible' as a value."
-                    % (_get_indexed_component_data_name(self, index),)
-                )
-
-        return expr
 
 
 class ScalarLogicalConstraint(LogicalConstraintData, LogicalConstraint):
@@ -422,19 +395,9 @@ class ScalarLogicalConstraint(LogicalConstraintData, LogicalConstraint):
 
     def set_value(self, expr):
         """Set the expression on this logical constraint."""
-        if not self._constructed:
-            raise ValueError(
-                "Setting the value of logical constraint '%s' "
-                "before the LogicalConstraint has been constructed (there "
-                "is currently no object to set)." % self.name
-            )
-
-        if len(self._data) == 0:
+        if not self._data:
             self._data[None] = self
-        if self._check_skip_add(None, expr) is None:
-            del self[None]
-            return None
-        return super(ScalarLogicalConstraint, self).set_value(expr)
+        return super().set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -456,6 +419,11 @@ class SimpleLogicalConstraint(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
+@disable_methods({'add', 'set_value', 'body'})
+class AbstractScalarLogicalConstraint(ScalarLogicalConstraint):
+    pass
+
+
 class IndexedLogicalConstraint(LogicalConstraint):
     #
     # Leaving this method for backward compatibility reasons
@@ -468,6 +436,11 @@ class IndexedLogicalConstraint(LogicalConstraint):
         """Add a logical constraint with a given index."""
         return self.__setitem__(index, expr)
 
+    @overload
+    def __getitem__(self, index) -> LogicalConstraintData: ...
+
+    __getitem__ = ActiveIndexedComponent.__getitem__  # type: ignore
+
 
 @ModelComponentFactory.register("A list of logical constraints.")
 class LogicalConstraintList(IndexedLogicalConstraint):
@@ -477,13 +450,21 @@ class LogicalConstraintList(IndexedLogicalConstraint):
     added an index value is not specified.
     """
 
-    End = (1003,)
+    class End(object):
+        pass
 
     def __init__(self, **kwargs):
         """Constructor"""
         if 'expr' in kwargs:
             raise ValueError("LogicalConstraintList does not accept the 'expr' keyword")
-        LogicalConstraint.__init__(self, Set(dimen=1), **kwargs)
+        _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
+
+        super().__init__(Set(dimen=1), **kwargs)
+
+        self.rule = Initializer(
+            _rule, treat_sequences_as_mappings=False, allow_generators=True
+        )
 
     def construct(self, data=None):
         """
@@ -493,58 +474,21 @@ class LogicalConstraintList(IndexedLogicalConstraint):
             return
         self._constructed = True
 
-        generate_debug_messages = is_debug_set(logger)
-        if generate_debug_messages:
-            logger.debug("Constructing logical constraint list %s" % self.name)
+        if is_debug_set(logger):
+            logger.debug("Constructing constraint list %s" % (self.name))
 
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        assert self._init_expr is None
-        _init_rule = self.rule
-
-        #
-        # We no longer need these
-        #
-        self._init_expr = None
-        # Utilities like DAE assume this stays around
-        # self.rule = None
-
-        if _init_rule is None:
-            return
-
-        _generator = None
-        _self_parent = self._parent()
-        if inspect.isgeneratorfunction(_init_rule):
-            _generator = _init_rule(_self_parent)
-        elif inspect.isgenerator(_init_rule):
-            _generator = _init_rule
-        if _generator is None:
-            while True:
-                val = len(self._index_set) + 1
-                if generate_debug_messages:
-                    logger.debug("   Constructing logical constraint index " + str(val))
-                expr = apply_indexed_rule(self, _init_rule, _self_parent, val)
-                if expr is None:
-                    raise ValueError(
-                        "LogicalConstraintList '%s': rule returned None "
-                        "instead of LogicalConstraintList.End" % (self.name,)
-                    )
-                if (expr.__class__ is tuple) and (expr == LogicalConstraintList.End):
-                    return
-                self.add(expr)
-
-        else:
-            for expr in _generator:
-                if expr is None:
-                    raise ValueError(
-                        "LogicalConstraintList '%s': generator returned None "
-                        "instead of LogicalConstraintList.End" % (self.name,)
-                    )
-                if (expr.__class__ is tuple) and (expr == LogicalConstraintList.End):
-                    return
-                self.add(expr)
+        if self.rule is not None:
+            _rule = self.rule(self.parent_block(), ())
+            for cc in iter(_rule):
+                if cc is LogicalConstraintList.End:
+                    break
+                if cc is LogicalConstraint.Skip:
+                    continue
+                self.add(cc)
 
     def add(self, expr):
         """Add a logical constraint with an implicit index."""
