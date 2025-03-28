@@ -269,5 +269,9 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
         # This LogicalExpression must evaluate to True (but note that we cannot
         # fix this variable to 1 since this logical expression could be living
         # on a Disjunct and later need to be relaxed.)
-        self.constraints.add(result >= 1)
+        expr = result >= 1
+        if expr.__class__ is bool:
+            self.constraints.add(Constraint.Feasible if expr else Constraint.Infeasible)
+        else:
+            self.constraints.add(expr)
         return result
