@@ -75,7 +75,9 @@ class TestKNITROAMPLInterface(unittest.TestCase):
 
             results = opt.solve(model, load_solutions=True)
 
-            self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(
+                results.solver.termination_condition, TerminationCondition.optimal
+            )
             self.assertAlmostEqual(value(model.X), 2.5)
 
     @unittest.skipIf(
@@ -129,8 +131,11 @@ class TestKNITROAMPLInterface(unittest.TestCase):
 
             results = opt.solve(model, load_solutions=True)
 
-            self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal)
+            self.assertEqual(
+                results.solver.termination_condition, TerminationCondition.optimal
+            )
             self.assertAlmostEqual(value(model.X), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

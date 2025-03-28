@@ -297,6 +297,7 @@ for prob in ('MILP_unbounded', 'MILP_unbounded_kernel'):
         'Unbounded MILP detection not operational in Knitro, fixed in 15.0',
     )
 
+
 def generate_scenarios(arg=None):
     """
     Generate scenarios
