@@ -29,6 +29,10 @@ from pyomo.core.base.var import ScalarVar, VarData
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
 
 
+def _dispatch_boolean_const(visitor, node):
+    return False, 1 if node.value else 0
+
+
 def _dispatch_boolean_var(visitor, node):
     if node not in visitor.boolean_to_binary_map:
         binary = node.get_associated_binary()
@@ -197,6 +201,7 @@ _operator_dispatcher[EXPR.AtLeastExpression] = _dispatch_atleast
 _operator_dispatcher[EXPR.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
+_before_child_dispatcher[EXPR.BooleanConstant] = _dispatch_boolean_const
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
 _before_child_dispatcher[BV.BooleanVarData] = _dispatch_boolean_var
 _before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
