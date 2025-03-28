@@ -441,16 +441,15 @@ class ConstraintData(ActiveComponentData):
         # Ignore an 'empty' constraint
         #
         elif expr.__class__ is type:
-            del self.parent_component()[self.index()]
             if expr is Constraint.Skip:
+                del self.parent_component()[self.index()]
                 return
             elif expr is Constraint.Infeasible:
-                # TODO: create a trivial infeasible constraint.  This
-                # could be useful in the case of GDP where certain
-                # disjuncts are trivially infeasible, but we would still
-                # like to express the disjunction.
-                # del self.parent_component()[self.index()]
-                raise ValueError("Constraint '%s' is always infeasible" % (self.name,))
+                self._expr = InequalityExpression((1, 0), False)
+                return
+            elif expr is Constraint.Feasible:
+                self._expr = InequalityExpression((0, 0), False)
+                return
             else:
                 raise ValueError(
                     "Constraint '%s' does not have a proper "
@@ -620,7 +619,9 @@ class Constraint(ActiveIndexedComponent):
     class Infeasible(object):
         pass
 
-    Feasible = ActiveIndexedComponent.Skip
+    class Feasible(object):
+        pass
+
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
     Satisfied = Feasible
