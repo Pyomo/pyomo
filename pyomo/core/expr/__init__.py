@@ -19,13 +19,8 @@ from . import (
 )
 
 #
-# FIXME: remove circular dependencies between relational_expr and numeric_expr
+# FIXME: remove circular dependencies between logical_expr and numeric_expr
 #
-
-# Initialize relational expression functions
-numeric_expr._generate_relational_expression = (
-    relational_expr._generate_relational_expression
-)
 
 # Initialize logicalvalue functions
 boolean_value._generate_logical_proposition = logical_expr._generate_logical_proposition
