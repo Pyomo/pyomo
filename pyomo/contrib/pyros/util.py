@@ -25,6 +25,7 @@ import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.dependencies import scipy as sp
+from pyomo.common.flags import NOTSET
 from pyomo.common.errors import ApplicationError, InvalidValueError
 from pyomo.common.log import Preformatted
 from pyomo.common.modeling import unique_component_name
@@ -46,6 +47,7 @@ from pyomo.core.base import (
     VarData,
     value,
 )
+from pyomo.core.base.suffix import SuffixFinder
 from pyomo.core.expr.numeric_expr import SumExpression
 from pyomo.core.expr.numvalue import native_types
 from pyomo.core.expr.visitor import (
@@ -1083,6 +1085,11 @@ class ModelData:
     separation_priority_order : dict
         Mapping from constraint names to separation priority
         values.
+    separation_priority_suffix_finder : SuffixFinder
+        Object for resolving active Suffix components
+        added to the model by the user as a means of
+        prioritizing separation problems mapped to
+        second-stage inequality constraints.
     """
 
     def __init__(self, original_model, config, timing):
@@ -1092,6 +1099,9 @@ class ModelData:
         self.separation_priority_order = dict()
         # working model will be addressed by preprocessing
         self.working_model = None
+        self.separation_priority_suffix_finder = SuffixFinder(
+            name="pyros_separation_priority", default=NOTSET
+        )
 
     def preprocess(self, user_var_partitioning):
         """
@@ -1105,6 +1115,46 @@ class ModelData:
             True if robust infeasibility detected, False otherwise.
         """
         return preprocess_model_data(self, user_var_partitioning)
+
+    def get_user_separation_priority(self, component_data, component_data_name):
+        """
+        Infer user specification for the separation priority/priorities
+        of the second-stage inequality constraint/constraints derived
+        from a given component data attribute of the working model.
+
+        Parameters
+        ----------
+        component_data : ComponentData
+            Component data from which the inequality constraints
+            are meant to be derived.
+        component_data_name : str
+            Name of the component data object as it is expected
+            to appear in ``self.config.separation_priority_order``.
+
+        Returns
+        -------
+        numeric type or None
+            Priority of the derived constraint(s).
+
+        Notes
+        -----
+        The separation priorities for the constraints derived from
+        ``component_data`` are inferred from either the
+        active ``Suffix`` components of ``self.working_model``
+        with name 'pyros_separation_priority'
+        or from ``self.config.separation_priority``.
+        Priorities specified through the active ``Suffix`` components
+        take precedence over priorities specified through
+        ``self.config.separation_priority_order``.
+        Moreover, priorities are inferred from ``Suffix`` components
+        using the Pyomo ``SuffixFinder``.
+        """
+        priority = self.separation_priority_suffix_finder.find(component_data)
+        if priority is NOTSET:
+            priority = self.config.separation_priority_order.get(
+                component_data_name, DEFAULT_SEPARATION_PRIORITY
+            )
+        return priority
 
 
 def setup_quadratic_expression_visitor(
@@ -1656,10 +1706,11 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                     working_model.second_stage.inequality_cons[new_con_name] = (
                         new_con_expr
                     )
-                    # can't specify custom priorities for variable bounds
-                    model_data.separation_priority_order[new_con_name] = (
-                        DEFAULT_SEPARATION_PRIORITY
+                model_data.separation_priority_order[new_con_name] = (
+                    model_data.get_user_separation_priority(
+                        component_data=var, component_data_name=var_name
                     )
+                )
 
     # for subsequent developments: return a mapping
     # from each variable to the corresponding binding constraints?
@@ -1715,11 +1766,12 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
                         working_model.second_stage.inequality_cons[new_con_name] = (
                             new_con_expr
                         )
-                        # no custom separation priorities for Var
-                        # bound constraints
-                        model_data.separation_priority_order[new_con_name] = (
-                            DEFAULT_SEPARATION_PRIORITY
+
+                    model_data.separation_priority_order[new_con_name] = (
+                        model_data.get_user_separation_priority(
+                            component_data=var, component_data_name=var_name
                         )
+                    )
 
         remove_all_var_bounds(var)
 
@@ -1912,7 +1964,6 @@ def standardize_inequality_constraints(model_data):
     model_data : model data object
         Main model data object, containing the working model.
     """
-    config = model_data.config
     working_model = model_data.working_model
     uncertain_params_set = ComponentSet(working_model.effective_uncertain_params)
     adjustable_vars_set = ComponentSet(
@@ -1968,8 +2019,8 @@ def standardize_inequality_constraints(model_data):
                     )
                     # account for user-specified priority specifications
                     model_data.separation_priority_order[new_con_name] = (
-                        config.separation_priority_order.get(
-                            con_rel_name, DEFAULT_SEPARATION_PRIORITY
+                        model_data.get_user_separation_priority(
+                            component_data=con, component_data_name=con_rel_name
                         )
                     )
                 else:
@@ -2023,12 +2074,16 @@ def standardize_equality_constraints(model_data):
         con_rel_name = con.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
+        new_con_name = f"eq_con_{con_rel_name}"
         if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
-            working_model.second_stage.equality_cons[f"eq_con_{con_rel_name}"] = (
-                con.expr
+            working_model.second_stage.equality_cons[new_con_name] = con.expr
+            model_data.separation_priority_order[new_con_name] = (
+                model_data.get_user_separation_priority(
+                    component_data=con, component_data_name=con_rel_name
+                )
             )
         else:
-            working_model.first_stage.equality_cons[f"eq_con_{con_rel_name}"] = con.expr
+            working_model.first_stage.equality_cons[new_con_name] = con.expr
 
         # definitely don't want active duplicate
         con.deactivate()
@@ -2496,7 +2551,7 @@ def _reformulate_eq_con_continuous_uncertainty(
             working_model.second_stage.inequality_cons[new_con_name] = std_con_expr
             # no custom priorities specified
             model_data.separation_priority_order[new_con_name] = (
-                DEFAULT_SEPARATION_PRIORITY
+                model_data.separation_priority_order[ss_eq_con_index]
             )
     else:
         polynomial_repn_coeffs = (
@@ -2675,6 +2730,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
                 )
                 if robust_infeasible:
                     break
+        del model_data.separation_priority_order[con_idx]
 
     # we no longer need these auxiliary components
     working_model.del_component(temp_param_vars)
@@ -2780,6 +2836,10 @@ def preprocess_model_data(model_data, user_var_partitioning):
         "Reformulating state variable-independent second-stage equality constraints..."
     )
     robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
+
+    # we are done looking for separation priorities
+    for priority_sfx in model_data.separation_priority_suffix_finder.all_suffixes:
+        priority_sfx.deactivate()
 
     return robust_infeasible
 

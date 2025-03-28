@@ -386,21 +386,42 @@ def group_ss_ineq_constraints_by_priority(separation_data):
         Keys are sorted in descending order
         (i.e. highest priority first).
     """
+    separation_data.config.progress_logger.debug(
+        "Grouping second-stage inequality constraints by separation priority..."
+    )
+
     ss_ineq_cons = separation_data.separation_model.second_stage.inequality_cons
     separation_priority_groups = dict()
     for name, ss_ineq_con in ss_ineq_cons.items():
-        # by default, priority set to 0
         priority = separation_data.separation_priority_order[name]
         cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
         cons_with_same_priority.append(ss_ineq_con)
 
     # sort separation priority groups
-    return {
+    sorted_priority_groups = {
         priority: ss_ineq_cons
         for priority, ss_ineq_cons in sorted(
             separation_priority_groups.items(), reverse=True
         )
     }
+    num_priority_groups = len(sorted_priority_groups)
+    separation_data.config.progress_logger.debug(
+        f"Found {num_priority_groups} separation "
+        f"priority group{'s' if num_priority_groups != 1 else ''}."
+    )
+    separation_data.config.progress_logger.debug(
+        "Separation priority grouping statistics:"
+    )
+    separation_data.config.progress_logger.debug(
+        f"  {'Priority':20s}{'# Ineq Cons':15s}"
+    )
+    for priority, cons in sorted_priority_groups.items():
+        priority_str = str(priority) + (" (bypass)" if priority is None else "")
+        separation_data.config.progress_logger.debug(
+            f"  {priority_str:20s}{len(cons):<15d}"
+        )
+
+    return sorted_priority_groups
 
 
 def get_worst_discrete_separation_solution(

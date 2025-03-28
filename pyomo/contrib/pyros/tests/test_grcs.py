@@ -51,6 +51,7 @@ from pyomo.environ import (
     Objective,
     Param,
     SolverFactory,
+    Suffix,
     Var,
     exp,
     log,
@@ -1996,6 +1997,64 @@ class RegressionTest(unittest.TestCase):
             places=2,
         )
         self.assertEqual(m.x.value, 1)
+
+
+@unittest.skipUnless(ipopt_available, "IPOPT not available.")
+class TestPyROSSeparationPriorityOrder(unittest.TestCase):
+    """
+    Test PyROS solver behavior with respect to specification
+    of separation priorities.
+    """
+
+    def test_priority_order_invariant(self):
+        m = build_leyffer_two_cons()
+        m2 = m.clone()
+        interval = BoxSet(bounds=[(0.25, 2)])
+        pyros_solver = SolverFactory("pyros")
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("ipopt")
+        res1 = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            separation_priority_order={"con1": 2},
+        )
+        self.assertEqual(
+            res1.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        m2.pyros_separation_priority = Suffix()
+        m2.pyros_separation_priority[m2.con1] = 2
+        res2 = pyros_solver.solve(
+            model=m2,
+            first_stage_variables=[m2.x1],
+            second_stage_variables=[m2.x2],
+            uncertain_params=[m2.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+        )
+        self.assertEqual(
+            res2.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
+
+        # confirm results are identical
+        self.assertEqual(res2.iterations, res1.iterations)
+        self.assertEqual(res2.final_objective_value, res1.final_objective_value)
+        self.assertEqual(m.x1.value, m2.x1.value)
+        self.assertEqual(m.x2.value, m2.x2.value)
 
 
 @unittest.skipUnless(baron_available, "BARON not available")
