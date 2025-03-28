@@ -391,6 +391,7 @@ class ConstraintData(ActiveComponentData):
                     "using '<=', '>=', or '=='." % (self.name,)
                 )
             self._expr = expr
+            return
 
         elif expr.__class__ is tuple:  # or expr_type is list:
             for arg in expr:
@@ -418,6 +419,7 @@ class ConstraintData(ActiveComponentData):
                         "cannot contain None [received %s]" % (self.name, expr)
                     )
                 self._expr = EqualityExpression(expr)
+                return
             elif len(expr) == 3:
                 #
                 # Form (ranged) inequality expression
@@ -428,6 +430,7 @@ class ConstraintData(ActiveComponentData):
                     self._expr = InequalityExpression(expr[:2], False)
                 else:
                     self._expr = RangedExpression(expr, False)
+                return
             else:
                 raise ValueError(
                     "Constraint '%s' does not have a proper value. "
@@ -451,13 +454,8 @@ class ConstraintData(ActiveComponentData):
                 self._expr = InequalityExpression((0, 0), False)
                 return
             else:
-                raise ValueError(
-                    "Constraint '%s' does not have a proper "
-                    "value. Found '%s'\nExpecting a tuple or "
-                    "relational expression. Examples:"
-                    "\n   sum(model.costs) == model.income"
-                    "\n   (0, model.price[item], 50)" % (self.name, str(expr))
-                )
+                del self.parent_component()[self.index()]
+                # self._expr is still None: this will raise a ValueError below
 
         elif expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
@@ -476,17 +474,19 @@ class ConstraintData(ActiveComponentData):
             try:
                 if expr.is_expression_type(ExpressionType.RELATIONAL):
                     self._expr = expr
+                    return
             except AttributeError:
                 pass
-            if self._expr is None:
-                msg = (
-                    "Constraint '%s' does not have a proper "
-                    "value. Found '%s'\nExpecting a tuple or "
-                    "relational expression. Examples:"
-                    "\n   sum(model.costs) == model.income"
-                    "\n   (0, model.price[item], 50)" % (self.name, str(expr))
-                )
-                raise ValueError(msg)
+
+        msg = (
+            "Constraint '%s' does not have a proper "
+            "value. Found %s '%s'\nExpecting a tuple or "
+            "relational expression. Examples:"
+            "\n   sum(model.costs) == model.income"
+            "\n   (0, model.price[item], 50)"
+            % (self.name, type(arg).__name__, str(expr))
+        )
+        raise ValueError(msg)
 
     def lslack(self):
         """
