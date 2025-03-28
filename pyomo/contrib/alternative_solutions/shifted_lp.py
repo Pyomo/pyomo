@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common.collections import ComponentMap
 from pyomo.gdp.util import clone_without_expression_components
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -115,11 +115,11 @@ def get_shifted_linear_model(model, block=None):
     shifted_lp = aos_utils._add_aos_block(block, name="_shifted_lp")
 
     # Replace original variables with shifted lower and upper variables
-    shifted_lp.var_lower = pe.Var(
-        new_vars.keys(), domain=pe.NonNegativeReals, bounds=var_range
+    shifted_lp.var_lower = pyo.Var(
+        new_vars.keys(), domain=pyo.NonNegativeReals, bounds=var_range
     )
-    shifted_lp.var_upper = pe.Var(
-        new_vars.keys(), domain=pe.NonNegativeReals, bounds=var_range
+    shifted_lp.var_upper = pyo.Var(
+        new_vars.keys(), domain=pyo.NonNegativeReals, bounds=var_range
     )
 
     # Link the shifted lower and upper variables
@@ -128,7 +128,7 @@ def get_shifted_linear_model(model, block=None):
             m.var_lower[var_index] + m.var_upper[var_index] == m.var_upper[var_index].ub
         )
 
-    shifted_lp.link_vars = pe.Constraint(new_vars.keys(), rule=link_vars_rule)
+    shifted_lp.link_vars = pyo.Constraint(new_vars.keys(), rule=link_vars_rule)
 
     # Map the lower and upper variables to the original variables and their
     # lower bounds. This will be used to substitute x with var_lower + x.lb.
@@ -149,7 +149,7 @@ def get_shifted_linear_model(model, block=None):
     c_fix_zeros = clone_without_expression_components(
         active_objective.expr, substitute=var_zeros
     )
-    shifted_lp.objective = pe.Objective(
+    shifted_lp.objective = pyo.Objective(
         expr=c_var_lower - c_fix_zeros + c_fix_lower,
         name=active_objective.name + "_shifted",
         sense=active_objective.sense,
@@ -161,7 +161,7 @@ def get_shifted_linear_model(model, block=None):
     constraint_map = ComponentMap()
     constraint_type = {}
     slacks = []
-    for constraint in model.component_data_objects(pe.Constraint, active=True):
+    for constraint in model.component_data_objects(pyo.Constraint, active=True):
         if constraint.parent_block() == shifted_lp:
             continue
         if constraint.equality:
@@ -189,10 +189,10 @@ def get_shifted_linear_model(model, block=None):
                 constraint_map[constraint] = constraint_name
                 constraint_type[constraint_name] = 1
                 slacks.append(constraint_name)
-    shifted_lp.constraint_index = pe.Set(initialize=new_constraints.keys())
-    shifted_lp.slack_index = pe.Set(initialize=slacks)
-    shifted_lp.slack_vars = pe.Var(shifted_lp.slack_index, domain=pe.NonNegativeReals)
-    shifted_lp.constraints = pe.Constraint(shifted_lp.constraint_index)
+    shifted_lp.constraint_index = pyo.Set(initialize=new_constraints.keys())
+    shifted_lp.slack_index = pyo.Set(initialize=slacks)
+    shifted_lp.slack_vars = pyo.Var(shifted_lp.slack_index, domain=pyo.NonNegativeReals)
+    shifted_lp.constraints = pyo.Constraint(shifted_lp.constraint_index)
 
     for constraint_name, constraint in new_constraints.items():
         # The c_fix_zeros calculation is used to find any constant terms that

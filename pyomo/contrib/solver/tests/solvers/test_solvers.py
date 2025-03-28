@@ -13,7 +13,7 @@ import random
 import math
 from typing import Type
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo import gdp
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
@@ -94,17 +94,17 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(2, None))
-        m.obj = pe.Objective(expr=m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(2, None))
+        m.obj = pyo.Objective(expr=m.x)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 2)
 
         del m.x
         del m.obj
-        m.x = pe.Var(bounds=(2, None))
-        m.obj = pe.Objective(expr=m.x)
+        m.x = pyo.Var(bounds=(2, None))
+        m.obj = pyo.Objective(expr=m.x)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 2)
@@ -121,13 +121,13 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x)
         m.x.value = 1
         m.y.value = 1
         m.z.value = 1
@@ -169,16 +169,16 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.obj = pe.Objective(expr=m.x)
-        m.c = pe.Constraint(expr=(-1, m.x, 1))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x)
+        m.c = pyo.Constraint(expr=(-1, m.x, 1))
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, -1)
         duals = res.solution_loader.get_duals()
         self.assertAlmostEqual(duals[m.c], 1)
-        m.obj.sense = pe.maximize
+        m.obj.sense = pyo.maximize
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 1)
@@ -197,10 +197,10 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1, 1))
-        m.y = pe.Var(bounds=(-2, 2))
-        m.obj = pe.Objective(expr=3 * m.x + 4 * m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1, 1))
+        m.y = pyo.Var(bounds=(-2, 2))
+        m.obj = pyo.Objective(expr=3 * m.x + 4 * m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, -1)
@@ -226,15 +226,15 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1, 1))
-        m.obj = pe.Objective(expr=m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1, 1))
+        m.obj = pyo.Objective(expr=m.x)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, -1)
         rc = res.solution_loader.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], 1)
-        m.obj.sense = pe.maximize
+        m.obj.sense = pyo.maximize
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 1)
@@ -253,16 +253,16 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(mutable=True)
-        m.a2 = pe.Param(mutable=True)
-        m.b1 = pe.Param(mutable=True)
-        m.b2 = pe.Param(mutable=True)
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
-        m.c2 = pe.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(mutable=True)
+        m.a2 = pyo.Param(mutable=True)
+        m.b1 = pyo.Param(mutable=True)
+        m.b2 = pyo.Param(mutable=True)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
+        m.c2 = pyo.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -300,16 +300,16 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(mutable=True)
-        m.a2 = pe.Param(initialize=-1)
-        m.b1 = pe.Param(mutable=True)
-        m.b2 = pe.Param(mutable=True)
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
-        m.c2 = pe.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(mutable=True)
+        m.a2 = pyo.Param(initialize=-1)
+        m.b1 = pyo.Param(mutable=True)
+        m.b2 = pyo.Param(mutable=True)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
+        m.c2 = pyo.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
 
         params_to_test = [(1, 2, 1), (1, 2, 1), (1, 3, 1)]
         for a1, b1, b2 in params_to_test:
@@ -343,16 +343,16 @@ class TestSolvers(unittest.TestCase):
                 check_duals = False
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(mutable=True)
-        m.a2 = pe.Param(mutable=True)
-        m.b1 = pe.Param(mutable=True)
-        m.b2 = pe.Param(mutable=True)
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
-        m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(mutable=True)
+        m.a2 = pyo.Param(mutable=True)
+        m.b1 = pyo.Param(mutable=True)
+        m.b2 = pyo.Param(mutable=True)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y == m.a1 * m.x + m.b1)
+        m.c2 = pyo.Constraint(expr=m.y == m.a2 * m.x + m.b2)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -387,22 +387,22 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(mutable=True)
-        m.a2 = pe.Param(mutable=True)
-        m.b1 = pe.Param(mutable=True)
-        m.b2 = pe.Param(mutable=True)
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(mutable=True)
+        m.a2 = pyo.Param(mutable=True)
+        m.b1 = pyo.Param(mutable=True)
+        m.b2 = pyo.Param(mutable=True)
+        m.obj = pyo.Objective(expr=m.y)
         e = LinearExpression(
             constant=m.b1, linear_coefs=[-1, m.a1], linear_vars=[m.y, m.x]
         )
-        m.c1 = pe.Constraint(expr=e == 0)
+        m.c1 = pyo.Constraint(expr=e == 0)
         e = LinearExpression(
             constant=m.b2, linear_coefs=[-1, m.a2], linear_vars=[m.y, m.x]
         )
-        m.c2 = pe.Constraint(expr=e == 0)
+        m.c2 = pyo.Constraint(expr=e == 0)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -434,15 +434,15 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(mutable=True)
-        m.a2 = pe.Param(mutable=True)
-        m.b1 = pe.Param(mutable=True)
-        m.b2 = pe.Param(mutable=True)
-        m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
-        m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(mutable=True)
+        m.a2 = pyo.Param(mutable=True)
+        m.b1 = pyo.Param(mutable=True)
+        m.b2 = pyo.Param(mutable=True)
+        m.c1 = pyo.Constraint(expr=m.y == m.a1 * m.x + m.b1)
+        m.c2 = pyo.Constraint(expr=m.y == m.a2 * m.x + m.b2)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -473,18 +473,18 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
         a1 = -1
         a2 = 1
         b1 = 1
         b2 = 2
         a3 = 1
         b3 = 3
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
-        m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= a1 * m.x + b1)
+        m.c2 = pyo.Constraint(expr=m.y >= a2 * m.x + b2)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
@@ -499,7 +499,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], -(1 + a1 / (a2 - a1)))
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
-        m.c3 = pe.Constraint(expr=m.y >= a3 * m.x + b3)
+        m.c3 = pyo.Constraint(expr=m.y >= a3 * m.x + b3)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, (b3 - b1) / (a1 - a3))
@@ -534,12 +534,12 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x)
-        m.c2 = pe.Constraint(expr=m.y <= m.x - 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x)
+        m.c2 = pyo.Constraint(expr=m.y <= m.x - 1)
         with self.assertRaises(Exception):
             res = opt.solve(m)
         opt.config.load_solutions = False
@@ -588,12 +588,12 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y - m.x >= 0)
-        m.c2 = pe.Constraint(expr=m.y + m.x - 2 >= 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y - m.x >= 0)
+        m.c2 = pyo.Constraint(expr=m.y + m.x - 2 >= 0)
 
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 1)
@@ -618,13 +618,13 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a = pe.Param(initialize=1, mutable=True)
-        m.b = pe.Param(initialize=-1, mutable=True)
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c = pe.Constraint(expr=m.y >= (m.a * m.x + m.b) ** 2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a = pyo.Param(initialize=1, mutable=True)
+        m.b = pyo.Param(initialize=-1, mutable=True)
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c = pyo.Constraint(expr=m.y >= (m.a * m.x + m.b) ** 2)
 
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.41024548525899274, 4)
@@ -647,15 +647,15 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a = pe.Param(initialize=1, mutable=True)
-        m.b = pe.Param(initialize=-1, mutable=True)
-        m.c = pe.Param(initialize=1, mutable=True)
-        m.d = pe.Param(initialize=1, mutable=True)
-        m.obj = pe.Objective(expr=m.x**2 + m.c * m.y**2 + m.d * m.x)
-        m.ccon = pe.Constraint(expr=m.y >= (m.a * m.x + m.b) ** 2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a = pyo.Param(initialize=1, mutable=True)
+        m.b = pyo.Param(initialize=-1, mutable=True)
+        m.c = pyo.Param(initialize=1, mutable=True)
+        m.d = pyo.Param(initialize=1, mutable=True)
+        m.obj = pyo.Objective(expr=m.x**2 + m.c * m.y**2 + m.d * m.x)
+        m.ccon = pyo.Constraint(expr=m.y >= (m.a * m.x + m.b) ** 2)
 
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.2719178742733325, 4)
@@ -682,17 +682,17 @@ class TestSolvers(unittest.TestCase):
                     opt.config.writer_config.linear_presolve = True
                 else:
                     opt.config.writer_config.linear_presolve = False
-            m = pe.ConcreteModel()
-            m.x = pe.Var()
+            m = pyo.ConcreteModel()
+            m.x = pyo.Var()
             m.x.fix(0)
-            m.y = pe.Var()
+            m.y = pyo.Var()
             a1 = 1
             a2 = -1
             b1 = 1
             b2 = 2
-            m.obj = pe.Objective(expr=m.y)
-            m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
-            m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
+            m.obj = pyo.Objective(expr=m.y)
+            m.c1 = pyo.Constraint(expr=m.y >= a1 * m.x + b1)
+            m.c2 = pyo.Constraint(expr=m.y >= a2 * m.x + b2)
             res = opt.solve(m)
             self.assertAlmostEqual(m.x.value, 0)
             self.assertAlmostEqual(m.y.value, 2)
@@ -727,17 +727,17 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
         m.x.fix(0)
-        m.y = pe.Var()
+        m.y = pyo.Var()
         a1 = 1
         a2 = -1
         b1 = 1
         b2 = 2
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
-        m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= a1 * m.x + b1)
+        m.c2 = pyo.Constraint(expr=m.y >= a2 * m.x + b2)
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
@@ -772,11 +772,11 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x + m.y)
-        m.c1 = pe.Constraint(expr=m.x == 2 / m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x + m.y)
+        m.c1 = pyo.Constraint(expr=m.x == 2 / m.y)
         m.y.fix(1)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 3)
@@ -796,11 +796,11 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.x == 2 / m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.x == 2 / m.y)
         m.y.fix(1)
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 2)
@@ -821,18 +821,18 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(initialize=0, mutable=True)
-        m.a2 = pe.Param(initialize=0, mutable=True)
-        m.b1 = pe.Param(initialize=0, mutable=True)
-        m.b2 = pe.Param(initialize=0, mutable=True)
-        m.c1 = pe.Param(initialize=0, mutable=True)
-        m.c2 = pe.Param(initialize=0, mutable=True)
-        m.obj = pe.Objective(expr=m.y)
-        m.con1 = pe.Constraint(expr=(m.b1, m.y - m.a1 * m.x, m.c1))
-        m.con2 = pe.Constraint(expr=(m.b2, m.y - m.a2 * m.x, m.c2))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(initialize=0, mutable=True)
+        m.a2 = pyo.Param(initialize=0, mutable=True)
+        m.b1 = pyo.Param(initialize=0, mutable=True)
+        m.b2 = pyo.Param(initialize=0, mutable=True)
+        m.c1 = pyo.Param(initialize=0, mutable=True)
+        m.c2 = pyo.Param(initialize=0, mutable=True)
+        m.obj = pyo.Objective(expr=m.y)
+        m.con1 = pyo.Constraint(expr=(m.b1, m.y - m.a1 * m.x, m.c1))
+        m.con2 = pyo.Constraint(expr=(m.b2, m.y - m.a2 * m.x, m.c2))
 
         np.random.seed(0)
         params_to_test = [
@@ -843,7 +843,7 @@ class TestSolvers(unittest.TestCase):
                 np.random.uniform(-5, 2.5),
                 np.random.uniform(2.5, 10),
                 np.random.uniform(2.5, 10),
-                pe.minimize,
+                pyo.minimize,
             ),
             (
                 np.random.uniform(0, 10),
@@ -852,7 +852,7 @@ class TestSolvers(unittest.TestCase):
                 np.random.uniform(-5, 2.5),
                 np.random.uniform(2.5, 10),
                 np.random.uniform(2.5, 10),
-                pe.maximize,
+                pyo.maximize,
             ),
             (
                 np.random.uniform(0, 10),
@@ -861,7 +861,7 @@ class TestSolvers(unittest.TestCase):
                 np.random.uniform(-5, 2.5),
                 np.random.uniform(2.5, 10),
                 np.random.uniform(2.5, 10),
-                pe.minimize,
+                pyo.minimize,
             ),
             (
                 np.random.uniform(0, 10),
@@ -870,7 +870,7 @@ class TestSolvers(unittest.TestCase):
                 np.random.uniform(-5, 2.5),
                 np.random.uniform(2.5, 10),
                 np.random.uniform(2.5, 10),
-                pe.maximize,
+                pyo.maximize,
             ),
         ]
         for a1, a2, b1, b2, c1, c2, sense in params_to_test:
@@ -883,7 +883,7 @@ class TestSolvers(unittest.TestCase):
             m.obj.sense = sense
             res: Results = opt.solve(m)
             self.assertEqual(res.solution_status, SolutionStatus.optimal)
-            if sense is pe.minimize:
+            if sense is pyo.minimize:
                 self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2), 6)
                 self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1, 6)
                 self.assertAlmostEqual(res.incumbent_objective, m.y.value, 6)
@@ -918,9 +918,9 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.y = pe.Var(bounds=(-1, None))
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.y = pyo.Var(bounds=(-1, None))
+        m.obj = pyo.Objective(expr=m.y)
         if opt.is_persistent():
             opt.config.auto_updates.update_parameters = False
             opt.config.auto_updates.update_vars = False
@@ -934,13 +934,13 @@ class TestSolvers(unittest.TestCase):
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         res.solution_loader.load_vars()
         self.assertAlmostEqual(m.y.value, -1)
-        m.x = pe.Var()
+        m.x = pyo.Var()
         a1 = 1
         a2 = -1
         b1 = 2
         b2 = 1
-        m.c1 = pe.Constraint(expr=(0, m.y - a1 * m.x - b1, None))
-        m.c2 = pe.Constraint(expr=(None, -m.y + a2 * m.x + b2, 0))
+        m.c1 = pyo.Constraint(expr=(0, m.y - a1 * m.x - b1, None))
+        m.c2 = pyo.Constraint(expr=(None, -m.y + a2 * m.x + b2, 0))
         if opt.is_persistent():
             opt.add_constraints([m.c1, m.c2])
         res = opt.solve(m)
@@ -969,11 +969,11 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.42630274815985264)
         self.assertAlmostEqual(m.y.value, 0.6529186341994245)
@@ -988,11 +988,11 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(initialize=1)
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y <= pe.log(m.x))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1)
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y <= pyo.log(m.x))
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.6529186341994245)
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
@@ -1009,18 +1009,18 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
         a1 = 1
         b1 = 3
         a2 = -2
         b2 = 1
-        m.c1 = pe.Constraint(
+        m.c1 = pyo.Constraint(
             expr=(np.float64(0), m.y - np.int64(1) * m.x - np.float32(3), None)
         )
-        m.c2 = pe.Constraint(
+        m.c2 = pyo.Constraint(
             expr=(None, -m.y + np.int32(-2) * m.x + np.float64(1), np.float16(0))
         )
         res = opt.solve(m)
@@ -1040,12 +1040,12 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.y = pe.Var()
-        m.p = pe.Param(mutable=True)
+        m = pyo.ConcreteModel()
+        m.y = pyo.Var()
+        m.p = pyo.Param(mutable=True)
         m.y.setlb(m.p)
         m.p.value = 1
-        m.obj = pe.Objective(expr=m.y)
+        m.obj = pyo.Objective(expr=m.y)
         res = opt.solve(m)
         self.assertAlmostEqual(m.y.value, 1)
         m.p.value = -1
@@ -1053,7 +1053,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -1)
         m.y.setlb(None)
         m.y.setub(m.p)
-        m.obj.sense = pe.maximize
+        m.obj.sense = pyo.maximize
         m.p.value = 5
         res = opt.solve(m)
         self.assertAlmostEqual(m.y.value, 5)
@@ -1062,7 +1062,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 4)
         m.y.setub(None)
         m.y.setlb(m.p)
-        m.obj.sense = pe.minimize
+        m.obj.sense = pyo.minimize
         m.p.value = 3
         res = opt.solve(m)
         self.assertAlmostEqual(m.y.value, 3)
@@ -1079,12 +1079,12 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1, None))
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=(0, m.y - m.x, None))
-        m.c2 = pe.Constraint(expr=(0, m.y - m.x + 1, None))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(1, None))
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=(0, m.y - m.x, None))
+        m.c2 = pyo.Constraint(expr=(0, m.y - m.x + 1, None))
         opt.config.load_solutions = False
         res = opt.solve(m)
         self.assertIsNone(m.x.value)
@@ -1142,10 +1142,10 @@ class TestSolvers(unittest.TestCase):
             raise unittest.SkipTest
 
         N = 30
-        m = pe.ConcreteModel()
-        m.jobs = pe.Set(initialize=list(range(N)))
-        m.tasks = pe.Set(initialize=list(range(N)))
-        m.x = pe.Var(m.jobs, m.tasks, bounds=(0, 1))
+        m = pyo.ConcreteModel()
+        m.jobs = pyo.Set(initialize=list(range(N)))
+        m.tasks = pyo.Set(initialize=list(range(N)))
+        m.x = pyo.Var(m.jobs, m.tasks, bounds=(0, 1))
 
         random.seed(0)
         coefs = list()
@@ -1157,10 +1157,10 @@ class TestSolvers(unittest.TestCase):
         obj_expr = LinearExpression(
             linear_coefs=coefs, linear_vars=lin_vars, constant=0
         )
-        m.obj = pe.Objective(expr=obj_expr, sense=pe.maximize)
+        m.obj = pyo.Objective(expr=obj_expr, sense=pyo.maximize)
 
-        m.c1 = pe.Constraint(m.jobs)
-        m.c2 = pe.Constraint(m.tasks)
+        m.c1 = pyo.Constraint(m.jobs)
+        m.c2 = pyo.Constraint(m.tasks)
         for j in m.jobs:
             expr = LinearExpression(
                 linear_coefs=[1] * N,
@@ -1199,22 +1199,22 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.y >= m.x + 1)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.y >= m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x + 1)
+        m.obj = pyo.Objective(expr=m.y)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
         del m.obj
-        m.obj = pe.Objective(expr=2 * m.y)
+        m.obj = pyo.Objective(expr=2 * m.y)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 2)
         m.obj.expr = 3 * m.y
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 3)
-        m.obj.sense = pe.maximize
+        m.obj.sense = pyo.maximize
         opt.config.raise_exception_on_nonoptimal_result = False
         opt.config.load_solutions = False
         res = opt.solve(m)
@@ -1225,10 +1225,10 @@ class TestSolvers(unittest.TestCase):
                 TerminationCondition.infeasibleOrUnbounded,
             },
         )
-        m.obj.sense = pe.minimize
+        m.obj.sense = pyo.minimize
         opt.config.load_solutions = True
         del m.obj
-        m.obj = pe.Objective(expr=m.x * m.y)
+        m.obj = pyo.Objective(expr=m.x * m.y)
         m.x.fix(2)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 6, 6)
@@ -1244,9 +1244,9 @@ class TestSolvers(unittest.TestCase):
         m.y.unfix()
         m.x.setlb(None)
         m.x.setub(None)
-        m.e = pe.Expression(expr=2)
+        m.e = pyo.Expression(expr=2)
         del m.obj
-        m.obj = pe.Objective(expr=m.e * m.y)
+        m.obj = pyo.Objective(expr=m.e * m.y)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 2)
         m.e.expr = 3
@@ -1268,9 +1268,9 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(1, None), domain=pe.NonNegativeReals)
-        m.obj = pe.Objective(expr=m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(1, None), domain=pyo.NonNegativeReals)
+        m.obj = pyo.Objective(expr=m.x)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
         m.x.setlb(-1)
@@ -1280,10 +1280,10 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
         m.x.setlb(-1)
-        m.x.domain = pe.Reals
+        m.x.domain = pyo.Reals
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, -1)
-        m.x.domain = pe.NonNegativeReals
+        m.x.domain = pyo.NonNegativeReals
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
 
@@ -1299,19 +1299,19 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-1, None), domain=pe.NonNegativeIntegers)
-        m.obj = pe.Objective(expr=m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-1, None), domain=pyo.NonNegativeIntegers)
+        m.obj = pyo.Objective(expr=m.x)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.setlb(0.5)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
         m.x.setlb(-5.5)
-        m.x.domain = pe.Integers
+        m.x.domain = pyo.Integers
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, -5)
-        m.x.domain = pe.Binary
+        m.x.domain = pyo.Binary
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
         m.x.setlb(0.5)
@@ -1330,11 +1330,11 @@ class TestSolvers(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = True
             else:
                 opt.config.writer_config.linear_presolve = False
-        m = pe.ConcreteModel()
-        m.x = pe.Var(domain=pe.Binary)
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
-        m.c = pe.Constraint(expr=m.y >= m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Binary)
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c = pyo.Constraint(expr=m.y >= m.x)
         m.x.fix(0)
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
@@ -1364,18 +1364,18 @@ class TestSolvers(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-10, 10))
-        m.y = pe.Var(bounds=(-10, 10))
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-10, 10))
+        m.y = pyo.Var(bounds=(-10, 10))
+        m.obj = pyo.Objective(expr=m.y)
         m.d1 = gdp.Disjunct()
-        m.d1.c1 = pe.Constraint(expr=m.y >= m.x + 2)
-        m.d1.c2 = pe.Constraint(expr=m.y >= -m.x + 2)
+        m.d1.c1 = pyo.Constraint(expr=m.y >= m.x + 2)
+        m.d1.c2 = pyo.Constraint(expr=m.y >= -m.x + 2)
         m.d2 = gdp.Disjunct()
-        m.d2.c1 = pe.Constraint(expr=m.y >= m.x + 1)
-        m.d2.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
+        m.d2.c1 = pyo.Constraint(expr=m.y >= m.x + 1)
+        m.d2.c2 = pyo.Constraint(expr=m.y >= -m.x + 1)
         m.disjunction = gdp.Disjunction(expr=[m.d2, m.d1])
-        pe.TransformationFactory("gdp.bigm").apply_to(m)
+        pyo.TransformationFactory("gdp.bigm").apply_to(m)
 
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 1)
@@ -1402,13 +1402,13 @@ class TestSolvers(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.b = pe.Block()
-        m.b.obj = pe.Objective(expr=m.y)
-        m.b.c1 = pe.Constraint(expr=m.y >= m.x + 2)
-        m.b.c2 = pe.Constraint(expr=m.y >= -m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.b = pyo.Block()
+        m.b.obj = pyo.Objective(expr=m.y)
+        m.b.c1 = pyo.Constraint(expr=m.y >= m.x + 2)
+        m.b.c2 = pyo.Constraint(expr=m.y >= -m.x)
 
         res = opt.solve(m.b)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
@@ -1436,16 +1436,16 @@ class TestSolvers(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
 
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x)
-        m.c3 = pe.Constraint(expr=m.y >= m.z + 1)
-        m.c4 = pe.Constraint(expr=m.y >= -m.z + 1)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x)
+        m.c3 = pyo.Constraint(expr=m.y >= m.z + 1)
+        m.c4 = pyo.Constraint(expr=m.y >= -m.z + 1)
 
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
@@ -1476,13 +1476,13 @@ class TestSolvers(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(3, 7))
-        m.y = pe.Var(bounds=(-10, 10))
-        m.p = pe.Param(mutable=True, initialize=0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(3, 7))
+        m.y = pyo.Var(bounds=(-10, 10))
+        m.p = pyo.Param(mutable=True, initialize=0)
 
-        m.obj = pe.Objective(expr=m.y)
-        m.c = pe.Constraint(expr=m.y >= m.p * m.x)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c = pyo.Constraint(expr=m.y >= m.p * m.x)
 
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
@@ -1511,11 +1511,11 @@ class TestSolvers(unittest.TestCase):
                 else:
                     opt.config.writer_config.linear_presolve = False
 
-            m = pe.ConcreteModel()
-            m.x = pe.Var(bounds=(-10, 10))
-            m.y = pe.Var()
-            m.obj = pe.Objective(expr=3 * m.y - m.x)
-            m.c = pe.Constraint(expr=m.y >= m.x)
+            m = pyo.ConcreteModel()
+            m.x = pyo.Var(bounds=(-10, 10))
+            m.y = pyo.Var()
+            m.obj = pyo.Objective(expr=3 * m.y - m.x)
+            m.c = pyo.Constraint(expr=m.y >= m.x)
 
             m.x.fix(1)
             res = opt.solve(m)
@@ -1544,13 +1544,13 @@ class TestSolvers(unittest.TestCase):
         x - y + y = 0 which becomes
         x - 0*y == 0 which is the zero we are testing for
         """
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2 + m.z**2)
-        m.c1 = pe.Constraint(expr=m.x == m.y + m.z + 1.5)
-        m.c2 = pe.Constraint(expr=m.z == -m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2 + m.z**2)
+        m.c1 = pyo.Constraint(expr=m.x == m.y + m.z + 1.5)
+        m.c2 = pyo.Constraint(expr=m.z == -m.y)
 
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 2.25)
@@ -1568,15 +1568,15 @@ class TestSolvers(unittest.TestCase):
             exp = TerminationCondition.locallyInfeasible
         self.assertEqual(res.termination_condition, exp)
 
-        m = pe.ConcreteModel()
-        m.w = pe.Var()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2 + m.z**2 + m.w**2)
-        m.c1 = pe.Constraint(expr=m.x + m.w == m.y + m.z)
-        m.c2 = pe.Constraint(expr=m.z == -m.y)
-        m.c3 = pe.Constraint(expr=m.x == -m.w)
+        m = pyo.ConcreteModel()
+        m.w = pyo.Var()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2 + m.z**2 + m.w**2)
+        m.c1 = pyo.Constraint(expr=m.x + m.w == m.y + m.z)
+        m.c2 = pyo.Constraint(expr=m.z == -m.y)
+        m.c3 = pyo.Constraint(expr=m.x == -m.w)
 
         res = opt.solve(m)
         self.assertAlmostEqual(res.incumbent_objective, 0)
@@ -1586,7 +1586,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.z.value, 0)
 
         del m.c1
-        m.c1 = pe.Constraint(expr=m.x + m.w == m.y + m.z + 1.5)
+        m.c1 = pyo.Constraint(expr=m.x + m.w == m.y + m.z + 1.5)
         res = opt.solve(
             m, load_solutions=False, raise_exception_on_nonoptimal_result=False
         )
@@ -1605,13 +1605,13 @@ class TestSolvers(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= (m.x - 1) + 1)
-        m.c2 = pe.Constraint(expr=m.y >= -(m.x - 1) + 1)
-        m.scaling_factor = pe.Suffix(direction=pe.Suffix.EXPORT)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= (m.x - 1) + 1)
+        m.c2 = pyo.Constraint(expr=m.y >= -(m.x - 1) + 1)
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
         m.scaling_factor[m.x] = 0.5
         m.scaling_factor[m.y] = 2
         m.scaling_factor[m.c1] = 0.5
@@ -1653,20 +1653,20 @@ class TestSolvers(unittest.TestCase):
 class TestLegacySolverInterface(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_param_updates(self, name: str, opt_class: Type[SolverBase]):
-        opt = pe.SolverFactory(name + '_v2')
+        opt = pyo.SolverFactory(name + '_v2')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.a1 = pe.Param(mutable=True)
-        m.a2 = pe.Param(mutable=True)
-        m.b1 = pe.Param(mutable=True)
-        m.b2 = pe.Param(mutable=True)
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
-        m.c2 = pe.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
-        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.a1 = pyo.Param(mutable=True)
+        m.a2 = pyo.Param(mutable=True)
+        m.b1 = pyo.Param(mutable=True)
+        m.b2 = pyo.Param(mutable=True)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=(0, m.y - m.a1 * m.x - m.b1, None))
+        m.c2 = pyo.Constraint(expr=(None, -m.y + m.a2 * m.x + m.b2, 0))
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for a1, a2, b1, b2 in params_to_test:
@@ -1675,7 +1675,7 @@ class TestLegacySolverInterface(unittest.TestCase):
             m.b1.value = b1
             m.b2.value = b2
             res = opt.solve(m)
-            pe.assert_optimal_termination(res)
+            pyo.assert_optimal_termination(res)
             self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
             self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
             self.assertAlmostEqual(m.dual[m.c1], (1 + a1 / (a2 - a1)))
@@ -1683,16 +1683,16 @@ class TestLegacySolverInterface(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_load_solutions(self, name: str, opt_class: Type[SolverBase]):
-        opt = pe.SolverFactory(name + '_v2')
+        opt = pyo.SolverFactory(name + '_v2')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.obj = pe.Objective(expr=m.x)
-        m.c = pe.Constraint(expr=(-1, m.x, 1))
-        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x)
+        m.c = pyo.Constraint(expr=(-1, m.x, 1))
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
         res = opt.solve(m, load_solutions=False)
-        pe.assert_optimal_termination(res)
+        pyo.assert_optimal_termination(res)
         self.assertIsNone(m.x.value)
         self.assertNotIn(m.c, m.dual)
         m.solutions.load_from(res)

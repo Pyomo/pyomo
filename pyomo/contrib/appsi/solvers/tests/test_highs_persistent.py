@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 import pyomo.common.unittest as unittest
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
@@ -28,16 +28,16 @@ if not opt.available():
 
 class TestBugs(unittest.TestCase):
     def test_mutable_params_with_remove_cons(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-10, 10))
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-10, 10))
+        m.y = pyo.Var()
 
-        m.p1 = pe.Param(mutable=True)
-        m.p2 = pe.Param(mutable=True)
+        m.p1 = pyo.Param(mutable=True)
+        m.p2 = pyo.Param(mutable=True)
 
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x + m.p1)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x + m.p2)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x + m.p1)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x + m.p2)
 
         m.p1.value = 1
         m.p2.value = 1
@@ -52,19 +52,19 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(res.best_feasible_objective, -8)
 
     def test_mutable_params_with_remove_vars(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
 
-        m.p1 = pe.Param(mutable=True)
-        m.p2 = pe.Param(mutable=True)
+        m.p1 = pyo.Param(mutable=True)
+        m.p2 = pyo.Param(mutable=True)
 
         m.y.setlb(m.p1)
         m.y.setub(m.p2)
 
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x + 1)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x + 1)
 
         m.p1.value = -10
         m.p2.value = 10
@@ -83,16 +83,16 @@ class TestBugs(unittest.TestCase):
     def test_fix_and_unfix(self):
         # Tests issue https://github.com/Pyomo/pyomo/issues/3127
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(domain=pe.Binary)
-        m.y = pe.Var(domain=pe.Binary)
-        m.fx = pe.Var(domain=pe.NonNegativeReals)
-        m.fy = pe.Var(domain=pe.NonNegativeReals)
-        m.c1 = pe.Constraint(expr=m.fx <= m.x)
-        m.c2 = pe.Constraint(expr=m.fy <= m.y)
-        m.c3 = pe.Constraint(expr=m.x + m.y <= 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Binary)
+        m.y = pyo.Var(domain=pyo.Binary)
+        m.fx = pyo.Var(domain=pyo.NonNegativeReals)
+        m.fy = pyo.Var(domain=pyo.NonNegativeReals)
+        m.c1 = pyo.Constraint(expr=m.fx <= m.x)
+        m.c2 = pyo.Constraint(expr=m.fy <= m.y)
+        m.c3 = pyo.Constraint(expr=m.x + m.y <= 1)
 
-        m.obj = pe.Objective(expr=m.fx * 0.5 + m.fy * 0.4, sense=pe.maximize)
+        m.obj = pyo.Objective(expr=m.fx * 0.5 + m.fy * 0.4, sense=pyo.maximize)
 
         opt = Highs()
 
@@ -124,13 +124,13 @@ class TestBugs(unittest.TestCase):
         # first time that a model is instantiated.  We need to test this
         # in a subprocess to trigger that output.
         model = [
-            'import pyomo.environ as pe',
-            'm = pe.ConcreteModel()',
-            'm.x = pe.Var(domain=pe.NonNegativeReals)',
-            'm.y = pe.Var(domain=pe.NonNegativeReals)',
-            'm.obj = pe.Objective(expr=m.x + m.y, sense=pe.maximize)',
-            'm.c1 = pe.Constraint(expr=m.x <= 10)',
-            'm.c2 = pe.Constraint(expr=m.y <= 5)',
+            'import pyomo.environ as pyo',
+            'm = pyo.ConcreteModel()',
+            'm.x = pyo.Var(domain=pyo.NonNegativeReals)',
+            'm.y = pyo.Var(domain=pyo.NonNegativeReals)',
+            'm.obj = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)',
+            'm.c1 = pyo.Constraint(expr=m.x <= 10)',
+            'm.c2 = pyo.Constraint(expr=m.y <= 5)',
             'from pyomo.contrib.appsi.solvers.highs import Highs',
             'result = Highs().solve(m)',
             'print(m.x.value, m.y.value)',
@@ -157,21 +157,21 @@ class TestBugs(unittest.TestCase):
         self.assertEqual(ref, OUT.getvalue()[-len(ref) :])
 
     def test_warm_start(self):
-        m = pe.ConcreteModel()
+        m = pyo.ConcreteModel()
 
         # decision variables
-        m.x1 = pe.Var(domain=pe.Integers, name="x1", bounds=(0, 10))
-        m.x2 = pe.Var(domain=pe.Reals, name="x2", bounds=(0, 10))
-        m.x3 = pe.Var(domain=pe.Binary, name="x3")
+        m.x1 = pyo.Var(domain=pyo.Integers, name="x1", bounds=(0, 10))
+        m.x2 = pyo.Var(domain=pyo.Reals, name="x2", bounds=(0, 10))
+        m.x3 = pyo.Var(domain=pyo.Binary, name="x3")
 
         # objective function
-        m.OBJ = pe.Objective(expr=(3 * m.x1 + 2 * m.x2 + 4 * m.x3), sense=pe.maximize)
+        m.OBJ = pyo.Objective(expr=(3 * m.x1 + 2 * m.x2 + 4 * m.x3), sense=pyo.maximize)
 
         # constraints
-        m.C1 = pe.Constraint(expr=m.x1 + m.x2 <= 9)
-        m.C2 = pe.Constraint(expr=3 * m.x1 + m.x2 <= 18)
-        m.C3 = pe.Constraint(expr=m.x1 <= 7)
-        m.C4 = pe.Constraint(expr=m.x2 <= 6)
+        m.C1 = pyo.Constraint(expr=m.x1 + m.x2 <= 9)
+        m.C2 = pyo.Constraint(expr=3 * m.x1 + m.x2 <= 18)
+        m.C3 = pyo.Constraint(expr=m.x1 <= 7)
+        m.C4 = pyo.Constraint(expr=m.x2 <= 6)
 
         # MIP start
         m.x1 = 4
@@ -180,6 +180,6 @@ class TestBugs(unittest.TestCase):
 
         # solving process
         with capture_output() as output:
-            pe.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
+            pyo.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
         log = output.getvalue()
         self.assertIn("MIP start solution is feasible, objective value is 25", log)

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.opt
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 from pyomo.contrib.alternative_solutions import Solution
@@ -26,18 +26,18 @@ class TestSolutionUnit(unittest.TestCase):
         Simple model with all variable types and fixed variables to test the
         Solution code.
         """
-        m = pe.ConcreteModel()
-        m.x = pe.Var(domain=pe.NonNegativeReals)
-        m.y = pe.Var(domain=pe.Binary)
-        m.z = pe.Var(domain=pe.NonNegativeIntegers)
-        m.f = pe.Var(domain=pe.Reals)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.NonNegativeReals)
+        m.y = pyo.Var(domain=pyo.Binary)
+        m.z = pyo.Var(domain=pyo.NonNegativeIntegers)
+        m.f = pyo.Var(domain=pyo.Reals)
 
         m.f.fix(1)
-        m.obj = pe.Objective(expr=m.x + m.y + m.z + m.f, sense=pe.maximize)
+        m.obj = pyo.Objective(expr=m.x + m.y + m.z + m.f, sense=pyo.maximize)
 
-        m.con_x = pe.Constraint(expr=m.x <= 1.5)
-        m.con_y = pe.Constraint(expr=m.y <= 1)
-        m.con_z = pe.Constraint(expr=m.z <= 3)
+        m.con_x = pyo.Constraint(expr=m.x <= 1.5)
+        m.con_y = pyo.Constraint(expr=m.y <= 1)
+        m.con_z = pyo.Constraint(expr=m.z <= 3)
         return m
 
     @unittest.skipUnless(mip_available, "MIP solver not available")
@@ -47,7 +47,7 @@ class TestSolutionUnit(unittest.TestCase):
         data is returned.
         """
         model = self.get_model()
-        opt = pe.SolverFactory(mip_solver)
+        opt = pyo.SolverFactory(mip_solver)
         opt.solve(model)
         all_vars = au.get_model_variables(model, include_fixed=True)
 

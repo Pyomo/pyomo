@@ -14,7 +14,7 @@ from pyomo.common.dependencies import numpy as numpy, numpy_available
 if numpy_available:
     from numpy.testing import assert_array_almost_equal
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.opt
 from pyomo.common import unittest
 
@@ -38,28 +38,28 @@ class TestShiftedIP:
     @unittest.skipIf(not numpy_available, "Numpy not installed")
     def test_mip_abs_objective(self, lp_solver):
         m = tc.get_indexed_pentagonal_pyramid_mip()
-        m.x.domain = pe.Reals
+        m.x.domain = pyo.Reals
 
-        opt = pe.SolverFactory(lp_solver)
+        opt = pyo.SolverFactory(lp_solver)
         old_results = opt.solve(m, tee=False)
-        old_obj = pe.value(m.o)
+        old_obj = pyo.value(m.o)
 
         new_model = shifted_lp.get_shifted_linear_model(m)
         new_results = opt.solve(new_model, tee=False)
-        new_obj = pe.value(new_model.objective)
+        new_obj = pyo.value(new_model.objective)
 
         assert old_obj == unittest.pytest.approx(new_obj)
 
     def test_polyhedron(self, lp_solver):
         m = tc.get_3d_polyhedron_problem()
 
-        opt = pe.SolverFactory(lp_solver)
+        opt = pyo.SolverFactory(lp_solver)
         old_results = opt.solve(m, tee=False)
-        old_obj = pe.value(m.o)
+        old_obj = pyo.value(m.o)
 
         new_model = shifted_lp.get_shifted_linear_model(m)
         new_results = opt.solve(new_model, tee=False)
-        new_obj = pe.value(new_model.objective)
+        new_obj = pyo.value(new_model.objective)
 
         assert old_obj == unittest.pytest.approx(new_obj)
 

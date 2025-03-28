@@ -21,7 +21,7 @@ if numpy_available:
     import numpy.random
     from numpy.linalg import norm
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.collections import ComponentSet
 import pyomo.util.vars_from_expressions as vfe
@@ -56,7 +56,7 @@ def get_active_objective(model):
     assume that there is exactly one active objective.
     """
 
-    active_objs = list(model.component_data_objects(pe.Objective, active=True))
+    active_objs = list(model.component_data_objects(pyo.Objective, active=True))
     assert (
         len(active_objs) == 1
     ), "Model has {} active objective functions, exactly one is required.".format(
@@ -68,7 +68,7 @@ def get_active_objective(model):
 
 def _add_aos_block(model, name="_aos_block"):
     """Adds an alternative optimal solution block with a unique name."""
-    aos_block = pe.Block()
+    aos_block = pyo.Block()
     model.add_component(unique_component_name(model, name), aos_block)
     return aos_block
 
@@ -103,11 +103,11 @@ def _add_objective_constraint(
         )
 
         if objective_is_min:
-            aos_block.optimality_tol_rel = pe.Constraint(
+            aos_block.optimality_tol_rel = pyo.Constraint(
                 expr=objective_expr <= objective_cutoff
             )
         else:
-            aos_block.optimality_tol_rel = pe.Constraint(
+            aos_block.optimality_tol_rel = pyo.Constraint(
                 expr=objective_expr >= objective_cutoff
             )
         objective_constraints.append(aos_block.optimality_tol_rel)
@@ -116,11 +116,11 @@ def _add_objective_constraint(
         objective_cutoff = objective_value + objective_sense * abs_opt_gap
 
         if objective_is_min:
-            aos_block.optimality_tol_abs = pe.Constraint(
+            aos_block.optimality_tol_abs = pyo.Constraint(
                 expr=objective_expr <= objective_cutoff
             )
         else:
-            aos_block.optimality_tol_abs = pe.Constraint(
+            aos_block.optimality_tol_abs = pyo.Constraint(
                 expr=objective_expr >= objective_cutoff
             )
         objective_constraints.append(aos_block.optimality_tol_abs)
@@ -219,7 +219,7 @@ def get_model_variables(
 
     """
 
-    component_list = (pe.Objective, pe.Constraint)
+    component_list = (pyo.Objective, pyo.Constraint)
     variable_set = ComponentSet()
     if components == None:
         var_generator = vfe.get_vars_from_components(
@@ -235,7 +235,7 @@ def get_model_variables(
         )
     else:
         for comp in components:
-            if hasattr(comp, "ctype") and comp.ctype == pe.Block:
+            if hasattr(comp, "ctype") and comp.ctype == pyo.Block:
                 blocks = comp.values() if comp.is_indexed() else (comp,)
                 for item in blocks:
                     variables = vfe.get_vars_from_components(
@@ -252,10 +252,10 @@ def get_model_variables(
             elif (
                 isinstance(comp, tuple)
                 and hasattr(comp[0], "ctype")
-                and comp[0].ctype == pe.Block
+                and comp[0].ctype == pyo.Block
             ):
                 block = comp[0]
-                descend_into = pe.Block if comp[1] else False
+                descend_into = pyo.Block if comp[1] else False
                 blocks = block.values() if block.is_indexed() else (block,)
                 for item in blocks:
                     variables = vfe.get_vars_from_components(
@@ -275,7 +275,7 @@ def get_model_variables(
             elif hasattr(comp, "ctype") and comp.ctype in component_list:
                 constraints = comp.values() if comp.is_indexed() else (comp,)
                 for item in constraints:
-                    variables = pe.expr.identify_variables(
+                    variables = pyo.expr.identify_variables(
                         item.expr, include_fixed=include_fixed
                     )
                     _filter_model_variables(
@@ -286,7 +286,7 @@ def get_model_variables(
                         include_integer,
                         include_fixed,
                     )
-            elif hasattr(comp, "ctype") and comp.ctype == pe.Var:
+            elif hasattr(comp, "ctype") and comp.ctype == pyo.Var:
                 variables = comp.values() if comp.is_indexed() else (comp,)
                 _filter_model_variables(
                     variable_set,

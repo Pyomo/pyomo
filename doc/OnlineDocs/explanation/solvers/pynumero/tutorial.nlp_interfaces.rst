@@ -10,7 +10,7 @@ Relevant imports
 .. doctest::
    :skipif: not numpy_available or not scipy_available or not asl_available
 
-   >>> import pyomo.environ as pe
+   >>> import pyomo.environ as pyo
    >>> from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
    >>> import numpy as np
 
@@ -19,12 +19,12 @@ Create a Pyomo model
 .. doctest::
    :skipif: not numpy_available or not scipy_available or not asl_available
 
-   >>> m = pe.ConcreteModel()
-   >>> m.x = pe.Var(bounds=(-5, None))
-   >>> m.y = pe.Var(initialize=2.5)
-   >>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-   >>> m.c1 = pe.Constraint(expr=m.y == (m.x - 1)**2)
-   >>> m.c2 = pe.Constraint(expr=m.y >= pe.exp(m.x))
+   >>> m = pyo.ConcreteModel()
+   >>> m.x = pyo.Var(bounds=(-5, None))
+   >>> m.y = pyo.Var(initialize=2.5)
+   >>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+   >>> m.c1 = pyo.Constraint(expr=m.y == (m.x - 1)**2)
+   >>> m.c2 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
 
 Create a :py:class:`pyomo.contrib.pynumero.interfaces.pyomo_nlp.PyomoNLP` instance
 

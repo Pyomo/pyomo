@@ -11,7 +11,6 @@
 
 from pyomo.contrib.appsi.examples import getting_started
 import pyomo.common.unittest as unittest
-import pyomo.environ as pe
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib import appsi
 

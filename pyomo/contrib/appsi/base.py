@@ -402,11 +402,11 @@ class Results(object):
     -------
     Here is an example workflow:
 
-        >>> import pyomo.environ as pe
+        >>> import pyomo.environ as pyo
         >>> from pyomo.contrib import appsi
-        >>> m = pe.ConcreteModel()
-        >>> m.x = pe.Var()
-        >>> m.obj = pe.Objective(expr=m.x**2)
+        >>> m = pyo.ConcreteModel()
+        >>> m.x = pyo.Var()
+        >>> m.obj = pyo.Objective(expr=m.x**2)
         >>> opt = appsi.solvers.Ipopt()
         >>> opt.config.load_solution = False
         >>> results = opt.solve(m) #doctest:+SKIP

@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.contrib.alternative_solutions import (
     aos_utils,
     shifted_lp,
@@ -145,7 +145,7 @@ def enumerate_linear_solutions(
         for parameter, value in solver_options.items():
             opt.gurobi_options[parameter] = value
     else:
-        opt = pe.SolverFactory(solver)
+        opt = pyo.SolverFactory(solver)
         opt.available()
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
@@ -163,7 +163,7 @@ def enumerate_linear_solutions(
     else:
         results = opt.solve(model, tee=tee, load_solutions=False)
         condition = results.solver.termination_condition
-        optimal_tc = pe.TerminationCondition.optimal
+        optimal_tc = pyo.TerminationCondition.optimal
     if condition != optimal_tc:
         raise Exception(
             (
@@ -178,7 +178,7 @@ def enumerate_linear_solutions(
         model.solutions.load_from(results)
 
     orig_objective = aos_utils.get_active_objective(model)
-    orig_objective_value = pe.value(orig_objective)
+    orig_objective_value = pyo.value(orig_objective)
     logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
 
     aos_block = aos_utils._add_aos_block(model, name="_lp_enum")
@@ -191,20 +191,20 @@ def enumerate_linear_solutions(
     cb = canon_block
 
     # Set K
-    cb.iteration = pe.Set(pe.PositiveIntegers)
+    cb.iteration = pyo.Set(pyo.PositiveIntegers)
 
     # w variables
-    cb.basic_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    cb.basic_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-    cb.basic_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+    cb.basic_lower = pyo.Var(pyo.Any, domain=pyo.Binary, dense=False)
+    cb.basic_upper = pyo.Var(pyo.Any, domain=pyo.Binary, dense=False)
+    cb.basic_slack = pyo.Var(pyo.Any, domain=pyo.Binary, dense=False)
 
     # w upper bounds constraints (Eqn (3))
-    cb.bound_lower = pe.Constraint(pe.Any)
-    cb.bound_upper = pe.Constraint(pe.Any)
-    cb.bound_slack = pe.Constraint(pe.Any)
+    cb.bound_lower = pyo.Constraint(pyo.Any)
+    cb.bound_upper = pyo.Constraint(pyo.Any)
+    cb.bound_slack = pyo.Constraint(pyo.Any)
 
     # non-zero basic variable no-good cut set
-    cb.cut_set = pe.Constraint(pe.PositiveIntegers)
+    cb.cut_set = pyo.Constraint(pyo.PositiveIntegers)
 
     # [ (continuous, binary, constraint) ]
     variable_groups = [
@@ -259,11 +259,11 @@ def enumerate_linear_solutions(
             if hasattr(cb, "basic_last_slack"):
                 cb.del_component("basic_last_slack")
 
-            cb.link_in_out = pe.Constraint(pe.Any)
+            cb.link_in_out = pyo.Constraint(pyo.Any)
             # y variables
-            cb.basic_last_lower = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-            cb.basic_last_upper = pe.Var(pe.Any, domain=pe.Binary, dense=False)
-            cb.basic_last_slack = pe.Var(pe.Any, domain=pe.Binary, dense=False)
+            cb.basic_last_lower = pyo.Var(pyo.Any, domain=pyo.Binary, dense=False)
+            cb.basic_last_upper = pyo.Var(pyo.Any, domain=pyo.Binary, dense=False)
+            cb.basic_last_slack = pyo.Var(pyo.Any, domain=pyo.Binary, dense=False)
             basic_last_list = [
                 cb.basic_last_lower,
                 cb.basic_last_upper,
@@ -298,15 +298,15 @@ def enumerate_linear_solutions(
                         cb.link_in_out[var] = basic_var + binary_var[var] <= 1
             # Eqn (1): at least one of the non-zero basic variables in the
             #   previous solution is selected
-            cb.force_out = pe.Constraint(expr=force_out_expr >= 0)
+            cb.force_out = pyo.Constraint(expr=force_out_expr >= 0)
             # Eqn (2): At most (# non-zero basic variables)-1 binary choice
             # variables can be selected
             cb.cut_set[solution_number] = non_zero_basic_expr <= num_non_zero
 
             solution_number += 1
         elif (
-            condition == pe.TerminationCondition.infeasibleOrUnbounded
-            or condition == pe.TerminationCondition.infeasible
+            condition == pyo.TerminationCondition.infeasibleOrUnbounded
+            or condition == pyo.TerminationCondition.infeasible
         ):
             logger.info("Infeasible, all alternative solutions have been found.")
             break

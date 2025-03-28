@@ -25,9 +25,9 @@ if not AmplInterface.available():
 from pyomo.contrib.pynumero.linalg.mumps_interface import mumps_available
 from pyomo.contrib.pynumero.linalg.scipy_interface import ScipyLU
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
-ipopt_opt = pe.SolverFactory('ipopt')
+ipopt_opt = pyo.SolverFactory('ipopt')
 ipopt_available = ipopt_opt.available(exception_flag=False)
 
 from pyomo.contrib.pynumero.examples import (
