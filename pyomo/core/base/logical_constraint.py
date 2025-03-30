@@ -136,6 +136,17 @@ class LogicalConstraintData(ActiveComponentData):
                     self._expr = expr
                     _known_logical_expression_types.add(expr.__class__)
                     return
+
+                # FIXME: we should extend the templating system to
+                # handle things like IntervalVar types so that
+                # indirection and things like CallExpression can
+                # properly propagate the expression type.  In the
+                # meantime, we will just assume that all template
+                # expressions are acceptable (which, while not correct,
+                # is consistent with prior behavior)
+                if hasattr(expr, '_resolve_template'):
+                    self._expr = expr
+                    return
             except AttributeError:
                 pass
 
