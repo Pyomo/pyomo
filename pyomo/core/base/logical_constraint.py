@@ -87,9 +87,7 @@ class LogicalConstraintData(ActiveComponentData):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this logical constraint."""
-        if self.body is None:
-            return None
-        return self.body(exception=exception)
+        return self.expr(exception=exception)
 
     #
     # Abstract Interface
