@@ -475,6 +475,6 @@ class LogicalConstraintList(IndexedLogicalConstraint):
 
     def add(self, expr):
         """Add a logical constraint with an implicit index."""
-        next_idx = len(self._index_set) + 1
+        next_idx = len(self._index_set) + self._starting_index
         self._index_set.add(next_idx)
         return self.__setitem__(next_idx, expr)
