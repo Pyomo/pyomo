@@ -929,6 +929,7 @@ class SimpleConstraint(metaclass=RenamedClass):
         'add',
         'set_value',
         'to_bounded_expression',
+        'expr',
         'body',
         'lower',
         'upper',

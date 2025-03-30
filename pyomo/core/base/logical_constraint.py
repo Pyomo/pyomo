@@ -98,7 +98,7 @@ class LogicalConstraintData(ActiveComponentData):
     @property
     def body(self):
         """Access the body of a logical constraint expression."""
-        return self._expr
+        return self.expr
 
     @property
     def expr(self):
@@ -361,22 +361,16 @@ class ScalarLogicalConstraint(LogicalConstraintData, LogicalConstraint):
     #
 
     @property
-    def body(self):
+    def expr(self):
         """Access the body of a logical constraint."""
-        if self._constructed:
-            if len(self._data) == 0:
-                raise ValueError(
-                    "Accessing the body of ScalarLogicalConstraint "
-                    "'%s' before the LogicalConstraint has been assigned "
-                    "an expression. There is currently "
-                    "nothing to access." % self.name
-                )
-            return LogicalConstraintData.body.fget(self)
-        raise ValueError(
-            "Accessing the body of logical constraint '%s' "
-            "before the LogicalConstraint has been constructed (there "
-            "is currently no value to return)." % self.name
-        )
+        if not self._data:
+            raise ValueError(
+                "Accessing the expr of ScalarLogicalConstraint "
+                "'%s' before the LogicalConstraint has been assigned "
+                "an expression. There is currently "
+                "nothing to access." % self.name
+            )
+        return LogicalConstraintData.expr.fget(self)
 
     #
     # Singleton logical constraints are strange in that we want them to be
@@ -415,7 +409,7 @@ class SimpleLogicalConstraint(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-@disable_methods({'add', 'set_value', 'body'})
+@disable_methods({'add', 'set_value', 'expr', 'body'})
 class AbstractScalarLogicalConstraint(ScalarLogicalConstraint):
     pass
 
