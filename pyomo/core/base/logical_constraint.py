@@ -107,8 +107,6 @@ class LogicalConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this logical constraint."""
-        # Clear any previous expression
-        self._expr = None
         if expr.__class__ in _known_logical_expression_types:
             self._expr = expr
             return
@@ -125,9 +123,7 @@ class LogicalConstraintData(ActiveComponentData):
             elif expr is LogicalConstraint.Feasible:
                 self._expr = BooleanConstant(True)
                 return
-            else:
-                del self.parent_component()[self.index()]
-                # self._expr is still None: this will raise a ValueError below
+            # else: fall through to the ValueError below
 
         elif expr.__class__ in native_logical_types:
             self._expr = as_boolean(expr)

@@ -816,7 +816,7 @@ class TestSimpleCon(unittest.TestCase):
         model.c = Constraint(expr=ans)
 
         with self.assertRaisesRegex(
-            ValueError, "No value for uninitialized NumericValue object x"
+            ValueError, "No value for uninitialized ScalarVar object x"
         ):
             value(model.c)
         model.x = 2
@@ -1876,11 +1876,11 @@ class MiscConTests(unittest.TestCase):
         self.assertIs(m.c.lower, m.l)
         self.assertIs(m.c.upper, m.u)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object l'
+            ValueError, 'No value for uninitialized ScalarExpression object l'
         ):
             m.c.lb
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object u'
+            ValueError, 'No value for uninitialized ScalarExpression object u'
         ):
             m.c.ub
 

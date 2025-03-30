@@ -380,8 +380,6 @@ class ConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        # Clear any previous constraint
-        self._expr = None
         if expr.__class__ in _known_relational_expression_types:
             if getattr(expr, 'strict', False) in _strict_relational_exprs:
                 raise ValueError(
@@ -460,9 +458,7 @@ class ConstraintData(ActiveComponentData):
                 # than it actually has.
                 self._expr = InequalityExpression((0, 0), False)
                 return
-            else:
-                del self.parent_component()[self.index()]
-                # self._expr is still None: this will raise a ValueError below
+            # else: fall through to the ValueError below
 
         elif expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
@@ -485,7 +481,7 @@ class ConstraintData(ActiveComponentData):
             except AttributeError:
                 pass
 
-        msg = (
+        raise ValueError(
             "Constraint '%s' does not have a proper "
             "value. Found %s '%s'\nExpecting a tuple or "
             "relational expression. Examples:"
@@ -493,7 +489,6 @@ class ConstraintData(ActiveComponentData):
             "\n   (0, model.price[item], 50)"
             % (self.name, type(expr).__name__, str(expr))
         )
-        raise ValueError(msg)
 
     def lslack(self):
         """
