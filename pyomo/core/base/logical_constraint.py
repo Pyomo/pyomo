@@ -458,7 +458,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
         self._constructed = True
 
         if is_debug_set(logger):
-            logger.debug("Constructing constraint list %s" % (self.name))
+            logger.debug("Constructing logical constraint list %s" % (self.name))
 
         if self._anonymous_sets is not None:
             for _set in self._anonymous_sets:
