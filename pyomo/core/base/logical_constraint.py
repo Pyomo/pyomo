@@ -33,7 +33,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import Set
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger(__name__)
 _known_logical_expression_types = set()
 _rule_returned_none_error = """LogicalConstraint '%s': rule returned None.
 
