@@ -132,17 +132,12 @@ class LogicalConstraintData(ActiveComponentData):
 
         elif expr.__class__ not in native_types:
             try:
-                if expr.is_expression_type(ExpressionType.LOGICAL):
+                if expr.is_logical_type():
                     self._expr = expr
                     _known_logical_expression_types.add(expr.__class__)
                     return
             except AttributeError:
                 pass
-
-            self._expr = as_boolean(expr)
-            if self._expr is expr:
-                _known_logical_expression_types.add(expr.__class__)
-            return
 
         raise ValueError(
             "LogicalStatement '%s' does not have a proper value. "

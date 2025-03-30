@@ -46,8 +46,8 @@ def as_boolean(obj):
     # Ignore objects that are duck types to work with Pyomo expressions
     #
     try:
-        obj.is_expression_type()
-        return obj
+        if obj.is_logical_type():
+            return obj
     except AttributeError:
         pass
     #
