@@ -28,17 +28,20 @@ def _generate_logical_proposition(etype, _self, _other):
 
 
 def as_boolean(obj):
-    """
-    A function that creates a BooleanConstant object that
-    wraps Python Boolean values.
+    """A function that converts its argument to a Pyomo Boolean (logiacl) object.
 
-    Args:
-        obj: The logical value that may be wrapped.
+    If `obj` is a Pyomo logical value (usually a BooleanValue subclass),
+    then `obj` is returned.  If `obj` is in `native_logical_types`, then
+    the value is wrapped in a :py:class:`BooleanConstant` and returned.
 
-    Raises: TypeError if the object is in native_types and not in
-        native_logical_types
+    Parameters
+    ----------
+    obj: The value to process and return / convert.
 
-    Returns: A true or false BooleanConstant or the original object
+    Raises
+    ------
+    TypeError: if `obj` is not a logical value
+
     """
     if obj.__class__ in native_logical_types:
         return BooleanConstant(obj)
@@ -55,9 +58,13 @@ def as_boolean(obj):
     #
     if obj.__class__ in native_types:
         raise TypeError(f"Cannot treat the value '{obj}' as a logical constant")
+    try:
+        _name = obj.name
+    except AttributeError:
+        _name = str(obj)
     raise TypeError(
-        "Cannot treat the value '%s' as a logical constant because it has "
-        "unknown type '%s'" % (str(obj), type(obj).__name__)
+        "The '%s' object '%s' is not a valid type for Pyomo "
+        "logical expressions" % (type(obj).__name__, _name)
     )
 
 
