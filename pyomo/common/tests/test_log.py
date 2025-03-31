@@ -550,6 +550,18 @@ class TestLogStream(unittest.TestCase):
             # Exiting the context manager flushes the LogStream
             self.assertEqual(OUT.getvalue(), "INFO: line 1\nINFO: line 2\n")
 
+    def test_loggerAdapter(self):
+        class Adapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '[%s] %s' % (self.extra['foo'], msg), kwargs
+
+        adapter = Adapter(logging.getLogger('pyomo'), {"foo": 42})
+        ls = LogStream(logging.INFO, adapter)
+        LI = LoggingIntercept(level=logging.INFO, formatter=pyomo_formatter)
+        with LI as OUT:
+            ls.write("hello, world\n")
+            self.assertEqual(OUT.getvalue(), "INFO: [42] hello, world\n")
+
 
 class TestPreformatted(unittest.TestCase):
     def test_preformatted_api(self):

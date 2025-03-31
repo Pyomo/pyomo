@@ -415,6 +415,8 @@ class LogStream(io.TextIOBase):
         """
         found = 0
         logger = self._logger
+        while isinstance(logger, logging.LoggerAdapter):
+            logger = logger.logger
         while logger:
             for handler in logger.handlers:
                 found += 1
