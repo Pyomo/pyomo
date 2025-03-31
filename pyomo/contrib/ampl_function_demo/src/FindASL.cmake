@@ -9,8 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-cmake_minimum_required(VERSION 3.0)
-# Minimum version inherited from AMPL/asl
+cmake_minimum_required(VERSION 3.0...3.5)
+# CMake 3.0 added GIT_SUBMODULES to ExternalProject_ADD, and without it
+# the Ampl/MP checkout fails because one of the submodules (gecode) is a
+# private repository.
+#
+# CMake will complain/fail if we don't explicitly acknowledge 3.5
+# compatibility.  AMPL/asl has moved their min version to 3.5.
 
 include(ExternalProject)
 
