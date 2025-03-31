@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-cmake_minimum_required(VERSION 3.0...3.5)
+cmake_minimum_required(VERSION 3.0...3.31)
 # CMake 3.0 added GIT_SUBMODULES to ExternalProject_ADD, and without it
 # the Ampl/MP checkout fails because one of the submodules (gecode) is a
 # private repository.

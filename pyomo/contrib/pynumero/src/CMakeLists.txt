@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-cmake_minimum_required(VERSION 3.0...3.5)
+cmake_minimum_required(VERSION 3.0...3.31)
 # This was developed against CMake 3.0, and appears to comply with 3.5
 
 PROJECT( pynumero )
