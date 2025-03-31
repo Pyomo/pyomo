@@ -1537,14 +1537,14 @@ class DesignOfExperiments:
             # Compute and record metrics on FIM
             D_opt = np.log10(np.linalg.det(FIM))
             A_opt = np.log10(np.trace(FIM))
-            E_vals =np.linalg.eigvalsh(FIM) # np.linalg.eigvalsh(FIM)  # Grab eigenvalues
+            E_vals, E_vecs =np.linalg.eig(FIM)  # Grab eigenvalues
 
-            E_ind = 0  # Grab index of minima to check imaginary
-            img_thereshold = 1e-8  # Threshold for imaginary component
+            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            IMG_THERESHOLD = 1e-6  # Threshold for imaginary component
             # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > img_thereshold:
+            if abs(E_vals.imag[E_ind]) > IMG_THERESHOLD:
                 self.logger.warning(
-                    f"Eigenvalue has imaginary component greater than {img_thereshold}, contact developers if this issue persists."
+                    f"Eigenvalue has imaginary component greater than {IMG_THERESHOLD}, contact developers if this issue persists."
                 )
 
             # If the real value is less than or equal to zero, set the E_opt value to nan
