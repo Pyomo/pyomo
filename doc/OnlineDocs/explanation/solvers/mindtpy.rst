@@ -17,10 +17,10 @@ The following algorithms are currently available in MindtPy:
 
 Usage and early implementation details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
-`preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
+`preprint <https://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
 This solver implementation has been developed by `David Bernal <https://github.com/bernalde>`_
 and `Zedong Peng <https://github.com/ZedongPeng>`_ as part of research efforts at the `Bernal Research Group 
-<https://bernalde.github.io/>`_ and the `Grossmann Research Group <http://egon.cheme.cmu.edu/>`_
+<https://bernalde.github.io/>`_ and the `Grossmann Research Group <https://egon.cheme.cmu.edu/>`_
 at Purdue University and Carnegie Mellon University.
 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064

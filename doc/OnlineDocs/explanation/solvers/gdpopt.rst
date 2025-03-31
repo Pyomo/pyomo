@@ -20,7 +20,7 @@ Three algorithms are available in GDPopt:
 
 Usage and implementation details for GDPopt can be found in the PSE 2018 paper
 (`Chen et al., 2018`_), or via its
-`preprint <http://egon.cheme.cmu.edu/Papers/Chen_Pyomo_GDP_PSE2018.pdf>`_.
+`preprint <https://egon.cheme.cmu.edu/Papers/Chen_Pyomo_GDP_PSE2018.pdf>`_.
 
 Credit for prototyping and development can be found in the ``GDPopt`` class documentation, below.
 

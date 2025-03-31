@@ -9,15 +9,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-cmake_minimum_required(VERSION 3.0)
-# Minimum version inherited from AMPL/asl
+cmake_minimum_required(VERSION 3.0...3.31)
+# CMake 3.0 added GIT_SUBMODULES to ExternalProject_ADD, and without it
+# the Ampl/MP checkout fails because one of the submodules (gecode) is a
+# private repository.
+#
+# CMake will complain/fail if we don't explicitly acknowledge 3.5
+# compatibility.  AMPL/asl has moved their min version to 3.5.
 
 include(ExternalProject)
 
 # Dependencies that we manage / can install
-SET(AMPLASL_TAG "9fb7cb8e4f68ed1c3bc066d191e63698b7d7d1d2" CACHE STRING
+SET(AMPLASL_TAG "ae937db9bd1169ec2c4cb8d75196f67cdcb8041b" CACHE STRING
   "AMPL/asl git tag/branch to checkout and build")
-# 9fb7cb8e4f68ed1c3bc066d191e63698b7d7d1d2 corresponds to ASLdate = 20211109
+# 9fb7cb8e4f68ed1c3bc066d191e63698b7d7d1d2: ASLdate=20211109
+# ae937db9bd1169ec2c4cb8d75196f67cdcb8041b: v1.0.1  ASLdate = 20241202/20241122
 OPTION(BUILD_AMPLASL
   "Download and build AMPL/asl ${AMPLASL_TAG} from GitHub" OFF)
 
