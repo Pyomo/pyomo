@@ -198,7 +198,7 @@ an ordinary or partial differential equation.
 .. doctest::
 
    Required imports
-   >>> fimport pyomo.environ as pyo
+   >>> import pyomo.environ as pyo
    >>> from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
    >>> model = pyo.ConcreteModel()
@@ -898,7 +898,7 @@ example.
     >>> c_profile = {0: 5.0, 7: 50}
 
     Declaring a Pyomo Suffix to pass the time-varying inputs to the Simulator
-    >>> m.var_input = Suffix(direction=Suffix.LOCAL)
+    >>> m.var_input = pyo.Suffix(direction=pyo.Suffix.LOCAL)
     >>> m.var_input[m.b] = b_profile
     >>> m.var_input[m.c] = c_profile
 

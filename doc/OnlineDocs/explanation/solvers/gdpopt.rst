@@ -103,7 +103,7 @@ An example that includes the modeling approach may be found below.
           Key  : Active : Value
           None :   True :   0.1
   <BLANKLINE>
-    pyo.Constraints:
+    Constraints:
       c : Size=1
           Key  : Lower : Body : Upper
           None :   1.0 :    1 :   1.0
