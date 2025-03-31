@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.util.report_scaling import report_scaling
 import logging
 from pyomo.common import unittest
@@ -20,10 +20,10 @@ import re
 
 class TestReportScaling(unittest.TestCase):
     def test_report_scaling(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(list(range(5)))
-        m.c = pe.Constraint(list(range(4)))
-        m.p = pe.Param(initialize=0, mutable=True)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(list(range(5)))
+        m.c = pyo.Constraint(list(range(4)))
+        m.p = pyo.Param(initialize=0, mutable=True)
 
         m.x[0].setlb(-1)
         m.x[0].setub(1)
@@ -34,8 +34,8 @@ class TestReportScaling(unittest.TestCase):
         m.x[3].setlb(-20)
         m.x[3].setub(20)
 
-        m.obj1 = pe.Objective(expr=1e-8 * m.x[0] + pe.exp(m.x[3]) + m.x[1] * m.x[2])
-        m.obj2 = pe.Objective(expr=m.x[0] * m.x[3] + m.x[1] ** 2)
+        m.obj1 = pyo.Objective(expr=1e-8 * m.x[0] + pyo.exp(m.x[3]) + m.x[1] * m.x[2])
+        m.obj2 = pyo.Objective(expr=m.x[0] * m.x[3] + m.x[1] ** 2)
 
         m.c[0] = m.x[0] + m.x[3] == 0
         m.c[1] = 1 / m.x[1] == 1
