@@ -21,6 +21,7 @@
 import inspect
 import io
 import logging
+import os
 import re
 import sys
 import textwrap
@@ -286,13 +287,21 @@ class LoggingIntercept(object):
     ----------
     output: io.TextIOBase
         the file stream to send log messages to
+
     module: str
-        the target logger name to intercept
+        the target logger name to intercept. `logger` and `module` are
+        mutually exclusive.
+
     level: int
         the logging level to intercept
+
     formatter: logging.Formatter
         the formatter to use when rendering the log messages.  If not
         specified, uses `'%(message)s'`
+
+    logger: logging.Logger
+        the target logger to intercept. `logger` and `module` are
+        mutually exclusive.
 
     Examples
     --------
@@ -306,10 +315,24 @@ class LoggingIntercept(object):
 
     """
 
-    def __init__(self, output=None, module=None, level=logging.WARNING, formatter=None):
+    def __init__(
+        self,
+        output=None,
+        module=None,
+        level=logging.WARNING,
+        formatter=None,
+        logger=None,
+    ):
         self.handler = None
         self.output = output
-        self.module = module
+        if logger is not None:
+            if module is not None:
+                raise ValueError(
+                    "LoggingIntercept: only one of 'module' and 'logger' is allowed"
+                )
+            self._logger = logger
+        else:
+            self._logger = logging.getLogger(module)
         self._level = level
         if formatter is None:
             formatter = logging.Formatter('%(message)s')
@@ -317,6 +340,11 @@ class LoggingIntercept(object):
         self._save = None
 
     def __enter__(self):
+        # Get the logger for the scope we will be overriding
+        logger = self._logger
+        self._save = logger.level, logger.propagate, logger.handlers
+        if self._level is None:
+            self._level = logger.getEffectiveLevel()
         # Set up the handler
         output = self.output
         if output is None:
@@ -326,22 +354,24 @@ class LoggingIntercept(object):
         self.handler.setFormatter(self._formatter)
         self.handler.setLevel(self._level)
         # Register the handler with the appropriate module scope
-        logger = logging.getLogger(self.module)
-        self._save = logger.level, logger.propagate, logger.handlers
         logger.handlers = []
-        logger.propagate = 0
+        logger.propagate = False
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
         return output
 
     def __exit__(self, et, ev, tb):
-        logger = logging.getLogger(self.module)
+        logger = self._logger
         logger.removeHandler(self.handler)
         self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
         assert not logger.handlers
         logger.handlers.extend(self._save[2])
+
+    @property
+    def module(self):
+        return self._logger.name
 
 
 class LogStream(io.TextIOBase):
@@ -357,6 +387,8 @@ class LogStream(io.TextIOBase):
         self._buffer = ''
 
     def write(self, s: str) -> int:
+        if not s:
+            return 0
         res = len(s)
         if self._buffer:
             s = self._buffer + s
@@ -369,3 +401,78 @@ class LogStream(io.TextIOBase):
     def flush(self):
         if self._buffer:
             self.write('\n')
+
+    def redirect_streams(self, redirects):
+        """Redirect StreamHandler objects to the original file descriptors
+
+        This utility method for py:class:`~pyomo.common.tee.capture_output`
+        locates any StreamHandlers that would process messages from the
+        logger assigned to this :py:class:`LogStream` that would write
+        to the file descriptors redirected by `capture_output` and
+        yields context managers that will redirect those StreamHandlers
+        back to duplicates of the original file descriptors.
+
+        """
+        found = 0
+        logger = self._logger
+        while isinstance(logger, logging.LoggerAdapter):
+            logger = logger.logger
+        while logger:
+            for handler in logger.handlers:
+                found += 1
+                if not isinstance(handler, logging.StreamHandler):
+                    continue
+                try:
+                    fd = handler.stream.fileno()
+                except (AttributeError, OSError):
+                    fd = None
+                if fd not in redirects:
+                    continue
+                yield _StreamRedirector(handler, redirects[fd].original_fd)
+            if not logger.propagate:
+                break
+            else:
+                logger = logger.parent
+        if not found:
+            fd = logging.lastResort.stream.fileno()
+            if not redirects:
+                yield _LastResortRedirector(fd)
+            elif fd in redirects:
+                yield _LastResortRedirector(redirects[fd].original_fd)
+
+
+class _StreamRedirector(object):
+    def __init__(self, handler, fd):
+        self.handler = handler
+        self.fd = fd
+        self.orig_stream = None
+
+    def __enter__(self):
+        self.orig_stream = self.handler.stream
+        self.handler.stream = os.fdopen(
+            os.dup(self.fd), mode="w", closefd=True
+        ).__enter__()
+
+    def __exit__(self, et, ev, tb):
+        try:
+            self.handler.stream.__exit__(et, ev, tb)
+        finally:
+            self.handler.stream = self.orig_stream
+
+
+class _LastResortRedirector(object):
+    def __init__(self, fd):
+        self.fd = fd
+        self.orig_stream = None
+
+    def __enter__(self):
+        self.orig = logging.lastResort
+        logging.lastResort = logging.StreamHandler(
+            os.fdopen(os.dup(self.fd), mode="w", closefd=True).__enter__()
+        )
+
+    def __exit__(self, et, ev, tb):
+        try:
+            logging.lastResort.stream.close()
+        finally:
+            logging.lastResort = self.orig

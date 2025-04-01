@@ -527,6 +527,12 @@ class TestLogStream(unittest.TestCase):
             self.assertEqual(OUT.getvalue(), "INFO: line 1\nINFO: line 2\n")
 
         with LI as OUT:
+            # empty writes do not generate log records
+            ls.write("")
+            ls.flush()
+            self.assertEqual(OUT.getvalue(), "")
+
+        with LI as OUT:
             ls.write("line 1\nline 2")
             self.assertEqual(OUT.getvalue(), "INFO: line 1\n")
 
@@ -544,6 +550,18 @@ class TestLogStream(unittest.TestCase):
             # Exiting the context manager flushes the LogStream
             self.assertEqual(OUT.getvalue(), "INFO: line 1\nINFO: line 2\n")
 
+    def test_loggerAdapter(self):
+        class Adapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '[%s] %s' % (self.extra['foo'], msg), kwargs
+
+        adapter = Adapter(logging.getLogger('pyomo'), {"foo": 42})
+        ls = LogStream(logging.INFO, adapter)
+        LI = LoggingIntercept(level=logging.INFO, formatter=pyomo_formatter)
+        with LI as OUT:
+            ls.write("hello, world\n")
+            self.assertEqual(OUT.getvalue(), "INFO: [42] hello, world\n")
+
 
 class TestPreformatted(unittest.TestCase):
     def test_preformatted_api(self):
@@ -558,3 +576,46 @@ class TestPreformatted(unittest.TestCase):
         self.assertIs(msg.msg, ref)
         self.assertEqual(str(msg), '2')
         self.assertEqual(repr(msg), "Preformatted(2)")
+
+
+class TestLoggingIntercept(unittest.TestCase):
+    def test_init(self):
+        li = LoggingIntercept()
+        self.assertEqual(li.module, 'root')
+
+        li = LoggingIntercept(module='pyomo.core')
+        self.assertEqual(li.module, 'pyomo.core')
+
+        li = LoggingIntercept(logger=logger)
+        self.assertEqual(li.module, 'pyomo.common.log.testing')
+
+        with self.assertRaisesRegex(
+            ValueError, "LoggingIntercept: only one of 'module' and 'logger' is allowed"
+        ):
+            li = LoggingIntercept(module='pyomo', logger=logger)
+
+    def test_propagate(self):
+        self.assertEqual(logger.propagate, True)
+        with LoggingIntercept(logger=logger):
+            self.assertEqual(logger.propagate, False)
+        self.assertEqual(logger.propagate, True)
+
+    def test_propagate(self):
+        self.assertEqual(logger.level, 30)
+        try:
+            with LoggingIntercept(logger=logger, level=None):
+                self.assertEqual(logger.level, 30)
+            self.assertEqual(logger.level, 30)
+            with LoggingIntercept(logger=logger, level=40):
+                self.assertEqual(logger.level, 40)
+            self.assertEqual(logger.level, 30)
+
+            logger.setLevel(40)
+            with LoggingIntercept(logger=logger, level=None):
+                self.assertEqual(logger.level, 40)
+            self.assertEqual(logger.level, 40)
+            with LoggingIntercept(logger=logger, level=30):
+                self.assertEqual(logger.level, 30)
+            self.assertEqual(logger.level, 40)
+        finally:
+            logger.setLevel(30)
