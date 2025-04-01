@@ -9,6 +9,8 @@ on:
       git-ref:
         description: Git Hash (Optional)
         required: false
+  workflow_call:
+    inputs:
       subworkflow:
         description: Configure the sub-workflow to execute
         required: false
