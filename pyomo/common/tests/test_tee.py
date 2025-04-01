@@ -586,7 +586,7 @@ class TestCapture(unittest.TestCase):
         # insufficient to ensure that T was collected (but unable to
         # reproduce it locally).  We will try up to 4 times (1 more than
         # the number of generations in the GC)
-        remaining_attempts = 1
+        remaining_attempts = 4
         while len(stack) and remaining_attempts:
             gc.collect()
             remaining_attempts -= 1
