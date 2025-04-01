@@ -914,26 +914,6 @@ jobs:
         $PYTHON_EXE -c "from pyomo.dataportal.parse_datacmds import \
             parse_data_commands; parse_data_commands(data='')"
 
-    - name: Update codecov uploader
-      run: |
-        set +e
-        CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
-        echo "CODECOV=$CODECOV" >> $GITHUB_ENV
-        for i in `seq 3`; do
-            echo "Downloading current codecov script (attempt ${i})"
-            curl -L https://codecov.io/bash -o $CODECOV
-            if test $? == 0; then
-                break
-            fi
-            DELAY=$(( RANDOM % 30 + 30))
-            echo "Pausing $DELAY seconds before re-attempting download"
-            sleep $DELAY
-        done
-        if test ! -e $CODECOV; then
-            echo "Failed to download codecov.sh"
-            exit 1
-        fi
-
     - name: Combine coverage reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
       run: |
@@ -972,7 +952,7 @@ jobs:
 
     - name: Upload codecov reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: coverage.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
@@ -984,7 +964,7 @@ jobs:
       if: |
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: coverage-other.xml
         token: ${{ secrets.PYOMO_CODECOV_TOKEN }}
