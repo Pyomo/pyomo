@@ -18,6 +18,7 @@ on:
       subworkflow_test:
         description: Configure the sub-workflow to execute
         required: false
+        type: string
         default: |
           ${{ ( contains(github.event.pull_request.title, '[WIP]') ||
                 github.event.pull_request.draft ) && 'draft_pr'
