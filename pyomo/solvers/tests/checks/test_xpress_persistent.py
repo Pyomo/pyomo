@@ -11,7 +11,7 @@
 import logging
 
 import pyomo.common.unittest as unittest
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.solvers.plugins.solvers.xpress_direct as xpd
 
 from pyomo.common.log import LoggingIntercept
@@ -19,19 +19,19 @@ from pyomo.core.expr.taylor_series import taylor_series_expansion
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.solvers.plugins.solvers.xpress_persistent import XpressPersistent
 
-xpress_available = pe.SolverFactory('xpress_persistent').available(False)
+xpress_available = pyo.SolverFactory('xpress_persistent').available(False)
 
 
 class TestXpressPersistent(unittest.TestCase):
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_basics(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-10, 10))
-        m.y = pe.Var()
-        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-        m.c1 = pe.Constraint(expr=m.y >= 2 * m.x + 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-10, 10))
+        m.y = pyo.Var()
+        m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pyo.Constraint(expr=m.y >= 2 * m.x + 1)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
 
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
@@ -57,7 +57,7 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.slack[m.c1], 0, delta=1e-6)
         del m.slack
 
-        m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x + 1)
         opt.add_constraint(m.c2)
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
         self.assertEqual(opt.get_xpress_attribute('rows'), 2)
@@ -111,7 +111,7 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertEqual(lb[0], -5)
         self.assertEqual(ub[0], 5)
 
-        m.c2 = pe.Constraint(expr=m.y >= m.x**2)
+        m.c2 = pyo.Constraint(expr=m.y >= m.x**2)
         opt.add_constraint(m.c2)
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
         self.assertEqual(opt.get_xpress_attribute('rows'), 2)
@@ -121,7 +121,7 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
         self.assertEqual(opt.get_xpress_attribute('rows'), 1)
 
-        m.z = pe.Var()
+        m.z = pyo.Var()
         opt.add_var(m.z)
         self.assertEqual(opt.get_xpress_attribute('cols'), 3)
         opt.remove_var(m.z)
@@ -130,14 +130,14 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_qconstraint(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.obj = pe.Objective(expr=m.z)
-        m.c1 = pe.Constraint(expr=m.z >= m.x**2 + m.y**2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.obj = pyo.Objective(expr=m.z)
+        m.c1 = pyo.Constraint(expr=m.z >= m.x**2 + m.y**2)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
         self.assertEqual(opt.get_xpress_attribute('rows'), 1)
 
@@ -149,14 +149,14 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_lconstraint(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.z = pe.Var()
-        m.obj = pe.Objective(expr=m.z)
-        m.c2 = pe.Constraint(expr=m.x + m.y == 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var()
+        m.obj = pyo.Objective(expr=m.z)
+        m.c2 = pyo.Constraint(expr=m.x + m.y == 1)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
         self.assertEqual(opt.get_xpress_attribute('rows'), 1)
 
@@ -168,14 +168,14 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_sosconstraint(self):
-        m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=[1, 2, 3], ordered=True)
-        m.x = pe.Var(m.a, within=pe.Binary)
-        m.y = pe.Var(within=pe.Binary)
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.SOSConstraint(var=m.x, sos=1)
+        m = pyo.ConcreteModel()
+        m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
+        m.x = pyo.Var(m.a, within=pyo.Binary)
+        m.y = pyo.Var(within=pyo.Binary)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.SOSConstraint(var=m.x, sos=1)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
         self.assertEqual(opt.get_xpress_attribute('sets'), 1)
 
@@ -187,17 +187,17 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_sosconstraint2(self):
-        m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=[1, 2, 3], ordered=True)
-        m.x = pe.Var(m.a, within=pe.Binary)
-        m.y = pe.Var(within=pe.Binary)
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.SOSConstraint(var=m.x, sos=1)
+        m = pyo.ConcreteModel()
+        m.a = pyo.Set(initialize=[1, 2, 3], ordered=True)
+        m.x = pyo.Var(m.a, within=pyo.Binary)
+        m.y = pyo.Var(within=pyo.Binary)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.SOSConstraint(var=m.x, sos=1)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
         self.assertEqual(opt.get_xpress_attribute('sets'), 1)
-        m.c2 = pe.SOSConstraint(var=m.x, sos=2)
+        m.c2 = pyo.SOSConstraint(var=m.x, sos=2)
         opt.add_sos_constraint(m.c2)
         self.assertEqual(opt.get_xpress_attribute('sets'), 2)
         opt.remove_sos_constraint(m.c2)
@@ -205,11 +205,11 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_remove_var(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
         self.assertEqual(opt.get_xpress_attribute('cols'), 2)
 
@@ -226,17 +226,17 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_column(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(within=pe.NonNegativeReals)
-        m.c = pe.Constraint(expr=(0, m.x, 1))
-        m.obj = pe.Objective(expr=-m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(within=pyo.NonNegativeReals)
+        m.c = pyo.Constraint(expr=(0, m.x, 1))
+        m.obj = pyo.Objective(expr=-m.x)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
         opt.set_instance(m)
         opt.solve()
         self.assertAlmostEqual(m.x.value, 1)
 
-        m.y = pe.Var(within=pe.NonNegativeReals)
+        m.y = pyo.Var(within=pyo.NonNegativeReals)
 
         opt.add_column(m, m.y, -3, [m.c], [2])
         opt.solve()
@@ -246,35 +246,35 @@ class TestXpressPersistent(unittest.TestCase):
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_add_column_exceptions(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.c = pe.Constraint(expr=(0, m.x, 1))
-        m.ci = pe.Constraint([1, 2], rule=lambda m, i: (0, m.x, i + 1))
-        m.cd = pe.Constraint(expr=(0, -m.x, 1))
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.c = pyo.Constraint(expr=(0, m.x, 1))
+        m.ci = pyo.Constraint([1, 2], rule=lambda m, i: (0, m.x, i + 1))
+        m.cd = pyo.Constraint(expr=(0, -m.x, 1))
         m.cd.deactivate()
-        m.obj = pe.Objective(expr=-m.x)
+        m.obj = pyo.Objective(expr=-m.x)
 
-        opt = pe.SolverFactory('xpress_persistent')
+        opt = pyo.SolverFactory('xpress_persistent')
 
         # set_instance not called
         self.assertRaises(RuntimeError, opt.add_column, m, m.x, 0, [m.c], [1])
 
         opt.set_instance(m)
 
-        m2 = pe.ConcreteModel()
-        m2.y = pe.Var()
-        m2.c = pe.Constraint(expr=(0, m.x, 1))
+        m2 = pyo.ConcreteModel()
+        m2.y = pyo.Var()
+        m2.c = pyo.Constraint(expr=(0, m.x, 1))
 
         # different model than attached to opt
         self.assertRaises(RuntimeError, opt.add_column, m2, m2.y, 0, [], [])
         # pyomo var attached to different model
         self.assertRaises(RuntimeError, opt.add_column, m, m2.y, 0, [], [])
 
-        z = pe.Var()
+        z = pyo.Var()
         # pyomo var floating
         self.assertRaises(RuntimeError, opt.add_column, m, z, -2, [m.c, z], [1])
 
-        m.y = pe.Var()
+        m.y = pyo.Var()
         # len(coefficients) == len(constraints)
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c], [1, 2])
         self.assertRaises(RuntimeError, opt.add_column, m, m.y, -2, [m.c, z], [1])
@@ -298,17 +298,17 @@ class TestXpressPersistent(unittest.TestCase):
     def test_nonconvexqp_locally_optimal(self):
         """Test non-convex QP for which xpress_direct should find a locally
         optimal solution."""
-        m = pe.ConcreteModel()
-        m.x1 = pe.Var()
-        m.x2 = pe.Var()
-        m.x3 = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x1 = pyo.Var()
+        m.x2 = pyo.Var()
+        m.x3 = pyo.Var()
 
-        m.obj = pe.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pe.minimize)
-        m.equ1 = pe.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
-        m.cone = pe.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
-        m.equ2 = pe.Constraint(rule=lambda m: m.x1 >= 0)
+        m.obj = pyo.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pyo.minimize)
+        m.equ1 = pyo.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
+        m.cone = pyo.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
+        m.equ2 = pyo.Constraint(rule=lambda m: m.x1 >= 0)
 
-        opt = pe.SolverFactory('xpress_direct')
+        opt = pyo.SolverFactory('xpress_direct')
         opt.options['XSLP_SOLVER'] = 0
         # xpress 9.5.0 now defaults to trying (and failing) to solve this problem
         # using the global solver. This option forces the use of the local solver.
@@ -329,18 +329,18 @@ class TestXpressPersistent(unittest.TestCase):
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_nonconvexqp_infeasible(self):
         """Test non-convex QP which xpress_direct should prove infeasible."""
-        m = pe.ConcreteModel()
-        m.x1 = pe.Var()
-        m.x2 = pe.Var()
-        m.x3 = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x1 = pyo.Var()
+        m.x2 = pyo.Var()
+        m.x3 = pyo.Var()
 
-        m.obj = pe.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pe.minimize)
-        m.equ1a = pe.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
-        m.equ1b = pe.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == -1)
-        m.cone = pe.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
-        m.equ2 = pe.Constraint(rule=lambda m: m.x1 >= 0)
+        m.obj = pyo.Objective(rule=lambda m: 2 * m.x1 + m.x2 + m.x3, sense=pyo.minimize)
+        m.equ1a = pyo.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == 1)
+        m.equ1b = pyo.Constraint(rule=lambda m: m.x1 + m.x2 + m.x3 == -1)
+        m.cone = pyo.Constraint(rule=lambda m: m.x2 * m.x2 + m.x3 * m.x3 <= m.x1 * m.x1)
+        m.equ2 = pyo.Constraint(rule=lambda m: m.x1 >= 0)
 
-        opt = pe.SolverFactory('xpress_direct')
+        opt = pyo.SolverFactory('xpress_direct')
         opt.options['XSLP_SOLVER'] = 0
 
         results = opt.solve(m)

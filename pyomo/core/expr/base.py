@@ -11,8 +11,9 @@
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.numeric_types import native_types
+from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
-from pyomo.core.expr.expr_common import OperatorAssociativity
+from pyomo.core.expr.expr_common import OperatorAssociativity, _type_check_exception_arg
 
 visitor, _ = attempt_import('pyomo.core.expr.visitor')
 
@@ -98,7 +99,7 @@ class ExpressionBase(PyomoObject):
             f"Derived expression ({self.__class__}) failed to implement args()"
         )
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Evaluate the value of the expression tree.
 
         Parameters
@@ -113,6 +114,7 @@ class ExpressionBase(PyomoObject):
         The value of the expression or :const:`None`.
 
         """
+        exception = _type_check_exception_arg(self, exception)
         return visitor.evaluate_expression(self, exception)
 
     def __str__(self):

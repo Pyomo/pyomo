@@ -17,7 +17,7 @@ from pyomo.contrib.alternative_solutions import lp_enum
 from pyomo.contrib.alternative_solutions import lp_enum_solnpool
 from pyomo.opt import check_available_solvers
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 # lp_enum_solnpool uses both 'gurobi' and 'appsi_gurobi'
 gurobi_available = len(check_available_solvers('gurobi', 'appsi_gurobi')) == 2
@@ -33,8 +33,8 @@ class TestLPEnumSolnpool(unittest.TestCase):
 
     def test_here(self):
         n = tc.get_pentagonal_pyramid_mip()
-        n.x.domain = pe.Reals
-        n.y.domain = pe.Reals
+        n.x.domain = pyo.Reals
+        n.y.domain = pyo.Reals
 
         try:
             sols = lp_enum_solnpool.enumerate_linear_solutions_soln_pool(n, tee=True)

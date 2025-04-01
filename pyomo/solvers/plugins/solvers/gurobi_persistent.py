@@ -514,14 +514,14 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                :skipif: not gurobipy_available
 
                from gurobipy import GRB
-               import pyomo.environ as pe
+               import pyomo.environ as pyo
                from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-               m = pe.ConcreteModel()
-               m.x = pe.Var(bounds=(0, 4))
-               m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-               m.obj = pe.Objective(expr=2*m.x + m.y)
-               m.cons = pe.ConstraintList()  # for the cutting planes
+               m = pyo.ConcreteModel()
+               m.x = pyo.Var(bounds=(0, 4))
+               m.y = pyo.Var(within=pyo.Integers, bounds=(0, None))
+               m.obj = pyo.Objective(expr=2*m.x + m.y)
+               m.cons = pyo.ConstraintList()  # for the cutting planes
 
                def _add_cut(xval):
                    # a function to generate the cut
@@ -531,7 +531,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                _add_cut(0)  # start with 2 cuts at the bounds of x
                _add_cut(4)  # this is an arbitrary choice
 
-               opt = pe.SolverFactory('gurobi_persistent')
+               opt = pyo.SolverFactory('gurobi_persistent')
                opt.set_instance(m)
                opt.set_gurobi_param('PreCrush', 1)
                opt.set_gurobi_param('LazyConstraints', 1)

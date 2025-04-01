@@ -15,7 +15,7 @@ from collections import Counter
 
 from pyomo.common.dependencies import numpy as np
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 """
 This script has collection of test cases that can be used to enumerate solutions.
@@ -24,7 +24,7 @@ That is, simple problems where the alternative solutions can be found manually.
 
 
 def _is_satisfied(constraint, feasibility_tol=1e-6):
-    value = pe.value(constraint.body)
+    value = pyo.value(constraint.body)
     if constraint.has_lb() and value < constraint.lb - feasibility_tol:
         return False
     if constraint.has_ub() and value > constraint.ub + feasibility_tol:
@@ -36,16 +36,16 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
     """
     Simple 2d problem where the feasible is diamond-shaped.
     """
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Integers if discrete_x else pe.Reals, bounds=(-10, 10))
-    m.y = pe.Var(within=pe.Integers if discrete_y else pe.Reals, bounds=(-10, 10))
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.Integers if discrete_x else pyo.Reals, bounds=(-10, 10))
+    m.y = pyo.Var(within=pyo.Integers if discrete_y else pyo.Reals, bounds=(-10, 10))
 
-    m.o = pe.Objective(expr=m.x + m.y, sense=pe.maximize)
+    m.o = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
 
-    m.c1 = pe.Constraint(expr=-4 / 5 * m.x - 4 <= m.y)
-    m.c2 = pe.Constraint(expr=5 / 9 * m.x - 5 <= m.y)
-    m.c3 = pe.Constraint(expr=2 / 9 * m.x + 2 >= m.y)
-    m.c4 = pe.Constraint(expr=-1 / 2 * m.x + 3 >= m.y)
+    m.c1 = pyo.Constraint(expr=-4 / 5 * m.x - 4 <= m.y)
+    m.c2 = pyo.Constraint(expr=5 / 9 * m.x - 5 <= m.y)
+    m.c3 = pyo.Constraint(expr=2 / 9 * m.x + 2 >= m.y)
+    m.c4 = pyo.Constraint(expr=-1 / 2 * m.x + 3 >= m.y)
 
     # Continuous exteme points and bounds
     m.extreme_points = {
@@ -55,7 +55,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
         (7.578947368, -0.789473684),
     }
 
-    m.continuous_bounds = pe.ComponentMap()
+    m.continuous_bounds = pyo.ComponentMap()
     m.continuous_bounds[m.x] = (-5.869565217, 7.578947368)
     m.continuous_bounds[m.y] = (-4.590163934, 2.307692308)
 
@@ -70,7 +70,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
         (7.578947368, -0.789473684),
     }
 
-    m.continuous_bounds_cut = pe.ComponentMap()
+    m.continuous_bounds_cut = pyo.ComponentMap()
     m.continuous_bounds_cut[m.x] = (-18 / 11, 7.578947368)
     m.continuous_bounds_cut[m.y] = (-45 / 14, 2.307692308)
 
@@ -106,7 +106,7 @@ def get_2d_diamond_problem(discrete_x=False, discrete_y=False):
                     y_upper_bound = y_value
                 feasible_sols.append(((x_value, y_value), x_value + y_value))
     m.discrete_feasible = sorted(feasible_sols, key=lambda sol: sol[1], reverse=True)
-    m.discrete_bounds = pe.ComponentMap()
+    m.discrete_bounds = pyo.ComponentMap()
     m.discrete_bounds[m.x] = (x_lower_bound, x_upper_bound)
     m.discrete_bounds[m.y] = (y_lower_bound, y_upper_bound)
 
@@ -117,8 +117,8 @@ def get_3d_polyhedron_problem():
     """
     Simple 3d polyhedron that is expressed using all types of linear constraints
     """
-    m = pe.ConcreteModel()
-    m.x = pe.Var([0, 1, 2], within=pe.Reals)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([0, 1, 2], within=pyo.Reals)
     m.x[0].setlb(-1)
     m.x[0].setub(1)
     m.x[1].setlb(-2)
@@ -138,9 +138,9 @@ def get_3d_polyhedron_problem():
         elif i == 4:
             return m.x[0] + m.x[1] + m.x[2] == 4
 
-    m.c = pe.Constraint([i for i in range(5)], rule=_constraint_switch_rule)
+    m.c = pyo.Constraint([i for i in range(5)], rule=_constraint_switch_rule)
 
-    m.o = pe.Objective(expr=m.x[0] + m.x[2], sense=pe.maximize)
+    m.o = pyo.Objective(expr=m.x[0] + m.x[2], sense=pyo.maximize)
     return m
 
 
@@ -149,18 +149,18 @@ def get_2d_unbounded_problem():
     Simple 2d problem where the feasible region is unbounded, but the problem
     has an optimal solution.
     """
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Reals)
-    m.y = pe.Var(within=pe.Reals)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.Reals)
+    m.y = pyo.Var(within=pyo.Reals)
 
-    m.o = pe.Objective(expr=m.y - m.x)
+    m.o = pyo.Objective(expr=m.y - m.x)
 
-    m.c1 = pe.Constraint(expr=m.x <= 4)
-    m.c2 = pe.Constraint(expr=m.y >= 2)
+    m.c1 = pyo.Constraint(expr=m.x <= 4)
+    m.c2 = pyo.Constraint(expr=m.y >= 2)
 
     m.extreme_points = {(4, 2)}
 
-    m.continuous_bounds = pe.ComponentMap()
+    m.continuous_bounds = pyo.ComponentMap()
     m.continuous_bounds[m.x] = (float("-inf"), 4)
     m.continuous_bounds[m.y] = (2, float("inf"))
     return m
@@ -171,16 +171,16 @@ def get_2d_degenerate_lp():
     Simple 2d problem that includes a redundant constraint such that three
     constraints are active at optimality.
     """
-    m = pe.ConcreteModel()
+    m = pyo.ConcreteModel()
 
-    m.x = pe.Var(within=pe.Reals, bounds=(-1, 3))
-    m.y = pe.Var(within=pe.Reals, bounds=(-3, 2))
+    m.x = pyo.Var(within=pyo.Reals, bounds=(-1, 3))
+    m.y = pyo.Var(within=pyo.Reals, bounds=(-3, 2))
 
-    m.obj = pe.Objective(expr=m.x + 2 * m.y, sense=pe.maximize)
+    m.obj = pyo.Objective(expr=m.x + 2 * m.y, sense=pyo.maximize)
 
-    m.con1 = pe.Constraint(expr=m.x + m.y <= 3)
-    m.con2 = pe.Constraint(expr=m.x + 2 * m.y <= 5)
-    m.con3 = pe.Constraint(expr=m.x + m.y >= -1)
+    m.con1 = pyo.Constraint(expr=m.x + m.y <= 3)
+    m.con2 = pyo.Constraint(expr=m.x + 2 * m.y <= 5)
+    m.con3 = pyo.Constraint(expr=m.x + m.y >= -1)
 
     return m
 
@@ -192,12 +192,12 @@ def get_triangle_ip():
     x + y == 5.  Alternative near-optimal have integer objective values from 0 to 4.
     """
     var_max = 5
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, var_max))
-    m.y = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, var_max))
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, var_max))
+    m.y = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, var_max))
 
-    m.o = pe.Objective(expr=m.x + m.y, sense=pe.maximize)
-    m.c = pe.Constraint(expr=m.x + m.y <= var_max)
+    m.o = pyo.Objective(expr=m.x + m.y, sense=pyo.maximize)
+    m.c = pyo.Constraint(expr=m.x + m.y <= var_max)
 
     #
     # Enumerate all feasible solutions
@@ -223,18 +223,18 @@ def get_implied_bound_ip():
     facilitate testing cases where the impled bounds are tighter than the
     given bounds for the variable.
     """
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, 5))
-    m.y = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, 5))
-    m.z = pe.Var(within=pe.NonNegativeIntegers, bounds=(0, 5))
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, 5))
+    m.y = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, 5))
+    m.z = pyo.Var(within=pyo.NonNegativeIntegers, bounds=(0, 5))
 
-    m.o = pe.Objective(expr=m.x + m.z)
+    m.o = pyo.Objective(expr=m.x + m.z)
 
-    m.c1 = pe.Constraint(expr=m.x + m.y == 3)
-    m.c2 = pe.Constraint(expr=m.x + m.y + m.z <= 5)
-    m.c3 = pe.Constraint(expr=m.x + m.y + m.z >= 4)
+    m.c1 = pyo.Constraint(expr=m.x + m.y == 3)
+    m.c2 = pyo.Constraint(expr=m.x + m.y + m.z <= 5)
+    m.c3 = pyo.Constraint(expr=m.x + m.y + m.z >= 4)
 
-    m.var_bounds = pe.ComponentMap()
+    m.var_bounds = pyo.ComponentMap()
     m.var_bounds[m.x] = (0, 3)
     m.var_bounds[m.y] = (0, 3)
     m.var_bounds[m.z] = (1, 2)
@@ -261,17 +261,17 @@ def get_aos_test_knapsack(
     if capacity is None:
         capacity = sum(weights) * var_max * capacity_fraction
 
-    m = pe.ConcreteModel()
-    m.i = pe.RangeSet(0, num_vars - 1)
+    m = pyo.ConcreteModel()
+    m.i = pyo.RangeSet(0, num_vars - 1)
 
     if var_max == 1:
-        m.x = pe.Var(m.i, within=pe.Binary)
+        m.x = pyo.Var(m.i, within=pyo.Binary)
     else:
-        m.x = pe.Var(m.i, within=pe.NonNegativeIntegers, bounds=(0, var_max))
+        m.x = pyo.Var(m.i, within=pyo.NonNegativeIntegers, bounds=(0, var_max))
 
-    m.o = pe.Objective(expr=sum(values[i] * m.x[i] for i in m.i), sense=pe.maximize)
+    m.o = pyo.Objective(expr=sum(values[i] * m.x[i] for i in m.i), sense=pyo.maximize)
 
-    m.c = pe.Constraint(expr=sum(weights[i] * m.x[i] for i in m.i) <= capacity)
+    m.c = pyo.Constraint(expr=sum(weights[i] * m.x[i] for i in m.i) <= capacity)
 
     var_domain = range(var_max + 1)
     all_combos = product(var_domain, repeat=num_vars)
@@ -291,11 +291,11 @@ def get_pentagonal_lp():
     Pentagonal LP
     """
     var_max = 5
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Reals, bounds=(0, 2 * var_max))
-    m.y = pe.Var(within=pe.Reals, bounds=(0, 2 * var_max))
-    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, 2 * var_max))
-    m.o = pe.Objective(expr=m.z, sense=pe.minimize)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.Reals, bounds=(0, 2 * var_max))
+    m.y = pyo.Var(within=pyo.Reals, bounds=(0, 2 * var_max))
+    m.z = pyo.Var(within=pyo.NonNegativeReals, bounds=(0, 2 * var_max))
+    m.o = pyo.Objective(expr=m.z, sense=pyo.minimize)
 
     base_points = np.array(
         [
@@ -308,7 +308,7 @@ def get_pentagonal_lp():
     )
     apex_point = np.array([var_max, var_max, var_max])
 
-    m.c = pe.ConstraintList()
+    m.c = pyo.ConstraintList()
     for i in range(5):
         vec_1 = base_points[i] - apex_point
         vec_2 = base_points[(i + 1) % var_max] - base_points[i]
@@ -329,11 +329,11 @@ def get_pentagonal_pyramid_mip():
     a third continuous dimension.
     """
     var_max = 5
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Integers, bounds=(-var_max, var_max))
-    m.y = pe.Var(within=pe.Integers, bounds=(-var_max, var_max))
-    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, var_max))
-    m.o = pe.Objective(expr=m.z, sense=pe.maximize)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.Integers, bounds=(-var_max, var_max))
+    m.y = pyo.Var(within=pyo.Integers, bounds=(-var_max, var_max))
+    m.z = pyo.Var(within=pyo.NonNegativeReals, bounds=(0, var_max))
+    m.o = pyo.Objective(expr=m.z, sense=pyo.maximize)
 
     base_points = np.array(
         [
@@ -346,7 +346,7 @@ def get_pentagonal_pyramid_mip():
     )
     apex_point = np.array([0, 0, var_max])
 
-    m.c = pe.ConstraintList()
+    m.c = pyo.ConstraintList()
     for i in range(5):
         vec_1 = base_points[i] - apex_point
         vec_2 = base_points[(i + 1) % var_max] - base_points[i]
@@ -370,10 +370,10 @@ def get_indexed_pentagonal_pyramid_mip():
     a third continuous dimension.
     """
     var_max = 5
-    m = pe.ConcreteModel()
-    m.x = pe.Var([1, 2], within=pe.Integers, bounds=(-var_max, var_max))
-    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, var_max))
-    m.o = pe.Objective(expr=m.z, sense=pe.maximize)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var([1, 2], within=pyo.Integers, bounds=(-var_max, var_max))
+    m.z = pyo.Var(within=pyo.NonNegativeReals, bounds=(0, var_max))
+    m.o = pyo.Objective(expr=m.z, sense=pyo.maximize)
     base_points = np.array(
         [
             [0, var_max, 0],
@@ -396,7 +396,7 @@ def get_indexed_pentagonal_pyramid_mip():
         )
         return expr >= 0
 
-    m.c = pe.Constraint([i for i in range(5)], rule=_con_rule)
+    m.c = pyo.Constraint([i for i in range(5)], rule=_con_rule)
     m.num_ranked_solns = [1, 4, 2, 8, 2, 12, 4, 16, 4, 20]
     return m
 
@@ -407,12 +407,12 @@ def get_bloated_pentagonal_pyramid_mip():
     a third continuous dimension. Bounds are artificially widened for obbt testing purposes
     """
     var_max = 5
-    m = pe.ConcreteModel()
-    m.x = pe.Var(within=pe.Integers, bounds=(-2 * var_max, 2 * var_max))
-    m.y = pe.Var(within=pe.Integers, bounds=(-2 * var_max, var_max))
-    m.z = pe.Var(within=pe.NonNegativeReals, bounds=(0, 2 * var_max))
-    m.var_bounds = pe.ComponentMap()
-    m.o = pe.Objective(expr=m.z, sense=pe.maximize)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(within=pyo.Integers, bounds=(-2 * var_max, 2 * var_max))
+    m.y = pyo.Var(within=pyo.Integers, bounds=(-2 * var_max, var_max))
+    m.z = pyo.Var(within=pyo.NonNegativeReals, bounds=(0, 2 * var_max))
+    m.var_bounds = pyo.ComponentMap()
+    m.o = pyo.Objective(expr=m.z, sense=pyo.maximize)
     base_points = np.array(
         [
             [0, var_max, 0],
@@ -424,7 +424,7 @@ def get_bloated_pentagonal_pyramid_mip():
     )
     apex_point = np.array([0, 0, var_max])
 
-    m.c = pe.ConstraintList()
+    m.c = pyo.ConstraintList()
     for i in range(5):
         vec_1 = base_points[i] - apex_point
         vec_2 = base_points[(i + 1) % var_max] - base_points[i]
