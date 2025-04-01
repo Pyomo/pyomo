@@ -38,6 +38,7 @@ from pyomo.core.expr import (
     InequalityExpression,
     RangedExpression,
 )
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.template_expr import templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -168,8 +169,9 @@ class ConstraintData(ActiveComponentData):
         if expr is not None:
             self.set_value(expr)
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of the body of this constraint."""
+        exception = _type_check_exception_arg(self, exception)
         body = self.to_bounded_expression()[1]
         if body.__class__ not in native_numeric_types:
             body = value(self.body, exception=exception)
