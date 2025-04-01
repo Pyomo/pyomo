@@ -810,7 +810,7 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    # run even if a build job fails, but not if cancelled (except for branches)
+    # run even if a build job fails, but not if canceled (except for branches)
     if: ${{ false }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
