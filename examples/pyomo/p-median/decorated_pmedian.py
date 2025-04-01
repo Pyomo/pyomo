@@ -35,24 +35,24 @@ model.x = pyo.Var(model.Locations, model.Customers, bounds=(0.0, 1.0))
 model.y = pyo.Var(model.Locations, within=pyo.Binary)
 
 
-@model.pyo.Objective()
+@model.Objective()
 def obj(model):
     return sum(
         model.d[n, m] * model.x[n, m] for n in model.Locations for m in model.Customers
     )
 
 
-@model.pyo.Constraint(model.Customers)
+@model.Constraint(model.Customers)
 def single_x(model, m):
     return (sum(model.x[n, m] for n in model.Locations), 1.0)
 
 
-@model.pyo.Constraint(model.Locations, model.Customers)
+@model.Constraint(model.Locations, model.Customers)
 def bound_y(model, n, m):
     return model.x[n, m] - model.y[n] <= 0.0
 
 
-@model.pyo.Constraint()
+@model.Constraint()
 def num_facilities(model):
     return sum(model.y[n] for n in model.Locations) == model.P
 
