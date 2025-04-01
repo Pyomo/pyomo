@@ -27,7 +27,7 @@ can be accessed using its ``value`` member. For example, suppose the
 model contains a variable named ``quant`` that is a singleton (has no
 indexes) and suppose further that the name of the instance object is
 ``instance``. Then the value of this variable can be accessed using
-``pyo.pyo.value(instance.quant)``. Variables with indexes can be referenced
+``pyo.value(instance.quant)``. Variables with indexes can be referenced
 by supplying the index.
 
 Consider the following very simple example, which is similar to the
@@ -54,13 +54,13 @@ the following code snippet displays all variables and their values:
    >>> for v in instance.component_objects(pyo.Var, active=True):
    ...     print("Variable",v)  # doctest: +SKIP
    ...     for index in v:
-   ...         print ("   ",index, pyo.pyo.value(v[index]))  # doctest: +SKIP
+   ...         print ("   ",index, pyo.value(v[index]))  # doctest: +SKIP
 
 
 Alternatively,
 
    >>> for v in instance.component_data_objects(pyo.Var, active=True):
-   ...     print(v, pyo.pyo.value(v))  # doctest: +SKIP
+   ...     print(v, pyo.value(v))  # doctest: +SKIP
 
 This code could be improved by checking to see if the variable is not
 indexed (i.e., the only index value is ``None``), then the code could
@@ -96,7 +96,7 @@ of every Parameter in a model:
    ...     nametoprint = str(str(parmobject.name))
    ...     print ("Parameter ", nametoprint)  # doctest: +SKIP
    ...     for index in parmobject:
-   ...         vtoprint = pyo.pyo.value(parmobject[index])
+   ...         vtoprint = pyo.value(parmobject[index])
    ...         print ("   ",index, vtoprint)  # doctest: +SKIP
 
 
@@ -136,7 +136,7 @@ an instance, duals can be accessed in the following fashion.
    :language: python
 
 The following snippet will only work, of course, if there is a
-constraint with the name ``Axbpyo.Constraint`` that has and index, which is
+constraint with the name ``AxbConstraint`` that has and index, which is
 the string ``Film``.
 
 .. literalinclude:: /src/scripting/driveabs2_Access_one_dual.spy
@@ -145,7 +145,7 @@ the string ``Film``.
 Here is a complete example that relies on the file ``abstract2.py`` to
 provide the model and the file ``abstract2.dat`` to provide the
 data. Note that the model in ``abstract2.py`` does contain a constraint
-named ``Axbpyo.Constraint`` and ``abstract2.dat`` does specify an index for
+named ``AxbConstraint`` and ``abstract2.dat`` does specify an index for
 it named ``Film``.
 
 .. literalinclude:: /src/scripting/driveabs2.spy

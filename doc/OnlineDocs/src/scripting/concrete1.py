@@ -17,4 +17,4 @@ model.x = pyo.Var([1, 2], domain=pyo.NonNegativeReals)
 
 model.OBJ = pyo.Objective(expr=2 * model.x[1] + 3 * model.x[2])
 
-model.pyo.Constraint1 = pyo.Constraint(expr=3 * model.x[1] + 4 * model.x[2] >= 1)
+model.Constraint1 = pyo.Constraint(expr=3 * model.x[1] + 4 * model.x[2] >= 1)

@@ -46,7 +46,7 @@ for i in range(len(Cuts)):
     tmp[Cuts[i]] = CutDemand[i]
 CutDemand = tmp
 
-model = pyo.ConcreteModgl(name="CutStock Problem")
+model = pyo.ConcreteModel(name="CutStock Problem")
 
 # Defining Variables
 model.SheetsCut = pyo.Var()
@@ -70,7 +70,7 @@ for c in Cuts:
     )
 
 instance = model.create()
-opt = pyomo.opt.pyo.SolverFactory('glpk')
+opt = pyo.SolverFactory('glpk')
 results = opt.solve(instance)
 instance.load(results)
 

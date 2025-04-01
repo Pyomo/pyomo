@@ -18,10 +18,10 @@ later be deprecated or combined, depending on their usefulness.
     :nosignatures:
 
     var_aggregator.VariableAggregator
-    bounds_to_vars.pyo.ConstraintToVarBoundTransform
+    bounds_to_vars.ConstraintToVarBoundTransform
     induced_linearity.InducedLinearity
-    constraint_tightener.Tightenpyo.ConstraintFromVars
-    deactivate_trivial_constraints.Trivialpyo.ConstraintDeactivator
+    constraint_tightener.TightenConstraintFromVars
+    deactivate_trivial_constraints.TrivialConstraintDeactivator
     detect_fixed_vars.FixedVarDetector
     equality_propagate.FixedVarPropagator
     equality_propagate.VarBoundPropagator
@@ -77,7 +77,7 @@ Explicit pyo.Constraints to Variable Bounds
     >>> m.c3 = pyo.Constraint(expr=m.v3 <= 5)
     >>> pyo.TransformationFactory('contrib.constraints_to_var_bounds').apply_to(m)
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.pyo.ConstraintToVarBoundTransform
+.. autoclass:: pyomo.contrib.preprocessing.plugins.bounds_to_vars.ConstraintToVarBoundTransform
     :noindex:
     :members: apply_to, create_using
 
@@ -96,14 +96,14 @@ pyo.Constraint Bounds Tightener
 This transformation was developed by `Sunjeev Kale
 <https://github.com/sjkale>`_ at Carnegie Mellon University.
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.Tightenpyo.ConstraintFromVars
+.. autoclass:: pyomo.contrib.preprocessing.plugins.constraint_tightener.TightenConstraintFromVars
     :noindex:
     :members: apply_to, create_using
 
 Trivial pyo.Constraint Deactivation
 -------------------------------
 
-.. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.Trivialpyo.ConstraintDeactivator
+.. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.TrivialConstraintDeactivator
     :noindex:
     :members: apply_to, create_using, revert
 

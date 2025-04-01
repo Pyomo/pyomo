@@ -120,7 +120,7 @@ def print_model_suffixes(model):
 
 
 print("")
-print("pyo.Suffixes Before Solve:")
+print("Suffixes Before Solve:")
 print_model_suffixes(model)
 
 ### Send the model to gurobi_ampl and collect the solution
@@ -130,5 +130,5 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 ###
 
 print("")
-print("pyo.Suffixes After Solve:")
+print("Suffixes After Solve:")
 print_model_suffixes(model)

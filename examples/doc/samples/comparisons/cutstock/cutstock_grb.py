@@ -35,17 +35,17 @@ CutsInPattern = getCutsInPattern()
 m = Model("CutStock")
 
 # Defining Variables
-SheetsCut = m.addpyo.Var(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "SheetsCut")
-TotalCost = m.addpyo.Var(0, GRB.INFINITY, 1, GRB.CONTINUOUS, "TotCost")
+SheetsCut = m.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "SheetsCut")
+TotalCost = m.addVar(0, GRB.INFINITY, 1, GRB.CONTINUOUS, "TotCost")
 
 PatternCount = []
 for i in range(patcount):
-    newvar = m.addpyo.Var(0, GRB.INFINITY, 0, GRB.CONTINUOUS, Patterns[i])
+    newvar = m.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, Patterns[i])
     PatternCount += [newvar]
 
 ExcessCuts = []
 for j in range(cutcount):
-    newvar = m.addpyo.Var(0, GRB.INFINITY, 0, GRB.CONTINUOUS, Cuts[j])
+    newvar = m.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, Cuts[j])
     ExcessCuts += [newvar]
 
 # Objective Sense

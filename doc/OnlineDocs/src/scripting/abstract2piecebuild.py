@@ -74,4 +74,4 @@ def ax_constraint_rule(model, i):
 
 
 # the next line creates one constraint for each member of the set model.I
-model.Axbpyo.Constraint = pyo.Constraint(model.I, rule=ax_constraint_rule)
+model.AxbConstraint = pyo.Constraint(model.I, rule=ax_constraint_rule)

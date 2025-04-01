@@ -123,17 +123,17 @@ LP/NLP Based Branch-and-Bound
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MindtPy also supports single-tree implementation of Outer-Approximation (OA) algorithm, which is known as LP/NLP based branch-and-bound algorithm originally described in [`Quesada & Grossmann, 1992`_].
-The LP/NLP based branch-and-bound algorithm in MindtPy is implemented based on the Lazypyo.ConstraintCallback function in commercial solvers.
+The LP/NLP based branch-and-bound algorithm in MindtPy is implemented based on the LazyConstraintCallback function in commercial solvers.
 
 .. _Quesada & Grossmann, 1992: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
 
 .. note::
 
-   In Pyomo, :ref:`persistent solvers <persistent_solvers>` are necessary to set or register callback functions. The single tree implementation currently only works with CPLEX and GUROBI, more exactly ``cplex_persistent`` and ``gurobi_persistent``. To use the `Lazypyo.ConstraintCallback`_ function of CPLEX from Pyomo, the `CPLEX Python API`_ is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer. To use the `cbLazy`_ function of GUROBI from pyomo, `gurobipy`_ is required.
+   In Pyomo, :ref:`persistent solvers <persistent_solvers>` are necessary to set or register callback functions. The single tree implementation currently only works with CPLEX and GUROBI, more exactly ``cplex_persistent`` and ``gurobi_persistent``. To use the `LazyConstraintCallback`_ function of CPLEX from Pyomo, the `CPLEX Python API`_ is required. This means both IBM ILOG CPLEX Optimization Studio and the CPLEX-Python modules should be installed on your computer. To use the `cbLazy`_ function of GUROBI from pyomo, `gurobipy`_ is required.
 
 .. _CPLEX Python API: https://www.ibm.com/docs/en/icos/20.1.0?topic=cplex-setting-up-python-api
 .. _gurobipy: https://www.gurobi.com/documentation/9.1/quickstart_mac/cs_grbpy_the_gurobi_python.html
-.. _Lazypyo.ConstraintCallback: https://www.ibm.com/docs/en/icos/20.1.0?topic=classes-cplexcallbackslazyconstraintcallback
+.. _LazyConstraintCallback: https://www.ibm.com/docs/en/icos/20.1.0?topic=classes-cplexcallbackslazyconstraintcallback
 .. _cbLazy: https://www.gurobi.com/documentation/9.1/refman/py_model_cblazy.html
 
 A usage example for LP/NLP based branch-and-bound algorithm is as follows:

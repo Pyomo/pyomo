@@ -95,7 +95,7 @@ cpx.solve()
 numcols = cpx.variables.get_num()
 x = cpx.solution.get_values()
 print(cpx.solution.status[cpx.solution.get_status()])
-print("Objective value  = ", cpx.solution.get_objective_pyo.value())
+print("Objective value  = ", cpx.solution.get_objective_value())
 for j in range(numcols):
     if x[j] >= 1:
         print("Var:", j, "Value=", x[j])

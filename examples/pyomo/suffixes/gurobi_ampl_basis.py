@@ -98,7 +98,7 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 # Print the suffix values that were imported
 #
 print("")
-print("pyo.Suffixes After First Solve:")
+print("Suffixes After First Solve:")
 for i in model.s:
     print("%s.sstatus: %s" % (model.x[i].name, model.sstatus.get(model.x[i])))
 for i in model.s:
