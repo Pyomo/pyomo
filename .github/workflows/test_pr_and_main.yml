@@ -79,7 +79,7 @@ jobs:
 
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
-    needs: ${{ endsWith( env.PYOMO_WORKFLOW, 'pr') && 'lint' || '' }}
+    needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -819,7 +819,7 @@ jobs:
 
   bare-python-env:
     name: linux/3.9/bare-env
-    needs: ${{ endsWith( env.PYOMO_WORKFLOW, 'pr') && 'lint' || '' }}
+    needs: lint  # the linter job is a prerequisite for PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
