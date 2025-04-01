@@ -14,6 +14,7 @@ on:
       subworkflow:
         description: Configure the sub-workflow to execute
         required: false
+        type: string
         default: branch
       subworkflow_test:
         description: Configure the sub-workflow to execute
