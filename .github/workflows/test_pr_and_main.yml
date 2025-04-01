@@ -17,15 +17,13 @@ on:
       git-ref:
         description: Git Hash (Optional)
         required: false
-
-inputs:
-  subworkflow:
-    description: Configure the sub-workflow to execute
-    required: false
-    default: |
-      ${{ ( contains(github.event.pull_request.title, '[WIP]') ||
-            github.event.pull_request.draft ) && 'draft_pr'
-          || github.event.pull_request.number && 'pr' || 'main' }}
+      subworkflow:
+        description: Configure the sub-workflow to execute
+        required: false
+        default: |
+          ${{ ( contains(github.event.pull_request.title, '[WIP]') ||
+                github.event.pull_request.draft ) && 'draft_pr'
+              || github.event.pull_request.number && 'pr' || 'main' }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
