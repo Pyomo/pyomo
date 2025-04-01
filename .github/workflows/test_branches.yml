@@ -9,21 +9,6 @@ on:
       git-ref:
         description: Git Hash (Optional)
         required: false
-  workflow_call:
-    inputs:
-      subworkflow:
-        description: Configure the sub-workflow to execute
-        required: false
-        type: string
-        default: branch
-      subworkflow_test:
-        description: Configure the sub-workflow to execute
-        required: false
-        type: string
-        default: |
-          ${{ ( contains(github.event.pull_request.title, '[WIP]') ||
-                github.event.pull_request.draft ) && 'draft_pr'
-              || github.event.pull_request.number && 'pr' || 'main' }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -41,12 +26,14 @@ env:
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
-  PYOMO_WORKFLOW: ${{ inputs.subworkflow }}
+  PYOMO_WORKFLOW: branch
 
 jobs:
   lint:
     name: lint/style-and-typos
-    if: inputs.subworkflow != 'draft_pr'
+    if: |
+      ${{ ! ( contains(github.event.pull_request.title, '[WIP]') ||
+            github.event.pull_request.draft ) }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Pyomo source
@@ -65,7 +52,7 @@ jobs:
       with: 
         config: ./.github/workflows/typos.toml
     - name: URL Checker
-      if: inputs.subworkflow == 'branch'
+      if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
       with:
         # A comma-separated list of file types to cover in the URL checks
@@ -824,7 +811,7 @@ jobs:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
     # run even if a build job fails, but not if cancelled (except for branches)
-    if: inputs.subworkflow != 'branch' && (success() || failure())
+    if: ${{ false }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
