@@ -26,11 +26,13 @@ env:
   CACHE_VER: v221013.1
   NEOS_EMAIL: tests@pyomo.org
   SRC_REF: ${{ github.head_ref || github.ref }}
+  PYOMO_WORKFLOW: branch
 
 jobs:
   lint:
     name: lint/style-and-typos
     runs-on: ubuntu-latest
+    if: env.PYOMO_WORKFLOW != 'draft_pr'
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v4
@@ -48,6 +50,7 @@ jobs:
       with: 
         config: ./.github/workflows/typos.toml
     - name: URL Checker
+      if: env.PYOMO_WORKFLOW == 'branch'
       uses: urlstechie/urlchecker-action@0.0.34
       with:
         # A comma-separated list of file types to cover in the URL checks
@@ -65,6 +68,7 @@ jobs:
 
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
+    needs: ${{ endsWith( env.PYOMO_WORKFLOW, 'pr') && 'lint' || '' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -764,6 +768,7 @@ jobs:
 
   bare-python-env:
     name: linux/3.9/bare-env
+    needs: ${{ endsWith( env.PYOMO_WORKFLOW, 'pr') && 'lint' || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -805,7 +810,8 @@ jobs:
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
-    if: ${{ false }} # turn off for branches
+    # run even if a build job fails, but not if cancelled (except for branches)
+    if: env.PYOMO_WORKFLOW != 'branch' && (success() || failure())
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
