@@ -103,7 +103,7 @@ The ``BooleanVar`` object in Pyomo represents Boolean variables, analogous to ``
           3 :  None : False :  True
           4 :  None : False :  True
 
-Using these Boolean variables, we can define ``LogicalConstraint`` objects, analogous to algebraic ``pyo.Constraint`` objects.
+Using these Boolean variables, we can define ``LogicalConstraint`` objects, analogous to algebraic ``Constraint`` objects.
 
 .. doctest::
 
@@ -370,7 +370,7 @@ or equivalently,
 
 .. code::
 
-    m.p = pyo.LogicalConstraint(
+    m.p = LogicalConstraint(
         expr=atleast(2, m.Y[1], exactly(2, m.Y[2], m.Y[3], m.Y[4]), m.Y[5], m.Y[6]))
 
 In the ``logical_to_linear`` transformation, we automatically convert these special disjunctions to linear form using a Big M reformulation.

@@ -19,7 +19,7 @@ import pyomo.environ as pyo
 ##
 #
 # Pyomo makes a fundamental distinction between an abstract model and a
-# problem instance.  The Pyomo pyo.AbstractModel() class is used to manage the
+# problem instance.  The Pyomo AbstractModel() class is used to manage the
 # declaration of model components (e.g. sets and variables), and to
 # generate a problem instance.
 #

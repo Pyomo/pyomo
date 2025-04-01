@@ -35,8 +35,8 @@ Pyomo.DAE introduces three new modeling components to Pyomo:
 
 As will be shown later, differential equations can be declared using
 using these new modeling components along with the standard Pyomo
-:py:class:`Var <pyomo.environ.Var>` and
-:py:class:`pyo.Constraint <pyomo.environ.Constraint>` components.
+:py:class:`Var<pyomo.environ.Var>` and
+:py:class:`Constraint<pyomo.environ.Constraint>` components.
 
 ContinuousSet
 *************
@@ -416,7 +416,7 @@ discretization equations for this method are shown below:
 
 where :math:`h` is the step size between discretization points or the size of
 each finite element. These equations are generated automatically as
-:py:class:`pyo.Constraints<pyomo.environ.Constraint>` when the backward
+:py:class:`Constraints<pyomo.environ.Constraint>` when the backward
 difference method is applied to a Pyomo model.
 
 There are several discretization options available to a

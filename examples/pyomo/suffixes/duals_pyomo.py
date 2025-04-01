@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A pyo.Suffix example for the collection of duals.
+# A Suffix example for the collection of duals.
 
 import pyomo.environ as pyo
 
@@ -20,7 +20,7 @@ model.obj = pyo.Objective(expr=model.x)
 model.con = pyo.Constraint(expr=model.x >= 1)
 ###
 
-# Declare an IMPORT pyo.Suffix to store the dual information that will
+# Declare an IMPORT Suffix to store the dual information that will
 # be returned by the solver. When pyo.Suffix components are declared
 # with an IMPORT direction, Pyomo solver interfaces will attempt to collect
 # this named information from a solver solution.

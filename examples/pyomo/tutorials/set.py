@@ -23,7 +23,7 @@ model = pyo.AbstractModel()
 ## Declaring Sets
 ##
 #
-# An unordered set of arbitrary objects can be defined by creating a pyo.Set()
+# An unordered set of arbitrary objects can be defined by creating a Set()
 # object:
 #
 model.A = pyo.Set()
@@ -229,7 +229,7 @@ model.U = pyo.Set(ordered=True, initialize=U_init)
 # This example can be generalized to array sets.  Note that in this case
 # we can use ordered sets to to index the array, thereby guaranteeing that
 # data has been filled.  The following example illustrates the use of the
-# pyo.RangeSet(a,b) object, which generates an ordered set from 'a' to 'b'
+# RangeSet(a,b) object, which generates an ordered set from 'a' to 'b'
 # (inclusive).
 #
 def V_init(model, z, i):

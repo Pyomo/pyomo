@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A pyo.Suffix example for the gurobi_ampl solver that uses
+# A Suffix example for the gurobi_ampl solver that uses
 # basis information from a previous solve to warmstart
 # another solve.
 #

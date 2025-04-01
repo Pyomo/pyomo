@@ -62,7 +62,7 @@ To see the results of the transformation, you could then use the command
     :members: apply_to, create_using, update_variables
 
 
-Explicit pyo.Constraints to Variable Bounds
+Explicit Constraints to Variable Bounds
 ---------------------------------------
 
 .. doctest::
@@ -90,7 +90,7 @@ Induced Linearity Reformulation
     :members: apply_to, create_using
 
 
-pyo.Constraint Bounds Tightener
+Constraint Bounds Tightener
 ---------------------------
 
 This transformation was developed by `Sunjeev Kale
@@ -100,7 +100,7 @@ This transformation was developed by `Sunjeev Kale
     :noindex:
     :members: apply_to, create_using
 
-Trivial pyo.Constraint Deactivation
+Trivial Constraint Deactivation
 -------------------------------
 
 .. autoclass:: pyomo.contrib.preprocessing.plugins.deactivate_trivial_constraints.TrivialConstraintDeactivator

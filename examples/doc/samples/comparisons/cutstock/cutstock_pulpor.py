@@ -61,7 +61,7 @@ for c in Cuts:
 # prob.writeLP("CutStock.lp")
 prob.solve()
 print("Status:", LpStatus[prob.status])
-print("Minimum total cost:", prob.objective.pyo.value())
+print("Minimum total cost:", prob.objective.value())
 for v in prob.variables():
     if v.varValue > 0:
         print(v.name, "=", v.varValue)

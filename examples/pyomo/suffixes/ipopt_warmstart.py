@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A pyo.Suffix example for ipopt.
+# A Suffix example for ipopt.
 # Translated to Pyomo from AMPL model source at:
 #   https://projects.coin-or.org/Ipopt/wiki/IpoptAddFeatures
 #

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A pyo.Suffix example for the gurobi_ampl solver.
+# A Suffix example for the gurobi_ampl solver.
 #
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:

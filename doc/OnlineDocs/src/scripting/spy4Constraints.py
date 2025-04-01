@@ -11,7 +11,7 @@
 
 """
 David L. Woodruff and Mingye Yang, Spring 2018
-Code snippets for pyo.Constraints.rst in testable form
+Code snippets for Constraints.rst in testable form
 """
 
 import pyomo.environ as pyo
@@ -40,13 +40,13 @@ model.J = pyo.Set(initialize=['butter', 'scones'])
 model.x = pyo.Var(model.J)
 
 
-# @pyo.Constraint_example
+# @Constraint_example
 def teaOKrule(model):
     return model.x['butter'] + model.x['scones'] == 3
 
 
 model.TeaConst = pyo.Constraint(rule=teaOKrule)
-# @pyo.Constraint_example
+# @Constraint_example
 
 # @Passing_elements_crossproduct
 model.A = pyo.RangeSet(1, 10)

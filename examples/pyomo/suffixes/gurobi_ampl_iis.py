@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A pyo.Suffix example for the gurobi_ampl solver.
+# A Suffix example for the gurobi_ampl solver.
 #
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
@@ -52,7 +52,7 @@ model.obj = pyo.Objective(expr=model.x)
 model.con = pyo.Constraint(expr=model.x <= -1)
 ###
 
-# Create an IMPORT pyo.Suffix to store the iis information that will
+# Create an IMPORT Suffix to store the iis information that will
 # be returned by gurobi_ampl
 model.iis = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 

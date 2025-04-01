@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# A pyo.Suffix example for the collection of duals.
+# A Suffix example for the collection of duals.
 #
 # This Pyomo example is formulated as a python script.
 # To run this script execute the following command:
@@ -41,7 +41,7 @@ if opt is None:
     exit(1)
 
 # import the simple example model containing a
-# 'dual' IMPORT pyo.Suffix component
+# 'dual' IMPORT Suffix component
 from duals_pyomo import model
 
 ### Send the model to gurobi_ampl and collect the solution

@@ -107,7 +107,7 @@ model.S = pyo.Param(validate=S_validate)
 ##
 #
 # Pyomo assumes that parameter values are specified in a sparse manner.  For
-# example, the instance pyo.Param(model.A,model.B) declares a parameter indexed
+# example, the instance Param(model.A,model.B) declares a parameter indexed
 # over sets A and B.  However, not all of these values are necessarily
 # declared in a model.  The default value for all parameters not declared
 # is zero. This default can be overridden with the _default_ option.

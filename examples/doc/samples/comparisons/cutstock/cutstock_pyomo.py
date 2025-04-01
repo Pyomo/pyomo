@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
-import pyomo.opt
 from cutstock_util import (
     getCutCount,
     getPatCount,
