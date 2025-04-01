@@ -68,7 +68,6 @@ jobs:
 
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
-    needs:  # Note: GHA does not support conditional dependencies
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -768,7 +767,6 @@ jobs:
 
   bare-python-env:
     name: linux/3.9/bare-env
-    needs:  # Note: GHA does not support conditional dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
