@@ -237,8 +237,8 @@ To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
   >>> m.y2_disjunction = Disjunction(expr=[m.Y2_disjuncts[j] for j in J])
 
   Logical constraints to enforce exactly one selection
-  >>> m.Y1_limit = pyo.LogicalConstraint(expr=exactly(1, [m.Y1_disjuncts[i].indicator_var for i in I]))
-  >>> m.Y2_limit = pyo.LogicalConstraint(expr=exactly(1, [m.Y2_disjuncts[j].indicator_var for j in J]))
+  >>> m.Y1_limit = pyo.LogicalConstraint(expr=pyo.exactly(1, [m.Y1_disjuncts[i].indicator_var for i in I]))
+  >>> m.Y2_limit = pyo.LogicalConstraint(expr=pyo.exactly(1, [m.Y2_disjuncts[j].indicator_var for j in J]))
 
   Define objective function
   >>> m.obj = pyo.Objective(
