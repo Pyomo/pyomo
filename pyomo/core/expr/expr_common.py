@@ -163,6 +163,8 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TY
 
     def _mutable_mutable(a, b):
         if a is b:
+            # Note: _recast_mutable is an in-place operation: make sure
+            # that we don't call it twice on the same object.
             a = b = _recast_mutable(a)
         else:
             a = _recast_mutable(a)
