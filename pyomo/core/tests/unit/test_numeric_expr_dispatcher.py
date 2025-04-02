@@ -201,8 +201,8 @@ class Base(object):
         try:
             for test_num, test in enumerate(tests):
                 ans = None
-                args = test[:-1]
-                result = test[-1]
+                args = [clone_expression(arg) for arg in test[:-1]]
+                result = clone_expression(test[-1])
                 if result is self.SKIP:
                     continue
                 orig_args = list(args)
@@ -212,7 +212,7 @@ class Base(object):
                     classes = [arg.__class__ for arg in args]
                     with LoggingIntercept() as LOG:
                         ans = op(*args)
-                    if not any(arg is self.asbinary for arg in args):
+                    if not any(arg is self.asbinary for arg in test):
                         self.assertEqual(LOG.getvalue(), "")
                     assertExpressionsEqual(self, result, ans)
                     for i, arg in enumerate(args):
@@ -257,8 +257,8 @@ class Base(object):
         try:
             for test_num, test in enumerate(tests):
                 ans = None
-                args = test[:-1]
-                result = test[-1]
+                args = [clone_expression(arg) for arg in test[:-1]]
+                result = clone_expression(test[-1])
                 if result is self.SKIP:
                     continue
                 orig_args = list(args)
@@ -268,7 +268,7 @@ class Base(object):
                     classes = [arg.__class__ for arg in args]
                     with LoggingIntercept() as LOG:
                         ans = op(*args)
-                    if not any(arg is self.asbinary for arg in args):
+                    if not any(arg is self.asbinary for arg in test):
                         self.assertEqual(LOG.getvalue(), "")
                     assertExpressionsEqual(self, result, ans)
                     for i, arg in enumerate(args):
