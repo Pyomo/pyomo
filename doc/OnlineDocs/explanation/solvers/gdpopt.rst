@@ -160,25 +160,25 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   :skipif: not baron_available
 
   Required imports
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
   >>> from pyomo.gdp import Disjunct, Disjunction
 
   Create a simple model
-  >>> m = ConcreteModel()
-  >>> m.x1 = Var(bounds = (0,8))
-  >>> m.x2 = Var(bounds = (0,8))
-  >>> m.obj = Objective(expr=m.x1 + m.x2, sense=minimize)
+  >>> m = pyo.ConcreteModel()
+  >>> m.x1 = pyo.Var(bounds = (0,8))
+  >>> m.x2 = pyo.Var(bounds = (0,8))
+  >>> m.obj = pyo.Objective(expr=m.x1 + m.x2, sense=pyo.minimize)
   >>> m.y1 = Disjunct()
   >>> m.y2 = Disjunct()
-  >>> m.y1.c1 = Constraint(expr=m.x1 >= 2)
-  >>> m.y1.c2 = Constraint(expr=m.x2 >= 2)
-  >>> m.y2.c1 = Constraint(expr=m.x1 >= 3)
-  >>> m.y2.c2 = Constraint(expr=m.x2 >= 3)
+  >>> m.y1.c1 = pyo.Constraint(expr=m.x1 >= 2)
+  >>> m.y1.c2 = pyo.Constraint(expr=m.x2 >= 2)
+  >>> m.y2.c1 = pyo.Constraint(expr=m.x1 >= 3)
+  >>> m.y2.c2 = pyo.Constraint(expr=m.x2 >= 3)
   >>> m.djn = Disjunction(expr=[m.y1, m.y2])
 
   Invoke the GDPopt-LBB solver
 
-  >>> results = SolverFactory('gdpopt.lbb').solve(m)
+  >>> results = pyo.SolverFactory('gdpopt.lbb').solve(m)
   WARNING: 09/06/22: The GDPopt LBB algorithm currently has known issues. Please
       use the results with caution and report any bugs!
 
@@ -188,7 +188,7 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> print(results.solver.termination_condition)
   optimal
 
-  >>> print([value(m.y1.indicator_var), value(m.y2.indicator_var)])
+  >>> print([pyo.value(m.y1.indicator_var), pyo.value(m.y2.indicator_var)])
   [True, False]
 
 Logic-based Discrete-Steepest Descent Algorithm (LD-SDA)
