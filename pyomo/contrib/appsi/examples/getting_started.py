@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.contrib import appsi
 from pyomo.common.timing import HierarchicalTimer
 
@@ -18,14 +18,14 @@ def main(plot=True, n_points=200):
     import numpy as np
 
     # create a Pyomo model
-    m = pe.ConcreteModel()
-    m.x = pe.Var()
-    m.y = pe.Var()
-    m.p = pe.Param(initialize=1, mutable=True)
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var()
+    m.y = pyo.Var()
+    m.p = pyo.Param(initialize=1, mutable=True)
 
-    m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-    m.c1 = pe.Constraint(expr=m.y >= (m.x + 1) ** 2)
-    m.c2 = pe.Constraint(expr=m.y >= (m.x - m.p) ** 2)
+    m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+    m.c1 = pyo.Constraint(expr=m.y >= (m.x + 1) ** 2)
+    m.c2 = pyo.Constraint(expr=m.y >= (m.x - m.p) ** 2)
 
     opt = appsi.solvers.Cplex()  # create an APPSI solver interface
     opt.config.load_solution = False  # modify the config options
