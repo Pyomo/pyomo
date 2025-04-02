@@ -234,11 +234,11 @@ def SSE(model):
     expr = sum((y - y_hat) ** 2 for y, y_hat in model.experiment_outputs.items())
     return expr
 
-def regularize_term(model, FIM, theta_ref):
+def regularize_term(model, prior_FIM, theta_ref):
     """
     Regularization term for the objective function, which is used to penalize deviation from a 
     reference theta
-    (theta - theta_ref).transpose() * FIM * (theta - theta_ref)
+    (theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref)
 
     theta_ref: Reference parameter value, element of matrix
     FIM: Fisher Information Matrix, matrix
@@ -246,7 +246,7 @@ def regularize_term(model, FIM, theta_ref):
 
     Added to SSE objective function
     """
-    expr = ((theta - theta_ref).transpose() * FIM * (theta - theta_ref) for theta in model.unknown_parameters.items())
+    expr = ((theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref) for theta in model.unknown_parameters.items())
     return expr
 
 
@@ -285,7 +285,7 @@ class Estimator(object):
         self,
         experiment_list,
         obj_function=None,
-        FIM=None,
+        prior_FIM=None,
         theta_ref=None,
         tee=False,
         diagnostic_mode=False,
@@ -444,10 +444,18 @@ class Estimator(object):
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
             if self.obj_function == 'SSE':
-                second_stage_rule = SSE
+                
                 if self.FIM and self.theta_ref is not None:
                     # Regularize the objective function
-                    second_stage_rule = SSE + regularize_term
+                    second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
+                elif self.FIM:
+                    theta_ref = model.unknown_parameters.values()
+                    second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
+
+                else:
+                    # Sum of squared errors
+                    second_stage_rule = SSE
+
 
             
             else:
