@@ -208,46 +208,46 @@ To use the GDPopt-LDSDA solver, define your Pyomo GDP model as usual:
   :skipif: not baron_available
 
   Required imports
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
   >>> from pyomo.gdp import Disjunct, Disjunction
 
   Create a simple model
-  >>> m = ConcreteModel()
+  >>> m = pyo.ConcreteModel()
 
   Define sets
   >>> I = [1, 2, 3, 4, 5]
   >>> J = [1, 2, 3, 4, 5]
 
   Define variables
-  >>> m.a = Var(bounds=(-0.3, 0.2))
-  >>> m.b = Var(bounds=(-0.9, -0.5))
+  >>> m.a = pyo.Var(bounds=(-0.3, 0.2))
+  >>> m.b = pyo.Var(bounds=(-0.9, -0.5))
 
   Define disjuncts for Y1
   >>> m.Y1_disjuncts = Disjunct(I)
   >>> for i in I:
-  ...     m.Y1_disjuncts[i].y1_constraint = Constraint(expr=m.a == -0.3 + 0.1 * (i - 1))
+  ...     m.Y1_disjuncts[i].y1_constraint = pyo.Constraint(expr=m.a == -0.3 + 0.1 * (i - 1))
 
   Define disjuncts for Y2
   >>> m.Y2_disjuncts = Disjunct(J)
   >>> for j in J:
-  ...     m.Y2_disjuncts[j].y2_constraint = Constraint(expr=m.b == -0.9 + 0.1 * (j - 1))
+  ...     m.Y2_disjuncts[j].y2_constraint = pyo.Constraint(expr=m.b == -0.9 + 0.1 * (j - 1))
 
   Define disjunctions
   >>> m.y1_disjunction = Disjunction(expr=[m.Y1_disjuncts[i] for i in I])
   >>> m.y2_disjunction = Disjunction(expr=[m.Y2_disjuncts[j] for j in J])
 
   Logical constraints to enforce exactly one selection
-  >>> m.Y1_limit = LogicalConstraint(expr=exactly(1, [m.Y1_disjuncts[i].indicator_var for i in I]))
-  >>> m.Y2_limit = LogicalConstraint(expr=exactly(1, [m.Y2_disjuncts[j].indicator_var for j in J]))
+  >>> m.Y1_limit = pyo.LogicalConstraint(expr=exactly(1, [m.Y1_disjuncts[i].indicator_var for i in I]))
+  >>> m.Y2_limit = pyo.LogicalConstraint(expr=exactly(1, [m.Y2_disjuncts[j].indicator_var for j in J]))
 
   Define objective function
-  >>> m.obj = Objective(
+  >>> m.obj = pyo.Objective(
   ...     expr=4 * m.a**2 - 2.1 * m.a**4 + (1 / 3) * m.a**6 + m.a * m.b - 4 * m.b**2 + 4 * m.b**4,
-  ...     sense=minimize
+  ...     sense=pyo.minimize
   ... )
 
   Invoke the GDPopt-LDSDA solver
-  >>> results = SolverFactory('gdpopt.ldsda').solve(m,
+  >>> results = pyo.SolverFactory('gdpopt.ldsda').solve(m,
   ...     starting_point=[1,1],
   ...     logical_constraint_list=[m.Y1_limit, m.Y2_limit],
   ...     direction_norm='Linf',
