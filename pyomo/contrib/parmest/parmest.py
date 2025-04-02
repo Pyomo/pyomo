@@ -246,7 +246,23 @@ def regularize_term(model, prior_FIM, theta_ref):
 
     Added to SSE objective function
     """
-    expr = ((theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref) for theta in model.unknown_parameters.items())
+    # Check if prior_FIM is a square matrix
+    if prior_FIM.shape[0] != prior_FIM.shape[1]:
+        raise ValueError("prior_FIM must be a square matrix")
+    
+    # Check if theta_ref is a vector of the same size as prior_FIM
+    if len(theta_ref) != prior_FIM.shape[0]:
+        raise ValueError("theta_ref must be a vector of the same size as prior_FIM")
+    
+    # (theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref)
+    expr = np.zeros(len(theta_ref))
+
+    for i in range(len(theta_ref)):
+        if theta_ref[i] is None:
+            raise ValueError("theta_ref must not contain None values")
+        expr[i] = (model.unknown_parameters[i] - theta_ref[i]).transpose() * prior_FIM[i] * (model.unknown_parameters[i] - theta_ref[i])
+    return sum(expr)**2
+    
     return expr
 
 
@@ -449,10 +465,10 @@ class Estimator(object):
                 
                 if self.prior_FIM and self.theta_ref is not None:
                     # Regularize the objective function
-                    second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
+                    second_stage_rule = SSE + regularize_term(model = self.model_initialized, prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
                 elif self.prior_FIM:
                     theta_ref = model.unknown_parameters.values()
-                    second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
+                    second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = theta_ref)
 
                 else:
                     # Sum of squared errors
