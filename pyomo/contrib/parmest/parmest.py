@@ -313,6 +313,8 @@ class Estimator(object):
 
         # populate keyword argument options
         self.obj_function = obj_function
+        self.prior_FIM = prior_FIM
+        self.theta_ref = theta_ref
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
