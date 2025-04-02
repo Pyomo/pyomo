@@ -241,7 +241,7 @@ def regularize_term(model, prior_FIM, theta_ref):
     (theta - theta_ref).transpose() * prior_FIM * (theta - theta_ref)
 
     theta_ref: Reference parameter value, element of matrix
-    FIM: Fisher Information Matrix, matrix
+    prior_FIM: Fisher Information Matrix from prior experimental design, matrix
     theta: Parameter value, matrix
 
     Added to SSE objective function
@@ -447,18 +447,16 @@ class Estimator(object):
             # custom functions
             if self.obj_function == 'SSE':
                 
-                if self.FIM and self.theta_ref is not None:
+                if self.prior_FIM and self.theta_ref is not None:
                     # Regularize the objective function
                     second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
-                elif self.FIM:
+                elif self.prior_FIM:
                     theta_ref = model.unknown_parameters.values()
                     second_stage_rule = SSE + regularize_term(prior_FIM = self.prior_FIM, theta_ref = self.theta_ref)
 
                 else:
                     # Sum of squared errors
                     second_stage_rule = SSE
-
-
             
             else:
                 # A custom function uses model.experiment_outputs as data
