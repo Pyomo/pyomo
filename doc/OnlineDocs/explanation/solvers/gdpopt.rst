@@ -65,27 +65,27 @@ An example that includes the modeling approach may be found below.
   :skipif: not glpk_available
 
   Required imports
-  >>> from pyomo.environ import *
-  >>> from pyomo.gdp import *
+  >>> import pyomo.environ as pyo
+  >>> from pyomo.gdp import Disjunct, Disjunction
 
   Create a simple model
-  >>> model = ConcreteModel(name='LOA example')
+  >>> model = pyo.ConcreteModel(name='LOA example')
 
-  >>> model.x = Var(bounds=(-1.2, 2))
-  >>> model.y = Var(bounds=(-10,10))
-  >>> model.c = Constraint(expr= model.x + model.y == 1)
+  >>> model.x = pyo.Var(bounds=(-1.2, 2))
+  >>> model.y = pyo.Var(bounds=(-10,10))
+  >>> model.c = pyo.Constraint(expr= model.x + model.y == 1)
 
   >>> model.fix_x = Disjunct()
-  >>> model.fix_x.c = Constraint(expr=model.x == 0)
+  >>> model.fix_x.c = pyo.Constraint(expr=model.x == 0)
 
   >>> model.fix_y = Disjunct()
-  >>> model.fix_y.c = Constraint(expr=model.y == 0)
+  >>> model.fix_y.c = pyo.Constraint(expr=model.y == 0)
 
   >>> model.d = Disjunction(expr=[model.fix_x, model.fix_y])
-  >>> model.objective = Objective(expr=model.x + 0.1*model.y, sense=minimize)
+  >>> model.objective = pyo.Objective(expr=model.x + 0.1*model.y, sense=pyo.minimize)
 
   Solve the model using GDPopt
-  >>> results = SolverFactory('gdpopt.loa').solve(
+  >>> results = pyo.SolverFactory('gdpopt.loa').solve(
   ...     model, mip_solver='glpk') # doctest: +IGNORE_RESULT
 
   Display the final solution
