@@ -70,6 +70,10 @@ def handle_sequence(node: collections.abc.Sequence, pn: List):
     pn.append((collections.abc.Sequence, len(node)))
     return list(node)
 
+def handle_inequality(node: collections.abc.Sequence, pn: List):
+    pn.append((type(node), node.nargs(), node.strict))
+    return node.args
+
 
 def _generic_expression_handler():
     return handle_expression
@@ -83,7 +87,8 @@ handler[ExternalFunctionExpression] = handle_external_function_expression
 handler[NPV_ExternalFunctionExpression] = handle_external_function_expression
 handler[AbsExpression] = handle_unary_expression
 handler[NPV_AbsExpression] = handle_unary_expression
-handler[RangedExpression] = handle_expression
+handler[InequalityExpression] = handle_inequality
+handler[RangedExpression] = handle_inequality
 handler[list] = handle_sequence
 
 
