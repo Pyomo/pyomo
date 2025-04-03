@@ -226,8 +226,10 @@ class Base(object):
                         else:
                             self.assertIs(arg.__class__, classes[i])
                             assertExpressionsEqual(self, arg, orig_args_clone[i])
-                except TypeError:
-                    if result is not NotImplemented:
+                except TypeError as e:
+                    if type(result) is str:
+                        self.assertRegex(str(e), result)
+                    elif result is not NotImplemented:
                         raise
                 except ZeroDivisionError:
                     if result is not ZeroDivisionError:
