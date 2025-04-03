@@ -175,7 +175,7 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TY
 
     # Because ASNUMERIC and MUTABLE re-call the dispatcher, we want to
     # resolve ASNUMERIC first, MUTABLE second, and INVALID last.  That
-    # means we will add them to teh dispatcher dict in opposite order so
+    # means we will add them to the dispatcher dict in opposite order so
     # "higher priority" callbacks override lower priority ones.
 
     mapping.update({(i, TYPES.INVALID): _invalid for i in TYPES})
