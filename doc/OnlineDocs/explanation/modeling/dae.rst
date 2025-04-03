@@ -35,19 +35,19 @@ Pyomo.DAE introduces three new modeling components to Pyomo:
 
 As will be shown later, differential equations can be declared using
 using these new modeling components along with the standard Pyomo
-:py:class:`Var<.Var>` and
-:py:class:`Constraint<.Constraint>` components.
+:py:class:`.Var` and
+:py:class:`.Constraint` components.
 
 ContinuousSet
 *************
 
 This component is used to define continuous bounded domains (for example
 'spatial' or 'time' domains). It is similar to a Pyomo
-:py:class:`Set <.Set>`  component and can be used to index things
+:py:class:`.Set`  component and can be used to index things
 like variables and constraints. Any number of
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` can be used to index a
 component and components can be indexed by both
-:py:class:`Sets <.Set>` and
+:py:class:`.Set` and
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
 
 In the current implementation, models with
@@ -112,9 +112,9 @@ abstract Pyomo model using the example data file.
 
 .. note::
    Most valid ways to declare and initialize a
-   :py:class:`Set <.Set>` can be used to
+   :py:class:`.Set` can be used to
    declare and initialize a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`.
-   See the documentation for :py:class:`Set <.Set>` for additional
+   See the documentation for :py:class:`.Set` for additional
    options.
 
 .. warning::
@@ -129,7 +129,7 @@ abstract Pyomo model using the example data file.
 .. note::
    :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` components are
    always ordered (sorted) therefore the ``first()`` and ``last()``
-   :py:class:`Set <.Set>` methods can be used to access the lower
+   :py:class:`.Set` methods can be used to access the lower
    and upper boundaries of the
    :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` respectively
 
@@ -146,7 +146,7 @@ Pyomo model. In each case, the variable being differentiated is supplied
 as the only positional argument and the type of derivative is specified
 using the 'wrt' (or the more verbose 'withrespectto') keyword
 argument. Any keyword argument that is valid for a Pyomo
-:py:class:`Var <.Var>` component may also be specified.
+:py:class:`.Var` component may also be specified.
 
 .. doctest::
 
@@ -182,16 +182,16 @@ argument. Any keyword argument that is valid for a Pyomo
    The 'initialize' keyword argument will initialize the value of a
    derivative and is **not** the same as specifying an initial
    condition. Initial or boundary conditions should be specified using a
-   :py:class:`Constraint<.Constraint>` or
-   :py:class:`ConstraintList<.ConstraintList>` or
-   by fixing the value of a :py:class:`Var<.Var>` at a boundary
+   :py:class:`.Constraint` or
+   :py:class:`.ConstraintList` or
+   by fixing the value of a :py:class:`.Var` at a boundary
    point.
 
 Declaring Differential Equations
 --------------------------------
 
 A differential equations is declared as a standard Pyomo
-:py:class:`Constraint<.Constraint>` and is not required to have
+:py:class:`.Constraint` and is not required to have
 any particular form. The following code snippet shows how one might declare
 an ordinary or partial differential equation.
 
@@ -226,12 +226,12 @@ an ordinary or partial differential equation.
    ...    return m.dydt[t, l] == m.dydl2[t, l]
    >>> model.pde = pyo.Constraint(model.t, model.l, rule=_pde_rule)
 
-By default, a :py:class:`Constraint<.Constraint>` declared over a
+By default, a :py:class:`.Constraint` declared over a
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` will be applied at every
 discretization point contained in the set. Often a modeler does not want to
 enforce a differential equation at one or both boundaries of a continuous
 domain. This may be addressed explicitly in the
-:py:class:`Constraint<.Constraint>` declaration using
+:py:class:`.Constraint` declaration using
 ``Constraint.Skip`` as shown above. Alternatively, the desired constraints can
 be deactivated just before the model is sent to a solver as shown below.
 
@@ -294,7 +294,7 @@ Declaring Integrals
    :members:
 
 Declaring an :py:class:`Integral<pyomo.dae.Integral>` component is similar to
-declaring an :py:class:`Expression<.Expression>` component. A
+declaring an :py:class:`.Expression` component. A
 simple example is shown below:
 
 .. doctest::
@@ -326,7 +326,7 @@ is being evaluated over. This is done using the 'wrt' keyword argument.
    ensure consistency in the ordering and dimension of the indexing sets
 
 After an :py:class:`Integral<pyomo.dae.Integral>` has been declared, it can be
-used just like a Pyomo :py:class:`Expression<.Expression>`
+used just like a Pyomo :py:class:`.Expression`
 component and can be included in constraints or the objective function as shown
 above.
 
@@ -342,7 +342,7 @@ positional argument. This should become more clear with the following example
 showing a double integral over the
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` components ``model.t1`` and
 ``model.t2``. In addition, the expression is also indexed by the
-:py:class:`Set<.Set>` ``model.s``. The mathematical representation
+:py:class:`.Set` ``model.s``. The mathematical representation
 and implementation in Pyomo are shown below:
 
 .. math::
@@ -416,7 +416,7 @@ discretization equations for this method are shown below:
 
 where :math:`h` is the step size between discretization points or the size of
 each finite element. These equations are generated automatically as
-:py:class:`Constraints<.Constraint>` when the backward
+:py:class:`.Constraint` when the backward
 difference method is applied to a Pyomo model.
 
 There are several discretization options available to a
