@@ -4810,11 +4810,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
             (self.asbinary, self.one, InequalityExpression((self.bin, 1), True)),
             # 4:
             (self.asbinary, self.native, InequalityExpression((self.bin, 5), True)),
-            (
-                self.asbinary,
-                self.npv,
-                InequalityExpression((self.bin, self.npv), True),
-            ),
+            (self.asbinary, self.npv, InequalityExpression((self.bin, self.npv), True)),
             (self.asbinary, self.param, InequalityExpression((self.bin, 6), True)),
             (
                 self.asbinary,
@@ -4822,11 +4818,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 InequalityExpression((self.bin, self.param_mut), True),
             ),
             # 8:
-            (
-                self.asbinary,
-                self.var,
-                InequalityExpression((self.bin, self.var), True),
-            ),
+            (self.asbinary, self.var, InequalityExpression((self.bin, self.var), True)),
             (
                 self.asbinary,
                 self.mon_native,
@@ -4848,11 +4840,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.linear,
                 InequalityExpression((self.bin, self.linear), True),
             ),
-            (
-                self.asbinary,
-                self.sum,
-                InequalityExpression((self.bin, self.sum), True),
-            ),
+            (self.asbinary, self.sum, InequalityExpression((self.bin, self.sum), True)),
             (
                 self.asbinary,
                 self.other,
@@ -4976,11 +4964,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
             (self.one, self.native, True),
             (self.one, self.npv, InequalityExpression((1, self.npv), True)),
             (self.one, self.param, True),
-            (
-                self.one,
-                self.param_mut,
-                InequalityExpression((1, self.param_mut), True),
-            ),
+            (self.one, self.param_mut, InequalityExpression((1, self.param_mut), True)),
             # 8:
             (self.one, self.var, InequalityExpression((1, self.var), True)),
             (
@@ -4988,11 +4972,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.mon_native,
                 InequalityExpression((1, self.mon_native), True),
             ),
-            (
-                self.one,
-                self.mon_param,
-                InequalityExpression((1, self.mon_param), True),
-            ),
+            (self.one, self.mon_param, InequalityExpression((1, self.mon_param), True)),
             (self.one, self.mon_npv, InequalityExpression((1, self.mon_npv), True)),
             # 12:
             (self.one, self.linear, InequalityExpression((1, self.linear), True)),
@@ -5075,11 +5055,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.le,
                 RangedExpression((5,) + self.le.args, (True, False)),
             ),
-            (
-                self.native,
-                self.lt,
-                RangedExpression((5,) + self.lt.args, (True, True)),
-            ),
+            (self.native, self.lt, RangedExpression((5,) + self.lt.args, (True, True))),
             # 24
             (
                 self.native,
@@ -5093,11 +5069,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
     def test_lt_npv(self):
         tests = [
             (self.npv, self.invalid, NotImplemented),
-            (
-                self.npv,
-                self.asbinary,
-                InequalityExpression((self.npv, self.bin), True),
-            ),
+            (self.npv, self.asbinary, InequalityExpression((self.npv, self.bin), True)),
             (self.npv, self.zero, InequalityExpression((self.npv, 0), True)),
             (self.npv, self.one, InequalityExpression((self.npv, 1), True)),
             # 4:
@@ -5230,11 +5202,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 "Cannot create an InequalityExpression where one of the "
                 "sub-expressions is a relational expression",
             ),
-            (
-                self.param,
-                self.le,
-                RangedExpression((6,) + self.le.args, (True, False)),
-            ),
+            (self.param, self.le, RangedExpression((6,) + self.le.args, (True, False))),
             (self.param, self.lt, RangedExpression((6,) + self.lt.args, (True, True))),
             # 24
             (
@@ -5259,11 +5227,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.zero,
                 InequalityExpression((self.param_mut, 0), True),
             ),
-            (
-                self.param_mut,
-                self.one,
-                InequalityExpression((self.param_mut, 1), True),
-            ),
+            (self.param_mut, self.one, InequalityExpression((self.param_mut, 1), True)),
             # 4:
             (
                 self.param_mut,
@@ -5383,11 +5347,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
     def test_lt_var(self):
         tests = [
             (self.var, self.invalid, NotImplemented),
-            (
-                self.var,
-                self.asbinary,
-                InequalityExpression((self.var, self.bin), True),
-            ),
+            (self.var, self.asbinary, InequalityExpression((self.var, self.bin), True)),
             (self.var, self.zero, InequalityExpression((self.var, 0), True)),
             (self.var, self.one, InequalityExpression((self.var, 1), True)),
             # 4:
@@ -5621,11 +5581,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.zero,
                 InequalityExpression((self.mon_param, 0), True),
             ),
-            (
-                self.mon_param,
-                self.one,
-                InequalityExpression((self.mon_param, 1), True),
-            ),
+            (self.mon_param, self.one, InequalityExpression((self.mon_param, 1), True)),
             # 4:
             (
                 self.mon_param,
@@ -5965,11 +5921,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
     def test_lt_sum(self):
         tests = [
             (self.sum, self.invalid, NotImplemented),
-            (
-                self.sum,
-                self.asbinary,
-                InequalityExpression((self.sum, self.bin), True),
-            ),
+            (self.sum, self.asbinary, InequalityExpression((self.sum, self.bin), True)),
             (self.sum, self.zero, InequalityExpression((self.sum, 0), True)),
             (self.sum, self.one, InequalityExpression((self.sum, 1), True)),
             # 4:
@@ -6531,11 +6483,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.le,
                 RangedExpression((0,) + self.le.args, (True, False)),
             ),
-            (
-                self.param0,
-                self.lt,
-                RangedExpression((0,) + self.lt.args, (True, True)),
-            ),
+            (self.param0, self.lt, RangedExpression((0,) + self.lt.args, (True, True))),
             # 24
             (
                 self.param0,
@@ -6597,11 +6545,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.le,
                 RangedExpression((1,) + self.le.args, (True, False)),
             ),
-            (
-                self.param1,
-                self.lt,
-                RangedExpression((1,) + self.lt.args, (True, True)),
-            ),
+            (self.param1, self.lt, RangedExpression((1,) + self.lt.args, (True, True))),
             # 24
             (
                 self.param1,
@@ -6891,11 +6835,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.zero,
                 RangedExpression((self.le.args + (0,)), (False, True)),
             ),
-            (
-                self.le,
-                self.one,
-                RangedExpression((self.le.args + (1,)), (False, True)),
-            ),
+            (self.le, self.one, RangedExpression((self.le.args + (1,)), (False, True))),
             # 4:
             (
                 self.le,
@@ -7022,11 +6962,7 @@ class TestStrictInequality(BaseRelational, unittest.TestCase):
                 self.asbinary,
                 RangedExpression((self.lt.args + (self.bin,)), (True, True)),
             ),
-            (
-                self.lt,
-                self.zero,
-                RangedExpression((self.lt.args + (0,)), (True, True)),
-            ),
+            (self.lt, self.zero, RangedExpression((self.lt.args + (0,)), (True, True))),
             (self.lt, self.one, RangedExpression((self.lt.args + (1,)), (True, True))),
             # 4:
             (

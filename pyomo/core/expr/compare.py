@@ -70,6 +70,7 @@ def handle_sequence(node: collections.abc.Sequence, pn: List):
     pn.append((collections.abc.Sequence, len(node)))
     return list(node)
 
+
 def handle_inequality(node: collections.abc.Sequence, pn: List):
     pn.append((type(node), node.nargs(), node.strict))
     return node.args
