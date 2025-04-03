@@ -47,7 +47,7 @@ This component is used to define continuous bounded domains (for example
 like variables and constraints. Any number of
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` can be used to index a
 component and components can be indexed by both
-:py:class:`.Set` and
+:py:class:`Sets <.Set>` and
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
 
 In the current implementation, models with
@@ -416,7 +416,7 @@ discretization equations for this method are shown below:
 
 where :math:`h` is the step size between discretization points or the size of
 each finite element. These equations are generated automatically as
-:py:class:`.Constraint` when the backward
+:py:class:`Constraints<.Constraint>` when the backward
 difference method is applied to a Pyomo model.
 
 There are several discretization options available to a
