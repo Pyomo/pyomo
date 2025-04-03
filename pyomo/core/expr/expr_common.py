@@ -172,16 +172,22 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates, TYPES=NUMERIC_ARG_TY
         return dispatcher[a.__class__, b.__class__](a, b)
 
     mapping = {}
-    mapping.update({(i, TYPES.ASNUMERIC): _any_asnumeric for i in TYPES})
-    mapping.update({(TYPES.ASNUMERIC, i): _asnumeric_any for i in TYPES})
-    mapping[TYPES.ASNUMERIC, TYPES.ASNUMERIC] = _asnumeric_asnumeric
+
+    # Because ASNUMERIC and MUTABLE re-call the dispatcher, we want to
+    # resolve ASNUMERIC first, MUTABLE second, and INVALID last.  That
+    # means we will add them to teh dispatcher dict in opposite order so
+    # "higher priority" callbacks override lower priority ones.
+
+    mapping.update({(i, TYPES.INVALID): _invalid for i in TYPES})
+    mapping.update({(TYPES.INVALID, i): _invalid for i in TYPES})
 
     mapping.update({(i, TYPES.MUTABLE): _any_mutable for i in TYPES})
     mapping.update({(TYPES.MUTABLE, i): _mutable_any for i in TYPES})
     mapping[TYPES.MUTABLE, TYPES.MUTABLE] = _mutable_mutable
 
-    mapping.update({(i, TYPES.INVALID): _invalid for i in TYPES})
-    mapping.update({(TYPES.INVALID, i): _invalid for i in TYPES})
+    mapping.update({(i, TYPES.ASNUMERIC): _any_asnumeric for i in TYPES})
+    mapping.update({(TYPES.ASNUMERIC, i): _asnumeric_any for i in TYPES})
+    mapping[TYPES.ASNUMERIC, TYPES.ASNUMERIC] = _asnumeric_asnumeric
 
     mapping.update(updates)
     return mapping
