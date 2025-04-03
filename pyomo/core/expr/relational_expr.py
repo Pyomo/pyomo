@@ -48,6 +48,18 @@ from pyomo.core.pyomoobject import PyomoObject
 
 
 def _categorize_relational_arg_type(arg):
+    """Attempt to categorize an unknown object type into a RELATIONAL_ARG_TYPE
+
+    Note that this can return the following types:
+    - MUTABLE
+    - ASNUMERIC
+    - INVALID
+    - NATIVE
+    - PARAM
+    - OTHER
+    - INEQUALITY
+    - INVALID_RELATIONAL
+    """
     arg_type = numeric_expr._categorize_arg_type(arg)
     if arg_type is ARG_TYPE.INVALID:
         if isinstance(arg, PyomoObject):
@@ -412,7 +424,7 @@ def _invalid_relational(op_type, op_str, a, b):
         if getattr(b, 'is_expression_type', no)(ExpressionType.RELATIONAL):
             msg = (
                 f"Cannot create an {op_type} where both "
-                "sub-expressions are relational expression:"
+                "sub-expressions are relational expressions:"
             )
         else:
             msg = (
