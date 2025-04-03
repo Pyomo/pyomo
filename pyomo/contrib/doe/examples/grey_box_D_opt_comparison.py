@@ -83,11 +83,11 @@ def compare_reactor_doe():
             doe_obj.results["Experiment Design"][0]
         )
     )
-    print(
-        ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
-            *doe_obj.results["Experiment Design"][1:]
-        )
-    )
+    # print(
+    #     ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
+    #         *doe_obj.results["Experiment Design"][1:]
+    #     )
+    # )
     print("FIM at optimal design:\n {}".format(np.array(doe_obj.results["FIM"])))
     print(
         "Objective value at optimal design: {:.2f}".format(
@@ -130,9 +130,14 @@ def compare_reactor_doe():
             doe_obj_grey_box.results["Experiment Design"][0]
         )
     )
+    # print(
+    #     ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
+    #         *doe_obj_grey_box.results["Experiment Design"][1:]
+    #     )
+    # )
     print(
-        ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
-            *doe_obj_grey_box.results["Experiment Design"][1:]
+        ("\tTemperature values: [""{:.2f}]").format(
+            doe_obj_grey_box.results["Experiment Design"][1]
         )
     )
     print(
@@ -153,6 +158,8 @@ def compare_reactor_doe():
 
     print(doe_obj_grey_box.results["Experiment Design Names"])
 
+    print()
+
     # Print out a results summary
     print("Optimal experiment values: ")
     print(
@@ -160,9 +167,14 @@ def compare_reactor_doe():
             doe_obj.results["Experiment Design"][0]
         )
     )
+    # print(
+    #     ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
+    #         *doe_obj.results["Experiment Design"][1:]
+    #     )
+    # )
     print(
-        ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
-            *doe_obj.results["Experiment Design"][1:]
+        ("\tTemperature values: [""{:.2f}]").format(
+            doe_obj.results["Experiment Design"][1]
         )
     )
     print("FIM at optimal design:\n {}".format(np.array(doe_obj.results["FIM"])))

@@ -92,11 +92,11 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Set initial values for inputs
         # Need a mask structure
-        self._masking_matrix = np.tril(np.ones_like(self.doe_object.fim_initial))
-        # self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
-        self._input_values = np.asarray(
-            self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
-        )
+        self._masking_matrix = np.triu(np.ones_like(self.doe_object.fim_initial))
+        self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+        # self._input_values = np.asarray(
+        #     self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
+        # )
         self._n_inputs = len(self._input_values)
         # print(self._input_values)
 
@@ -123,7 +123,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         input_names_list = list(itertools.product(self._param_names, self._param_names))
-        input_names_list = list(itertools.combinations_with_replacement(self._param_names, 2))
+        # input_names_list = list(itertools.combinations_with_replacement(self._param_names, 2))
         return input_names_list
 
     def equality_constraint_names(self):
@@ -157,7 +157,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     def evaluate_outputs(self):
         # Evaluates the objective value for the specified
         # ObjectiveLib type.
-        current_FIM = self._get_FIM()
+        # current_FIM = self._get_FIM()
+        current_FIM = self._input_values
 
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
@@ -212,10 +213,13 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         #
         # ToDo: there will be significant bookkeeping for more
         # complicated objective functions and the Hessian
-        current_FIM = self._get_FIM()
+        # current_FIM = self._get_FIM()
+        current_FIM = self._input_values
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
         )
+
+        # print(current_FIM)
 
         # May remove this warning. If so, we
         # should put the eigenvalue computation
@@ -287,11 +291,12 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 * (max_eig_term - safe_cond_number * min_eig_term)
             )
 
+        # print(jac_M)
         # Filter jac_M using the
         # masking matrix
-        jac_M = jac_M[self._masking_matrix > 0]
-        M_rows = np.zeros_like(jac_M)
-        M_cols = np.arange(len(jac_M))
+        # jac_M = jac_M[self._masking_matrix > 0]
+        # M_rows = np.zeros_like(jac_M)
+        # M_cols = np.arange(len(jac_M))
 
         # # Rows are the integer division by number of columns
         # M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]
@@ -299,14 +304,16 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # # Columns are the remaindar (mod) by number of rows
         # M_cols = np.arange(len(jac_M.flatten())) % jac_M.shape[0]
 
-        # # Need to be flat?
-        # M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
+        # Need to be flat?
+        M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
 
-        # # Need to be flat?
-        # M_cols = np.arange(len(jac_M.flatten()))
+        # Need to be flat?
+        M_cols = np.arange(len(jac_M.flatten()))
 
         # Returns coo_matrix of the correct shape
         # print(coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))))
+        # print(jac_M)
+        # print(self.input_names())
         return coo_matrix(
             (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
         )
@@ -326,66 +333,68 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             output_con_multiplier_values, dtype=np.float64
         )
 
-    def evaluate_hessian_equality_constraints(self):
-        #ToDo: Do any objectives require constraints?
-        #Returns coo_matrix of the correct shape
-        return None
+    # def evaluate_hessian_equality_constraints(self):
+    #     #ToDo: Do any objectives require constraints?
+    #     #Returns coo_matrix of the correct shape
+    #     return None
 
-    def evaluate_hessian_outputs(self, FIM=None):
-        # ToDo: significant bookkeeping if the hessian's require vectorized
-        # operations. Just need mapping that works well and we are good.
-        if FIM is None:
-            current_FIM = self._get_FIM()
-        else:
-            current_FIM = FIM
-        M = np.asarray(current_FIM, dtype=np.float64).reshape(
-            self._n_params, self._n_params
-        )
+    # def evaluate_hessian_outputs(self, FIM=None):
+    #     # ToDo: significant bookkeeping if the hessian's require vectorized
+    #     # operations. Just need mapping that works well and we are good.
+    #     if FIM is None:
+    #         current_FIM = self._get_FIM()
+    #     else:
+    #         current_FIM = FIM
+    #     M = np.asarray(current_FIM, dtype=np.float64).reshape(
+    #         self._n_params, self._n_params
+    #     )
 
-        # Hessian with correct size for using only the
-        # lower (upper) triangle of the FIM
-        hess = np.zeros((self._n_inputs, self._n_inputs))
+    #     # Hessian with correct size for using only the
+    #     # lower (upper) triangle of the FIM
+    #     hess = np.zeros((self._n_inputs, self._n_inputs))
 
-        from pyomo.contrib.doe import ObjectiveLib
-        if self.objective_option == ObjectiveLib.determinant:
-            # Grab inverse
-            Minv = np.linalg.pinv(M)
+    #     from pyomo.contrib.doe import ObjectiveLib
+    #     if self.objective_option == ObjectiveLib.determinant:
+    #         # Grab inverse
+    #         Minv = np.linalg.pinv(M)
 
-            # Equation derived, shown in greybox
-            # pyomo.DoE 2.0 paper
-            # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] + 
-            #                          Minv[i, l]Minv[k, j])
-            lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
-            for curr_location in lower_tri_inds_4D:
-                # For quadruples (i, j, k, l)...
-                # Row of hessian is sum from
-                # n - i + 1 to n minus i plus j
-                #
-                # Column of hessian is sum from
-                # n - k + 1 to n minus k plus l
-                i, j, k, l = curr_location
-                print(i, j, k, l)
-                row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
-                col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
-                hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
+    #         # Equation derived, shown in greybox
+    #         # pyomo.DoE 2.0 paper
+    #         # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] + 
+    #         #                          Minv[i, l]Minv[k, j])
+    #         lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
+    #         for curr_location in lower_tri_inds_4D:
+    #             # For quadruples (i, j, k, l)...
+    #             # Row of hessian is sum from
+    #             # n - i + 1 to n minus i plus j
+    #             #
+    #             # Column of hessian is sum from
+    #             # n - k + 1 to n minus k plus l
+    #             i, j, k, l = curr_location
+    #             print(i, j, k, l)
+    #             row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
+    #             col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
+    #             #hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
+    #             # New Formula (tested with finite differencing)
+    #             hess[row, col] = -(Minv[i, l] * Minv[k, j])
             
-            print(hess)
-            # Complete the full matrix
-            hess = hess.transpose()
-        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            pass
-        elif self.objective_option == ObjectiveLib.condition_number:
-            pass
+    #         print(hess)
+    #         # Complete the full matrix
+    #         hess = hess.transpose()
+    #     elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+    #         pass
+    #     elif self.objective_option == ObjectiveLib.condition_number:
+    #         pass
         
-        # Select only lower triangular values as a flat array
-        hess_masking_matrix = np.tril(np.ones_like(hess))
-        hess_data = hess[hess_masking_matrix > 0]
-        hess_rows, hess_cols  = np.tril_indices_from(hess)
+    #     # Select only lower triangular values as a flat array
+    #     hess_masking_matrix = np.tril(np.ones_like(hess))
+    #     hess_data = hess[hess_masking_matrix > 0]
+    #     hess_rows, hess_cols  = np.tril_indices_from(hess)
 
-        print(hess_rows)
-        print(hess_cols)
+    #     print(hess_rows)
+    #     print(hess_cols)
 
-        # Returns coo_matrix of the correct shape
-        return coo_matrix(
-            (hess_data, (hess_rows, hess_cols)), shape=hess.shape
-        )
+    #     # Returns coo_matrix of the correct shape
+    #     return coo_matrix(
+    #         (hess_data, (hess_rows, hess_cols)), shape=hess.shape
+    #     )

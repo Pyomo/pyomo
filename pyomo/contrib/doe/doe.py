@@ -199,7 +199,7 @@ class DesignOfExperiments:
             # solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
-            solver.options["tol"] = 1e-4
+            #solver.options["tol"] = 1e-4
             self.solver = solver
 
         self.tee = tee
@@ -209,10 +209,10 @@ class DesignOfExperiments:
             self.grey_box_solver = grey_box_solver
         else:
             grey_box_solver = pyo.SolverFactory("cyipopt")
-            grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
+            # grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             # grey_box_solver.config.options["linear_solver"] = "ma57"
-            grey_box_solver.config.options['max_iter'] = 500
-            grey_box_solver.config.options['tol'] = 1e-4
+            grey_box_solver.config.options['max_iter'] = 200
+            #grey_box_solver.config.options['tol'] = 1e-4
             # grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
@@ -313,11 +313,15 @@ class DesignOfExperiments:
                 ).index(p2):
                     return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
                 else:
-                    return pyo.Constraint.Skip
+                    # return pyo.Constraint.Skip
+                    return model.fim[(p2, p1)] == m.egb_fim_block.inputs[(p2, p1)]
 
             model.obj_cons.FIM_equalities = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=FIM_egb_cons
             )
+
+            model.obj_cons.pprint()
+            model.fim_constraint.pprint()
 
             # ToDo: Add naming convention to adjust name of objective output
             # to conincide with the ObjectiveLib type
@@ -396,10 +400,14 @@ class DesignOfExperiments:
                         model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
                             pyo.value(model.fim[(i, j)])
                         )
+                    else:  # REMOVE THIS IF USING LOWER TRIANGLE
+                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                            pyo.value(model.fim[(j, i)])
+                        )
             # Set objective value
             if self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(np.log10(det_val))
+                model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(np.log(det_val))
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
                 eig, _ = np.linalg.eig(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
