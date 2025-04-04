@@ -14,8 +14,8 @@ import logging
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
+from pyomo.common.numeric_types import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _type_check_exception_arg
-from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
 

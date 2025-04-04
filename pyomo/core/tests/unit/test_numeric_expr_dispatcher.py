@@ -66,14 +66,9 @@ class Base(object):
     NUM_TESTS = 21
 
     def tearDown(self):
-        # Restore the state of 0 and 1 optimizations
-        _zero_one_optimizations.clear()
-        _zero_one_optimizations.update(self.zero_one_optimizations)
+        pass
 
     def setUp(self):
-        # Save (and standardize) the state of 0 and 1 optimizations
-        self.zero_one_optimizations = set(_zero_one_optimizations)
-
         # Note there are 11 basic argument "types" that determine how
         # expressions are generated (defined by the _EXPR_TYPE enum):
         #
@@ -231,8 +226,10 @@ class Base(object):
                         else:
                             self.assertIs(arg.__class__, classes[i])
                             assertExpressionsEqual(self, arg, orig_args_clone[i])
-                except TypeError:
-                    if result is not NotImplemented:
+                except TypeError as e:
+                    if type(result) is str:
+                        self.assertRegex(str(e), result)
+                    elif result is not NotImplemented:
                         raise
                 except ZeroDivisionError:
                     if result is not ZeroDivisionError:
@@ -247,6 +244,21 @@ class Base(object):
         except:
             self._print_error(test_num, test, ans)
             raise
+
+
+class BaseNumeric(Base):
+    def tearDown(self):
+        # Restore the state of 0 and 1 optimizations
+        _zero_one_optimizations.clear()
+        _zero_one_optimizations.update(self.zero_one_optimizations)
+
+        return super().tearDown()
+
+    def setUp(self):
+        # Save (and standardize) the state of 0 and 1 optimizations
+        self.zero_one_optimizations = set(_zero_one_optimizations)
+
+        return super().setUp()
 
     def _run_iadd_cases(self, tests, op):
         self.assertEqual(len(tests), self.NUM_TESTS)
@@ -317,7 +329,7 @@ class Base(object):
             raise
 
 
-class TestExpressionGeneration(Base, unittest.TestCase):
+class TestExpressionGeneration(BaseNumeric, unittest.TestCase):
     def setUp(self):
         super().setUp()
         enable_expression_optimizations(zero=False, one=True)
@@ -6281,7 +6293,7 @@ class TestExpressionGeneration(Base, unittest.TestCase):
         self._run_iadd_cases(tests, operator.iadd)
 
 
-class TestExpressionGeneration_Misc(Base, unittest.TestCase):
+class TestExpressionGeneration_Misc(BaseNumeric, unittest.TestCase):
     def test_enable_optimizations(self):
         enable_expression_optimizations(zero=False, one=False)
         self.assertEqual(_zero_one_optimizations, set())
