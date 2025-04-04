@@ -114,22 +114,25 @@ class TestDisjunction(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "Unexpected term for Disjunction 'dd'.\n    "
-            "Expected a Disjunct object, relational expression, or iterable of\n"
-            "    relational expressions but got 'IndexedDisjunct'",
+            "Expected a Disjunct object, relational or logical "
+            "expression, or\n    iterable of relational/logical "
+            "expressions but got 'IndexedDisjunct'",
         ):
             m.dd = Disjunction(expr=[m.d])
         with self.assertRaisesRegex(
             ValueError,
             "Unexpected term for Disjunction 'ee'.\n    "
-            "Expected a Disjunct object, relational expression, or iterable of\n"
-            "    relational expressions but got 'str' in 'list'",
+            "Expected a Disjunct object, relational or logical "
+            "expression, or\n    iterable of relational/logical "
+            "expressions but got 'str' in 'list'",
         ):
             m.ee = Disjunction(expr=[['a']])
         with self.assertRaisesRegex(
             ValueError,
             "Unexpected term for Disjunction 'ff'.\n    "
-            "Expected a Disjunct object, relational expression, or iterable of\n"
-            "    relational expressions but got 'str'",
+            "Expected a Disjunct object, relational or logical "
+            "expression, or\n    iterable of relational/logical "
+            "expressions but got 'str'",
         ):
             m.ff = Disjunction(expr=['a'])
 
