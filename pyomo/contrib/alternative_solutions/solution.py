@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import json
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.alternative_solutions import aos_utils
 
@@ -66,11 +66,11 @@ class Solution:
             if is_fixed:
                 self.fixed_vars.add(var)
             if include_fixed or not is_fixed:
-                self.variables[var] = pe.value(var)
+                self.variables[var] = pyo.value(var)
 
         if objective is None:
             objective = aos_utils.get_active_objective(model)
-        self.objective = (objective, pe.value(objective))
+        self.objective = (objective, pyo.value(objective))
 
     @property
     def objective_value(self):

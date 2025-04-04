@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
-from pyomo.gdp import *
+import pyomo.environ as pyo
+from pyomo.gdp import Disjunct, Disjunction
 
 #
 # Jobshop example from http://www.gams.com/modlib/libhtml/logmip4.htm
@@ -32,29 +32,29 @@ from pyomo.gdp import *
 
 
 def build_model():
-    model = AbstractModel()
+    model = pyo.AbstractModel()
 
-    model.JOBS = Set(ordered=True)
-    model.STAGES = Set(ordered=True)
-    model.I_BEFORE_K = RangeSet(0, 1)
+    model.JOBS = pyo.Set(ordered=True)
+    model.STAGES = pyo.Set(ordered=True)
+    model.I_BEFORE_K = pyo.RangeSet(0, 1)
 
     # Task durations
-    model.tau = Param(model.JOBS, model.STAGES, default=0)
+    model.tau = pyo.Param(model.JOBS, model.STAGES, default=0)
 
     # Total Makespan (this will be the objective)
-    model.ms = Var()
+    model.ms = pyo.Var()
 
     # Start time of each job
     def t_bounds(model, I):
-        return (0, sum(value(model.tau[idx]) for idx in model.tau))
+        return (0, sum(pyo.value(model.tau[idx]) for idx in model.tau))
 
-    model.t = Var(model.JOBS, within=NonNegativeReals, bounds=t_bounds)
+    model.t = pyo.Var(model.JOBS, within=pyo.NonNegativeReals, bounds=t_bounds)
 
     # Auto-generate the L set (potential collisions between 2 jobs at any stage.
     def _L_filter(model, I, K, J):
         return I < K and model.tau[I, J] and model.tau[K, J]
 
-    model.L = Set(
+    model.L = pyo.Set(
         initialize=model.JOBS * model.JOBS * model.STAGES, dimen=3, filter=_L_filter
     )
 
@@ -63,7 +63,7 @@ def build_model():
     def _feas(model, I):
         return model.ms >= model.t[I] + sum(model.tau[I, M] for M in model.STAGES)
 
-    model.Feas = Constraint(model.JOBS, rule=_feas)
+    model.Feas = pyo.Constraint(model.JOBS, rule=_feas)
 
     # Disjunctions to prevent clashes at a stage: This creates a set of
     # disjunct pairs: one if job I occurs before job K and the other if job
@@ -73,9 +73,9 @@ def build_model():
         lhs = model.t[I] + sum([M < J and model.tau[I, M] or 0 for M in model.STAGES])
         rhs = model.t[K] + sum([M < J and model.tau[K, M] or 0 for M in model.STAGES])
         if IthenK:
-            disjunct.c = Constraint(expr=lhs + model.tau[I, J] <= rhs)
+            disjunct.c = pyo.Constraint(expr=lhs + model.tau[I, J] <= rhs)
         else:
-            disjunct.c = Constraint(expr=rhs + model.tau[K, J] <= lhs)
+            disjunct.c = pyo.Constraint(expr=rhs + model.tau[K, J] <= lhs)
 
     model.NoClash = Disjunct(model.L, model.I_BEFORE_K, rule=_NoClash)
 
@@ -86,14 +86,14 @@ def build_model():
     model.disj = Disjunction(model.L, rule=_disj)
 
     # minimize makespan
-    model.makespan = Objective(expr=model.ms)
+    model.makespan = pyo.Objective(expr=model.ms)
     return model
 
 
 if __name__ == "__main__":
     m = build_model().create_instance('jobshop-small.dat')
-    TransformationFactory('gdp.bigm').apply_to(m)
-    SolverFactory('gams').solve(
+    pyo.TransformationFactory('gdp.bigm').apply_to(m)
+    pyo.SolverFactory('gams').solve(
         m, solver='baron', tee=True, add_options=['option optcr=1e-6;']
     )
     m.makespan.display()
