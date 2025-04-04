@@ -1523,7 +1523,7 @@ class DesignOfExperiments:
             FIM = self._computed_FIM
             
             '''
-            # Alex said to makek this a function
+            # Alex said to make this a function
             # This should be a static (?) function
             # Making it a function allows us to perform error tests
             # on the FIM
@@ -1535,9 +1535,11 @@ class DesignOfExperiments:
             
             '''
             # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs =np.linalg.eig(FIM)  # Grab eigenvalues
+            det_FIM = np.linalg.det(FIM)   # Determinant of FIM         
+            D_opt = np.log10(det_FIM)
+            trace_FIM = np.trace(FIM)  # Trace of FIM
+            A_opt = np.log10(trace_FIM)  
+            E_vals, E_vecs =np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
 
             E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
             IMG_THERESHOLD = 1e-6  # Threshold for imaginary component
@@ -1564,9 +1566,9 @@ class DesignOfExperiments:
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
             fim_factorial_results["eigval_min"].append(E_vals[0])
-            fim_factorial_results["eigval_max"].append(E_vals[-1])
-            fim_factorial_results["det_FIM"].append(np.linalg.det(FIM))
-            fim_factorial_results["trace_FIM"].append(np.trace(FIM))
+            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
             
         self.fim_factorial_results = fim_factorial_results
