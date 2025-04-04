@@ -2343,25 +2343,249 @@ def check_time_limit_reached(timing_data, config):
     )
 
 
+def _reformulate_eq_con_scenario_uncertainty(
+    model_data, discrete_set, ss_eq_con, ss_eq_con_index, ss_var_id_to_dr_expr_map
+):
+    """
+    Reformulate a second-stage equality constraint that
+    is independent of the state variables and subject
+    to scenario-based uncertainty.
+
+    This reformulation merely involves adding to the set
+    of first-stage equalities the original constraint
+    subject to each (hard-coded) scenario in the uncertainty set.
+
+    The original constraint is removed from the model.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        Model data object, with mostly preprocessed working model.
+    discrete_set : UncertaintySet
+        Uncertainty set with scenario-based geometry.
+    ss_eq_con : ConstraintData
+        Second-stage equality constraint to be reformulated.
+        Expected to be a member of
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_eq_con_index : hashable
+        Index of the equality constraint in
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_var_id_to_dr_expr_map : dict
+        Mapping from object IDs of second-stage variables to
+        corresponding decision rule expressions.
+    """
+    working_model = model_data.working_model
+    con_expr_after_dr_substitution = replace_expressions(
+        expr=ss_eq_con.expr, substitution_map=ss_var_id_to_dr_expr_map
+    )
+    scenarios_enum = enumerate(discrete_set.scenarios)
+    for sc_idx, scenario in scenarios_enum:
+        working_model.first_stage.equality_cons[
+            f"scenario_{sc_idx}_{ss_eq_con_index}"
+        ] = replace_expressions(
+            expr=con_expr_after_dr_substitution,
+            substitution_map={
+                id(param): scenario_val
+                for param, scenario_val in zip(working_model.uncertain_params, scenario)
+            },
+        )
+    del working_model.second_stage.equality_cons[ss_eq_con_index]
+
+
+def _reformulate_eq_con_continuous_uncertainty(
+    model_data,
+    config,
+    ss_eq_con,
+    ss_eq_con_index,
+    ss_var_id_to_dr_expr_map,
+    uncertain_param_id_to_temp_var_map,
+    originally_unfixed_vars,
+):
+    """
+    Reformulate a second-stage equality constraint that
+    is independent of the state variables and subject
+    to non-scenario-based uncertainty.
+
+    If, after substitution of the decision rule expressions,
+    the constraint expression is a polynomial (up to degree 2)
+    in the uncertain parameters, then coefficient matching
+    constraints are added. Note that in some (rare?) cases,
+    coefficient matching constraints are restrictive.
+
+    Otherwise, the constraint is cast to two second-stage
+    inequality constraints, each of which is assigned a separation
+    priority equal to ``DEFAULT_SEPARATION_PRIORITY``.
+
+    The original constraint is removed from the model.
+
+    Parameters
+    ----------
+    model_data : ModelData
+        Model data object, with mostly preprocessed working model.
+    config : ConfigDict
+        PyROS solver settings.
+    ss_eq_con : ConstraintData
+        Second-stage equality constraint to be reformulated.
+        Expected to be a member of
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_eq_con_index : hashable
+        Index of the equality constraint in
+        ``model_data.working_model.second_stage.equality_cons``.
+    ss_var_id_to_dr_expr_map : dict
+        Mapping from object IDs of second-stage variables to
+        corresponding decision rule expressions.
+    uncertain_param_id_to_temp_var_map : dict
+        Mapping from object IDs of effective uncertain parameters
+        to temporary placeholder variables.
+    originally_unfixed_vars : list/ComponentSet of VarData
+        Variables of the working model that were originally
+        unfixed.
+
+    Returns
+    -------
+    robust_infeasible : bool
+        True if robust infeasibility was detected through
+        coefficient matching, False otherwise.
+    """
+    robust_infeasible = False
+
+    working_model = model_data.working_model
+    con_expr_after_dr_substitution = replace_expressions(
+        expr=ss_eq_con.body - ss_eq_con.upper, substitution_map=ss_var_id_to_dr_expr_map
+    )
+
+    # substitute temporarily defined vars for uncertain params.
+    # note: this is performed after, rather than along with,
+    # the DR expression substitution, as the DR expressions
+    # contain uncertain params
+    con_expr_after_all_substitutions = replace_expressions(
+        expr=con_expr_after_dr_substitution,
+        substitution_map=uncertain_param_id_to_temp_var_map,
+    )
+
+    # analyze the expression with respect to the
+    # effective uncertain parameters only. thus, only the proxy
+    # variables for the uncertain parameters are unfixed
+    # during the analysis
+    visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
+    expr_repn = visitor.walk_expression(con_expr_after_all_substitutions)
+
+    if expr_repn.nonlinear is not None:
+        config.progress_logger.debug(
+            f"Equality constraint {ss_eq_con.name!r} "
+            "is state-variable independent, but cannot be written "
+            "as a polynomial in the uncertain parameters with "
+            "the currently available expression analyzers "
+            "and selected decision rules "
+            f"(decision_rule_order={config.decision_rule_order}). "
+            "We are unable to write a coefficient matching reformulation "
+            "of this constraint."
+            "Recasting to two inequality constraints."
+        )
+
+        # keeping this constraint as an equality is not appropriate,
+        # as it effectively constrains the uncertain parameters
+        # in the separation problems, since the effective DOF
+        # variables and DR variables are fixed.
+        # hence, we reformulate to inequalities
+        for bound_type in [BoundType.LOWER, BoundType.UPPER]:
+            std_con_expr = create_bound_constraint_expr(
+                expr=ss_eq_con.body, bound=ss_eq_con.upper, bound_type=bound_type
+            )
+            new_con_name = f"reform_{bound_type}_bound_from_{ss_eq_con_index}"
+            working_model.second_stage.inequality_cons[new_con_name] = std_con_expr
+            # no custom priorities specified
+            model_data.separation_priority_order[new_con_name] = (
+                DEFAULT_SEPARATION_PRIORITY
+            )
+    else:
+        polynomial_repn_coeffs = (
+            [expr_repn.constant]
+            + list(expr_repn.linear.values())
+            + (
+                []
+                if expr_repn.quadratic is None
+                else list(expr_repn.quadratic.values())
+            )
+        )
+        for coeff_idx, coeff_expr in enumerate(polynomial_repn_coeffs):
+            # for robust satisfaction of the original equality
+            # constraint, all polynomial coefficients must be
+            # equal to zero. so for each coefficient,
+            # we either check for trivial robust
+            # feasibility/infeasibility, or add a constraint
+            # restricting the coefficient expression to value 0
+            if isinstance(coeff_expr, tuple(native_types)):
+                # coefficient is a constant;
+                # check value to determine
+                # trivial feasibility/infeasibility
+                robust_infeasible = not math.isclose(
+                    a=coeff_expr,
+                    b=0,
+                    rel_tol=COEFF_MATCH_REL_TOL,
+                    abs_tol=COEFF_MATCH_ABS_TOL,
+                )
+                if robust_infeasible:
+                    config.progress_logger.info(
+                        "PyROS has determined that the model is "
+                        "robust infeasible. "
+                        "One reason for this is that "
+                        f"the equality constraint {ss_eq_con.name!r} "
+                        "cannot be satisfied against all realizations "
+                        "of uncertainty, "
+                        "given the current partitioning into "
+                        "first-stage, second-stage, and state variables. "
+                        "Consider editing this constraint to reference some "
+                        "(additional) second-stage and/or state variable(s)."
+                    )
+
+                    # robust infeasibility found;
+                    # that is sufficient for termination of PyROS.
+                    break
+
+            else:
+                # coefficient is dependent on model first-stage
+                # and DR variables. add matching constraint
+                new_con_name = f"coeff_matching_{ss_eq_con_index}_coeff_{coeff_idx}"
+                working_model.first_stage.equality_cons[new_con_name] = coeff_expr == 0
+                new_con = working_model.first_stage.equality_cons[new_con_name]
+                working_model.first_stage.coefficient_matching_cons.append(new_con)
+
+                config.progress_logger.debug(
+                    f"Derived from constraint {ss_eq_con.name!r} a coefficient "
+                    f"matching constraint named {new_con_name!r} "
+                    "with expression: \n    "
+                    f"{new_con.expr}."
+                )
+
+    del working_model.second_stage.equality_cons[ss_eq_con_index]
+
+    return robust_infeasible
+
+
 def reformulate_state_var_independent_eq_cons(model_data):
     """
     Reformulate second-stage equality constraints that are
     independent of the state variables.
 
-    The state variable-independent second-stage equality
-    constraints that can be rewritten as polynomials
-    in terms of the effective uncertain parameters
-    are reformulated to first-stage equalities
-    through matching of the polynomial coefficients.
-    Hence, this reformulation technique is referred to as
-    coefficient matching.
-    In some cases, matching of the coefficients may lead to
-    a certificate of robust infeasibility.
+    The reformulation of every such constraint is as follows:
 
-    All other state variable-independent second-stage equality
-    constraints are recast to pairs of opposing second-stage inequality
-    constraints, as they would otherwise over-constrain the uncertain
-    parameters in the separation subproblems.
+    - If the uncertainty set is discrete, then the constraint,
+      subject to each scenario in the set, is added to the
+      first-stage equality constraints.
+    - Otherwise:
+
+      - If, after substitution of the decision rule expressions
+        for the effective second-stage variables, the constraint
+        expression is a polynomial (of degree up to 2) in the
+        uncertain parameters, then an equality requiring that
+        each coefficient be of value 0 is added to the first-stage
+        equality constraints.
+        In some cases, matching of the coefficients may lead to
+        immediate detection of robust infeasibility.
+      - Otherwise, the constraint is cast to two second-stage
+        inequalities, each of which is assigned a separation
+        priority of ``DEFAULT_SEPARATION_PRIORITY``.
 
     Parameters
     ----------
@@ -2385,7 +2609,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
 
     # we will need this to substitute DR expressions for
     # second-stage variables later
-    ssvar_id_to_dr_expr_map = {
+    ss_var_id_to_dr_expr_map = {
         id(ss_var): get_dr_expression(working_model, ss_var)
         for ss_var in effective_second_stage_var_set
     }
@@ -2411,10 +2635,12 @@ def reformulate_state_var_independent_eq_cons(model_data):
         id(param): var for param, var in uncertain_param_to_temp_var_map.items()
     }
 
+    robust_infeasible = False
+
     # copy the items iterable,
     # as we will be modifying the constituents of the constraint
     # in place
-    working_model.first_stage.coefficient_matching_cons = coefficient_matching_cons = []
+    working_model.first_stage.coefficient_matching_cons = []
     for con_idx, con in list(working_model.second_stage.equality_cons.items()):
         vars_in_con = ComponentSet(identify_variables(con.expr))
         mutable_params_in_con = ComponentSet(identify_mutable_parameters(con.expr))
@@ -2427,128 +2653,34 @@ def reformulate_state_var_independent_eq_cons(model_data):
             uncertain_params_in_con or second_stage_vars_in_con
         )
         if coefficient_matching_applicable:
-            con_expr_after_dr_substitution = replace_expressions(
-                expr=con.body - con.upper, substitution_map=ssvar_id_to_dr_expr_map
-            )
-
-            # substitute temporarily defined vars for uncertain params.
-            # note: this is performed after, rather than along with,
-            # the DR expression substitution, as the DR expressions
-            # contain uncertain params
-            con_expr_after_all_substitutions = replace_expressions(
-                expr=con_expr_after_dr_substitution,
-                substitution_map=uncertain_param_id_to_temp_var_map,
-            )
-
-            # analyze the expression with respect to the
-            # effective uncertain parameters only. thus, only the proxy
-            # variables for the uncertain parameters are unfixed
-            # during the analysis
-            visitor = setup_quadratic_expression_visitor(wrt=originally_unfixed_vars)
-            expr_repn = visitor.walk_expression(con_expr_after_all_substitutions)
-
-            if expr_repn.nonlinear is not None:
-                config.progress_logger.debug(
-                    f"Equality constraint {con.name!r} "
-                    "is state-variable independent, but cannot be written "
-                    "as a polynomial in the uncertain parameters with "
-                    "the currently available expression analyzers "
-                    "and selected decision rules "
-                    f"(decision_rule_order={config.decision_rule_order}). "
-                    "We are unable to write a coefficient matching reformulation "
-                    "of this constraint."
-                    "Recasting to two inequality constraints."
+            if config.uncertainty_set.geometry.name == "DISCRETE_SCENARIOS":
+                _reformulate_eq_con_scenario_uncertainty(
+                    model_data=model_data,
+                    ss_eq_con=con,
+                    ss_eq_con_index=con_idx,
+                    discrete_set=config.uncertainty_set,
+                    ss_var_id_to_dr_expr_map=ss_var_id_to_dr_expr_map,
                 )
-
-                # keeping this constraint as an equality is not appropriate,
-                # as it effectively constrains the uncertain parameters
-                # in the separation problems, since the effective DOF
-                # variables and DR variables are fixed.
-                # hence, we reformulate to inequalities
-                for bound_type in [BoundType.LOWER, BoundType.UPPER]:
-                    std_con_expr = create_bound_constraint_expr(
-                        expr=con.body, bound=con.upper, bound_type=bound_type
-                    )
-                    new_con_name = f"reform_{bound_type}_bound_from_{con_idx}"
-                    working_model.second_stage.inequality_cons[new_con_name] = (
-                        std_con_expr
-                    )
-                    # no custom priorities specified
-                    model_data.separation_priority_order[new_con_name] = (
-                        DEFAULT_SEPARATION_PRIORITY
-                    )
             else:
-                polynomial_repn_coeffs = (
-                    [expr_repn.constant]
-                    + list(expr_repn.linear.values())
-                    + (
-                        []
-                        if expr_repn.quadratic is None
-                        else list(expr_repn.quadratic.values())
-                    )
+                robust_infeasible = _reformulate_eq_con_continuous_uncertainty(
+                    model_data=model_data,
+                    config=config,
+                    ss_eq_con=con,
+                    ss_eq_con_index=con_idx,
+                    ss_var_id_to_dr_expr_map=ss_var_id_to_dr_expr_map,
+                    uncertain_param_id_to_temp_var_map=(
+                        uncertain_param_id_to_temp_var_map
+                    ),
+                    originally_unfixed_vars=originally_unfixed_vars,
                 )
-                for coeff_idx, coeff_expr in enumerate(polynomial_repn_coeffs):
-                    # for robust satisfaction of the original equality
-                    # constraint, all polynomial coefficients must be
-                    # equal to zero. so for each coefficient,
-                    # we either check for trivial robust
-                    # feasibility/infeasibility, or add a constraint
-                    # restricting the coefficient expression to value 0
-                    if isinstance(coeff_expr, tuple(native_types)):
-                        # coefficient is a constant;
-                        # check value to determine
-                        # trivial feasibility/infeasibility
-                        robust_infeasible = not math.isclose(
-                            a=coeff_expr,
-                            b=0,
-                            rel_tol=COEFF_MATCH_REL_TOL,
-                            abs_tol=COEFF_MATCH_ABS_TOL,
-                        )
-                        if robust_infeasible:
-                            config.progress_logger.info(
-                                "PyROS has determined that the model is "
-                                "robust infeasible. "
-                                "One reason for this is that "
-                                f"the equality constraint {con.name!r} "
-                                "cannot be satisfied against all realizations "
-                                "of uncertainty, "
-                                "given the current partitioning into "
-                                "first-stage, second-stage, and state variables. "
-                                "Consider editing this constraint to reference some "
-                                "(additional) second-stage and/or state variable(s)."
-                            )
-
-                            # robust infeasibility found;
-                            # that is sufficient for termination of PyROS.
-                            return robust_infeasible
-
-                    else:
-                        # coefficient is dependent on model first-stage
-                        # and DR variables. add matching constraint
-                        new_con_name = f"coeff_matching_{con_idx}_coeff_{coeff_idx}"
-                        working_model.first_stage.equality_cons[new_con_name] = (
-                            coeff_expr == 0
-                        )
-                        new_con = working_model.first_stage.equality_cons[new_con_name]
-                        coefficient_matching_cons.append(new_con)
-
-                        config.progress_logger.debug(
-                            f"Derived from constraint {con.name!r} a coefficient "
-                            f"matching constraint named {new_con_name!r} "
-                            "with expression: \n    "
-                            f"{new_con.expr}."
-                        )
-
-            # remove rather than deactivate to facilitate:
-            # - we no longer need this constraint anywhere
-            # - facilitates accurate counting of active constraints
-            del working_model.second_stage.equality_cons[con_idx]
+                if robust_infeasible:
+                    break
 
     # we no longer need these auxiliary components
     working_model.del_component(temp_param_vars)
     working_model.del_component(temp_param_vars.index_set())
 
-    return False
+    return robust_infeasible
 
 
 def get_effective_uncertain_dimensions(model_data):
