@@ -22,53 +22,53 @@
 # v(0)=0; v(tf)=0
 # -3<=a<=1
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 
-m = ConcreteModel()
+m = pyo.ConcreteModel()
 
-m.R = Param(initialize=0.001)  #  Friction factor
-m.L = Param(initialize=100.0)  #  Final position
+m.R = pyo.Param(initialize=0.001)  #  Friction factor
+m.L = pyo.Param(initialize=100.0)  #  Final position
 
 m.tau = ContinuousSet(bounds=(0, 1))  # Unscaled time
-m.time = Var(m.tau)  # Scaled time
-m.tf = Var()
-m.x = Var(m.tau, bounds=(0, m.L + 50))
-m.v = Var(m.tau, bounds=(0, None))
-m.a = Var(m.tau, bounds=(-3.0, 1.0), initialize=0)
+m.time = pyo.Var(m.tau)  # Scaled time
+m.tf = pyo.Var()
+m.x = pyo.Var(m.tau, bounds=(0, m.L + 50))
+m.v = pyo.Var(m.tau, bounds=(0, None))
+m.a = pyo.Var(m.tau, bounds=(-3.0, 1.0), initialize=0)
 
 m.dtime = DerivativeVar(m.time)
 m.dx = DerivativeVar(m.x)
 m.dv = DerivativeVar(m.v)
 
-m.obj = Objective(expr=m.tf)
+m.obj = pyo.Objective(expr=m.tf)
 
 
 def _ode1(m, i):
     if i == 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.dx[i] == m.tf * m.v[i]
 
 
-m.ode1 = Constraint(m.tau, rule=_ode1)
+m.ode1 = pyo.Constraint(m.tau, rule=_ode1)
 
 
 def _ode2(m, i):
     if i == 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.dv[i] == m.tf * (m.a[i] - m.R * m.v[i] ** 2)
 
 
-m.ode2 = Constraint(m.tau, rule=_ode2)
+m.ode2 = pyo.Constraint(m.tau, rule=_ode2)
 
 
 def _ode3(m, i):
     if i == 0:
-        return Constraint.Skip
+        return pyo.Constraint.Skip
     return m.dtime[i] == m.tf
 
 
-m.ode3 = Constraint(m.tau, rule=_ode3)
+m.ode3 = pyo.Constraint(m.tau, rule=_ode3)
 
 
 def _init(m):
@@ -79,15 +79,15 @@ def _init(m):
     yield m.time[0] == 0
 
 
-m.initcon = ConstraintList(rule=_init)
+m.initcon = pyo.ConstraintList(rule=_init)
 
-discretizer = TransformationFactory('dae.finite_difference')
+discretizer = pyo.TransformationFactory('dae.finite_difference')
 discretizer.apply_to(m, nfe=15, scheme='BACKWARD')
 
-solver = SolverFactory('ipopt')
+solver = pyo.SolverFactory('ipopt')
 solver.solve(m, tee=True)
 
-print("final time = %6.2f" % (value(m.tf)))
+print("final time = %6.2f" % (pyo.value(m.tf)))
 
 x = []
 v = []
@@ -95,10 +95,10 @@ a = []
 time = []
 
 for i in m.tau:
-    time.append(value(m.time[i]))
-    x.append(value(m.x[i]))
-    v.append(value(m.v[i]))
-    a.append(value(m.a[i]))
+    time.append(pyo.value(m.time[i]))
+    x.append(pyo.value(m.x[i]))
+    v.append(pyo.value(m.v[i]))
+    a.append(pyo.value(m.a[i]))
 
 import matplotlib.pyplot as plt
 

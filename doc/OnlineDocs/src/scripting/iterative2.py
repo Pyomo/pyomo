@@ -12,7 +12,6 @@
 # iterative2.py
 
 import pyomo.environ as pyo
-from pyomo.opt import SolverFactory
 
 # Create a solver
 opt = pyo.SolverFactory('cplex')

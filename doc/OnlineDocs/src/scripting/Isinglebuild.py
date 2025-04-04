@@ -11,15 +11,15 @@
 
 # Isinglebuild.py
 # NodesIn and NodesOut are created by a build action using the Arcs
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.Nodes = Set()
-model.Arcs = Set(dimen=2)
+model.Nodes = pyo.Set()
+model.Arcs = pyo.Set(dimen=2)
 
-model.NodesOut = Set(model.Nodes, within=model.Nodes, initialize=[])
-model.NodesIn = Set(model.Nodes, within=model.Nodes, initialize=[])
+model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes, initialize=[])
+model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes, initialize=[])
 
 
 def Populate_In_and_Out(model):
@@ -29,20 +29,20 @@ def Populate_In_and_Out(model):
         model.NodesOut[i].add(j)
 
 
-model.In_n_Out = BuildAction(rule=Populate_In_and_Out)
+model.In_n_Out = pyo.BuildAction(rule=Populate_In_and_Out)
 
-model.Flow = Var(model.Arcs, domain=NonNegativeReals)
-model.FlowCost = Param(model.Arcs)
+model.Flow = pyo.Var(model.Arcs, domain=pyo.NonNegativeReals)
+model.FlowCost = pyo.Param(model.Arcs)
 
-model.Demand = Param(model.Nodes)
-model.Supply = Param(model.Nodes)
+model.Demand = pyo.Param(model.Nodes)
+model.Supply = pyo.Param(model.Nodes)
 
 
 def Obj_rule(model):
-    return summation(model.FlowCost, model.Flow)
+    return pyo.summation(model.FlowCost, model.Flow)
 
 
-model.Obj = Objective(rule=Obj_rule, sense=minimize)
+model.Obj = pyo.Objective(rule=Obj_rule, sense=pyo.minimize)
 
 
 def FlowBalance_rule(model, node):
@@ -55,4 +55,4 @@ def FlowBalance_rule(model, node):
     )
 
 
-model.FlowBalance = Constraint(model.Nodes, rule=FlowBalance_rule)
+model.FlowBalance = pyo.Constraint(model.Nodes, rule=FlowBalance_rule)

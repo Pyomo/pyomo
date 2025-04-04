@@ -36,13 +36,13 @@ The simplest is to instantiate the generic GDPopt solver and specify the desired
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model, algorithm='LOA')
+  >>> pyo.SolverFactory('gdpopt').solve(model, algorithm='LOA')
 
 The alternative is to instantiate an algorithm-specific GDPopt solver:
 
 .. code::
 
-  >>> SolverFactory('gdpopt.loa').solve(model)
+  >>> pyo.SolverFactory('gdpopt.loa').solve(model)
 
 In the above examples, GDPopt uses the GDPopt-LOA algorithm.
 Other algorithms may be used by specifying them in the ``algorithm`` argument when using the generic solver or by instantiating the algorithm-specific GDPopt solvers. All GDPopt options are listed below.
@@ -117,7 +117,7 @@ An example that includes the modeling approach may be found below.
 
 .. code::
 
-  >>> SolverFactory('gdpopt.loa').solve(model, tee=True)
+  >>> pyo.SolverFactory('gdpopt.loa').solve(model, tee=True)
 
 Global Logic-based Outer Approximation (GLOA)
 ---------------------------------------------
@@ -126,7 +126,7 @@ The same algorithm can be used to solve GDPs involving nonconvex nonlinear const
 
 .. code::
 
-  >>> SolverFactory('gdpopt.gloa').solve(model)
+  >>> pyo.SolverFactory('gdpopt.gloa').solve(model)
 
 .. warning::
 
@@ -139,7 +139,7 @@ Instead of outer approximation, GDPs can be solved using the same MILP relaxatio
 
 .. code::
 
-  >>> SolverFactory('gdpopt.ric').solve(model)
+  >>> pyo.SolverFactory('gdpopt.ric').solve(model)
 
 Again, this is a global algorithm if the subproblems are solved globally, and is not otherwise.
 
