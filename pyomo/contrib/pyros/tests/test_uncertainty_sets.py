@@ -73,6 +73,22 @@ else:
     baron_version = (0, 0, 0)
 
 
+def bounded_and_nonempty_check(unc_set):
+    """
+    All uncertainty sets should pass these checks,
+    regardless of their custom `validate` method.
+    """
+    CONFIG = pyros_config()
+    CONFIG.global_solver = global_solver
+
+    # check is_bounded
+    check_bounded = unc_set.is_bounded(config=CONFIG)
+    # check is_nonempty
+    check_nonempty = unc_set.is_nonempty(config=CONFIG)
+
+    return check_bounded and check_nonempty
+
+
 class TestBoxSet(unittest.TestCase):
     """
     Tests for the BoxSet.
