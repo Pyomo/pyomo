@@ -377,6 +377,42 @@ class TestBoxSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (3, 4))
 
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # construct valid box set
+        box_set = BoxSet(bounds=[[1., 2.], [3., 4.]])
+
+        # validate raises no issues on valid set
+        box_set.validate(config=CONFIG)
+
+        # check when bounds are not finite
+        box_set.bounds[0][0] = np.nan
+        exc_str = r"Not all bounds are finite. Got bounds:.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            box_set.validate(config=CONFIG)
+
+        # check when LB >= UB
+        box_set.bounds[0][0] = 5
+        exc_str = r"Lower bound 5.0 exceeds upper bound 2.0"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            box_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid box set.
+        """
+        box_set = BoxSet(bounds=[[1., 2.], [3., 4.]])
+        self.assertTrue(
+            bounded_and_nonempty_check(box_set),
+            "Set is not bounded or not nonempty"
+        )
+
 
 class TestBudgetSet(unittest.TestCase):
     """
@@ -2489,7 +2525,6 @@ class CustomUncertaintySet(UncertaintySet):
     @parameter_bounds.setter
     def parameter_bounds(self, val):
         self._parameter_bounds = val
-
 
 
 class TestCustomUncertaintySet(unittest.TestCase):
