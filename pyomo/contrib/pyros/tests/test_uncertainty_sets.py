@@ -2429,6 +2429,7 @@ class CustomUncertaintySet(UncertaintySet):
 
     def __init__(self, dim):
         self._dim = dim
+        self._parameter_bounds = [(-1, 1)] * self.dim
 
     @property
     def geometry(self):
@@ -2464,7 +2465,12 @@ class CustomUncertaintySet(UncertaintySet):
 
     @property
     def parameter_bounds(self):
-        return [(-1, 1)] * self.dim
+        return self._parameter_bounds
+
+    @parameter_bounds.setter
+    def parameter_bounds(self, val):
+        self._parameter_bounds = val
+
 
 
 class TestCustomUncertaintySet(unittest.TestCase):
