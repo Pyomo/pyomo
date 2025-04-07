@@ -36,6 +36,7 @@ from pyomo.core.base import (
     minimize,
     Var,
     VarData,
+    NonNegativeReals
 )
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
@@ -502,6 +503,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         Bounds for the value of each uncertain parameter constrained
         by the set (i.e. bounds for each set dimension).
+
+        This method should return an empty list if it can't be calculated
+        or a list of length = self.dim if it can.
         """
         raise NotImplementedError
 
@@ -552,23 +556,32 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Notes
         -----
-        This check is carried out by solving a sequence of maximization
-        and minimization problems (in which the objective for each
-        problem is the value of a single uncertain parameter). If any of
-        the optimization models cannot be solved successfully to
+        This check is carried out by checking if all parameter bounds
+        are finite.
+
+        If no parameter bounds are available, the check is done by
+        solving a sequence of maximization and minimization problems
+        (in which the objective for each problem is the value of a
+        single uncertain parameter).
+        If any of the optimization models cannot be solved successfully to
         optimality, then False is returned.
 
-        This method is invoked during the validation step of a PyROS
-        solver call.
+        This method is invoked by validate.
         """
-        # initialize uncertain parameter variables
-        param_bounds_arr = np.array(
-            self._compute_parameter_bounds(solver=config.global_solver)
-        )
+        # use parameter bounds if they are available
+        param_bounds_arr = self.parameter_bounds
+        if param_bounds_arr:
+            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+        else:
+            # initialize uncertain parameter variables
+            param_bounds_arr = np.array(
+                self._compute_parameter_bounds(solver=config.global_solver)
+            )
+            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
 
-        all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+        # log result
         if not all_bounds_finite:
-            config.progress_logger.info(
+            config.progress_logger.error(
                 "Computed coordinate value bounds are not all finite. "
                 f"Got bounds: {param_bounds_arr}"
             )
@@ -577,16 +590,73 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def is_nonempty(self, config):
         """
-        Return True if the uncertainty set is nonempty, else False.
-        """
-        return self.is_bounded(config)
+        Determine whether the uncertainty set is nonempty.
 
-    def is_valid(self, config):
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Returns
+        -------
+        : bool
+            True if the nominal point is within the set,
+            and False otherwise.
         """
-        Return True if the uncertainty set is bounded and non-empty,
-        else False.
+        # check if nominal point is in set for quick test
+        set_nonempty = False
+        if config.nominal_uncertain_param_vals:
+            if self.point_in_set(config.nominal_uncertain_param_vals):
+                set_nonempty = True
+        else:
+            # construct feasibility problem and solve otherwise
+            set_nonempty = self._solve_feasibility(config.global_solver)
+
+        # parameter bounds for logging
+        param_bounds_arr = self.parameter_bounds
+        if not param_bounds_arr:
+            param_bounds_arr = np.array(
+                self._compute_parameter_bounds(solver=config.global_solver)
+            )
+
+        # log result
+        if not set_nonempty:
+            config.progress_logger.error(
+                "Nominal point is not within the uncertainty set. "
+                f"Set parameter bounds: {param_bounds_arr}"
+                f"Got nominal point: {config.nominal_uncertain_param_vals}"
+            )
+
+        return set_nonempty
+
+    def validate(self, config):
         """
-        return self.is_nonempty(config=config) and self.is_bounded(config=config)
+        Validate the uncertainty set with a nonemptiness and boundedness check.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Raises
+        ------
+        ValueError
+            If nonemptiness check or boundedness check fail.
+        """
+        check_nonempty = self.is_nonempty(config=config)
+        check_bounded = self.is_bounded(config=config)
+
+        if not check_nonempty:
+            raise ValueError(
+                    "Failed nonemptiness check. Nominal point is not in the set. "
+                    f"Nominal point:\n {config.nominal_uncertain_param_vals}."
+                )
+
+        if not check_bounded:
+            raise ValueError(
+                    "Failed boundedness check. Parameter bounds are not finite. "
+                    f"Parameter bounds:\n {self.parameter_bounds}."
+                )
 
     @abc.abstractmethod
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -697,6 +767,58 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             obj.deactivate()
 
         return param_bounds
+
+    def _solve_feasibility(self, solver):
+        """
+        Construct and solve feasibility problem using uncertainty set
+        constraints and parameter bounds using `set_as_constraint` and
+        `_add_bounds_on_uncertain_parameters` of self.
+
+        Parameters
+        ----------
+        solver : Pyomo solver
+            Optimizer capable of solving bounding problems to
+            global optimality.
+
+        Returns
+        -------
+        : bool
+            True if the feasibility problem solves successfully,
+            and raises an exception otherwise
+
+        Raises
+        ------
+        ValueError
+            If feasibility problem fails to solve.
+        """
+        model = ConcreteModel()
+        model.u = Var(within=NonNegativeReals)
+
+        # construct param vars
+        model.param_vars = Var(range(self.dim))
+
+        # add bounds on param vars
+        self._add_bounds_on_uncertain_parameters(
+            model.param_vars, global_solver=solver
+        )
+
+        # add constraints
+        self.set_as_constraint(uncertain_params=model.param_vars, block=model)
+
+        # add objective with dummy variable model.u
+        @model.Objective(sense=minimize)
+        def feasibility_objective(self):
+            return model.u
+
+        # solve feasibility problem
+        res = solver.solve(model, load_solutions=False)
+        if not check_optimal_termination(res):
+            raise ValueError(
+                "Could not successfully solve feasibility problem. "
+                f"Solver status summary:\n {res.solver}."
+            )
+
+        return True
 
     def _add_bounds_on_uncertain_parameters(
         self, uncertain_param_vars, global_solver=None
