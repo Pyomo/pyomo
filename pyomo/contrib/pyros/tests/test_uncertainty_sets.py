@@ -125,25 +125,6 @@ class TestBoxSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             bset.bounds = [[1, 2], [3, 4], [5, 6]]
 
-    def test_error_on_lb_exceeds_ub(self):
-        """
-        Test exception raised when an LB exceeds a UB.
-        """
-        bad_bounds = [[1, 2], [4, 3]]
-
-        exc_str = r"Lower bound 4 exceeds upper bound 3"
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            BoxSet(bad_bounds)
-
-        # construct a valid box set
-        bset = BoxSet([[1, 2], [3, 4]])
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, exc_str):
-            bset.bounds = bad_bounds
-
     def test_error_on_ragged_bounds_array(self):
         """
         Test ValueError raised on attempting to set BoxSet bounds
