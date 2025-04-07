@@ -1139,10 +1139,6 @@ class BoxSet(UncertaintySet):
 
         bounds_arr = np.array(val)
 
-        for lb, ub in bounds_arr:
-            if lb > ub:
-                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
-
         # box set dimension is immutable
         if hasattr(self, "_bounds") and bounds_arr.shape[0] != self.dim:
             raise ValueError(
@@ -1202,6 +1198,29 @@ class BoxSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check BoxSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness and LB<=UB checks fail.
+        """
+        bounds_arr = np.array(self.parameter_bounds)
+
+        # finiteness check
+        if not np.all(np.isfinite(bounds_arr)):
+            raise ValueError(
+                "Not all bounds are finite. "
+                f"Got bounds:\n {bounds_arr}"
+            )
+
+        # check LB <= UB
+        for lb, ub in bounds_arr:
+            if lb > ub:
+                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
 
 
 class CardinalitySet(UncertaintySet):
