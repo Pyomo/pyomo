@@ -44,6 +44,9 @@ from pyomo.contrib.pyros.uncertainty_sets import (
     _setup_standard_uncertainty_set_constraint_block,
 )
 
+from pyomo.contrib.pyros.config import pyros_config
+import time
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -2502,6 +2505,68 @@ class TestCustomUncertaintySet(unittest.TestCase):
         custom_set = CustomUncertaintySet(dim=2)
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
         self.assertEqual(custom_set._compute_parameter_bounds(baron), [(-1, 1)] * 2)
+
+    # test default is_bounded
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_bounded(self):
+        """
+        Test boundedness check computations give expected results.
+        """
+        custom_set = CustomUncertaintySet(dim=2)
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # using provided parameter_bounds
+        start = time.time()
+        self.assertTrue(custom_set.is_bounded(config=CONFIG), "Set is not bounded")
+        end = time.time()
+        time_with_bounds_provided = end - start
+
+        # when parameter_bounds is not available
+        custom_set.parameter_bounds = None
+        start = time.time()
+        self.assertTrue(custom_set.is_bounded(config=CONFIG), "Set is not bounded")
+        end = time.time()
+        time_without_bounds_provided = end - start
+
+        # check with parameter_bounds should always take less time than solving 2N
+        # optimization problems
+        self.assertLess(time_with_bounds_provided, time_without_bounds_provided,
+                        "Boundedness check with provided parameter_bounds took longer than expected.")
+
+        # when bad bounds are provided
+        for val_str in ["inf", "nan"]:
+            bad_bounds = [[1, float(val_str)], [2, 3]]
+            custom_set.parameter_bounds = bad_bounds
+            self.assertFalse(custom_set.is_bounded(config=CONFIG), "Set is bounded")
+
+    # test default is_nonempty
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_is_nonempty(self):
+        """
+        Test nonemptiness check computations give expected results.
+        """
+        custom_set = CustomUncertaintySet(dim=2)
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # constructing a feasibility problem
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG), "Set is empty")
+
+        # using provided nominal point
+        CONFIG.nominal_uncertain_param_vals = [0, 0]
+        self.assertTrue(custom_set.is_nonempty(config=CONFIG), "Set is empty")
+
+        # check when nominal point is not in set
+        CONFIG.nominal_uncertain_param_vals = [-2, -2]
+        self.assertFalse(custom_set.is_nonempty(config=CONFIG), "Nominal point is in set")
+
+        # check when feasibility problem fails
+        CONFIG.nominal_uncertain_param_vals = None
+        custom_set.parameter_bounds = [[1, 2], [3, 4]]
+        exc_str = r"Could not successfully solve feasibility problem. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            custom_set.is_nonempty(config=CONFIG)
 
 
 if __name__ == "__main__":
