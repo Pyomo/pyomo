@@ -437,3 +437,12 @@ As a result, the signs of the duals change. The KKT conditions are
    \nu_i g_i(x) = 0 \\
    \delta_i h_i(x) = 0
    \end{align}
+
+
+Pyomo also supports "range constraints" which are inequalities with both upper and lower bounds, where the bounds are not equal. For example,
+
+.. math::
+
+   -1 \leq x + y \leq 1
+
+These are handled very similarly to variable bounds in terms of dual sign conventions. For these, at most one "side" of the inequality can be active at a time. If neither side is active, then the dual will be zero. If the dual is nonzero, then the dual corresponds to the side of the constraint that is active. The dual for the other side will be implicitly zero. When accessing duals, the keys are the constraints. As a result, there is only one key for a range constraint, even though it is really two constraints. Therefore, the dual for the inactive side will not be reported explicitly. Again, the sign convention is based on the ``(lower, body, upper)`` representation of the constraint. Therefore, the left side of this inequality belongs to :math:`\mathcal{L}` and the right side belongs to :math:`\mathcal{U}`.
