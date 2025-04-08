@@ -160,7 +160,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         pn = convert_expression_to_prefix_notation(e)
         expected = [
             (Expr_ifExpression, 3),
-            (InequalityExpression, 2),
+            (InequalityExpression, 2, False),
             m.x,
             0,
             (EqualityExpression, 2),
@@ -183,7 +183,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pyo.Var()
         e = pyo.inequality(-1, m.x, 1)
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(RangedExpression, 3), -1, m.x, 1]
+        expected = [(RangedExpression, 3, (False, False)), -1, m.x, 1]
         self.assertEqual(pn, expected)
 
     def test_assertExpressionsEqual(self):
