@@ -403,3 +403,37 @@ right-hand sides of equalities and inequalities. However, the
 ``(lower, body, upper)`` representation ensures that all variables
 appear in the ``body``, matching the form of the problem above.
 
+For maximization problems of the form
+
+.. math::
+
+   \begin{align}
+   \max & f(x) \\
+   \text{s.t.} \\
+   & c_i(x) = 0 && \forall i \in \mathcal{E} \\
+   & g_i(x) \leq 0 && \forall i \in \mathcal{U} \\
+   & h_i(x) \geq 0 && \forall i \in \mathcal{L}
+   \end{align}
+
+we define the Lagrangian to be the same as above:
+
+.. math::
+
+   \begin{align}
+   L(x, \lambda, \nu, \delta) = f(x) - \sum_{i \in \mathcal{E}} \lambda_i c_i(x) - \sum_{i \in \mathcal{U}} \nu_i g_i(x) - \sum_{i \in \mathcal{L}} \delta_i h_i(x)
+   \end{align}
+
+As a result, the signs of the duals change. The KKT conditions are 
+
+.. math::
+
+   \begin{align}
+   \nabla_x L(x, \lambda, \nu, \delta) = 0 \\
+   c(x) = 0 \\
+   g(x) \leq 0 \\
+   h(x) \geq 0 \\
+   \nu \geq 0 \\
+   \delta \leq 0 \\
+   \nu_i g_i(x) = 0 \\
+   \delta_i h_i(x) = 0
+   \end{align}
