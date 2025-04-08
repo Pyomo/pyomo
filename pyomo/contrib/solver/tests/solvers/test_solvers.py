@@ -92,12 +92,12 @@ class TestDualSignConvention(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.y - m.x - 1 == 0)
-        m.c2 = pe.Constraint(expr=m.y + m.x - 1 == 0)
-        m.obj = pe.Objective(expr=m.x + m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.y - m.x - 1 == 0)
+        m.c2 = pyo.Constraint(expr=m.y + m.x - 1 == 0)
+        m.obj = pyo.Objective(expr=m.x + m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
@@ -111,12 +111,12 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], 1)
 
         # multiply the constraints by -1 and make sure the sign of the dual flips
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=-m.y + m.x + 1 == 0)
-        m.c2 = pe.Constraint(expr=-m.y - m.x + 1 == 0)
-        m.obj = pe.Objective(expr=m.x + m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=-m.y + m.x + 1 == 0)
+        m.c2 = pyo.Constraint(expr=-m.y - m.x + 1 == 0)
+        m.obj = pyo.Objective(expr=m.x + m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
@@ -146,12 +146,12 @@ class TestDualSignConvention(unittest.TestCase):
             else:
                 opt.config.writer_config.linear_presolve = False
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.x - m.y + 1 <= 0)
-        m.c2 = pe.Constraint(expr=-m.x - m.y + 1 <= 0)
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.x - m.y + 1 <= 0)
+        m.c2 = pyo.Constraint(expr=-m.x - m.y + 1 <= 0)
+        m.obj = pyo.Objective(expr=m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
@@ -169,12 +169,12 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], -0.5)
 
         # multiply the constraints by -1 and make sure the sign of the dual flips
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=-m.x + m.y - 1 >= 0)
-        m.c2 = pe.Constraint(expr=m.x + m.y - 1 >= 0)
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=-m.x + m.y - 1 >= 0)
+        m.c2 = pyo.Constraint(expr=m.x + m.y - 1 >= 0)
+        m.obj = pyo.Objective(expr=m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
@@ -207,11 +207,11 @@ class TestDualSignConvention(unittest.TestCase):
                 opt.config.writer_config.linear_presolve = False
 
         # first check the lower bound
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(0, None))
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=m.x - m.y + 1 <= 0)
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, None))
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.x - m.y + 1 <= 0)
+        m.obj = pyo.Objective(expr=m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
@@ -227,11 +227,11 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], 1)
 
         # now check the upper bound
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(None, 0))
-        m.y = pe.Var()
-        m.c1 = pe.Constraint(expr=-m.x - m.y + 1 <= 0)
-        m.obj = pe.Objective(expr=m.y)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(None, 0))
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=-m.x - m.y + 1 <= 0)
+        m.obj = pyo.Objective(expr=m.y)
         res = opt.solve(m)
         self.assertEqual(res.solution_status, SolutionStatus.optimal)
         self.assertAlmostEqual(m.x.value, 0)
@@ -245,6 +245,175 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c1], -1)
         rc = res.solution_loader.get_reduced_costs()
         self.assertAlmostEqual(rc[m.x], -1)
+
+    @parameterized.expand(input=_load_tests(all_solvers))
+    def test_equality_max(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+
+        # for now, we don't support getting duals if linear_presolve = True
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                raise unittest.SkipTest(
+                    f'cannot yet get duals if NLWriter presolve is on'
+                )
+            else:
+                opt.config.writer_config.linear_presolve = False
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.y - m.x - 1 == 0)
+        m.c2 = pyo.Constraint(expr=m.y + m.x - 1 == 0)
+        m.obj = pyo.Objective(expr=-m.x - m.y, sense=pyo.maximize)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+        duals = res.solution_loader.get_duals()
+        # the sign convention is based on the (lower, body, upper) representation of the constraint,
+        # so we need to make sure the constraint body is what we expect
+        assertExpressionsEqual(self, m.c1.body, m.y - m.x - 1)
+        assertExpressionsEqual(self, m.c2.body, m.y + m.x - 1)
+        self.assertAlmostEqual(duals[m.c1], 0)
+        self.assertAlmostEqual(duals[m.c2], -1)
+
+        # multiply the constraints by -1 and make sure the sign of the dual flips
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=-m.y + m.x + 1 == 0)
+        m.c2 = pyo.Constraint(expr=-m.y - m.x + 1 == 0)
+        m.obj = pyo.Objective(expr=-m.x - m.y, sense=pyo.maximize)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+        duals = res.solution_loader.get_duals()
+        # the sign convention is based on the (lower, body, upper) representation of the constraint,
+        # so we need to make sure the constraint body is what we expect
+        assertExpressionsEqual(self, m.c1.body, -m.y + m.x + 1)
+        assertExpressionsEqual(self, m.c2.body, -m.y - m.x + 1)
+        self.assertAlmostEqual(duals[m.c1], 0)
+        self.assertAlmostEqual(duals[m.c2], 1)
+
+    @parameterized.expand(input=_load_tests(all_solvers))
+    def test_inequality_max(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+
+        # for now, we don't support getting duals if linear_presolve = True
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                raise unittest.SkipTest(
+                    f'cannot yet get duals if NLWriter presolve is on'
+                )
+            else:
+                opt.config.writer_config.linear_presolve = False
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.x - m.y + 1 <= 0)
+        m.c2 = pyo.Constraint(expr=-m.x - m.y + 1 <= 0)
+        m.obj = pyo.Objective(expr=-m.y, sense=pyo.maximize)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+        duals = res.solution_loader.get_duals()
+        # the sign convention is based on the (lower, body, upper) representation of the constraint,
+        # so we need to make sure the constraint body is what we expect
+        assertExpressionsEqual(self, m.c1.body, m.x - m.y + 1)
+        assertExpressionsEqual(self, m.c2.body, -m.x - m.y + 1)
+        self.assertAlmostEqual(m.c1.ub, 0)
+        self.assertIsNone(m.c1.lb)
+        self.assertAlmostEqual(m.c2.ub, 0)
+        self.assertIsNone(m.c2.lb)
+        self.assertAlmostEqual(duals[m.c1], 0.5)
+        self.assertAlmostEqual(duals[m.c2], 0.5)
+
+        # multiply the constraints by -1 and make sure the sign of the dual flips
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=-m.x + m.y - 1 >= 0)
+        m.c2 = pyo.Constraint(expr=m.x + m.y - 1 >= 0)
+        m.obj = pyo.Objective(expr=-m.y, sense=pyo.maximize)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+        duals = res.solution_loader.get_duals()
+        # the sign convention is based on the (lower, body, upper) representation of the constraint,
+        # so we need to make sure the constraint body is what we expect
+        assertExpressionsEqual(self, m.c1.body, -m.x + m.y - 1)
+        assertExpressionsEqual(self, m.c2.body, m.x + m.y - 1)
+        self.assertAlmostEqual(m.c1.lb, 0)
+        self.assertIsNone(m.c1.ub)
+        self.assertAlmostEqual(m.c2.lb, 0)
+        self.assertIsNone(m.c2.ub)
+        self.assertAlmostEqual(duals[m.c1], -0.5)
+        self.assertAlmostEqual(duals[m.c2], -0.5)
+
+    @parameterized.expand(input=_load_tests(all_solvers))
+    def test_bounds_max(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+
+        # for now, we don't support getting duals if linear_presolve = True
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                raise unittest.SkipTest(
+                    f'cannot yet get duals if NLWriter presolve is on'
+                )
+            else:
+                opt.config.writer_config.linear_presolve = False
+
+        # first check the lower bound
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0, None))
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.x - m.y + 1 <= 0)
+        m.obj = pyo.Objective(expr=-m.y, sense=pyo.maximize)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+        duals = res.solution_loader.get_duals()
+        # the sign convention is based on the (lower, body, upper) representation of the constraint,
+        # so we need to make sure the constraint body is what we expect
+        assertExpressionsEqual(self, m.c1.body, m.x - m.y + 1)
+        self.assertAlmostEqual(m.c1.ub, 0)
+        self.assertIsNone(m.c1.lb)
+        self.assertAlmostEqual(duals[m.c1], 1)
+        rc = res.solution_loader.get_reduced_costs()
+        self.assertAlmostEqual(rc[m.x], -1)
+
+        # now check the upper bound
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(None, 0))
+        m.y = pyo.Var()
+        m.c1 = pyo.Constraint(expr=-m.x - m.y + 1 <= 0)
+        m.obj = pyo.Objective(expr=-m.y, sense=pyo.maximize)
+        res = opt.solve(m)
+        self.assertEqual(res.solution_status, SolutionStatus.optimal)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+        duals = res.solution_loader.get_duals()
+        # the sign convention is based on the (lower, body, upper) representation of the constraint,
+        # so we need to make sure the constraint body is what we expect
+        assertExpressionsEqual(self, m.c1.body, -m.x - m.y + 1)
+        self.assertAlmostEqual(m.c1.ub, 0)
+        self.assertIsNone(m.c1.lb)
+        self.assertAlmostEqual(duals[m.c1], 1)
+        rc = res.solution_loader.get_reduced_costs()
+        self.assertAlmostEqual(rc[m.x], 1)
 
 
 @unittest.skipUnless(numpy_available, 'numpy is not available')
