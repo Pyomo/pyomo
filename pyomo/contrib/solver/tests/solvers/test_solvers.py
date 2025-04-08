@@ -299,7 +299,9 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], -0.5)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_equality_max(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_equality_max(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -413,7 +415,9 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], -0.5)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_bounds_max(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_bounds_max(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
@@ -468,7 +472,9 @@ class TestDualSignConvention(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], 1)
 
     @parameterized.expand(input=_load_tests(all_solvers))
-    def test_range_max(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_range_max(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         opt: SolverBase = opt_class()
         if not opt.available():
             raise unittest.SkipTest(f'Solver {opt.name} not available.')
