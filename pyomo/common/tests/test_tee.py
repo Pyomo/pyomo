@@ -422,6 +422,80 @@ class TestCapture(unittest.TestCase):
         finally:
             logger.propagate, logger.handlers = orig
 
+    def test_capture_to_logger_adapter(self):
+        class Adapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '[%s] %s' % (self.extra['foo'], msg), kwargs
+
+        logger = logging.getLogger('_pyomo_no_logger')
+        adapter = Adapter(logger, {"foo": 42})
+        lstream = LogStream(logging.WARNING, adapter)
+        orig = logger.propagate, logger.handlers
+        try:
+            logger.propagate = False
+            logger.handlers = []
+            with LoggingIntercept(module='_pyomo_no_logger') as LOG:
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi!\n")
+                    sys.stderr.flush()
+            self.assertEqual(LOG.getvalue(), "[42] hi!\n")
+
+            # test that we handle the lastResort logger correctly
+            _lastResort = logging.lastResort
+            with tee.capture_output() as OUT:
+                with tee.capture_output(lstream, capture_fd=False):
+                    self.assertIsNot(_lastResort, logging.lastResort)
+                    sys.stderr.write("hi?\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi?\n")
+
+            # test that we allow redirect-to-logger out
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi.\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi.\n")
+            logger.handlers.clear()
+        finally:
+            logger.propagate, logger.handlers = orig
+
+    def test_capture_fd_to_logger_adapter(self):
+        class Adapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '[%s] %s' % (self.extra['foo'], msg), kwargs
+
+        logger = logging.getLogger('_pyomo_no_logger')
+        adapter = Adapter(logger, {"foo": 42})
+        lstream = LogStream(logging.WARNING, adapter)
+        orig = logger.propagate, logger.handlers
+        try:
+            logger.propagate = False
+            logger.handlers = []
+            with LoggingIntercept(module='_pyomo_no_logger') as LOG:
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi!\n")
+                    sys.stderr.flush()
+            self.assertEqual(LOG.getvalue(), "[42] hi!\n")
+
+            # test that we handle the lastResort logger correctly
+            _lastResort = logging.lastResort
+            with tee.capture_output() as OUT:
+                with tee.capture_output(lstream, capture_fd=True):
+                    self.assertIsNot(_lastResort, logging.lastResort)
+                    sys.stderr.write("hi?\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi?\n")
+
+            # test that we allow redirect-to-logger out
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi.\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi.\n")
+            logger.handlers.clear()
+        finally:
+            logger.propagate, logger.handlers = orig
+
     def test_no_fileno_stdout(self):
         T = tee.capture_output()
         with T:
@@ -504,7 +578,18 @@ class TestCapture(unittest.TestCase):
         stack = T.context_stack
         self.assertGreater(len(stack), 0)
         del T
-        gc.collect()
+        # This is a bit tricky: for cpython, T should be immediately
+        # deallocated (including calling __del__) through reference
+        # counting.  pypy is trickier: because it lacks
+        # reference-counting, it must rely on the GC.  We have seen
+        # cases on GHA where a single call to gc.collect() was sometimes
+        # insufficient to ensure that T was collected (but unable to
+        # reproduce it locally).  We will try up to 4 times (1 more than
+        # the number of generations in the GC)
+        remaining_attempts = 4
+        while len(stack) and remaining_attempts:
+            gc.collect()
+            remaining_attempts -= 1
         self.assertEqual(len(stack), 0)
 
     def test_deadlock(self):
