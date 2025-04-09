@@ -9,16 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.A = Set(initialize=['A1', 'A2', 'A3', 'A4'])
-model.Y = Param(model.A)
+model.A = pyo.Set(initialize=['A1', 'A2', 'A3', 'A4'])
+model.Y = pyo.Param(model.A)
 
 instance = model.create_instance('import1.tab.dat')
 
 print('Y')
 keys = instance.Y.keys()
 for key in sorted(keys):
-    print(str(key) + " " + str(value(instance.Y[key])))
+    print(str(key) + " " + str(pyo.value(instance.Y[key])))
