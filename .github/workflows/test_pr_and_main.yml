@@ -550,19 +550,22 @@ jobs:
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz \
-                    > $IPOPT_TAR
+                    -o $IPOPT_TAR
             elif test "${{matrix.TARGET}}" == osx; then
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-darwin-aarch64.tar.gz \
-                    > $IPOPT_TAR
+                    -o $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-windows-x86_64.tar.gz \
-                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
+                    -o $IPOPT_TAR
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-lib-windows-x86_64.tar.gz \
+                    -o $IPOPT_TAR
             fi
         fi
         cd $IPOPT_DIR
-        tar -xzi < $IPOPT_TAR
+        tar -xzf $IPOPT_TAR
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
