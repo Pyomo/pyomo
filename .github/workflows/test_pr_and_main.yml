@@ -536,6 +536,7 @@ jobs:
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
         echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
@@ -558,14 +559,15 @@ jobs:
             else
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-windows-x86_64.tar.gz \
-                    -o $IPOPT_TAR
-                curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-lib-windows-x86_64.tar.gz \
-                    -o $IPOPT_TAR
+                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
             fi
         fi
         cd $IPOPT_DIR
-        tar -xzf $IPOPT_TAR
+        if test "${{matrix.TARGET}}" == win; then
+            tar -xzi < $IPOPT_TAR
+        else
+            tar -xzf $IPOPT_TAR
+        fi
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
