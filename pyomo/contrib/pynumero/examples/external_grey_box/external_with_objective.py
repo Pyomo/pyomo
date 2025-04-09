@@ -12,7 +12,7 @@
 import math
 import numpy as np
 from scipy.sparse import coo_matrix
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxModel,
     ExternalGreyBoxBlock,
@@ -107,15 +107,15 @@ class ConstrainedWithHessian(Constrained):
 
 
 def solve_unconstrained():
-    m = pe.ConcreteModel()
-    m.z = pe.Var()
+    m = pyo.ConcreteModel()
+    m.z = pyo.Var()
     m.grey_box = ExternalGreyBoxBlock(external_model=Unconstrained())
-    m.c = pe.Constraint(expr=m.z == m.grey_box.inputs['x'] + 1)
+    m.c = pyo.Constraint(expr=m.z == m.grey_box.inputs['x'] + 1)
 
-    opt = pe.SolverFactory('cyipopt')
+    opt = pyo.SolverFactory('cyipopt')
     opt.config.options['hessian_approximation'] = 'limited-memory'
     res = opt.solve(m, tee=True)
-    pe.assert_optimal_termination(res)
+    pyo.assert_optimal_termination(res)
     x = m.grey_box.inputs['x'].value
     y = m.grey_box.inputs['y'].value
     assert math.isclose(x, -2)
@@ -124,15 +124,15 @@ def solve_unconstrained():
 
 
 def solve_constrained():
-    m = pe.ConcreteModel()
-    m.z = pe.Var()
+    m = pyo.ConcreteModel()
+    m.z = pyo.Var()
     m.grey_box = ExternalGreyBoxBlock(external_model=Constrained())
-    m.c2 = pe.Constraint(expr=m.z == m.grey_box.inputs['x'] + 1)
+    m.c2 = pyo.Constraint(expr=m.z == m.grey_box.inputs['x'] + 1)
 
-    opt = pe.SolverFactory('cyipopt')
+    opt = pyo.SolverFactory('cyipopt')
     opt.config.options['hessian_approximation'] = 'limited-memory'
     res = opt.solve(m, tee=True)
-    pe.assert_optimal_termination(res)
+    pyo.assert_optimal_termination(res)
     x = m.grey_box.inputs['x'].value
     y = m.grey_box.inputs['y'].value
     assert math.isclose(x, -0.4263027509962655)
@@ -141,14 +141,14 @@ def solve_constrained():
 
 
 def solve_constrained_with_hessian():
-    m = pe.ConcreteModel()
-    m.z = pe.Var()
+    m = pyo.ConcreteModel()
+    m.z = pyo.Var()
     m.grey_box = ExternalGreyBoxBlock(external_model=ConstrainedWithHessian())
-    m.c2 = pe.Constraint(expr=m.z == m.grey_box.inputs['x'] + 1)
+    m.c2 = pyo.Constraint(expr=m.z == m.grey_box.inputs['x'] + 1)
 
-    opt = pe.SolverFactory('cyipopt')
+    opt = pyo.SolverFactory('cyipopt')
     res = opt.solve(m, tee=True)
-    pe.assert_optimal_termination(res)
+    pyo.assert_optimal_termination(res)
     x = m.grey_box.inputs['x'].value
     y = m.grey_box.inputs['y'].value
     assert math.isclose(x, -0.4263027509962655)

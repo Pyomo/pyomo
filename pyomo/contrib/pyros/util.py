@@ -2637,7 +2637,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
         uncertain parameters, then an equality requiring that
         each coefficient be of value 0 is added to the first-stage
         equality constraints.
-        In some cases, matching of the coefficientws may lead to
+        In some cases, matching of the coefficients may lead to
         immediate detection of robust infeasibility.
       - Otherwise, the constraint is cast to two second-stage
         inequalities, each of which is assigned a separation

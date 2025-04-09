@@ -89,7 +89,7 @@ class Solution(MapContainer):
         #
         # the following is specialized logic for handling variable and
         # constraint maps - which are dictionaries of dictionaries, with
-        # at a minimum an "id" element per sub-directionary.
+        # at a minimum an "id" element per sub-dictionary.
         #
         first = True
         for key in self._order:
