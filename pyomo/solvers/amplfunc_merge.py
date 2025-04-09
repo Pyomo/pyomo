@@ -20,7 +20,7 @@ relocated_module_attribute(
 
 
 def unique_paths(*paths):
-    """Marge paths, eliminating duplicates.
+    """Merge paths, eliminating duplicates.
 
     Parameters
     ----------
