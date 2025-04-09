@@ -313,12 +313,12 @@ which can be manipulated similar to a standard ``dict`` in Python.
    :members:
    :undoc-members:
 
-The new interface has condensed :py:class:`SolutionStatus<pyomo.opt.results.solver.SolutionStatus>`,
-:py:class:`SolutionStatus<pyomo.opt.results.solver.TerminationCondition>`,
+The new interface has condensed :py:class:`SolverStatus<pyomo.opt.results.solver.SolverStatus>`,
+:py:class:`TerminationCondition<pyomo.opt.results.solver.TerminationCondition>`,
 and :py:class:`SolutionStatus<pyomo.opt.results.solution.SolutionStatus>` into
 :py:class:`TerminationCondition<pyomo.contrib.solver.common.results.TerminationCondition>`
 and :py:class:`SolutionStatus<pyomo.contrib.solver.common.results.SolutionStatus>` to
-reduce complexity. As a result, several
+reduce complexity. As a result, several legacy
 :py:class:`SolutionStatus<pyomo.opt.results.solver.SolutionStatus>` values are
 no longer achievable. These are detailed in the table below.
 
@@ -326,7 +326,7 @@ no longer achievable. These are detailed in the table below.
                 to future statuses
    :header-rows: 1
 
-   * - :py:class:`SolutionStatus<pyomo.opt.results.solver.SolutionStatus>`
+   * - Legacy :py:class:`SolutionStatus<pyomo.opt.results.solver.SolutionStatus>`
      - :py:class:`TerminationCondition<pyomo.contrib.solver.common.results.TerminationCondition>`
      - :py:class:`SolutionStatus<pyomo.contrib.solver.common.results.SolutionStatus>`
    * - other
