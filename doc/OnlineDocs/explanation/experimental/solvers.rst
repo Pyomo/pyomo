@@ -313,6 +313,34 @@ which can be manipulated similar to a standard ``dict`` in Python.
    :members:
    :undoc-members:
 
+The new interface has condensed ``LegacySolverStatus``,
+``LegacyTerminationCondition``, and ``LegacySolutionStatus`` into
+``TerminationCondition`` and ``SolutionStatus`` to reduce complexity. As a
+result, several ``LegacySolutionStatus`` values are no longer achievable.
+These are detailed in the table below.
+
+.. list-table:: Mapping from unachievable ``LegacySolutionStatus``
+                to future statuses
+   :header-rows: 1
+
+   * - ``LegacySolutionStatus``
+     - ``TerminationCondition``
+     - ``SolutionStatus``
+   * - other
+     - unknown
+     - noSolution
+   * - unsure
+     - unknown
+     - noSolution
+   * - locallyOptimal
+     - convergenceCriteriaSatisfied
+     - optimal
+   * - globallyOptimal
+     - convergenceCriteriaSatisfied
+     - optimal
+   * - bestSoFar
+     - convergenceCriteriaSatisfied
+     - feasible
 
 Termination Conditions
 ^^^^^^^^^^^^^^^^^^^^^^
