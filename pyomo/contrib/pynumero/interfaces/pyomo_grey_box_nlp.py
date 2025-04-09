@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -21,6 +21,7 @@ from scipy.sparse import coo_matrix, identity
 from pyomo.common.deprecation import deprecated
 import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap
+from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.pynumero.sparse.block_matrix import BlockMatrix
 from pyomo.contrib.pynumero.sparse.block_vector import BlockVector
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
@@ -45,6 +46,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # this is done over *all* variables in active blocks, even
         # if they are not included in this model
         self._pyomo_model_var_names_to_datas = None
+        number_of_objectives = 0
         try:
             # We support Pynumero's ExternalGreyBoxBlock modeling
             # objects that are provided through ExternalGreyBoxBlock objects
@@ -59,9 +61,24 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
             # store the pyomo model
             self._pyomo_model = pyomo_model
+
+            # count the number of objectives excluding grey box objectives
+            for obj in self._pyomo_model.component_data_objects(
+                pyo.Objective, active=True, descend_into=True
+            ):
+                number_of_objectives += 1
+
             # build a PyomoNLP object (will include the "pyomo"
             # part of the model only)
-            self._pyomo_nlp = PyomoNLP(pyomo_model)
+            if number_of_objectives == 0:
+                objname = unique_component_name(pyomo_model, "_obj")
+                objective = pyomo_model.add_component(objname, pyo.Objective(expr=0.0))
+            try:
+                self._pyomo_nlp = PyomoNLP(pyomo_model)
+            finally:
+                if number_of_objectives == 0:
+                    pyomo_model.del_component(objective)
+
             self._pyomo_model_var_names_to_datas = {
                 v.getname(fully_qualified=True): v
                 for v in pyomo_model.component_data_objects(
@@ -100,7 +117,14 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
                     greybox_nlp = _ExternalGreyBoxAsNLP(data)
+                    if data.get_external_model().has_objective():
+                        number_of_objectives += 1
                     greybox_nlps.append(greybox_nlp)
+
+        if number_of_objectives > 1:
+            raise ValueError(
+                f'Found {number_of_objectives} active objectives. Expected 1.'
+            )
 
         if fixed_vars:
             logging.getLogger(__name__).error(
@@ -341,8 +365,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
     # overloaded from NLP
     def set_obj_factor(self, obj_factor):
-        # objective is owned by the pyomo model
-        self._pyomo_nlp.set_obj_factor(obj_factor)
+        for nlp in self._nlps:
+            nlp.set_obj_factor(obj_factor)
 
     # overloaded from NLP
     def get_obj_factor(self):
@@ -363,12 +387,28 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
     # overloaded from NLP
     def evaluate_objective(self):
-        # objective is owned by the pyomo model
-        return self._pyomo_nlp.evaluate_objective()
+        # There is a check in the constructor to ensure
+        # that there is only one objective. The rest of
+        # the nlps will return zero.
+        obj = 0
+        for nlp in self._nlps:
+            obj += nlp.evaluate_objective()
+        return obj
 
     # overloaded from NLP
     def evaluate_grad_objective(self, out=None):
-        return self._pyomo_nlp.evaluate_grad_objective(out=out)
+        # There is a check in the constructor to ensure
+        # that there is only one objective. The rest of
+        # the nlps will return arrays of zero.
+        ret = np.zeros(self.n_primals(), dtype=float)
+        for nlp in self._nlps:
+            ret += nlp.evaluate_grad_objective()
+
+        if out is not None:
+            ret.copyto(out)
+            return out
+
+        return ret
 
     # overloaded from NLP
     def evaluate_constraints(self, out=None):
@@ -476,28 +516,20 @@ class _ExternalGreyBoxAsNLP(NLP):
     """
     This class takes an ExternalGreyBoxModel and makes it look
     like an NLP so it can be used with other interfaces. Currently,
-    the ExternalGreyBoxModel supports constraints only (no objective),
-    so some of the methods are not appropriate and raise exceptions
+    the ExternalGreyBoxModel supports objectives and equality
+    constraints only, so some of the methods are not appropriate
+    and raise exceptions
     """
 
     def __init__(self, external_grey_box_block):
         self._block = external_grey_box_block
         self._ex_model = external_grey_box_block.get_external_model()
+        self._obj_factor = 1.0
         n_inputs = len(self._block.inputs)
         assert n_inputs == self._ex_model.n_inputs()
         n_eq_constraints = self._ex_model.n_equality_constraints()
         n_outputs = len(self._block.outputs)
         assert n_outputs == self._ex_model.n_outputs()
-
-        if (
-            self._ex_model.n_outputs() == 0
-            and self._ex_model.n_equality_constraints() == 0
-        ):
-            raise ValueError(
-                'ExternalGreyBoxModel has no equality constraints '
-                'or outputs. To use _ExternalGreyBoxAsNLP, it must'
-                ' have at least one or both.'
-            )
 
         # create the list of primals and constraint names
         # primals will be ordered inputs, followed by outputs
@@ -584,12 +616,18 @@ class _ExternalGreyBoxAsNLP(NLP):
             self._ex_model, 'evaluate_hessian_outputs'
         ):
             self._has_hessian_support = False
+        if self._ex_model.has_objective() and not hasattr(
+            self._ex_model, 'evaluate_hessian_objective'
+        ):
+            self._has_hessian_support = False
 
         self._nnz_jacobian = None
         self._nnz_hessian_lag = None
         self._cached_constraint_residuals = None
         self._cached_jacobian = None
         self._cached_hessian = None
+        self._cached_objective = None
+        self._cached_grad_objective = None
 
     def n_primals(self):
         return len(self._primals_names)
@@ -643,6 +681,8 @@ class _ExternalGreyBoxAsNLP(NLP):
         self._cached_constraint_residuals = None
         self._cached_jacobian = None
         self._cached_hessian = None
+        self._cached_objective = None
+        self._cached_grad_objective = None
 
     def set_primals(self, primals):
         self._cache_invalidate_primals()
@@ -673,13 +713,16 @@ class _ExternalGreyBoxAsNLP(NLP):
         return np.copy(self._dual_values)
 
     def set_obj_factor(self, obj_factor):
-        raise NotImplementedError('_ExternalGreyBoxAsNLP does not support objectives')
+        self._cached_hessian = None
+        self._obj_factor = obj_factor
 
     def get_obj_factor(self):
-        raise NotImplementedError('_ExternalGreyBoxAsNLP does not support objectives')
+        return self._obj_factor
 
     def get_obj_scaling(self):
-        raise NotImplementedError('_ExternalGreyBoxAsNLP does not support objectives')
+        raise NotImplementedError(
+            '_ExternalGreyBoxAsNLP does not support objective scaling'
+        )
 
     def get_primals_scaling(self):
         raise NotImplementedError(
@@ -706,13 +749,31 @@ class _ExternalGreyBoxAsNLP(NLP):
             return scaling
         return None
 
+    def _evaluate_objective_if_necessary_and_cache(self):
+        if self._ex_model.has_objective():
+            if self._cached_objective is None:
+                self._cached_objective = self._ex_model.evaluate_objective()
+        else:
+            self._cached_objective = 0
+
     def evaluate_objective(self):
-        # todo: Should we return 0 here?
-        raise NotImplementedError('_ExternalGreyBoxNLP does not support objectives')
+        self._evaluate_objective_if_necessary_and_cache()
+        return self._cached_objective
+
+    def _evaluate_grad_objective_if_necessary_and_cache(self):
+        if self._ex_model.has_objective():
+            if self._cached_grad_objective is None:
+                self._cached_grad_objective = self._ex_model.evaluate_grad_objective()
+        else:
+            self._cached_grad_objective = np.zeros(self.n_primals(), dtype=float)
 
     def evaluate_grad_objective(self, out=None):
-        # todo: Should we return 0 here?
-        raise NotImplementedError('_ExternalGreyBoxNLP does not support objectives')
+        self._evaluate_grad_objective_if_necessary_and_cache()
+        if out is not None:
+            assert len(out) == self.n_primals()
+            np.copyto(out, self._cached_grad_objective)
+            return out
+        return np.copy(self._cached_grad_objective)
 
     def _evaluate_constraints_if_necessary_and_cache(self):
         if self._cached_constraint_residuals is None:
@@ -774,10 +835,37 @@ class _ExternalGreyBoxAsNLP(NLP):
             hess.set_col_size(0, self._ex_model.n_inputs())
             hess.set_col_size(1, self._ex_model.n_outputs())
 
+            n = self._ex_model.n_inputs()
+            expected_shape = (n, n)
+
+            # get the hessian of the objective
+            if self._ex_model.has_objective():
+                obj_hess = (
+                    self._ex_model.evaluate_hessian_objective() * self.get_obj_factor()
+                )
+                if obj_hess.shape != expected_shape:
+                    raise ValueError(
+                        'ExternalGreyBoxModel objective hessian shape'
+                        'should be (n_inputs, n_inputs)'
+                    )
+                # let's check that it is lower triangular
+                if np.any(obj_hess.row < obj_hess.col):
+                    raise ValueError(
+                        'ExternalGreyBoxModel must return lower'
+                        'triangular portion of the Hessian only'
+                    )
+                obj_hess = make_lower_triangular_full(obj_hess)
+            else:
+                obj_hess = coo_matrix(([], ([], [])), shape=expected_shape)
+
             # get the hessian w.r.t. the equality constraints
-            eq_hess = None
             if self._ex_model.n_equality_constraints() > 0:
                 eq_hess = self._ex_model.evaluate_hessian_equality_constraints()
+                if eq_hess.shape != expected_shape:
+                    raise ValueError(
+                        'ExternalGreyBoxModel equality constraint hessian shape'
+                        'should be (n_inputs, n_inputs)'
+                    )
                 # let's check that it is lower triangular
                 if np.any(eq_hess.row < eq_hess.col):
                     raise ValueError(
@@ -786,10 +874,16 @@ class _ExternalGreyBoxAsNLP(NLP):
                     )
 
                 eq_hess = make_lower_triangular_full(eq_hess)
+            else:
+                eq_hess = coo_matrix(([], ([], [])), shape=expected_shape)
 
-            output_hess = None
             if self._ex_model.n_outputs() > 0:
                 output_hess = self._ex_model.evaluate_hessian_outputs()
+                if output_hess.shape != expected_shape:
+                    raise ValueError(
+                        'ExternalGreyBoxModel output hessian shape'
+                        'should be (n_inputs, n_inputs)'
+                    )
                 # let's check that it is lower triangular
                 if np.any(output_hess.row < output_hess.col):
                     raise ValueError(
@@ -798,21 +892,13 @@ class _ExternalGreyBoxAsNLP(NLP):
                     )
 
                 output_hess = make_lower_triangular_full(output_hess)
+            else:
+                output_hess = coo_matrix(([], ([], [])), shape=expected_shape)
 
-            input_hess = None
-            if eq_hess is not None and output_hess is not None:
-                # we may want to make this more efficient
-                row = np.concatenate((eq_hess.row, output_hess.row))
-                col = np.concatenate((eq_hess.col, output_hess.col))
-                data = np.concatenate((eq_hess.data, output_hess.data))
-
-                assert eq_hess.shape == output_hess.shape
-                input_hess = coo_matrix((data, (row, col)), shape=eq_hess.shape)
-            elif eq_hess is not None:
-                input_hess = eq_hess
-            elif output_hess is not None:
-                input_hess = output_hess
-            assert input_hess is not None  # need equality or outputs or both
+            row = np.concatenate((obj_hess.row, eq_hess.row, output_hess.row))
+            col = np.concatenate((obj_hess.col, eq_hess.col, output_hess.col))
+            data = np.concatenate((obj_hess.data, eq_hess.data, output_hess.data))
+            input_hess = coo_matrix((data, (row, col)), shape=expected_shape)
 
             hess.set_block(0, 0, input_hess)
             self._cached_hessian = hess.tocoo()

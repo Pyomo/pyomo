@@ -11,21 +11,24 @@ Generalized Disjunctive Programming (GDP) provides a way to bridge high-level pr
 The GDP standard form from the :ref:`index page <gdp-main-page>` is repeated below.
 
 .. math::
+   :nowrap:
 
-    \min\ obj = &\ f(x, z) \\
-    \text{s.t.} \quad &\ Ax+Bz \leq d\\
-    &\ g(x,z) \leq 0\\
-    &\ \bigvee_{i\in D_k} \left[
+   \[\begin{array}{ll}
+    \min & f(x, z) \\
+    \mathrm{s.t.} \quad & Ax+Bz \leq d \\
+    & g(x,z) \leq 0 \\
+    & \bigvee_{i\in D_k} \left[
         \begin{gathered}
         Y_{ik} \\
         M_{ik} x + N_{ik} z \leq e_{ik} \\
-        r_{ik}(x,z)\leq 0\\
+        r_{ik}(x,z)\leq 0 \\
         \end{gathered}
-    \right] \quad k \in K\\
-    &\ \Omega(Y) = True \\
-    &\ x \in X \subseteq \mathbb{R}^n\\
-    &\ Y \in \{True, False\}^{p}\\
-    &\ z \in Z \subseteq \mathbb{Z}^m
+    \right] \quad k \in K \\
+    & \Omega(Y) = True \\
+    & x \in X \subseteq \mathbb{R}^n \\
+    & Y \in \{True, False\}^{p} \\
+    & z \in Z \subseteq \mathbb{Z}^m
+    \end{array}\]
 
 Original support in Pyomo.GDP focused on the disjuncts and disjunctions, allowing the modelers to group relational expressions in disjuncts, with disjunctions describing logical-OR relationships between the groupings.
 As a result, we implemented the ``Disjunct`` and ``Disjunction`` objects before ``BooleanVar`` and the rest of the logical expression system.
@@ -37,14 +40,16 @@ Disjuncts
 Disjuncts represent groupings of relational expressions (e.g. algebraic constraints) summarized by a Boolean indicator variable :math:`Y` through implication:
 
 .. math::
+   :nowrap:
 
+    \[
     \left.
     \begin{aligned}
     & Y_{ik} \Rightarrow & M_{ik} x + N_{ik} z &\leq e_{ik}\\
     & Y_{ik} \Rightarrow & r_{ik}(x,z) &\leq 0
     \end{aligned}
     \right.\qquad \forall i \in D_k, \forall k \in K
-
+    \]
 
 Logically, this means that if :math:`Y_{ik} = True`, then the constraints :math:`M_{ik} x + N_{ik} z \leq e_{ik}` and :math:`r_{ik}(x,z) \leq 0` must be satisfied.
 However, if :math:`Y_{ik} = False`, then the corresponding constraints are ignored.
@@ -59,7 +64,9 @@ Disjunctions describe a logical *OR* relationship between two or more Disjuncts.
 The simplest and most common case is a 2-term disjunction:
 
 .. math::
+   :nowrap:
 
+    \[
     \left[\begin{gathered}
     Y_1 \\
     \exp(x_2) - 1 = x_1 \\
@@ -71,6 +78,7 @@ The simplest and most common case is a 2-term disjunction:
     x_1 = x_2 = 0
     \end{gathered}
     \right]
+    \]
 
 
 The disjunction above describes the selection between two units in a process network.

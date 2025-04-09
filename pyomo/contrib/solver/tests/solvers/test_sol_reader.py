@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,7 @@
 from pyomo.common import unittest
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.contrib.solver.sol_reader import parse_sol_file, SolFileData
+from pyomo.contrib.solver.solvers.sol_reader import SolFileData
 
 currdir = this_file_dir()
 

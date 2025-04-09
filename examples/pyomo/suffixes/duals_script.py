@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -22,16 +22,14 @@
 # on this system. This example was tested using Gurobi
 # Solver 5.1.0
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the a solver plugin
 solver = 'gurobi'
 solver_io = 'lp'  # Uses the LP file interface
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")

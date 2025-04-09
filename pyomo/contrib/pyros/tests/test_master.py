@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -27,6 +27,7 @@ from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import SolverFactory
 from pyomo.opt import TerminationCondition
 
+from pyomo.contrib.pyros.uncertainty_sets import BoxSet
 from pyomo.contrib.pyros.master_problem_methods import (
     add_scenario_block_to_master_problem,
     construct_initial_master_problem,
@@ -78,6 +79,7 @@ def build_simple_model_data(objective_focus="worst_case", decision_rule_order=1)
         progress_logger=logger,
         nominal_uncertain_param_vals=[0.4],
         separation_priority_order=dict(),
+        uncertainty_set=BoxSet([[1, 2]]),
     )
     model_data = ModelData(original_model=m, timing=TimingData(), config=config)
     user_var_partitioning = VariablePartitioning(

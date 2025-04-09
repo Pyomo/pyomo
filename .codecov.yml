@@ -1,0 +1,25 @@
+codecov:
+  notify:
+    # GHA: 5, Jenkins: 11
+    # Accurate as of April 1, 2025
+    # Potential to change when Python versions change.  We will allow
+    # codecov to start reporting when 80% of the reports are in.  This
+    # will hopefully help avoid an issue where codecov is not tracking
+    # PR branches (see https://github.com/codecov/feedback/issues/692).
+    after_n_builds: 13
+    wait_for_ci: false
+  require_ci_to_pass: false
+comment:
+  after_n_builds: 13
+coverage:
+  range: 70..98
+  status:
+    patch:
+      default:
+        # Force patches to be covered at the level of the codebase
+        threshold: 0.0
+    project:
+      default:
+        # Allow overall coverage to drop to avoid failures due to code
+        # cleanup or CI unavailability/lag
+        threshold: 5.0

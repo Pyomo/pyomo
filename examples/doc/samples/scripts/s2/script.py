@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,9 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
-import pyomo.opt
-import pyomo.environ
+from pyomo.environ import SolverFactory
 
 #
 # Import model
@@ -22,7 +20,7 @@ import knapsack
 instance = knapsack.model.create_instance("knapsack.dat")
 #
 # Setup the optimizer
-opt = pyomo.opt.SolverFactory("glpk")
+opt = SolverFactory("glpk")
 #
 # Optimize
 results = opt.solve(instance, suffixes=['.*'])

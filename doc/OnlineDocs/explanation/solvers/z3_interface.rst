@@ -19,15 +19,15 @@ To use the sat solver define your pyomo model as usual:
 .. doctest::
 
   Required import
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
   >>> from pyomo.contrib.satsolver.satsolver import SMTSatSolver
 
   Create a simple model
-  >>> m = ConcreteModel()
-  >>> m.x = Var()
-  >>> m.y = Var()
-  >>> m.obj = Objective(expr=m.x**2 + m.y**2)
-  >>> m.c = Constraint(expr=m.y >= -2*m.x + 5)
+  >>> m = pyo.ConcreteModel()
+  >>> m.x = pyo.Var()
+  >>> m.y = pyo.Var()
+  >>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+  >>> m.c = pyo.Constraint(expr=m.y >= -2*m.x + 5)
 
   Invoke the sat solver using optional argument model to automatically process
   pyomo model

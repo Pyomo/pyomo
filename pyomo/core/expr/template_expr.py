@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -229,6 +229,11 @@ class GetAttrExpression(ExpressionBase):
         #
         # TODO: deprecate (then remove) evaluating expressions by
         # "calling" them.
+        #
+        # [ESJ 3/25/25]: Note that since this always calls the ExpressionBase
+        # implementation of __call__ if 'exception' is specified, we need not
+        # check the type of the exception arg here--it will get checked in the
+        # base class.
         try:
             if not args:
                 if not kwargs:

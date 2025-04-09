@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -89,7 +89,7 @@ class Solution(MapContainer):
         #
         # the following is specialized logic for handling variable and
         # constraint maps - which are dictionaries of dictionaries, with
-        # at a minimum an "id" element per sub-directionary.
+        # at a minimum an "id" element per sub-dictionary.
         #
         first = True
         for key in self._order:
