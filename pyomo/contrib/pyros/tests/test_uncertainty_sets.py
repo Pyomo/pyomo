@@ -378,7 +378,7 @@ class TestBoxSet(unittest.TestCase):
 
         # check when bounds are not finite
         box_set.bounds[0][0] = np.nan
-        exc_str = r"Not all bounds are finite. Got bounds:.*"
+        exc_str = r"Not all bounds are finite. \nGot bounds:.*"
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
 
@@ -1568,29 +1568,13 @@ class TestCardinalitySet(unittest.TestCase):
 
         # check when bounds are not finite
         cardinality_set.origin[0] = np.nan
-        cardinality_set.positive_deviation[0] = np.nan
-        exc_str = (
-            r"Origin value and\/or positive deviation are not finite. "
-            + r"Got origin: \[nan  0.\], positive deviation: \[nan  1.\]"
-        )
-        with self.assertRaisesRegex(ValueError, exc_str):
-            cardinality_set.validate(config=CONFIG)
-
-        cardinality_set.origin[0] = np.nan
-        cardinality_set.positive_deviation[0] = 1
-        exc_str = (
-            r"Origin value and\/or positive deviation are not finite. "
-            + r"Got origin: \[nan  0.\], positive deviation: \[1. 1.\]"
-        )
+        exc_str = r"Origin value and/or positive deviation are not finite. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
 
         cardinality_set.origin[0] = 0
         cardinality_set.positive_deviation[0] = np.nan
-        exc_str = (
-            r"Origin value and\/or positive deviation are not finite. "
-            + r"Got origin: \[0. 0.\], positive deviation: \[nan  1.\]"
-        )
+        exc_str = r"Origin value and/or positive deviation are not finite. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
 

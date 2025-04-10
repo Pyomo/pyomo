@@ -1206,7 +1206,7 @@ class BoxSet(UncertaintySet):
         if not np.all(np.isfinite(bounds_arr)):
             raise ValueError(
                 "Not all bounds are finite. "
-                f"Got bounds:\n {bounds_arr}"
+                f"\nGot bounds:\n {bounds_arr}"
             )
 
         # check LB <= UB
