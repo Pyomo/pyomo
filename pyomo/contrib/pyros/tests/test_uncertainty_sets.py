@@ -91,7 +91,7 @@ def bounded_and_nonempty_check(test, unc_set):
     # check is_nonempty
     test.assertTrue(
         unc_set.is_nonempty(config=CONFIG),
-        "Set is not bounded."
+        "Set is empty."
     )
 
 
@@ -2539,6 +2539,23 @@ class TestCustomUncertaintySet(unittest.TestCase):
         custom_set = CustomUncertaintySet(dim=2)
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
         self.assertEqual(custom_set._compute_parameter_bounds(baron), [(-1, 1)] * 2)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_solve_feasibility(self):
+        """
+        Test uncertainty set feasibility problem gives expected results.
+        """
+        # feasibility problem passes
+        baron = SolverFactory("baron")
+        custom_set = CustomUncertaintySet(dim=2)
+        self.assertTrue(custom_set._solve_feasibility(baron))
+
+        # feasibility problem fails
+        custom_set.parameter_bounds = [[1, 2], [3, 4]]
+        exc_str = r"Could not successfully solve feasibility problem. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            custom_set._solve_feasibility(baron)
+
 
     # test default is_bounded
     @unittest.skipUnless(baron_available, "BARON is not available")
