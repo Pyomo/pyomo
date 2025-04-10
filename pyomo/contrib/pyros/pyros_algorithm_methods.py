@@ -336,6 +336,18 @@ def ROSolver_iterative_solve(model_data):
             from_block=nominal_master_blk,
             clone_first_stage_components=False,
         )
+        # constraints that are bypassed during separation are enforced
+        # only in the nominal master block
+        bypassed_ss_ineq_cons = (
+            separation_data.separation_priority_groups.get(None, [])
+        )
+        for ss_ineq_con in bypassed_ss_ineq_cons:
+            new_master_ss_ineq_con = (
+                master_data.master_model.scenarios[k + 1, 0]
+                .second_stage.inequality_cons[ss_ineq_con.index()]
+            )
+            new_master_ss_ineq_con.deactivate()
+
         separation_data.points_added_to_master[(k + 1, 0)] = (
             separation_results.violating_param_realization
         )
