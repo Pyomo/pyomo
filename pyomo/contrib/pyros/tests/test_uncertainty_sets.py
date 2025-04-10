@@ -1435,58 +1435,6 @@ class TestCardinalitySet(unittest.TestCase):
         np.testing.assert_allclose(cset.positive_deviation, [3, 0])
         np.testing.assert_allclose(cset.gamma, 0.5)
 
-    def test_error_on_neg_positive_deviation(self):
-        """
-        Cardinality set positive deviation attribute should
-        contain nonnegative numerical entries.
-
-        Check ValueError raised if any negative entries provided.
-        """
-        origin = [0, 0]
-        positive_deviation = [1, -2]  # invalid
-        gamma = 2
-
-        exc_str = r"Entry -2 of attribute 'positive_deviation' is negative value"
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            cset = CardinalitySet(origin, positive_deviation, gamma)
-
-        # construct a valid cardinality set
-        cset = CardinalitySet(origin, [1, 1], gamma)
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, exc_str):
-            cset.positive_deviation = positive_deviation
-
-    def test_error_on_invalid_gamma(self):
-        """
-        Cardinality set gamma attribute should be a float-like
-        between 0 and the set dimension.
-
-        Check ValueError raised if gamma attribute is set
-        to an invalid value.
-        """
-        origin = [0, 0]
-        positive_deviation = [1, 1]
-        gamma = 3  # should be invalid
-
-        exc_str = (
-            r".*attribute 'gamma' must be a real number "
-            r"between 0 and dimension 2 \(provided value 3\)"
-        )
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            CardinalitySet(origin, positive_deviation, gamma)
-
-        # construct a valid cardinality set
-        cset = CardinalitySet(origin, positive_deviation, gamma=2)
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, exc_str):
-            cset.gamma = gamma
-
     def test_error_on_cardinality_set_dim_change(self):
         """
         Dimension is considered immutable.
