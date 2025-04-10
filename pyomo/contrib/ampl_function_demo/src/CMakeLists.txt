@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-cmake_minimum_required(VERSION 3.0)
-# CMake 3.0 needed by AMPL/asl build
+cmake_minimum_required(VERSION 3.0...3.31)
+# This was developed against CMake 3.0, and appears to comply with 3.5
 
 PROJECT( ampl_function_demo )
 

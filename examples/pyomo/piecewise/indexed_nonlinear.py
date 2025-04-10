@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,7 +12,7 @@
 # Nonlinear version of example4.
 # Must have a nonlinear solver
 # to run this example.
-from pyomo.core import *
+import pyomo.environ as pyo
 from indexed import model, f
 
 
@@ -22,7 +22,7 @@ def nonlinear_con_rule(model, i, j):
     return model.Z[i, j] == f(model, i, j, model.X[i, j])
 
 
-model.nonlinear_constraint = Constraint(model.INDEX1, rule=nonlinear_con_rule)
+model.nonlinear_constraint = pyo.Constraint(model.INDEX1, rule=nonlinear_con_rule)
 
 # deactivate all constraints on the Piecewise component
 model.linearized_constraint.deactivate()
