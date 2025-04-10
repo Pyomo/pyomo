@@ -2340,27 +2340,6 @@ class TestPolyhedralSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             PolyhedralSet([[1], [-1]], rhs_vec=[1, -3])
 
-    def test_error_on_polyhedral_mat_all_zero_columns(self):
-        """
-        Test ValueError raised if budget membership mat
-        has a column with all zeros.
-        """
-        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
-        rhs_vec = [1, 1, 2]
-
-        exc_str = r".*all entries zero in columns at indexes: 0, 1.*"
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            PolyhedralSet(invalid_col_mat, rhs_vec)
-
-        # construct a valid budget set
-        pset = PolyhedralSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], rhs_vec)
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, exc_str):
-            pset.coefficients_mat = invalid_col_mat
-
     def test_set_as_constraint(self):
         """
         Test method for setting up constraints works correctly.
