@@ -612,18 +612,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             # construct feasibility problem and solve otherwise
             set_nonempty = self._solve_feasibility(config.global_solver)
 
-        # parameter bounds for logging
-        param_bounds_arr = self.parameter_bounds
-        if not param_bounds_arr:
-            param_bounds_arr = np.array(
-                self._compute_parameter_bounds(solver=config.global_solver)
-            )
-
         # log result
         if not set_nonempty:
             config.progress_logger.error(
                 "Nominal point is not within the uncertainty set. "
-                f"Set parameter bounds: {param_bounds_arr}"
                 f"Got nominal point: {config.nominal_uncertain_param_vals}"
             )
 
