@@ -1604,6 +1604,80 @@ class TestCardinalitySet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 4))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (2, 2))
 
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid cardinality set
+        cardinality_set = CardinalitySet(
+            origin=[0., 0.], positive_deviation=[1., 1.], gamma=2
+        )
+
+        # validate raises no issues on valid set
+        cardinality_set.validate(config=CONFIG)
+
+        # check when bounds are not finite
+        cardinality_set.origin[0] = np.nan
+        cardinality_set.positive_deviation[0] = np.nan
+        exc_str = (
+            r"Origin value and\/or positive deviation are not finite. "
+            + r"Got origin: \[nan  0.\], positive deviation: \[nan  1.\]"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cardinality_set.validate(config=CONFIG)
+
+        cardinality_set.origin[0] = np.nan
+        cardinality_set.positive_deviation[0] = 1
+        exc_str = (
+            r"Origin value and\/or positive deviation are not finite. "
+            + r"Got origin: \[nan  0.\], positive deviation: \[1. 1.\]"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cardinality_set.validate(config=CONFIG)
+
+        cardinality_set.origin[0] = 0
+        cardinality_set.positive_deviation[0] = np.nan
+        exc_str = (
+            r"Origin value and\/or positive deviation are not finite. "
+            + r"Got origin: \[0. 0.\], positive deviation: \[nan  1.\]"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cardinality_set.validate(config=CONFIG)
+
+        # check when deviation is negative
+        cardinality_set.positive_deviation[0] = -2
+        exc_str = r"Entry -2.0 of attribute 'positive_deviation' is negative value"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cardinality_set.validate(config=CONFIG)
+
+        # check when gamma is invalid
+        cardinality_set.positive_deviation[0] = 1
+        cardinality_set.gamma = 3
+        exc_str = (
+            r".*attribute 'gamma' must be a real number "
+            r"between 0 and dimension 2 \(provided value 3\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cardinality_set.validate(config=CONFIG)
+
+        cardinality_set.gamma = -1
+        exc_str = (
+            r".*attribute 'gamma' must be a real number "
+            r"between 0 and dimension 2 \(provided value -1\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cardinality_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        cardinality_set = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
+        bounded_and_nonempty_check(self, cardinality_set),
+
 
 class TestDiscreteScenarioSet(unittest.TestCase):
     """
