@@ -1310,13 +1310,6 @@ class CardinalitySet(UncertaintySet):
             valid_type_desc="a valid numeric type",
         )
 
-        for dev_val in val:
-            if dev_val < 0:
-                raise ValueError(
-                    f"Entry {dev_val} of attribute 'positive_deviation' "
-                    f"is negative value"
-                )
-
         val_arr = np.array(val)
 
         # dimension of the set is immutable
@@ -1349,13 +1342,6 @@ class CardinalitySet(UncertaintySet):
     @gamma.setter
     def gamma(self, val):
         validate_arg_type("gamma", val, valid_num_types, "a valid numeric type", False)
-        if val < 0 or val > self.dim:
-            raise ValueError(
-                "Cardinality set attribute "
-                f"'gamma' must be a real number between 0 and dimension "
-                f"{self.dim} "
-                f"(provided value {val})"
-            )
 
         self._gamma = val
 
@@ -1469,6 +1455,43 @@ class CardinalitySet(UncertaintySet):
             and np.all(0 <= aux_space_pt)
             and np.all(aux_space_pt <= 1)
         )
+
+    def validate(self, config):
+        """
+        Check CardinalitySet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, positive deviation, or gamma checks fail.
+        """
+        orig_val = self.origin
+        pos_dev = self.positive_deviation
+        gamma = self.gamma
+
+        # finiteness check
+        if not (np.all(np.isfinite(orig_val)) and np.all(np.isfinite(pos_dev))):
+            raise ValueError(
+                "Origin value and/or positive deviation are not finite. "
+                f"Got origin: {orig_val}, positive deviation: {pos_dev}"
+            )
+
+        # check deviation is positive
+        for dev_val in pos_dev:
+            if dev_val < 0:
+                raise ValueError(
+                    f"Entry {dev_val} of attribute 'positive_deviation' "
+                    f"is negative value"
+                )
+
+        # check gamma between 0 and n
+        if gamma < 0 or gamma > self.dim:
+            raise ValueError(
+                "Cardinality set attribute "
+                f"'gamma' must be a real number between 0 and dimension "
+                f"{self.dim} "
+                f"(provided value {gamma})"
+            )
 
 
 class PolyhedralSet(UncertaintySet):
