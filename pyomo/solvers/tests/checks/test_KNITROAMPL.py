@@ -16,12 +16,11 @@ from pyomo.environ import (
     Objective,
     Constraint,
     Suffix,
-    Integers,
     NonNegativeIntegers,
     NonNegativeReals,
     value,
 )
-from pyomo.opt import SolverFactory, TerminationCondition, SolutionStatus
+from pyomo.opt import SolverFactory, TerminationCondition
 
 knitroampl_available = SolverFactory('knitroampl').available(False)
 
