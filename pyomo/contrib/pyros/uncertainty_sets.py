@@ -1538,6 +1538,8 @@ class PolyhedralSet(UncertaintySet):
         # This check is only performed at construction.
         self._validate()
 
+    # TODO this has a _validate method...
+    # seems redundant with new validate method and should be consolidated
     def _validate(self):
         """
         Check polyhedral set attributes are such that set is nonempty
@@ -1621,19 +1623,6 @@ class PolyhedralSet(UncertaintySet):
                     f"to match shape of attribute 'rhs_vec' "
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
-
-        # check no column is all zeros. otherwise, set is unbounded
-        cols_with_all_zeros = np.nonzero(
-            [np.all(col == 0) for col in lhs_coeffs_arr.T]
-        )[0]
-        if cols_with_all_zeros.size > 0:
-            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
-            raise ValueError(
-                "Attempting to set attribute 'coefficients_mat' to value "
-                f"with all entries zero in columns at indexes: {col_str}. "
-                "Ensure column has at least one nonzero entry"
-            )
-
         self._coefficients_mat = lhs_coeffs_arr
 
     @property
@@ -1713,6 +1702,42 @@ class PolyhedralSet(UncertaintySet):
             uncertainty_cons=list(conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+
+    def validate(self, config):
+        """
+        Check PolyhedralSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, full column rank of LHS matrix, is_bounded,
+            or is_nonempty checks fail.
+        """
+        lhs_coeffs_arr = self.coefficients_mat
+        rhs_vec_arr = self.rhs_vec
+
+        # finiteness check
+        if not (np.all(np.isfinite(lhs_coeffs_arr)) and np.all(np.isfinite(rhs_vec_arr))):
+            raise ValueError(
+                "LHS coefficient matrix or RHS vector are not finite. "
+                f"\nGot LHS matrix:\n{lhs_coeffs_arr},\nRHS vector:\n{rhs_vec_arr}"
+            )
+
+        # check no column is all zeros. otherwise, set is unbounded
+        cols_with_all_zeros = np.nonzero(
+            [np.all(col == 0) for col in lhs_coeffs_arr.T]
+        )[0]
+        if cols_with_all_zeros.size > 0:
+            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
+            raise ValueError(
+                "Attempting to set attribute 'coefficients_mat' to value "
+                f"with all entries zero in columns at indexes: {col_str}. "
+                "Ensure column has at least one nonzero entry"
+            )
+
+        # check boundedness and nonemptiness
+        super().validate(config)
 
 
 class BudgetSet(UncertaintySet):
