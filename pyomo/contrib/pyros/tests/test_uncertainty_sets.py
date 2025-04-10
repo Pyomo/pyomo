@@ -23,6 +23,7 @@ from pyomo.common.dependencies import (
     scipy as sp,
     scipy_available,
 )
+from pyomo.common.collections import Bunch
 from pyomo.environ import SolverFactory
 from pyomo.core.base import ConcreteModel, Param, Var
 from pyomo.core.expr import RangedExpression
@@ -73,7 +74,7 @@ else:
     baron_version = (0, 0, 0)
 
 
-def bounded_and_nonempty_check(unc_set):
+def bounded_and_nonempty_check(test, unc_set):
     """
     All uncertainty sets should pass these checks,
     regardless of their custom `validate` method.
@@ -82,11 +83,16 @@ def bounded_and_nonempty_check(unc_set):
     CONFIG.global_solver = global_solver
 
     # check is_bounded
-    check_bounded = unc_set.is_bounded(config=CONFIG)
-    # check is_nonempty
-    check_nonempty = unc_set.is_nonempty(config=CONFIG)
+    test.assertTrue(
+        unc_set.is_bounded(config=CONFIG),
+        "Set is not bounded."
+    )
 
-    return check_bounded and check_nonempty
+    # check is_nonempty
+    test.assertTrue(
+        unc_set.is_nonempty(config=CONFIG),
+        "Set is not bounded."
+    )
 
 
 class TestBoxSet(unittest.TestCase):
@@ -362,8 +368,7 @@ class TestBoxSet(unittest.TestCase):
         """
         Test validate checks perform as expected.
         """
-        CONFIG = pyros_config()
-        CONFIG.global_solver = global_solver
+        CONFIG = Bunch()
 
         # construct valid box set
         box_set = BoxSet(bounds=[[1., 2.], [3., 4.]])
@@ -389,10 +394,7 @@ class TestBoxSet(unittest.TestCase):
         Test `is_bounded` and `is_nonempty` for a valid box set.
         """
         box_set = BoxSet(bounds=[[1., 2.], [3., 4.]])
-        self.assertTrue(
-            bounded_and_nonempty_check(box_set),
-            "Set is not bounded or not nonempty"
-        )
+        bounded_and_nonempty_check(self, box_set),
 
 
 class TestBudgetSet(unittest.TestCase):
