@@ -2465,6 +2465,49 @@ class TestPolyhedralSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[0].bounds, (1, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1, 1))
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # construct a valid polyhedral set
+        polyhedral_set = PolyhedralSet(
+            lhs_coefficients_mat=[[1., 0.], [-1., 1.], [-1., -1.]],
+            rhs_vec=[2., -1., -1.]
+        )
+
+        # validate raises no issues on valid set
+        polyhedral_set.validate(config=CONFIG)
+
+        # check when bounds are not finite
+        polyhedral_set.rhs_vec[0] = np.nan
+        exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            polyhedral_set.validate(config=CONFIG)
+
+        polyhedral_set.rhs_vec[0] = 2
+        polyhedral_set.coefficients_mat[0][0] = np.nan
+        exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            polyhedral_set.validate(config=CONFIG)
+
+        # check when LHS matrix is not full column rank
+        polyhedral_set.coefficients_mat = [[0., 0.], [0., 1.], [0., -1.]]
+        exc_str = r".*all entries zero in columns at indexes: 0.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            polyhedral_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        cardinality_set = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
+        bounded_and_nonempty_check(self, cardinality_set),
+
 
 class CustomUncertaintySet(UncertaintySet):
     """
