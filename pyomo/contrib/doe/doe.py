@@ -1389,7 +1389,7 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
@@ -1448,8 +1448,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1457,6 +1457,10 @@ class DesignOfExperiments:
                 "log10 A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1517,21 +1521,37 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
             FIM = self._computed_FIM
-
+            
+            '''
+            # Alex said to make this a function
+            # This should be a static (?) function
+            # Making it a function allows us to perform error tests
+            # on the FIM
+            def compute_metrics(FIM):
+                
+                # Compute D, A, E, ME metrics
+                # Perform error checks
+                # Return D, A, E, ME
+            
+            '''
             # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
+            det_FIM = np.linalg.det(FIM)   # Determinant of FIM         
+            D_opt = np.log10(det_FIM)
+            trace_FIM = np.trace(FIM)  # Trace of FIM
+            A_opt = np.log10(trace_FIM)  
+            E_vals, E_vecs =np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
+
             E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            IMG_THERESHOLD = 1e-6  # Threshold for imaginary component
             # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
+            if abs(E_vals.imag[E_ind]) > IMG_THERESHOLD:
                 self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
+                    f"Eigenvalue has imaginary component greater than {IMG_THERESHOLD}, contact developers if this issue persists."
                 )
 
             # If the real value is less than or equal to zero, set the E_opt value to nan
             if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
+                E_opt = np.nan  
             else:
                 E_opt = np.log10(E_vals.real[E_ind])
 
@@ -1545,8 +1565,12 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["eigval_min"].append(E_vals[0])
+            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
-
+            
         self.fim_factorial_results = fim_factorial_results
 
         return self.fim_factorial_results
