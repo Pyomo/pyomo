@@ -123,7 +123,7 @@ class redirect_fd(object):
             # We used to flush original_file here.  We have removed that
             # because the std* streams are flushed by capture_output.
             # Flushing again here caused intermittent errors due to
-            # clodes file handles on OSX
+            # closed file handles on OSX
             self.original_file = getattr(sys, self.std)
         # Duplicate the original standard file descriptor(file
         # descriptor 1 or 2) to a different file descriptor number
