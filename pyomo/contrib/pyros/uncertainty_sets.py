@@ -2516,14 +2516,6 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
                     f"to value of dimension {val_arr.size}"
                 )
 
-        # ensure half-lengths are non-negative
-        for half_len in val_arr:
-            if half_len < 0:
-                raise ValueError(
-                    f"Entry {half_len} of 'half_lengths' "
-                    "is negative. All half-lengths must be nonnegative"
-                )
-
         self._half_lengths = val_arr
 
     @property
@@ -2592,6 +2584,36 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check AxisAlignedEllipsoidalSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or positive half-length checks fail.
+        """
+        ctr = self.center
+        half_lengths = self.half_lengths
+
+        # finiteness check
+        if not (
+                np.all(np.isfinite(ctr))
+                and np.all(np.isfinite(half_lengths))
+        ):
+            raise ValueError(
+                "Center or half-lengths are not finite. "
+                f"Got center: {ctr}, half-lengths: {half_lengths}"
+            )
+
+        # ensure half-lengths are non-negative
+        for half_len in half_lengths:
+            if half_len < 0:
+                raise ValueError(
+                    f"Entry {half_len} of 'half_lengths' "
+                    "is negative. All half-lengths must be nonnegative"
+                )
 
 
 class EllipsoidalSet(UncertaintySet):
