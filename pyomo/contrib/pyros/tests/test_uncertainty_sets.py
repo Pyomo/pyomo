@@ -1720,6 +1720,45 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0, 2))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (0, 1.0))
 
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid discrete scenario set
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+
+        # validate raises no issues on valid set
+        discrete_set.validate(config=CONFIG)
+
+        # check when scenario set is empty
+        # TODO should this method can be used to create ragged arrays
+        # after a set is created. There are currently no checks for this
+        # in any validate method. It may be good to included validate_array
+        # in all validate methods as well to guard against it.
+        discrete_set = DiscreteScenarioSet([[0]])
+        discrete_set.scenarios.pop(0)
+        exc_str = r"Scenarios set must be nonempty. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            discrete_set.validate(config=CONFIG)
+
+        # check when not all scenarios are finite
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+        exc_str = r"Not all scenarios are finite. .*"
+        for val_str in ["inf", "nan"]:
+            discrete_set.scenarios[0] = [1, float(val_str)]
+            with self.assertRaisesRegex(ValueError, exc_str):
+                discrete_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+        bounded_and_nonempty_check(self, discrete_set),
+
 
 class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
     """

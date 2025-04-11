@@ -3158,6 +3158,32 @@ class DiscreteScenarioSet(UncertaintySet):
         rounded_point = np.round(point, decimals=num_decimals)
         return np.any(np.all(rounded_point == rounded_scenarios, axis=1))
 
+    def validate(self, config):
+        """
+        Check DiscreteScenarioSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or nonemptiness checks fail.
+        """
+        scenario_arr = self.scenarios
+
+        # check nonemptiness
+        if len(scenario_arr) < 1:
+            raise ValueError(
+                "Scenarios set must be nonempty. "
+                f"Got scenarios: {scenario_arr}"
+            )
+
+        # check finiteness
+        for scenario in scenario_arr:
+            if not np.all(np.isfinite(scenario)):
+                raise ValueError(
+                    "Not all scenarios are finite. "
+                    f"Got scenario: {scenario}"
+                )
+
 
 class IntersectionSet(UncertaintySet):
     """
