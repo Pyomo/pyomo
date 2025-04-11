@@ -376,7 +376,7 @@ class TestBoxSet(unittest.TestCase):
         # validate raises no issues on valid set
         box_set.validate(config=CONFIG)
 
-        # check when bounds are not finite
+        # check when values are not finite
         box_set.bounds[0][0] = np.nan
         exc_str = r"Not all bounds are finite. \nGot bounds:.*"
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -613,7 +613,7 @@ class TestBudgetSet(unittest.TestCase):
         # validate raises no issues on valid set
         budget_set.validate(config=CONFIG)
 
-        # check when bounds are not finite
+        # check when values are not finite
         budget_set.origin[0] = np.nan
         exc_str = r"Origin, LHS coefficient matrix or RHS vector are not finite. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -644,7 +644,6 @@ class TestBudgetSet(unittest.TestCase):
         exc_str = r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
-        budget_set.budget_membership_mat = budget_mat
 
         # check when row has all zeros
         invalid_row_mat = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
@@ -1033,6 +1032,75 @@ class TestFactorModelSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-1.1, 3.1))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (-13.0, 17.0))
         self.assertEqual(m.uncertain_param_vars[3].bounds, (-12.0, 18.0))
+
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid budget set
+        origin = [0., 0., 0.]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+        factor_set = FactorModelSet(origin, number_of_factors, psi_mat, beta)
+
+        # validate raises no issues on valid set
+        factor_set.validate(config=CONFIG)
+
+        # check when values are not finite
+        factor_set.origin[0] = np.nan
+        exc_str = r"Origin is not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            factor_set.validate(config=CONFIG)
+        factor_set.origin[0] = 0
+
+        # check when beta is invalid
+        neg_beta = -0.5
+        big_beta = 1.5
+        neg_exc_str = (
+            r".*must be a real number between 0 and 1.*\(provided value -0.5\)"
+        )
+        big_exc_str = r".*must be a real number between 0 and 1.*\(provided value 1.5\)"
+        factor_set.beta = neg_beta
+        with self.assertRaisesRegex(ValueError, neg_exc_str):
+            factor_set.validate(config=CONFIG)
+        factor_set.beta = big_beta
+        with self.assertRaisesRegex(ValueError, big_exc_str):
+            factor_set.validate(config=CONFIG)
+
+        # check when psi matrix is rank defficient
+        with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 3\)"):
+            # more columns than rows
+            factor_set = FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=3,
+                psi_mat=[[1, -1, 1], [1, 0.1, 1]],
+                beta=1 / 6,
+            )
+            factor_set.validate(config=CONFIG)
+        with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 2\)"):
+            # linearly dependent columns
+            factor_set = FactorModelSet(
+                origin=[0, 0],
+                number_of_factors=2,
+                psi_mat=[[1, -1], [1, -1]],
+                beta=1 / 6,
+            )
+            factor_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        origin = [0., 0., 0.]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+        factor_set = FactorModelSet(origin, number_of_factors, psi_mat, beta)
+        bounded_and_nonempty_check(self, factor_set),
 
 
 class TestIntersectionSet(unittest.TestCase):
@@ -1554,7 +1622,7 @@ class TestCardinalitySet(unittest.TestCase):
         # validate raises no issues on valid set
         cardinality_set.validate(config=CONFIG)
 
-        # check when bounds are not finite
+        # check when values are not finite
         cardinality_set.origin[0] = np.nan
         exc_str = r"Origin value and/or positive deviation are not finite. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
@@ -2449,7 +2517,7 @@ class TestPolyhedralSet(unittest.TestCase):
         # validate raises no issues on valid set
         polyhedral_set.validate(config=CONFIG)
 
-        # check when bounds are not finite
+        # check when values are not finite
         polyhedral_set.rhs_vec[0] = np.nan
         exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
         with self.assertRaisesRegex(ValueError, exc_str):
