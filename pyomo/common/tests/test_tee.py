@@ -589,6 +589,7 @@ class TestCapture(unittest.TestCase):
         remaining_attempts = 4
         while len(stack) and remaining_attempts:
             gc.collect()
+            time.sleep(((4 - remaining_attempts) / 4.0) ** 2)
             remaining_attempts -= 1
         self.assertEqual(len(stack), 0)
 
