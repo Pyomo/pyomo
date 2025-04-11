@@ -283,7 +283,7 @@ class Test_variable(unittest.TestCase):
         self.assertIs(v.lower, lb)
         self.assertIs(v.upper, ub)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object None'
+            ValueError, 'No value for uninitialized parameter object None'
         ):
             v.bounds
 
