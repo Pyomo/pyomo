@@ -536,16 +536,13 @@ jobs:
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
+        echo "DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         NEW_PYOMO_PATH="$IPOPT_DIR:$PYOMO_PATH"
         echo "PYOMO_PATH=$NEW_PYOMO_PATH" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
             echo "...downloading Ipopt"
-            if test "${{matrix.TARGET}}" == osx; then
-                echo "IDAES Ipopt not available on OSX"
-                exit 0
-            fi
             URL=https://github.com/IDAES/idaes-ext
             RELEASE=$(curl --max-time 150 --retry 8 \
                 -L -s -H 'Accept: application/json' ${URL}/releases/latest)
@@ -553,8 +550,12 @@ jobs:
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
-                    > $IPOPT_TAR
+                    -L $URL/idaes-solvers-ubuntu2204-x86_64.tar.gz \
+                    -o $IPOPT_TAR
+            elif test "${{matrix.TARGET}}" == osx; then
+                curl --max-time 150 --retry 8 \
+                    -L $URL/idaes-solvers-darwin-aarch64.tar.gz \
+                    -o $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
                     -L $URL/idaes-solvers-windows-x86_64.tar.gz \
@@ -562,7 +563,11 @@ jobs:
             fi
         fi
         cd $IPOPT_DIR
-        tar -xzi < $IPOPT_TAR
+        if test "${{matrix.TARGET}}" == win; then
+            tar -xzi < $IPOPT_TAR
+        else
+            tar -xzf $IPOPT_TAR
+        fi
         echo ""
         echo "$IPOPT_DIR"
         ls -l $IPOPT_DIR
