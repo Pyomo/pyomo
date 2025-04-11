@@ -657,7 +657,7 @@ class TestBudgetSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid budget set.
         """
         budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
         budget_rhs_vec = [1.0, 3.0]
@@ -1035,7 +1035,7 @@ class TestFactorModelSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid factor model set.
         """
         origin = [0.0, 0.0, 0.0]
         number_of_factors = 2
@@ -1439,10 +1439,12 @@ class TestIntersectionSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid intersection set.
         """
-        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
-        bounded_and_nonempty_check(self, discrete_set),
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+        intersection_set = IntersectionSet(box_set=bset, axis_aligned_set=aset)
+        bounded_and_nonempty_check(self, intersection_set),
 
 
 class TestCardinalitySet(unittest.TestCase):
@@ -1791,7 +1793,7 @@ class TestDiscreteScenarioSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid discrete scenario set.
         """
         discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
         bounded_and_nonempty_check(self, discrete_set),
@@ -1978,7 +1980,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid axis aligned ellipsoidal set.
         """
         center = [0.0, 0.0]
         half_lengths = [1.0, 3.0]
@@ -2344,7 +2346,7 @@ class TestEllipsoidalSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid ellipsoidal set.
         """
         center = [0.0, 0.0]
         shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
@@ -2580,7 +2582,7 @@ class TestPolyhedralSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        Test `is_bounded` and `is_nonempty` for a valid polyhedral set.
         """
         polyhedral_set = PolyhedralSet(
             lhs_coefficients_mat=[[1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]],
