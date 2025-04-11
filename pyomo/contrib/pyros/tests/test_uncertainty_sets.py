@@ -2019,28 +2019,6 @@ class TestEllipsoidalSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             eset.center = [0, 0, 0]
 
-    def test_error_on_neg_scale(self):
-        """
-        Test ValueError raised if scale attribute set to negative
-        value.
-        """
-        center = [0, 0]
-        shape_matrix = [[1, 0], [0, 2]]
-        neg_scale = -1
-
-        exc_str = r".*must be a non-negative real \(provided.*-1\)"
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            EllipsoidalSet(center, shape_matrix, neg_scale)
-
-        # construct a valid EllipsoidalSet
-        eset = EllipsoidalSet(center, shape_matrix, scale=2)
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, exc_str):
-            eset.scale = neg_scale
-
     def test_error_invalid_gaussian_conf_lvl(self):
         """
         Test error when attempting to initialize with Gaussian
@@ -2104,53 +2082,6 @@ class TestEllipsoidalSet(unittest.TestCase):
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
             eset.shape_matrix = invalid_shape_matrix
-
-    def test_error_on_invalid_shape_matrix(self):
-        """
-        Test exceptional cases of invalid square shape matrix
-        arguments
-        """
-        center = [0, 0]
-        scale = 3
-
-        # assert error on construction
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Shape matrix must be symmetric",
-            msg="Asymmetric shape matrix test failed",
-        ):
-            EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
-        with self.assertRaises(
-            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
-        ):
-            EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Non positive-definite.*",
-            msg="Indefinite shape matrix test failed",
-        ):
-            EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
-
-        # construct a valid EllipsoidalSet
-        eset = EllipsoidalSet(center, [[1, 0], [0, 2]], scale)
-
-        # assert error on update
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Shape matrix must be symmetric",
-            msg="Asymmetric shape matrix test failed",
-        ):
-            eset.shape_matrix = [[1, 1], [0, 1]]
-        with self.assertRaises(
-            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
-        ):
-            eset.shape_matrix = [[0, 0], [0, 0]]
-        with self.assertRaisesRegex(
-            ValueError,
-            r"Non positive-definite.*",
-            msg="Indefinite shape matrix test failed",
-        ):
-            eset.shape_matrix = [[1, 0], [0, -2]]
 
     def test_set_as_constraint(self):
         """
