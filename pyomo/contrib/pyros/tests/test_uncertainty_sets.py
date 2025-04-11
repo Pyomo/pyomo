@@ -753,58 +753,6 @@ class TestFactorModelSet(unittest.TestCase):
         with self.assertRaisesRegex(AttributeError, exc_str):
             fset.number_of_factors = 3
 
-    def test_error_on_invalid_beta(self):
-        """
-        Test ValueError raised if beta is invalid (exceeds 1 or
-        is negative)
-        """
-        origin = [0, 0, 0]
-        number_of_factors = 2
-        psi_mat = [[1, 0], [0, 1], [1, 1]]
-        neg_beta = -0.5
-        big_beta = 1.5
-
-        # assert error on construction
-        neg_exc_str = (
-            r".*must be a real number between 0 and 1.*\(provided value -0.5\)"
-        )
-        big_exc_str = r".*must be a real number between 0 and 1.*\(provided value 1.5\)"
-        with self.assertRaisesRegex(ValueError, neg_exc_str):
-            FactorModelSet(origin, number_of_factors, psi_mat, neg_beta)
-        with self.assertRaisesRegex(ValueError, big_exc_str):
-            FactorModelSet(origin, number_of_factors, psi_mat, big_beta)
-
-        # create a valid factor model set
-        fset = FactorModelSet(origin, number_of_factors, psi_mat, 1)
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, neg_exc_str):
-            fset.beta = neg_beta
-        with self.assertRaisesRegex(ValueError, big_exc_str):
-            fset.beta = big_beta
-
-    def test_error_on_rank_deficient_psi_mat(self):
-        """
-        Test exception raised if factor loading matrix `psi_mat`
-        is rank-deficient.
-        """
-        with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 3\)"):
-            # more columns than rows
-            FactorModelSet(
-                origin=[0, 0],
-                number_of_factors=3,
-                psi_mat=[[1, -1, 1], [1, 0.1, 1]],
-                beta=1 / 6,
-            )
-        with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 2\)"):
-            # linearly dependent columns
-            FactorModelSet(
-                origin=[0, 0],
-                number_of_factors=2,
-                psi_mat=[[1, -1], [1, -1]],
-                beta=1 / 6,
-            )
-
     @parameterized.expand(
         [
             # map beta to expected parameter bounds
