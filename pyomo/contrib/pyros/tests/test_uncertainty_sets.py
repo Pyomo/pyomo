@@ -987,7 +987,7 @@ class TestFactorModelSet(unittest.TestCase):
         """
         CONFIG = Bunch()
 
-        # construct a valid budget set
+        # construct a valid factor model set
         origin = [0., 0., 0.]
         number_of_factors = 2
         psi_mat = [[1, 0], [0, 1], [1, 1]]
@@ -1872,7 +1872,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         """
         CONFIG = Bunch()
 
-        # construct a valid budget set
+        # construct a valid axis aligned ellipsoidal set
         center = [0., 0.]
         half_lengths = [1., 3.]
         a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
@@ -2280,6 +2280,70 @@ class TestEllipsoidalSet(unittest.TestCase):
         )
         self.assertEqual(m.uncertain_param_vars[0].bounds, (0.5, 1.5))
         self.assertEqual(m.uncertain_param_vars[1].bounds, (1, 2))
+
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid ellipsoidal set
+        center = [0., 0.]
+        shape_matrix = [[1., 0.], [0., 2.]]
+        scale = 1
+        ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
+
+        # validate raises no issues on valid set
+        ellipsoid_set.validate(config=CONFIG)
+
+        # check when values are not finite
+        ellipsoid_set.center[0] = np.nan
+        exc_str = r"Center is not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            ellipsoid_set.validate(config=CONFIG)
+        ellipsoid_set.center[0] = 0
+
+        # check when scale is not positive
+        ellipsoid_set.scale = -1
+        exc_str = r".*must be a non-negative real \(provided.*-1\)"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            ellipsoid_set.validate(config=CONFIG)
+
+        # check when shape matrix is invalid
+        center = [0, 0]
+        scale = 3
+
+        # assert error on construction
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Shape matrix must be symmetric",
+            msg="Asymmetric shape matrix test failed",
+        ):
+            ellipsoid_set = EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
+            ellipsoid_set.validate(config=CONFIG)
+        with self.assertRaises(
+            np.linalg.LinAlgError, msg="Singular shape matrix test failed"
+        ):
+            ellipsoid_set = EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
+            ellipsoid_set.validate(config=CONFIG)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Non positive-definite.*",
+            msg="Indefinite shape matrix test failed",
+        ):
+            ellipsoid_set = EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
+            ellipsoid_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        center = [0., 0.]
+        shape_matrix = [[1., 0.], [0., 2.]]
+        scale = 1
+        ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
+        bounded_and_nonempty_check(self, ellipsoid_set),
 
 
 class TestPolyhedralSet(unittest.TestCase):
