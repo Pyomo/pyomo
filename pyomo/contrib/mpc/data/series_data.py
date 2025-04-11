@@ -15,7 +15,10 @@ from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
 from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable, _DynamicDataBase
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
-
+from pyomo.contrib.mpc.data.interpolation import (
+    get_time_index_vec,
+    get_interp_expr_vec,
+)
 
 TimeSeriesTuple = namedtuple("TimeSeriesTuple", ["data", "time"])
 
@@ -104,7 +107,7 @@ class TimeSeriesData(_DynamicDataBase):
                 {cuid: values[indices] for cuid, values in self._data.items()}
             )
 
-    def get_data_at_time(self, time=None, tolerance=0.0):
+    def get_data_at_time(self, time=None, tolerance=0.0, interpolate=False):
         """
         Returns the data associated with the provided time point or points.
         This function attempts to map time points to indices, then uses
@@ -134,6 +137,20 @@ class TimeSeriesData(_DynamicDataBase):
             # return self.
             return self
         is_iterable = _is_iterable(time)
+        if interpolate:
+            if not is_iterable:
+                time=[time]
+            idxs = get_time_index_vec(time, self._time)
+            data = {}
+            for cuid in self._data:
+                v = get_interp_expr_vec(time, self._time, self._data[cuid], idxs)
+                data[cuid] = v
+            if is_iterable:
+                return TimeSeriesData(data, list(time))
+            else:
+                for cuid in self._data:
+                    data[cuid] = data[cuid][0]
+                return ScalarData(data)
         time_iter = iter(time) if is_iterable else (time,)
         indices = []
         # Allocate indices list dynamically to support a general iterator
