@@ -2827,7 +2827,6 @@ class EllipsoidalSet(UncertaintySet):
                     f"(provided matrix with shape {shape_mat_arr.shape})"
                 )
 
-        self._verify_positive_definite(shape_mat_arr)
         self._shape_matrix = shape_mat_arr
 
     @property
@@ -2842,12 +2841,6 @@ class EllipsoidalSet(UncertaintySet):
     @scale.setter
     def scale(self, val):
         validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
-        if val < 0:
-            raise ValueError(
-                f"{type(self).__name__} attribute "
-                f"'scale' must be a non-negative real "
-                f"(provided value {val})"
-            )
 
         self._scale = val
         self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
@@ -2966,6 +2959,38 @@ class EllipsoidalSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check EllipsoidalSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, positive semi-definite, or
+            positive scale checks fail.
+        """
+        ctr = self.center
+        shape_mat_arr = self.shape_matrix
+        scale = self.scale
+
+        # finiteness check
+        if not np.all(np.isfinite(ctr)):
+            raise ValueError(
+                "Center is not finite. "
+                f"Got center: {ctr}"
+            )
+
+        # check shape matrix is positive semidefinite
+        self._verify_positive_definite(shape_mat_arr)
+
+        # ensure scale is non-negative
+        if scale < 0:
+            raise ValueError(
+                f"{type(self).__name__} attribute "
+                f"'scale' must be a non-negative real "
+                f"(provided value {scale})"
+            )
 
 
 class DiscreteScenarioSet(UncertaintySet):
