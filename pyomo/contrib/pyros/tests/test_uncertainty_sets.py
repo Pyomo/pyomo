@@ -683,6 +683,78 @@ class TestBudgetSet(unittest.TestCase):
         self.assertEqual(m.v[0].bounds, (1, 3))
         self.assertEqual(m.v[1].bounds, (3, 5))
 
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid budget set
+        budget_mat = [[1., 0., 1.], [0., 1., 0.]]
+        budget_rhs_vec = [1., 3.]
+        budget_set = BudgetSet(budget_mat, budget_rhs_vec)
+
+        # validate raises no issues on valid set
+        budget_set.validate(config=CONFIG)
+
+        # check when bounds are not finite
+        budget_set.origin[0] = np.nan
+        exc_str = r"Origin, LHS coefficient matrix or RHS vector are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+        budget_set.origin[0] = 0
+
+        budget_set.budget_rhs_vec[0] = np.nan
+        exc_str = r"Origin, LHS coefficient matrix or RHS vector are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+        budget_set.budget_rhs_vec[0] = 1
+
+        budget_set.budget_membership_mat[0][0] = np.nan
+        exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+        budget_set.budget_membership_mat[0][0] = 1
+
+        # check when rhs has negative element
+        budget_set.budget_rhs_vec = [1, -1]
+        exc_str = r"Entry -1 of.*'budget_rhs_vec' is negative*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+        budget_set.budget_rhs_vec = budget_rhs_vec
+
+        # check when not all lhs entries are 0-1
+        budget_set.budget_membership_mat = [[1, 0, 1], [1, 1, 0.1]]
+        exc_str = r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+        budget_set.budget_membership_mat = budget_mat
+
+        # check when row has all zeros
+        invalid_row_mat = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
+        budget_rhs_vec = [1, 1, 2]
+        budget_set = BudgetSet(invalid_row_mat, budget_rhs_vec)
+        exc_str = r".*all entries zero in rows at indexes: 0, 2.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+
+        # check when column has all zeros
+        budget_set.budget_membership_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        budget_set.budget_rhs_vec = [1, 1, 2]
+        exc_str = r".*all entries zero in columns at indexes: 0, 1.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            budget_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        budget_mat = [[1., 0., 1.], [0., 1., 0.]]
+        budget_rhs_vec = [1., 3.]
+        budget_set = BudgetSet(budget_mat, budget_rhs_vec)
+        bounded_and_nonempty_check(self, budget_set),
+
 
 class TestFactorModelSet(unittest.TestCase):
     """
@@ -2484,8 +2556,11 @@ class TestPolyhedralSet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
-        cardinality_set = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
-        bounded_and_nonempty_check(self, cardinality_set),
+        polyhedral_set = PolyhedralSet(
+            lhs_coefficients_mat=[[1., 0.], [-1., 1.], [-1., -1.]],
+            rhs_vec=[2., -1., -1.]
+        )
+        bounded_and_nonempty_check(self, polyhedral_set),
 
 
 class CustomUncertaintySet(UncertaintySet):
