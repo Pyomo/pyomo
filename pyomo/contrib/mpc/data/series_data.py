@@ -139,7 +139,7 @@ class TimeSeriesData(_DynamicDataBase):
         is_iterable = _is_iterable(time)
         if interpolate:
             if not is_iterable:
-                time=[time]
+                time = [time]
             idxs = get_time_index_vec(time, self._time)
             data = {}
             for cuid in self._data:

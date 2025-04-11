@@ -13,8 +13,8 @@ from pyomo.common.dependencies import numpy as np
 
 
 def get_time_index_vec(time_set, time_data):
-    """Get the position index of time_data above and below the times in 
-    time_set. This can be used to find positions of points to interpolate 
+    """Get the position index of time_data above and below the times in
+    time_set. This can be used to find positions of points to interpolate
     between.
 
     Parameters
@@ -27,7 +27,7 @@ def get_time_index_vec(time_set, time_data):
     Returns
     -------
     numpy.array
-        Position index of the first time in time_data greater than the 
+        Position index of the first time in time_data greater than the
         corresponding points time_set. If a time is less than all the times
         in time_data return 1. If a time is greater than all times time_data
         set return the last index of time_data.
@@ -39,7 +39,7 @@ def get_time_index_vec(time_set, time_data):
 
 
 def get_interp_expr_vec(time_set, time_data, data, indexes=None):
-    """Depending of the data types contained in data, return a list of 
+    """Depending of the data types contained in data, return a list of
     Pyomo expression or float interpolated data at times in time_set.
 
     Parameters
@@ -60,12 +60,9 @@ def get_interp_expr_vec(time_set, time_data, data, indexes=None):
     """
     if indexes is None:
         indexes = get_surround_time_vec(time_set, time_data)
-    expr = [None]*len(time_set)
+    expr = [None] * len(time_set)
     for i, (l, h, t) in enumerate(zip(indexes - 1, indexes, time_set)):
-        expr[i] = (
-            data[l] 
-            + (data[h] - data[l]) 
-            / (time_data[h] - time_data[l]) 
-            * (t - time_data[l])
+        expr[i] = data[l] + (data[h] - data[l]) / (time_data[h] - time_data[l]) * (
+            t - time_data[l]
         )
     return expr
