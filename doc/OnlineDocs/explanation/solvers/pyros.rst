@@ -959,7 +959,6 @@ Observe that the log contains the following information:
 .. _solver-log-snippet:
 
 .. code-block:: text
-
    :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
    :linenos:
 
