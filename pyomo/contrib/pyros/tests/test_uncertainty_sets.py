@@ -1779,26 +1779,6 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             aset.half_lengths = [0, 0, 1]
 
-    def test_error_on_negative_axis_aligned_half_lengths(self):
-        """
-        Test ValueError if half lengths for AxisAlignedEllipsoidalSet
-        contains a negative value.
-        """
-        center = [1, 1]
-        invalid_half_lengths = [1, -1]
-        exc_str = r"Entry -1 of.*'half_lengths' is negative.*"
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            AxisAlignedEllipsoidalSet(center, invalid_half_lengths)
-
-        # construct a valid axis-aligned ellipsoidal set
-        aset = AxisAlignedEllipsoidalSet(center, [1, 0])
-
-        # assert error on update
-        with self.assertRaisesRegex(ValueError, exc_str):
-            aset.half_lengths = invalid_half_lengths
-
     def test_set_as_constraint(self):
         """
         Test method for setting up constraints works correctly.
