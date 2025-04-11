@@ -1886,6 +1886,49 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         self.assertEqual(m.uncertain_param_vars[1].bounds, (-0.5, 3.5))
         self.assertEqual(m.uncertain_param_vars[2].bounds, (1, 1))
 
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid budget set
+        center = [0., 0.]
+        half_lengths = [1., 3.]
+        a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
+
+        # validate raises no issues on valid set
+        a_ellipsoid_set.validate(config=CONFIG)
+
+        # check when values are not finite
+        a_ellipsoid_set.center[0] = np.nan
+        exc_str = r"Center or half-lengths are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            a_ellipsoid_set.validate(config=CONFIG)
+        a_ellipsoid_set.center[0] = 0
+
+        a_ellipsoid_set.half_lengths[0] = np.nan
+        exc_str = r"Center or half-lengths are not finite. .*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            a_ellipsoid_set.validate(config=CONFIG)
+        a_ellipsoid_set.half_lengths[0] = 1
+
+        # check when half lengths are negative
+        a_ellipsoid_set.half_lengths = [1, -1]
+        exc_str = r"Entry -1 of.*'half_lengths' is negative.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            a_ellipsoid_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        center = [0., 0.]
+        half_lengths = [1., 3.]
+        a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
+        bounded_and_nonempty_check(self, a_ellipsoid_set),
+
 
 class TestEllipsoidalSet(unittest.TestCase):
     """
