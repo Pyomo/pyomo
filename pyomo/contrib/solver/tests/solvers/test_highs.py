@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 from pyomo.contrib.solver.solvers.highs import Highs
 
@@ -21,16 +21,16 @@ if not opt.available():
 
 class TestBugs(unittest.TestCase):
     def test_mutable_params_with_remove_cons(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var(bounds=(-10, 10))
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(-10, 10))
+        m.y = pyo.Var()
 
-        m.p1 = pe.Param(mutable=True)
-        m.p2 = pe.Param(mutable=True)
+        m.p1 = pyo.Param(mutable=True)
+        m.p2 = pyo.Param(mutable=True)
 
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x + m.p1)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x + m.p2)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x + m.p1)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x + m.p2)
 
         m.p1.value = 1
         m.p2.value = 1
@@ -45,19 +45,19 @@ class TestBugs(unittest.TestCase):
         self.assertAlmostEqual(res.objective_bound, -8)
 
     def test_mutable_params_with_remove_vars(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
 
-        m.p1 = pe.Param(mutable=True)
-        m.p2 = pe.Param(mutable=True)
+        m.p1 = pyo.Param(mutable=True)
+        m.p2 = pyo.Param(mutable=True)
 
         m.y.setlb(m.p1)
         m.y.setub(m.p2)
 
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= m.x + 1)
-        m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
+        m.obj = pyo.Objective(expr=m.y)
+        m.c1 = pyo.Constraint(expr=m.y >= m.x + 1)
+        m.c2 = pyo.Constraint(expr=m.y >= -m.x + 1)
 
         m.p1.value = -10
         m.p2.value = 10
@@ -76,16 +76,16 @@ class TestBugs(unittest.TestCase):
     def test_fix_and_unfix(self):
         # Tests issue https://github.com/Pyomo/pyomo/issues/3127
 
-        m = pe.ConcreteModel()
-        m.x = pe.Var(domain=pe.Binary)
-        m.y = pe.Var(domain=pe.Binary)
-        m.fx = pe.Var(domain=pe.NonNegativeReals)
-        m.fy = pe.Var(domain=pe.NonNegativeReals)
-        m.c1 = pe.Constraint(expr=m.fx <= m.x)
-        m.c2 = pe.Constraint(expr=m.fy <= m.y)
-        m.c3 = pe.Constraint(expr=m.x + m.y <= 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(domain=pyo.Binary)
+        m.y = pyo.Var(domain=pyo.Binary)
+        m.fx = pyo.Var(domain=pyo.NonNegativeReals)
+        m.fy = pyo.Var(domain=pyo.NonNegativeReals)
+        m.c1 = pyo.Constraint(expr=m.fx <= m.x)
+        m.c2 = pyo.Constraint(expr=m.fy <= m.y)
+        m.c3 = pyo.Constraint(expr=m.x + m.y <= 1)
 
-        m.obj = pe.Objective(expr=m.fx * 0.5 + m.fy * 0.4, sense=pe.maximize)
+        m.obj = pyo.Objective(expr=m.fx * 0.5 + m.fy * 0.4, sense=pyo.maximize)
 
         opt = Highs()
 
@@ -112,16 +112,16 @@ class TestBugs(unittest.TestCase):
 
     def test_qp1(self):
         # test issue #3381
-        m = pe.ConcreteModel()
+        m = pyo.ConcreteModel()
 
-        m.x1 = pe.Var(name='x1', domain=pe.Reals)
-        m.x2 = pe.Var(name='x2', domain=pe.Reals)
+        m.x1 = pyo.Var(name='x1', domain=pyo.Reals)
+        m.x2 = pyo.Var(name='x2', domain=pyo.Reals)
 
         # Quadratic Objective function
-        m.obj = pe.Objective(expr=m.x1 * m.x1 + m.x2 * m.x2, sense=pe.minimize)
+        m.obj = pyo.Objective(expr=m.x1 * m.x1 + m.x2 * m.x2, sense=pyo.minimize)
 
-        m.con1 = pe.Constraint(expr=m.x1 >= 1)
-        m.con2 = pe.Constraint(expr=m.x2 >= 1)
+        m.con1 = pyo.Constraint(expr=m.x1 >= 1)
+        m.con2 = pyo.Constraint(expr=m.x2 >= 1)
 
         results = opt.solve(m)
         self.assertAlmostEqual(m.x1.value, 1, places=5)
@@ -130,19 +130,19 @@ class TestBugs(unittest.TestCase):
 
     def test_qp2(self):
         # test issue #3381
-        m = pe.ConcreteModel()
+        m = pyo.ConcreteModel()
 
-        m.x1 = pe.Var(name='x1', domain=pe.Reals)
-        m.x2 = pe.Var(name='x2', domain=pe.Reals)
+        m.x1 = pyo.Var(name='x1', domain=pyo.Reals)
+        m.x2 = pyo.Var(name='x2', domain=pyo.Reals)
 
-        m.p = pe.Param(initialize=1, mutable=True)
+        m.p = pyo.Param(initialize=1, mutable=True)
 
-        m.obj = pe.Objective(
-            expr=m.p * m.x1 * m.x1 + m.x2 * m.x2 - m.x1 * m.x2, sense=pe.minimize
+        m.obj = pyo.Objective(
+            expr=m.p * m.x1 * m.x1 + m.x2 * m.x2 - m.x1 * m.x2, sense=pyo.minimize
         )
 
-        m.con1 = pe.Constraint(expr=m.x1 >= 1)
-        m.con2 = pe.Constraint(expr=m.x2 >= 1)
+        m.con1 = pyo.Constraint(expr=m.x1 >= 1)
+        m.con2 = pyo.Constraint(expr=m.x2 >= 1)
 
         opt.set_instance(m)
         results = opt.solve(m)
