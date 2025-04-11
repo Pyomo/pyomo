@@ -2208,16 +2208,6 @@ class FactorModelSet(UncertaintySet):
                 f"(provided shape {psi_mat_arr.shape})"
             )
 
-        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
-        is_full_column_rank = psi_mat_rank == self.number_of_factors
-        if not is_full_column_rank:
-            raise ValueError(
-                "Attribute 'psi_mat' should be full column rank. "
-                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
-                "Ensure `psi_mat` does not have more columns than rows, "
-                "and the columns of `psi_mat` are linearly independent."
-            )
-
         self._psi_mat = psi_mat_arr
 
     @property
@@ -2237,12 +2227,6 @@ class FactorModelSet(UncertaintySet):
 
     @beta.setter
     def beta(self, val):
-        if val > 1 or val < 0:
-            raise ValueError(
-                "Beta parameter must be a real number between 0 "
-                f"and 1 inclusive (provided value {val})"
-            )
-
         self._beta = val
 
     @property
@@ -2392,6 +2376,45 @@ class FactorModelSet(UncertaintySet):
         ) <= self.beta * self.number_of_factors + tol and np.all(
             np.abs(aux_space_pt) <= 1 + tol
         )
+
+    def validate(self, config):
+        """
+        Check FactorModelSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness full column rank of Psi matrix, or
+            beta between 0 and 1 checks fail.
+        """
+        orig_val = self.origin
+        psi_mat_arr = self.psi_mat
+        beta = self.beta
+
+        # finiteness check
+        if not np.all(np.isfinite(orig_val)):
+            raise ValueError(
+                "Origin is not finite. "
+                f"Got origin: {orig_val}"
+            )
+
+        # check psi is full column rank
+        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
+        check_full_column_rank = psi_mat_rank == self.number_of_factors
+        if not check_full_column_rank:
+            raise ValueError(
+                "Attribute 'psi_mat' should be full column rank. "
+                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
+                "Ensure `psi_mat` does not have more columns than rows, "
+                "and the columns of `psi_mat` are linearly independent."
+            )
+
+        # check beta is between 0 and 1
+        if beta > 1 or beta < 0:
+            raise ValueError(
+                "Beta parameter must be a real number between 0 "
+                f"and 1 inclusive (provided value {beta})"
+            )
 
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
