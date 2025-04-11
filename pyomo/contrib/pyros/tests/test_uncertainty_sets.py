@@ -83,16 +83,10 @@ def bounded_and_nonempty_check(test, unc_set):
     CONFIG.global_solver = global_solver
 
     # check is_bounded
-    test.assertTrue(
-        unc_set.is_bounded(config=CONFIG),
-        "Set is not bounded."
-    )
+    test.assertTrue(unc_set.is_bounded(config=CONFIG), "Set is not bounded.")
 
     # check is_nonempty
-    test.assertTrue(
-        unc_set.is_nonempty(config=CONFIG),
-        "Set is empty."
-    )
+    test.assertTrue(unc_set.is_nonempty(config=CONFIG), "Set is empty.")
 
 
 class TestBoxSet(unittest.TestCase):
@@ -371,7 +365,7 @@ class TestBoxSet(unittest.TestCase):
         CONFIG = Bunch()
 
         # construct valid box set
-        box_set = BoxSet(bounds=[[1., 2.], [3., 4.]])
+        box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
 
         # validate raises no issues on valid set
         box_set.validate(config=CONFIG)
@@ -393,7 +387,7 @@ class TestBoxSet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid box set.
         """
-        box_set = BoxSet(bounds=[[1., 2.], [3., 4.]])
+        box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
         bounded_and_nonempty_check(self, box_set),
 
 
@@ -606,8 +600,8 @@ class TestBudgetSet(unittest.TestCase):
         CONFIG = Bunch()
 
         # construct a valid budget set
-        budget_mat = [[1., 0., 1.], [0., 1., 0.]]
-        budget_rhs_vec = [1., 3.]
+        budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
+        budget_rhs_vec = [1.0, 3.0]
         budget_set = BudgetSet(budget_mat, budget_rhs_vec)
 
         # validate raises no issues on valid set
@@ -665,8 +659,8 @@ class TestBudgetSet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
-        budget_mat = [[1., 0., 1.], [0., 1., 0.]]
-        budget_rhs_vec = [1., 3.]
+        budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
+        budget_rhs_vec = [1.0, 3.0]
         budget_set = BudgetSet(budget_mat, budget_rhs_vec)
         bounded_and_nonempty_check(self, budget_set),
 
@@ -988,7 +982,7 @@ class TestFactorModelSet(unittest.TestCase):
         CONFIG = Bunch()
 
         # construct a valid factor model set
-        origin = [0., 0., 0.]
+        origin = [0.0, 0.0, 0.0]
         number_of_factors = 2
         psi_mat = [[1, 0], [0, 1], [1, 1]]
         beta = 0.5
@@ -1043,7 +1037,7 @@ class TestFactorModelSet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
-        origin = [0., 0., 0.]
+        origin = [0.0, 0.0, 0.0]
         number_of_factors = 2
         psi_mat = [[1, 0], [0, 1], [1, 1]]
         beta = 0.5
@@ -1450,6 +1444,7 @@ class TestIntersectionSet(unittest.TestCase):
         discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
         bounded_and_nonempty_check(self, discrete_set),
 
+
 class TestCardinalitySet(unittest.TestCase):
     """
     Tests for the CardinalitySet.
@@ -1604,7 +1599,7 @@ class TestCardinalitySet(unittest.TestCase):
 
         # construct a valid cardinality set
         cardinality_set = CardinalitySet(
-            origin=[0., 0.], positive_deviation=[1., 1.], gamma=2
+            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
         )
 
         # validate raises no issues on valid set
@@ -1651,7 +1646,9 @@ class TestCardinalitySet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
-        cardinality_set = CardinalitySet(origin=[0, 0], positive_deviation=[1, 1], gamma=2)
+        cardinality_set = CardinalitySet(
+            origin=[0, 0], positive_deviation=[1, 1], gamma=2
+        )
         bounded_and_nonempty_check(self, cardinality_set),
 
 
@@ -1952,8 +1949,8 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         CONFIG = Bunch()
 
         # construct a valid axis aligned ellipsoidal set
-        center = [0., 0.]
-        half_lengths = [1., 3.]
+        center = [0.0, 0.0]
+        half_lengths = [1.0, 3.0]
         a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
 
         # validate raises no issues on valid set
@@ -1983,8 +1980,8 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
-        center = [0., 0.]
-        half_lengths = [1., 3.]
+        center = [0.0, 0.0]
+        half_lengths = [1.0, 3.0]
         a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
         bounded_and_nonempty_check(self, a_ellipsoid_set),
 
@@ -2298,8 +2295,8 @@ class TestEllipsoidalSet(unittest.TestCase):
         CONFIG = Bunch()
 
         # construct a valid ellipsoidal set
-        center = [0., 0.]
-        shape_matrix = [[1., 0.], [0., 2.]]
+        center = [0.0, 0.0]
+        shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
         scale = 1
         ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
 
@@ -2349,8 +2346,8 @@ class TestEllipsoidalSet(unittest.TestCase):
         """
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
-        center = [0., 0.]
-        shape_matrix = [[1., 0.], [0., 2.]]
+        center = [0.0, 0.0]
+        shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
         scale = 1
         ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
         bounded_and_nonempty_check(self, ellipsoid_set),
@@ -2555,8 +2552,8 @@ class TestPolyhedralSet(unittest.TestCase):
 
         # construct a valid polyhedral set
         polyhedral_set = PolyhedralSet(
-            lhs_coefficients_mat=[[1., 0.], [-1., 1.], [-1., -1.]],
-            rhs_vec=[2., -1., -1.]
+            lhs_coefficients_mat=[[1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]],
+            rhs_vec=[2.0, -1.0, -1.0],
         )
 
         # validate raises no issues on valid set
@@ -2575,7 +2572,7 @@ class TestPolyhedralSet(unittest.TestCase):
             polyhedral_set.validate(config=CONFIG)
 
         # check when LHS matrix is not full column rank
-        polyhedral_set.coefficients_mat = [[0., 0.], [0., 1.], [0., -1.]]
+        polyhedral_set.coefficients_mat = [[0.0, 0.0], [0.0, 1.0], [0.0, -1.0]]
         exc_str = r".*all entries zero in columns at indexes: 0.*"
         with self.assertRaisesRegex(ValueError, exc_str):
             polyhedral_set.validate(config=CONFIG)
@@ -2586,8 +2583,8 @@ class TestPolyhedralSet(unittest.TestCase):
         Test `is_bounded` and `is_nonempty` for a valid cardinality set.
         """
         polyhedral_set = PolyhedralSet(
-            lhs_coefficients_mat=[[1., 0.], [-1., 1.], [-1., -1.]],
-            rhs_vec=[2., -1., -1.]
+            lhs_coefficients_mat=[[1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]],
+            rhs_vec=[2.0, -1.0, -1.0],
         )
         bounded_and_nonempty_check(self, polyhedral_set),
 
@@ -2688,7 +2685,6 @@ class TestCustomUncertaintySet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             custom_set._solve_feasibility(baron)
 
-
     # test default is_bounded
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_bounded(self):
@@ -2714,8 +2710,11 @@ class TestCustomUncertaintySet(unittest.TestCase):
 
         # check with parameter_bounds should always take less time than solving 2N
         # optimization problems
-        self.assertLess(time_with_bounds_provided, time_without_bounds_provided,
-                        "Boundedness check with provided parameter_bounds took longer than expected.")
+        self.assertLess(
+            time_with_bounds_provided,
+            time_without_bounds_provided,
+            "Boundedness check with provided parameter_bounds took longer than expected.",
+        )
 
         # when bad bounds are provided
         for val_str in ["inf", "nan"]:
@@ -2742,7 +2741,9 @@ class TestCustomUncertaintySet(unittest.TestCase):
 
         # check when nominal point is not in set
         CONFIG.nominal_uncertain_param_vals = [-2, -2]
-        self.assertFalse(custom_set.is_nonempty(config=CONFIG), "Nominal point is in set")
+        self.assertFalse(
+            custom_set.is_nonempty(config=CONFIG), "Nominal point is in set"
+        )
 
         # check when feasibility problem fails
         CONFIG.nominal_uncertain_param_vals = None

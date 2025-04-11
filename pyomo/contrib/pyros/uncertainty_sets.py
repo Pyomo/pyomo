@@ -36,7 +36,7 @@ from pyomo.core.base import (
     minimize,
     Var,
     VarData,
-    NonNegativeReals
+    NonNegativeReals,
 )
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
@@ -640,15 +640,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         if not check_nonempty:
             raise ValueError(
-                    "Failed nonemptiness check. Nominal point is not in the set. "
-                    f"Nominal point:\n {config.nominal_uncertain_param_vals}."
-                )
+                "Failed nonemptiness check. Nominal point is not in the set. "
+                f"Nominal point:\n {config.nominal_uncertain_param_vals}."
+            )
 
         if not check_bounded:
             raise ValueError(
-                    "Failed boundedness check. Parameter bounds are not finite. "
-                    f"Parameter bounds:\n {self.parameter_bounds}."
-                )
+                "Failed boundedness check. Parameter bounds are not finite. "
+                f"Parameter bounds:\n {self.parameter_bounds}."
+            )
 
     @abc.abstractmethod
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -790,9 +790,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         model.param_vars = Var(range(self.dim))
 
         # add bounds on param vars
-        self._add_bounds_on_uncertain_parameters(
-            model.param_vars, global_solver=solver
-        )
+        self._add_bounds_on_uncertain_parameters(model.param_vars, global_solver=solver)
 
         # add constraints
         self.set_as_constraint(uncertain_params=model.param_vars, block=model)
@@ -1205,8 +1203,7 @@ class BoxSet(UncertaintySet):
         # finiteness check
         if not np.all(np.isfinite(bounds_arr)):
             raise ValueError(
-                "Not all bounds are finite. "
-                f"\nGot bounds:\n {bounds_arr}"
+                "Not all bounds are finite. " f"\nGot bounds:\n {bounds_arr}"
             )
 
         # check LB <= UB
@@ -1703,7 +1700,6 @@ class PolyhedralSet(UncertaintySet):
             auxiliary_vars=aux_var_list,
         )
 
-
     def validate(self, config):
         """
         Check PolyhedralSet validity.
@@ -1718,7 +1714,9 @@ class PolyhedralSet(UncertaintySet):
         rhs_vec_arr = self.rhs_vec
 
         # finiteness check
-        if not (np.all(np.isfinite(lhs_coeffs_arr)) and np.all(np.isfinite(rhs_vec_arr))):
+        if not (
+            np.all(np.isfinite(lhs_coeffs_arr)) and np.all(np.isfinite(rhs_vec_arr))
+        ):
             raise ValueError(
                 "LHS coefficient matrix or RHS vector are not finite. "
                 f"\nGot LHS matrix:\n{lhs_coeffs_arr},\nRHS vector:\n{rhs_vec_arr}"
@@ -1999,9 +1997,9 @@ class BudgetSet(UncertaintySet):
 
         # finiteness check
         if not (
-                np.all(np.isfinite(lhs_coeffs_arr))
-                and np.all(np.isfinite(rhs_vec_arr))
-                and np.all(np.isfinite(orig_val))
+            np.all(np.isfinite(lhs_coeffs_arr))
+            and np.all(np.isfinite(rhs_vec_arr))
+            and np.all(np.isfinite(orig_val))
         ):
             raise ValueError(
                 "Origin, LHS coefficient matrix or RHS vector are not finite. "
@@ -2393,10 +2391,7 @@ class FactorModelSet(UncertaintySet):
 
         # finiteness check
         if not np.all(np.isfinite(orig_val)):
-            raise ValueError(
-                "Origin is not finite. "
-                f"Got origin: {orig_val}"
-            )
+            raise ValueError("Origin is not finite. " f"Got origin: {orig_val}")
 
         # check psi is full column rank
         psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
@@ -2598,10 +2593,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         half_lengths = self.half_lengths
 
         # finiteness check
-        if not (
-                np.all(np.isfinite(ctr))
-                and np.all(np.isfinite(half_lengths))
-        ):
+        if not (np.all(np.isfinite(ctr)) and np.all(np.isfinite(half_lengths))):
             raise ValueError(
                 "Center or half-lengths are not finite. "
                 f"Got center: {ctr}, half-lengths: {half_lengths}"
@@ -2976,10 +2968,7 @@ class EllipsoidalSet(UncertaintySet):
 
         # finiteness check
         if not np.all(np.isfinite(ctr)):
-            raise ValueError(
-                "Center is not finite. "
-                f"Got center: {ctr}"
-            )
+            raise ValueError("Center is not finite. " f"Got center: {ctr}")
 
         # check shape matrix is positive semidefinite
         self._verify_positive_definite(shape_mat_arr)
@@ -3172,16 +3161,14 @@ class DiscreteScenarioSet(UncertaintySet):
         # check nonemptiness
         if len(scenario_arr) < 1:
             raise ValueError(
-                "Scenarios set must be nonempty. "
-                f"Got scenarios: {scenario_arr}"
+                "Scenarios set must be nonempty. " f"Got scenarios: {scenario_arr}"
             )
 
         # check finiteness
         for scenario in scenario_arr:
             if not np.all(np.isfinite(scenario)):
                 raise ValueError(
-                    "Not all scenarios are finite. "
-                    f"Got scenario: {scenario}"
+                    "Not all scenarios are finite. " f"Got scenario: {scenario}"
                 )
 
 
