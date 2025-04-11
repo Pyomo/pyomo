@@ -1409,6 +1409,46 @@ class TestIntersectionSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, ".*to match the set dimension.*"):
             iset.point_in_set([1, 2, 3])
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_validate(self):
+        """
+        Test validate checks perform as expected.
+        """
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # construct a valid intersection set
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+        intersection_set = IntersectionSet(box_set=bset, axis_aligned_set=aset)
+
+        # validate raises no issues on valid set
+        intersection_set.validate(config=CONFIG)
+
+        # check when individual sets fail validation method
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
+        bset.bounds[0][0] = 2
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+        intersection_set = IntersectionSet(box_set=bset, axis_aligned_set=aset)
+        exc_str = r"Lower bound 2 exceeds upper bound 1"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            intersection_set.validate(config=CONFIG)
+
+        # check when individual sets are not actually intersecting
+        bset1 = BoxSet(bounds=[[1, 2], [1, 2]])
+        bset2 = BoxSet(bounds=[[-2, -1], [-2, -1]])
+        intersection_set = IntersectionSet(box_set1=bset1, box_set2=bset2)
+        exc_str = r"Could not compute.*bound in dimension.*Solver status summary:.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            intersection_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_bounded_and_nonempty(self):
+        """
+        Test `is_bounded` and `is_nonempty` for a valid cardinality set.
+        """
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+        bounded_and_nonempty_check(self, discrete_set),
 
 class TestCardinalitySet(unittest.TestCase):
     """

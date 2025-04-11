@@ -3370,3 +3370,21 @@ class IntersectionSet(UncertaintySet):
             uncertainty_cons=all_cons,
             auxiliary_vars=all_aux_vars,
         )
+
+    def validate(self, config):
+        """
+        Check IntersectionSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or nonemptiness checks fail.
+        """
+        the_sets = self.all_sets
+
+        # validate each set
+        for a_set in the_sets:
+            a_set.validate(config)
+
+        # check boundedness and nonemptiness of intersected set
+        super().validate(config)
