@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,7 +11,7 @@
 
 # ex2.py
 import pyomo.environ as pyo
-from pyomo.mpec import *
+from pyomo.mpec import Complementarity, complements
 
 
 model = pyo.ConcreteModel()

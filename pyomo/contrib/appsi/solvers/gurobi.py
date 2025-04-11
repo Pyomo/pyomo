@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1377,15 +1377,15 @@ class Gurobi(PersistentBase, PersistentSolver):
             as an MILP using extended cutting planes in callbacks.
 
                 >>> from gurobipy import GRB # doctest:+SKIP
-                >>> import pyomo.environ as pe
+                >>> import pyomo.environ as pyo
                 >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
                 >>> from pyomo.contrib import appsi
                 >>>
-                >>> m = pe.ConcreteModel()
-                >>> m.x = pe.Var(bounds=(0, 4))
-                >>> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-                >>> m.obj = pe.Objective(expr=2*m.x + m.y)
-                >>> m.cons = pe.ConstraintList()  # for the cutting planes
+                >>> m = pyo.ConcreteModel()
+                >>> m.x = pyo.Var(bounds=(0, 4))
+                >>> m.y = pyo.Var(within=pyo.Integers, bounds=(0, None))
+                >>> m.obj = pyo.Objective(expr=2*m.x + m.y)
+                >>> m.cons = pyo.ConstraintList()  # for the cutting planes
                 >>>
                 >>> def _add_cut(xval):
                 ...     # a function to generate the cut

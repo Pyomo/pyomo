@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -128,8 +128,7 @@ class ExternalFunction(Component):
         **ASL function libraries** (:class:`AMPLExternalFunction` interface)
 
         Pyomo can also call functions compiled as part of an AMPL
-        External Function library (see the `User-defined functions
-        <https://www.ampl.com/REFS/HOOKING/#userdefinedfuncs>`_ section
+        External Function library (see the `Imported functions` section
         in the `Hooking your solver to AMPL
         <https://www.ampl.com/REFS/hooking3.pdf>`_ report).  Links to
         these functions are declared by creating an

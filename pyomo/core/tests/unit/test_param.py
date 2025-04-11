@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -1624,6 +1624,24 @@ q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
             "      a :     3\n"
             "     bb :     4\n",
         )
+
+    def test_invalid_exception_argument(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=7, mutable=True)
+        m.indexed = Param([1, 2], initialize={1: 3, 2: 4}, mutable=True)
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Param 'p' was called with a non-bool argument for 'exception': "
+            r"p \+ 2",
+        ):
+            m.p(m.p + 2)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Param 'indexed\[1\]' was called with a non-bool argument for "
+            r"'exception': 3.2",
+        ):
+            m.indexed[1](3.2)
 
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):

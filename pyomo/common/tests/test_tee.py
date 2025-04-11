@@ -2,7 +2,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,6 +12,7 @@
 
 import gc
 import itertools
+import logging
 import os
 import platform
 import time
@@ -19,7 +20,7 @@ import sys
 
 from io import StringIO, BytesIO
 
-from pyomo.common.log import LoggingIntercept
+from pyomo.common.log import LoggingIntercept, LogStream
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.tee as tee
@@ -35,7 +36,10 @@ class timestamper:
 
     def write(self, data):
         for line in data.splitlines():
-            self.buf.append((time.time(), float(line.strip())))
+            line = line.strip()
+            if not line:
+                continue
+            self.buf.append((time.time(), float(line)))
 
     def writelines(self, data):
         for line in data:
@@ -94,6 +98,28 @@ class TestTeeStream(unittest.TestCase):
             err = t.STDERR
             self.assertIs(err, t.STDERR)
             self.assertIsNot(out, err)
+
+    def test_signal_flush(self):
+        a = StringIO()
+        with tee.TeeStream(a) as t:
+            out = t.STDOUT
+            self.assertIs(type(out), tee._SignalFlush)
+            out.write("out1\n")
+            out.writelines(["out2\n", "out3\n"])
+        self.assertEqual(a.getvalue(), "out1\nout2\nout3\n")
+        with tee.TeeStream(a) as t:
+            err = t.STDERR
+            self.assertIs(type(err), tee._AutoFlush)
+            err.write("err1\n")
+            err.writelines(["err2\n", "err3\n"])
+        self.assertEqual(a.getvalue(), "out1\nout2\nout3\nerr1\nerr2\nerr3\n")
+        # Note: 'is not writable' appears to work for all platforms
+        # except PyPy, where the exception is "readonly attribute
+        # 'name'"
+        with self.assertRaisesRegex(
+            AttributeError, '.*(is not writable)|(readonly attribute)'
+        ):
+            tee.TeeStream().STDOUT.name = 'foo'
 
     @unittest.skipIf(
         not tee._peek_available,
@@ -216,11 +242,63 @@ class TestTeeStream(unittest.TestCase):
             with tee.TeeStream(out) as t:
                 out.close()
                 t.STDOUT.write("hi\n")
+        _id = hex(id(out))
         self.assertRegex(
             log.getvalue(),
-            r"^Output stream \(<.*?>\) closed before all output was written "
-            r"to it. The following was left in the output buffer:\n\t'hi\\n'\n$",
+            f"Error writing to output stream <_?io.StringIO @ {_id}>:"
+            r"\n.*\nOutput stream closed before all output was written to it.\n"
+            r"The following was left in the output buffer:\n    'hi\\n'\n$",
         )
+
+        # TeeStream expects stream-like objects
+        out = logging.getLogger()
+        log = StringIO()
+        with LoggingIntercept(log):
+            with tee.TeeStream(out) as t:
+                t.STDOUT.write("hi\n")
+        _id = hex(id(out))
+        self.assertRegex(
+            log.getvalue(),
+            f"Error writing to output stream <logging.RootLogger @ {_id}>:"
+            r"\n.*\nIs this a writeable TextIOBase object\?\n"
+            r"The following was left in the output buffer:\n    'hi\\n'\n$",
+        )
+
+        # Catch partial writes
+        class fake_stream:
+            def write(self, data):
+                return 1
+
+        out = fake_stream()
+        log = StringIO()
+        with LoggingIntercept(log):
+            with tee.TeeStream(out) as t:
+                t.STDOUT.write("hi\n")
+        _id = hex(id(out))
+        self.assertRegex(
+            log.getvalue(),
+            f"Incomplete write to output stream <.*fake_stream @ {_id}>."
+            r"\nThe following was left in the output buffer:\n    'i\\n'\n$",
+        )
+
+
+class TestCapture(unittest.TestCase):
+    def setUp(self):
+        self.streams = sys.stdout, sys.stderr
+        self.reenable_gc = gc.isenabled()
+        gc.disable()
+        gc.collect()
+        # Set a short switch interval so that the threading tests behave
+        # as expected
+        self.switchinterval = sys.getswitchinterval()
+        sys.setswitchinterval(tee._poll_interval / 100)
+
+    def tearDown(self):
+        sys.stdout, sys.stderr = self.streams
+        sys.setswitchinterval(self.switchinterval)
+        if self.reenable_gc:
+            gc.enable()
+            gc.collect()
 
     def test_capture_output(self):
         out = StringIO()
@@ -250,10 +328,203 @@ class TestTeeStream(unittest.TestCase):
                 result = f.read()
             self.assertEqual('HELLO WORLD\n', result)
 
+        # Check that an exception when entering the context will cleanly
+        # unroll the context stack
+        logfile = os.path.join('path', 'to', 'nonexisting', 'file.txt')
+        T = tee.capture_output(logfile)
+        with self.assertRaises(FileNotFoundError):
+            T.__enter__()
+        self.assertEqual(T.context_stack, [])
+
+    def test_capture_to_logger(self):
+        logger = logging.getLogger('_pyomo_no_logger')
+        lstream = LogStream(logging.WARNING, logger)
+        orig = logger.propagate, logger.handlers
+        try:
+            logger.propagate = False
+            logger.handlers = []
+            with LoggingIntercept(module='_pyomo_no_logger') as LOG:
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi!\n")
+                    sys.stderr.flush()
+            self.assertEqual(LOG.getvalue(), "hi!\n")
+
+            # test that we handle the lastResort logger correctly
+            _lastResort = logging.lastResort
+            with tee.capture_output() as OUT:
+                with tee.capture_output(lstream, capture_fd=False):
+                    self.assertIsNot(_lastResort, logging.lastResort)
+                    sys.stderr.write("hi?\n")
+            self.assertEqual(OUT.getvalue(), "hi?\n")
+
+            # test that we allow redirect-to-logger out
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi.\n")
+            self.assertEqual(OUT.getvalue(), "hi.\n")
+            logger.handlers.clear()
+
+            # test a sub-logger
+            lstream = LogStream(
+                logging.WARNING, logging.getLogger('_pyomo_no_logger.foo')
+            )
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi,\n")
+            self.assertEqual(OUT.getvalue(), "hi,\n")
+        finally:
+            logger.propagate, logger.handlers = orig
+
+    def test_capture_fd_to_logger(self):
+        logger = logging.getLogger('_pyomo_no_logger')
+        lstream = LogStream(logging.WARNING, logger)
+        orig = logger.propagate, logger.handlers
+        try:
+            logger.propagate = False
+            logger.handlers = []
+            with LoggingIntercept(module='_pyomo_no_logger') as LOG:
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi!\n")
+                    sys.stderr.flush()
+            self.assertEqual(LOG.getvalue(), "hi!\n")
+
+            # test that we handle the lastResort logger correctly
+            _lastResort = logging.lastResort
+            with tee.capture_output() as OUT:
+                with tee.capture_output(lstream, capture_fd=True):
+                    self.assertIsNot(_lastResort, logging.lastResort)
+                    sys.stderr.write("hi?\n")
+            self.assertEqual(OUT.getvalue(), "hi?\n")
+
+            # test that we allow redirect-to-logger out
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi.\n")
+            self.assertEqual(OUT.getvalue(), "hi.\n")
+            logger.handlers.clear()
+
+            # test a sub-logger
+            lstream = LogStream(
+                logging.WARNING, logging.getLogger('_pyomo_no_logger.foo')
+            )
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi,\n")
+            self.assertEqual(OUT.getvalue(), "hi,\n")
+        finally:
+            logger.propagate, logger.handlers = orig
+
+    def test_capture_to_logger_adapter(self):
+        class Adapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '[%s] %s' % (self.extra['foo'], msg), kwargs
+
+        logger = logging.getLogger('_pyomo_no_logger')
+        adapter = Adapter(logger, {"foo": 42})
+        lstream = LogStream(logging.WARNING, adapter)
+        orig = logger.propagate, logger.handlers
+        try:
+            logger.propagate = False
+            logger.handlers = []
+            with LoggingIntercept(module='_pyomo_no_logger') as LOG:
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi!\n")
+                    sys.stderr.flush()
+            self.assertEqual(LOG.getvalue(), "[42] hi!\n")
+
+            # test that we handle the lastResort logger correctly
+            _lastResort = logging.lastResort
+            with tee.capture_output() as OUT:
+                with tee.capture_output(lstream, capture_fd=False):
+                    self.assertIsNot(_lastResort, logging.lastResort)
+                    sys.stderr.write("hi?\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi?\n")
+
+            # test that we allow redirect-to-logger out
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=False):
+                    sys.stderr.write("hi.\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi.\n")
+            logger.handlers.clear()
+        finally:
+            logger.propagate, logger.handlers = orig
+
+    def test_capture_fd_to_logger_adapter(self):
+        class Adapter(logging.LoggerAdapter):
+            def process(self, msg, kwargs):
+                return '[%s] %s' % (self.extra['foo'], msg), kwargs
+
+        logger = logging.getLogger('_pyomo_no_logger')
+        adapter = Adapter(logger, {"foo": 42})
+        lstream = LogStream(logging.WARNING, adapter)
+        orig = logger.propagate, logger.handlers
+        try:
+            logger.propagate = False
+            logger.handlers = []
+            with LoggingIntercept(module='_pyomo_no_logger') as LOG:
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi!\n")
+                    sys.stderr.flush()
+            self.assertEqual(LOG.getvalue(), "[42] hi!\n")
+
+            # test that we handle the lastResort logger correctly
+            _lastResort = logging.lastResort
+            with tee.capture_output() as OUT:
+                with tee.capture_output(lstream, capture_fd=True):
+                    self.assertIsNot(_lastResort, logging.lastResort)
+                    sys.stderr.write("hi?\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi?\n")
+
+            # test that we allow redirect-to-logger out
+            with tee.capture_output() as OUT:
+                logger.addHandler(logging.NullHandler())
+                logger.addHandler(logging.StreamHandler(sys.stderr))
+                with tee.capture_output(lstream, capture_fd=True):
+                    sys.stderr.write("hi.\n")
+            self.assertEqual(OUT.getvalue(), "[42] hi.\n")
+            logger.handlers.clear()
+        finally:
+            logger.propagate, logger.handlers = orig
+
+    def test_no_fileno_stdout(self):
+        T = tee.capture_output()
+        with T:
+            self.assertEqual(len(T.context_stack), 2)
+        T = tee.capture_output(capture_fd=True)
+        # out & err point to something other than fd 1 and 2
+        sys.stdout = os.fdopen(os.dup(1), closefd=True)
+        sys.stderr = os.fdopen(os.dup(2), closefd=True)
+        with sys.stdout, sys.stderr:
+            with T:
+                self.assertEqual(len(T.context_stack), 7)
+        # out & err point to fd 1 and 2
+        sys.stdout = os.fdopen(1, closefd=False)
+        sys.stderr = os.fdopen(2, closefd=False)
+        with sys.stdout, sys.stderr:
+            with T:
+                self.assertEqual(len(T.context_stack), 5)
+        # out & err have no fileno
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        with sys.stdout, sys.stderr:
+            with T:
+                self.assertEqual(len(T.context_stack), 5)
+
     def test_capture_output_stack_error(self):
         OUT1 = StringIO()
         OUT2 = StringIO()
         old = (sys.stdout, sys.stderr)
+        old_fd = os.dup(1), os.dup(2)
         try:
             a = tee.capture_output(OUT1)
             a.setup()
@@ -265,12 +536,68 @@ class TestTeeStream(unittest.TestCase):
                 a.reset()
             b.tee = None
         finally:
+            os.dup2(old_fd[0], 1)
+            os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old
+            logging.getLogger('pyomo.common.tee').handlers.clear()
+
+    def test_capture_output_invalid_ostream(self):
+        # Test that capture_output does not suppress errors from the tee
+        # module
+        _id = hex(id(15))
+        with tee.capture_output(capture_fd=True) as OUT:
+            with tee.capture_output(15):
+                sys.stderr.write("hi\n")
+        self.assertEqual(
+            OUT.getvalue(),
+            f"Error writing to output stream <builtins.int @ {_id}>:\n"
+            "    AttributeError: 'int' object has no attribute 'write'\n"
+            "Is this a writeable TextIOBase object?\n"
+            "The following was left in the output buffer:\n    'hi\\n'\n",
+        )
+
+        with tee.capture_output(capture_fd=True) as OUT:
+            with tee.capture_output(15, capture_fd=True):
+                print("hi")
+        self.assertEqual(
+            OUT.getvalue(),
+            f"Error writing to output stream <builtins.int @ {_id}>:\n"
+            "    AttributeError: 'int' object has no attribute 'write'\n"
+            "Is this a writeable TextIOBase object?\n"
+            "The following was left in the output buffer:\n    'hi\\n'\n",
+        )
+
+    def test_exit_on_del(self):
+        # This is a weird "feature", but because things like the pyomo
+        # script will create and "enter" a capture_output object without
+        # using a context manager, it is possible that the object can be
+        # deleted without calling __exit__.  Check that the context
+        # stack is correctly unwound
+        T = tee.capture_output()
+        T.__enter__()
+        stack = T.context_stack
+        self.assertGreater(len(stack), 0)
+        del T
+        # This is a bit tricky: for cpython, T should be immediately
+        # deallocated (including calling __del__) through reference
+        # counting.  pypy is trickier: because it lacks
+        # reference-counting, it must rely on the GC.  We have seen
+        # cases on GHA where a single call to gc.collect() was sometimes
+        # insufficient to ensure that T was collected (but unable to
+        # reproduce it locally).  We will try up to 4 times (1 more than
+        # the number of generations in the GC)
+        remaining_attempts = 4
+        while len(stack) and remaining_attempts:
+            gc.collect()
+            remaining_attempts -= 1
+        self.assertEqual(len(stack), 0)
 
     def test_deadlock(self):
         class MockStream(object):
             def write(self, data):
-                time.sleep(0.2)
+                # This test will kill the write before this sleep is
+                # done, so a long sleep won't impact suite run time.
+                time.sleep(1)
 
             def flush(self):
                 pass
@@ -284,11 +611,11 @@ class TestTeeStream(unittest.TestCase):
                 RuntimeError, 'deadlock'
             ):
                 with tee.TeeStream(MockStream()) as t:
-                    err = t.STDERR
-                    err.write('*')
+                    t.STDERR.write('*')
             self.assertEqual(
                 'Significant delay observed waiting to join reader '
-                'threads, possible output stream deadlock\n',
+                'threads, possible output stream deadlock\n'
+                'TeeStream: deadlock observed joining reader threads\n',
                 LOG.getvalue(),
             )
         finally:
@@ -323,14 +650,15 @@ class BufferTester(object):
             sys.stdout.write(f"{time.time()}\n")
             time.sleep(self.dt)
         ts.write(f"{time.time()}\n")
-        baseline = [[(0, 0), (1, 0), (1, 0), (1, 1)]]
-        if fd:
-            # TODO: [JDS] If we are capturing the file descriptor, the
-            # stdout channel is sometimes no longer buffered.  I am not
-            # exactly sure why (my guess is because the underlying pipe
-            # is not buffered), but as it is generally not a problem to
-            # not buffer, we will put off "fixing" it.
-            baseline.append([(0, 0), (0, 0), (0, 0), (1, 1)])
+        baseline = [
+            [(0, 0), (1, 0), (1, 0), (1, 1)],
+            # TODO: [JDS] The stdout channel appears to sometimes be no
+            # longer buffered.  I am not exactly sure why (my guess is
+            # because the underlying pipe is not buffered), but as it is
+            # generally not a problem to not buffer, we will put off
+            # "fixing" it.
+            [(0, 0), (0, 0), (0, 0), (1, 1)],
+        ]
         if not ts.check(*baseline):
             self.fail(ts.error)
 
@@ -551,7 +879,7 @@ class TestFileDescriptor(unittest.TestCase):
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
             os.close(1)
-            self.assertEqual(FILE.read(), "to_stdout_1\nto_stdout_2\nto_fd1_2\n")
+            self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
 
     # Pytest's default capture method causes failures for the following
     # two tests. This re-implementation of the capfd fixture allows
@@ -641,6 +969,38 @@ class TestFileDescriptor(unittest.TestCase):
             os.close(1)
             os.close(w)
             self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
+
+    def test_nested_capture_output(self):
+        OUT2 = StringIO()
+        r, w = os.pipe()
+        os.dup2(w, 1)
+        sys.stdout = stdout0 = os.fdopen(1, 'w', closefd=False)
+        with tee.capture_output((sys.stdout, StringIO()), capture_fd=True) as (_, OUT1):
+            stdout1 = sys.stdout
+            self.assertIsNot(stdout0, stdout1)
+            with tee.capture_output((sys.stdout, OUT2), capture_fd=True):
+                stdout2 = sys.stdout
+                self.assertIsNot(stdout1, stdout2)
+                sys.stdout.write("to_stdout_1\n")
+                sys.stdout.flush()
+                with os.fdopen(1, 'w', closefd=False) as F:
+                    F.write("to_fd1_1\n")
+                    F.flush()
+
+        sys.stdout.write("to_stdout_2\n")
+        sys.stdout.flush()
+        with os.fdopen(1, 'w', closefd=False) as F:
+            F.write("to_fd1_2\n")
+            F.flush()
+
+        self.assertEqual(OUT1.getvalue(), "to_stdout_1\nto_fd1_1\n")
+        self.assertEqual(OUT2.getvalue(), "to_stdout_1\nto_fd1_1\n")
+        with os.fdopen(r, 'r') as FILE:
+            os.close(1)
+            os.close(w)
+            self.assertEqual(
+                FILE.read(), "to_stdout_1\nto_fd1_1\nto_stdout_2\nto_fd1_2\n"
+            )
 
 
 if __name__ == '__main__':

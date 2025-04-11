@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -16,7 +16,6 @@ from pyomo.common.dependencies import numpy as numpy, numpy_available
 if numpy_available:
     from numpy.testing import assert_array_almost_equal
 
-import pyomo.environ as pe
 from pyomo.common import unittest
 import pyomo.opt
 

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -51,13 +51,8 @@ def _generate_autosummary_content(
     obj: Any,
     parent: Any,
     template: autosummary.generate.AutosummaryRenderer,
-    template_name: str,
-    imported_members: bool,
-    app: Any,
-    recursive: bool,
-    context: dict,
-    modname: Union[str, None] = None,
-    qualname: Union[str, None] = None,
+    *gac_args,
+    **gac_kwargs,
 ) -> str:
     """Override sphinx.ext.autosummary.generate.generate_autosummary_content()
     to provide additional fields to the namespace dictionary.
@@ -94,9 +89,14 @@ def _generate_autosummary_content(
                 obj = l['obj']
                 args = {'obj': obj}
                 if '_get_members' in caller.f_globals:
-                    # Sphinx >= 7.2
                     _get_members = caller.f_globals['_get_members']
-                    args.update({'doc': doc, 'app': l['app']})
+                    if 'config' in l:
+                        # Sphinx >= 8.2.1
+                        for field in ('config', 'doc', 'events', 'registry'):
+                            args[field] = l[field]
+                    else:
+                        # Sphinx >= 7.2
+                        args.update({'doc': doc, 'app': l['app']})
                 else:
                     # Sphinx < 7.2
                     _get_members = caller.f_locals['get_members']
@@ -136,19 +136,7 @@ def _generate_autosummary_content(
 
         template.__class__ = _pyomo_template_wrapper
 
-    return _gac(
-        name,
-        obj,
-        parent,
-        template,
-        template_name,
-        imported_members,
-        app,
-        recursive,
-        context,
-        modname,
-        qualname,
-    )
+    return _gac(name, obj, parent, template, *gac_args, **gac_kwargs)
 
 
 class EnumDocumenter(autodoc.ClassDocumenter):
@@ -191,7 +179,7 @@ class EnumMemberDocumenter(autodoc.AttributeDocumenter):
 
     # Note that we want to flag these attributes as "special" (i.e., not
     # generic attributes, but we still want to emit regular py:attribute
-    # directives (so that we still refer to them with :pt:attr:
+    # directives (so that we still refer to them with :py:attr:
     # references).
     objtype = "enum_member"
     directivetype = autodoc.AttributeDocumenter.objtype

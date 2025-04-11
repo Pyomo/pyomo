@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,16 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.A = Set()
-model.B = Set(initialize=['B1', 'B2', 'B3'])
-model.Z = Set(dimen=2)
+model.A = pyo.Set()
+model.B = pyo.Set(initialize=['B1', 'B2', 'B3'])
+model.Z = pyo.Set(dimen=2)
 
-model.M = Param(model.A)
-model.N = Param(model.A, model.B)
+model.M = pyo.Param(model.A)
+model.N = pyo.Param(model.A, model.B)
 
 
 instance = model.create_instance('table3.dat')

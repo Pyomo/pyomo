@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -60,7 +60,7 @@ def solver_factory(version=None):
     .. doctest::
 
         >>> solver_factory(3)
-        <pyomo.contrib.solver.factory.SolverFactoryClass object ...>
+        <pyomo.contrib.solver.common.factory.SolverFactoryClass object ...>
 
     or by importing the "special" name:
 
@@ -75,7 +75,7 @@ def solver_factory(version=None):
 
     """
     import pyomo.opt.base.solvers as _solvers
-    import pyomo.contrib.solver.factory as _contrib
+    import pyomo.contrib.solver.common.factory as _contrib
     import pyomo.contrib.appsi.base as _appsi
 
     versions = {

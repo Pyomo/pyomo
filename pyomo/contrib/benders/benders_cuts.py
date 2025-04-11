@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -37,47 +37,62 @@ and McKinnon "A note on feasibility in Benders Decomposition" [GLM99]_
 Original problem:
 
 .. math::
+   :nowrap:
 
-    \min\ & f(x, y) + h0(y) \\
-    s.t.\ & g(x, y) <= 0 \\
-              & h(y) <= 0
+   \[\begin{array}{ll}
+     \min & f(x, y) + h0(y) \\
+     s.t. & g(x, y) <= 0 \\
+          & h(y) <= 0
+   \end{array}\]
 
 where y are the complicating variables. Reformulate to
 
 .. math::
+   :nowrap:
 
-    \min\ & h0(y) + \eta \\
-    s.t.\ & g(x, y) <= 0 \\
-          & f(x, y) <= \eta \\
-          & h(y) <= 0
+   \[\begin{array}{ll}
+   \min & h0(y) + \eta \\
+   s.t. & g(x, y) <= 0 \\
+        & f(x, y) <= \eta \\
+        & h(y) <= 0
+   \end{array}\]
 
 Root problem must be of the form
 
 .. math::
+   :nowrap:
 
-    \min\ & h0(y) + \eta \\
-    s.t.\ & h(y) <= 0 \\
-          & benders\ cuts
+   \[\begin{array}{ll}
+    \min & h0(y) + \eta \\
+    s.t. & h(y) <= 0 \\
+          & \{benders\ cuts\}
+   \end{array}\]
 
 where the last constraint will be generated automatically with
 BendersCutGenerators. The BendersCutGenerators must be handed a
 subproblem of the form
 
 .. math::
+   :nowrap:
 
-    \min\ & f(x, y) \\
-    s.t.\ & g(x, y) <= 0
+   \[\begin{array}{ll}
+    \min & f(x, y) \\
+    s.t. & g(x, y) <= 0
+   \end{array}\]
 
 except the constraints don't actually have to be in this form. The
 subproblem will automatically be transformed to
 
 .. math::
+   :nowrap:
 
-    \min\ & _z & \\
-    s.t.\ & g(x, y) - z <= 0        & \quad (\alpha) \\
-          & f(x, y) - \eta - z <= 0 & \quad (\beta)  \\
-          & y - y_k = 0             & \quad (\gamma) \\
-          & \eta - \eta_k = 0       & \quad (\delta) \\
+   \[\begin{array}{lll}
+    \min & z & \\
+    s.t. & g(x, y) - z <= 0        & (\alpha) \\
+         & f(x, y) - \eta - z <= 0 & (\beta)  \\
+         & y - y_k = 0             & (\gamma) \\
+         & \eta - \eta_k = 0       & (\delta)
+   \end{array}\]
 
 """
 
