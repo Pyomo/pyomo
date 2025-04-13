@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.common.gsl import find_GSL
@@ -22,37 +22,37 @@ class TestIpoptPersistent(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
-        opt = pe.SolverFactory('appsi_ipopt')
+        opt = pyo.SolverFactory('appsi_ipopt')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
 
-        m = pe.ConcreteModel()
-        m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
-        m.x = pe.Var(bounds=(-10, 10), initialize=2)
-        m.y = pe.Var(initialize=2)
+        m = pyo.ConcreteModel()
+        m.hypot = pyo.ExternalFunction(library=DLL, function='gsl_hypot')
+        m.x = pyo.Var(bounds=(-10, 10), initialize=2)
+        m.y = pyo.Var(initialize=2)
         e = 2 * m.hypot(m.x, m.x * m.y)
-        m.c = pe.Constraint(expr=e == 2.82843)
-        m.obj = pe.Objective(expr=m.x)
+        m.c = pyo.Constraint(expr=e == 2.82843)
+        m.obj = pyo.Objective(expr=m.x)
         res = opt.solve(m)
-        pe.assert_optimal_termination(res)
-        self.assertAlmostEqual(pe.value(m.c.body) - pe.value(m.c.lower), 0)
+        pyo.assert_optimal_termination(res)
+        self.assertAlmostEqual(pyo.value(m.c.body) - pyo.value(m.c.lower), 0)
 
     def test_external_function_in_objective(self):
         DLL = find_GSL()
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
-        opt = pe.SolverFactory('appsi_ipopt')
+        opt = pyo.SolverFactory('appsi_ipopt')
         if not opt.available(exception_flag=False):
             raise unittest.SkipTest
 
-        m = pe.ConcreteModel()
-        m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
-        m.x = pe.Var(bounds=(1, 10), initialize=2)
-        m.y = pe.Var(bounds=(1, 10), initialize=2)
+        m = pyo.ConcreteModel()
+        m.hypot = pyo.ExternalFunction(library=DLL, function='gsl_hypot')
+        m.x = pyo.Var(bounds=(1, 10), initialize=2)
+        m.y = pyo.Var(bounds=(1, 10), initialize=2)
         e = 2 * m.hypot(m.x, m.x * m.y)
-        m.obj = pe.Objective(expr=e)
+        m.obj = pyo.Objective(expr=e)
         res = opt.solve(m)
-        pe.assert_optimal_termination(res)
+        pyo.assert_optimal_termination(res)
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)

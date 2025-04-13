@@ -13,7 +13,9 @@ import sys
 import logging
 
 from pyomo.common.deprecation import deprecated
-from pyomo.core.expr.numvalue import native_types, native_logical_types
+from pyomo.common.modeling import NOTSET
+from pyomo.common.numeric_types import native_types, native_logical_types
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
 
@@ -296,8 +298,9 @@ class BooleanConstant(BooleanValue):
     def __bool__(self):
         return self.value
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Return the constant value"""
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     def pprint(self, ostream=None, verbose=False):

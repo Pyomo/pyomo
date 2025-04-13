@@ -176,7 +176,10 @@ def calculate_variable_from_constraint(
         intercept = (residual_1 - upper) - slope * x1
         if slope:
             variable.set_value(-intercept / slope, skip_validation=True)
-            body_val = value(body, exception=False)
+            try:
+                body_val = value(body, exception=False)
+            except OverflowError:
+                body_val = None
             if body_val.__class__ not in _invalid_types and abs(body_val - upper) < eps:
                 # Re-set the variable value to trigger any warnings WRT
                 # the final variable state
@@ -277,18 +280,25 @@ def calculate_variable_from_constraint(
             while alpha > alpha_min:
                 # check if the value at xkp1 has sufficient reduction in
                 # the residual
-                fkp1 = value(expr, exception=False)
-                # HACK for Python3 support, pending resolution of #879
-                # Issue #879 also pertains to other checks for "complex"
-                # in this method.
-                if fkp1.__class__ in _invalid_types:
-                    # We cannot perform computations on complex numbers
-                    fkp1 = None
-                if fkp1 is not None and fkp1**2 < c1 * fk**2:
-                    # found an alpha value with sufficient reduction
-                    # continue to the next step
-                    fk = fkp1
-                    break
+                try:
+                    fkp1 = value(expr, exception=False)
+                    # HACK for Python3 support, pending resolution of #879
+                    # Issue #879 also pertains to other checks for "complex"
+                    # in this method.
+                    if fkp1.__class__ in _invalid_types:
+                        # We cannot perform computations on complex numbers
+                        fkp1 = None
+                    if fkp1 is not None and fkp1**2 < c1 * fk**2:
+                        # found an alpha value with sufficient reduction
+                        # continue to the next step
+                        fk = fkp1
+                        break
+                except OverflowError:
+                    # Encountered an overflow, either from evaluating
+                    # this point in the line search (to get fkp1) or
+                    # from squaring fkp1.  (The example from #3540
+                    # actually triggers both).  Reject this alpha value.
+                    pass
                 alpha /= 2.0
                 xkp1 = xk + alpha * pk
                 variable.set_value(xkp1, skip_validation=True)

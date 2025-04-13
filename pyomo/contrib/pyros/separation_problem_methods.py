@@ -15,14 +15,17 @@ and related objects.
 """
 
 from itertools import product
-import math
 import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.core.base import Block, Constraint, maximize, Objective, value, Var
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core.expr import replace_expressions, identify_mutable_parameters
+from pyomo.core.expr import (
+    replace_expressions,
+    identify_variables,
+    identify_mutable_parameters,
+)
 
 from pyomo.contrib.pyros.solve_data import (
     DiscreteSeparationSolveCallResults,
@@ -35,8 +38,6 @@ from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
     call_solver,
     check_time_limit_reached,
-    PARAM_IS_CERTAIN_ABS_TOL,
-    PARAM_IS_CERTAIN_REL_TOL,
 )
 
 
@@ -77,17 +78,26 @@ def add_uncertainty_set_constraints(separation_model, config):
         for auxvar, auxval in zip(aux_vars, aux_var_vals):
             auxvar.set_value(auxval)
 
-    # preprocess uncertain parameters which have been fixed by bounds
-    # in order to simplify the separation problems
-    for param_var, nomval in zip(param_var_list, config.nominal_uncertain_param_vals):
-        bounds_close = math.isclose(
-            a=param_var.lb,
-            b=param_var.ub,
-            rel_tol=PARAM_IS_CERTAIN_REL_TOL,
-            abs_tol=PARAM_IS_CERTAIN_ABS_TOL,
-        )
-        if bounds_close:
+    # fix the effectively certain parameters
+    param_val_enum_zip = enumerate(
+        zip(param_var_list, config.nominal_uncertain_param_vals)
+    )
+    fixed_param_var_set = ComponentSet()
+    for idx, (param_var, nomval) in param_val_enum_zip:
+        if idx not in separation_model.effective_uncertain_dimensions:
             param_var.fix(nomval)
+            fixed_param_var_set.add(param_var)
+
+    # deactivate constraints that depend on only the
+    # effective certain parameters
+    separation_model.uncertainty.certain_param_var_cons = []
+    for con in uncertainty_cons:
+        unfixed_param_vars_in_con = (
+            ComponentSet(identify_variables(con.expr)) - fixed_param_var_set
+        )
+        if not unfixed_param_vars_in_con:
+            con.deactivate()
+            separation_model.uncertainty.certain_param_var_cons.append(con)
 
 
 def construct_separation_problem(model_data):
@@ -887,6 +897,30 @@ def initialize_separation(ss_ineq_con_to_maximize, separation_data, master_data)
                 f"Initial point for separation of second-stage ineq constraint "
                 f"{ss_ineq_con_name_repr} violates the model constraint "
                 f"{con.name!r} by more than {tol} ({lslack=}, {uslack=})"
+            )
+
+    for con in sep_model.uncertainty.certain_param_var_cons:
+        trivially_infeasible = (
+            con.lslack() < -ABS_CON_CHECK_FEAS_TOL
+            or con.uslack() < -ABS_CON_CHECK_FEAS_TOL
+        )
+        if trivially_infeasible:
+            # this should never happen in the context of a full solve,
+            # since the certain parameters should be at their
+            # nominal values, and the nominal point was already
+            # confirmed to be a member of the set
+            config.progress_logger.error(
+                f"Uncertainty set "
+                f"(type {type(config.uncertainty_set).__name__}) "
+                f"constraint {con.name!r}, with expression {con.expr}, "
+                "is trivially infeasible at the parameter realization "
+                f"{config.nominal_uncertain_param_vals}. "
+                f"Check implementation of "
+                f"{config.uncertainty_set.set_as_constraint.__name__}."
+            )
+            raise ValueError(
+                f"Trivial infeasibility detected in the uncertainty set "
+                f"(type {type(config.uncertainty_set).__name__}) constraints."
             )
 
 
