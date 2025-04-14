@@ -182,6 +182,8 @@ class MOSEKDirect(DirectSolver):
                                 option.pop(0)
                             option = getattr(mosek, option[0])(option[1])
                             self._solver_model.putintparam(param, option)
+                        else:
+                            logger.warning("Ignoring invalid value for iparam.\n")
             except (TypeError, AttributeError):
                 raise
         try:

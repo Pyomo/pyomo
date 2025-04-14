@@ -313,6 +313,55 @@ class MOSEKDirectTests(unittest.TestCase):
                     results.Solution.constraint['x11']['Dual'][i], check[i], 5
                 )
 
+    def test_solver_parameters(self):
+        import mosek
+
+        with self.assertLogs('pyomo.solvers', level='WARNING') as warnLogs:
+            solver = pmo.SolverFactory('mosek_direct')
+            model = self._test_model()
+            solver.solve(
+                model,
+                options={
+                    'dparam.optimizer_max_time': 1.0,
+                    'iparam.intpnt_solve_form': int(mosek.solveform.dual),
+                    'mosek.iparam.intpnt_max_iterations': 10,
+                    'MSK_DPAR_INTPNT_CO_TOL_REL_GAP': '1.0e-7',
+                    'MSK_IPAR_PRESOLVE_USE': '0',
+                    'sparam.param_comment_sign': '##',
+                    'iparam.log': 1.2
+                }
+            )
+            # Check if iparams were set correctly
+            self.assertEqual(
+                solver._solver_model.getintparam(mosek.iparam.intpnt_solve_form),
+                mosek.solveform.dual,
+            )
+            self.assertEqual(solver._solver_model.getintparam(mosek.iparam.intpnt_max_iterations), 10)
+            self.assertEqual(
+                solver._solver_model.getintparam(mosek.iparam.presolve_use),
+                mosek.presolvemode.off,
+            )
+            # Check if dparams were set correctly
+            self.assertEqual(
+                solver._solver_model.getdouparam(mosek.dparam.optimizer_max_time), 1.0
+            )
+            self.assertEqual(
+                solver._solver_model.getdouparam(mosek.dparam.intpnt_co_tol_rel_gap),
+                1.0e-7,
+            )
+            # Check if sparam is set correctly
+            self.assertEqual(
+                solver._solver_model.getstrparam(mosek.sparam.param_comment_sign)[1],
+                '##',
+            )
+            # Check if a warning is logged
+            self.assertEqual(
+                warnLogs.output,
+                [
+                    'WARNING:pyomo.solvers:Ignoring invalid value for iparam.\n'
+                ],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
