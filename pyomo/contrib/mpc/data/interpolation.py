@@ -63,7 +63,7 @@ def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
         interpolation if data are floats, this will return floats.
     """
     if indexes is None:
-        indexes = get_surround_time_vec(time_set, time_data)
+        indexes = _get_time_index_vec(time_set, time_data)
     expr = [None] * len(time_set)
     for i, (h, t) in enumerate(zip(indexes, time_set)):
         l = h - 1
