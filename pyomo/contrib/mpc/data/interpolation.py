@@ -35,15 +35,15 @@ def _get_time_index_vec(time_set, time_data):
     pos = [None] * len(time_set)
     for i, t in enumerate(time_set):
         pos[i] = bisect_right(time_data, t)
-        if pos[i] == 0: 
+        if pos[i] == 0:
             pos[i] = 1
-        elif pos[i] == len(time_data): 
+        elif pos[i] == len(time_data):
             pos[i] = len(time_data) - 1
     return pos
 
 
 def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
-    """Return an array floats interpolated from data at times_data in 
+    """Return an array floats interpolated from data at times_data in
     time_set.
 
     Parameters
