@@ -11,20 +11,22 @@
 
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import scipy_available
 
 import pyomo.environ as pyo
 import pyomo.contrib.pynumero.interfaces.pyomo_nlp as nlp
 import pyomo.contrib.sensitivity_toolbox.pynumero as pnsens
-from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.pynumero.asl import AmplInterface
+
+if not scipy_available or not numpy_available:
+    raise unittest.SkipTest("scipy or numpy is not available")
 
 if not AmplInterface.available():
     raise unittest.SkipTest("Pynumero needs the ASL extension to run NLP tests")
 
 
 class TestSeriesData(unittest.TestCase):
-    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_dsdp_dfdp_pyomo(self):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=200)
@@ -52,7 +54,6 @@ class TestSeriesData(unittest.TestCase):
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p1]], 605.0)
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p2]], 85.0)
 
-    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_dsdp_dfdp_pyomo_nlp(self):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=200)
@@ -83,7 +84,6 @@ class TestSeriesData(unittest.TestCase):
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p1]], 605.0)
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p2]], 85.0)
 
-    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_dydp_pyomo(self):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=200)
