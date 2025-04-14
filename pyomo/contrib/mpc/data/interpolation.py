@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np
+from bisect import bisect_right
 
 
-def get_time_index_vec(time_set, time_data):
+def _get_time_index_vec(time_set, time_data):
     """Get the position index of time_data above and below the times in
     time_set. This can be used to find positions of points to interpolate
     between.
@@ -32,15 +32,19 @@ def get_time_index_vec(time_set, time_data):
         in time_data return 1. If a time is greater than all times time_data
         set return the last index of time_data.
     """
-    pos = np.searchsorted(time_data, time_set)
-    pos[pos == 0] = 1
-    pos[pos == len(time_data)] = len(time_data) - 1
+    pos = [None] * len(time_set)
+    for i, t in enumerate(time_set):
+        pos[i] = bisect_right(time_data, t)
+        if pos[i] == 0: 
+            pos[i] = 1
+        elif pos[i] == len(time_data): 
+            pos[i] = len(time_data) - 1
     return pos
 
 
-def get_interp_expr_vec(time_set, time_data, data, indexes=None):
-    """Depending of the data types contained in data, return a list of
-    Pyomo expression or float interpolated data at times in time_set.
+def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
+    """Return an array floats interpolated from data at times_data in 
+    time_set.
 
     Parameters
     ----------
@@ -61,7 +65,8 @@ def get_interp_expr_vec(time_set, time_data, data, indexes=None):
     if indexes is None:
         indexes = get_surround_time_vec(time_set, time_data)
     expr = [None] * len(time_set)
-    for i, (l, h, t) in enumerate(zip(indexes - 1, indexes, time_set)):
+    for i, (h, t) in enumerate(zip(indexes, time_set)):
+        l = h - 1
         expr[i] = data[l] + (data[h] - data[l]) / (time_data[h] - time_data[l]) * (
             t - time_data[l]
         )

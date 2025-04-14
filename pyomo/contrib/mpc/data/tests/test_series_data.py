@@ -130,17 +130,17 @@ class TestSeriesData(unittest.TestCase):
         m = self._make_model()
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
         data = TimeSeriesData(data_dict, m.time)
-        new_data = data.get_data_at_time(0.05, interpolate=True)
+        new_data = data.get_interpolated_data_at_time(0.05)
         self.assertEqual(ScalarData({m.var[:, "A"]: 1.5, m.var[:, "B"]: 3}), new_data)
 
         t1 = 0.05
-        new_data = data.get_data_at_time([t1], interpolate=True)
+        new_data = data.get_interpolated_data_at_time([t1])
         self.assertEqual(
             TimeSeriesData({m.var[:, "A"]: [1.5], m.var[:, "B"]: [3]}, [t1]), new_data
         )
 
         new_t = [0.05, 0.15]
-        new_data = data.get_data_at_time(new_t, interpolate=True)
+        new_data = data.get_interpolated_data_at_time(new_t)
         self.assertEqual(
             TimeSeriesData({m.var[:, "A"]: [1.5, 2.5], m.var[:, "B"]: [3, 5]}, new_t),
             new_data,
