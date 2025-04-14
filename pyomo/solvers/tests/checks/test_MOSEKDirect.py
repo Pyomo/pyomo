@@ -365,6 +365,11 @@ class MOSEKDirectTests(unittest.TestCase):
             with self.assertRaises(AttributeError) as assertCheck:
                 solver.solve(model, options={'wrong.name': '1'})
 
+            with self.assertRaises(TypeError) as typeCheck:
+                solver.solve(
+                    model, options={'mosek.dparam.intpnt_co_tol_rel_gap': '1.4'}
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
