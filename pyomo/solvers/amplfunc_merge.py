@@ -9,24 +9,54 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import relocated_module_attribute
 
-def amplfunc_string_merge(amplfunc, pyomo_amplfunc):
-    """Merge two AMPLFUNC variable strings eliminating duplicate lines"""
-    # Assume that the strings amplfunc and pyomo_amplfunc don't contain duplicates
-    # Assume that the path separator is correct for the OS so we don't need to
-    # worry about comparing Unix and Windows paths.
-    amplfunc_lines = amplfunc.split("\n")
-    existing = set(amplfunc_lines)
-    for line in pyomo_amplfunc.split("\n"):
-        # Skip lines we already have
-        if line not in existing:
-            amplfunc_lines.append(line)
-    # Remove empty lines which could happen if one or both of the strings is
-    # empty or there are two new lines in a row for whatever reason.
-    amplfunc_lines = [s for s in amplfunc_lines if s != ""]
-    return "\n".join(amplfunc_lines)
+relocated_module_attribute(
+    'amplfunc_string_merge',
+    'pyomo.solvers.amplfunc_merge.unique_paths',
+    version='6.9.2.dev0',
+    f_globals=globals(),
+)
 
 
-def amplfunc_merge(env):
-    """Merge AMPLFUNC and PYOMO_AMPLFUNC in an environment var dict"""
-    return amplfunc_string_merge(env.get("AMPLFUNC", ""), env.get("PYOMO_AMPLFUNC", ""))
+def unique_paths(*paths):
+    """Merge paths, eliminating duplicates.
+
+    Parameters
+    ----------
+    *path : str
+
+        Each argument is a string containing one or more paths.
+        Multiple libraries are separated by newlines.
+
+    Returns
+    -------
+    str : merged list of newline-separated paths.
+
+    """
+    funcs = {}
+    for src in paths:
+        for line in src.splitlines():
+            if not line:
+                continue
+            funcs[line] = None
+    return "\n".join(funcs)
+
+
+def amplfunc_merge(env, *funcs):
+    """Merge AMPLFUNC and PYOMO_AMPLFUNC environment variables with provided values
+
+    Paths are returned with entries from AMPLFUNC first, PYOMO_AMPLFUNC
+    second, and the user-provided arguments last.  Duplicates and empty
+    paths are filtered out.
+
+    Parameters
+    ----------
+    env : Dict[str, str]
+        Environment dictionary mapping environment variable names to values.
+
+    *funcs : str
+        Additional paths to combine.
+
+    """
+    return unique_paths(env.get("AMPLFUNC", ""), env.get("PYOMO_AMPLFUNC", ""), *funcs)
