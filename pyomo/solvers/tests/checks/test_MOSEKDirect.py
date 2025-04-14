@@ -328,15 +328,17 @@ class MOSEKDirectTests(unittest.TestCase):
                     'MSK_DPAR_INTPNT_CO_TOL_REL_GAP': '1.0e-7',
                     'MSK_IPAR_PRESOLVE_USE': '0',
                     'sparam.param_comment_sign': '##',
-                    'iparam.log': 1.2
-                }
+                    'iparam.log': 1.2,
+                },
             )
             # Check if iparams were set correctly
             self.assertEqual(
                 solver._solver_model.getintparam(mosek.iparam.intpnt_solve_form),
                 mosek.solveform.dual,
             )
-            self.assertEqual(solver._solver_model.getintparam(mosek.iparam.intpnt_max_iterations), 10)
+            self.assertEqual(
+                solver._solver_model.getintparam(mosek.iparam.intpnt_max_iterations), 10
+            )
             self.assertEqual(
                 solver._solver_model.getintparam(mosek.iparam.presolve_use),
                 mosek.presolvemode.off,
@@ -357,9 +359,7 @@ class MOSEKDirectTests(unittest.TestCase):
             # Check if a warning is logged
             self.assertEqual(
                 warnLogs.output,
-                [
-                    'WARNING:pyomo.solvers:Ignoring invalid value for iparam.\n'
-                ],
+                ['WARNING:pyomo.solvers:Ignoring invalid value for iparam.\n'],
             )
 
 
