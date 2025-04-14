@@ -172,9 +172,9 @@ class _MutableObjective:
         dim = self.highs.getNumCol()
 
         # Build CSC format for the lower triangular part
-        q_value = []
-        q_index = []
-        q_start = [0] * dim
+        hessian_value = []
+        hessian_index = []
+        hessian_start = [0] * dim
 
         sorted_entries = sorted(
             self.quad_coef_dict.items(), key=lambda x: (x[0][1], x[0][0])
@@ -185,24 +185,24 @@ class _MutableObjective:
             while col > last_col:
                 last_col += 1
                 if last_col < dim:
-                    q_start[last_col] = len(q_value)
+                    hessian_start[last_col] = len(hessian_value)
 
             # Add the entry
-            q_index.append(row)
-            q_value.append(val)
+            hessian_index.append(row)
+            hessian_value.append(val)
 
         while last_col < dim - 1:
             last_col += 1
-            q_start[last_col] = len(q_value)
+            hessian_start[last_col] = len(hessian_value)
 
-        nnz = len(q_value)
+        nnz = len(hessian_value)
         status = self.highs.passHessian(
             dim,
             nnz,
             highspy.HessianFormat.kTriangular,
-            np.array(q_start, dtype=np.int32),
-            np.array(q_index, dtype=np.int32),
-            np.array(q_value, dtype=np.double),
+            np.array(hessian_start, dtype=np.int32),
+            np.array(hessian_index, dtype=np.int32),
+            np.array(hessian_value, dtype=np.double),
         )
 
         if status != highspy.HighsStatus.kOk:
