@@ -17,6 +17,10 @@ import pyomo.environ as pyo
 import pyomo.contrib.pynumero.interfaces.pyomo_nlp as nlp
 import pyomo.contrib.sensitivity_toolbox.pynumero as pnsens
 from pyomo.common.dependencies import scipy_available
+from pyomo.contrib.pynumero.asl import AmplInterface
+
+if not AmplInterface.available():
+    raise unittest.SkipTest("Pynumero needs the ASL extension to run NLP tests")
 
 
 class TestSeriesData(unittest.TestCase):
