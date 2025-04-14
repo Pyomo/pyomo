@@ -120,9 +120,11 @@ class redirect_fd(object):
 
     def __enter__(self):
         if self.std:
+            # We used to flush original_file here.  We have removed that
+            # because the std* streams are flushed by capture_output.
+            # Flushing again here caused intermittent errors due to
+            # closed file handles on OSX
             self.original_file = getattr(sys, self.std)
-            # important: flush the current file buffer when redirecting
-            self.original_file.flush()
         # Duplicate the original standard file descriptor(file
         # descriptor 1 or 2) to a different file descriptor number
         self.original_fd = os.dup(self.fd)
