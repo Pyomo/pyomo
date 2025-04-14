@@ -317,7 +317,7 @@ class MOSEKDirectTests(unittest.TestCase):
         import mosek
 
         with self.assertLogs('pyomo.solvers', level='WARNING') as warnLogs:
-            solver = pmo.SolverFactory('mosek_direct')
+            solver = pyo.SolverFactory('mosek_direct')
             model = self._test_model()
             solver.solve(
                 model,
@@ -361,6 +361,9 @@ class MOSEKDirectTests(unittest.TestCase):
                 warnLogs.output,
                 ['WARNING:pyomo.solvers:Ignoring invalid value for iparam.\n'],
             )
+            # Check if AttributeError is raised for wrong parameter name
+            with self.assertRaises(AttributeError) as assertCheck:
+                solver.solve(model, options={'wrong.name': '1'})
 
 
 if __name__ == "__main__":
