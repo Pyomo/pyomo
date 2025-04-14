@@ -17,7 +17,8 @@ from pyomo.common.deprecation import (
     deprecation_warning,
     relocated_module_attribute,
 )
-from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import ExpressionType, _type_check_exception_arg
 from pyomo.core.expr.numeric_expr import NumericValue
 
 # TODO: update Pyomo to import these objects from common.numeric_types
@@ -113,7 +114,8 @@ class NonNumericValue(PyomoObject):
     def __repr__(self):
         return repr(self.value)
 
-    def __call__(self, exception=None):
+    def __call__(self, exception=NOTSET):
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     def is_constant(self):
@@ -422,8 +424,9 @@ class NumericConstant(NumericValue):
     def __str__(self):
         return str(self.value)
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Return the constant value"""
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     def pprint(self, ostream=None, verbose=False):
