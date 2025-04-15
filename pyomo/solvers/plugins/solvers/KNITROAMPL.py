@@ -9,10 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import logging
-from pathlib import Path
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.dependencies import pathlib
 from pyomo.opt.base.formats import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
@@ -71,7 +71,9 @@ class KNITROAMPL(ASL):
             import knitro
 
             package_knitroampl_path = (
-                Path(knitro.__file__).resolve().parent / 'knitroampl' / 'knitroampl'
+                pathlib.Path(knitro.__file__).resolve().parent
+                / 'knitroampl'
+                / 'knitroampl'
             )
             executable = Executable(str(package_knitroampl_path))
         except ModuleNotFoundError:

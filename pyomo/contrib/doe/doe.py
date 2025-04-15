@@ -32,12 +32,11 @@ import json
 import logging
 import math
 
-from pathlib import Path
-
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
     pandas as pd,
+    pathlib,
     matplotlib as plt,
 )
 from pyomo.common.modeling import unique_component_name
@@ -230,7 +229,7 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [Path, str]:
+            if type(results_file) not in [pathlib.Path, str]:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
@@ -1769,7 +1768,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
             )
 
         # Draw D-optimality
@@ -1790,7 +1789,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
             )
 
         # Draw E-optimality
@@ -1811,7 +1810,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
             )
 
         # Draw Modified E-optimality
@@ -1832,7 +1831,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
             )
 
     def _heatmap(
@@ -1933,7 +1932,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
             )
 
         # D-optimality
@@ -1959,7 +1958,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
             )
 
         # E-optimality
@@ -1985,7 +1984,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
             )
 
         # Modified E-optimality
@@ -2011,7 +2010,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
             )
 
     # Gets the FIM from an existing model
