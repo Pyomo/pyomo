@@ -38,6 +38,7 @@ from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
     call_solver,
     check_time_limit_reached,
+    get_all_first_stage_eq_cons,
 )
 
 
@@ -121,7 +122,7 @@ def construct_separation_problem(model_data):
     # fix/deactivate all nonadjustable components
     for var in separation_model.all_nonadjustable_variables:
         var.fix()
-    for fs_eqcon in separation_model.first_stage.equality_cons.values():
+    for fs_eqcon in get_all_first_stage_eq_cons(separation_model):
         fs_eqcon.deactivate()
     for fs_ineqcon in separation_model.first_stage.inequality_cons.values():
         fs_ineqcon.deactivate()
