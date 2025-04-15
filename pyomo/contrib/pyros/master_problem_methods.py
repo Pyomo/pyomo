@@ -602,7 +602,8 @@ def get_master_dr_degree(master_data):
 
     - 0 if iteration number is 0
     - min(1, config.decision_rule_order) if iteration number
-      otherwise does not exceed number of uncertain parameters
+      otherwise does not exceed number of effective
+      uncertain parameters
     - min(2, config.decision_rule_order) otherwise.
 
     Parameters
@@ -615,12 +616,13 @@ def get_master_dr_degree(master_data):
     int
         DR order, or polynomial degree, to enforce.
     """
-    if master_data.master_model.scenarios[0, 0].first_stage.dr_dependent_equality_cons:
+    nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+    if nom_scenario_blk.first_stage.dr_dependent_equality_cons:
         return master_data.config.decision_rule_order
 
     if master_data.iteration == 0:
         return 0
-    elif master_data.iteration <= len(master_data.config.uncertain_params):
+    elif master_data.iteration <= len(nom_scenario_blk.effective_uncertain_params):
         return min(1, master_data.config.decision_rule_order)
     else:
         return min(2, master_data.config.decision_rule_order)
