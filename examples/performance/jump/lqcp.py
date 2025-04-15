@@ -9,9 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
 model.n = 1000
 model.m = 1000
@@ -21,11 +21,11 @@ model.dt = model.T / model.n
 model.h2 = model.dx**2
 model.a = 0.001
 
-model.ns = RangeSet(0, model.n)
-model.ms = RangeSet(0, model.n)
+model.ns = pyo.RangeSet(0, model.n)
+model.ms = pyo.RangeSet(0, model.n)
 
-model.y = Var(model.ms, model.ns, bounds=(0.0, 1.0))
-model.u = Var(model.ms, bounds=(-1.0, 1.0))
+model.y = pyo.Var(model.ms, model.ns, bounds=(0.0, 1.0))
+model.u = pyo.Var(model.ms, bounds=(-1.0, 1.0))
 
 
 def yt(j, dx):
@@ -43,7 +43,7 @@ def rule(model):
     )
 
 
-model.obj = Objective(rule=rule)
+model.obj = pyo.Objective(rule=rule)
 
 
 def pde_rule(model, i, j):
@@ -57,8 +57,8 @@ def pde_rule(model, i, j):
     ) / model.h2
 
 
-model.pde = Constraint(
-    RangeSet(0, model.n - 1), RangeSet(1, model.n - 1), rule=pde_rule
+model.pde = pyo.Constraint(
+    pyo.RangeSet(0, model.n - 1), pyo.RangeSet(1, model.n - 1), rule=pde_rule
 )
 
 
@@ -66,14 +66,14 @@ def ic_rule(model, j):
     return model.y[0, j] == 0
 
 
-model.ic = Constraint(model.ns, rule=ic_rule)
+model.ic = pyo.Constraint(model.ns, rule=ic_rule)
 
 
 def bc1_rule(model, i):
     return model.y[i, 2] - 4 * model.y[i, 1] + 3 * model.y[i, 0] == 0
 
 
-model.bc1 = Constraint(RangeSet(1, model.n), rule=bc1_rule)
+model.bc1 = pyo.Constraint(pyo.RangeSet(1, model.n), rule=bc1_rule)
 
 
 def bc2_rule(model, i):
@@ -82,4 +82,4 @@ def bc2_rule(model, i):
     ] == (2 * model.dx) * (model.u[i] - model.y[i, model.n - 0])
 
 
-model.bc2 = Constraint(RangeSet(1, model.n), rule=bc2_rule)
+model.bc2 = pyo.Constraint(pyo.RangeSet(1, model.n), rule=bc2_rule)
