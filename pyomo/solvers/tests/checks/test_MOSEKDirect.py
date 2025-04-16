@@ -362,6 +362,12 @@ class MOSEKDirectTests(unittest.TestCase):
             solver.solve(model, options={'wrong.name': '1'})
         with self.assertRaises(AttributeError) as typeCheck:
             solver.solve(model, options={'mosek.iparam.log': 'mosek.wrong.input'})
+        # Check for wrong parameter name (but valid MOSEK attribute)
+        with self.assertRaises(ValueError) as typeCheck:
+            solver.solve(model, options={'mosek.mark.up': 'wrong.val'})
+        # Check for parameter names with wrong length
+        with self.assertRaises(AssertionError) as typeCheck:
+            solver.solve(model, options={'mosek.iparam.log.level': 10})
 
 
 if __name__ == "__main__":
