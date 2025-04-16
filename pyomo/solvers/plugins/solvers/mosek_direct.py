@@ -169,21 +169,17 @@ class MOSEKDirect(DirectSolver):
                     if param[0] == 'mosek':
                         param.pop(0)
                     param = getattr(mosek, param[0])(param[1])
-                    if 'sparam' in key.split('.'):
+                    if 'sparam.' in key:
                         self._solver_model.putstrparam(param, option)
-                    elif 'dparam' in key.split('.'):
+                    elif 'dparam.' in key:
                         self._solver_model.putdouparam(param, option)
-                    elif 'iparam' in key.split('.'):
-                        if isinstance(option, int):
-                            self._solver_model.putintparam(param, option)
-                        elif isinstance(option, str):
+                    elif 'iparam.' in key:
+                        if isinstance(option, str):
                             option = option.split('.')
                             if option[0] == 'mosek':
                                 option.pop(0)
                             option = getattr(mosek, option[0])(option[1])
-                            self._solver_model.putintparam(param, option)
-                        else:
-                            logger.warning("Ignoring invalid value for iparam.\n")
+                        self._solver_model.putintparam(param, option)
             except (TypeError, AttributeError):
                 raise
         try:
