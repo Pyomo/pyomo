@@ -92,6 +92,7 @@ class DesignOfExperiments:
         tee=False,
         get_labeled_model_args=None,
         logger_level=logging.WARNING,
+        experiment_cost_weight=None,
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     ):
@@ -146,6 +147,10 @@ class DesignOfExperiments:
             Solver option to be passed for verbose output.
         get_labeled_model_args:
             Additional arguments for the ``get_labeled_model`` function on the Experiment object.
+        experiment_cost_weight:
+            This is the weight to add "experiment_cost" to the objective function.
+            This is important if the FIM objective is "flat" in the decision space.
+            Default is None, which means no additional penalty term is added.
         _Cholesky_option:
             Boolean value of whether or not to use the cholesky factorization to compute the
             determinant for the D-optimality criteria. This parameter should not be changed
@@ -221,6 +226,9 @@ class DesignOfExperiments:
 
         # Empty results object
         self.results = {}
+
+        # extended objective
+        self.experiment_cost_weight = experiment_cost_weight
 
         # May need this attribute for more complicated structures?
         # (i.e., no model rebuilding for large models with sequential)
@@ -1274,12 +1282,25 @@ class DesignOfExperiments:
             )
             return m.determinant == det_perm
 
+        if self.experiment_cost_weight:
+            # If the experiment cost weight is provided, add it to the objective
+            # TODO: Add error checking that the experiment object computes an experiment cost
+            model.extra_objective = pyo.Expression(
+                expr=self.experiment_cost_weight*model.scenario_blocks[0].experiment_cost
+                )
+        else:
+            # If no experiment cost weight is provided, set it to 0
+            model.extra_objective = 0
+
         if self.Cholesky_option and self.objective_option == ObjectiveLib.determinant:
             model.obj_cons.cholesky_cons = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=cholesky_imp
             )
+
+        
+
             model.objective = pyo.Objective(
-                expr=2 * sum(pyo.log10(model.L[j, j]) for j in model.parameter_names),
+                expr=2 * sum(pyo.log10(model.L[j, j]) for j in model.parameter_names) + model.extra_objective,
                 sense=pyo.maximize,
             )
 
@@ -1290,7 +1311,7 @@ class DesignOfExperiments:
             )
             model.obj_cons.determinant_rule = pyo.Constraint(rule=determinant_general)
             model.objective = pyo.Objective(
-                expr=pyo.log10(model.determinant + 1e-6), sense=pyo.maximize
+                expr=pyo.log10(model.determinant + 1e-6) + model.extra_objective, sense=pyo.maximize
             )
 
         elif self.objective_option == ObjectiveLib.trace:
@@ -1298,7 +1319,7 @@ class DesignOfExperiments:
             model.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             model.obj_cons.trace_rule = pyo.Constraint(rule=trace_calc)
             model.objective = pyo.Objective(
-                expr=pyo.log10(model.trace), sense=pyo.maximize
+                expr=pyo.log10(model.trace) + model.extra_objective, sense=pyo.maximize
             )
 
         elif self.objective_option == ObjectiveLib.zero:
