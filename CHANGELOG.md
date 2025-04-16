@@ -24,6 +24,7 @@ Pyomo 6.9.2   (16 Apr 2025)
   - Update future solver interface documentation (#3526)
   - Document `BlockData.clone` (#3542)
 - Solver Interfaces
+  - Fix bug in `XpressPersistent.update_var` (#3566)
   - Avoid duplicate `AMPLFUNC` entries in `ipopt_v2` (#3554)
   - Update deprecation warnings in `contrib.solver` (#3553, #3555)
   - Support for upcoming knitro python package (#3478)
@@ -40,8 +41,10 @@ Pyomo 6.9.2   (16 Apr 2025)
 - Contributed Packages
   - cspline_external: Add a function for cubic spline interpolation (#3216)
   - DoE: Correct initialization when using lower diagonal of FIM (#3532)
+  - FBBT: Resolve bug registering native type handlers (#3567)
   - parmest/DoE: Ordering and param bug fixes (#3512)
   - PyNumero: Add support for greybox models (#3364)
+  - PyROS: Modify Decision Rule Order Efficiency (#3562)
   - PyROS: Revise second-stage equality reformulation under discrete
     (scenario-based) uncertainty (#3533)
   - PyROS: Add Uncertain Parameter Reduction (#3503)
