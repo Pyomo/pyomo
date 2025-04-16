@@ -30,7 +30,7 @@ Pyomo 6.9.2   (16 Apr 2025)
   - Support for upcoming knitro python package (#3478)
   - Future solver interface reorganization and updates (#3476)
   - Update HiGHS interface to allow keyboard interrupts (#3509, #3511)
-  - Fix/extend MOSEK option handeling (#3488)
+  - Fix/extend MOSEK option handling (#3488)
 - Testing
   - Defer `pathlib` import, remove test output file (#3563)
   - Add IDAES Solvers to Mac; Update to Ubuntu 22.04 (#3556)

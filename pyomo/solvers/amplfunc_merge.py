@@ -14,7 +14,7 @@ from pyomo.common.deprecation import relocated_module_attribute
 relocated_module_attribute(
     'amplfunc_string_merge',
     'pyomo.solvers.amplfunc_merge.unique_paths',
-    version='6.9.2.dev0',
+    version='6.9.2',
     f_globals=globals(),
 )
 
