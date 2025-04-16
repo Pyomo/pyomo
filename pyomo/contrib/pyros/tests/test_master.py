@@ -39,6 +39,7 @@ from pyomo.contrib.pyros.master_problem_methods import (
 from pyomo.contrib.pyros.util import (
     ModelData,
     preprocess_model_data,
+    get_all_first_stage_eq_cons,
     ObjectiveType,
     time_code,
     TimingData,
@@ -195,8 +196,8 @@ class TestConstructMasterProblem(unittest.TestCase):
             )
 
         nadj_eq_con_zip = zip(
-            master_model.scenarios[0, 0].first_stage.equality_cons.values(),
-            master_model.scenarios[0, 1].first_stage.equality_cons.values(),
+            get_all_first_stage_eq_cons(master_model.scenarios[0, 0]),
+            get_all_first_stage_eq_cons(master_model.scenarios[0, 1]),
         )
         for eq_con_00, eq_con_01 in nadj_eq_con_zip:
             self.assertIsNot(
