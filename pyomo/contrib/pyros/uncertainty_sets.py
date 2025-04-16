@@ -36,6 +36,7 @@ from pyomo.core.base import (
     minimize,
     Var,
     VarData,
+    NonNegativeReals,
 )
 from pyomo.core.expr import mutable_expression, native_numeric_types, value
 from pyomo.core.util import quicksum, dot_product
@@ -508,6 +509,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         Bounds for the value of each uncertain parameter constrained
         by the set (i.e. bounds for each set dimension).
+
+        This method should return an empty list if it can't be calculated
+        or a list of length = self.dim if it can.
         """
         raise NotImplementedError
 
@@ -558,23 +562,32 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Notes
         -----
-        This check is carried out by solving a sequence of maximization
-        and minimization problems (in which the objective for each
-        problem is the value of a single uncertain parameter). If any of
-        the optimization models cannot be solved successfully to
+        This check is carried out by checking if all parameter bounds
+        are finite.
+
+        If no parameter bounds are available, the check is done by
+        solving a sequence of maximization and minimization problems
+        (in which the objective for each problem is the value of a
+        single uncertain parameter).
+        If any of the optimization models cannot be solved successfully to
         optimality, then False is returned.
 
-        This method is invoked during the validation step of a PyROS
-        solver call.
+        This method is invoked by validate.
         """
-        # initialize uncertain parameter variables
-        param_bounds_arr = np.array(
-            self._compute_parameter_bounds(solver=config.global_solver)
-        )
+        # use parameter bounds if they are available
+        param_bounds_arr = self.parameter_bounds
+        if param_bounds_arr:
+            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+        else:
+            # initialize uncertain parameter variables
+            param_bounds_arr = np.array(
+                self._compute_parameter_bounds(solver=config.global_solver)
+            )
+            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
 
-        all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+        # log result
         if not all_bounds_finite:
-            config.progress_logger.info(
+            config.progress_logger.error(
                 "Computed coordinate value bounds are not all finite. "
                 f"Got bounds: {param_bounds_arr}"
             )
@@ -583,16 +596,65 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def is_nonempty(self, config):
         """
-        Return True if the uncertainty set is nonempty, else False.
-        """
-        return self.is_bounded(config)
+        Determine whether the uncertainty set is nonempty.
 
-    def is_valid(self, config):
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Returns
+        -------
+        : bool
+            True if the nominal point is within the set,
+            and False otherwise.
         """
-        Return True if the uncertainty set is bounded and non-empty,
-        else False.
+        # check if nominal point is in set for quick test
+        set_nonempty = False
+        if config.nominal_uncertain_param_vals:
+            if self.point_in_set(config.nominal_uncertain_param_vals):
+                set_nonempty = True
+        else:
+            # construct feasibility problem and solve otherwise
+            set_nonempty = self._solve_feasibility(config.global_solver)
+
+        # log result
+        if not set_nonempty:
+            config.progress_logger.error(
+                "Nominal point is not within the uncertainty set. "
+                f"Got nominal point: {config.nominal_uncertain_param_vals}"
+            )
+
+        return set_nonempty
+
+    def validate(self, config):
         """
-        return self.is_nonempty(config=config) and self.is_bounded(config=config)
+        Validate the uncertainty set with a nonemptiness and boundedness check.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+
+        Raises
+        ------
+        ValueError
+            If nonemptiness check or boundedness check fail.
+        """
+        check_nonempty = self.is_nonempty(config=config)
+        check_bounded = self.is_bounded(config=config)
+
+        if not check_nonempty:
+            raise ValueError(
+                "Failed nonemptiness check. Nominal point is not in the set. "
+                f"Nominal point:\n {config.nominal_uncertain_param_vals}."
+            )
+
+        if not check_bounded:
+            raise ValueError(
+                "Failed boundedness check. Parameter bounds are not finite. "
+                f"Parameter bounds:\n {self.parameter_bounds}."
+            )
 
     @abc.abstractmethod
     def set_as_constraint(self, uncertain_params=None, block=None):
@@ -734,6 +796,56 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             obj.deactivate()
 
         return param_bounds
+
+    def _solve_feasibility(self, solver):
+        """
+        Construct and solve feasibility problem using uncertainty set
+        constraints and parameter bounds using `set_as_constraint` and
+        `_add_bounds_on_uncertain_parameters` of self.
+
+        Parameters
+        ----------
+        solver : Pyomo solver
+            Optimizer capable of solving bounding problems to
+            global optimality.
+
+        Returns
+        -------
+        : bool
+            True if the feasibility problem solves successfully,
+            and raises an exception otherwise
+
+        Raises
+        ------
+        ValueError
+            If feasibility problem fails to solve.
+        """
+        model = ConcreteModel()
+        model.u = Var(within=NonNegativeReals)
+
+        # construct param vars
+        model.param_vars = Var(range(self.dim))
+
+        # add bounds on param vars
+        self._add_bounds_on_uncertain_parameters(model.param_vars, global_solver=solver)
+
+        # add constraints
+        self.set_as_constraint(uncertain_params=model.param_vars, block=model)
+
+        # add objective with dummy variable model.u
+        @model.Objective(sense=minimize)
+        def feasibility_objective(self):
+            return model.u
+
+        # solve feasibility problem
+        res = solver.solve(model, load_solutions=False)
+        if not check_optimal_termination(res):
+            raise ValueError(
+                "Could not successfully solve feasibility problem. "
+                f"Solver status summary:\n {res.solver}."
+            )
+
+        return True
 
     def _add_bounds_on_uncertain_parameters(
         self, uncertain_param_vars, global_solver=None
@@ -1097,10 +1209,6 @@ class BoxSet(UncertaintySet):
 
         bounds_arr = np.array(val)
 
-        for lb, ub in bounds_arr:
-            if lb > ub:
-                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
-
         # box set dimension is immutable
         if hasattr(self, "_bounds") and bounds_arr.shape[0] != self.dim:
             raise ValueError(
@@ -1160,6 +1268,28 @@ class BoxSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check BoxSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness and LB<=UB checks fail.
+        """
+        bounds_arr = np.array(self.parameter_bounds)
+
+        # finiteness check
+        if not np.all(np.isfinite(bounds_arr)):
+            raise ValueError(
+                "Not all bounds are finite. " f"\nGot bounds:\n {bounds_arr}"
+            )
+
+        # check LB <= UB
+        for lb, ub in bounds_arr:
+            if lb > ub:
+                raise ValueError(f"Lower bound {lb} exceeds upper bound {ub}")
 
 
 class CardinalitySet(UncertaintySet):
@@ -1259,13 +1389,6 @@ class CardinalitySet(UncertaintySet):
             valid_type_desc="a valid numeric type",
         )
 
-        for dev_val in val:
-            if dev_val < 0:
-                raise ValueError(
-                    f"Entry {dev_val} of attribute 'positive_deviation' "
-                    f"is negative value"
-                )
-
         val_arr = np.array(val)
 
         # dimension of the set is immutable
@@ -1298,13 +1421,6 @@ class CardinalitySet(UncertaintySet):
     @gamma.setter
     def gamma(self, val):
         validate_arg_type("gamma", val, valid_num_types, "a valid numeric type", False)
-        if val < 0 or val > self.dim:
-            raise ValueError(
-                "Cardinality set attribute "
-                f"'gamma' must be a real number between 0 and dimension "
-                f"{self.dim} "
-                f"(provided value {val})"
-            )
 
         self._gamma = val
 
@@ -1419,6 +1535,43 @@ class CardinalitySet(UncertaintySet):
             and np.all(aux_space_pt <= 1)
         )
 
+    def validate(self, config):
+        """
+        Check CardinalitySet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, positive deviation, or gamma checks fail.
+        """
+        orig_val = self.origin
+        pos_dev = self.positive_deviation
+        gamma = self.gamma
+
+        # finiteness check
+        if not (np.all(np.isfinite(orig_val)) and np.all(np.isfinite(pos_dev))):
+            raise ValueError(
+                "Origin value and/or positive deviation are not finite. "
+                f"Got origin: {orig_val}, positive deviation: {pos_dev}"
+            )
+
+        # check deviation is positive
+        for dev_val in pos_dev:
+            if dev_val < 0:
+                raise ValueError(
+                    f"Entry {dev_val} of attribute 'positive_deviation' "
+                    f"is negative value"
+                )
+
+        # check gamma between 0 and n
+        if gamma < 0 or gamma > self.dim:
+            raise ValueError(
+                "Cardinality set attribute "
+                f"'gamma' must be a real number between 0 and dimension "
+                f"{self.dim} "
+                f"(provided value {gamma})"
+            )
+
 
 class PolyhedralSet(UncertaintySet):
     """
@@ -1464,6 +1617,8 @@ class PolyhedralSet(UncertaintySet):
         # This check is only performed at construction.
         self._validate()
 
+    # TODO this has a _validate method...
+    # seems redundant with new validate method and should be consolidated
     def _validate(self):
         """
         Check polyhedral set attributes are such that set is nonempty
@@ -1547,19 +1702,6 @@ class PolyhedralSet(UncertaintySet):
                     f"to match shape of attribute 'rhs_vec' "
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
-
-        # check no column is all zeros. otherwise, set is unbounded
-        cols_with_all_zeros = np.nonzero(
-            [np.all(col == 0) for col in lhs_coeffs_arr.T]
-        )[0]
-        if cols_with_all_zeros.size > 0:
-            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
-            raise ValueError(
-                "Attempting to set attribute 'coefficients_mat' to value "
-                f"with all entries zero in columns at indexes: {col_str}. "
-                "Ensure column has at least one nonzero entry"
-            )
-
         self._coefficients_mat = lhs_coeffs_arr
 
     @property
@@ -1639,6 +1781,43 @@ class PolyhedralSet(UncertaintySet):
             uncertainty_cons=list(conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check PolyhedralSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, full column rank of LHS matrix, is_bounded,
+            or is_nonempty checks fail.
+        """
+        lhs_coeffs_arr = self.coefficients_mat
+        rhs_vec_arr = self.rhs_vec
+
+        # finiteness check
+        if not (
+            np.all(np.isfinite(lhs_coeffs_arr)) and np.all(np.isfinite(rhs_vec_arr))
+        ):
+            raise ValueError(
+                "LHS coefficient matrix or RHS vector are not finite. "
+                f"\nGot LHS matrix:\n{lhs_coeffs_arr},\nRHS vector:\n{rhs_vec_arr}"
+            )
+
+        # check no column is all zeros. otherwise, set is unbounded
+        cols_with_all_zeros = np.nonzero(
+            [np.all(col == 0) for col in lhs_coeffs_arr.T]
+        )[0]
+        if cols_with_all_zeros.size > 0:
+            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
+            raise ValueError(
+                "Attempting to set attribute 'coefficients_mat' to value "
+                f"with all entries zero in columns at indexes: {col_str}. "
+                "Ensure column has at least one nonzero entry"
+            )
+
+        # check boundedness and nonemptiness
+        super().validate(config)
 
 
 class BudgetSet(UncertaintySet):
@@ -1778,38 +1957,6 @@ class BudgetSet(UncertaintySet):
                     f"to match shape of attribute 'budget_rhs_vec' "
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
-
-        # ensure all entries are 0-1 values
-        uniq_entries = np.unique(lhs_coeffs_arr)
-        non_bool_entries = uniq_entries[(uniq_entries != 0) & (uniq_entries != 1)]
-        if non_bool_entries.size > 0:
-            raise ValueError(
-                "Attempting to set attribute `budget_membership_mat` to value "
-                "containing entries that are not 0-1 values "
-                f"(example: {non_bool_entries[0]}). "
-                "Ensure all entries are of value 0 or 1"
-            )
-
-        # check no row is all zeros
-        rows_with_zero_sums = np.nonzero(lhs_coeffs_arr.sum(axis=1) == 0)[0]
-        if rows_with_zero_sums.size > 0:
-            row_str = ", ".join(str(val) for val in rows_with_zero_sums)
-            raise ValueError(
-                "Attempting to set attribute `budget_membership_mat` to value "
-                f"with all entries zero in rows at indexes: {row_str}. "
-                "Ensure each row and column has at least one nonzero entry"
-            )
-
-        # check no column is all zeros
-        cols_with_zero_sums = np.nonzero(lhs_coeffs_arr.sum(axis=0) == 0)[0]
-        if cols_with_zero_sums.size > 0:
-            col_str = ", ".join(str(val) for val in cols_with_zero_sums)
-            raise ValueError(
-                "Attempting to set attribute `budget_membership_mat` to value "
-                f"with all entries zero in columns at indexes: {col_str}. "
-                "Ensure each row and column has at least one nonzero entry"
-            )
-
         # matrix is valid; update
         self._budget_membership_mat = lhs_coeffs_arr
 
@@ -1843,14 +1990,6 @@ class BudgetSet(UncertaintySet):
                     f"must have {self.budget_membership_mat.shape[0]} entries "
                     f"to match shape of attribute 'budget_membership_mat' "
                     f"(provided {rhs_vec_arr.size} entries)"
-                )
-
-        # ensure all entries are nonnegative
-        for entry in rhs_vec_arr:
-            if entry < 0:
-                raise ValueError(
-                    f"Entry {entry} of attribute 'budget_rhs_vec' is "
-                    "negative. Ensure all entries are nonnegative"
                 )
 
         self._budget_rhs_vec = rhs_vec_arr
@@ -1925,6 +2064,71 @@ class BudgetSet(UncertaintySet):
     @copy_docstring(UncertaintySet.set_as_constraint)
     def set_as_constraint(self, **kwargs):
         return PolyhedralSet.set_as_constraint(self, **kwargs)
+
+    def validate(self, config):
+        """
+        Check BudgetSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, full 0 column or row of LHS matrix,
+            or positive RHS vector checks fail.
+        """
+        lhs_coeffs_arr = self.budget_membership_mat
+        rhs_vec_arr = self.budget_rhs_vec
+        orig_val = self.origin
+
+        # finiteness check
+        if not (
+            np.all(np.isfinite(lhs_coeffs_arr))
+            and np.all(np.isfinite(rhs_vec_arr))
+            and np.all(np.isfinite(orig_val))
+        ):
+            raise ValueError(
+                "Origin, LHS coefficient matrix or RHS vector are not finite. "
+                f"\nGot origin:\n{orig_val},\nLHS matrix:\n{lhs_coeffs_arr},\nRHS vector:\n{rhs_vec_arr}"
+            )
+
+        # check no row, col, are all zeros and all values are 0-1.
+        # ensure all entries are 0-1 values
+        uniq_entries = np.unique(lhs_coeffs_arr)
+        non_bool_entries = uniq_entries[(uniq_entries != 0) & (uniq_entries != 1)]
+        if non_bool_entries.size > 0:
+            raise ValueError(
+                "Attempting to set attribute `budget_membership_mat` to value "
+                "containing entries that are not 0-1 values "
+                f"(example: {non_bool_entries[0]}). "
+                "Ensure all entries are of value 0 or 1"
+            )
+
+        # check no row is all zeros
+        rows_with_zero_sums = np.nonzero(lhs_coeffs_arr.sum(axis=1) == 0)[0]
+        if rows_with_zero_sums.size > 0:
+            row_str = ", ".join(str(val) for val in rows_with_zero_sums)
+            raise ValueError(
+                "Attempting to set attribute `budget_membership_mat` to value "
+                f"with all entries zero in rows at indexes: {row_str}. "
+                "Ensure each row and column has at least one nonzero entry"
+            )
+
+        # check no column is all zeros
+        cols_with_zero_sums = np.nonzero(lhs_coeffs_arr.sum(axis=0) == 0)[0]
+        if cols_with_zero_sums.size > 0:
+            col_str = ", ".join(str(val) for val in cols_with_zero_sums)
+            raise ValueError(
+                "Attempting to set attribute `budget_membership_mat` to value "
+                f"with all entries zero in columns at indexes: {col_str}. "
+                "Ensure each row and column has at least one nonzero entry"
+            )
+
+        # ensure all rhs entries are nonnegative
+        for entry in rhs_vec_arr:
+            if entry < 0:
+                raise ValueError(
+                    f"Entry {entry} of attribute 'budget_rhs_vec' is "
+                    "negative. Ensure all entries are nonnegative"
+                )
 
 
 class FactorModelSet(UncertaintySet):
@@ -2088,16 +2292,6 @@ class FactorModelSet(UncertaintySet):
                 f"(provided shape {psi_mat_arr.shape})"
             )
 
-        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
-        is_full_column_rank = psi_mat_rank == self.number_of_factors
-        if not is_full_column_rank:
-            raise ValueError(
-                "Attribute 'psi_mat' should be full column rank. "
-                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
-                "Ensure `psi_mat` does not have more columns than rows, "
-                "and the columns of `psi_mat` are linearly independent."
-            )
-
         self._psi_mat = psi_mat_arr
 
     @property
@@ -2117,12 +2311,6 @@ class FactorModelSet(UncertaintySet):
 
     @beta.setter
     def beta(self, val):
-        if val > 1 or val < 0:
-            raise ValueError(
-                "Beta parameter must be a real number between 0 "
-                f"and 1 inclusive (provided value {val})"
-            )
-
         self._beta = val
 
     @property
@@ -2273,6 +2461,42 @@ class FactorModelSet(UncertaintySet):
             np.abs(aux_space_pt) <= 1 + tol
         )
 
+    def validate(self, config):
+        """
+        Check FactorModelSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness full column rank of Psi matrix, or
+            beta between 0 and 1 checks fail.
+        """
+        orig_val = self.origin
+        psi_mat_arr = self.psi_mat
+        beta = self.beta
+
+        # finiteness check
+        if not np.all(np.isfinite(orig_val)):
+            raise ValueError("Origin is not finite. " f"Got origin: {orig_val}")
+
+        # check psi is full column rank
+        psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
+        check_full_column_rank = psi_mat_rank == self.number_of_factors
+        if not check_full_column_rank:
+            raise ValueError(
+                "Attribute 'psi_mat' should be full column rank. "
+                f"(Got a matrix of shape {psi_mat_arr.shape} and rank {psi_mat_rank}.) "
+                "Ensure `psi_mat` does not have more columns than rows, "
+                "and the columns of `psi_mat` are linearly independent."
+            )
+
+        # check beta is between 0 and 1
+        if beta > 1 or beta < 0:
+            raise ValueError(
+                "Beta parameter must be a real number between 0 "
+                f"and 1 inclusive (provided value {beta})"
+            )
+
 
 class AxisAlignedEllipsoidalSet(UncertaintySet):
     """
@@ -2375,14 +2599,6 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
                     f"to value of dimension {val_arr.size}"
                 )
 
-        # ensure half-lengths are non-negative
-        for half_len in val_arr:
-            if half_len < 0:
-                raise ValueError(
-                    f"Entry {half_len} of 'half_lengths' "
-                    "is negative. All half-lengths must be nonnegative"
-                )
-
         self._half_lengths = val_arr
 
     @property
@@ -2451,6 +2667,33 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check AxisAlignedEllipsoidalSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or positive half-length checks fail.
+        """
+        ctr = self.center
+        half_lengths = self.half_lengths
+
+        # finiteness check
+        if not (np.all(np.isfinite(ctr)) and np.all(np.isfinite(half_lengths))):
+            raise ValueError(
+                "Center or half-lengths are not finite. "
+                f"Got center: {ctr}, half-lengths: {half_lengths}"
+            )
+
+        # ensure half-lengths are non-negative
+        for half_len in half_lengths:
+            if half_len < 0:
+                raise ValueError(
+                    f"Entry {half_len} of 'half_lengths' "
+                    "is negative. All half-lengths must be nonnegative"
+                )
 
 
 class EllipsoidalSet(UncertaintySet):
@@ -2666,7 +2909,6 @@ class EllipsoidalSet(UncertaintySet):
                     f"(provided matrix with shape {shape_mat_arr.shape})"
                 )
 
-        self._verify_positive_definite(shape_mat_arr)
         self._shape_matrix = shape_mat_arr
 
     @property
@@ -2681,12 +2923,6 @@ class EllipsoidalSet(UncertaintySet):
     @scale.setter
     def scale(self, val):
         validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
-        if val < 0:
-            raise ValueError(
-                f"{type(self).__name__} attribute "
-                f"'scale' must be a non-negative real "
-                f"(provided value {val})"
-            )
 
         self._scale = val
         self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
@@ -2805,6 +3041,35 @@ class EllipsoidalSet(UncertaintySet):
             uncertainty_cons=list(uncertainty_conlist.values()),
             auxiliary_vars=aux_var_list,
         )
+
+    def validate(self, config):
+        """
+        Check EllipsoidalSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness, positive semi-definite, or
+            positive scale checks fail.
+        """
+        ctr = self.center
+        shape_mat_arr = self.shape_matrix
+        scale = self.scale
+
+        # finiteness check
+        if not np.all(np.isfinite(ctr)):
+            raise ValueError("Center is not finite. " f"Got center: {ctr}")
+
+        # check shape matrix is positive semidefinite
+        self._verify_positive_definite(shape_mat_arr)
+
+        # ensure scale is non-negative
+        if scale < 0:
+            raise ValueError(
+                f"{type(self).__name__} attribute "
+                f"'scale' must be a non-negative real "
+                f"(provided value {scale})"
+            )
 
 
 class DiscreteScenarioSet(UncertaintySet):
@@ -2973,6 +3238,30 @@ class DiscreteScenarioSet(UncertaintySet):
         rounded_scenarios = np.round(self.scenarios, decimals=num_decimals)
         rounded_point = np.round(point, decimals=num_decimals)
         return np.any(np.all(rounded_point == rounded_scenarios, axis=1))
+
+    def validate(self, config):
+        """
+        Check DiscreteScenarioSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or nonemptiness checks fail.
+        """
+        scenario_arr = self.scenarios
+
+        # check nonemptiness
+        if len(scenario_arr) < 1:
+            raise ValueError(
+                "Scenarios set must be nonempty. " f"Got scenarios: {scenario_arr}"
+            )
+
+        # check finiteness
+        for scenario in scenario_arr:
+            if not np.all(np.isfinite(scenario)):
+                raise ValueError(
+                    "Not all scenarios are finite. " f"Got scenario: {scenario}"
+                )
 
 
 class IntersectionSet(UncertaintySet):
@@ -3160,3 +3449,21 @@ class IntersectionSet(UncertaintySet):
             uncertainty_cons=all_cons,
             auxiliary_vars=all_aux_vars,
         )
+
+    def validate(self, config):
+        """
+        Check IntersectionSet validity.
+
+        Raises
+        ------
+        ValueError
+            If finiteness or nonemptiness checks fail.
+        """
+        the_sets = self.all_sets
+
+        # validate each set
+        for a_set in the_sets:
+            a_set.validate(config)
+
+        # check boundedness and nonemptiness of intersected set
+        super().validate(config)
