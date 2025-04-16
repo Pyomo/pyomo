@@ -1,7 +1,5 @@
-from pyomo.common.dependencies import (
-    numpy as np,
-    pandas as pd
-)
+import numpy as np
+# from pyomo.common.dependencies import numpy as np
 import pytest
 
 def compute_FIM_metrics(FIM):
@@ -57,17 +55,17 @@ def test_FIM_metrics():
 
     cond_expected = np.linalg.cond(FIM)
 
-    assert np.isclose(results['det_FIM'], det_expected)
-    assert np.isclose(results['trace_FIM'], trace_expected)
-    assert np.allclose(results['E_vals'], E_vals_expected)
-    assert np.isclose(results['D_opt'], D_opt_expected)
-    assert np.isclose(results['A_opt'], A_opt_expected)
+    assert results['det_FIM']== det_expected # np.isclose(results['det_FIM'], det_expected)
+    assert results['trace_FIM']== trace_expected # np.isclose(results['trace_FIM'], trace_expected)
+    assert results['E_vals']== E_vals_expected # np.allclose(results['E_vals'], E_vals_expected)
+    assert results['D_opt']== D_opt_expected # np.isclose(results['D_opt'], D_opt_expected)
+    assert results['A_opt']== A_opt_expected # np.isclose(results['A_opt'], A_opt_expected)
     if min_eigval.real > 0:
-        assert np.isclose(results['E_opt'], np.log10(min_eigval))
+        assert results['E_opt']== np.log10(min_eigval) # np.isclose(results['E_opt'], np.log10(min_eigval))
     else:
         assert np.isnan(results['E_opt'])
 
-    assert np.isclose(results['ME_opt'], np.log10(cond_expected))
+    assert results['ME_opt']== np.log10(cond_expected)# np.isclose(results['ME_opt'], np.log10(cond_expected))
 
 
 def test_FIM_metrics_warning_printed(capfd):
