@@ -17,10 +17,10 @@ The following algorithms are currently available in MindtPy:
 
 Usage and early implementation details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
-`preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
+`preprint <https://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
 This solver implementation has been developed by `David Bernal <https://github.com/bernalde>`_
 and `Zedong Peng <https://github.com/ZedongPeng>`_ as part of research efforts at the `Bernal Research Group 
-<https://bernalde.github.io/>`_ and the `Grossmann Research Group <http://egon.cheme.cmu.edu/>`_
+<https://bernalde.github.io/>`_ and the `Grossmann Research Group <https://egon.cheme.cmu.edu/>`_
 at Purdue University and Carnegie Mellon University.
 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
@@ -65,28 +65,28 @@ Usage of MindtPy to solve a convex MINLP Pyomo model involves:
 
 .. code::
 
-  >>> SolverFactory('mindtpy').solve(model)
+  >>> pyo.SolverFactory('mindtpy').solve(model)
 
 An example which includes the modeling approach may be found below.
 
 .. doctest::
 
   Required imports
-  >>> from pyomo.environ import *
+  >>> import pyomo.environ as pyo
 
   Create a simple model
-  >>> model = ConcreteModel()
+  >>> model = pyo.ConcreteModel()
 
-  >>> model.x = Var(bounds=(1.0,10.0),initialize=5.0)
-  >>> model.y = Var(within=Binary)
+  >>> model.x = pyo.Var(bounds=(1.0,10.0),initialize=5.0)
+  >>> model.y = pyo.Var(within=pyo.Binary)
 
-  >>> model.c1 = Constraint(expr=(model.x-4.0)**2 - model.x <= 50.0*(1-model.y))
-  >>> model.c2 = Constraint(expr=model.x*log(model.x)+5.0 <= 50.0*(model.y))
+  >>> model.c1 = pyo.Constraint(expr=(model.x-4.0)**2 - model.x <= 50.0*(1-model.y))
+  >>> model.c2 = pyo.Constraint(expr=model.x*pyo.log(model.x)+5.0 <= 50.0*(model.y))
 
-  >>> model.objective = Objective(expr=model.x, sense=minimize)
+  >>> model.objective = pyo.Objective(expr=model.x, sense=pyo.minimize)
 
   Solve the model using MindtPy
-  >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt') # doctest: +SKIP
+  >>> pyo.SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt') # doctest: +SKIP
 
 The solution may then be displayed by using the commands
 
@@ -103,13 +103,13 @@ The solution may then be displayed by using the commands
 
 .. code::
 
-  >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
+  >>> pyo.SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
 
 MindtPy also supports setting options for mip solvers and nlp solvers. 
 
 .. code::
 
-  >>> SolverFactory('mindtpy').solve(model, 
+  >>> pyo.SolverFactory('mindtpy').solve(model, 
                                      strategy='OA',
                                      time_limit=3600,
                                      mip_solver='gams',

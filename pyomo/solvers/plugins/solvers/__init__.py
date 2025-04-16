@@ -34,4 +34,5 @@ from pyomo.solvers.plugins.solvers import (
     scip_direct,
     scip_persistent,
     SAS,
+    KNITROAMPL,
 )
