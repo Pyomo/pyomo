@@ -7,7 +7,7 @@ Pyomo 6.9.2   (16 Apr 2025)
 
 - General
   - Update Copyright to 2025 (#3515)
-  - Ensure `capture_output` does not output to file descriptors (#3537)
+  - `capture_output`: do not output to captured file descriptors (#3537, #3560)
   - `calc_variable_from_constraint`: guard against expression overflow (#3541)
   - Standardize the usage of pyomo.environ imports (#3545)
   - Update ASL CMake builders (#3548)
@@ -30,10 +30,10 @@ Pyomo 6.9.2   (16 Apr 2025)
   - Support for upcoming knitro python package (#3478)
   - Future solver interface reorganization and updates (#3476)
   - Update HiGHS interface to allow keyboard interrupts (#3509, #3511)
+  - Fix/extend MOSEK option handeling (#3488)
 - Testing
   - Defer `pathlib` import, remove test output file (#3563)
   - Add IDAES Solvers to Mac; Update to Ubuntu 22.04 (#3556)
-  - Address two intermittent test failures when capturing output (#3560)
   - Clean up numeric_expr dispatcher test driver (#3551)
   - Testing and coverage fixes (#3549)
   - Resolve intermittent test failure (increase sleep time) (#3517)
@@ -82,7 +82,7 @@ Pyomo 6.9.0   (21 Feb 2025)
   - Resolve error parenthesizing pow mantissa (#3472)
   - Resolve OSX error accessing closed filehandle (#3467)
   - Allow construction of CUID from another CUID (#3464)
-  - Clean up `identify_variables` / `identify_mutable_parameters`; 
+  - Clean up `identify_variables` / `identify_mutable_parameters`;
     deprecate `SimpleExpressionVisitor` (#3436)
 - Solver Interfaces
   - Solver refactor: BUGFIX, f-string in contrib/solver (#3481)
@@ -96,11 +96,11 @@ Pyomo 6.9.0   (21 Feb 2025)
   - 2025 Testing update: Black 25.1.0, testing Qt without X11 (#3463)
   - Testing: exclude Xpress 9.5.1 on Windows/GHA/Python3.{0,1} (#3455)
   - CY25 CI Infrastructure and typo fixes (#3453)
-  - Verify we are testing all NEOS solvers (#3433)  
+  - Verify we are testing all NEOS solvers (#3433)
 - Contributed Packages
   - GDPOpt: Add Logic-Based Discrete-Steepest Descent Algorithm (#3331)
   - PyROS: Fix/Tweak Documentation and Solver Output Logging (#3475)
-  - PyROS: Fix Treatment of Fixed Model Variables and Initialization of 
+  - PyROS: Fix Treatment of Fixed Model Variables and Initialization of
            Auxiliary Uncertain Parameters (#3461)
   - PyROS: Improve handling of separation problem sub-solver errors (#3441)
   - PyROS: Extend valid types for solver argument `uncertain_params` (#3439)
