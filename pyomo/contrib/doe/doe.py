@@ -61,6 +61,13 @@ _SMALL_TOLERANCE_DEFINITENESS = 1e-6
 # below and the tests. The user should not need to adjust it.
 _SMALL_TOLERANCE_SYMMETRY = 1e-6
 
+# This small and positive tolerance is used to check
+# if the imaginary part of the eigenvalues of the FIM is
+# greater than a small tolerance. It is defined as a
+# tolerance here to ensure consistency between the code
+# below and the tests. The user should not need to adjust it.
+_SMALL_TOLERANCE_IMG = 1e-6
+
 
 class ObjectiveLib(Enum):
     determinant = "determinant"
@@ -1578,8 +1585,8 @@ class DesignOfExperiments:
                 time_set.append(iter_t)
 
             FIM = self._computed_FIM
-            
-            '''
+
+            """
             # Alex said to make this a function
             # This should be a static (?) function
             # Making it a function allows us to perform error tests
@@ -1590,25 +1597,25 @@ class DesignOfExperiments:
                 # Perform error checks
                 # Return D, A, E, ME
             
-            '''
+            """
             # Compute and record metrics on FIM
-            det_FIM = np.linalg.det(FIM)   # Determinant of FIM         
+            det_FIM = np.linalg.det(FIM)  # Determinant of FIM
             D_opt = np.log10(det_FIM)
             trace_FIM = np.trace(FIM)  # Trace of FIM
-            A_opt = np.log10(trace_FIM)  
-            E_vals, E_vecs =np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
+            A_opt = np.log10(trace_FIM)
+            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
 
             E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            IMG_THERESHOLD = 1e-6  # Threshold for imaginary component
+
             # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > IMG_THERESHOLD:
+            if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
                 self.logger.warning(
-                    f"Eigenvalue has imaginary component greater than {IMG_THERESHOLD}, contact developers if this issue persists."
+                    f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
                 )
 
             # If the real value is less than or equal to zero, set the E_opt value to nan
             if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan  
+                E_opt = np.nan
             else:
                 E_opt = np.log10(E_vals.real[E_ind])
 
@@ -1627,7 +1634,7 @@ class DesignOfExperiments:
             fim_factorial_results["det_FIM"].append(det_FIM)
             fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
-            
+
         self.fim_factorial_results = fim_factorial_results
 
         return self.fim_factorial_results
