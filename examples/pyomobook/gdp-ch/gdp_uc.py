@@ -11,7 +11,7 @@
 
 # gdp_uc.py
 import pyomo.environ as pyo
-from pyomo.gdp import *
+from pyomo.gdp import Disjunct, Disjunction
 
 model = pyo.AbstractModel()
 

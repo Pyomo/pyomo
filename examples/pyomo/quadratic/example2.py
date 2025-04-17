@@ -12,29 +12,29 @@
 # a slightly less brain-dead separable parabolic function of three variables, whose
 # minimum is obviously at x[1]=x[2]=x[3]=0.
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 
 def indices_rule(model):
     return range(1, 4)
 
 
-model.indices = Set(initialize=indices_rule, within=PositiveIntegers)
+model.indices = pyo.Set(initialize=indices_rule, within=pyo.PositiveIntegers)
 
-model.x = Var(model.indices, within=Reals)
+model.x = pyo.Var(model.indices, within=pyo.Reals)
 
 
 def bound_x_rule(model, i):
     return (-10, model.x[i], 10)
 
 
-model.bound_x = Constraint(model.indices, rule=bound_x_rule)
+model.bound_x = pyo.Constraint(model.indices, rule=bound_x_rule)
 
 
 def objective_rule(model):
     return sum([model.x[i] * model.x[i] for i in model.indices])
 
 
-model.objective = Objective(rule=objective_rule, sense=minimize)
+model.objective = pyo.Objective(rule=objective_rule, sense=pyo.minimize)

@@ -18,7 +18,7 @@ from pyomo.common.download import FileDownloader
 logger = logging.getLogger('pyomo.common')
 
 # These URLs were retrieved from
-#     https://ampl.com/resources/hooking-your-solver-to-ampl/
+#     https://dev.ampl.com/more/reports.html#hooking-solvers-to-ampl
 # All 32-bit downloads are used - 64-bit is available only for Linux
 urlmap = {
     'linux': 'https://netlib.org/ampl/student/linux/gjh.gz',
