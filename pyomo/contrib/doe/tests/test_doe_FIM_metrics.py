@@ -11,7 +11,7 @@ def compute_FIM_metrics(FIM):
     E_vals, E_vecs =np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
 
     E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-    IMG_THERESHOLD = 1e-6  # Threshold for imaginary component
+    IMG_THERESHOLD = 1e-6  # Instead of creating a new constant, use `SMALL_DIFF` by importiing it form `doe.py`
     # Warn the user if there is a ``large`` imaginary component (should not be)
     if abs(E_vals.imag[E_ind]) > IMG_THERESHOLD:
         print(
@@ -67,18 +67,7 @@ def test_FIM_metrics():
 
     assert np.isclose(results['ME_opt'], np.log10(cond_expected))
 
-    # assert results['det_FIM']== det_expected # np.isclose(results['det_FIM'], det_expected)
-    # assert results['trace_FIM']== trace_expected # np.isclose(results['trace_FIM'], trace_expected)
-    # assert results['E_vals']== E_vals_expected # np.allclose(results['E_vals'], E_vals_expected)
-    # assert results['D_opt']== D_opt_expected # np.isclose(results['D_opt'], D_opt_expected)
-    # assert results['A_opt']== A_opt_expected # np.isclose(results['A_opt'], A_opt_expected)
-    # if min_eigval.real > 0:
-    #     assert results['E_opt']== np.log10(min_eigval) # np.isclose(results['E_opt'], np.log10(min_eigval))
-    # else:
-    #     assert np.isnan(results['E_opt'])
-
-    # assert results['ME_opt']== np.log10(cond_expected)# np.isclose(results['ME_opt'], np.log10(cond_expected))
-
+   
 
 def test_FIM_metrics_warning_printed(capfd):
     # Create a matrix with an imaginary component large enough to trigger the warning
