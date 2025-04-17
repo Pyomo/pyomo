@@ -247,12 +247,13 @@ def SSE_weighted(model):
     return expr
 
 # Calculate the sensitivity of measured variables to parameters using central finite difference
-def compute_jacobian(model):
+def _compute_jacobian(model, relative_perturbation, solver_option="ipopt"):
     """
-    Compute the Jacobian matrix using central finite difference.
+    Computes the Jacobian matrix using central finite difference scheme
 
     Arguments:
-        model: Pyomo model containing experiment_outputs and measurement_error.
+        model: Pyomo model containing experiment_outputs and measurement_error
+        relative_perturbation: value used to perturb the objectives
 
     Returns:
         J: Jacobian matrix
@@ -271,23 +272,22 @@ def compute_jacobian(model):
     # compute the sensitivity of measured variables to the parameters (Jacobian)
     J = np.zeros((n_outputs, n_params))
 
-    perturbation = 1e-6  # Small perturbation for finite differences
     for i, param in enumerate(params):
         # store original value of the parameter
         orig_value = param_values[i]
 
         # Forward perturbation
-        param.fix(orig_value + perturbation)
+        param.fix(orig_value + relative_perturbation)
 
         # solve model
-        solver = pyo.SolverFactory('ipopt')
+        solver = pyo.SolverFactory(solver_option)
         solver.solve(model)
 
         # forward perturbation measured variables
         y_hat_plus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
 
         # Backward perturbation
-        param.fix(orig_value - perturbation)
+        param.fix(orig_value - relative_perturbation)
 
         # resolve model
         solver.solve(model)
@@ -299,20 +299,21 @@ def compute_jacobian(model):
         param.fix(orig_value)
 
         # Central difference approximation for the Jacobian
-        J[:, i] = [(y_hat_plus[w] - y_hat_minus[w]) / (2 * perturbation) for w in range(len(y_hat_plus))]
+        J[:, i] = [(y_hat_plus[w] - y_hat_minus[w]) / (2 * relative_perturbation) for w in range(len(y_hat_plus))]
 
     return J
 
 # compute the Fisher information matrix of the estimated parameters
-def compute_FIM(model):
+def compute_FIM(model, relative_perturbation, solver_option="ipopt"):
     """
-    Calculate the Fisher information matrix using the Jacobian and model measurement errors.
+    Compute the Fisher information matrix from the Jacobian matrix and measurement errors
 
     Arguments:
-        model: Pyomo model containing experiment_outputs and measurement_error.
+        model: Pyomo model containing the experiment outputs and measurement errors
+        relative_perturbation: value used to perturb the objectives
 
     Returns:
-        FIM: Fisher information matrix.
+        FIM: Fisher information matrix
     """
 
     # extract the measured variables and measurement errors
@@ -323,11 +324,19 @@ def compute_FIM(model):
     if len(error_list) == 0 or len(y_hat_list) == 0:
         raise ValueError("Experiment outputs and measurement errors cannot be empty.")
 
+    # check if the dimension of error_list is same with that of y_hat_list
+    if len(error_list) != len(y_hat_list):
+        raise ValueError("Experiment outputs and measurement errors are not the same length.")
+
     # create the weight matrix W (inverse of variance)
     W = np.diag([1 / (err**2) for err in error_list])
 
-    # calculate Jacobian matrix
-    J = compute_jacobian(model)
+    # compute the Jacobian matrix
+    J = _compute_jacobian(model, relative_perturbation, solver_option)
+
+    # computing the condition number of the Jacobian matrix
+    cond_number_jac = np.linalg.cond(J)
+    print("The condition number of the Jacobian matrix is:",cond_number_jac)
 
     # calculate the FIM
     FIM = J.T @ W @ J
@@ -681,7 +690,7 @@ class Estimator(object):
                 '''
                 if self.obj_function == 'SSE': # covariance calculation for measurements in the same unit
                     # get the model
-                    model = self.exp_list[0].get_labeled_model()
+                    model = self.exp_list[0].get_labeled_model().clone()
 
                     # get the measurement error
                     meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
@@ -697,7 +706,7 @@ class Estimator(object):
                         cov = pd.DataFrame(
                             cov, index=thetavals.keys(), columns=thetavals.keys()
                         )
-                elif self.obj_function == 'SSE_weighted': # covariance calculation for measurements in diff. units
+                elif self.obj_function == 'SSE_weighted':
                     # Store the FIM of all the experiments
                     FIM_all_exp = []
                     for experiment in self.exp_list: # loop through the experiments
@@ -714,7 +723,7 @@ class Estimator(object):
                         solver.solve(model)
 
                         # compute the FIM
-                        FIM_all_exp.append(compute_FIM(model))
+                        FIM_all_exp.append(compute_FIM(model, relative_perturbation=1e-6))
 
                     # Total FIM of experiments
                     FIM_total = np.sum(FIM_all_exp, axis=0)
@@ -1877,7 +1886,7 @@ class _DeprecatedEstimator(object):
                 '''
                 if self.obj_function == 'SSE': # covariance calculation for measurements in the same unit
                     # get the model
-                    model = self.exp_list[0].get_labeled_model()
+                    model = self.exp_list[0].get_labeled_model().clone()
 
                     # get the measurement error
                     meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
@@ -1910,7 +1919,7 @@ class _DeprecatedEstimator(object):
                         solver.solve(model)
 
                         # compute the FIM
-                        FIM_all_exp.append(compute_FIM(model))
+                        FIM_all_exp.append(compute_FIM(model, relative_perturbation=1e-6))
 
                     # Total FIM of experiments
                     FIM_total = np.sum(FIM_all_exp, axis=0)
