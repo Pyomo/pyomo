@@ -232,7 +232,7 @@ def SSE(model):
     Sum of squared error between the model prediction of measured variables and data values,
     assuming Gaussian i.i.d errors.
     """
-    expr = (1 / 2) * sum((y - y_hat) ** 2 for y_hat, y in model.experiment_outputs.items())
+    expr = sum((y - y_hat) ** 2 for y_hat, y in model.experiment_outputs.items())
     return expr
 
 def SSE_weighted(model):
@@ -688,21 +688,28 @@ class Estimator(object):
                 the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
-                if self.obj_function == 'SSE': # covariance calculation for measurements in the same unit
+                if self.obj_function == 'SSE':
                     # get the model
-                    model = self.exp_list[0].get_labeled_model().clone()
+                    model = self.exp_list[0].get_labeled_model()
 
-                    # get the measurement error
-                    meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
+                    # covariance matrix if the user defines the measurement errors
+                    if hasattr(model, "measurement_error"):
+                        # get the measurement errors
+                        meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
 
-                    # check if the user specifies the measurement error
-                    if all(item is None for item in meas_error):
-                        cov = sse / (n - l) * inv_red_hes # covariance matrix
-                        cov = pd.DataFrame(
-                            cov, index=thetavals.keys(), columns=thetavals.keys()
-                        )
+                        # check if the user supplied values for the measurement errors
+                        if all(item is None for item in meas_error):
+                            cov = 2 * (sse / (n - l)) * inv_red_hes  # covariance matrix
+                            cov = pd.DataFrame(
+                                cov, index=thetavals.keys(), columns=thetavals.keys()
+                            )
+                        else:
+                            cov = 2 * (meas_error[0] ** 2) * inv_red_hes # covariance matrix
+                            cov = pd.DataFrame(
+                                cov, index=thetavals.keys(), columns=thetavals.keys()
+                            )
                     else:
-                        cov = meas_error[0] * inv_red_hes # covariance matrix
+                        cov = 2 * (sse / (n - l)) * inv_red_hes # covariance matrix when the measurement errors are not defined
                         cov = pd.DataFrame(
                             cov, index=thetavals.keys(), columns=thetavals.keys()
                         )
@@ -1886,19 +1893,26 @@ class _DeprecatedEstimator(object):
                 '''
                 if self.obj_function == 'SSE': # covariance calculation for measurements in the same unit
                     # get the model
-                    model = self.exp_list[0].get_labeled_model().clone()
+                    model = self.exp_list[0].get_labeled_model()
 
-                    # get the measurement error
-                    meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
+                    # covariance matrix if the user defines the measurement errors
+                    if hasattr(model, "measurement_error"):
+                        # get the measurement errors
+                        meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
 
-                    # check if the user specifies the measurement error
-                    if all(item is None for item in meas_error):
-                        cov = sse / (n - l) * inv_red_hes # covariance matrix
-                        cov = pd.DataFrame(
-                            cov, index=thetavals.keys(), columns=thetavals.keys()
-                        )
+                        # check if the user supplied values for the measurement errors
+                        if all(item is None for item in meas_error):
+                            cov = 2 * (sse / (n - l)) * inv_red_hes  # covariance matrix
+                            cov = pd.DataFrame(
+                                cov, index=thetavals.keys(), columns=thetavals.keys()
+                            )
+                        else:
+                            cov = 2 * (meas_error[0] ** 2) * inv_red_hes  # covariance matrix
+                            cov = pd.DataFrame(
+                                cov, index=thetavals.keys(), columns=thetavals.keys()
+                            )
                     else:
-                        cov = meas_error[0] * inv_red_hes # covariance matrix
+                        cov = 2 * (sse / (n - l)) * inv_red_hes  # covariance matrix when the measurement errors are not defined
                         cov = pd.DataFrame(
                             cov, index=thetavals.keys(), columns=thetavals.keys()
                         )
