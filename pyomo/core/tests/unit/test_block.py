@@ -3049,6 +3049,77 @@ class TestBlock(unittest.TestCase):
         b.pprint(ostream=stream)
         self.assertEqual(correct_s, stream.getvalue())
 
+    def test_custom_block_default_rule(self):
+        """Tests the decorator with `build` method, but without options"""
+        @declare_custom_block("FooBlock")
+        class FooBlockData(BlockData):
+            def build(self, *args):
+                self.x = Var(list(args))
+                self.y = Var()
+
+        m = ConcreteModel()
+        m.blk_without_index = FooBlock()
+        m.blk_1 = FooBlock([1, 2, 3])
+        m.blk_2 = FooBlock([4, 5], [6, 7])
+
+        self.assertIn("x", m.blk_without_index.component_map())
+        self.assertIn("y", m.blk_without_index.component_map())
+        self.assertIn("x", m.blk_1[3].component_map())
+        self.assertIn("x", m.blk_2[4, 6].component_map())
+
+        self.assertEqual(len(m.blk_1), 3)
+        self.assertEqual(len(m.blk_2), 4)
+
+        self.assertEqual(len(m.blk_1[2].x), 1)
+        self.assertEqual(len(m.blk_2[4, 6].x), 2)
+
+    def test_custom_block_default_rule_options(self):
+        """Tests the decorator with `build` method and model options"""
+        @declare_custom_block("FooBlock")
+        class FooBlockData(BlockData):
+            def build(self, *args, capex, opex):
+                self.x = Var(list(args))
+                self.y = Var()
+
+                self.capex = capex
+                self.opex = opex
+
+        options = {"capex": 42, "opex": 24}
+        m = ConcreteModel()
+        m.blk_without_index = FooBlock(options=options)
+        m.blk_1 = FooBlock([1, 2, 3], options=options)
+        m.blk_2 = FooBlock([4, 5], [6, 7], options=options)
+
+        self.assertEqual(m.blk_without_index.capex, 42)
+        self.assertEqual(m.blk_without_index.opex, 24)
+
+        self.assertEqual(m.blk_1[3].capex, 42)
+        self.assertEqual(m.blk_2[4, 7].opex, 24)
+
+        with self.assertRaises(TypeError):
+            # missing 2 required keyword arguments
+            m.blk_3 = FooBlock()
+
+    def test_custom_block_user_rule(self):
+        """Tests if the default rule can be overwritten"""
+        @declare_custom_block("FooBlock")
+        class FooBlockData(BlockData):
+            def build(self, *args):
+                self.x = Var(list(args))
+                self.y = Var()
+
+        def _new_rule(blk):
+            blk.a = Var()
+            blk.b = Var()
+
+        m = ConcreteModel()
+        m.blk = FooBlock(rule=_new_rule)
+
+        self.assertNotIn("x", m.blk.component_map())
+        self.assertNotIn("y", m.blk.component_map())
+        self.assertIn("a", m.blk.component_map())
+        self.assertIn("b", m.blk.component_map())
+
     def test_block_rules(self):
         m = ConcreteModel()
         m.I = Set()
