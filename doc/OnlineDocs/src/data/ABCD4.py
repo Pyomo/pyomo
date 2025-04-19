@@ -9,16 +9,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.Z = Set(dimen=3)
-model.Y = Param(model.Z)
+model.Z = pyo.Set(dimen=3)
+model.Y = pyo.Param(model.Z)
 
 instance = model.create_instance('ABCD4.dat')
 
 print('Z ' + str(sorted(list(instance.Z.data()))))
 print('Y')
 for key in sorted(instance.Y.keys()):
-    print(name(instance.Y, key) + " " + str(value(instance.Y[key])))
+    print(pyo.name(instance.Y, key) + " " + str(pyo.value(instance.Y[key])))

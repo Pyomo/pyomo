@@ -688,10 +688,26 @@ class Test_Initializer(unittest.TestCase):
 
         d = {'col1': [1, 2, 4], 'col2': [10, 20, 40]}
         df = pd.DataFrame(data=d)
-        with self.assertRaisesRegex(
-            ValueError, 'DataFrameInitializer for DataFrame with multiple columns'
-        ):
-            a = Initializer(df)
+        a = Initializer(df)
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(
+            list(a.indices()),
+            [
+                (0, 'col1'),
+                (0, 'col2'),
+                (1, 'col1'),
+                (1, 'col2'),
+                (2, 'col1'),
+                (2, 'col2'),
+            ],
+        )
+        self.assertEqual(a(None, (0, 'col1')), 1)
+        self.assertEqual(a(None, (1, 'col2')), 20)
+        self.assertEqual(a(None, (2, 'col2')), 40)
+
         a = DataFrameInitializer(df, 'col2')
         self.assertIs(type(a), DataFrameInitializer)
         self.assertFalse(a.constant())
