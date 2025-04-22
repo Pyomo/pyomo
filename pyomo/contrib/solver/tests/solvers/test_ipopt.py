@@ -278,6 +278,7 @@ class TestIpoptInterface(unittest.TestCase):
             result = opt._create_command_line('myfile', opt.config, False)
 
 
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
@@ -302,6 +303,21 @@ class TestIpopt(unittest.TestCase):
         self.assertFalse(solver.config.tee)
         self.assertTrue(solver.config.executable.startswith('/path'))
 
-        # Change value on a solve call
-        # model = self.create_model()
-        # result = solver.solve(model, tee=True)
+    def test_ipopt_solve(self):
+        model = self.create_model()
+        ipopt.Ipopt().solve(model)
+
+    def test_ipopt_results(self):
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(model)
+        self.assertEqual(results.solver_name, 'ipopt')
+        self.assertEqual(results.iteration_count, 11)
+        self.assertEqual(results.incumbent_objective, 7.013645951336496e-25)
+        self.assertIn('Optimal Solution Found', results.extra_info.solver_message)
+
+    def test_ipopt_timer_object(self):
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(model)
+        timing_info = results.timing_info
+        self.assertIn('ipopt_excluding_nlp_functions', timing_info.keys())
+        self.assertIn('nlp_function_evaluations', timing_info.keys())

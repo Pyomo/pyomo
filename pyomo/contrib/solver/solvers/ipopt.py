@@ -14,10 +14,16 @@ import os
 import subprocess
 import datetime
 import io
+import re
 from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
-from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
+from pyomo.common.config import (
+    ConfigValue,
+    document_kwargs_from_configdict,
+    ConfigDict,
+    ADVANCED_OPTION,
+)
 from pyomo.common.errors import (
     ApplicationError,
     DeveloperError,
@@ -394,9 +400,7 @@ class Ipopt(SolverBase):
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
                     # and time
-                    (iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time) = (
-                        self._parse_ipopt_output(ostreams[0])
-                    )
+                    parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
             if proven_infeasible:
                 results = Results()
@@ -431,16 +435,26 @@ class Ipopt(SolverBase):
                     results.termination_condition = TerminationCondition.error
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
-                    results.iteration_count = iters
-                    if ipopt_time_nofunc is not None:
+                    results.iteration_count = parsed_output_data['iters']
+                    parsed_output_data.pop('iters')
+                    if 'total_time' in parsed_output_data['cpu_seconds']:
+                        results.timing_info.total_seconds = parsed_output_data[
+                            'cpu_seconds'
+                        ]['total_time']
+                    if 'nofunc_time' in parsed_output_data['cpu_seconds']:
                         results.timing_info.ipopt_excluding_nlp_functions = (
-                            ipopt_time_nofunc
+                            parsed_output_data['cpu_seconds']['nofunc_time']
                         )
-
-                    if ipopt_time_func is not None:
-                        results.timing_info.nlp_function_evaluations = ipopt_time_func
-                    if ipopt_total_time is not None:
-                        results.timing_info.total_seconds = ipopt_total_time
+                        results.timing_info.nlp_function_evaluations = (
+                            parsed_output_data['cpu_seconds']['func_time']
+                        )
+                    parsed_output_data.pop('cpu_seconds')
+                    results.extra_info = parsed_output_data
+                    # Set iteration_log visibility to ADVANCED_OPTION because it's
+                    # a lot to print out with `display`
+                    results.extra_info.get("iteration_log")._visibility = (
+                        ADVANCED_OPTION
+                    )
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -499,44 +513,131 @@ class Ipopt(SolverBase):
         results.timing_info.timer = timer
         return results
 
-    def _parse_ipopt_output(self, stream: io.StringIO):
-        """
-        Parse an IPOPT output file and return:
+    def _parse_ipopt_output(self, output):
+        parsed_data = {}
 
-        * number of iterations
-        * time in IPOPT
+        # Convert output to a string so we can parse it
+        if isinstance(output, io.StringIO):
+            output = output.getvalue()
 
-        """
+        if not output:
+            logger.log(
+                logging.WARNING,
+                "Returned output was empty. " "Cannot parse for additional data.",
+            )
+            return parsed_data
 
-        iters = None
-        nofunc_time = None
-        func_time = None
-        total_time = None
-        # parse the output stream to get the iteration count and solver time
-        for line in stream.getvalue().splitlines():
-            if line.startswith("Number of Iterations....:"):
-                tokens = line.split()
-                iters = int(tokens[-1])
-            elif line.startswith(
-                "Total seconds in IPOPT                               ="
-            ):
-                # Newer versions of IPOPT no longer separate timing into
-                # two different values. This is so we have compatibility with
-                # both new and old versions
-                tokens = line.split()
-                total_time = float(tokens[-1])
-            elif line.startswith(
-                "Total CPU secs in IPOPT (w/o function evaluations)   ="
-            ):
-                tokens = line.split()
-                nofunc_time = float(tokens[-1])
-            elif line.startswith(
-                "Total CPU secs in NLP function evaluations           ="
-            ):
-                tokens = line.split()
-                func_time = float(tokens[-1])
+        # Extract number of iterations
+        iter_match = re.search(r'Number of Iterations\.\.\.\.:\s+(\d+)', output)
+        if iter_match:
+            parsed_data['iters'] = int(iter_match.group(1))
+        # Gather all the iteration data
+        iter_table = re.findall(r'^(?:\s*\d+.*?)$', output, re.MULTILINE)
+        if iter_table:
+            columns = [
+                "iter",
+                "objective",
+                "inf_pr",
+                "inf_du",
+                "lg_mu",
+                "d_norm",
+                "lg_rg",
+                "alpha_du",
+                "alpha_pr",
+                "ls",
+            ]
+            all_iterations = []
 
-        return iters, nofunc_time, func_time, total_time
+            for line in iter_table:
+                tokens = line.strip().split()
+                if len(tokens) == len(columns):
+                    iter_data = dict(zip(columns, tokens))
+
+                    # Extract restoration flag from 'iter'
+                    iter_val = iter_data["iter"]
+                    iter_match = re.match(r"(\d+)(r?)", iter_val)
+                    if iter_match:
+                        iter_data["restoration"] = bool(
+                            iter_match.group(2)
+                        )  # True if 'r' is present
+                    else:
+                        iter_data["restoration"] = False
+                    iter_data.pop('iter')
+
+                    # Separate alpha_pr into numeric part and optional tag
+                    alpha_pr_val = iter_data["alpha_pr"]
+                    match = re.match(r"([0-9.eE+-]+)([a-zA-Z]?)", alpha_pr_val)
+                    if match:
+                        iter_data["alpha_pr"] = match.group(1)
+                        iter_data["step_acceptance"] = (
+                            match.group(2) if match.group(2) else None
+                        )
+                    else:
+                        iter_data["step_acceptance"] = None
+
+                    # Attempt to cast all values to float where possible
+                    for key in iter_data:
+                        try:
+                            if iter_data[key] == '-':
+                                iter_data[key] = None
+                                continue
+                            if isinstance(iter_data[key], bool):
+                                continue
+                            iter_data[key] = float(iter_data[key])
+                        except (ValueError, TypeError):
+                            pass
+
+                    all_iterations.append(iter_data)
+
+            parsed_data['iteration_log'] = all_iterations
+
+        # Extract scaled and unscaled table
+        scaled_unscaled_match = re.findall(
+            r'Objective\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
+            r'Dual infeasibility\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
+            r'Constraint violation\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
+            r'Complementarity\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
+            r'Overall NLP error\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+)',
+            output,
+            re.DOTALL,
+        )
+        if scaled_unscaled_match:
+            scaled = {
+                "incumbent_objective": float(scaled_unscaled_match[0][0]),
+                "dual_infeasibility": float(scaled_unscaled_match[0][2]),
+                "constraint_violation": float(scaled_unscaled_match[0][4]),
+                "complementarity_error": float(scaled_unscaled_match[0][6]),
+                "overall_nlp_error": float(scaled_unscaled_match[0][8]),
+            }
+            unscaled = {
+                "incumbent_objective": float(scaled_unscaled_match[0][1]),
+                "dual_infeasibility": float(scaled_unscaled_match[0][3]),
+                "constraint_violation": float(scaled_unscaled_match[0][5]),
+                "complementarity": float(scaled_unscaled_match[0][7]),
+                "overall_nlp_error": float(scaled_unscaled_match[0][9]),
+            }
+
+            parsed_data.update(unscaled)
+            parsed_data['final_scaled_results'] = scaled
+
+        # Newer versions of IPOPT no longer separate timing into
+        # two different values. This is so we have compatibility with
+        # both new and old versions
+        cpu_time = re.findall(r'Total CPU secs in .*? =\s+([0-9.]+)', output)
+        ipopt_seconds_match = re.search(
+            r'Total seconds in IPOPT\s+=\s+([0-9.]+)', output
+        )
+        if cpu_time and len(cpu_time) >= 2:
+            parsed_data['cpu_seconds'] = {
+                'nofunc_time': float(cpu_time[0]),
+                'func_time': float(cpu_time[1]),
+            }
+        elif ipopt_seconds_match:
+            parsed_data['cpu_seconds'] = {
+                'total_time': float(ipopt_seconds_match.group(1))
+            }
+
+        return parsed_data
 
     def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
         results = Results()
