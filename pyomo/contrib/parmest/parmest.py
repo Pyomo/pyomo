@@ -235,6 +235,9 @@ def SSE(model):
     return expr
 
 
+'''Adding pseudocode for draft implementation of the estimator class, 
+incorporating multistart. 
+'''
 class Estimator(object):
     """
     Parameter estimation class
@@ -273,7 +276,17 @@ class Estimator(object):
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
+        # Add the extra arguments needed for running the multistart implement
+        # _validate_multistart_args:
+        # if n_restarts > 1 and theta_samplig_method is not None:
+            # n_restarts=1,
+            # theta_sampling_method="random",
     ):
+
+        '''first theta would be provided by the user in the initialization of 
+        the Estimator class through the unknown parameter variables. Additional
+        would need to be generated using the sampling method provided by the user.
+        '''
 
         # check that we have a (non-empty) list of experiments
         assert isinstance(experiment_list, list)
@@ -447,6 +460,19 @@ class Estimator(object):
         parmest_model = utils.convert_params_to_vars(model, theta_names, fix_vars=False)
 
         return parmest_model
+    
+    # Make new private method, _generalize_initial_theta:
+    # This method will be used to generalize the initial theta values for multistart
+    # optimization. It will take the theta names and the initial theta values
+    # and return a dictionary of theta names and their corresponding values.
+    # def _generalize_initial_theta(self, theta_names, initial_theta):
+    #     if self.method == "random":
+    #         # Generate random theta values
+    #         theta_vals = np.random.uniform(lower_bound, upper_bound, size=len(theta_names))
+
+    #     elif self.method == "latin_hypercube":
+    #         # Generate theta values using Latin hypercube sampling
+    #         theta_vals = scipy.statsqmc.LatinHypercube(n=len(theta_names)).rvs(size=self.n_restarts)
 
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         model = self._create_parmest_model(experiment_number)
@@ -921,6 +947,83 @@ class Estimator(object):
             cov_n=cov_n,
         )
 
+    '''
+    def theta_est_multistart(
+        self,
+        n_restarts=1,
+        theta_sampling_method="random",
+        solver="ef_ipopt",
+        return_values=[],
+        calc_cov=False,
+        cov_n=None,
+    ):
+        """
+        Parameter estimation using multistart optimization
+
+        Parameters
+        ----------
+        n_restarts: int, optional
+            Number of restarts for multistart. Default is 1.
+        theta_sampling_method: string, optional
+            Method used to sample theta values. Options are "random", "latin_hypercube", or "sobol".
+            Default is "random".
+        solver: string, optional
+            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
+        return_values: list, optional
+            List of Variable names, used to return values from the model for data reconciliation
+        calc_cov: boolean, optional
+            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver).
+            Default is False.
+        cov_n: int, optional
+            If calc_cov=True, then the user needs to supply the number of datapoints
+            that are used in the objective function.
+
+        Returns
+        -------
+        objectiveval: float
+            The objective function value
+        thetavals: pd.Series
+            Estimated values for theta
+        variable values: pd.DataFrame
+            Variable values for each variable name in return_values (only for solver='ef_ipopt')
+        cov: pd.DataFrame
+            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
+        """
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None:
+            return print(
+                "Multistart is not supported in the deprecated parmest interface")
+            )
+
+        assert isinstance(n_restarts, int)
+        assert isinstance(theta_sampling_method, str)
+        assert isinstance(solver, str)
+        assert isinstance(return_values, list)
+        assert isinstance(calc_cov, bool)
+        if calc_cov:
+            num_unknowns = max(
+                [
+                    len(experiment.get_labeled_model().unknown_parameters)
+                    for experiment in self.exp_list
+                ]
+            )
+            assert isinstance(cov_n, int), (
+                "The number of datapoints that are used in the objective function is "
+                "required to calculate the covariance matrix"
+            )
+            assert (
+                cov_n > num_unknowns
+            ), "The number of datapoints must be greater than the number of parameters to estimate"
+        return_values = self._Q_opt(
+            solver=solver,
+            return_values=return_values,
+            bootlist=None,
+            calc_cov=calc_cov,
+            cov_n=cov_n,
+        )
+
+    '''
     def theta_est_bootstrap(
         self,
         bootstrap_samples,
