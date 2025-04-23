@@ -15,6 +15,7 @@ import subprocess
 import datetime
 import io
 import re
+import sys
 from typing import Mapping, Optional, Sequence
 
 from pyomo.common import Executable
@@ -296,7 +297,7 @@ class Ipopt(SolverBase):
         for k, val in config.solver_options.items():
             if k in ipopt_command_line_options:
                 cmd.append(str(k) + '=' + str(val))
-        return ' '.join(cmd)
+        return cmd
 
     @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
@@ -386,22 +387,34 @@ class Ipopt(SolverBase):
                     timeout = None
 
                 ostreams = [io.StringIO()] + config.tee
-                with TeeStream(*ostreams) as t:
-                    timer.start('subprocess')
-                    process = subprocess.run(
-                        cmd,
-                        timeout=timeout,
-                        env=env,
-                        universal_newlines=True,
-                        stdout=t.STDOUT,
-                        stderr=t.STDERR,
-                        check=False,
-                        shell=True,
-                    )
-                    timer.stop('subprocess')
+                try:
+                    with TeeStream(*ostreams) as t:
+                        timer.start('subprocess')
+                        process = subprocess.run(
+                            cmd,
+                            timeout=timeout,
+                            env=env,
+                            universal_newlines=True,
+                            stdout=t.STDOUT,
+                            stderr=t.STDERR,
+                            check=False,
+                        )
+                        t.STDOUT.flush()
+                        t.STDERR.flush()
+                        timer.stop('subprocess')
+                except OSError:
+                    err = sys.exc_info()[1]
+                    msg = 'Could not execute the command: %s\tError message: %s'
+                    raise ApplicationError(msg % (cmd, err))
                     # This is the stuff we need to parse to get the iterations
                     # and time
-                    parsed_output_data = self._parse_ipopt_output(ostreams[0])
+                finally:
+                    sys.stdout.flush()
+                print(ostreams)
+                print(ostreams[0])
+                print(ostreams[0].getvalue())
+
+                parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
             if proven_infeasible:
                 results = Results()
