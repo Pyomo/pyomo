@@ -589,8 +589,18 @@ class TestCapture(unittest.TestCase):
         remaining_attempts = 4
         while len(stack) and remaining_attempts:
             gc.collect()
+            time.sleep(((4 - remaining_attempts) / 4.0) ** 2)
             remaining_attempts -= 1
-        self.assertEqual(len(stack), 0)
+        try:
+            self.assertEqual(len(stack), 0)
+        except:
+            # We still want to unwind the context managers if the test fails:
+            while stack:
+                try:
+                    stack.pop().__exit__(None, None, None)
+                except:
+                    pass
+            raise
 
     def test_deadlock(self):
         class MockStream(object):

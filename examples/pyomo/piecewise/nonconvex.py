@@ -15,7 +15,7 @@
 # Z(X) = | -2X + 4       ,  2 <= X <= 6
 #        \ 5X - 38       ,  6 <= X <= 10
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 # Define the function
 # Just like in Pyomo constraint rules, a Pyomo model object
@@ -27,17 +27,17 @@ def f(model, x):
     return RANGE_POINTS[x]
 
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 
-model.X = Var(bounds=(-1.0, 10.0))
-model.Z = Var()
-model.p = Var(within=NonNegativeReals)
-model.n = Var(within=NonNegativeReals)
+model.X = pyo.Var(bounds=(-1.0, 10.0))
+model.Z = pyo.Var()
+model.p = pyo.Var(within=pyo.NonNegativeReals)
+model.n = pyo.Var(within=pyo.NonNegativeReals)
 
 # See documentation on Piecewise component by typing
 # help(Piecewise) in a python terminal after importing pyomo.core
 # Using BigM constraints with binary variables to represent the piecewise constraints
-model.con = Piecewise(
+model.con = pyo.Piecewise(
     model.Z,
     model.X,  # range and domain variables
     pw_pts=[-1.0, 2.0, 6.0, 10.0],
@@ -47,5 +47,5 @@ model.con = Piecewise(
 )
 
 # minimize the 1-norm distance of Z to 7.0, i.e., |Z-7|
-model.pn_con = Constraint(expr=model.Z - 7.0 == model.p - model.n)
-model.obj = Objective(rule=lambda model: model.p + model.n, sense=minimize)
+model.pn_con = pyo.Constraint(expr=model.Z - 7.0 == model.p - model.n)
+model.obj = pyo.Objective(rule=lambda model: model.p + model.n, sense=pyo.minimize)

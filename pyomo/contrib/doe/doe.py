@@ -32,12 +32,11 @@ import json
 import logging
 import math
 
-from pathlib import Path
-
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
     pandas as pd,
+    pathlib,
     matplotlib as plt,
 )
 from pyomo.common.modeling import unique_component_name
@@ -52,6 +51,19 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxB
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverStatus
+
+# This small and positive tolerance is used when checking
+# if the prior is negative definite or approximately
+# indefinite. It is defined as a tolerance here to ensure
+# consistency between the code below and the tests. The
+# user should not need to adjust it.
+_SMALL_TOLERANCE_DEFINITENESS = 1e-6
+
+# This small and positive tolerance is used to check
+# the FIM is approximately symmetric. It is defined as
+# a tolerance here to ensure consistency between the code
+# below and the tests. The user should not need to adjust it.
+_SMALL_TOLERANCE_SYMMETRY = 1e-6
 
 
 class ObjectiveLib(Enum):
@@ -256,7 +268,7 @@ class DesignOfExperiments:
         """
         # Check results file name
         if results_file is not None:
-            if type(results_file) not in [Path, str]:
+            if type(results_file) not in [pathlib.Path, str]:
                 raise ValueError(
                     "``results_file`` must be either a Path object or a string."
                 )
@@ -427,7 +439,31 @@ class DesignOfExperiments:
                 (len(model.parameter_names), len(model.parameter_names))
             )
 
-            L_vals_sq = np.linalg.cholesky(fim_np)
+            # Need to compute the full FIM before initializing the Cholesky factorization
+            if self.only_compute_fim_lower:
+                fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
+
+            # Check if the FIM is positive definite
+            # If not, add jitter to the diagonal
+            # to ensure positive definiteness
+            min_eig = np.min(np.linalg.eigvals(fim_np))
+
+            if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
+                # Raise the minimum eigenvalue to at least _SMALL_TOLERANCE_DEFINITENESS
+                jitter = np.min(
+                    [
+                        -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
+                        _SMALL_TOLERANCE_DEFINITENESS,
+                    ]
+                )
+            else:
+                # No jitter needed
+                jitter = 0
+
+            # Add jitter to the diagonal to ensure positive definiteness
+            L_vals_sq = np.linalg.cholesky(
+                fim_np + jitter * np.eye(len(model.parameter_names))
+            )
             for i, c in enumerate(model.parameter_names):
                 for j, d in enumerate(model.parameter_names):
                     model.L[c, d].value = L_vals_sq[i, j]
@@ -1471,7 +1507,28 @@ class DesignOfExperiments:
                 )
             )
 
-        self.logger.info("FIM provided matches expected dimensions from model.")
+        # Compute the eigenvalues of the FIM
+        evals = np.linalg.eigvals(FIM)
+
+        # Check if the FIM is positive definite
+        if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
+            raise ValueError(
+                "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
+                    _SMALL_TOLERANCE_DEFINITENESS
+                )
+            )
+
+        # Check if the FIM is symmetric
+        if not np.allclose(FIM, FIM.T, atol=_SMALL_TOLERANCE_SYMMETRY):
+            raise ValueError(
+                "FIM provided is not symmetric using absolute tolerance {}".format(
+                    _SMALL_TOLERANCE_SYMMETRY
+                )
+            )
+
+        self.logger.info(
+            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
+        )
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
@@ -1902,7 +1959,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
             )
 
         # Draw D-optimality
@@ -1923,7 +1980,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
             )
 
         # Draw E-optimality
@@ -1944,7 +2001,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
             )
 
         # Draw Modified E-optimality
@@ -1965,7 +2022,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
             )
 
     def _heatmap(
@@ -2066,7 +2123,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_A_opt.png"), format="png", dpi=450
             )
 
         # D-optimality
@@ -2092,7 +2149,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_D_opt.png"), format="png", dpi=450
             )
 
         # E-optimality
@@ -2118,7 +2175,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_E_opt.png"), format="png", dpi=450
             )
 
         # Modified E-optimality
@@ -2144,7 +2201,7 @@ class DesignOfExperiments:
             plt.pyplot.show()
         else:
             plt.pyplot.savefig(
-                Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
+                pathlib.Path(figure_file_name + "_ME_opt.png"), format="png", dpi=450
             )
 
     # Gets the FIM from an existing model
