@@ -2,6 +2,54 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.9.2   (16 Apr 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Update Copyright to 2025 (#3515)
+  - `capture_output`: do not output to captured file descriptors (#3537, #3560)
+  - `calc_variable_from_constraint`: guard against expression overflow (#3541)
+  - Standardize the usage of pyomo.environ imports (#3545)
+  - Update ASL CMake builders (#3548)
+  - Support passing LoggerAdapter objects to LogStream (#3547)
+- Core
+  - Support multi-column DataFrames in Initializer (#3552)
+  - Multiple dispatch for relational expression generation (#3483)
+  - Type check `exception` args in component `__call__` implementations (#3538)
+- Documentation
+  - Move RTD ads to the sidebar (#3536)
+  - Standardize Example Imports (#3543)
+  - LD-SDA Documentation (#3539)
+  - Fix broken URLs in documentation (#3529, #3544)
+  - Update future solver interface documentation (#3526)
+  - Document `BlockData.clone` (#3542)
+- Solver Interfaces
+  - Fix bug in `XpressPersistent.update_var` (#3566)
+  - Avoid duplicate `AMPLFUNC` entries in `ipopt_v2` (#3554)
+  - Update deprecation warnings in `contrib.solver` (#3553, #3555)
+  - Support for upcoming knitro python package (#3478)
+  - Future solver interface reorganization and updates (#3476)
+  - Update HiGHS interface to allow keyboard interrupts (#3509, #3511)
+  - Fix/extend MOSEK option handling (#3488)
+- Testing
+  - Defer `pathlib` import, remove test output file (#3563)
+  - Add IDAES Solvers to Mac; Update to Ubuntu 22.04 (#3556)
+  - Clean up numeric_expr dispatcher test driver (#3551)
+  - Testing and coverage fixes (#3549)
+  - Resolve intermittent test failure (increase sleep time) (#3517)
+  - Be more careful when/how we timeout conda install (#3514)
+- Contributed Packages
+  - cspline_external: Add a function for cubic spline interpolation (#3216)
+  - DoE: Correct initialization when using lower diagonal of FIM (#3532)
+  - FBBT: Resolve bug registering native type handlers (#3567)
+  - parmest/DoE: Ordering and param bug fixes (#3512)
+  - PyNumero: Add support for greybox models (#3364)
+  - PyROS: Modify Decision Rule Order Efficiency (#3562)
+  - PyROS: Revise second-stage equality reformulation under discrete
+    (scenario-based) uncertainty (#3533)
+  - PyROS: Add Uncertain Parameter Reduction (#3503)
+
+-------------------------------------------------------------------------------
 Pyomo 6.9.1   (5 Mar 2025)
 -------------------------------------------------------------------------------
 
@@ -34,7 +82,7 @@ Pyomo 6.9.0   (21 Feb 2025)
   - Resolve error parenthesizing pow mantissa (#3472)
   - Resolve OSX error accessing closed filehandle (#3467)
   - Allow construction of CUID from another CUID (#3464)
-  - Clean up `identify_variables` / `identify_mutable_parameters`; 
+  - Clean up `identify_variables` / `identify_mutable_parameters`;
     deprecate `SimpleExpressionVisitor` (#3436)
 - Solver Interfaces
   - Solver refactor: BUGFIX, f-string in contrib/solver (#3481)
@@ -48,11 +96,11 @@ Pyomo 6.9.0   (21 Feb 2025)
   - 2025 Testing update: Black 25.1.0, testing Qt without X11 (#3463)
   - Testing: exclude Xpress 9.5.1 on Windows/GHA/Python3.{0,1} (#3455)
   - CY25 CI Infrastructure and typo fixes (#3453)
-  - Verify we are testing all NEOS solvers (#3433)  
+  - Verify we are testing all NEOS solvers (#3433)
 - Contributed Packages
   - GDPOpt: Add Logic-Based Discrete-Steepest Descent Algorithm (#3331)
   - PyROS: Fix/Tweak Documentation and Solver Output Logging (#3475)
-  - PyROS: Fix Treatment of Fixed Model Variables and Initialization of 
+  - PyROS: Fix Treatment of Fixed Model Variables and Initialization of
            Auxiliary Uncertain Parameters (#3461)
   - PyROS: Improve handling of separation problem sub-solver errors (#3441)
   - PyROS: Extend valid types for solver argument `uncertain_params` (#3439)
