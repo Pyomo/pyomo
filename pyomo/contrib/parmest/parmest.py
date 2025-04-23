@@ -466,13 +466,30 @@ class Estimator(object):
     # optimization. It will take the theta names and the initial theta values
     # and return a dictionary of theta names and their corresponding values.
     # def _generalize_initial_theta(self, theta_names, initial_theta):
+    #     if n_restarts == 1:
+    #         # If only one restart, return an empty list
+            # return []
+
+    #         return {theta_names[i]: initial_theta[i] for i in range(len(theta_names))}
     #     if self.method == "random":
     #         # Generate random theta values
-    #         theta_vals = np.random.uniform(lower_bound, upper_bound, size=len(theta_names))
+    #         theta_vals = np.random.uniform(lower_bound, upper_bound, size=len(theta_names)
+    #     else:
+    #         # Generate theta values using Latin hypercube sampling or Sobol sampling
+    #     samples
 
     #     elif self.method == "latin_hypercube":
     #         # Generate theta values using Latin hypercube sampling
-    #         theta_vals = scipy.statsqmc.LatinHypercube(n=len(theta_names)).rvs(size=self.n_restarts)
+              # sampler = scipy.stats.qmc.LatinHypercube(d=len(theta_names))
+    #         samples = sampler.random(n=self.n_restarts)
+    #         theta_vals = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
+
+    #       elif self.method == "sobol":
+              # sampler = scipy.stats.qmc.Sobol(d=len(theta_names))
+    #         samples = sampler.random(n=self.n_restarts)
+    #         theta_vals = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
+
+    #       return theta_vals_multistart
 
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         model = self._create_parmest_model(experiment_number)
@@ -951,6 +968,7 @@ class Estimator(object):
     def theta_est_multistart(
         self,
         n_restarts=1,
+        theta_vals=None,
         theta_sampling_method="random",
         solver="ef_ipopt",
         return_values=[],
@@ -1015,12 +1033,46 @@ class Estimator(object):
             assert (
                 cov_n > num_unknowns
             ), "The number of datapoints must be greater than the number of parameters to estimate"
-        return_values = self._Q_opt(
-            solver=solver,
-            return_values=return_values,
-            bootlist=None,
-            calc_cov=calc_cov,
-            cov_n=cov_n,
+            if n_restarts > 1 and theta_sampling_method is not None:
+                call self._generalize_initial_theta(
+                    self.estimator_theta_names, self.initial_theta
+                )
+            # make empty list to store results
+            
+            for i in range(n_restarts):
+            # for number of restarts, call the self._Q_opt method
+            # with the theta values generated using the _generalize_initial_theta method
+
+                # Call the _Q_opt method with the generated theta values
+                objectiveval, thetavals, variable_values, cov = self._Q_opt(
+                    ThetaVals=theta_vals,
+                    solver=solver,
+                    return_values=return_values,
+                    calc_cov=calc_cov,
+                    cov_n=cov_n,
+                )
+                # Store the results in a list or DataFrame
+                # depending on the number of restarts
+                if n_restarts > 1 and cov is not None:
+                    results.append(
+                        {
+                            "objectiveval": objectiveval,
+                            "thetavals": thetavals,
+                            "variable_values": variable_values,
+                            "cov": cov,
+                        }
+                elif n_restarts > 1 and cov is None:
+                    results.append(
+                        { objectiveval: objectiveval,
+                            "thetavals": thetavals,
+                            "variable_values": variable_values,
+                        }
+                    )
+            return pd.DataFrame(results)
+                else:
+                    return objectiveval, thetavals, variable_values, cov
+ 
+                    
         )
 
     '''
