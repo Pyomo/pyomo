@@ -410,9 +410,6 @@ class Ipopt(SolverBase):
                     # and time
                 finally:
                     sys.stdout.flush()
-                print(ostreams)
-                print(ostreams[0])
-                print(ostreams[0].getvalue())
 
                 parsed_output_data = self._parse_ipopt_output(ostreams[0])
 

@@ -11,6 +11,7 @@
 
 import os
 import subprocess
+import logging
 
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
@@ -22,7 +23,6 @@ from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter
-
 
 """
 TODO:
@@ -161,6 +161,97 @@ class TestIpoptInterface(unittest.TestCase):
         opt.version(config=config)
         self.assertIsNone(opt._version_cache[0])
         self.assertIsNone(opt._version_cache[1])
+
+    def test_parse_output(self):
+        output = """Ipopt 3.13.2: 
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit http://projects.coin-or.org/Ipopt
+
+This version of Ipopt was compiled from source code available at
+    https://github.com/IDAES/Ipopt as part of the Institute for the Design of
+    Advanced Energy Systems Process Systems Engineering Framework (IDAES PSE
+    Framework) Copyright (c) 2018-2019. See https://github.com/IDAES/idaes-pse.
+
+This version of Ipopt was compiled using HSL, a collection of Fortran codes
+    for large-scale scientific computation.  All technical papers, sales and
+    publicity material resulting from use of the HSL codes within IPOPT must
+    contain the following acknowledgement:
+        HSL, a collection of Fortran codes for large-scale scientific
+        computation. See http://www.hsl.rl.ac.uk.
+******************************************************************************
+
+This is Ipopt version 3.13.2, running with linear solver ma27.
+
+Number of nonzeros in equality constraint Jacobian...:        0
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:        3
+
+Total number of variables............................:        2
+                     variables with only lower bounds:        0
+                variables with lower and upper bounds:        0
+                     variables with only upper bounds:        0
+Total number of equality constraints.................:        0
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0  5.6500000e+01 0.00e+00 1.00e+02  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  2.4669972e-01 0.00e+00 2.22e-01  -1.0 7.40e-01    -  1.00e+00 1.00e+00f  1
+   2  1.6256267e-01 0.00e+00 2.04e+00  -1.7 1.48e+00    -  1.00e+00 2.50e-01f  3
+   3  8.6119444e-02 0.00e+00 1.08e+00  -1.7 2.36e-01    -  1.00e+00 1.00e+00f  1
+   4  4.3223836e-02 0.00e+00 1.23e+00  -1.7 2.61e-01    -  1.00e+00 1.00e+00f  1
+   5  1.5610508e-02 0.00e+00 3.54e-01  -1.7 1.18e-01    -  1.00e+00 1.00e+00f  1
+   6  5.3544798e-03 0.00e+00 5.51e-01  -1.7 1.67e-01    -  1.00e+00 1.00e+00f  1
+   7  6.1281576e-04 0.00e+00 5.19e-02  -1.7 3.87e-02    -  1.00e+00 1.00e+00f  1
+   8  2.8893076e-05 0.00e+00 4.52e-02  -2.5 4.53e-02    -  1.00e+00 1.00e+00f  1
+   9  3.4591761e-08 0.00e+00 3.80e-04  -2.5 3.18e-03    -  1.00e+00 1.00e+00f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  10  1.2680803e-13 0.00e+00 3.02e-06  -5.7 3.62e-04    -  1.00e+00 1.00e+00f  1
+  11  7.0136460e-25 0.00e+00 1.72e-12  -8.6 2.13e-07    -  1.00e+00 1.00e+00f  1
+
+Number of Iterations....: 11
+
+                                   (scaled)                 (unscaled)
+Objective...............:   1.5551321399859192e-25    7.0136459513364959e-25
+Dual infeasibility......:   1.7239720368203862e-12    7.7751138860599418e-12
+Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
+Complementarity.........:   0.0000000000000000e+00    0.0000000000000000e+00
+Overall NLP error.......:   1.7239720368203862e-12    7.7751138860599418e-12
+
+
+Number of objective function evaluations             = 18
+Number of objective gradient evaluations             = 12
+Number of equality constraint evaluations            = 0
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 0
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 11
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.000
+Total CPU secs in NLP function evaluations           =      0.000
+
+EXIT: Optimal Solution Found.
+        
+        """
+        parsed_output = ipopt.Ipopt()._parse_ipopt_output(output)
+        self.assertEqual(parsed_output["iters"], 11)
+        self.assertEqual(len(parsed_output["iteration_log"]), 12)
+        self.assertEqual(parsed_output["incumbent_objective"], 7.0136459513364959e-25)
+        self.assertIn("final_scaled_results", parsed_output.keys())
+
+    def test_empty_output_parsing(self):
+        with self.assertLogs(
+            "pyomo.contrib.solver.solvers.ipopt", level="WARNING"
+        ) as logs:
+            ipopt.Ipopt()._parse_ipopt_output(output=None)
+        self.assertIn(
+            "Returned output was empty. Cannot parse for additional data.",
+            logs.output[0],
+        )
 
     def test_write_options_file(self):
         # If we have no options, we should get false back
