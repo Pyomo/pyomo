@@ -313,6 +313,10 @@ class Estimator(object):
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
 
+        # add the extra multistart arguments to the Estimator class
+        # self.n_restarts = n_restarts
+        # self.theta_sampling_method = theta_sampling_method
+
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
 
@@ -1038,7 +1042,14 @@ class Estimator(object):
                     self.estimator_theta_names, self.initial_theta
                 )
             # make empty list to store results
+
+
+            theta_vals = self._generalize_initial_theta(
+                self.estimator_theta_names, self.initial_theta, self.n_restarts, theta_sampling_method
+            )
+
             
+            results = []
             for i in range(n_restarts):
             # for number of restarts, call the self._Q_opt method
             # with the theta values generated using the _generalize_initial_theta method
