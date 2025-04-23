@@ -296,7 +296,7 @@ class Ipopt(SolverBase):
         for k, val in config.solver_options.items():
             if k in ipopt_command_line_options:
                 cmd.append(str(k) + '=' + str(val))
-        return cmd
+        return ' '.join(cmd)
 
     @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds):
@@ -396,6 +396,7 @@ class Ipopt(SolverBase):
                         stdout=t.STDOUT,
                         stderr=t.STDERR,
                         check=False,
+                        shell=True,
                     )
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
