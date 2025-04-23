@@ -155,7 +155,7 @@ class TimeSeriesData(_DynamicDataBase):
             indices = indices[0]
         return self.get_data_at_time_indices(indices)
 
-    def get_interpolated_data_at_time(self, time=None):
+    def get_interpolated_data(self, time=None, tolerance=0.0):
         """
         Returns the data associated with the provided time point or points by
         linear interpolation.
@@ -164,6 +164,9 @@ class TimeSeriesData(_DynamicDataBase):
         ----------
         time: Float or iterable
             The time point or points corresponding to returned data.
+        tolerance: float
+            Tolerance used when checking if time points are inside the data
+            range.
 
         Returns
         -------
@@ -181,6 +184,9 @@ class TimeSeriesData(_DynamicDataBase):
         is_iterable = _is_iterable(time)
         if not is_iterable:
             time = [time]
+        for t in time:
+            if t > self._time[-1] + tolerance or t < self._time[0] - tolerance:
+                raise RuntimeError("Requesting interpolation outside data range.")
         idxs = _get_time_index_vec(time, self._time)
         data = {}
         for cuid in self._data:
