@@ -740,11 +740,6 @@ class Estimator(object):
                     cov = pd.DataFrame(
                         cov, index=thetavals.keys(), columns=thetavals.keys()
                     )
-                # elif self.obj_function == 'SSE_weighted':
-                #     cov = inv_red_hes
-                #     cov = pd.DataFrame(
-                #         cov, index=thetavals.keys(), columns=thetavals.keys()
-                #     )
                 else:
                     raise NotImplementedError('Covariance calculation is only supported for SSE and SSE_weighted objectives')
 
@@ -1943,11 +1938,6 @@ class _DeprecatedEstimator(object):
                     cov = pd.DataFrame(
                         cov, index=thetavals.keys(), columns=thetavals.keys()
                     )
-                # elif self.obj_function == 'SSE_weighted':
-                #     cov = inv_red_hes
-                #     cov = pd.DataFrame(
-                #         cov, index=thetavals.keys(), columns=thetavals.keys()
-                #     )
                 else:
                     raise NotImplementedError('Covariance calculation is only supported for SSE and SSE_weighted objectives')
 
