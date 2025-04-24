@@ -108,6 +108,9 @@ class TestKestrel(unittest.TestCase):
 
 
 class RunAllNEOSSolvers(object):
+    def test_baron(self):
+        self._run('baron')
+
     def test_bonmin(self):
         self._run('bonmin')
 
@@ -161,8 +164,8 @@ class RunAllNEOSSolvers(object):
     # (and testing) until we have time to resolve #3321
     # [20 Sep 24]: and appears to have been removed from NEOS
     #
-    # def test_octeract(self):
-    #     self._run('octeract')
+    def test_octeract(self):
+        self._run('octeract')
 
     def test_ooqp(self):
         if self.sense == pyo.maximize:
