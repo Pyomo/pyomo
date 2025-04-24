@@ -185,7 +185,7 @@ class TimeSeriesData(_DynamicDataBase):
         if not is_iterable:
             time = [time]
         for t in time:
-            if t >= self._time[-1] + tolerance or t <= self._time[0] - tolerance:
+            if t > self._time[-1] + tolerance or t < self._time[0] - tolerance:
                 raise RuntimeError("Requesting interpolation outside data range.")
         idxs = _get_time_index_vec(time, self._time)
         data = {}
