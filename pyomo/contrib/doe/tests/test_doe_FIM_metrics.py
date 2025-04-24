@@ -18,7 +18,7 @@ def compute_FIM_metrics(FIM):
     # Warn the user if there is a ``large`` imaginary component (should not be)
     if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
         print(
-            f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
+            "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
         )
 
     # If the real value is less than or equal to zero, set the E_opt value to nan
