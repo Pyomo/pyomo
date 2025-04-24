@@ -163,7 +163,7 @@ class RunAllNEOSSolvers(object):
     # [16 Jul 24]: Octeract is erroring.  We will disable the interface
     # (and testing) until we have time to resolve #3321
     # [20 Sep 24]: and appears to have been removed from NEOS
-    #
+    # [24 Apr 25]: appears to be working again
     def test_octeract(self):
         self._run('octeract')
 

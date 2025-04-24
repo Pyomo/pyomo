@@ -14,6 +14,7 @@
 
 # Static documentation for NEOS solvers
 doc = {
+    'baron': 'Heuristic MINLP solver',
     'bonmin': 'Heuristic MINLP solver',
     'cbc': 'MILP solver',
     'conopt': 'Feasible path NLP solver',
@@ -30,7 +31,7 @@ doc = {
     'minos': 'SLC NLP solver',
     'minto': 'MILP solver',
     'mosek': 'Interior point NLP solver',
-    #'octeract': 'Deterministic global MINLP solver',
+    'octeract': 'Deterministic global MINLP solver',
     'ooqp': 'Convex QP solver',
     'path': 'Nonlinear MCP solver',
     'snopt': 'SQP NLP solver',
