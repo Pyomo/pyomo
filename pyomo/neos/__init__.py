@@ -14,8 +14,8 @@
 
 # Static documentation for NEOS solvers
 doc = {
-    'baron': 'Heuristic MINLP solver',
-    'bonmin': 'Heuristic MINLP solver',
+    'baron': 'Deterministic global MINLP solver',
+    'bonmin': 'Deterministic local MINLP solver',
     'cbc': 'MILP solver',
     'conopt': 'Feasible path NLP solver',
     'couenne': 'Deterministic global MINLP solver',
@@ -26,6 +26,7 @@ doc = {
     'knitro': 'Convex MINLP solver',
     'l-bfgs-b': 'Bound-constrained NLP solver',
     'lancelot': 'Augmented Lagrangian NLP solver',
+    'lgo': 'Lipschitz-Continuous Global Optimizer',
     'loqo': 'Interior point NLP solver',
     'minlp': 'Heuristic MINLP solver',
     'minos': 'SLC NLP solver',
@@ -34,7 +35,6 @@ doc = {
     'octeract': 'Deterministic global MINLP solver',
     'ooqp': 'Convex QP solver',
     'path': 'Nonlinear MCP solver',
-    'snopt': 'SQP NLP solver',
     'raposa': 'A Global Solver for Polynomial Programming Problems',
-    'lgo': 'Lipschitz-Continuous Global Optimizer',
+    'snopt': 'SQP NLP solver',
 }
