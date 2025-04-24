@@ -16,7 +16,7 @@ import datetime
 import io
 import re
 import sys
-from typing import Mapping, Optional, Sequence
+from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 
 from pyomo.common import Executable
 from pyomo.common.config import (
@@ -209,14 +209,14 @@ ipopt_command_line_options = {
 class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwds: Any) -> None:
         super().__init__(**kwds)
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
         self._version_timeout = 2
 
-    def available(self, config=None):
+    def available(self, config: Optional[IpoptConfig] = None) -> Availability:
         if config is None:
             config = self.config
         pth = config.executable.path()
@@ -227,7 +227,9 @@ class Ipopt(SolverBase):
                 self._available_cache = (pth, Availability.FullLicense)
         return self._available_cache[1]
 
-    def version(self, config=None):
+    def version(
+        self, config: Optional[IpoptConfig] = None
+    ) -> Optional[Tuple[int, int, int]]:
         if config is None:
             config = self.config
         pth = config.executable.path()
@@ -249,7 +251,7 @@ class Ipopt(SolverBase):
                 self._version_cache = (pth, version)
         return self._version_cache[1]
 
-    def has_linear_solver(self, linear_solver):
+    def has_linear_solver(self, linear_solver: str) -> bool:
         import pyomo.core as AML
 
         m = AML.ConcreteModel()
@@ -264,7 +266,9 @@ class Ipopt(SolverBase):
         )
         return 'running with linear solver' in results.solver_log
 
-    def _write_options_file(self, filename: str, options: Mapping):
+    def _write_options_file(
+        self, filename: str, options: Mapping[str, Union[str, int, float]]
+    ) -> bool:
         # First we need to determine if we even need to create a file.
         # If options is empty, then we return False
         opt_file_exists = False
@@ -280,7 +284,9 @@ class Ipopt(SolverBase):
                     opt_file.write(str(k) + ' ' + str(val) + '\n')
         return opt_file_exists
 
-    def _create_command_line(self, basename: str, config: IpoptConfig, opt_file: bool):
+    def _create_command_line(
+        self, basename: str, config: IpoptConfig, opt_file: bool
+    ) -> List[str]:
         cmd = [str(config.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
@@ -300,7 +306,7 @@ class Ipopt(SolverBase):
         return cmd
 
     @document_kwargs_from_configdict(CONFIG)
-    def solve(self, model, **kwds):
+    def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -524,7 +530,7 @@ class Ipopt(SolverBase):
         results.timing_info.timer = timer
         return results
 
-    def _parse_ipopt_output(self, output):
+    def _parse_ipopt_output(self, output: Union[str, io.StringIO]) -> Dict[str, Any]:
         parsed_data = {}
 
         # Convert output to a string so we can parse it
@@ -650,7 +656,9 @@ class Ipopt(SolverBase):
 
         return parsed_data
 
-    def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
+    def _parse_solution(
+        self, instream: io.TextIOBase, nl_info: NLWriterInfo
+    ) -> Results:
         results = Results()
         res, sol_data = parse_sol_file(
             sol_file=instream, nl_info=nl_info, result=results
