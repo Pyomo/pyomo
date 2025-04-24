@@ -93,10 +93,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Set initial values for inputs
         # Need a mask structure
         self._masking_matrix = np.triu(np.ones_like(self.doe_object.fim_initial))
-        self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
-        # self._input_values = np.asarray(
-        #     self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
-        # )
+        # self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
+        self._input_values = np.asarray(
+            self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
+        )
         self._n_inputs = len(self._input_values)
         # print(self._input_values)
 
@@ -122,8 +122,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Cartesian product gives us matrix indicies flattened in row-first format
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
-        input_names_list = list(itertools.product(self._param_names, self._param_names))
-        # input_names_list = list(itertools.combinations_with_replacement(self._param_names, 2))
+        # input_names_list = list(itertools.product(self._param_names, self._param_names))
+        input_names_list = list(itertools.combinations_with_replacement(self._param_names, 2))
         return input_names_list
 
     def equality_constraint_names(self):
@@ -157,8 +157,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     def evaluate_outputs(self):
         # Evaluates the objective value for the specified
         # ObjectiveLib type.
-        # current_FIM = self._get_FIM()
-        current_FIM = self._input_values
+        current_FIM = self._get_FIM()
+        # current_FIM = self._input_values
 
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
@@ -167,7 +167,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Change objective value based on ObjectiveLib type.
         from pyomo.contrib.doe import ObjectiveLib
 
-        if self.objective_option == ObjectiveLib.determinant:
+        if self.objective_option == ObjectiveLib.trace:
+            obj_value = np.trace(np.linalg.inv(M))
+        elif self.objective_option == ObjectiveLib.determinant:
             (sign, logdet) = np.linalg.slogdet(M)
             obj_value = logdet
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -193,7 +195,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Initialize log_determinant value
         from pyomo.contrib.doe import ObjectiveLib
 
-        if self.objective_option == ObjectiveLib.determinant:
+        if self.objective_option == ObjectiveLib.trace:
+            pyomo_block.outputs["A-opt"] = 0
+        elif self.objective_option == ObjectiveLib.determinant:
             pyomo_block.outputs["log10-D-opt"] = 0
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             pyomo_block.outputs["E-opt"] = 0
@@ -213,8 +217,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         #
         # ToDo: there will be significant bookkeeping for more
         # complicated objective functions and the Hessian
-        # current_FIM = self._get_FIM()
-        current_FIM = self._input_values
+        current_FIM = self._get_FIM()
+        # current_FIM = self._input_values
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
         )
@@ -232,7 +236,13 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         from pyomo.contrib.doe import ObjectiveLib
 
-        if self.objective_option == ObjectiveLib.determinant:
+        if self.objective_option == ObjectiveLib.trace:
+            Minv = np.linalg.pinv(M)
+            # Derivative formula of A-optimality
+            # is -inv(FIM) @ inv(FIM). Add reference to 
+            # pyomo.DoE 2.0 manuscript S.I.
+            jac_M = -Minv @ Minv
+        elif self.objective_option == ObjectiveLib.determinant:
             Minv = np.linalg.pinv(M)
             # Derivative formula derived using tensor
             # calculus. Add reference to pyomo.DoE 2.0
@@ -294,7 +304,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # print(jac_M)
         # Filter jac_M using the
         # masking matrix
-        # jac_M = jac_M[self._masking_matrix > 0]
+        jac_M = jac_M[self._masking_matrix > 0]
         # M_rows = np.zeros_like(jac_M)
         # M_cols = np.arange(len(jac_M))
 

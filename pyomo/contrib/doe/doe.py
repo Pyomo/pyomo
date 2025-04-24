@@ -325,8 +325,8 @@ class DesignOfExperiments:
                 ).index(p2):
                     return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
                 else:
-                    # return pyo.Constraint.Skip
-                    return model.fim[(p2, p1)] == m.egb_fim_block.inputs[(p2, p1)]
+                    return pyo.Constraint.Skip
+                    # return model.fim[(p2, p1)] == m.egb_fim_block.inputs[(p2, p1)]
 
             model.obj_cons.FIM_equalities = pyo.Constraint(
                 model.parameter_names, model.parameter_names, rule=FIM_egb_cons
