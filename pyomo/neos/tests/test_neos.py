@@ -108,6 +108,9 @@ class TestKestrel(unittest.TestCase):
 
 
 class RunAllNEOSSolvers(object):
+    def test_baron(self):
+        self._run('baron')
+
     def test_bonmin(self):
         self._run('bonmin')
 
@@ -160,9 +163,9 @@ class RunAllNEOSSolvers(object):
     # [16 Jul 24]: Octeract is erroring.  We will disable the interface
     # (and testing) until we have time to resolve #3321
     # [20 Sep 24]: and appears to have been removed from NEOS
-    #
-    # def test_octeract(self):
-    #     self._run('octeract')
+    # [24 Apr 25]: appears to be working again
+    def test_octeract(self):
+        self._run('octeract')
 
     def test_ooqp(self):
         if self.sense == pyo.maximize:
@@ -174,8 +177,7 @@ class RunAllNEOSSolvers(object):
             self._run('ooqp')
 
     def test_path(self):
-        # The simple tests aren't complementarity
-        # problems
+        # The simple tests aren't complementarity problems
         self.skipTest("The simple NEOS test is not a complementarity problem")
 
     def test_snopt(self):
