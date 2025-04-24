@@ -1586,18 +1586,6 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            """
-            # Alex said to make this a function
-            # This should be a static (?) function
-            # Making it a function allows us to perform error tests
-            # on the FIM
-            def compute_metrics(FIM):
-                
-                # Compute D, A, E, ME metrics
-                # Perform error checks
-                # Return D, A, E, ME
-            
-            """
             # Compute and record metrics on FIM
             det_FIM = np.linalg.det(FIM)  # Determinant of FIM
             D_opt = np.log10(det_FIM)
