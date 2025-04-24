@@ -11,7 +11,6 @@
 
 import os
 import subprocess
-import logging
 
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
@@ -23,16 +22,6 @@ from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter
-
-"""
-TODO:
-    - Test unique configuration options
-    - Test unique results options
-    - Ensure that `*.opt` file is only created when needed
-    - Ensure options are correctly parsing to env or opt file
-    - Failures at appropriate times
-"""
-
 
 ipopt_available = ipopt.Ipopt().available()
 
