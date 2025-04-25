@@ -1818,7 +1818,8 @@ def setup_working_model(model_data, user_var_partitioning):
 
     # stagewise blocks for containing stagewise constraints
     working_model.first_stage = Block()
-    working_model.first_stage.equality_cons = Constraint(Any)
+    working_model.first_stage.dr_independent_equality_cons = Constraint(Any)
+    working_model.first_stage.dr_dependent_equality_cons = Constraint(Any)
     working_model.first_stage.inequality_cons = Constraint(Any)
     working_model.second_stage = Block()
     working_model.second_stage.equality_cons = Constraint(Any)
@@ -2023,7 +2024,9 @@ def standardize_equality_constraints(model_data):
                 con.expr
             )
         else:
-            working_model.first_stage.equality_cons[f"eq_con_{con_rel_name}"] = con.expr
+            working_model.first_stage.dr_independent_equality_cons[
+                f"eq_con_{con_rel_name}"
+            ] = con.expr
 
         # definitely don't want active duplicate
         con.deactivate()
@@ -2233,6 +2236,12 @@ def get_all_nonadjustable_variables(working_model):
     return [epigraph_var] + decision_rule_vars + effective_first_stage_vars
 
 
+def get_all_first_stage_eq_cons(working_model):
+    return list(working_model.first_stage.dr_dependent_equality_cons.values()) + list(
+        working_model.first_stage.dr_independent_equality_cons.values()
+    )
+
+
 def get_all_adjustable_variables(working_model):
     """
     Get all variables considered adjustable.
@@ -2339,7 +2348,12 @@ def check_time_limit_reached(timing_data, config):
 
 
 def _reformulate_eq_con_scenario_uncertainty(
-    model_data, discrete_set, ss_eq_con, ss_eq_con_index, ss_var_id_to_dr_expr_map
+    model_data,
+    discrete_set,
+    ss_eq_con,
+    ss_eq_con_index,
+    ss_var_id_to_dr_expr_map,
+    all_dr_vars_set,
 ):
     """
     Reformulate a second-stage equality constraint that
@@ -2368,21 +2382,36 @@ def _reformulate_eq_con_scenario_uncertainty(
     ss_var_id_to_dr_expr_map : dict
         Mapping from object IDs of second-stage variables to
         corresponding decision rule expressions.
+    all_dr_vars_set : ComponentSet
+        A set of all the decision rule variables declared on
+        ``model_data.working_model``.
     """
     working_model = model_data.working_model
     con_expr_after_dr_substitution = replace_expressions(
         expr=ss_eq_con.expr, substitution_map=ss_var_id_to_dr_expr_map
     )
+    vars_in_coeff_expr = ComponentSet(
+        identify_variables(con_expr_after_dr_substitution)
+    )
+    has_con_dr_vars = vars_in_coeff_expr & all_dr_vars_set
+    indexed_con_to_update = (
+        working_model.first_stage.dr_dependent_equality_cons
+        if has_con_dr_vars
+        else working_model.first_stage.dr_independent_equality_cons
+    )
+
     scenarios_enum = enumerate(discrete_set.scenarios)
     for sc_idx, scenario in scenarios_enum:
-        working_model.first_stage.equality_cons[
-            f"scenario_{sc_idx}_{ss_eq_con_index}"
-        ] = replace_expressions(
-            expr=con_expr_after_dr_substitution,
-            substitution_map={
-                id(param): scenario_val
-                for param, scenario_val in zip(working_model.uncertain_params, scenario)
-            },
+        indexed_con_to_update[f"scenario_{sc_idx}_{ss_eq_con_index}"] = (
+            replace_expressions(
+                expr=con_expr_after_dr_substitution,
+                substitution_map={
+                    id(param): scenario_val
+                    for param, scenario_val in zip(
+                        working_model.uncertain_params, scenario
+                    )
+                },
+            )
         )
     del working_model.second_stage.equality_cons[ss_eq_con_index]
 
@@ -2395,6 +2424,7 @@ def _reformulate_eq_con_continuous_uncertainty(
     ss_var_id_to_dr_expr_map,
     uncertain_param_id_to_temp_var_map,
     originally_unfixed_vars,
+    all_dr_vars_set,
 ):
     """
     Reformulate a second-stage equality constraint that
@@ -2435,6 +2465,9 @@ def _reformulate_eq_con_continuous_uncertainty(
     originally_unfixed_vars : list/ComponentSet of VarData
         Variables of the working model that were originally
         unfixed.
+    all_dr_vars_set : ComponentSet
+        A set of all the decision rule variables declared on
+        ``model_data.working_model``.
 
     Returns
     -------
@@ -2539,15 +2572,26 @@ def _reformulate_eq_con_continuous_uncertainty(
                     break
 
             else:
-                # coefficient is dependent on model first-stage
-                # and DR variables. add matching constraint
+                # coefficient is variable-dependent.
+                # add matching constraint
                 new_con_name = f"coeff_matching_{ss_eq_con_index}_coeff_{coeff_idx}"
-                working_model.first_stage.equality_cons[new_con_name] = coeff_expr == 0
-                new_con = working_model.first_stage.equality_cons[new_con_name]
+                vars_in_coeff_expr = ComponentSet(identify_variables(coeff_expr))
+                has_expr_dr_vars = vars_in_coeff_expr & all_dr_vars_set
+                indexed_con_to_update = (
+                    working_model.first_stage.dr_dependent_equality_cons
+                    if has_expr_dr_vars
+                    else working_model.first_stage.dr_independent_equality_cons
+                )
+                indexed_con_to_update[new_con_name] = coeff_expr == 0
+                new_con = indexed_con_to_update[new_con_name]
                 working_model.first_stage.coefficient_matching_cons.append(new_con)
 
+                dr_dependence_qual = (
+                    f"DR variable-{'in' if has_expr_dr_vars else ''}dependent"
+                )
                 config.progress_logger.debug(
-                    f"Derived from constraint {ss_eq_con.name!r} a coefficient "
+                    f"Derived from constraint {ss_eq_con.name!r} a "
+                    f"{dr_dependence_qual} coefficient "
                     f"matching constraint named {new_con_name!r} "
                     "with expression: \n    "
                     f"{new_con.expr}."
@@ -2600,6 +2644,9 @@ def reformulate_state_var_independent_eq_cons(model_data):
     effective_second_stage_var_set = ComponentSet(ep.second_stage_variables)
     effective_state_var_set = ComponentSet(ep.state_variables)
     all_vars_set = ComponentSet(working_model.all_variables)
+    all_dr_vars_set = ComponentSet(
+        generate_all_decision_rule_var_data_objects(working_model)
+    )
     originally_unfixed_vars = [var for var in all_vars_set if not var.fixed]
 
     # we will need this to substitute DR expressions for
@@ -2655,6 +2702,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
                     ss_eq_con_index=con_idx,
                     discrete_set=config.uncertainty_set,
                     ss_var_id_to_dr_expr_map=ss_var_id_to_dr_expr_map,
+                    all_dr_vars_set=all_dr_vars_set,
                 )
             else:
                 robust_infeasible = _reformulate_eq_con_continuous_uncertainty(
@@ -2667,6 +2715,7 @@ def reformulate_state_var_independent_eq_cons(model_data):
                         uncertain_param_id_to_temp_var_map
                     ),
                     originally_unfixed_vars=originally_unfixed_vars,
+                    all_dr_vars_set=all_dr_vars_set,
                 )
                 if robust_infeasible:
                     break
@@ -2813,11 +2862,12 @@ def log_model_statistics(model_data):
 
     # # equality constraints
     num_eq_cons = (
-        len(working_model.first_stage.equality_cons)
+        len(working_model.first_stage.dr_dependent_equality_cons)
+        + len(working_model.first_stage.dr_independent_equality_cons)
         + len(working_model.second_stage.equality_cons)
         + len(working_model.second_stage.decision_rule_eqns)
     )
-    num_first_stage_eq_cons = len(working_model.first_stage.equality_cons)
+    num_first_stage_eq_cons = len(get_all_first_stage_eq_cons(working_model))
     num_coeff_matching_cons = len(working_model.first_stage.coefficient_matching_cons)
     num_other_first_stage_eqns = num_first_stage_eq_cons - num_coeff_matching_cons
     num_second_stage_eq_cons = len(working_model.second_stage.equality_cons)

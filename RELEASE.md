@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.9.1.
+We are pleased to announce the release of Pyomo 6.9.2.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
@@ -8,7 +8,9 @@ The following are highlights of the 6.9 release series:
 
 - Removed support for Python 3.8
 - New Logic-Based Discrete-Steepest Descent Algorithm in GDPOpt
+- New External Function for Cubic Spline Interpolation
 - New solver interfaces:
+  - Support for upcoming knitro Python package
   - v2: Ongoing solver interface refactor
 - ...and of course numerous minor bug fixes and performance enhancements
 
