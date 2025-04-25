@@ -175,6 +175,14 @@ class TestSeriesData(unittest.TestCase):
         self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[1], 3, 4)
         self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[1], 6, 4)
 
+        # check that the exact endpoints don't raise an exception with 0 tol
+        new_t = [0.0, 0.2]
+        new_data = data.get_interpolated_data(new_t, tolerance=0.0)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[0], 1, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[0], 2, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[1], 3, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[1], 6, 4)
+
     def test_to_serializable(self):
         m = self._make_model()
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
