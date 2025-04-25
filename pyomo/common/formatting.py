@@ -102,7 +102,7 @@ tostr.handlers = {
 }
 
 
-def tabular_writer(ostream, prefix, data, header, row_generator):
+def tabular_writer(ostream, prefix, data, header, row_generator, sort_rows=True):
     """Output data in tabular form
 
     Parameters
@@ -121,7 +121,8 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
         returns either a tuple defining the entries for a single row, or
         a generator that returns a sequence of table rows to be output
         for the specified `key`
-
+    sort_rows: bool
+        sets if rows should be sorted using robust_sort, default (True)
     """
 
     prefix = tostr(prefix)
@@ -186,6 +187,8 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     if any(' ' in r[-1] for x in _rows.values() if x is not None for r in x):
         _width[-1] = '%s'
+    if sort_rows:
+        _rows=sort_rows(_rows)
     for _key in sorted_robust(_rows):
         _rowSet = _rows[_key]
         if not _rowSet:
