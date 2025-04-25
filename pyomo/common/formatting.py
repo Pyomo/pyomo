@@ -188,8 +188,10 @@ def tabular_writer(ostream, prefix, data, header, row_generator, sort_rows=True)
     if any(' ' in r[-1] for x in _rows.values() if x is not None for r in x):
         _width[-1] = '%s'
     if sort_rows:
-        _rows=sorted_robust(_rows)
-    for _key in _rows:
+        _sorted_rows=sorted_robust(_rows)
+    else:
+        _sorted_rows=_rows
+    for _key in _sorted_rows:
         _rowSet = _rows[_key]
         if not _rowSet:
             _rowSet = [[_key] + [None] * (len(_width) - 1)]
