@@ -50,7 +50,7 @@ from pyomo.contrib.pyros.util import (
 )
 
 
-valid_num_types = tuple(native_numeric_types)
+valid_num_types = native_numeric_types
 
 
 def standardize_uncertain_param_vars(obj, dim):
@@ -219,7 +219,7 @@ def validate_arg_type(
         Name of argument to be displayed in exception message.
     arg_val : object
         Value of argument to be checked.
-    valid_types : type or tuple of types
+    valid_types : type, tuple of types, or iterable of types
         Valid types for the argument value.
     valid_type_desc : str or None, optional
         Description of valid types for the argument value;
@@ -242,6 +242,9 @@ def validate_arg_type(
         If the finiteness check on a numerical value returns
         a negative result.
     """
+    # convert to tuple if necessary
+    if isinstance(valid_types, Iterable):
+        valid_types = tuple(valid_types)
     if not isinstance(arg_val, valid_types):
         if valid_type_desc is not None:
             type_phrase = f"not {valid_type_desc}"
