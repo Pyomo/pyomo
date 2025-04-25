@@ -2772,7 +2772,7 @@ class EllipsoidalSet(UncertaintySet):
            [0, 0, 3, 0]],
            [0, 0, 0. 4]])
     >>> conf_ellipsoid.scale
-    ...9.4877...
+    np.float64(9.4877...)
     >>> conf_ellipsoid.gaussian_conf_lvl
     0.95
 
