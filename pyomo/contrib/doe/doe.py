@@ -211,7 +211,7 @@ class DesignOfExperiments:
             # solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
-            #solver.options["tol"] = 1e-4
+            # solver.options["tol"] = 1e-4
             self.solver = solver
 
         self.tee = tee
@@ -419,7 +419,9 @@ class DesignOfExperiments:
             # Set objective value
             if self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(np.log(det_val))
+                model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(
+                    np.log(det_val)
+                )
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
                 eig, _ = np.linalg.eig(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))

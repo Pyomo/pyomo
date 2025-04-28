@@ -75,6 +75,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
         if objective_option == "determinant":
             from pyomo.contrib.doe import ObjectiveLib
+
             objective_option = ObjectiveLib(objective_option)
         self.objective_option = (
             objective_option  # Add failsafe to make sure this is ObjectiveLib object?
@@ -123,7 +124,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         # input_names_list = list(itertools.product(self._param_names, self._param_names))
-        input_names_list = list(itertools.combinations_with_replacement(self._param_names, 2))
+        input_names_list = list(
+            itertools.combinations_with_replacement(self._param_names, 2)
+        )
         return input_names_list
 
     def equality_constraint_names(self):
@@ -178,7 +181,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
             obj_value = np.max(eig) / np.min(eig)
-        
+
         # print(obj_value)
 
         return np.asarray([obj_value], dtype=np.float64)
@@ -232,14 +235,14 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         eig_vals, eig_vecs = np.linalg.eig(M)
         if min(eig_vals) <= 1:
             pass
-            #print("Warning: {:0.6f}".format(min(eig_vals)))
+            # print("Warning: {:0.6f}".format(min(eig_vals)))
 
         from pyomo.contrib.doe import ObjectiveLib
 
         if self.objective_option == ObjectiveLib.trace:
             Minv = np.linalg.pinv(M)
             # Derivative formula of A-optimality
-            # is -inv(FIM) @ inv(FIM). Add reference to 
+            # is -inv(FIM) @ inv(FIM). Add reference to
             # pyomo.DoE 2.0 manuscript S.I.
             jac_M = -Minv @ Minv
         elif self.objective_option == ObjectiveLib.determinant:
@@ -370,7 +373,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
     #         # Equation derived, shown in greybox
     #         # pyomo.DoE 2.0 paper
-    #         # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] + 
+    #         # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] +
     #         #                          Minv[i, l]Minv[k, j])
     #         lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
     #         for curr_location in lower_tri_inds_4D:
@@ -387,7 +390,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     #             #hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
     #             # New Formula (tested with finite differencing)
     #             hess[row, col] = -(Minv[i, l] * Minv[k, j])
-            
+
     #         print(hess)
     #         # Complete the full matrix
     #         hess = hess.transpose()
@@ -395,7 +398,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     #         pass
     #     elif self.objective_option == ObjectiveLib.condition_number:
     #         pass
-        
+
     #     # Select only lower triangular values as a flat array
     #     hess_masking_matrix = np.tril(np.ones_like(hess))
     #     hess_data = hess[hess_masking_matrix > 0]

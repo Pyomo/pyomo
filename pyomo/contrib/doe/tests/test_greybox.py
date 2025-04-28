@@ -44,13 +44,17 @@ _FD_EPSILON = 1e-6  # Epsilon for numerical comparison of derivatives
 
 if numpy_available:
     # Randomly generated P.S.D. matrix
-    # Matrix is 4x4 to match example 
+    # Matrix is 4x4 to match example
     # number of parameters.
-    testing_matrix = np.array([[5.13730123, 1.08084953, 1.6466824,  1.09943223],
-                               [1.08084953, 1.57183404, 1.50704403, 1.4969689],
-                               [1.6466824,  1.50704403, 2.54754738, 1.39902838],
-                               [1.09943223, 1.4969689,  1.39902838, 1.57406692]])
-    
+    testing_matrix = np.array(
+        [
+            [5.13730123, 1.08084953, 1.6466824, 1.09943223],
+            [1.08084953, 1.57183404, 1.50704403, 1.4969689],
+            [1.6466824, 1.50704403, 2.54754738, 1.39902838],
+            [1.09943223, 1.4969689, 1.39902838, 1.57406692],
+        ]
+    )
+
     masking_matrix = np.triu(np.ones_like(testing_matrix))
 
 
@@ -82,7 +86,7 @@ def get_numerical_derivative(grey_box_object=None):
         for j in range(dim):
             FIM_perturbed = copy.deepcopy(current_FIM)
             FIM_perturbed[i, j] += _FD_EPSILON
-            
+
             new_value_ij = 0
             # Test which method is being used:
             if grey_box_object.objective_option == ObjectiveLib.trace:
@@ -94,12 +98,12 @@ def get_numerical_derivative(grey_box_object=None):
                 new_value_ij = np.min(vals)
             elif grey_box_object.objective_option == ObjectiveLib.condition_number:
                 new_value_ij = np.linalg.cond(FIM_perturbed)
-            
+
             # Calculate the derivative value from forward difference
             diff = (new_value_ij - unperturbed_value) / _FD_EPSILON
 
             numerical_derivative[i, j] = diff
-    
+
     return numerical_derivative
 
 
@@ -111,7 +115,7 @@ def get_numerical_second_derivative(grey_box_object=None):
     current_FIM = grey_box_object._get_FIM()
     dim = current_FIM.shape[0]
 
-    # Calculate the numerical derivative, 
+    # Calculate the numerical derivative,
     # using second order formula
     numerical_derivative = np.zeros([dim, dim, dim, dim])
 
@@ -141,8 +145,8 @@ def get_numerical_second_derivative(grey_box_object=None):
 
                     FIM_perturbed_4[i, j] += -_FD_EPSILON
                     FIM_perturbed_4[k, l] += -_FD_EPSILON
-                    
-                    new_values = np.array([0., 0., 0., 0.])
+
+                    new_values = np.array([0.0, 0.0, 0.0, 0.0])
                     # Test which method is being used:
                     if grey_box_object.objective_option == ObjectiveLib.trace:
                         new_values[0] = np.trace(np.linalg.inv(FIM_perturbed_1))
@@ -154,7 +158,10 @@ def get_numerical_second_derivative(grey_box_object=None):
                         new_values[1] = np.log(np.linalg.det(FIM_perturbed_2))
                         new_values[2] = np.log(np.linalg.det(FIM_perturbed_3))
                         new_values[3] = np.log(np.linalg.det(FIM_perturbed_4))
-                    elif grey_box_object.objective_option == ObjectiveLib.minimum_eigenvalue:
+                    elif (
+                        grey_box_object.objective_option
+                        == ObjectiveLib.minimum_eigenvalue
+                    ):
                         vals, vecs = np.linalg.eig(FIM_perturbed_1)
                         new_values[0] = np.min(vals)
                         vals, vecs = np.linalg.eig(FIM_perturbed_2)
@@ -163,17 +170,22 @@ def get_numerical_second_derivative(grey_box_object=None):
                         new_values[2] = np.min(vals)
                         vals, vecs = np.linalg.eig(FIM_perturbed_4)
                         new_values[3] = np.min(vals)
-                    elif grey_box_object.objective_option == ObjectiveLib.condition_number:
+                    elif (
+                        grey_box_object.objective_option
+                        == ObjectiveLib.condition_number
+                    ):
                         new_values[0] = np.linalg.cond(FIM_perturbed_1)
                         new_values[1] = np.linalg.cond(FIM_perturbed_2)
                         new_values[2] = np.linalg.cond(FIM_perturbed_3)
                         new_values[3] = np.linalg.cond(FIM_perturbed_4)
-                    
+
                     # Calculate the derivative value from second order difference formula
-                    diff = (new_values[0] - new_values[1] - new_values[2] + new_values[3]) / (4 * _FD_EPSILON**2)
+                    diff = (
+                        new_values[0] - new_values[1] - new_values[2] + new_values[3]
+                    ) / (4 * _FD_EPSILON**2)
 
                     numerical_derivative[i, j, k, l] = diff
-    
+
     return numerical_derivative
 
 
@@ -246,7 +258,10 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    args['solver'] = None
+    # Change when we can access other solvers
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "MUMPS"
+    args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
     args['_Cholesky_option'] = True
@@ -267,7 +282,9 @@ doe_obj = DesignOfExperiments(**DoE_args)
 
 doe_obj.create_doe_model()
 
-grey_box_object = FIMExternalGreyBox(doe_object=doe_obj, objective_option=doe_obj.objective_option)
+grey_box_object = FIMExternalGreyBox(
+    doe_object=doe_obj, objective_option=doe_obj.objective_option
+)
 
 print(grey_box_object.input_names())
 print(grey_box_object._input_values)
@@ -287,11 +304,32 @@ print(get_numerical_derivative(grey_box_object))
 print((jac - get_numerical_derivative(grey_box_object)) / jac)
 print(get_numerical_second_derivative(grey_box_object))
 
-@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+
+# @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-class TestReactorExampleBuild(unittest.TestCase):
-    def dummy_test(self):
+class TestFIMExternalGreyBox(unittest.TestCase):
+    # Begin with tests on calculating
+    # derivatives.
+    def jacobian_test_A_opt(self):
+        # Make the object
+        fd_method = "central"
+        obj_used = "trace"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["use_grey_box_objective"] = True
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        grey_box_object = FIMExternalGreyBox(
+            doe_object=doe_obj, objective_option=doe_obj.objective_option
+        )
+
+        # Compute the derivative given
         self.assertTrue(1)
+
     # Tests:
     # See google doc for complete list of tests
 

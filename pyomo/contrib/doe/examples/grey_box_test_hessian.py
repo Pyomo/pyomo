@@ -49,8 +49,8 @@ def compare_reactor_doe():
     objective_option = "determinant"
     scale_nominal_param_value = True
 
-    #solver = pyo.SolverFactory("ipopt")
-    #solver.options["linear_solver"] = "mumps"
+    # solver = pyo.SolverFactory("ipopt")
+    # solver.options["linear_solver"] = "mumps"
 
     # DoE object to compute FIM prior
     # doe_obj = DesignOfExperiments(
@@ -98,7 +98,7 @@ def compare_reactor_doe():
 
     doe_obj.run_doe()
 
-    grey_box_check = FIMExternalGreyBox(doe_object=doe_obj, )
+    grey_box_check = FIMExternalGreyBox(doe_object=doe_obj)
     return grey_box_check, doe_obj
 
 

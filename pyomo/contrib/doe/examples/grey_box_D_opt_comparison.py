@@ -136,7 +136,7 @@ def compare_reactor_doe():
     #     )
     # )
     print(
-        ("\tTemperature values: [""{:.2f}]").format(
+        ("\tTemperature values: [" "{:.2f}]").format(
             doe_obj_grey_box.results["Experiment Design"][1]
         )
     )
@@ -173,7 +173,7 @@ def compare_reactor_doe():
     #     )
     # )
     print(
-        ("\tTemperature values: [""{:.2f}]").format(
+        ("\tTemperature values: [" "{:.2f}]").format(
             doe_obj.results["Experiment Design"][1]
         )
     )
