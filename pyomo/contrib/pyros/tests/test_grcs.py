@@ -2063,7 +2063,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         m.q = Param(initialize=0, mutable=True)
         m.x = Var(bounds=[-2, 2])
         m.z = Var(bounds=(None, m.q))
-        m.eq_con = Constraint(expr=m.z == m.q ** 2)
+        m.eq_con = Constraint(expr=m.z == m.q**2)
         m.obj = Objective(expr=m.x + m.z, sense=minimize)
         m.pyros_separation_priority = Suffix()
         # enforce equality  only nominally, or else model is robust
@@ -2084,8 +2084,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
             solve_master_globally=True,
         )
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_optimal,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
         )
         self.assertEqual(m.x.value, -2)
         self.assertEqual(m.z.value, 0)
@@ -2095,7 +2094,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         m.q = Param(initialize=0, mutable=True)
         m.x = Var(bounds=[-2, 2])
         m.y = Var(bounds=(m.q, None))
-        m.eq_con = Constraint(expr=m.y == m.q ** 2)
+        m.eq_con = Constraint(expr=m.y == m.q**2)
         m.obj = Objective(expr=m.x + m.y, sense=minimize)
         m.pyros_separation_priority = Suffix()
         # enforce bounds only nominally, or else model is robust
@@ -2116,8 +2115,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
             solve_master_globally=True,
         )
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_optimal,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
         )
         self.assertEqual(m.x.value, -2)
         self.assertEqual(m.y.value, 1)
@@ -2128,7 +2126,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         m.x = Var(bounds=[-2, 2])
         m.y = Var()
         m.con = Constraint(expr=m.y >= m.q)
-        m.eq_con = Constraint(expr=m.y == m.q ** 2)
+        m.eq_con = Constraint(expr=m.y == m.q**2)
         m.obj = Objective(expr=m.x + m.y, sense=minimize)
         m.pyros_separation_priority = Suffix()
         # enforce inequality only nominally, or else model is robust
@@ -2149,8 +2147,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
             solve_master_globally=True,
         )
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.robust_optimal,
+            res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
         )
         self.assertEqual(m.x.value, -2)
         self.assertEqual(m.y.value, 1)

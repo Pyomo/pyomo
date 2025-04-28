@@ -1997,9 +1997,8 @@ def standardize_inequality_constraints(model_data):
             component_data=con, component_data_name=con_rel_name
         )
         is_con_potentially_second_stage = (
-            (uncertain_params_in_con_expr | adjustable_vars_in_con_body)
-            and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
-        )
+            uncertain_params_in_con_expr | adjustable_vars_in_con_body
+        ) and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
         if is_con_potentially_second_stage:
             con_bounds_triple = rearrange_bound_pair_to_triple(
                 lower_bound=con.lower, upper_bound=con.upper
@@ -2096,16 +2095,15 @@ def standardize_equality_constraints(model_data):
         )
         new_con_name = f"eq_con_{con_rel_name}"
         is_con_second_stage = (
-            (uncertain_params_in_con_expr | adjustable_vars_in_con_body)
-            and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
-        )
+            uncertain_params_in_con_expr | adjustable_vars_in_con_body
+        ) and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
         if is_con_second_stage:
             working_model.second_stage.equality_cons[new_con_name] = con.expr
             model_data.separation_priority_order[new_con_name] = con_sep_priority
         else:
-            working_model.first_stage.dr_independent_equality_cons[
-                new_con_name
-            ] = con.expr
+            working_model.first_stage.dr_independent_equality_cons[new_con_name] = (
+                con.expr
+            )
 
         # definitely don't want active duplicate
         con.deactivate()

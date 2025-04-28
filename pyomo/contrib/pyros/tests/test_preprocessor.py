@@ -698,7 +698,17 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
 
         # mock effective partitioning for testing
         ep = model_data.working_model.effective_var_partitioning = Bunch()
-        ep.first_stage_variables = [m.z1, m.z2, m.z3, m.z4, m.z5, m.z6, m.z7, m.z8, m.z11]
+        ep.first_stage_variables = [
+            m.z1,
+            m.z2,
+            m.z3,
+            m.z4,
+            m.z5,
+            m.z6,
+            m.z7,
+            m.z8,
+            m.z11,
+        ]
         ep.second_stage_variables = [m.z9]
         ep.state_variables = [m.z10]
         effective_first_stage_var_set = ComponentSet(ep.first_stage_variables)
@@ -883,7 +893,9 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
 
         model_data.working_model.first_stage = Block()
         model_data.working_model.first_stage.inequality_cons = Constraint(Any)
-        model_data.working_model.first_stage.dr_independent_equality_cons = Constraint(Any)
+        model_data.working_model.first_stage.dr_independent_equality_cons = Constraint(
+            Any
+        )
 
         m = model_data.working_model.user_model
 
@@ -1062,9 +1074,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         )
         fs_dr_indep_cons = first_stage.dr_independent_equality_cons
         assertExpressionsEqual(
-            self,
-            fs_dr_indep_cons["var_z11_uncertain_eq_bound_con"].expr,
-            m.z11 == m.q1,
+            self, fs_dr_indep_cons["var_z11_uncertain_eq_bound_con"].expr, m.z11 == m.q1
         )
 
         # check separation priorities
@@ -2897,9 +2907,7 @@ class TestPreprocessModelData(unittest.TestCase):
             -m.x1 <= -(-1 * working_model.temp_uncertain_params[1]),
         )
         assertExpressionsEqual(
-            self,
-            fs.inequality_cons["ineq_con_ineq7"].expr,
-            m.y3 <= 2 * m.q,
+            self, fs.inequality_cons["ineq_con_ineq7"].expr, m.y3 <= 2 * m.q
         )
 
         assertExpressionsEqual(
@@ -2916,7 +2924,7 @@ class TestPreprocessModelData(unittest.TestCase):
         assertExpressionsEqual(
             self,
             fs.dr_independent_equality_cons["eq_con_eq5"].expr,
-            m.z3 + m.y1 + 5 * working_model.temp_uncertain_params[1] == m.q
+            m.z3 + m.y1 + 5 * working_model.temp_uncertain_params[1] == m.q,
         )
 
         # user model block should have no active constraints

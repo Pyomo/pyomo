@@ -400,8 +400,7 @@ def group_ss_ineq_constraints_by_priority(separation_data):
 
     # sort separation priority groups
     numeric_priority_grp_items = [
-        (priority, cons)
-        for priority, cons in separation_priority_groups.items()
+        (priority, cons) for priority, cons in separation_priority_groups.items()
     ]
     sorted_priority_groups = {
         priority: ss_ineq_cons
