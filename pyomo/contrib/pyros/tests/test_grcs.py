@@ -2172,7 +2172,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
             global_solver=global_subsolver,
             objective_focus="worst_case",
             bypass_global_separation=True,
-            # note: this gets overriden by the priority suffix,
+            # note: this gets overridden by the priority suffix,
             #       and is therefore ignored
             separation_priority_order={"con1": 2},
         )
