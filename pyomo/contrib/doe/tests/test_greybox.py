@@ -305,8 +305,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
-    
-    def test_jacobian_A_opt(self):
+
+    def test_jacobian_D_opt(self):
         # Make the object
         fd_method = "central"
         obj_used = "determinant"
@@ -339,8 +339,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
-    
-    def test_jacobian_A_opt(self):
+
+    def test_jacobian_E_opt(self):
         # Make the object
         fd_method = "central"
         obj_used = "minimum_eigenvalue"
@@ -373,8 +373,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
-    
-    def test_jacobian_A_opt(self):
+
+    def test_jacobian_ME_opt(self):
         # Make the object
         fd_method = "central"
         obj_used = "condition_number"
