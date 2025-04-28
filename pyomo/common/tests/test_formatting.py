@@ -129,6 +129,25 @@ Key : i    : j
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
+    def test_multiline_generator_user_sorted(self):
+        os = StringIO()
+        data = {"b": 0, "a": 1, "c": 3}
+
+        def _data_gen(i, j):
+            for n in range(j):
+                yield (n, chr(ord("a") + n) * j)
+
+        tabular_writer(os, "", data.items(), ["i", "j"], _data_gen, sort_rows=False)
+        ref = """
+Key : i    : j
+  b : None : None
+  a :    0 :    a
+  c :    0 :  aaa
+    :    1 :  bbb
+    :    2 :  ccc
+"""
+        self.assertEqual(ref.strip(), os.getvalue().strip())
+
     def test_multiline_generator_exception(self):
         os = StringIO()
         data = {'a': 0, 'b': 1, 'c': 3}
