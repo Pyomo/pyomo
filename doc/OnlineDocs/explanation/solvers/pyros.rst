@@ -1133,6 +1133,75 @@ The constituent columns are defined in the
        current iteration.
 
 
+Separation Priority Ordering 
+----------------------------
+The PyROS solver provides support for custom prioritization of
+the separation subproblems that are automatically derived from
+a given model for robust optimization.
+Users may specify separation priorities through:
+
+- (Recommended) :class:`~pyomo.core.base.suffix.Suffix` components,
+  with local name ``pyros_separation_priority``,
+  declared on the model.
+  Each entry of every such
+  :class:`~pyomo.core.base.suffix.Suffix`
+  should map a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.var.Constraint`
+  component to a value that specifies the separation
+  priority of every second-stage constraint derived from that component
+- The optional argument ``separation_priority_order``
+  to the PyROS :py:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+  method. The argument should be castable to a :py:obj:`dict`,
+  of which each entry maps the full name of a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.var.Constraint`
+  component of the model to a value that specifies the
+  separation priority of every second-stage constraint
+  derived from that component
+
+Specification via :class:`~pyomo.core.base.suffix.Suffix` components
+takes precedence over specification via the solver argument
+``separation_priority_order``.
+Moreover, retrieval from the
+:class:`~pyomo.core.base.suffix.Suffix`
+components of the model is performed with the Pyomo
+:class:`~pyomo.core.base.suffix.SuffixFinder`
+utility, the documentation of which articulates the
+order of precedence for retrieval of
+:class:`~pyomo.core.base.suffix.Suffix`
+entries.
+
+A separation priority can be either a number
+(i.e., of type :py:class:`int`, :py:class:`float`, etc.)
+or :py:obj:`None`.
+A priority of 0 is assigned to the
+constraints derived from model components for
+which no user-specified priority has been provided.
+
+Every inequality constraint is invertibly
+mapped to a separation problem,
+for which the objective is derived from the inequality constraint expression.
+Inequality constraints that have been assigned a
+numeric priority are grouped in descending order of priority.
+In every PyROS solver iteration, the corresponding separation
+problems are solved in groups by descending order of priority,
+until the solver has within a group detected inequality constraints
+for which robust satisfaction is known to be violated.
+
+Equality and inequality constraints
+that have been assigned a priority of :py:obj:`None`
+are enforced subject to only the nominal uncertain parameter realization
+provided by the user. Therefore:
+
+- For all such inequality constraints,
+  the separation problems are skipped
+- All such equality constraints are excluded from the separation
+  problems
+- All such equality and inequality constraints are enforced in only
+  the nominal block of the master problem
+
+
 Feedback and Reporting Issues
 -------------------------------
 Please provide feedback and/or report any problems by opening an issue on
