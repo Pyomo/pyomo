@@ -881,9 +881,11 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
+            print(logfile)
             command.append(f'lf="{logfile}"')
 
         try:
+            print(command)
             ostreams = [StringIO()]
             if tee:
                 ostreams.append(sys.stdout)
