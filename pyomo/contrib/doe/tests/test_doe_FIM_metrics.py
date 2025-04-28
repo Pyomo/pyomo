@@ -1,8 +1,28 @@
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+)
+
+import pyomo.common.unittest as unittest
+from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.doe import compute_FIM_full_factorial, _SMALL_TOLERANCE_IMG
+from pyomo.opt import SolverFactory
+
+
+@unittest.skipIf(not numpy_available, "Numpy is not available")
+class TestFullFactrialMetrics(unittest.TestCase):
+    def test_compute_FIM_full_factorial_metrics(self):
+        # Create a sample Fisher Information Matrix (FIM)
+        FIM = np.array([[4, 2], [2, 3]])
+
+
+# ======================================================================
 import numpy as np
 
 # from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG
-import pytest
 
 
 def compute_FIM_metrics(FIM):
@@ -14,7 +34,7 @@ def compute_FIM_metrics(FIM):
     E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
 
     E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-    IMG_THERESHOLD = 1e-6  # Instead of creating a new constant, use `SMALL_DIFF` by importiing it form `doe.py`
+
     # Warn the user if there is a ``large`` imaginary component (should not be)
     if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
         print(
