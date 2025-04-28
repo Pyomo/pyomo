@@ -26,7 +26,7 @@ class LogDetModel(ExternalGreyBoxModel):
         print_level=0,
     ):
         """
-        Greybox model to compute the log determinant of a sqaure symmetric matrix.
+        Greybox model to compute the log determinant of a square symmetric matrix.
 
         Arguments
         ---------
@@ -42,7 +42,7 @@ class LogDetModel(ExternalGreyBoxModel):
             0 (default): no extra output
             1: minimal info to indicate if initialized well
                 print the following:
-                - initial FIM received by the grey-box moduel
+                - initial FIM received by the grey-box module
             2: intermediate info for debugging
                 print all the level 1 print statements, plus:
                 - the FIM output of the current iteration, both the output as the FIM matrix, and the flattened vector
@@ -129,7 +129,7 @@ class LogDetModel(ExternalGreyBoxModel):
         ---------
         pyomo_block: pass the created pyomo block here
         """
-        # ele_to_order map the input position in FIM, like (a,b), to its flattend index
+        # ele_to_order map the input position in FIM, like (a,b), to its flattened index
         # for e.g., ele_to_order[(0,0)] = 0
         # trash = input(str(inspect.stack()[0][3]))
 

@@ -120,7 +120,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         return current_FIM
 
     def input_names(self):
-        # Cartesian product gives us matrix indicies flattened in row-first format
+        # Cartesian product gives us matrix indices flattened in row-first format
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         # input_names_list = list(itertools.product(self._param_names, self._param_names))

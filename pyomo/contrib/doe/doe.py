@@ -296,7 +296,7 @@ class DesignOfExperiments:
         # Add the objective function to the model
         if self.use_grey_box:
             # Add external grey box block to a block named ``obj_cons`` to
-            # resuse material for initializing the objective-free square model
+            # reuse material for initializing the objective-free square model
             # ToDo: Make this naming convention robust
             model.obj_cons = pyo.Block()
             # ToDo: Add functionality for grey box objectives
@@ -336,7 +336,7 @@ class DesignOfExperiments:
             model.fim_constraint.pprint()
 
             # ToDo: Add naming convention to adjust name of objective output
-            # to conincide with the ObjectiveLib type
+            # to coincide with the ObjectiveLib type
             # ToDo: Write test for each option successfully building
             if self.objective_option == ObjectiveLib.determinant:
                 model.objective = pyo.Objective(
