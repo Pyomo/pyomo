@@ -300,7 +300,7 @@ class GAMSDirect(_GAMSSolver):
                 filename=output_file,
                 format=ProblemFormat.gams,
                 _called_by_solver=True,
-                **io_options
+                **io_options,
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
@@ -845,7 +845,7 @@ class GAMSShell(_GAMSSolver):
                 filename=output_filename,
                 format=ProblemFormat.gams,
                 _called_by_solver=True,
-                **io_options
+                **io_options,
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
@@ -881,7 +881,7 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            command.append("lf=" + str(logfile))
+            command.append(f'lf="{logfile}"')
 
         try:
             ostreams = [StringIO()]
