@@ -36,7 +36,6 @@ from pyomo.contrib.pyros.solve_data import (
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.contrib.pyros.util import (
     ABS_CON_CHECK_FEAS_TOL,
-    BYPASSING_SEPARATION_PRIORITY,
     call_solver,
     check_time_limit_reached,
 )
@@ -402,16 +401,11 @@ def group_ss_ineq_constraints_by_priority(separation_data):
     numeric_priority_grp_items = [
         (priority, cons)
         for priority, cons in separation_priority_groups.items()
-        if priority is not BYPASSING_SEPARATION_PRIORITY
     ]
     sorted_priority_groups = {
         priority: ss_ineq_cons
         for priority, ss_ineq_cons in sorted(numeric_priority_grp_items, reverse=True)
     }
-    if BYPASSING_SEPARATION_PRIORITY in separation_priority_groups:
-        sorted_priority_groups[BYPASSING_SEPARATION_PRIORITY] = (
-            separation_priority_groups[BYPASSING_SEPARATION_PRIORITY]
-        )
 
     num_priority_groups = len(sorted_priority_groups)
     separation_data.config.progress_logger.debug(
@@ -425,9 +419,8 @@ def group_ss_ineq_constraints_by_priority(separation_data):
         f"  {'Priority':20s}{'# Ineq Cons':15s}"
     )
     for priority, cons in sorted_priority_groups.items():
-        priority_str = str(priority) + (" (bypass)" if priority is None else "")
         separation_data.config.progress_logger.debug(
-            f"  {priority_str:20s}{len(cons):<15d}"
+            f"  {priority:<20d}{len(cons):<15d}"
         )
 
     return sorted_priority_groups
@@ -658,21 +651,9 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
     all_solve_call_results = ComponentMap()
     priority_groups_enum = enumerate(sorted_priority_groups.items())
-    solve_desc = "global" if solve_globally else "local"
     solve_adverb = "Globally" if solve_globally else "Locally"
     for group_idx, (priority, ss_ineq_constraints) in priority_groups_enum:
         priority_group_solve_call_results = ComponentMap()
-
-        if priority is BYPASSING_SEPARATION_PRIORITY:
-            config.progress_logger.debug(
-                f"Bypassing {solve_desc} separation of all "
-                f"{len(ss_ineq_constraints)} second-stage "
-                f"inequality constraints in the group with priority {priority} "
-                f"(group {group_idx + 1} of {len(sorted_priority_groups)}) "
-                f"as the priority value is {priority}."
-            )
-            worst_case_ss_ineq_con = None
-            continue
 
         for idx, ss_ineq_con in enumerate(ss_ineq_constraints):
             # log progress of separation loop
@@ -1337,10 +1318,6 @@ class SeparationProblemData:
             self.idxs_of_master_scenarios = None
 
         self.separation_priority_groups = group_ss_ineq_constraints_by_priority(self)
-
-    @property
-    def ss_ineq_cons_to_bypass(self):
-        return self.separation_priority_groups.get(BYPASSING_SEPARATION_PRIORITY, [])
 
     def solve_separation(self, master_data):
         """

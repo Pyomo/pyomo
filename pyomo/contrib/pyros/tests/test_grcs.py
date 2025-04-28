@@ -2006,6 +2006,103 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
     of separation priorities.
     """
 
+    def test_priority_nominal_only_eq(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=[-2, 2])
+        m.z = Var(bounds=(None, m.q))
+        m.eq_con = Constraint(expr=m.z == m.q ** 2)
+        m.obj = Objective(expr=m.x + m.z, sense=minimize)
+        m.pyros_separation_priority = Suffix()
+        # enforce equality  only nominally, or else model is robust
+        # infeasible with [0, 1] interval uncertainty set
+        m.pyros_separation_priority[m.eq_con] = None
+        pyros_solver = SolverFactory("pyros")
+        ipopt = SolverFactory("ipopt")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[m.z],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(m.x.value, -2)
+        self.assertEqual(m.z.value, 0)
+
+    def test_priority_nominal_only_var_bounds(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=[-2, 2])
+        m.y = Var(bounds=(m.q, None))
+        m.eq_con = Constraint(expr=m.y == m.q ** 2)
+        m.obj = Objective(expr=m.x + m.y, sense=minimize)
+        m.pyros_separation_priority = Suffix()
+        # enforce bounds only nominally, or else model is robust
+        # infeasible with [0, 1] interval uncertainty set
+        m.pyros_separation_priority[m.y] = None
+        pyros_solver = SolverFactory("pyros")
+        ipopt = SolverFactory("ipopt")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(m.x.value, -2)
+        self.assertEqual(m.y.value, 1)
+
+    def test_priority_nominal_only_ineq(self):
+        m = ConcreteModel()
+        m.q = Param(initialize=0, mutable=True)
+        m.x = Var(bounds=[-2, 2])
+        m.y = Var()
+        m.con = Constraint(expr=m.y >= m.q)
+        m.eq_con = Constraint(expr=m.y == m.q ** 2)
+        m.obj = Objective(expr=m.x + m.y, sense=minimize)
+        m.pyros_separation_priority = Suffix()
+        # enforce inequality only nominally, or else model is robust
+        # infeasible with [0, 1] interval uncertainty set
+        m.pyros_separation_priority[m.con] = None
+        pyros_solver = SolverFactory("pyros")
+        ipopt = SolverFactory("ipopt")
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x],
+            second_stage_variables=[],
+            uncertain_params=[m.q],
+            uncertainty_set=BoxSet([[0, 1]]),
+            local_solver=ipopt,
+            global_solver=ipopt,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            solve_master_globally=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(m.x.value, -2)
+        self.assertEqual(m.y.value, 1)
+
     def test_priority_skip_all_separation(self):
         m = build_leyffer_two_cons()
         m_det = m.clone()
@@ -2016,31 +2113,27 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         local_subsolver = SolverFactory('ipopt')
         global_subsolver = SolverFactory("ipopt")
 
-        with LoggingIntercept(level=logging.WARNING) as LOG:
-            res1 = pyros_solver.solve(
-                model=m,
-                first_stage_variables=[m.x1],
-                second_stage_variables=[m.x2],
-                uncertain_params=[m.u],
-                uncertainty_set=interval,
-                local_solver=local_subsolver,
-                global_solver=global_subsolver,
-                objective_focus="worst_case",
-                bypass_global_separation=True,
-                separation_priority_order={"con1": 2},
-            )
-
-        warning_logs = LOG.getvalue()
-        self.assertRegex(
-            warning_logs,
-            "Separation of 1.*was bypassed.*Thus, robust.*is not guaranteed",
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus="worst_case",
+            bypass_global_separation=True,
+            # note: this gets overriden by the priority suffix,
+            #       and is therefore ignored
+            separation_priority_order={"con1": 2},
         )
+
         self.assertEqual(
-            res1.pyros_termination_condition,
+            res.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
             msg="Returned termination condition is not return robust_optimal.",
         )
-        self.assertEqual(res1.iterations, 1)
+        self.assertEqual(res.iterations, 1)
         assert_optimal_termination(local_subsolver.solve(m_det))
         # when all separation problems bypassed, PyROS reduces to a
         # solving the deterministic model

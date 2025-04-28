@@ -1677,6 +1677,10 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
     Consequently, all constraints added to the working model
     in this method are considered second-stage constraints.
 
+    Uncertain bounds that have been assigned a separation priority
+    of None are not reformulated, and are subsequently enforced
+    subject to only the nominal uncertain parameter realization.
+
     Parameters
     ----------
     model_data : model data object
@@ -1691,11 +1695,18 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
         var_name = var.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
+        var_bound_sep_priority = model_data.get_user_separation_priority(
+            component_data=var, component_data_name=var_name
+        )
         for btype, bound in declared_bound_triple._asdict().items():
             is_bound_uncertain = bound is not None and (
                 ComponentSet(identify_mutable_parameters(bound)) & uncertain_params_set
             )
-            if is_bound_uncertain:
+            is_bound_second_stage = (
+                is_bound_uncertain
+                and var_bound_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+            )
+            if is_bound_second_stage:
                 new_con_expr = create_bound_constraint_expr(var, bound, btype)
                 new_con_name = f"var_{var_name}_uncertain_{btype}_bound_con"
                 remove_var_declared_bound(var, btype)
@@ -1708,15 +1719,8 @@ def turn_nonadjustable_var_bounds_to_constraints(model_data):
                         new_con_expr
                     )
                 model_data.separation_priority_order[new_con_name] = (
-                    model_data.get_user_separation_priority(
-                        component_data=var, component_data_name=var_name
-                    )
+                    var_bound_sep_priority
                 )
-
-    # for subsequent developments: return a mapping
-    # from each variable to the corresponding binding constraints?
-    # we will add this as needed when changes are made to
-    # the interface for separation priority ordering
 
 
 def turn_adjustable_var_bounds_to_constraints(model_data):
@@ -1731,6 +1735,11 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
     subproblems later.
     Since these constraints depend on adjustable variables,
     they are taken to be (effective) second-stage constraints.
+
+    Bounds that have been assigned a separation priority
+    of None are reformulated to first-stage constraints,
+    and are subsequently enforced subject to only the
+    nominal uncertain parameter realization.
 
     Parameters
     ----------
@@ -1754,32 +1763,36 @@ def turn_adjustable_var_bounds_to_constraints(model_data):
             ("certain", cert_bound_triple),
             ("uncertain", uncert_bound_triple),
         )
+        var_bound_sep_priority = model_data.get_user_separation_priority(
+            component_data=var, component_data_name=var_name
+        )
+        is_bound_second_stage = (
+            var_bound_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+        )
+        bound_stage_block = (
+            working_model.second_stage
+            if is_bound_second_stage else working_model.first_stage
+        )
         for certainty_desc, bound_triple in cert_uncert_bound_zip:
             for btype, bound in bound_triple._asdict().items():
                 if bound is not None:
                     new_con_name = f"var_{var_name}_{certainty_desc}_{btype}_bound_con"
                     new_con_expr = create_bound_constraint_expr(var, bound, btype)
                     if btype == BoundType.EQ:
-                        working_model.second_stage.equality_cons[new_con_name] = (
+                        bound_stage_block.equality_cons[new_con_name] = (
                             new_con_expr
                         )
                     else:
-                        working_model.second_stage.inequality_cons[new_con_name] = (
+                        bound_stage_block.inequality_cons[new_con_name] = (
                             new_con_expr
                         )
 
-                    model_data.separation_priority_order[new_con_name] = (
-                        model_data.get_user_separation_priority(
-                            component_data=var, component_data_name=var_name
+                    if is_bound_second_stage:
+                        model_data.separation_priority_order[new_con_name] = (
+                            var_bound_sep_priority
                         )
-                    )
 
         remove_all_var_bounds(var)
-
-    # for subsequent developments: return a mapping
-    # from each variable to the corresponding binding constraints?
-    # we will add this as needed when changes are made to
-    # the interface for separation priority ordering
 
 
 def _replace_vars_in_component_exprs(block, substitution_map, ctype):
@@ -1981,8 +1994,14 @@ def standardize_inequality_constraints(model_data):
         con_rel_name = con.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
-
-        if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
+        con_sep_priority = model_data.get_user_separation_priority(
+            component_data=con, component_data_name=con_rel_name
+        )
+        is_con_potentially_second_stage = (
+            (uncertain_params_in_con_expr | adjustable_vars_in_con_body)
+            and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+        )
+        if is_con_potentially_second_stage:
             con_bounds_triple = rearrange_bound_pair_to_triple(
                 lower_bound=con.lower, upper_bound=con.upper
             )
@@ -2020,9 +2039,7 @@ def standardize_inequality_constraints(model_data):
                     )
                     # account for user-specified priority specifications
                     model_data.separation_priority_order[new_con_name] = (
-                        model_data.get_user_separation_priority(
-                            component_data=con, component_data_name=con_rel_name
-                        )
+                        con_sep_priority
                     )
                 else:
                     # we do not want to modify the arrangement of
@@ -2075,14 +2092,17 @@ def standardize_equality_constraints(model_data):
         con_rel_name = con.getname(
             relative_to=working_model.user_model, fully_qualified=True
         )
+        con_sep_priority = model_data.get_user_separation_priority(
+            component_data=con, component_data_name=con_rel_name
+        )
         new_con_name = f"eq_con_{con_rel_name}"
-        if uncertain_params_in_con_expr | adjustable_vars_in_con_body:
+        is_con_second_stage = (
+            (uncertain_params_in_con_expr | adjustable_vars_in_con_body)
+            and con_sep_priority is not BYPASSING_SEPARATION_PRIORITY
+        )
+        if is_con_second_stage:
             working_model.second_stage.equality_cons[new_con_name] = con.expr
-            model_data.separation_priority_order[new_con_name] = (
-                model_data.get_user_separation_priority(
-                    component_data=con, component_data_name=con_rel_name
-                )
-            )
+            model_data.separation_priority_order[new_con_name] = con_sep_priority
         else:
             working_model.first_stage.equality_cons[new_con_name] = con.expr
 
