@@ -51,6 +51,7 @@ from pyomo.contrib.pyros.uncertainty_sets import BoxSet, DiscreteScenarioSet
 from pyomo.contrib.pyros.util import (
     ModelData,
     ObjectiveType,
+    get_all_first_stage_eq_cons,
     get_effective_var_partitioning,
     get_var_certain_uncertain_bounds,
     get_var_bound_pairs,
@@ -481,7 +482,8 @@ class TestSetupModelData(unittest.TestCase):
 
         # constraint partitioning initialization
         self.assertFalse(working_model.first_stage.inequality_cons)
-        self.assertFalse(working_model.first_stage.equality_cons)
+        self.assertFalse(working_model.first_stage.dr_dependent_equality_cons)
+        self.assertFalse(working_model.first_stage.dr_independent_equality_cons)
         self.assertFalse(working_model.second_stage.inequality_cons)
         self.assertFalse(working_model.second_stage.equality_cons)
 
@@ -881,7 +883,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
 
         model_data.working_model.first_stage = Block()
         model_data.working_model.first_stage.inequality_cons = Constraint(Any)
-        model_data.working_model.first_stage.equality_cons = Constraint(Any)
+        model_data.working_model.first_stage.dr_independent_equality_cons = Constraint(Any)
 
         m = model_data.working_model.user_model
 
@@ -977,7 +979,7 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
         first_stage = model_data.working_model.first_stage
         second_stage = model_data.working_model.second_stage
 
-        self.assertEqual(len(first_stage.equality_cons), 1)
+        self.assertEqual(len(first_stage.dr_independent_equality_cons), 1)
         self.assertEqual(len(first_stage.inequality_cons), 0)
         self.assertEqual(len(second_stage.inequality_cons), 10)
         self.assertEqual(len(second_stage.equality_cons), 5)
@@ -1058,9 +1060,10 @@ class TestTurnVarBoundsToConstraints(unittest.TestCase):
             second_stage.inequality_cons["var_z8_uncertain_upper_bound_con"].expr,
             m.z8 <= m.q2,
         )
+        fs_dr_indep_cons = first_stage.dr_independent_equality_cons
         assertExpressionsEqual(
             self,
-            first_stage.equality_cons["var_z11_uncertain_eq_bound_con"].expr,
+            fs_dr_indep_cons["var_z11_uncertain_eq_bound_con"].expr,
             m.z11 == m.q1,
         )
 
@@ -1411,7 +1414,12 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
         model_data.working_model.effective_uncertain_params = [m.q]
 
         model_data.working_model.first_stage = Block()
-        model_data.working_model.first_stage.equality_cons = Constraint(Any)
+        model_data.working_model.first_stage.dr_dependent_equality_cons = Constraint(
+            Any
+        )
+        model_data.working_model.first_stage.dr_independent_equality_cons = Constraint(
+            Any
+        )
         model_data.working_model.second_stage = Block()
         model_data.working_model.second_stage.equality_cons = Constraint(Any)
 
@@ -1449,7 +1457,7 @@ class TestStandardizeEqualityConstraints(unittest.TestCase):
 
         standardize_equality_constraints(model_data)
 
-        first_stage_eq_cons = working_model.first_stage.equality_cons
+        first_stage_eq_cons = working_model.first_stage.dr_independent_equality_cons
         second_stage_eq_cons = working_model.second_stage.equality_cons
 
         self.assertEqual(len(first_stage_eq_cons), 3)
@@ -2128,7 +2136,8 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         working_model.effective_uncertain_params = [m.u]
 
         working_model.first_stage = Block()
-        working_model.first_stage.equality_cons = Constraint(Any)
+        working_model.first_stage.dr_dependent_equality_cons = Constraint(Any)
+        working_model.first_stage.dr_independent_equality_cons = Constraint(Any)
         working_model.second_stage = Block()
         working_model.second_stage.equality_cons = Constraint(Any)
         working_model.second_stage.inequality_cons = Constraint(Any)
@@ -2188,9 +2197,12 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             ),
         )
 
-        first_stage_eq_cons = model_data.working_model.first_stage.equality_cons
+        fs_blk = model_data.working_model.first_stage
+        dr_dependent_fs_eq_cons = fs_blk.dr_dependent_equality_cons
+        dr_independent_fs_eq_cons = fs_blk.dr_independent_equality_cons
+        self.assertFalse(dr_dependent_fs_eq_cons)
         self.assertEqual(
-            len(first_stage_eq_cons),
+            len(dr_independent_fs_eq_cons),
             3,
             msg="Number of coefficient matching constraints not as expected.",
         )
@@ -2200,17 +2212,17 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
 
         assertExpressionsEqual(
             self,
-            first_stage_eq_cons["coeff_matching_eq_con_coeff_1"].expr,
+            dr_independent_fs_eq_cons["coeff_matching_eq_con_coeff_1"].expr,
             m.x1**3 + 0.5 + 5 * m.x1 * m.x2 * (-1) + (-1) * (m.x1 + 2) * (-1) == 0,
         )
         assertExpressionsEqual(
             self,
-            first_stage_eq_cons["coeff_matching_eq_con_coeff_2"].expr,
+            dr_independent_fs_eq_cons["coeff_matching_eq_con_coeff_2"].expr,
             m.x2 - 1 == 0,
         )
         assertExpressionsEqual(
             self,
-            first_stage_eq_cons["coeff_matching_eq_con_2_coeff_1"].expr,
+            dr_independent_fs_eq_cons["coeff_matching_eq_con_2_coeff_1"].expr,
             m.x2 - 1 == 0,
         )
 
@@ -2261,16 +2273,19 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
             ),
         )
 
+        fs_blk = model_data.working_model.first_stage
+        dr_independent_fs_eq_cons = fs_blk.dr_independent_equality_cons
         # check constraint partitioning updated as expected
         self.assertFalse(wm.second_stage.equality_cons)
         self.assertEqual(len(wm.second_stage.inequality_cons), 3)
-        self.assertEqual(len(wm.first_stage.equality_cons), 1)
+        self.assertEqual(len(wm.first_stage.dr_independent_equality_cons), 1)
+        self.assertFalse(wm.first_stage.dr_dependent_equality_cons)
 
         second_stage_ineq_cons = wm.second_stage.inequality_cons
         self.assertTrue(second_stage_ineq_cons["reform_lower_bound_from_eq_con"].active)
         self.assertTrue(second_stage_ineq_cons["reform_upper_bound_from_eq_con"].active)
         self.assertTrue(
-            wm.first_stage.equality_cons["coeff_matching_eq_con_2_coeff_1"].active
+            dr_independent_fs_eq_cons["coeff_matching_eq_con_2_coeff_1"].active
         )
 
         # expressions for the new opposing inequalities
@@ -2299,7 +2314,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         )
         assertExpressionsEqual(
             self,
-            wm.first_stage.equality_cons["coeff_matching_eq_con_2_coeff_1"].expr,
+            dr_independent_fs_eq_cons["coeff_matching_eq_con_2_coeff_1"].expr,
             m.x1 - 1 == 0,
         )
 
@@ -2343,22 +2358,25 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         robust_infeasible = reformulate_state_var_independent_eq_cons(model_data)
 
         # check constraint partitioning updated as expected
+        dr_dependent_equality_cons = wm.first_stage.dr_dependent_equality_cons
+        dr_independent_equality_cons = wm.first_stage.dr_independent_equality_cons
         self.assertFalse(robust_infeasible)
         self.assertFalse(wm.second_stage.equality_cons)
         self.assertEqual(len(wm.second_stage.inequality_cons), 1)
-        self.assertEqual(len(wm.first_stage.equality_cons), 4)
+        self.assertEqual(len(wm.first_stage.dr_dependent_equality_cons), 2)
+        self.assertEqual(len(wm.first_stage.dr_independent_equality_cons), 2)
 
-        self.assertTrue(wm.first_stage.equality_cons["scenario_0_eq_con"].active)
-        self.assertTrue(wm.first_stage.equality_cons["scenario_1_eq_con"].active)
-        self.assertTrue(wm.first_stage.equality_cons["scenario_0_eq_con_2"].active)
-        self.assertTrue(wm.first_stage.equality_cons["scenario_1_eq_con_2"].active)
+        self.assertTrue(dr_dependent_equality_cons["scenario_0_eq_con"].active)
+        self.assertTrue(dr_dependent_equality_cons["scenario_1_eq_con"].active)
+        self.assertTrue(dr_independent_equality_cons["scenario_0_eq_con_2"].active)
+        self.assertTrue(dr_independent_equality_cons["scenario_1_eq_con_2"].active)
 
         # expressions for the new opposing inequalities
         # and coefficient matching constraint
         dr_vars = list(wm.first_stage.decision_rule_vars[0].values())
         assertExpressionsEqual(
             self,
-            wm.first_stage.equality_cons["scenario_0_eq_con"].expr,
+            wm.first_stage.dr_dependent_equality_cons["scenario_0_eq_con"].expr,
             (
                 0 * SumExpression([dr_vars[0] + 0 * dr_vars[1], -1])
                 + 0 * (m.x1**3 + 0.5)
@@ -2368,7 +2386,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         )
         assertExpressionsEqual(
             self,
-            wm.first_stage.equality_cons["scenario_1_eq_con"].expr,
+            wm.first_stage.dr_dependent_equality_cons["scenario_1_eq_con"].expr,
             (
                 (0.7**2) * SumExpression([dr_vars[0] + 0.7 * dr_vars[1], -1])
                 + 0.7 * (m.x1**3 + 0.5)
@@ -2378,12 +2396,12 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         )
         assertExpressionsEqual(
             self,
-            wm.first_stage.equality_cons["scenario_0_eq_con_2"].expr,
+            wm.first_stage.dr_independent_equality_cons["scenario_0_eq_con_2"].expr,
             0 * (m.x1 - 1) == 0,
         )
         assertExpressionsEqual(
             self,
-            wm.first_stage.equality_cons["scenario_1_eq_con_2"].expr,
+            wm.first_stage.dr_independent_equality_cons["scenario_1_eq_con_2"].expr,
             0.7 * (m.x1 - 1) == 0,
         )
 
@@ -2395,6 +2413,7 @@ class TestReformulateStateVarIndependentEqCons(unittest.TestCase):
         # Write the deterministic Pyomo model
         model_data = self.setup_test_model_data()
         m = model_data.working_model.user_model
+        model_data.working_model.first_stage.decision_rule_vars = []
         model_data.working_model.second_stage.equality_cons["eq_con"].set_value(
             expr=m.u * (m.x1**3 + 0.5)
             - 5 * m.u * m.x1 * m.x2
@@ -2750,8 +2769,12 @@ class TestPreprocessModelData(unittest.TestCase):
             ),
         )
         self.assertEqual(
-            list(working_model.first_stage.equality_cons),
-            ["eq_con_eq2", "eq_con_eq3", "eq_con_eq5"] + coeff_matching_con_names,
+            list(working_model.first_stage.dr_independent_equality_cons),
+            ["eq_con_eq2", "eq_con_eq3", "eq_con_eq5"],
+        )
+        self.assertEqual(
+            list(working_model.first_stage.dr_dependent_equality_cons),
+            coeff_matching_con_names,
         )
         self.assertEqual(
             list(working_model.second_stage.inequality_cons),
@@ -2793,7 +2816,7 @@ class TestPreprocessModelData(unittest.TestCase):
         )
 
         # verify the constraints are active
-        for fs_eq_con in working_model.first_stage.equality_cons.values():
+        for fs_eq_con in get_all_first_stage_eq_cons(working_model):
             self.assertTrue(fs_eq_con.active, msg=f"{fs_eq_con.name} inactive")
         for fs_ineq_con in working_model.first_stage.inequality_cons.values():
             self.assertTrue(fs_ineq_con.active, msg=f"{fs_ineq_con.name} inactive")
@@ -2880,11 +2903,11 @@ class TestPreprocessModelData(unittest.TestCase):
         )
 
         assertExpressionsEqual(
-            self, fs.equality_cons["eq_con_eq2"].expr, m.x1 - m.z1 == 0
+            self, fs.dr_independent_equality_cons["eq_con_eq2"].expr, m.x1 - m.z1 == 0
         )
         assertExpressionsEqual(
             self,
-            fs.equality_cons["eq_con_eq3"].expr,
+            fs.dr_independent_equality_cons["eq_con_eq3"].expr,
             m.x1**2 + m.x2 * m.q_cert + m.p * m.z2 == m.p,
         )
         if dr_order < 2:
@@ -2892,7 +2915,7 @@ class TestPreprocessModelData(unittest.TestCase):
             self.assertNotIn("eq_con_eq1", ss.equality_cons)
         assertExpressionsEqual(
             self,
-            fs.equality_cons["eq_con_eq5"].expr,
+            fs.dr_independent_equality_cons["eq_con_eq5"].expr,
             m.z3 + m.y1 + 5 * working_model.temp_uncertain_params[1] == m.q
         )
 
@@ -2948,7 +2971,7 @@ class TestPreprocessModelData(unittest.TestCase):
         working_model = model_data.working_model
         m = model_data.working_model.user_model
         fs = working_model.first_stage
-        fs_eqs = working_model.first_stage.equality_cons
+        dr_dependent_fs_eqs = working_model.first_stage.dr_dependent_equality_cons
         ss_ineqs = working_model.second_stage.inequality_cons
 
         self.assertIsInstance(robust_infeasible, bool)
@@ -2965,34 +2988,40 @@ class TestPreprocessModelData(unittest.TestCase):
             # check the constraint expressions of eq1 and z5 bound
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0"
+                ].expr,
                 fs.decision_rule_vars[1][0] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1"
+                ].expr,
                 fs.decision_rule_vars[1][1] - 1 == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"
+                ].expr,
                 fs.decision_rule_vars[1][2] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_eq_con_eq1_coeff_1"].expr,
+                dr_dependent_fs_eqs["coeff_matching_eq_con_eq1_coeff_1"].expr,
                 # note: the certain parameter was eliminated by
                 # the expression parser
                 fs.decision_rule_vars[0][0] + m.x2 == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_eq_con_eq1_coeff_2"].expr,
+                dr_dependent_fs_eqs["coeff_matching_eq_con_eq1_coeff_2"].expr,
                 fs.decision_rule_vars[0][1] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_eq_con_eq1_coeff_3"].expr,
+                dr_dependent_fs_eqs["coeff_matching_eq_con_eq1_coeff_3"].expr,
                 fs.decision_rule_vars[0][2] == 0,
             )
         if config.decision_rule_order == 2:
@@ -3016,32 +3045,44 @@ class TestPreprocessModelData(unittest.TestCase):
             # check coefficient matching constraint expressions
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_0"
+                ].expr,
                 fs.decision_rule_vars[1][0] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_1"
+                ].expr,
                 fs.decision_rule_vars[1][1] - 1 == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_2"
+                ].expr,
                 fs.decision_rule_vars[1][2] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_3"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_3"
+                ].expr,
                 fs.decision_rule_vars[1][3] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_4"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_4"
+                ].expr,
                 fs.decision_rule_vars[1][4] == 0,
             )
             assertExpressionsEqual(
                 self,
-                fs_eqs["coeff_matching_var_z5_uncertain_eq_bound_con_coeff_5"].expr,
+                dr_dependent_fs_eqs[
+                    "coeff_matching_var_z5_uncertain_eq_bound_con_coeff_5"
+                ].expr,
                 fs.decision_rule_vars[1][5] == 0,
             )
 

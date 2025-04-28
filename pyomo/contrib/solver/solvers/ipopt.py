@@ -46,6 +46,7 @@ from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
 
 logger = logging.getLogger(__name__)
 
@@ -357,9 +358,9 @@ class Ipopt(SolverBase):
                 # Get a copy of the environment to pass to the subprocess
                 env = os.environ.copy()
                 if nl_info.external_function_libraries:
-                    if env.get('AMPLFUNC'):
-                        nl_info.external_function_libraries.append(env.get('AMPLFUNC'))
-                    env['AMPLFUNC'] = "\n".join(nl_info.external_function_libraries)
+                    env['AMPLFUNC'] = amplfunc_merge(
+                        env, *nl_info.external_function_libraries
+                    )
                 # Write the opt_file, if there should be one; return a bool to say
                 # whether or not we have one (so we can correctly build the command line)
                 opt_file = self._write_options_file(
