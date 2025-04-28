@@ -269,48 +269,10 @@ def get_standard_args(experiment, fd_method, obj_used):
     return args
 
 
-# Understanding how to build an object to test the derivative values
-fd_method = "central"
-obj_used = "trace"
-
-experiment = FullReactorExperiment(data_ex, 10, 3)
-
-DoE_args = get_standard_args(experiment, fd_method, obj_used)
-DoE_args["use_grey_box_objective"] = True
-
-doe_obj = DesignOfExperiments(**DoE_args)
-
-doe_obj.create_doe_model()
-
-grey_box_object = FIMExternalGreyBox(
-    doe_object=doe_obj, objective_option=doe_obj.objective_option
-)
-
-print(grey_box_object.input_names())
-print(grey_box_object._input_values)
-print(testing_matrix)
-print(testing_matrix[masking_matrix > 0])
-# Set the input values
-grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
-print(grey_box_object._get_FIM())
-print(grey_box_object.evaluate_outputs())
-print(np.log(np.linalg.det(grey_box_object._get_FIM())))
-utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
-jac = np.zeros_like(grey_box_object._get_FIM())
-jac[np.triu_indices_from(jac)] = utri_vals_jac
-jac += jac.transpose() - np.diag(np.diag(jac))
-print(jac)
-print(get_numerical_derivative(grey_box_object))
-print((jac - get_numerical_derivative(grey_box_object)) / jac)
-print(get_numerical_second_derivative(grey_box_object))
-
-
-# @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestFIMExternalGreyBox(unittest.TestCase):
-    # Begin with tests on calculating
-    # derivatives.
-    def jacobian_test_A_opt(self):
+    def test_jacobian_A_opt(self):
         # Make the object
         fd_method = "central"
         obj_used = "trace"
@@ -327,11 +289,22 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             doe_object=doe_obj, objective_option=doe_obj.objective_option
         )
 
-        # Compute the derivative given
-        self.assertTrue(1)
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
 
-    # Tests:
-    # See google doc for complete list of tests
+        # Grab the Jacobian values
+        utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        jac = np.zeros_like(grey_box_object._get_FIM())
+        jac[np.triu_indices_from(jac)] = utri_vals_jac
+        jac += jac.transpose() - np.diag(np.diag(jac))
+
+        # Get numerical derivative matrix
+        jac_FD = get_numerical_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
 
 
 if __name__ == "__main__":
