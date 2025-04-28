@@ -305,6 +305,108 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+    
+    def test_jacobian_A_opt(self):
+        # Make the object
+        fd_method = "central"
+        obj_used = "determinant"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["use_grey_box_objective"] = True
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        grey_box_object = FIMExternalGreyBox(
+            doe_object=doe_obj, objective_option=doe_obj.objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        jac = np.zeros_like(grey_box_object._get_FIM())
+        jac[np.triu_indices_from(jac)] = utri_vals_jac
+        jac += jac.transpose() - np.diag(np.diag(jac))
+
+        # Get numerical derivative matrix
+        jac_FD = get_numerical_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+    
+    def test_jacobian_A_opt(self):
+        # Make the object
+        fd_method = "central"
+        obj_used = "minimum_eigenvalue"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["use_grey_box_objective"] = True
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        grey_box_object = FIMExternalGreyBox(
+            doe_object=doe_obj, objective_option=doe_obj.objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        jac = np.zeros_like(grey_box_object._get_FIM())
+        jac[np.triu_indices_from(jac)] = utri_vals_jac
+        jac += jac.transpose() - np.diag(np.diag(jac))
+
+        # Get numerical derivative matrix
+        jac_FD = get_numerical_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+    
+    def test_jacobian_A_opt(self):
+        # Make the object
+        fd_method = "central"
+        obj_used = "condition_number"
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used)
+        DoE_args["use_grey_box_objective"] = True
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+        doe_obj.create_doe_model()
+
+        grey_box_object = FIMExternalGreyBox(
+            doe_object=doe_obj, objective_option=doe_obj.objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        utri_vals_jac = grey_box_object.evaluate_jacobian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        jac = np.zeros_like(grey_box_object._get_FIM())
+        jac[np.triu_indices_from(jac)] = utri_vals_jac
+        jac += jac.transpose() - np.diag(np.diag(jac))
+
+        # Get numerical derivative matrix
+        jac_FD = get_numerical_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
 
 
 if __name__ == "__main__":
