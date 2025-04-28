@@ -269,25 +269,102 @@ def get_standard_args(experiment, fd_method, obj_used):
     return args
 
 
+def make_greybox_and_doe_objects(objective_option):
+    fd_method = "central"
+    obj_used = objective_option
+
+    experiment = FullReactorExperiment(data_ex, 10, 3)
+
+    DoE_args = get_standard_args(experiment, fd_method, obj_used)
+    DoE_args["use_grey_box_objective"] = True
+
+    doe_obj = DesignOfExperiments(**DoE_args)
+    doe_obj.create_doe_model()
+
+    grey_box_object = FIMExternalGreyBox(
+        doe_object=doe_obj, objective_option=doe_obj.objective_option
+    )
+    
+    return doe_obj, grey_box_object
+
+
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestFIMExternalGreyBox(unittest.TestCase):
+    # Test that we can properly
+    # set the inputs for the
+    # Grey Box object
+    def test_set_inputs(self):
+        objective_option = "trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
+        
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+        
+        # Grab the values from get_FIM
+        grey_box_FIM = grey_box_object._get_FIM()
+        
+        self.assertTrue(np.all(np.isclose(grey_box_FIM, testing_matrix)))
+        
+    
+    # Testing output computation
+    def test_outputs_A_opt(self):
+        objective_option = "trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
+        
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+        
+        grey_box_A_opt = grey_box_object.evaluate_outputs()
+        
+        A_opt = np.trace(np.linalg.inv(testing_matrix))
+        
+        self.assertTrue(np.isclose(grey_box_A_opt, A_opt))
+    
+    def test_outputs_D_opt(self):
+        objective_option = "determinant"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
+        
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+        
+        grey_box_D_opt = grey_box_object.evaluate_outputs()
+        
+        D_opt = np.log(np.linalg.det(testing_matrix))
+        
+        self.assertTrue(np.isclose(grey_box_D_opt, D_opt))
+    
+    def test_outputs_E_opt(self):
+        objective_option = "minimum_eigenvalue"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
+        
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+        
+        grey_box_E_opt = grey_box_object.evaluate_outputs()
+        
+        vals, vecs = np.linalg.eig(testing_matrix)
+        E_opt = np.min(vals)
+        
+        self.assertTrue(np.isclose(grey_box_E_opt, E_opt))
+    
+    def test_outputs_ME_opt(self):
+        objective_option = "condition_number"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
+        
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+        
+        grey_box_ME_opt = grey_box_object.evaluate_outputs()
+        
+        ME_opt = np.linalg.cond(testing_matrix)
+        
+        self.assertTrue(np.isclose(grey_box_ME_opt, ME_opt))
+    
+    # Testing Jacobian computation
     def test_jacobian_A_opt(self):
-        # Make the object
-        fd_method = "central"
-        obj_used = "trace"
-
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-
-        DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args["use_grey_box_objective"] = True
-
-        doe_obj = DesignOfExperiments(**DoE_args)
-        doe_obj.create_doe_model()
-
-        grey_box_object = FIMExternalGreyBox(
-            doe_object=doe_obj, objective_option=doe_obj.objective_option
-        )
+        objective_option = "trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
@@ -307,21 +384,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
 
     def test_jacobian_D_opt(self):
-        # Make the object
-        fd_method = "central"
-        obj_used = "determinant"
-
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-
-        DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args["use_grey_box_objective"] = True
-
-        doe_obj = DesignOfExperiments(**DoE_args)
-        doe_obj.create_doe_model()
-
-        grey_box_object = FIMExternalGreyBox(
-            doe_object=doe_obj, objective_option=doe_obj.objective_option
-        )
+        objective_option = "determinant"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
@@ -341,21 +405,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
 
     def test_jacobian_E_opt(self):
-        # Make the object
-        fd_method = "central"
-        obj_used = "minimum_eigenvalue"
-
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-
-        DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args["use_grey_box_objective"] = True
-
-        doe_obj = DesignOfExperiments(**DoE_args)
-        doe_obj.create_doe_model()
-
-        grey_box_object = FIMExternalGreyBox(
-            doe_object=doe_obj, objective_option=doe_obj.objective_option
-        )
+        objective_option = "minimum_eigenvalue"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
@@ -375,21 +426,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
 
     def test_jacobian_ME_opt(self):
-        # Make the object
-        fd_method = "central"
-        obj_used = "condition_number"
-
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-
-        DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args["use_grey_box_objective"] = True
-
-        doe_obj = DesignOfExperiments(**DoE_args)
-        doe_obj.create_doe_model()
-
-        grey_box_object = FIMExternalGreyBox(
-            doe_object=doe_obj, objective_option=doe_obj.objective_option
-        )
+        objective_option = "condition_number"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Set input values to the random testing matrix
         grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
