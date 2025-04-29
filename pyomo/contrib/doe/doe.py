@@ -305,11 +305,11 @@ class DesignOfExperiments:
             "Successfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
         )
 
-        # Solve the square problem first to 
+        # Solve the square problem first to
         # initialize the fim and
         # sensitivity constraints. First, we
-        # Deactivate objective expression and 
-        # objective constraints (on a block), 
+        # Deactivate objective expression and
+        # objective constraints (on a block),
         # and fix the design variables.
         model.objective.deactivate()
         model.obj_cons.deactivate()
@@ -1381,23 +1381,21 @@ class DesignOfExperiments:
         # reuse material for initializing the objective-free square model
         if model is None:
             model = model = self.model
-        
+
         # ToDo: Make this naming convention robust
         model.obj_cons = pyo.Block()
-        
+
         # Create FIM External Grey Box object
         grey_box_FIM = FIMExternalGreyBox(
             doe_object=self,
             objective_option=self.objective_option,
             logger_level=self.logger.getEffectiveLevel(),
         )
-        
+
         # Attach External Grey Box Model
-        # to the model as an External 
+        # to the model as an External
         # Grey Box Block
-        model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(
-            external_model=grey_box_FIM
-        )
+        model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(external_model=grey_box_FIM)
 
         # Adding constraints to for all grey box input values to equate to fim values
         def FIM_egb_cons(m, p1, p2):
@@ -1417,7 +1415,7 @@ class DesignOfExperiments:
             else:
                 return pyo.Constraint.Skip
 
-        # Add the FIM and External Grey 
+        # Add the FIM and External Grey
         # Box inputs constraints
         model.obj_cons.FIM_equalities = pyo.Constraint(
             model.parameter_names, model.parameter_names, rule=FIM_egb_cons
@@ -1427,8 +1425,7 @@ class DesignOfExperiments:
         # type within ObjectiveLib
         if self.objective_option == ObjectiveLib.trace:
             model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["A-opt"],
-                sense=pyo.minimize,
+                expr=model.obj_cons.egb_fim_block.outputs["A-opt"], sense=pyo.minimize
             )
         elif self.objective_option == ObjectiveLib.determinant:
             model.objective = pyo.Objective(
@@ -1437,13 +1434,11 @@ class DesignOfExperiments:
             )
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["E-opt"],
-                sense=pyo.maximize,
+                expr=model.obj_cons.egb_fim_block.outputs["E-opt"], sense=pyo.maximize
             )
         elif self.objective_option == ObjectiveLib.condition_number:
             model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["ME-opt"],
-                sense=pyo.minimize,
+                expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize
             )
         else:
             raise AttributeError(
