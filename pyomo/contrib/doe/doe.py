@@ -207,8 +207,8 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             solver = pyo.SolverFactory("ipopt")
-            solver.options["linear_solver"] = "ma57"
-            # solver.options["linear_solver"] = "MUMPS"
+            # solver.options["linear_solver"] = "ma57"
+            solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
             # solver.options["tol"] = 1e-4
@@ -222,7 +222,7 @@ class DesignOfExperiments:
         else:
             grey_box_solver = pyo.SolverFactory("cyipopt")
             grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
-            grey_box_solver.config.options["linear_solver"] = "ma57"
+            # grey_box_solver.config.options["linear_solver"] = "ma57"
             grey_box_solver.config.options['max_iter'] = 200
             grey_box_solver.config.options['tol'] = 1e-4
             # grey_box_solver.config.options['mu_strategy'] = "monotone"
@@ -351,12 +351,20 @@ class DesignOfExperiments:
                         model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
                             pyo.value(model.fim[(i, j)])
                         )
+                        print(j, i)
                     else:  # REMOVE THIS IF USING LOWER TRIANGLE
-                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
-                            pyo.value(model.fim[(j, i)])
-                        )
+                        pass
+                        #model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                        #    pyo.value(model.fim[(j, i)])
+                        #)
             # Set objective value
-            if self.objective_option == ObjectiveLib.determinant:
+            if self.objective_option == ObjectiveLib.trace:
+                # Do safe inverse here?
+                trace_val = 1 / np.trace(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(
+                    trace_val
+                )
+            elif self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(
                     np.log(det_val)

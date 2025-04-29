@@ -186,6 +186,9 @@ def compare_reactor_doe():
 
     print(doe_obj.results["Experiment Design Names"])
 
+    print(dir(doe_obj_grey_box.model.obj_cons.egb_fim_block))
+    doe_obj_grey_box.model.obj_cons.egb_fim_block._input_names_set.pprint()
+
 
 if __name__ == "__main__":
     compare_reactor_doe()
