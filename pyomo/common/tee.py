@@ -407,6 +407,7 @@ class _StreamHandle(object):
     flushing and closing buffers)
 
     """
+
     def __init__(self, mode, buffering, encoding, newline):
         self.buffering = buffering
         self.newlines = newline
