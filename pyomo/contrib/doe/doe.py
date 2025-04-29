@@ -415,9 +415,6 @@ class DesignOfExperiments:
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
             res = self.grey_box_solver.solve(model, tee=self.tee)
-            # from idaes.core.util import DiagnosticsToolbox
-            # dt = DiagnosticsToolbox(model)
-            # dt.report_numerical_issues()
         else:
             res = self.solver.solve(model, tee=self.tee)
 
