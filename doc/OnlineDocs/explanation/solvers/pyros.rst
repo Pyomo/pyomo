@@ -1135,7 +1135,7 @@ The constituent columns are defined in the
 
 Separation Priority Ordering 
 ----------------------------
-The PyROS solver provides support for custom prioritization of
+The PyROS solver supports custom prioritization of
 the separation subproblems that are automatically derived from
 a given model for robust optimization.
 Users may specify separation priorities through:
@@ -1182,12 +1182,12 @@ which no user-specified priority has been provided.
 Every inequality constraint is invertibly
 mapped to a separation problem,
 for which the objective is derived from the inequality constraint expression.
-Inequality constraints that have been assigned a
-numeric priority are grouped in descending order of priority.
-In every PyROS solver iteration, the corresponding separation
-problems are solved in groups by descending order of priority,
-until the solver has within a group detected inequality constraints
-for which robust satisfaction is known to be violated.
+Inequality constraints that have been assigned numeric priorities
+are grouped by priority.
+In every PyROS solver iteration,
+the groups are traversed in descending order of priority,
+until, within a group, the solver has detected at least one
+inequality constraint for which robust satisfaction is known to be violated.
 
 Equality and inequality constraints
 that have been assigned a priority of :py:obj:`None`
