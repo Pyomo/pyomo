@@ -756,23 +756,31 @@ def pyros_config():
             domain=_deprecated_separation_priority_order,
             doc=(
                 """
+                (DEPRECATED)
                 A dict-like object, each entry of which
                 maps the full name of a model ``Var`` or ``Constraint``
                 component to a value specifying the separation priority
                 for all constraints derived from the component.
                 A separation priority can be a numeric value or None.
-                Constraints derived from components not referenced
-                in the `dict` assume a priority of 0.
-                Constraints with a priority of None are excluded from
+                Constraints for which no priorities are specified
+                assume a priority of 0.
+                (Inequality and equality) constraints with a
+                priority of None are excluded from
                 the separation problems and enforced subject to only
                 the nominal uncertain parameter realization in the master
                 problems.
                 Separation problems corresponding to inequality
                 constraints with numeric priorities are grouped by
-                priority. In every iteration, the separation
-                problems are solved in groups in descending order
-                of priority, until within a group constraint violations
+                priority. In every iteration, the groups are traversed
+                in descending order of priority,
+                until, within a group, constraint violations
                 are detected.
+
+                *Deprecated since Pyomo 6.9.3dev0*: The argument
+                `separation_priority_order` is deprecated.
+                Specify separation priorities by declaring, on your
+                model, `Suffix` components with local name
+                'pyros_separation_priority'.
                 """
             ),
         ),
