@@ -882,7 +882,7 @@ class GAMSShell(_GAMSSolver):
             command.append("lo=4")
         if logfile:
             print("******* Current logfile path: ", logfile)
-            command.append('lf=' + f"{logfile}")
+            command.append('lf=' + rf"{logfile}")
             print("******* Command: ", command)
 
         try:
