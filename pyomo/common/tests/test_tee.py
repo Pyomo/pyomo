@@ -228,9 +228,6 @@ class TestTeeStream(unittest.TestCase):
                 os.write(t.STDOUT.fileno(), bytes_ref[:-1])
         self.assertEqual(
             log.getvalue(),
-            "Stream handle closed with a partial line in the output buffer "
-            "that was not emitted to the output stream(s):\n"
-            "\t'Hello, '\n"
             "Stream handle closed with un-decoded characters in the decoder "
             "buffer that was not emitted to the output stream(s):\n"
             "\tb'\\xc2'\n",
