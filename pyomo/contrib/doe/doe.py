@@ -305,9 +305,12 @@ class DesignOfExperiments:
             "Successfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
         )
 
-        # Solve the square problem first to initialize the fim and
-        # sensitivity constraints
-        # Deactivate objective expression and objective constraints (on a block), and fix design variables
+        # Solve the square problem first to 
+        # initialize the fim and
+        # sensitivity constraints. First, we
+        # Deactivate objective expression and 
+        # objective constraints (on a block), 
+        # and fix the design variables.
         model.objective.deactivate()
         model.obj_cons.deactivate()
         for comp in model.scenario_blocks[0].experiment_inputs:
@@ -322,9 +325,6 @@ class DesignOfExperiments:
         #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(model, tee=self.tee)
-        # from idaes.core.util import DiagnosticsToolbox
-        # dt = DiagnosticsToolbox(model)
-        # dt.display_extreme_jacobian_entries()
 
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
