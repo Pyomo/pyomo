@@ -49,7 +49,7 @@ def _make_hierarchical_model():
     m.b = Block()
     m.b.x = Var([1, 2], bounds=(2, 45), domain=Integers)
     m.b.y = Var(domain=Binary)
-    m.b.c = Constraint(expr=m.b.x[1]*m.y <= 23)
+    m.b.c = Constraint(expr=m.b.x[1] * m.y <= 23)
 
     return m
 
@@ -95,9 +95,7 @@ class Test(unittest.TestCase):
 
     def test_relax_integer_vars_block_targets(self):
         m = _make_hierarchical_model()
-        TransformationFactory('core.relax_integer_vars').apply_to(
-            m, targets=m.b
-        )
+        TransformationFactory('core.relax_integer_vars').apply_to(m, targets=m.b)
         for i in [1, 2]:
             self.assertIs(m.b.x[i].domain, Reals)
             self.assertEqual(m.b.x[i].lb, 2)
@@ -134,9 +132,7 @@ class Test(unittest.TestCase):
 
     def test_relax_integer_vars_indexed_var_targets(self):
         m = _make_hierarchical_model()
-        TransformationFactory('core.relax_integer_vars').apply_to(
-            m, targets=m.b.x
-        )
+        TransformationFactory('core.relax_integer_vars').apply_to(m, targets=m.b.x)
         # transformed
         for i in [1, 2]:
             self.assertIs(m.b.x[i].domain, Reals)
@@ -197,8 +193,9 @@ class Test(unittest.TestCase):
         m.obj = Objective(expr=m.b.x[2])
         m.b.deactivate()
         TransformationFactory('core.relax_integer_vars').apply_to(
-            m, transform_deactivated_blocks=False,
-            var_collector=VarCollector.FromExpressions
+            m,
+            transform_deactivated_blocks=False,
+            var_collector=VarCollector.FromExpressions,
         )
         # not transformed
         self.assertIs(m.b.x[1].domain, Integers)
@@ -215,8 +212,8 @@ class Test(unittest.TestCase):
         # not transformed
         self.assertIs(m.y.domain, Binary)
         self.assertEqual(m.y.lb, 0)
-        self.assertEqual(m.y.ub, 1)        
-        
+        self.assertEqual(m.y.ub, 1)
+
     @unittest.skipIf(len(solvers) == 0, "LP/MIP solver not available")
     def test_solve_fix_transform(self):
         s = SolverFactory(solvers[0])

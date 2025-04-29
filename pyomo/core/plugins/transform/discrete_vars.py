@@ -17,8 +17,16 @@ from pyomo.common import deprecated
 from pyomo.common.config import ConfigDict, ConfigValue, In
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.base import (
-    Transformation, TransformationFactory, Var, Suffix, Reals, Block,
-    ReverseTransformationToken, VarCollector, Constraint, Objective
+    Transformation,
+    TransformationFactory,
+    Var,
+    Suffix,
+    Reals,
+    Block,
+    ReverseTransformationToken,
+    VarCollector,
+    Constraint,
+    Objective,
 )
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct
@@ -46,8 +54,8 @@ class RelaxIntegerVars(Transformation):
             out of place, the list of targets should be attached to the model before
             it is cloned, and the list will specify the targets on the cloned
             instance.""",
-            ),
-        )
+        ),
+    )
     CONFIG.declare(
         'reverse',
         ConfigValue(
@@ -106,6 +114,7 @@ class RelaxIntegerVars(Transformation):
             "the transformation.",
         ),
     )
+
     def __init__(self):
         super().__init__()
 
@@ -122,7 +131,7 @@ class RelaxIntegerVars(Transformation):
             deprecation_warning(
                 "The 'undo' argument is deprecated. Please use the 'reverse' "
                 "argument to undo the transformation.",
-                version='6.9.3.dev0'
+                version='6.9.3.dev0',
             )
             for v, d in model._relaxed_integer_vars[None].values():
                 bounds = v.bounds
@@ -171,7 +180,7 @@ class RelaxIntegerVars(Transformation):
                             block,
                             ctype=(Constraint, Objective),
                             active=active,
-                            descend_into=True
+                            descend_into=True,
                         )
                     for var in model_vars:
                         self._relax_var(var, reverse_dict)
@@ -196,7 +205,6 @@ class RelaxIntegerVars(Transformation):
             var.setlb(lb)
             var.setub(ub)
             reverse_dict[id(var)] = (var, _domain)
-
 
 
 @TransformationFactory.register(
