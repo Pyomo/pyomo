@@ -881,7 +881,9 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            command.append(f"lf={logfile}")
+            print("******* Current logfile path: ", logfile)
+            command.append('lf=' + f"{logfile}")
+            print("******* Command: ", command)
 
         try:
             ostreams = [StringIO()]
