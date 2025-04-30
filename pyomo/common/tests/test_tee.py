@@ -298,6 +298,7 @@ class TestTeeStream(unittest.TestCase):
                 os.close(t.STDOUT.fileno())
         self.assertEqual(LOG.getvalue(), "")
 
+
 class TestCapture(unittest.TestCase):
     def setUp(self):
         self.streams = sys.stdout, sys.stderr
