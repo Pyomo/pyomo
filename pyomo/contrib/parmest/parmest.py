@@ -279,8 +279,8 @@ class Estimator(object):
         # Add the extra arguments needed for running the multistart implement
         # _validate_multistart_args:
         # if n_restarts > 1 and theta_samplig_method is not None:
-            # n_restarts=1,
-            # theta_sampling_method="random",
+        n_restarts=20,
+        multistart_sampling_method="random",
     ):
 
         '''first theta would be provided by the user in the initialization of 
@@ -314,8 +314,8 @@ class Estimator(object):
         self.solver_options = solver_options
 
         # add the extra multistart arguments to the Estimator class
-        # self.n_restarts = n_restarts
-        # self.theta_sampling_method = theta_sampling_method
+        self.n_restarts = n_restarts
+        self.multistart_sampling_method = multistart_sampling_method
 
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
@@ -469,31 +469,51 @@ class Estimator(object):
     # This method will be used to generalize the initial theta values for multistart
     # optimization. It will take the theta names and the initial theta values
     # and return a dictionary of theta names and their corresponding values.
-    # def _generalize_initial_theta(self, theta_names, initial_theta):
-    #     if n_restarts == 1:
-    #         # If only one restart, return an empty list
-            # return []
+    def _generate_initial_theta(self, parmest_model, seed=None):
+        if self.n_restarts == 1:
+            # If only one restart, return an empty list
+            return print("No multistart optimization needed. Please use normal theta_est()")
+        
+        # Get the theta names and initial theta values
+        theta_names = self._return_theta_names()
+        initial_theta = [parmest_model.find_component(name)() for name in theta_names]
 
-    #         return {theta_names[i]: initial_theta[i] for i in range(len(theta_names))}
-    #     if self.method == "random":
-    #         # Generate random theta values
-    #         theta_vals = np.random.uniform(lower_bound, upper_bound, size=len(theta_names)
-    #     else:
-    #         # Generate theta values using Latin hypercube sampling or Sobol sampling
-    #     samples
+        # Get the lower and upper bounds for the theta values
+        lower_bound = np.array([parmest_model.find_component(name).lb for name in theta_names])
+        upper_bound = np.array([parmest_model.find_component(name).ub for name in theta_names])
+        # Check if the lower and upper bounds are defined
+        if np.any(np.isnan(lower_bound)) or np.any(np.isnan(upper_bound)):
+            raise ValueError(
+                "The lower and upper bounds for the theta values must be defined."
+            )
+        
+        # Check the length of theta_names and initial_theta, and make sure bounds are defined
+        if len(theta_names) != len(initial_theta):
+            raise ValueError(
+                "The length of theta_names and initial_theta must be the same."
+            )
+        
+        if self.method == "random":
+            np.random.seed(seed)
+            # Generate random theta values
+            theta_vals_multistart = np.random.uniform(lower_bound, upper_bound, size=len(theta_names))
 
-    #     elif self.method == "latin_hypercube":
-    #         # Generate theta values using Latin hypercube sampling
-              # sampler = scipy.stats.qmc.LatinHypercube(d=len(theta_names))
-    #         samples = sampler.random(n=self.n_restarts)
-    #         theta_vals = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
+            # Generate theta values using Latin hypercube sampling or Sobol sampling
+            return theta_vals_multistart
 
-    #       elif self.method == "sobol":
-              # sampler = scipy.stats.qmc.Sobol(d=len(theta_names))
-    #         samples = sampler.random(n=self.n_restarts)
-    #         theta_vals = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
+        elif self.method == "latin_hypercube":
+            # Generate theta values using Latin hypercube sampling
+            sampler = scipy.stats.qmc.LatinHypercube(d=len(theta_names), seed=seed)
+            samples = sampler.random(n=self.n_restarts)
+            theta_vals_multistart = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
 
-    #       return theta_vals_multistart
+
+        elif self.method == "sobol":
+            sampler = scipy.stats.qmc.Sobol(d=len(theta_names), seed=seed)
+            samples = sampler.random(n=self.n_restarts)
+            theta_vals_multistart = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
+
+        return theta_vals_multistart
 
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         model = self._create_parmest_model(experiment_number)
@@ -968,16 +988,11 @@ class Estimator(object):
             cov_n=cov_n,
         )
 
-    '''
     def theta_est_multistart(
         self,
-        n_restarts=1,
         theta_vals=None,
-        theta_sampling_method="random",
         solver="ef_ipopt",
         return_values=[],
-        calc_cov=False,
-        cov_n=None,
     ):
         """
         Parameter estimation using multistart optimization
@@ -993,12 +1008,7 @@ class Estimator(object):
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
             List of Variable names, used to return values from the model for data reconciliation
-        calc_cov: boolean, optional
-            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver).
-            Default is False.
-        cov_n: int, optional
-            If calc_cov=True, then the user needs to supply the number of datapoints
-            that are used in the objective function.
+
 
         Returns
         -------
@@ -1008,49 +1018,29 @@ class Estimator(object):
             Estimated values for theta
         variable values: pd.DataFrame
             Variable values for each variable name in return_values (only for solver='ef_ipopt')
-        cov: pd.DataFrame
-            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
+
         """
 
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
             return print(
-                "Multistart is not supported in the deprecated parmest interface")
+                "Multistart is not supported in the deprecated parmest interface"
             )
 
-        assert isinstance(n_restarts, int)
-        assert isinstance(theta_sampling_method, str)
+        assert isinstance(self.n_restarts, int)
+        assert isinstance(self.multistart_sampling_method, str)
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
-        assert isinstance(calc_cov, bool)
-        if calc_cov:
-            num_unknowns = max(
-                [
-                    len(experiment.get_labeled_model().unknown_parameters)
-                    for experiment in self.exp_list
-                ]
-            )
-            assert isinstance(cov_n, int), (
-                "The number of datapoints that are used in the objective function is "
-                "required to calculate the covariance matrix"
-            )
-            assert (
-                cov_n > num_unknowns
-            ), "The number of datapoints must be greater than the number of parameters to estimate"
-            if n_restarts > 1 and theta_sampling_method is not None:
-                call self._generalize_initial_theta(
-                    self.estimator_theta_names, self.initial_theta
-                )
-            # make empty list to store results
-
-
+        
+        if self.n_restarts > 1 and self.multistart_sampling_method is not None:
+            # Generate theta values using the sampling method
             theta_vals = self._generalize_initial_theta(
-                self.estimator_theta_names, self.initial_theta, self.n_restarts, theta_sampling_method
+                self.estimator_theta_names, self.initial_theta, self.n_restarts, self.multistart_sampling_method
             )
 
-            
+            # make empty list to store results
             results = []
-            for i in range(n_restarts):
+            for i in range(self.n_restarts):
             # for number of restarts, call the self._Q_opt method
             # with the theta values generated using the _generalize_initial_theta method
 
@@ -1059,34 +1049,21 @@ class Estimator(object):
                     ThetaVals=theta_vals,
                     solver=solver,
                     return_values=return_values,
-                    calc_cov=calc_cov,
-                    cov_n=cov_n,
                 )
                 # Store the results in a list or DataFrame
                 # depending on the number of restarts
-                if n_restarts > 1 and cov is not None:
-                    results.append(
-                        {
-                            "objectiveval": objectiveval,
-                            "thetavals": thetavals,
-                            "variable_values": variable_values,
-                            "cov": cov,
-                        }
-                elif n_restarts > 1 and cov is None:
-                    results.append(
-                        { objectiveval: objectiveval,
-                            "thetavals": thetavals,
-                            "variable_values": variable_values,
-                        }
-                    )
-            return pd.DataFrame(results)
-                else:
-                    return objectiveval, thetavals, variable_values, cov
- 
-                    
-        )
 
-    '''
+            if self.n_restarts > 1:
+                results.append(
+                    { objectiveval: objectiveval,
+                        "thetavals": thetavals,
+                        "variable_values": variable_values,
+                    }
+                )
+            return pd.DataFrame(results)
+
+
+
     def theta_est_bootstrap(
         self,
         bootstrap_samples,
