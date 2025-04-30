@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2025
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 from pyomo.common.dependencies import (
     numpy as np,
     numpy_available,
@@ -14,7 +24,7 @@ import pyomo.environ as pyo
 
 import json
 from pathlib import Path
-import idaes
+import idaes.core.solvers.get_solver
 
 ipopt_available = SolverFactory("ipopt").available()
 k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
