@@ -534,11 +534,12 @@ class TestCapture(unittest.TestCase):
             b = tee.capture_output(OUT2)
             b.setup()
             with self.assertRaisesRegex(
-                RuntimeError, 'Captured output does not match sys.stdout'
+                RuntimeError, 'Captured output .* does not match sys.stdout'
             ):
                 a.reset()
-            b.tee = None
         finally:
+            # Clear b so that it doesn't call __exit__ and corrupt stdout/stderr
+            b.tee = None
             os.dup2(old_fd[0], 1)
             os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old

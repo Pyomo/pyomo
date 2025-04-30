@@ -366,10 +366,16 @@ class capture_output(object):
     def __exit__(self, et, ev, tb):
         # Check that we were nested correctly
         FAIL = []
-        if self.tee.STDOUT is not sys.stdout:
-            FAIL.append('Captured output does not match sys.stdout.')
-        if self.tee.STDERR is not sys.stderr:
-            FAIL.append('Captured output does not match sys.stderr.')
+        if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
+            FAIL.append(
+                'Captured output (%s) does not match sys.stdout (%s).'
+                % (self.tee._stdout, sys.stdout)
+            )
+        if self.tee._stderr is not None and self.tee.STDERR is not sys.stderr:
+            FAIL.append(
+                'Captured output (%s) does not match sys.stderr (%s).'
+                % (self.tee._stdout, sys.stdout)
+            )
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
