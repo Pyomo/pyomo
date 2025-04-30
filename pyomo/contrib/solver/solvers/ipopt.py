@@ -405,18 +405,14 @@ class Ipopt(SolverBase):
                             stderr=t.STDERR,
                             check=False,
                         )
-                        t.STDOUT.flush()
-                        t.STDERR.flush()
                         timer.stop('subprocess')
                 except OSError:
                     err = sys.exc_info()[1]
                     msg = 'Could not execute the command: %s\tError message: %s'
                     raise ApplicationError(msg % (cmd, err))
-                    # This is the stuff we need to parse to get the iterations
-                    # and time
-                finally:
-                    sys.stdout.flush()
 
+                # This is the stuff we need to parse to get the iterations
+                # and time
                 parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
             if proven_infeasible:
