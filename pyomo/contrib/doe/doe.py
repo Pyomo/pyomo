@@ -1381,6 +1381,31 @@ class DesignOfExperiments:
                 )
             )
 
+        # Check FIM is positive definite and symmetric
+        self._check_FIM(FIM)
+
+        self.logger.info(
+            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
+        )
+
+    # TODO: Make this a static method
+    @staticmethod
+    def _check_FIM(FIM):
+        """Private method for basic diagonists on FIM
+
+        Parameters
+        ----------
+            FIM: 2D numpy array representing the FIM
+
+        Returns
+        -------
+            None, but will raise error messages as needed
+
+        """
+        # Ensure that the FIM is a square matrix
+        if FIM.shape[0] != FIM.shape[1]:
+            raise ValueError("FIM must be a square matrix")
+
         # Compute the eigenvalues of the FIM
         evals = np.linalg.eigvals(FIM)
 
@@ -1399,10 +1424,6 @@ class DesignOfExperiments:
                     _SMALL_TOLERANCE_SYMMETRY
                 )
             )
-
-        self.logger.info(
-            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
-        )
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
@@ -2335,35 +2356,57 @@ class DesignOfExperiments:
             return -1
 
 
-# To discuss with Pyomo team: Should this be a light weight class?
-# The init method would essentially be the function below
-# The class would have atributes instead of returning a dictionary
-# This would then allow extensions such as a method to print the eigendecomposition
-# in a nicely formatted pandas dataframe.
+# loggers for the functions
+function_logger = logging.getLogger(__name__)
+function_logger.setLevel(logging.WARNING)
+
+
+# Functions to compute FIM metrics
 def _compute_FIM_metrics(FIM):
-    """Need to add a document string here.
+    """
+    This private function calculates the FIM metrics and returns them as a tuple.
+
+    Parameters
+    ----------
+    FIM: 2D numpy array of the FIM
+
+    Returns
+    -------
+    det_FIM: determinant of the FIM
+    trace_FIM: trace of the FIM
+    E_vals: eigenvalues of the FIM
+    E_vecs: eigenvectors of the FIM
+    D_opt: log10(D-optimality) metric
+    A_opt: log10(A-optimality) metric
+    E_opt: log10(E-optimality) metric
+    ME_opt: log10(Modified E-optimality) metric
+
 
     TODO: Return several results in a tuple (multiple outputs). This is a private function.
     """
 
-    # Need to do error checking here to make sure FIM is a square matrix
-    # Need to do error checking here to make sure FIM is positive definite
-    # Need to do error checking here to make sure FIM is symmetric
-    # These error checks are implemented above, let's generalize them
-    # so we can reuse code
+    # !Need to do error checking here to make sure FIM is a square matrix
+    # !Need to do error checking here to make sure FIM is positive definite
+    # !Need to do error checking here to make sure FIM is symmetric
+    # !These error checks are implemented above, let's generalize them
+    # !so we can reuse code
 
-    # Compute and record metrics on FIM
-    det_FIM = np.linalg.det(FIM)  # Determinant of FIM
+    # Check whether the FIM is square, positive definite, and symmetric
+    DesignOfExperiments._check_FIM(FIM)
+
+    # Compute FIM metrics
+    det_FIM = np.linalg.det(FIM)
     D_opt = np.log10(det_FIM)
-    trace_FIM = np.trace(FIM)  # Trace of FIM
-    A_opt = np.log10(trace_FIM)
-    E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
 
-    E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+    trace_FIM = np.trace(FIM)
+    A_opt = np.log10(trace_FIM)
+
+    E_vals, E_vecs = np.linalg.eig(FIM)
+    E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
 
     # Warn the user if there is a ``large`` imaginary component (should not be)
     if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
-        print(
+        function_logger.warning(
             f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
         )
 
@@ -2379,20 +2422,35 @@ def _compute_FIM_metrics(FIM):
 
 
 def get_FIM_metrics(FIM):
-    """Add document string here. This is the public interface."""
+    """
+    This private function calculates the FIM metrics and returns them as a dictionary.
 
+    Parameters
+    ----------
+    FIM: 2D numpy array of the FIM
+
+    Returns
+    -------
+    det_FIM: determinant of the FIM
+    trace_FIM: trace of the FIM
+    E_vals: eigenvalues of the FIM
+    E_vecs: eigenvectors of the FIM
+    D_opt: D-optimality metric
+    A_opt: A-optimality metric
+    E_opt: E-optimality metric
+    ME_opt: Modified E-optimality metric
+    """
     det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
         _compute_FIM_metrics(FIM)
     )
 
-    # Also return the eigenvectors
     return {
-        "det_FIM": det_FIM,
-        "trace_FIM": trace_FIM,
-        "E_vals": E_vals,
-        "E_vecs": E_vecs,
-        "D_opt": D_opt,
-        "A_opt": A_opt,
-        "E_opt": E_opt,
-        "ME_opt": ME_opt,
+        "Determinanat of FIM": det_FIM,
+        "Trace of FIM": trace_FIM,
+        "Eigenvalues": E_vals,
+        "Eigen vectors": E_vecs,
+        "log10(D-Optimality)": D_opt,
+        "log10(A-Optimality)": A_opt,
+        "log10(E-Optimality)": E_opt,
+        "log10(Modified E-Optimality)": ME_opt,
     }

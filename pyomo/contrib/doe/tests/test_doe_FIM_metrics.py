@@ -17,24 +17,61 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.tests import doe_test_example
-from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG, compute_FIM_metrics
+
+# Not need? from pyomo.contrib.doe.tests import doe_test_example
+from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG, _compute_FIM_metrics
 from pyomo.opt import SolverFactory
 import pyomo.environ as pyo
 
 import json
 from pathlib import Path
+import logging
 import idaes.core.solvers.get_solver
 
-ipopt_available = SolverFactory("ipopt").available()
-k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
+# ipopt_available = SolverFactory("ipopt").available()
+# k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-class TestFullFactorialMetrics(unittest.TestCase):
-    def test_compute_FIM_full_factorial_metrics(self):
+class TestComputeFIMMetrics(unittest.TestCase):
+    def test_compute_FIM_metrics(self):
         # Create a sample Fisher Information Matrix (FIM)
         FIM = np.array([[4, 2], [2, 3]])
+
+        det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+            _compute_FIM_metrics(FIM)
+        )
+
+        # expected results
+        det_expected = np.linalg.det(FIM)
+        D_opt_expected = np.log10(det_expected)
+
+        trace_expected = np.trace(FIM)
+        A_opt_expected = np.log10(trace_expected)
+
+        E_vals_expected, E_vecs_expected = np.linalg.eig(FIM)
+        min_eigval = np.min(E_vals_expected.real)
+        E_opt_expected = np.log10(min_eigval)
+
+        cond_expected = np.linalg.cond(FIM)
+        ME_opt_expected = np.log10(cond_expected)
+
+        # Test results
+        self.assertEqual(det_FIM, det_expected)
+        self.assertEqual(trace_FIM, trace_expected)
+        self.assertTrue(np.allclose(E_vals, E_vals_expected))
+        self.assertTrue(np.allclose(E_vecs, E_vecs_expected))
+        self.assertEqual(D_opt, D_opt_expected)
+        self.assertEqual(A_opt, A_opt_expected)
+        self.assertEqual(E_opt, E_opt_expected)
+        self.assertEqual(ME_opt, ME_opt_expected)
+
+
+class TestFIMWarning(unittest.TestCase):
+    def test_FIM_eigenvalue_warning(self):
+        # Create a matrix with an imaginary component large enough to trigger the warning
+        FIM = np.array([[9, -2], [9, 3]])
+        with self.assertLogs('_compute_FIM_metrics', level="WARNING") as cm:
 
 
 # ======================================================================
