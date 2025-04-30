@@ -277,9 +277,11 @@ class capture_output(object):
         FAIL = []
         while self.context_stack:
             try:
-                self.context_stack.pop().__exit__(et, ev, tb)
+                cm = self.context_stack.pop()
+                cm.__exit__(et, ev, tb)
             except:
-                FAIL.append(str(sys.exc_info()[1]))
+                _stack = self.context_stack
+                FAIL.append(f"{sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})")
         return FAIL
 
     def __enter__(self):
