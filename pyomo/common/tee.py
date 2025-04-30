@@ -79,6 +79,26 @@ class _AutoFlush(_SignalFlush):
         self.flush()
 
 
+class _fd_closer(object):
+    """A context manager to handle closing a specified file descriptor
+
+    Ideally we would use `os.fdopen(... closefd=True)`; however, it
+    appears that Python ignores `closefd` on Windows.  This would
+    eventually lead to the process exceeding the maximum number of open
+    files (see Pyomo/pyomo#3587).  So, we will explicitly manage closing
+    the file descriptors that we open using this context manager.
+
+    """
+    def __init__(self, fd):
+        self.fd = fd
+
+    def __enter__(self):
+        return self.fd
+
+    def __exit__(self, et, ev, tb):
+        os.close(self.fd)
+
+
 class redirect_fd(object):
     """Redirect a file descriptor to a new file or file descriptor.
 
@@ -286,8 +306,15 @@ class capture_output(object):
                 # overwrite it when we get to redirect_fd below).  If
                 # sys.stderr doesn't have a file descriptor, we will
                 # fall back on the process stderr (FD=2).
+                #
+                # Note that we would like to use closefd=True, but can't
+                # (see _fd_closer docs)
                 log_stream = self._enter_context(
-                    os.fdopen(os.dup(old_fd[1] or 2), mode="w", closefd=True)
+                    os.fdopen(
+                        self._enter_context(_fd_closer(os.dup(old_fd[1] or 2))),
+                        mode="w",
+                        closefd=False,
+                    )
                 )
             else:
                 log_stream = self.old[1]
@@ -340,11 +367,16 @@ class capture_output(object):
                         # loop that we really want to break.  Undo
                         # the redirect by pointing our output stream
                         # back to the original file descriptor.
+                        #
+                        # Note that we would like to use closefd=True, but can't
+                        # (see _fd_closer docs)
                         stream = self._enter_context(
                             os.fdopen(
-                                os.dup(fd_redirect[fd].original_fd),
+                                self._enter_context(
+                                    _fd_closer(os.dup(fd_redirect[fd].original_fd))
+                                ),
                                 mode="w",
-                                closefd=True,
+                                closefd=False,
                             ),
                             prior_to=self.tee,
                         )
