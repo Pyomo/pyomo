@@ -18,7 +18,7 @@ from pyomo.common.dependencies import (
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe.tests import doe_test_example
-from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG
+from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG, compute_FIM_metrics
 from pyomo.opt import SolverFactory
 import pyomo.environ as pyo
 
@@ -39,44 +39,6 @@ class TestFullFactorialMetrics(unittest.TestCase):
 
 # ======================================================================
 import numpy as np
-
-# from pyomo.common.dependencies import numpy as np
-from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG
-
-
-def compute_FIM_metrics(FIM):
-    # Compute and record metrics on FIM
-    det_FIM = np.linalg.det(FIM)  # Determinant of FIM
-    D_opt = np.log10(det_FIM)
-    trace_FIM = np.trace(FIM)  # Trace of FIM
-    A_opt = np.log10(trace_FIM)
-    E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
-
-    E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-
-    # Warn the user if there is a ``large`` imaginary component (should not be)
-    if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
-        print(
-            "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
-        )
-
-    # If the real value is less than or equal to zero, set the E_opt value to nan
-    if E_vals.real[E_ind] <= 0:
-        E_opt = np.nan
-    else:
-        E_opt = np.log10(E_vals.real[E_ind])
-
-    ME_opt = np.log10(np.linalg.cond(FIM))
-
-    return {
-        "det_FIM": det_FIM,
-        "trace_FIM": trace_FIM,
-        "E_vals": E_vals,
-        "D_opt": D_opt,
-        "A_opt": A_opt,
-        "E_opt": E_opt,
-        "ME_opt": ME_opt,
-    }
 
 
 def test_FIM_metrics():
@@ -122,7 +84,7 @@ def test_FIM_metrics_warning_printed(capfd):
     out, err = capfd.readouterr()
 
     # Correct expected message
-    expected_message = "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
+    expected_message = "Eigenvalue has imaginary component greater than {}, contact developers if this issue persists."
 
     # Ensure expected message is in the output
     assert expected_message in out

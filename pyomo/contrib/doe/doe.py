@@ -2333,3 +2333,66 @@ class DesignOfExperiments:
             return 1
         else:
             return -1
+
+
+# To discuss with Pyomo team: Should this be a light weight class?
+# The init method would essentially be the function below
+# The class would have atributes instead of returning a dictionary
+# This would then allow extensions such as a method to print the eigendecomposition
+# in a nicely formatted pandas dataframe.
+def _compute_FIM_metrics(FIM):
+    """Need to add a document string here.
+
+    TODO: Return several results in a tuple (multiple outputs). This is a private function.
+    """
+
+    # Need to do error checking here to make sure FIM is a square matrix
+    # Need to do error checking here to make sure FIM is positive definite
+    # Need to do error checking here to make sure FIM is symmetric
+    # These error checks are implemented above, let's generalize them
+    # so we can reuse code
+
+    # Compute and record metrics on FIM
+    det_FIM = np.linalg.det(FIM)  # Determinant of FIM
+    D_opt = np.log10(det_FIM)
+    trace_FIM = np.trace(FIM)  # Trace of FIM
+    A_opt = np.log10(trace_FIM)
+    E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
+
+    E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+
+    # Warn the user if there is a ``large`` imaginary component (should not be)
+    if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
+        print(
+            f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
+        )
+
+    # If the real value is less than or equal to zero, set the E_opt value to nan
+    if E_vals.real[E_ind] <= 0:
+        E_opt = np.nan
+    else:
+        E_opt = np.log10(E_vals.real[E_ind])
+
+    ME_opt = np.log10(np.linalg.cond(FIM))
+
+    return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
+
+
+def get_FIM_metrics(FIM):
+    """Add document string here. This is the public interface."""
+
+    det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+        _compute_FIM_metrics(FIM)
+    )
+
+    # Also return the eigenvectors
+    return {
+        "det_FIM": det_FIM,
+        "trace_FIM": trace_FIM,
+        "E_vals": E_vals,
+        "E_vecs": E_vecs,
+        "D_opt": D_opt,
+        "A_opt": A_opt,
+        "E_opt": E_opt,
+        "ME_opt": ME_opt,
+    }
