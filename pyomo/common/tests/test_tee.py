@@ -278,6 +278,12 @@ class TestTeeStream(unittest.TestCase):
             r"\nThe following was left in the output buffer:\n    'i\\n'\n$",
         )
 
+    def test_context_mismatch(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "TeeStream: exiting a context that was not entered"
+        ):
+            with tee.TeeStream() as t:
+                t.__exit__(None, None, None)
 
 class TestCapture(unittest.TestCase):
     def setUp(self):

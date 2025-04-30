@@ -572,6 +572,7 @@ class TeeStream(object):
         self._handles = []
         self._active_handles = []
         self._threads = []
+        self._enter_count = 0
 
     @property
     def STDOUT(self):
@@ -659,9 +660,13 @@ class TeeStream(object):
             raise RuntimeError("TeeStream: deadlock observed joining reader threads")
 
     def __enter__(self):
+        self._enter_count += 1
         return self
 
     def __exit__(self, et, ev, tb):
+        if not self._enter_count:
+            raise RuntimeError("TeeStream: exiting a context that was not entered")
+        self._enter_count -= 1
         self.close(et is not None)
 
     def __del__(self):
