@@ -23,16 +23,14 @@
 # on this system. This example was tested using Ipopt
 # version 3.10.2
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the ipopt solver plugin using the ASL interface
 solver = 'ipopt'
 solver_io = 'nl'
 stream_solver = False  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 
 if opt is None:
     print("")
@@ -45,29 +43,31 @@ if opt is None:
 ###
 
 ### Create the example model
-model = ConcreteModel()
-model.x1 = Var(bounds=(1, 5), initialize=1.0)
-model.x2 = Var(bounds=(1, 5), initialize=5.0)
-model.x3 = Var(bounds=(1, 5), initialize=5.0)
-model.x4 = Var(bounds=(1, 5), initialize=1.0)
-model.obj = Objective(
+model = pyo.ConcreteModel()
+model.x1 = pyo.Var(bounds=(1, 5), initialize=1.0)
+model.x2 = pyo.Var(bounds=(1, 5), initialize=5.0)
+model.x3 = pyo.Var(bounds=(1, 5), initialize=5.0)
+model.x4 = pyo.Var(bounds=(1, 5), initialize=1.0)
+model.obj = pyo.Objective(
     expr=model.x1 * model.x4 * (model.x1 + model.x2 + model.x3) + model.x3
 )
-model.inequality = Constraint(expr=model.x1 * model.x2 * model.x3 * model.x4 >= 25.0)
-model.equality = Constraint(
+model.inequality = pyo.Constraint(
+    expr=model.x1 * model.x2 * model.x3 * model.x4 >= 25.0
+)
+model.equality = pyo.Constraint(
     expr=model.x1**2 + model.x2**2 + model.x3**2 + model.x4**2 == 40.0
 )
 ###
 
 ### Declare all suffixes
 # Ipopt bound multipliers (obtained from solution)
-model.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-model.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
+model.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+model.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
 # Ipopt bound multipliers (sent to solver)
-model.ipopt_zL_in = Suffix(direction=Suffix.EXPORT)
-model.ipopt_zU_in = Suffix(direction=Suffix.EXPORT)
+model.ipopt_zL_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.ipopt_zU_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 # Obtain dual solutions from first solve and send to warm start
-model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
+model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
 ###
 
 ### Send the model to ipopt and collect the solution
@@ -80,7 +80,8 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 print("   %7s %12s %12s" % ("Value", "ipopt_zL_out", "ipopt_zU_out"))
 for v in [model.x1, model.x2, model.x3, model.x4]:
     print(
-        "%s %7g %12g %12g" % (v, value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
+        "%s %7g %12g %12g"
+        % (v, pyo.value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
     )
 print("inequality.dual = " + str(model.dual[model.inequality]))
 print("equality.dual   = " + str(model.dual[model.equality]))
@@ -112,7 +113,8 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 print("   %7s %12s %12s" % ("Value", "ipopt_zL_out", "ipopt_zU_out"))
 for v in [model.x1, model.x2, model.x3, model.x4]:
     print(
-        "%s %7g %12g %12g" % (v, value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
+        "%s %7g %12g %12g"
+        % (v, pyo.value(v), model.ipopt_zL_out[v], model.ipopt_zU_out[v])
     )
 print("inequality.dual = " + str(model.dual[model.inequality]))
 print("equality.dual   = " + str(model.dual[model.equality]))

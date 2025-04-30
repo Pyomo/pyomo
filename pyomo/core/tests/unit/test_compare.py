@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.common import unittest
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.core.expr.numeric_expr import (
     LinearExpression,
     MonomialTermExpression,
@@ -39,8 +39,8 @@ from pyomo.common.gsl import find_GSL
 
 class TestConvertToPrefixNotation(unittest.TestCase):
     def test_linear_expression(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var([1, 2, 3, 4])
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3, 4])
         e = LinearExpression(
             constant=3, linear_coefs=list(m.x.keys()), linear_vars=list(m.x.values())
         )
@@ -64,9 +64,9 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         self.assertEqual(pn, expected)
 
     def test_multiple(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
 
         e = m.x**2 + m.x * m.y / 3 + 4
         expected = [
@@ -89,9 +89,9 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         self.assertFalse(compare_expressions(e, e3))
 
     def test_unary(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        e = pe.log(m.x)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        e = pyo.log(m.x)
         expected = [(UnaryFunctionExpression, 1, 'log'), m.x]
         pn = convert_expression_to_prefix_notation(e)
         self.assertEqual(expected, pn)
@@ -101,10 +101,10 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgsl.dll library')
 
-        m = pe.ConcreteModel()
-        m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
-        m.x = pe.Var(initialize=0.5)
-        m.y = pe.Var(initialize=1.5)
+        m = pyo.ConcreteModel()
+        m.hypot = pyo.ExternalFunction(library=DLL, function='gsl_hypot')
+        m.x = pyo.Var(initialize=0.5)
+        m.y = pyo.Var(initialize=1.5)
         e = 2 * m.hypot(m.x, m.x * m.y)
         expected = [
             (ProductExpression, 2),
@@ -119,8 +119,8 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         self.assertEqual(expected, pn)
 
     def test_var(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
         pn = convert_expression_to_prefix_notation(m.x)
         self.assertEqual(pn, [m.x])
 
@@ -129,38 +129,38 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         self.assertEqual(pn, [4.3])
 
     def test_monomial(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
         e = 2 * m.x
         pn = convert_expression_to_prefix_notation(e)
         expected = [(MonomialTermExpression, 2), 2, m.x]
         self.assertEqual(pn, expected)
 
     def test_negation(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
         e = -m.x**2
         pn = convert_expression_to_prefix_notation(e)
         expected = [(NegationExpression, 1), (PowExpression, 2), m.x, 2]
         self.assertEqual(pn, expected)
 
     def test_abs(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
         e = abs(m.x)
         pn = convert_expression_to_prefix_notation(e)
         expected = [(AbsExpression, 1, 'abs'), m.x]
         self.assertEqual(pn, expected)
 
     def test_expr_if(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.y = pe.Var()
-        e = pe.Expr_if(m.x <= 0, m.y + m.x == 0, m.y - m.x == 0)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        e = pyo.Expr_if(m.x <= 0, m.y + m.x == 0, m.y - m.x == 0)
         pn = convert_expression_to_prefix_notation(e)
         expected = [
             (Expr_ifExpression, 3),
-            (InequalityExpression, 2),
+            (InequalityExpression, 2, False),
             m.x,
             0,
             (EqualityExpression, 2),
@@ -179,20 +179,20 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         self.assertEqual(pn, expected)
 
     def test_ranged_expression(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        e = pe.inequality(-1, m.x, 1)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        e = pyo.inequality(-1, m.x, 1)
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(RangedExpression, 3), -1, m.x, 1]
+        expected = [(RangedExpression, 3, (False, False)), -1, m.x, 1]
         self.assertEqual(pn, expected)
 
     def test_assertExpressionsEqual(self):
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.e1 = pe.Expression(expr=m.x**2 + m.x - 1)
-        m.e2 = pe.Expression(expr=m.x**2 + m.x - 1)
-        m.f = pe.Expression(expr=m.x**2 + 2 * m.x - 1)
-        m.g = pe.Expression(expr=m.x**2 + m.x - 2)
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.e1 = pyo.Expression(expr=m.x**2 + m.x - 1)
+        m.e2 = pyo.Expression(expr=m.x**2 + m.x - 1)
+        m.f = pyo.Expression(expr=m.x**2 + 2 * m.x - 1)
+        m.g = pyo.Expression(expr=m.x**2 + m.x - 2)
 
         assertExpressionsEqual(self, m.e1.expr, m.e2.expr)
         assertExpressionsStructurallyEqual(self, m.e1.expr, m.e2.expr)

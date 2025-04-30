@@ -9,12 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 
 # ---------------------------------------------
 # @simple
-M = ConcreteModel()
-M.v = Var()
+M = pyo.ConcreteModel()
+M.v = pyo.Var()
 
 e = M.v * 2
 # @simple

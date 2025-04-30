@@ -959,13 +959,12 @@ Observe that the log contains the following information:
 .. _solver-log-snippet:
 
 .. code-block:: text
-
    :caption: PyROS solver output log for the :ref:`two-stage problem example <example-two-stg>`.
    :linenos:
 
    ==============================================================================
    PyROS: The Pyomo Robust Optimization Solver, v1.3.6.
-          Pyomo version: 6.9.2.dev0 (devel {pyros-effective-uncertain-params})
+          Pyomo version: 6.9.2
           Commit hash: 41cd797e0
           Invoked at UTC 2025-03-13T16:20:31.105320+00:00
 

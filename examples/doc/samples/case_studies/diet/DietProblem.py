@@ -9,26 +9,26 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.foods = Set()
-model.nutrients = Set()
-model.costs = Param(model.foods)
-model.min_nutrient = Param(model.nutrients)
-model.max_nutrient = Param(model.nutrients)
-model.volumes = Param(model.foods)
-model.max_volume = Param()
-model.nutrient_value = Param(model.nutrients, model.foods)
-model.amount = Var(model.foods, within=NonNegativeReals)
+model.foods = pyo.Set()
+model.nutrients = pyo.Set()
+model.costs = pyo.Param(model.foods)
+model.min_nutrient = pyo.Param(model.nutrients)
+model.max_nutrient = pyo.Param(model.nutrients)
+model.volumes = pyo.Param(model.foods)
+model.max_volume = pyo.Param()
+model.nutrient_value = pyo.Param(model.nutrients, model.foods)
+model.amount = pyo.Var(model.foods, within=pyo.NonNegativeReals)
 
 
 def costRule(model):
     return sum(model.costs[n] * model.amount[n] for n in model.foods)
 
 
-model.cost = Objective(rule=costRule)
+model.cost = pyo.Objective(rule=costRule)
 
 
 def volumeRule(model):
@@ -37,7 +37,7 @@ def volumeRule(model):
     )
 
 
-model.volume = Constraint(rule=volumeRule)
+model.volume = pyo.Constraint(rule=volumeRule)
 
 
 def nutrientRule(model, n):
@@ -45,4 +45,4 @@ def nutrientRule(model, n):
     return (model.min_nutrient[n], value, model.max_nutrient[n])
 
 
-model.nutrientConstraint = Constraint(model.nutrients, rule=nutrientRule)
+model.nutrientConstraint = pyo.Constraint(model.nutrients, rule=nutrientRule)
