@@ -89,6 +89,7 @@ class _fd_closer(object):
     the file descriptors that we open using this context manager.
 
     """
+
     def __init__(self, fd):
         self.fd = fd
 
