@@ -618,7 +618,6 @@ class TestCapture(unittest.TestCase):
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
-
         try:
             with LoggingIntercept() as LOG, self.assertRaisesRegex(
                 RuntimeError, 'deadlock'
@@ -631,6 +630,20 @@ class TestCapture(unittest.TestCase):
                 'TeeStream: deadlock observed joining reader threads\n',
                 LOG.getvalue(),
             )
+        finally:
+            tee._poll_timeout, tee._poll_timeout_deadlock = _save
+
+        _save = tee._poll_timeout, tee._poll_timeout_deadlock
+        tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
+        tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
+        try:
+            with LoggingIntercept() as LOG, self.assertRaisesRegex(
+                ValueError, 'testing'
+            ):
+                with tee.TeeStream(MockStream()) as t:
+                    t.STDERR.write('*')
+                    raise ValueError('testing')
+            self.assertEqual("", LOG.getvalue())
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
 

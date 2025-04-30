@@ -635,7 +635,10 @@ class TeeStream(object):
             if _poll_timeout <= _poll < 2 * _poll_timeout:
                 if in_exception:
                     # We are already processing an exception: no reason
-                    # to trigger another, nor to deadlock for an extended time
+                    # to trigger another, nor to deadlock for an
+                    # extended time.  Silently clean everything up
+                    # (because emitting logger messages could trigger
+                    # yet another exception and mask the true cause).
                     break
                 logger.warning(
                     "Significant delay observed waiting to join reader "
