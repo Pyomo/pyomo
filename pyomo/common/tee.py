@@ -374,7 +374,8 @@ class capture_output(object):
                         stream = self._enter_context(
                             os.fdopen(
                                 self._enter_context(
-                                    _fd_closer(os.dup(fd_redirect[fd].original_fd))
+                                    _fd_closer(os.dup(fd_redirect[fd].original_fd)),
+                                    prior_to=self.tee,
                                 ),
                                 mode="w",
                                 closefd=False,
