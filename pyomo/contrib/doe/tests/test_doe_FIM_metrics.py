@@ -7,12 +7,21 @@ from pyomo.common.dependencies import (
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.doe import compute_FIM_full_factorial, _SMALL_TOLERANCE_IMG
+from pyomo.contrib.doe.tests import doe_test_example
+from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_IMG
 from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
+
+import json
+from pathlib import Path
+import idaes
+
+ipopt_available = SolverFactory("ipopt").available()
+k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-class TestFullFactrialMetrics(unittest.TestCase):
+class TestFullFactorialMetrics(unittest.TestCase):
     def test_compute_FIM_full_factorial_metrics(self):
         # Create a sample Fisher Information Matrix (FIM)
         FIM = np.array([[4, 2], [2, 3]])
