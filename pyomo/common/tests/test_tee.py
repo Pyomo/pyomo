@@ -285,6 +285,19 @@ class TestTeeStream(unittest.TestCase):
             with tee.TeeStream() as t:
                 t.__exit__(None, None, None)
 
+    def test_handle_prematurely_closed(self):
+        # Close the TextIO object
+        with LoggingIntercept() as LOG:
+            with tee.TeeStream() as t:
+                t.STDOUT.close()
+        self.assertEqual(LOG.getvalue(), "")
+
+        # Close the underlying file descriptor
+        with LoggingIntercept() as LOG:
+            with tee.TeeStream() as t:
+                os.close(t.STDOUT.fileno())
+        self.assertEqual(LOG.getvalue(), "")
+
 class TestCapture(unittest.TestCase):
     def setUp(self):
         self.streams = sys.stdout, sys.stderr

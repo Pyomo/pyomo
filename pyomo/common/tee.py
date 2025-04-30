@@ -455,8 +455,9 @@ class _StreamHandle(object):
         # Close both the file and the underlying file descriptor.  Note
         # that this may get called more than once.
         if self.write_file is not None:
-            self.write_file.flush()
-            self.write_file.close()
+            if not self.write_file.closed:
+                self.write_file.flush()
+                self.write_file.close()
             self.write_file = None
 
         if self.write_pipe is not None:
