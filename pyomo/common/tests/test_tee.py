@@ -523,19 +523,19 @@ class TestCapture(unittest.TestCase):
         sys.stderr = os.fdopen(os.dup(2), closefd=True)
         with sys.stdout, sys.stderr:
             with T:
-                self.assertEqual(len(T.context_stack), 7)
+                self.assertEqual(len(T.context_stack), 8)
         # out & err point to fd 1 and 2
         sys.stdout = os.fdopen(1, closefd=False)
         sys.stderr = os.fdopen(2, closefd=False)
         with sys.stdout, sys.stderr:
             with T:
-                self.assertEqual(len(T.context_stack), 5)
+                self.assertEqual(len(T.context_stack), 6)
         # out & err have no fileno
         sys.stdout = StringIO()
         sys.stderr = StringIO()
         with sys.stdout, sys.stderr:
             with T:
-                self.assertEqual(len(T.context_stack), 5)
+                self.assertEqual(len(T.context_stack), 6)
 
     def test_capture_output_stack_error(self):
         OUT1 = StringIO()
