@@ -244,9 +244,8 @@ class GurobiDirect(DirectSolver):
         else:
             self._solver_model.setParam('OutputFlag', 0)
 
+        self._solver_model.setParam('LogFile', self._log_file)
         if self._keepfiles:
-            # Only save log file when the user wants to keep it.
-            self._solver_model.setParam('LogFile', self._log_file)
             print("Solver log file: " + self._log_file)
 
         # Only pass along changed parameters to the model
