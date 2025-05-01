@@ -11,6 +11,7 @@
 
 from io import StringIO
 import shlex
+import ctypes
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time, subprocess
 
@@ -676,11 +677,17 @@ class GAMSShell(_GAMSSolver):
         # New versions of the community license can run LPs up to 5k
         return self._run_simple_model(5001)
 
-    def _quote_for_windows(self, token):
-        """Fix for Issue 3579 - quotes for Windows"""
-        if sys.platform[0:3] == 'win' and " " in token:
-            return f"'{token}'"
-        return token
+    def _win_short_path(self, path):
+        """
+        On Windows return the DOS 8.3 short path - no spaces, no quoting hassle.
+        On non-Windows just return str(path) unchanged.
+        """
+        if sys.platform[0:3] != "win":
+            return str(path)
+        buf = ctypes.create_unicode_buffer(260)
+        if ctypes.windll.kernel32.GetShortPathNameW(str(path), buf, 260):
+            return buf.value
+        return str(path)
 
     def _run_simple_model(self, n):
         solver_exec = self.executable()
@@ -887,8 +894,7 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            lf_token = f'lf="{os.fspath(logfile)}"'
-            command.append(self._quote_for_windows(lf_token))
+            command.append(self._win_short_path(logfile))
 
         try:
             ostreams = [StringIO()]
