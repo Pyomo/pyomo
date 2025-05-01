@@ -136,7 +136,7 @@ class GurobiParameterTests(GurobiBase):
         # Method should not be set again, but MIPFocus was changed.
         # OutputFlag is explicitly set on the model.
         assert envparams == {"Method": 2, "MIPFocus": 1}
-        assert modelparams == {"MIPFocus": 2, "OutputFlag": 0}
+        assert modelparams == {"LogFile": "", "MIPFocus": 2, "OutputFlag": 0}
 
     # Try an erroneous parameter setting to ensure parameters go through in all
     # cases. Expect an error to indicate pyomo tried to set the parameter.
