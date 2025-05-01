@@ -676,14 +676,11 @@ class GAMSShell(_GAMSSolver):
         # New versions of the community license can run LPs up to 5k
         return self._run_simple_model(5001)
 
-    def _quote_if_needed(self, opt, value):
-        """
-        Return a GAMS option in ‘name=value’ form, quoting the value
-        if it contains whitespace (on Windows).
-        """
-        if sys.platform[0:3] == "win" and (" " in value or "\t" in value):
-            return f'{opt}="{value}"'
-        return f"{opt}={value}"
+    def _quote_for_windows(self, token):
+        """Fix for Issue 3579 - quotes for Windows"""
+        if sys.platform[0:3] == 'win' and " " in token:
+            return f"'{token}'"
+        return token
 
     def _run_simple_model(self, n):
         solver_exec = self.executable()
@@ -890,9 +887,8 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            print("******* Current logfile path: ", logfile)
-            command.append(self._quote_if_needed("lf", str(logfile)))
-            print("******* Command: ", command)
+            lf_token = f'lf="{os.fspath(logfile)}"'
+            command.append(self._quote_for_windows(lf_token))
 
         try:
             ostreams = [StringIO()]
