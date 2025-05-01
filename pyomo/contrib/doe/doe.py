@@ -1391,7 +1391,7 @@ class DesignOfExperiments:
     # TODO: Make this a static method
     @staticmethod
     def _check_FIM(FIM):
-        """Private method for basic diagonists on FIM
+        """Private method for basic diagonists on FIM to ensure that the FIM is square, positive definite and symmetric.
 
         Parameters
         ----------
@@ -1607,28 +1607,32 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            # Compute and record metrics on FIM
-            det_FIM = np.linalg.det(FIM)  # Determinant of FIM
-            D_opt = np.log10(det_FIM)
-            trace_FIM = np.trace(FIM)  # Trace of FIM
-            A_opt = np.log10(trace_FIM)
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                _compute_FIM_metrics(FIM)
+            )
 
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            # # Compute and record metrics on FIM
+            # det_FIM = np.linalg.det(FIM)  # Determinant of FIM
+            # D_opt = np.log10(det_FIM)
+            # trace_FIM = np.trace(FIM)  # Trace of FIM
+            # A_opt = np.log10(trace_FIM)
+            # E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues and eigenvectors
 
-            # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
-                self.logger.warning(
-                    f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
-                )
+            # E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
 
-            # If the real value is less than or equal to zero, set the E_opt value to nan
-            if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
-            else:
-                E_opt = np.log10(E_vals.real[E_ind])
+            # # Warn the user if there is a ``large`` imaginary component (should not be)
+            # if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
+            #     self.logger.warning(
+            #         f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
+            #     )
 
-            ME_opt = np.log10(np.linalg.cond(FIM))
+            # # If the real value is less than or equal to zero, set the E_opt value to nan
+            # if E_vals.real[E_ind] <= 0:
+            #     E_opt = np.nan
+            # else:
+            #     E_opt = np.log10(E_vals.real[E_ind])
+
+            # ME_opt = np.log10(np.linalg.cond(FIM))
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -2380,16 +2384,7 @@ def _compute_FIM_metrics(FIM):
     A_opt: log10(A-optimality) metric
     E_opt: log10(E-optimality) metric
     ME_opt: log10(Modified E-optimality) metric
-
-
-    TODO: Return several results in a tuple (multiple outputs). This is a private function.
     """
-
-    # !Need to do error checking here to make sure FIM is a square matrix
-    # !Need to do error checking here to make sure FIM is positive definite
-    # !Need to do error checking here to make sure FIM is symmetric
-    # !These error checks are implemented above, let's generalize them
-    # !so we can reuse code
 
     # Check whether the FIM is square, positive definite, and symmetric
     DesignOfExperiments._check_FIM(FIM)
@@ -2421,9 +2416,10 @@ def _compute_FIM_metrics(FIM):
     return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
 
 
+# Standalone Function for user to calculate FIM metrics directly without using the class
 def get_FIM_metrics(FIM):
     """
-    This private function calculates the FIM metrics and returns them as a dictionary.
+    This function calculates the FIM metrics and returns them as a dictionary.
 
     Parameters
     ----------
