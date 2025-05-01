@@ -676,6 +676,15 @@ class GAMSShell(_GAMSSolver):
         # New versions of the community license can run LPs up to 5k
         return self._run_simple_model(5001)
 
+    def _quote_if_needed(self, opt, value):
+        """
+        Return a GAMS option in ‘name=value’ form, quoting the value
+        if it contains whitespace (on Windows).
+        """
+        if sys.platform[0:3] == "win" and (" " in value or "\t" in value):
+            return f'{opt}="{value}"'
+        return f"{opt}={value}"
+
     def _run_simple_model(self, n):
         solver_exec = self.executable()
         if solver_exec is None:
@@ -882,7 +891,7 @@ class GAMSShell(_GAMSSolver):
             command.append("lo=4")
         if logfile:
             print("******* Current logfile path: ", logfile)
-            command.append("lf=" + rf'"{logfile}"')
+            command.append(self._quote_if_needed("lf", str(logfile)))
             print("******* Command: ", command)
 
         try:
