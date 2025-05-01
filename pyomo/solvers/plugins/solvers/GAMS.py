@@ -12,6 +12,7 @@
 from io import StringIO
 import shlex
 import ctypes
+from pathlib import Path
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time, subprocess
 
@@ -677,18 +678,6 @@ class GAMSShell(_GAMSSolver):
         # New versions of the community license can run LPs up to 5k
         return self._run_simple_model(5001)
 
-    def _win_short_path(self, path):
-        """
-        On Windows return the DOS 8.3 short path - no spaces, no quoting hassle.
-        On non-Windows just return str(path) unchanged.
-        """
-        if sys.platform[0:3] != "win":
-            return str(path)
-        buf = ctypes.create_unicode_buffer(260)
-        if ctypes.windll.kernel32.GetShortPathNameW(str(path), buf, 260):
-            return buf.value
-        return str(path)
-
     def _run_simple_model(self, n):
         solver_exec = self.executable()
         if solver_exec is None:
@@ -751,6 +740,40 @@ class GAMSShell(_GAMSSolver):
         if value == 5.0e300:
             return sys.float_info.epsilon
         return value
+
+    def _short_path_win(self, path):
+        "Return 8.3 short path on Windows; unchanged elsewhere."
+        if sys.platform.startswith("win"):
+            buf = ctypes.create_unicode_buffer(260)
+            if ctypes.windll.kernel32.GetShortPathNameW(str(path), buf, 260):
+                return buf.value
+        return str(path)
+
+    def _logfile_token(self, logfile):
+        """
+        Build one argument token that reaches GAMS exactly as
+            lf=<path>                # no spaces
+                ... or ...
+            lf="<path with spaces>"   # has spaces
+        Whatever we return must be a single item in the `command` list.
+        """
+        path = self._short_path_win(Path(logfile))
+
+        # Need quotes only if spaces remain
+        if " " in path:
+            value = f'"{path}"'
+        else:
+            value = path
+
+        token = f"lf={value}"
+
+        # Windows quoting (Pyomo/pyomo#3579)
+        # If the token *contains* a double-quote, Python’s list-to-cmd converter
+        # will back-slash-escape it unless we protect the whole token with
+        # single-quotes.  Single-quotes are kept verbatim by cmd.exe.
+        if sys.platform.startswith("win") and '"' in token:
+            token = f"'{token}'"
+        return token
 
     def solve(self, *args, **kwds):
         """
@@ -894,7 +917,7 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            command.append(self._win_short_path(logfile))
+            command.append(self._logfile_token(logfile))
 
         try:
             ostreams = [StringIO()]
