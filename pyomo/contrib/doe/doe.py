@@ -1497,7 +1497,22 @@ class DesignOfExperiments:
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
 
+        Returns
+        -------
+        fim_factorial_results: a dictionary of the results with the following keys and
+        their corresponding values as a list. Each element in the list corresponds to
+        a different design point in the full factorial space.
+            "log10 D-opt": list of log10(D-optimality)
+            "log10 A-opt": list of log10(A-optimality)
+            "log10 E-opt": list of log10(E-optimality)
+            "log10 ME-opt": list of log10(ME-optimality)
+            "eigval_min": list of minimum eigenvalues
+            "eigval_max": list of maximum eigenvalues
+            "det_FIM": list of determinants
+            "trace_FIM": list of traces
+            "solve_time": list of solve times
         """
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
