@@ -269,7 +269,10 @@ class GurobiDirect(DirectSolver):
 
         # Change LogFile to make Gurobi close the original log file.
         # May not work for all Gurobi versions, like ver. 9.5.0.
-        self._solver_model.setParam('LogFile', '')
+        # Change the logfile to a different random file??
+        import tempfile
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        self._solver_model.setParam('LogFile', tmp.name)
 
         # Since we updated `LogFile`, see if update() will close the old one...
         self._solver_model.update()
