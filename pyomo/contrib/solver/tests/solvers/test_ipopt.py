@@ -14,8 +14,9 @@ import subprocess
 
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
-from pyomo.common.config import ConfigDict
+from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
+from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
 from pyomo.contrib.solver.common.util import NoSolutionError
 from pyomo.contrib.solver.common.factory import SolverFactory
@@ -384,6 +385,7 @@ class TestIpopt(unittest.TestCase):
         self.assertTrue(solver.config.executable.startswith('/path'))
 
     def test_ipopt_solve(self):
+        # Gut check - does it solve?
         model = self.create_model()
         ipopt.Ipopt().solve(model)
 
@@ -394,6 +396,26 @@ class TestIpopt(unittest.TestCase):
         self.assertEqual(results.iteration_count, 11)
         self.assertEqual(results.incumbent_objective, 7.013645951336496e-25)
         self.assertIn('Optimal Solution Found', results.extra_info.solver_message)
+
+    def test_ipopt_results_display(self):
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(model)
+        # Do not show extra loud stuff
+        with capture_output() as OUT:
+            results.display()
+        contents = OUT.getvalue()
+        self.assertIn('termination_condition', contents)
+        self.assertIn('solution_status', contents)
+        self.assertIn('incumbent_objective', contents)
+        self.assertNotIn('iteration_log', contents)
+        # Now we want to see the iteration log
+        with capture_output() as OUT:
+            results.display(visibility=ADVANCED_OPTION)
+        contents = OUT.getvalue()
+        self.assertIn('termination_condition', contents)
+        self.assertIn('solution_status', contents)
+        self.assertIn('incumbent_objective', contents)
+        self.assertIn('iteration_log', contents)
 
     def test_ipopt_timer_object(self):
         model = self.create_model()

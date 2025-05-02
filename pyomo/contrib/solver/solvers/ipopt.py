@@ -383,8 +383,8 @@ class Ipopt(SolverBase):
                 cmd = self._create_command_line(
                     basename=basename, config=config, opt_file=opt_file
                 )
-                # this seems silly, but we have to give the subprocess slightly longer to finish than
-                # ipopt
+                # this seems silly, but we have to give the subprocess slightly
+                # longer to finish than ipopt
                 if config.time_limit is not None:
                     timeout = config.time_limit + min(
                         max(1.0, 0.01 * config.time_limit), 100
@@ -411,7 +411,7 @@ class Ipopt(SolverBase):
                     msg = 'Could not execute the command: %s\tError message: %s'
                     raise ApplicationError(msg % (cmd, err))
 
-                # This is the stuff we need to parse to get the iterations
+                # This is the data we need to parse to get the iterations
                 # and time
                 parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
