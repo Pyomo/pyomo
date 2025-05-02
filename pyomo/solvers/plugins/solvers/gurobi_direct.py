@@ -271,6 +271,7 @@ class GurobiDirect(DirectSolver):
         # May not work for all Gurobi versions, like ver. 9.5.0.
         # Change the logfile to a different random file??
         import tempfile
+
         tmp = tempfile.NamedTemporaryFile(delete=False)
         self._solver_model.setParam('LogFile', tmp.name)
 
