@@ -337,6 +337,9 @@ jobs:
         conda list --show-channel-urls
         which python
         python --version
+        # As of May 2025, python 3.13/conda doesn't default have setuptools
+        # Manually install to bypass this issue
+        conda install setuptools
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
