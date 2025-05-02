@@ -448,26 +448,34 @@ class Ipopt(SolverBase):
                     results.termination_condition = TerminationCondition.error
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
-                    results.iteration_count = parsed_output_data['iters']
-                    parsed_output_data.pop('iters')
-                    if 'total_time' in parsed_output_data['cpu_seconds']:
-                        results.timing_info.total_seconds = parsed_output_data[
-                            'cpu_seconds'
-                        ]['total_time']
-                    if 'nofunc_time' in parsed_output_data['cpu_seconds']:
-                        results.timing_info.ipopt_excluding_nlp_functions = (
-                            parsed_output_data['cpu_seconds']['nofunc_time']
+                    try:
+                        results.iteration_count = parsed_output_data['iters']
+                        parsed_output_data.pop('iters')
+                        if 'total_time' in parsed_output_data['cpu_seconds']:
+                            results.timing_info.total_seconds = parsed_output_data[
+                                'cpu_seconds'
+                            ]['total_time']
+                        if 'nofunc_time' in parsed_output_data['cpu_seconds']:
+                            results.timing_info.ipopt_excluding_nlp_functions = (
+                                parsed_output_data['cpu_seconds']['nofunc_time']
+                            )
+                            results.timing_info.nlp_function_evaluations = (
+                                parsed_output_data['cpu_seconds']['func_time']
+                            )
+                        parsed_output_data.pop('cpu_seconds')
+                        results.extra_info = parsed_output_data
+                        # Set iteration_log visibility to ADVANCED_OPTION because it's
+                        # a lot to print out with `display`
+                        results.extra_info.get("iteration_log")._visibility = (
+                            ADVANCED_OPTION
                         )
-                        results.timing_info.nlp_function_evaluations = (
-                            parsed_output_data['cpu_seconds']['func_time']
+                    except KeyError as e:
+                        logger.log(
+                            logging.WARNING,
+                            "The solver output data is empty or incomplete.\n"
+                            f"Full error message: {e}\n"
+                            f"Parsed solver data: {parsed_output_data}\n",
                         )
-                    parsed_output_data.pop('cpu_seconds')
-                    results.extra_info = parsed_output_data
-                    # Set iteration_log visibility to ADVANCED_OPTION because it's
-                    # a lot to print out with `display`
-                    results.extra_info.get("iteration_log")._visibility = (
-                        ADVANCED_OPTION
-                    )
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -533,10 +541,11 @@ class Ipopt(SolverBase):
         if isinstance(output, io.StringIO):
             output = output.getvalue()
 
+        # Stop parsing if there is nothing to parse
         if not output:
             logger.log(
                 logging.WARNING,
-                "Returned output was empty. " "Cannot parse for additional data.",
+                "Returned output from ipopt was empty. Cannot parse for additional data.",
             )
             return parsed_data
 

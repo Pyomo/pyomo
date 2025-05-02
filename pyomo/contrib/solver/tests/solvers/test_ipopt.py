@@ -238,7 +238,7 @@ EXIT: Optimal Solution Found.
         ) as logs:
             ipopt.Ipopt()._parse_ipopt_output(output=None)
         self.assertIn(
-            "Returned output was empty. Cannot parse for additional data.",
+            "Returned output from ipopt was empty. Cannot parse for additional data.",
             logs.output[0],
         )
 
