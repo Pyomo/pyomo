@@ -248,6 +248,11 @@ class GurobiDirect(DirectSolver):
         if self._keepfiles:
             print("Solver log file: " + self._log_file)
 
+        # Try opening the log file ourselves..
+        log_file = None
+        if self._log_file != "":
+            log_file = open(self._log_file, "a")
+
         # Only pass along changed parameters to the model
         if self._env_options:
             new_options = {
@@ -270,6 +275,10 @@ class GurobiDirect(DirectSolver):
         # Change LogFile to make Gurobi close the original log file.
         # May not work for all Gurobi versions, like ver. 9.5.0.
         self._solver_model.setParam('LogFile', '')
+
+        # Try closing it ourselves now..
+        if log_file is not None:
+            log_file.close()
 
         # FIXME: can we get a return code indicating if Gurobi had a significant failure?
         return Bunch(rc=None, log=None)
