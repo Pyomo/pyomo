@@ -161,7 +161,7 @@ class CsplineParameters:
         self.a3 = np.array(self.a3)
         self.a4 = np.array(self.a4)
 
-    def add_linear_extrapolation_segments(self, m1=None, m2=None):
+    def add_linear_extrapolation_segments(self):
         """Add a segment on the front and back of the cspline so that
         any extrapolation will be linear."""
         # We need to add a knot for a linear segment on the beginning and
