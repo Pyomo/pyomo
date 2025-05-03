@@ -161,6 +161,32 @@ class CsplineParameters:
         self.a3 = np.array(self.a3)
         self.a4 = np.array(self.a4)
 
+    def add_linear_extrapolation_segments(self, m1=None, m2=None):
+        """Add a segment on the front and back of the cspline so that
+        any extrapolation will be linear."""
+        # We need to add a knot for a linear segment on the beginning and
+        # end.  Since the first and last segment will be used for extrapolation,
+        # and we want them to be linear, it doesn't really matter how far out
+        # the knots are. To try to be roughly in line with the data scale we
+        # just use the distance from the first to the last knot.
+        dist = self.knots[-1] - self.knots[0]
+        x = np.array([self.knots[0], self.knots[-1]])
+        y = self.f(x)
+        m = self.fx(x)
+        b = y - m * x
+        k = np.array([self.knots[0] - dist, self.knots[-1] + dist])
+
+        self.knots = np.insert(self.knots, 0, k[0])
+        self.a1 = np.insert(self.a1, 0, b[0])
+        self.a2 = np.insert(self.a2, 0, m[0])
+        self.a3 = np.insert(self.a3, 0, 0)
+        self.a4 = np.insert(self.a4, 0, 0)
+        self.knots = np.append(self.knots, k[1])
+        self.a1 = np.append(self.a1, b[1])
+        self.a2 = np.append(self.a2, m[1])
+        self.a3 = np.append(self.a3, 0)
+        self.a4 = np.append(self.a4, 0)
+
     def write_parameters(self, fptr):
         """Write parameters to a file"""
         assert self.valid
@@ -180,11 +206,18 @@ class CsplineParameters:
             array of integers is returned otherwise return an integer
         """
         s = np.searchsorted(self.knots, x)
-        # If x is past the last knot, use the last segment
-        # this could happen just due to round-off even if
-        # you don't intend to extrapolate
-        s[s >= self.n_segments] = self.n_segments - 1
-        return s
+        # If x is before the first knot use the first segment
+        if len(s) > 1:
+            s[s <= 0] = 1
+            s[s >= len(self.knots)] = len(self.knots) - 1
+        else:
+            if s <= 0:
+                return 0
+            if s >= len(self.knots):
+                # if the not extrapolates right it is 1 more than number of
+                # knots and 2 more than number of segments
+                return len(self.knots) - 1
+        return s - 1
 
     def f(self, x):
         """Get f(x)
@@ -197,6 +230,18 @@ class CsplineParameters:
         """
         s = self.segment(x)
         return self.a1[s] + self.a2[s] * x + self.a3[s] * x**2 + self.a4[s] * x**3
+
+    def fx(self, x):
+        """Get f(x)
+
+        Args:
+            x: location, numpy array float
+
+        Returns:
+            f(x) numpy array if x is numpy array or float
+        """
+        s = self.segment(x)
+        return self.a2[s] + 2 * self.a3[s] * x + 3 * self.a4[s] * x**2
 
 
 def cubic_parameters_model(
@@ -286,7 +331,7 @@ def cubic_parameters_model(
     def ydiff(blk, d):
         s = idx[d - 1] + 1
         if s >= m.seg_idx.last():
-            s -= 1
+            s = m.seg_idx.last()
         return m.y_data[d] - _f_cubic(m.x_data[d], m.alpha, s)
 
     if objective_form:
@@ -313,3 +358,71 @@ def add_endpoint_second_derivative_constraints(m):
         else:
             j = s
         return _fxx_cubic(m.x[j], m.alpha, s) == 0
+
+
+def add_decreasing_constraints(m, tol=0):
+    """If the objective form of the parameter calculation is used, the
+    data and the spline don't need to match exactly, and we can add
+    constraints on the derivatives that they are negative at the knots.
+
+    This doesn't necessarily mean the cubic spline function is always
+    decreasing, since the segments are cubic, but you can either check the
+    resulting curve or pair it with convex or concave constraints.
+    """
+
+    @m.Constraint(m.knt_idx)
+    def yx_ineq(blk, k):
+        if k >= len(m.knt_idx):
+            s = k - 1
+        else:
+            s = k
+        return _fx_cubic(m.x[k], m.alpha, s) <= -tol
+
+
+def add_concave_constraints(m, tol=0):
+    """If the objective form of the parameter calculation is used, the
+    data and the spline don't need to match exactly, and we can add
+    constraints on the second derivatives that they are always negative.
+    """
+
+    @m.Constraint(m.knt_idx)
+    def yxx_ineq(blk, k):
+        if k >= len(m.knt_idx):
+            s = k - 1
+        else:
+            s = k
+        return _fxx_cubic(m.x[k], m.alpha, s) <= -tol
+
+
+def add_increasing_constraints(m, tol=0):
+    """If the objective form of the parameter calculation is used, the
+    data and the spline don't need to match exactly, and we can add
+    constraints on the derivatives that they are positive at the knots.
+
+    This doesn't necessarily mean the cubic spline function is always
+    increasing, since the segments are cubic, but you can either check the
+    resulting curve or pair it with convex or concave constraints.
+    """
+
+    @m.Constraint(m.knt_idx)
+    def yx_ineq(blk, k):
+        if k >= len(m.knt_idx):
+            s = k - 1
+        else:
+            s = k
+        return _fx_cubic(m.x[k], m.alpha, s) >= tol
+
+
+def add_convex_constraints(m, tol=0):
+    """If the objective form of the parameter calculation is used, the
+    data and the spline don't need to match exactly, and we can add
+    constraints on the second derivatives that they are always positive.
+    """
+
+    @m.Constraint(m.knt_idx)
+    def yxx_ineq(blk, k):
+        if k >= len(m.knt_idx):
+            s = k - 1
+        else:
+            s = k
+        return _fxx_cubic(m.x[k], m.alpha, s) >= tol

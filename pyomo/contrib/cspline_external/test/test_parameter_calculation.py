@@ -11,10 +11,15 @@
 
 import io
 import os
+import idaes
 
 from pyomo.contrib.cspline_external.cspline_parameters import (
     cubic_parameters_model,
     CsplineParameters,
+    add_increasing_constraints,
+    add_decreasing_constraints,
+    add_convex_constraints,
+    add_concave_constraints,
 )
 from pyomo.opt import check_available_solvers
 from pyomo.common.dependencies import numpy as np, numpy_available
@@ -68,3 +73,119 @@ class CsplineExternalParamsTest(unittest.TestCase):
         y_pred = params.f(np.array(x_data))
         for yd, yp in zip(y_data, y_pred):
             self.assertAlmostEqual(yd, yp, 8)
+
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data) + 1e-4)
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 3)
+
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data) - 1e-4)
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 3)
+
+    def test_param_increasing(self):
+        x_data = [1, 2, 3, 4, 5]
+        y_data = [1, 4, 9, 16, 25]
+
+        m = cubic_parameters_model(x_data, y_data, objective_form=True)
+        add_increasing_constraints(m)
+        solver_obj = pyo.SolverFactory("ipopt")
+        solver_obj.solve(m)
+
+        params = CsplineParameters(model=m)
+
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data))
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 6)
+
+        x_new = [1.5, 2.5, 3.5, 4.5]
+        y_new = [2.25, 6.25, 12.25, 20.25]
+        # Check midpoints.  These aren't necessarily super close due
+        # to the end point second derivative constraints, and I
+        # calculated test values from a quadratic.
+        y_pred = params.f(np.array(x_new))
+        for yd, yp in zip(y_new, y_pred):
+            self.assertAlmostEqual(yd, yp, 0)
+
+    def test_param_increasing_linear_extrap(self):
+        x_data = [1, 2, 3, 4, 5]
+        y_data = [1, 4, 9, 16, 25]
+
+        m = cubic_parameters_model(x_data, y_data, objective_form=True)
+        add_increasing_constraints(m)
+
+        solver_obj = pyo.SolverFactory("ipopt")
+        solver_obj.solve(m)
+
+        params = CsplineParameters(model=m)
+        params.add_linear_extrapolation_segments()
+
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data))
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 6)
+
+        x_new = [0, 6, 7, 8]
+        y_new = [-1.571, 34.42857, 43.8571, 53.2857]
+        y_pred = params.f(np.array(x_new))
+        for yd, yp in zip(y_new, y_pred):
+            self.assertAlmostEqual(yd, yp, 3)
+
+    def test_param_decreasing(self):
+        x_data = [-1, -2, -3, -4, -5]
+        y_data = [1, 4, 9, 16, 25]
+
+        m = cubic_parameters_model(x_data, y_data, objective_form=True)
+        add_decreasing_constraints(m)
+
+        solver_obj = pyo.SolverFactory("ipopt")
+        solver_obj.solve(m)
+
+        params = CsplineParameters(model=m)
+
+        # Make sure the predictions are correct
+        y_pred = params.f(np.array(x_data))
+        for yd, yp in zip(y_data, y_pred):
+            self.assertAlmostEqual(yd, yp, 5)
+
+        x_new = [-1.5, -2.5, -3.5, -4.5]
+        y_new = [2.25, 6.25, 12.25, 20.25]
+        # Check midpoints.  These aren't necessarily super close due
+        # to the end point second derivative constraints, and I
+        # calculated test values from a quadratic.
+        y_pred = params.f(np.array(x_new))
+        for yd, yp in zip(y_new, y_pred):
+            self.assertAlmostEqual(yd, yp, 1)
+
+    def test_convex(self):
+        x_data = [-1, 1, 2, 3, 4, 5, 6]
+        y_data = [1, 1, 4, 11, 16, 25, 36]
+
+        m = cubic_parameters_model(
+            x_data, y_data, objective_form=True, end_point_constraint=False
+        )
+        add_convex_constraints(m, tol=0.1)
+        solver_obj = pyo.SolverFactory("ipopt")
+        solver_obj.solve(m)
+        params = CsplineParameters(model=m)
+        y_pred = params.f(np.array(x_data))
+        y_new = [1.007, 0.891, 4.524, 10.154, 16.536, 24.866, 36.0223]
+        for yd, yp in zip(y_new, y_pred):
+            self.assertAlmostEqual(yd, yp, 2)
+
+    def test_concave(self):
+        x_data = [1, 1, 2, 3, 4, 5, 6]
+        y_data = [-1, -1, -4, -14, -16, -25, -36]
+        m = cubic_parameters_model(
+            x_data, y_data, objective_form=True, end_point_constraint=False
+        )
+        add_concave_constraints(m, tol=0.1)
+        solver_obj = pyo.SolverFactory("ipopt")
+        solver_obj.solve(m)
+        params = CsplineParameters(model=m)
+        y_pred = params.f(np.array(x_data))
+        y_new = [-1.000, -1.000, -5.259, -11.3533, -17.5475, -24.80776, -36.032]
+        for yd, yp in zip(y_new, y_pred):
+            self.assertAlmostEqual(yd, yp, 2)
