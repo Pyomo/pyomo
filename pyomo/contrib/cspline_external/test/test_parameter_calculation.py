@@ -11,7 +11,6 @@
 
 import io
 import os
-import idaes
 
 from pyomo.contrib.cspline_external.cspline_parameters import (
     cubic_parameters_model,
