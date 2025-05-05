@@ -1006,12 +1006,12 @@ Observe that the log contains the following information:
    Done preprocessing; required wall time of 0.013s.
    ------------------------------------------------------------------------------
    Model Statistics:
-     Number of variables : 122
+     Number of variables : 62
        Epigraph variable : 1
        First-stage variables : 7
        Second-stage variables : 6 (6 adj.)
        State variables : 18 (7 adj.)
-       Decision rule variables : 90
+       Decision rule variables : 30
      Number of uncertain parameters : 4 (4 eff.)
      Number of constraints : 52
        Equality constraints : 24
@@ -1025,10 +1025,10 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   0.733
-   1     3.5838e+07  2.9329e-09   5.0030e-10   5       2.1295e+04   1.676
-   2     3.6285e+07  7.6526e-01   2.0398e-01   2       2.2457e+02   2.472
-   3     3.6285e+07  7.7348e-13   2.3957e-13   0       1.0980e-12g  4.639
+   0     3.5838e+07  -            -            5       1.8832e+04   0.759
+   1     3.5838e+07  2.9329e-09   5.0030e-10   5       2.1295e+04   1.573
+   2     3.6285e+07  7.6526e-01   2.0398e-01   2       2.2457e+02   2.272
+   3     3.6285e+07  7.7212e-13   1.2525e-10   0       7.2940e-08g  5.280
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -1036,22 +1036,22 @@ Observe that the log contains the following information:
    
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     4.640     4.640  100.0
+   main                           1     5.281     5.281  100.0
         ------------------------------------------------------
-        dr_polishing              3     0.169     0.056    3.6
-        global_separation        27     0.749     0.028   16.1
-        local_separation        108     1.965     0.018   42.3
-        master                    4     0.748     0.187   16.1
-        master_feasibility        3     0.107     0.036    2.3
-        preprocessing             1     0.014     0.014    0.3
-        other                   n/a     0.889       n/a   19.2
+        dr_polishing              3     0.155     0.052    2.9
+        global_separation        27     1.280     0.047   24.2
+        local_separation        108     2.200     0.020   41.7
+        master                    4     0.727     0.182   13.8
+        master_feasibility        3     0.103     0.034    1.9
+        preprocessing             1     0.021     0.021    0.4
+        other                   n/a     0.794       n/a   15.0
         ======================================================
    ===========================================================
    
    ------------------------------------------------------------------------------
    Termination stats:
     Iterations            : 4
-    Solve time (wall s)   : 4.640
+    Solve time (wall s)   : 5.281
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
