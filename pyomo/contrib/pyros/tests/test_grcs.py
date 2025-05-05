@@ -2066,8 +2066,9 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         m.eq_con = Constraint(expr=m.z == m.q**2)
         m.obj = Objective(expr=m.x + m.z, sense=minimize)
         m.pyros_separation_priority = Suffix()
-        # enforce equality  only nominally, or else model is robust
-        # infeasible with [0, 1] interval uncertainty set
+        # enforce equality  only nominally, or else model would be
+        # robust infeasible with [0, 1] interval uncertainty set
+        # due to coefficient matching of the equality
         m.pyros_separation_priority[m.eq_con] = None
         pyros_solver = SolverFactory("pyros")
         ipopt = SolverFactory("ipopt")
@@ -2082,12 +2083,17 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
             objective_focus="worst_case",
             bypass_global_separation=True,
             solve_master_globally=True,
+            decision_rule_order=0,
         )
         self.assertEqual(
             res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
         )
         self.assertEqual(m.x.value, -2)
         self.assertEqual(m.z.value, 0)
+        self.assertAlmostEqual(res.final_objective_value, -2, places=4)
+        # z is essentially fixed due to the equality,
+        # and x not involved in any constraints, so:
+        self.assertEqual(res.iterations, 1)
 
     def test_priority_nominal_only_var_bounds(self):
         m = ConcreteModel()
@@ -2119,6 +2125,9 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         )
         self.assertEqual(m.x.value, -2)
         self.assertEqual(m.y.value, 1)
+        # epigraph constraint is separated (due to worst-case focus),
+        # need only one more iteration to achieve robustness
+        self.assertEqual(res.iterations, 2)
 
     def test_priority_nominal_only_ineq(self):
         m = ConcreteModel()
@@ -2175,6 +2184,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
             # note: this gets overridden by the priority suffix,
             #       and is therefore ignored
             separation_priority_order={"con1": 2},
+            decision_rule_order=1,
         )
 
         self.assertEqual(
@@ -2190,6 +2200,7 @@ class TestPyROSSeparationPriorityOrder(unittest.TestCase):
         self.assertAlmostEqual(m.x2.value, m_det.x2.value, places=4)
         self.assertAlmostEqual(m.x3.value, m_det.x3.value, places=4)
         self.assertAlmostEqual(value(m.obj), value(m_det.obj), places=4)
+        self.assertAlmostEqual(res.final_objective_value, value(m_det.obj), places=4)
 
     def test_priority_order_invariant(self):
         m = build_leyffer_two_cons()
