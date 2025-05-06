@@ -59,8 +59,8 @@ def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
     Returns
     -------
     list
-        If data are Pyomo components, this will return Pyomo expressions
-        interpolation if data are floats, this will return floats.
+        If data are Pyomo components, this will return Pyomo expressions.
+        If data are floats, this will return floats.
     """
     if indexes is None:
         indexes = _get_time_index_vec(time_set, time_data)
