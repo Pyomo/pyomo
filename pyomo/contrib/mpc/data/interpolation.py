@@ -55,6 +55,12 @@ def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
     data: iterable
         Data corresponding to times in time_data, must have the same
         length as time data.
+    indexes: numpy.array
+        Numpy array of position indexes of the time points to interpolate in the 
+        time data.  The format is the same as returned by ``_get_time_index_vec()``.
+        If this is None, ``_get_time_index_vec()`` is called.  The reason to pass 
+        this is to avoid multiple position searches when interpolating multiple 
+        outputs with the same time points.
 
     Returns
     -------
