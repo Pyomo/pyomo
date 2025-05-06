@@ -290,7 +290,7 @@ class MapContainer(dict):
         return _instance
 
     def __init__(self, ordered=False):
-        dict.__init__(self)
+        super().__init__()
         self._active = True
         self._required = False
         self._ordered = ordered
@@ -454,7 +454,7 @@ class MapContainer(dict):
             tmp = self._convert(key)
             if tmp not in self:
                 self.declare(tmp)
-            item = dict.__getitem__(self, tmp)
+            item = super().__getitem__(tmp)
             item._active = True
             item.load(repn[key])
 

@@ -34,7 +34,7 @@ class SolverResults(MapContainer):
     default_print_options = dpo
 
     def __init__(self):
-        MapContainer.__init__(self)
+        super().__init__()
         self._sections = []
         self._descriptions = {}
         self.add(
