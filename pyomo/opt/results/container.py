@@ -35,17 +35,28 @@ class ScalarType(str, enum.Enum):
 
 
 default_print_options = Bunch(schema=False, ignore_time=False)
-
 strict = False
 
 
 class UndefinedData(object):
+    singleton = {}
+
+    def __new__(cls, name='undefined'):
+        if name not in UndefinedData.singleton:
+            UndefinedData.singleton[name] = super().__new__(cls)
+            UndefinedData.singleton[name].name = name
+        return UndefinedData.singleton[name]
+
+    def __deepcopy__(self, memo):
+        # Prevent deepcopy from duplicating this object
+        return self
+
     def __str__(self):
-        return "<undefined>"
+        return f"<{self.name}>"
 
 
-undefined = UndefinedData()
-ignore = UndefinedData()
+undefined = UndefinedData('undefined')
+ignore = UndefinedData('ignore')
 
 
 class ScalarData(object):
