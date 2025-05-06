@@ -194,21 +194,15 @@ class ListContainer(object):
         return self._list[i]
 
     def __getattr__(self, name):
-        try:
-            return self.__dict__[name]
-        except:
-            pass
+        if name[0] == "_":
+            super().__getattr__(name)
         if len(self) == 0:
             self.add()
         return getattr(self._list[0], name)
 
     def __setattr__(self, name, val):
-        if name == "__class__":
-            self.__class__ = val
-            return
         if name[0] == "_":
-            self.__dict__[name] = val
-            return
+            return super().__setattr__(name, val)
         if len(self) == 0:
             self.add()
         setattr(self._list[0], name, val)
@@ -250,12 +244,6 @@ class ListContainer(object):
             item = self.add()
             item.load(data)
 
-    def __getstate__(self):
-        return copy.copy(self.__dict__)
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-
     def __str__(self):
         ostream = StringIO()
         option = default_print_options
@@ -270,24 +258,6 @@ class ListContainer(object):
 # first letter is capitalized.
 #
 class MapContainer(dict):
-    def __getnewargs_ex__(self):
-        # Pass arguments to __new__ when unpickling
-        return ((0, 0), {})
-
-    def __getnewargs__(self):
-        # Pass arguments to __new__ when unpickling
-        return (0, 0)
-
-    def __new__(cls, *args, **kwargs):
-        #
-        # If the user provides "too many" arguments, then
-        # pre-initialize the '_order' attribute.  This pre-initializes
-        # the class during unpickling.
-        #
-        _instance = super(MapContainer, cls).__new__(cls, *args, **kwargs)
-        if len(args) > 1:
-            super(MapContainer, _instance).__setattr__('_order', [])
-        return _instance
 
     def __init__(self, ordered=False):
         super().__init__()
@@ -434,14 +404,6 @@ class MapContainer(dict):
             item._active = True
             item.load(val)
 
-    def __getnewargs__(self):
-        return (False, False)
-
-    def __getstate__(self):
-        return copy.copy(self.__dict__)
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
 
 
 if __name__ == '__main__':
