@@ -741,7 +741,7 @@ class GAMSShell(_GAMSSolver):
             return sys.float_info.epsilon
         return value
 
-    def _make_short_path_win(self, path):
+    def _rewrite_path_win8p3(self, path):
         """Return the 8.3 short path on Windows; unchanged elsewhere."""
         if not sys.platform.startswith("win"):
             return str(path)
@@ -900,7 +900,7 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            command.append(f"lf={self._make_short_path_win(logfile)}")
+            command.append(f"lf={self._rewrite_path_win8p3(logfile)}")
 
         try:
             ostreams = [StringIO()]
