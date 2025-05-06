@@ -120,9 +120,9 @@ class ScalarData(object):
 
         value = self.yaml_fix(self.get_value())
 
-        if value is inf:
+        if value == inf:
             value = '.inf'
-        elif value is -inf:
+        elif value == -inf:
             value = '-.inf'
 
         if not option.schema and self.description is None and self.units is None:
