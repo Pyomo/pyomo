@@ -325,7 +325,7 @@ Solution:
         results.read(istream=IN, format='json')
 
         with TempfileManager.new_context() as temp:
-            fname = temp.create_tempfile('jsn')
+            fname = temp.create_tempfile('.jsn')
             results.write(filename=fname)
             new_results = SolverResults()
             new_results.read(filename=fname)
