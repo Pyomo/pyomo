@@ -110,8 +110,8 @@ class XpressPersistent(PersistentSolver, XpressDirect):
         qctype = self._xpress_chgcoltype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb, ub])
         self._solver_model.chgcoltype([xpress_var], [qctype])
+        self._solver_model.chgbounds([xpress_var, xpress_var], ['L', 'U'], [lb, ub])
 
     def _add_column(self, var, obj_coef, constraints, coefficients):
         """Add a column to the solver's model

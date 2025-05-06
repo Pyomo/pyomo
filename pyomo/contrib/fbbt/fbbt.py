@@ -1105,7 +1105,9 @@ def _before_external_function(visitor, child):
 def _register_new_before_child_handler(visitor, child):
     handlers = _before_child_handlers
     child_type = child.__class__
-    if child.is_variable_type():
+    if child_type in native_types:
+        handlers[child_type] = _before_constant
+    elif child.is_variable_type():
         handlers[child_type] = _before_var
     elif not child.is_potentially_variable():
         handlers[child_type] = _before_NPV

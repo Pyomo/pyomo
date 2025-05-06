@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
-
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.numeric_types import native_types
 from pyomo.common.modeling import NOTSET

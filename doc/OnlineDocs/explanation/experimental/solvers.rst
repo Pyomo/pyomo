@@ -85,7 +85,6 @@ be used with other Pyomo tools / capabilities.
    :skipif: not ipopt_available
    :hide:
 
-   ...
    2 Var Declarations
    ...
    3 Declarations: x y obj
@@ -117,7 +116,6 @@ future methods of specifying solver options are supported:
    :skipif: not ipopt_available
    :hide:
 
-   ...
    2 Var Declarations
    ...
    3 Declarations: x y obj
@@ -154,7 +152,7 @@ Here we use the new interface by importing it directly:
    :skipif: not ipopt_available
    :hide:
 
-   solution_loader: ...
+   termination_condition: ...
    ...
    3 Declarations: x y obj
 
@@ -190,7 +188,7 @@ Here we use the new interface by retrieving it from the new ``SolverFactory``:
    :skipif: not ipopt_available
    :hide:
 
-   solution_loader: ...
+   termination_condition: ...
    ...
    3 Declarations: x y obj
 
@@ -227,7 +225,7 @@ replace the existing (legacy) SolverFactory and utilities with the new
    :skipif: not ipopt_available
    :hide:
 
-   solution_loader: ...
+   termination_condition: ...
    ...
    3 Declarations: x y obj
 
@@ -313,6 +311,37 @@ which can be manipulated similar to a standard ``dict`` in Python.
    :members:
    :undoc-members:
 
+The new interface has condensed :py:class:`~pyomo.opt.results.solver.SolverStatus`,
+:py:class:`~pyomo.opt.results.solver.TerminationCondition`,
+and :py:class:`~pyomo.opt.results.solution.SolutionStatus` into
+:py:class:`~pyomo.contrib.solver.common.results.TerminationCondition`
+and :py:class:`~pyomo.contrib.solver.common.results.SolutionStatus` to
+reduce complexity. As a result, several legacy
+:py:class:`~pyomo.opt.results.solver.SolutionStatus` values are
+no longer achievable. These are detailed in the table below.
+
+.. list-table:: Mapping from unachievable :py:class:`~pyomo.opt.results.solver.SolutionStatus`
+                to future statuses
+   :header-rows: 1
+
+   * - Legacy :py:class:`~pyomo.opt.results.solver.SolutionStatus`
+     - :py:class:`~pyomo.contrib.solver.common.results.TerminationCondition`
+     - :py:class:`~pyomo.contrib.solver.common.results.SolutionStatus`
+   * - other
+     - unknown
+     - noSolution
+   * - unsure
+     - unknown
+     - noSolution
+   * - locallyOptimal
+     - convergenceCriteriaSatisfied
+     - optimal
+   * - globallyOptimal
+     - convergenceCriteriaSatisfied
+     - optimal
+   * - bestSoFar
+     - convergenceCriteriaSatisfied
+     - feasible
 
 Termination Conditions
 ^^^^^^^^^^^^^^^^^^^^^^
