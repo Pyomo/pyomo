@@ -9,12 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import copy
 import enum
 from io import StringIO
 from math import inf
 
-from pyomo.common.collections import Bunch
+from pyomo.common.collections import Bunch, Sequence, Mapping
 
 
 class ScalarType(str, enum.Enum):
@@ -75,6 +74,9 @@ class ScalarData(object):
         self.scalar_description = scalar_description
         self.scalar_type = type
         self._required = required
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.__dict__ == other.__dict__
 
     def get_value(self):
         if isinstance(self.value, enum.Enum):
@@ -184,6 +186,9 @@ class ListContainer(object):
     def __getitem__(self, i):
         return self._list[i]
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.__dict__ == other.__dict__
+
     def clear(self):
         self._list = []
 
@@ -265,6 +270,8 @@ class MapContainer(dict):
         self._required = False
         self._option = default_print_options
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.__dict__ == other.__dict__
 
     def __getattr__(self, name):
         try:
@@ -405,6 +412,10 @@ class MapContainer(dict):
             item.load(val)
 
 
+# Register these as sequence / mapping types (so things like
+# assertStructuredAlmostEqual will process them correctly)
+Sequence.register(ListContainer)
+Mapping.register(MapContainer)
 
 if __name__ == '__main__':
     d = MapContainer()
