@@ -74,6 +74,7 @@ class ScalarData(object):
         self.scalar_description = scalar_description
         self.scalar_type = type
         self._required = required
+        self._active = False
 
     def __eq__(self, other):
         return super().__eq__(other) and self.__dict__ == other.__dict__
@@ -317,12 +318,18 @@ class MapContainer(dict):
         self._set_value(tmp, val)
 
     def _set_value(self, name, val):
-        if isinstance(val, ListContainer) or isinstance(val, MapContainer):
-            dict.__setitem__(self, name, val)
+        if isinstance(val, (ListContainer, MapContainer)):
+            super().__setitem__(name, val)
         elif isinstance(val, ScalarData):
-            dict.__getitem__(self, name).value = val.value
+            data = super().__getitem__(name)
+            data.value = val.value
+            data._active = val._active
+            data._required = val._required
+            data.scalar_type = val.scalar_type
         else:
-            dict.__getitem__(self, name).value = val
+            data = super().__getitem__(name)
+            data.value = val
+            data._active = True
 
     def __getitem__(self, name):
         tmp = self._convert(name)
