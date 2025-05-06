@@ -181,7 +181,7 @@ class ListContainer(object):
 
     def __len__(self):
         if '_list' in self.__dict__:
-            return len(self.__dict__['_list'])
+            return len(self._list)
         return 0
 
     def __getitem__(self, i):
@@ -253,7 +253,7 @@ class ListContainer(object):
     def __str__(self):
         ostream = StringIO()
         option = default_print_options
-        self.pprint(ostream, self._option, repn=self._repn_(self._option))
+        self.pprint(ostream, option, repn=self._repn_(option))
         return ostream.getvalue()
 
 
@@ -389,7 +389,6 @@ class MapContainer(dict):
 
     def __str__(self):
         ostream = StringIO()
-        option = default_print_options
         self.pprint(ostream, self._option, repn=self._repn_(self._option))
         return ostream.getvalue()
 
