@@ -28,6 +28,7 @@ from pyomo.contrib.solver.common.util import (
     NoReducedCostsError,
 )
 from pyomo.contrib.solver.common.base import SolverBase
+from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.solvers.ipopt import Ipopt
 from pyomo.contrib.solver.solvers.gurobi_persistent import GurobiPersistent
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
@@ -45,7 +46,7 @@ if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
 all_solvers = [
-    ('gurobi', GurobiPersistent),
+    ('gurobi_persistent', GurobiPersistent),
     ('gurobi_direct', GurobiDirect),
     ('ipopt', Ipopt),
     ('highs', Highs),
@@ -74,6 +75,15 @@ def _load_tests(solver_list):
             test_name = f"{solver_name}"
             res.append((test_name, solver, None))
     return res
+
+
+def test_all_solvers_list():
+    """
+    Make sure that new solver interfaces get
+    added to the lists of solvers at the top of the file
+    """
+    for name, cls in SolverFactory._cls.items():
+        assert (name, cls) in all_solvers
 
 
 class TestDualSignConvention(unittest.TestCase):
