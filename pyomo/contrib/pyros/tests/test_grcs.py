@@ -1997,6 +1997,58 @@ class RegressionTest(unittest.TestCase):
         )
         self.assertEqual(m.x.value, 1)
 
+    @parameterized.expand([[True, 1], [True, 2], [False, 1], [False, 2]])
+    def test_two_stage_set_nonstatic_dr_robust_opt(self, use_discrete_set, dr_order):
+        """
+        Test problems that are sensitive to the DR order efficiency.
+
+        If the efficiency is not switched off properly, then
+        PyROS may terminate prematurely with a(n inaccurate)
+        robust infeasibility status.
+        """
+        m = ConcreteModel()
+        m.x = Var(bounds=[-2, 2], initialize=0)
+        m.z = Var(bounds=[-10, 10], initialize=0)
+        m.q = Param(initialize=2, mutable=True)
+        m.obj = Objective(expr=m.x + m.z, sense=maximize)
+        # when uncertainty set is discrete, the
+        # preprocessor should write out this constraint for
+        # each scenario as a first-stage constraint
+        # otherwise, coefficient matching constraint
+        # requires only the affine DR coefficient be nonzero
+        m.xz_con = Constraint(expr=m.z == m.q)
+
+        uncertainty_set = (
+            DiscreteScenarioSet([[2], [3]]) if use_discrete_set else BoxSet([[2, 3]])
+        )
+        baron = SolverFactory("baron")
+        res = SolverFactory("pyros").solve(
+            model=m,
+            first_stage_variables=m.x,
+            second_stage_variables=m.z,
+            uncertain_params=m.q,
+            uncertainty_set=uncertainty_set,
+            local_solver=baron,
+            global_solver=baron,
+            solve_master_globally=True,
+            bypass_local_separation=True,
+            decision_rule_order=dr_order,
+            objective_focus="worst_case",
+        )
+        self.assertEqual(
+            # DR efficiency should have been switched off due to
+            # DR-dependent equalities, so robust optimal
+            # if the DR efficiency was not switched off, then
+            # robust infeasibililty would have been prematurely reported
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+        )
+        self.assertEqual(res.iterations, 1)
+        # optimal solution evaluated under worst-case scenario
+        self.assertAlmostEqual(res.final_objective_value, 4, places=4)
+        self.assertAlmostEqual(m.x.value, 2, places=4)
+        self.assertAlmostEqual(m.z.value, 2, places=4)
+
 
 @unittest.skipUnless(baron_available, "BARON not available")
 class TestReformulateSecondStageEqualitiesDiscrete(unittest.TestCase):
@@ -2145,12 +2197,9 @@ class TestReformulateSecondStageEqualitiesDiscrete(unittest.TestCase):
             res.pyros_termination_condition, pyrosTerminationCondition.robust_optimal
         )
         self.assertEqual(res.iterations, 1)
-        self.assertAlmostEqual(res.final_objective_value, 0, places=4)
-        # note: this solution is suboptimal (in the context of nonstatic DRs),
-        #       but follows from the current efficiency for DRs
-        #       (i.e. in first iteration, static DRs required)
-        self.assertAlmostEqual(m.x.value, 0, places=4)
-        self.assertAlmostEqual(m.z.value, 0, places=4)
+        self.assertAlmostEqual(res.final_objective_value, 2, places=4)
+        self.assertAlmostEqual(m.x.value, 4, places=4)
+        self.assertAlmostEqual(m.z.value, -2, places=4)
 
     def test_two_stage_discrete_set_fullrank_affine_dr(self):
         m = self.build_two_stage_model()
