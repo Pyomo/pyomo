@@ -92,11 +92,10 @@ class Solution(MapContainer):
         # at a minimum an "id" element per sub-dictionary.
         #
         first = True
-        for key in self._order:
+        for key, item in self.items():
             if not key in repn or key == 'Problem':
                 continue
-            item = dict.__getitem__(self, key)
-            if not type(item.value) is dict:
+            if type(item.value) is not dict:
                 #
                 # Do a normal print
                 #

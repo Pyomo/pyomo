@@ -160,8 +160,8 @@ class ScalarData(object):
 
     def load(self, repn):
         if type(repn) is dict:
-            for key in repn:
-                setattr(self, key, repn[key])
+            for key, val in repn.items():
+                setattr(self, key, val)
         else:
             self.value = repn
 
@@ -293,18 +293,10 @@ class MapContainer(dict):
         super().__init__()
         self._active = True
         self._required = False
-        self._ordered = ordered
-        self._order = []
         self._option = default_print_options
 
-    def keys(self):
-        return self._order
 
     def __getattr__(self, name):
-        try:
-            return self.__dict__[name]
-        except:
-            pass
         try:
             self._active = True
             return self[self._convert(name)]
@@ -318,12 +310,8 @@ class MapContainer(dict):
         )
 
     def __setattr__(self, name, val):
-        if name == "__class__":
-            self.__class__ = val
-            return
         if name[0] == "_":
-            self.__dict__[name] = val
-            return
+            return super().__setattr__(name, val)
         self._active = True
         tmp = self._convert(name)
         if tmp not in self:
@@ -368,25 +356,21 @@ class MapContainer(dict):
                 + "' for object with type "
                 + str(type(self))
             )
-        item = dict.__getitem__(self, tmp)
-        if isinstance(item, ListContainer) or isinstance(item, MapContainer):
+        item = super().__getitem__(tmp)
+        if isinstance(item, (ListContainer, MapContainer)):
             return item
         return item.value
 
     def declare(self, name, **kwds):
         if name in self or type(name) is int:
             return
-        tmp = self._convert(name)
-        self._order.append(tmp)
-        if 'value' in kwds and (
-            isinstance(kwds['value'], MapContainer)
-            or isinstance(kwds['value'], ListContainer)
-        ):
+        data = kwds.get('value', None)
+        if isinstance(data, (MapContainer, ListContainer)):
             if 'active' in kwds:
-                kwds['value']._active = kwds['active']
+                data._active = kwds['active']
             if 'required' in kwds and kwds['required'] is True:
-                kwds['value']._required = True
-            dict.__setitem__(self, tmp, kwds['value'])
+                data._required = True
+            super().__setitem__(self._convert(name), data)
         else:
             data = ScalarData(**kwds)
             if 'required' in kwds and kwds['required'] is True:
@@ -398,23 +382,16 @@ class MapContainer(dict):
             #
             # if 'value' in kwds:
             #    data._default = kwds['value']
-            dict.__setitem__(self, tmp, data)
+            super().__setitem__(self._convert(name), data)
 
     def _repn_(self, option):
         if not option.schema and not self._active and not self._required:
             return ignore
-        if self._ordered:
-            tmp = []
-            for key in self._order:
-                rep = dict.__getitem__(self, key)._repn_(option)
-                if not rep == ignore:
-                    tmp.append({key: rep})
-        else:
-            tmp = {}
-            for key in self.keys():
-                rep = dict.__getitem__(self, key)._repn_(option)
-                if not rep == ignore:
-                    tmp[key] = rep
+        tmp = {}
+        for key, val in self.items():
+            rep = val._repn_(option)
+            if not rep == ignore:
+                tmp[key] = rep
         return tmp
 
     def _convert(self, name):
@@ -438,10 +415,9 @@ class MapContainer(dict):
         else:
             _prefix = prefix
             ostream.write('\n')
-        for key in self._order:
+        for key, item in self.items():
             if not key in repn:
                 continue
-            item = dict.__getitem__(self, key)
             ostream.write(_prefix + key + ": ")
             _prefix = prefix
             if isinstance(item, ListContainer):
@@ -450,13 +426,13 @@ class MapContainer(dict):
                 item.pprint(ostream, option, prefix=_prefix + "  ", repn=repn[key])
 
     def load(self, repn):
-        for key in repn:
+        for key, val in repn.items():
             tmp = self._convert(key)
             if tmp not in self:
                 self.declare(tmp)
             item = super().__getitem__(tmp)
             item._active = True
-            item.load(repn[key])
+            item.load(val)
 
     def __getnewargs__(self):
         return (False, False)

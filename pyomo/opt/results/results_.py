@@ -122,8 +122,8 @@ class SolverResults(MapContainer):
 
         option = copy.copy(SolverResults.default_print_options)
         # TODO: verify that we need this for-loop
-        for key in kwds:
-            setattr(option, key, kwds[key])
+        for key, val in kwds.items():
+            setattr(option, key, val)
         repn = self.json_repn(option)
 
         for soln in repn.get('Solution', []):
@@ -173,11 +173,9 @@ class SolverResults(MapContainer):
         ostream.write("# ==========================================================\n")
         ostream.write("# = Solver Results                                         =\n")
         ostream.write("# ==========================================================\n")
-        for i in range(len(self._order)):
-            key = self._order[i]
+        for key, item in self.items():
             if not key in repn:
                 continue
-            item = dict.__getitem__(self, key)
             ostream.write(
                 "# ----------------------------------------------------------\n"
             )
@@ -209,12 +207,8 @@ class SolverResults(MapContainer):
             repn = yaml.load(istream, **yaml_load_args)
         else:
             repn = json.load(istream)
-        for i in range(len(self._order)):
-            key = self._order[i]
-            if not key in repn:
-                continue
-            item = dict.__getitem__(self, key)
-            item.load(repn[key])
+        for key, item in repn.items():
+            dict.__getitem__(self, key).load(item)
 
     def __repr__(self):
         return str(self._repn_(SolverResults.default_print_options))
