@@ -422,29 +422,3 @@ class MapContainer(dict):
 # assertStructuredAlmostEqual will process them correctly)
 Sequence.register(ListContainer)
 Mapping.register(MapContainer)
-
-if __name__ == '__main__':
-    d = MapContainer()
-    d.declare('f')
-    d.declare('g')
-    d.declare('h')
-    d.declare('i', value=ListContainer(UndefinedData))
-    d.declare('j', value=ListContainer(UndefinedData), active=False)
-    print("X")
-    d.f = 1
-    print("Y")
-    print(d.f)
-    print(d.keys())
-    d.g = None
-    print(d.keys())
-    try:
-        print(d.f, d.g, d.h)
-    except:
-        pass
-    d['h'] = None
-    print("")
-    print("FINAL")
-    print(d.f, d.g, d.h, d.i, d.j)
-    print(d.i._active, d.j._active)
-    d.j.add()
-    print(d.i._active, d.j._active)

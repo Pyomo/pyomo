@@ -334,6 +334,16 @@ Solution:
             results, new_results, allow_second_superset=True
         )
 
+    def test_deepcopy_solution(self):
+        IN = StringIO(ref_json_soln)
+        result = SolverResults()
+        result.read(istream=IN, format='json')
+        result_copy = copy.deepcopy(result)
+        self.assertEqual(list(result.keys()), list(result_copy.keys()))
+        self.assertEqual(str(result), str(result_copy))
+        self.assertEqual(result, result)
+        self.assertEqual(result, result_copy)
+
     #
     # deleting is not supported right now
     #
@@ -488,6 +498,111 @@ Solution:
         self.assertEqual(soln.variable[1]["Value"], 0.0)
         self.assertEqual(soln.variable[4]["Value"], 0.3)
         self.assertEqual(soln.variable[4]["Slack"], 0.4)
+
+    def test_soln_to_str(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        self.assertEqual(
+            """
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable: No nonzero values
+  Constraint: No values
+            """.strip(),
+            str(results).strip(),
+        )
+
+        soln.variable[1]["Value"] = 1.0
+        soln.variable[2]["Value"] = 3.0
+        soln.variable[4]["Value"] = 5.0
+
+        self.assertEqual(
+            """
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable:
+    1:
+      Value: 1
+    2:
+      Value: 3
+    4:
+      Value: 5
+  Constraint: No values
+            """.strip(),
+            str(results).strip(),
+        )
+
+
+class TestContainer(unittest.TestCase):
+    def test_declare_and_str(self):
+        class LocalContainer(MapContainer):
+            def __init__(self, **kwds):
+                super().__init__(**kwds)
+                self.declare('a')
+                self.declare('b', value=2)
+                self.declare('c', value=3)
+
+        d = MapContainer()
+        d.declare('f')
+        d.declare('g')
+        d.declare('h')
+        d.declare('i', value=ListContainer(UndefinedData))
+        d.declare('j', value=ListContainer(LocalContainer), active=False)
+        self.assertEqual(list(d.keys()), ['F', 'G', 'H', 'I', 'J'])
+
+        self.assertEqual(
+            """
+I: 
+""",
+            str(d),
+        )
+
+        # Assigning to a field activates it
+        d.f = 1
+        self.assertEqual(
+            """
+F: 1
+I: 
+""",
+            str(d),
+        )
+        self.assertEqual(d.f, 1)
+
+        # Adding to a list also activates it, even if it was declared
+        # with active=False
+        self.assertTrue(d.i._active)
+        self.assertFalse(d.j._active)
+        d.j.add()
+        self.assertTrue(d.i._active)
+        self.assertTrue(d.j._active)
+        self.assertEqual(
+            """
+F: 1
+I: 
+J: 
+- B: 2
+  C: 3
+""",
+            str(d),
+        )
+
+        self.assertEqual(
+            """
+- B: 2
+  C: 3
+""",
+            str(d.j),
+        )
 
 
 if __name__ == "__main__":
