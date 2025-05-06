@@ -78,7 +78,7 @@ def _load_tests(solver_list):
 
 def test_all_solvers_list():
     """
-    Make sure that new solver interfaces get 
+    Make sure that new solver interfaces get
     added to the lists of solvers at the top of the file
     """
     for name, cls in SolverFactory._cls.items():
