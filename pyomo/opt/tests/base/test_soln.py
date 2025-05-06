@@ -385,7 +385,7 @@ Solution:
         soln = results.solution.add()
         with self.assertRaisesRegex(
             AttributeError,
-            "Unknown attribute `bad' for object with type <.*\.Solution'>",
+            r"Unknown attribute `bad' for object with type <.*\.Solution'>",
         ):
             tmp = soln.bad
 
