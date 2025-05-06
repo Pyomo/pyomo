@@ -77,7 +77,7 @@ class ScalarData(object):
         self._active = False
 
     def __eq__(self, other):
-        return super().__eq__(other) and self.__dict__ == other.__dict__
+        return self.__dict__ == other.__dict__
 
     def get_value(self):
         if isinstance(self.value, enum.Enum):
@@ -188,7 +188,7 @@ class ListContainer(object):
         return self._list[i]
 
     def __eq__(self, other):
-        return super().__eq__(other) and self.__dict__ == other.__dict__
+        return self.__dict__ == other.__dict__
 
     def clear(self):
         self._list = []
@@ -272,6 +272,10 @@ class MapContainer(dict):
         self._option = default_print_options
 
     def __eq__(self, other):
+        # We need to check both our __dict__ (local attributes) and the
+        # underlying dict data (which doesn't show up in the __dict__).
+        # So we will use the base __eq__ in addition to checking
+        # __dict__.
         return super().__eq__(other) and self.__dict__ == other.__dict__
 
     def __getattr__(self, name):
