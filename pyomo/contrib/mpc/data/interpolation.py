@@ -43,8 +43,8 @@ def _get_time_index_vec(time_set, time_data):
 
 
 def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
-    """Return an array floats interpolated from data at times_data in
-    time_set.
+    """Return an array of floats interpolated at the time points in time_set 
+    from data defined at time_data.
 
     Parameters
     ----------
