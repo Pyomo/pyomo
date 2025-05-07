@@ -43,7 +43,7 @@ def _get_time_index_vec(time_set, time_data):
 
 
 def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
-    """Return an array of floats interpolated at the time points in time_set 
+    """Return an array of floats interpolated at the time points in time_set
     from data defined at time_data.
 
     Parameters
@@ -56,10 +56,10 @@ def _get_interp_expr_vec(time_set, time_data, data, indexes=None):
         Data corresponding to times in time_data, must have the same
         length as time data.
     indexes: numpy.array
-        Numpy array of position indexes of the time points to interpolate in the 
+        Numpy array of position indexes of the time points to interpolate in the
         time data.  The format is the same as returned by ``_get_time_index_vec()``.
-        If this is None, ``_get_time_index_vec()`` is called.  The reason to pass 
-        this is to avoid multiple position searches when interpolating multiple 
+        If this is None, ``_get_time_index_vec()`` is called.  The reason to pass
+        this is to avoid multiple position searches when interpolating multiple
         outputs with the same time points.
 
     Returns
