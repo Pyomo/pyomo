@@ -83,6 +83,13 @@ class CsplineExternalParamsTest(unittest.TestCase):
         for yd, yp in zip(y_data, y_pred):
             self.assertAlmostEqual(yd, yp, 3)
 
+        self.assertAlmostEqual(1, params.f(5), 8)
+        self.assertAlmostEqual(1, params.f(5 - 1e-4), 3)
+        self.assertAlmostEqual(1, params.f(5 + 1e-4), 3)
+        self.assertAlmostEqual(2, params.f(1), 8)
+        self.assertAlmostEqual(2, params.f(1 - 1e-4), 3)
+        self.assertAlmostEqual(2, params.f(1 + 1e-4), 3)
+
     def test_param_increasing(self):
         x_data = [1, 2, 3, 4, 5]
         y_data = [1, 4, 9, 16, 25]

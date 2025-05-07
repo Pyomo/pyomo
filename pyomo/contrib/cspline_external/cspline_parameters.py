@@ -172,7 +172,7 @@ class CsplineParameters:
         dist = self.knots[-1] - self.knots[0]
         x = np.array([self.knots[0], self.knots[-1]])
         y = self.f(x)
-        m = self.fx(x)
+        m = self.dfdx(x)
         b = y - m * x
         k = np.array([self.knots[0] - dist, self.knots[-1] + dist])
 
@@ -206,17 +206,18 @@ class CsplineParameters:
             array of integers is returned otherwise return an integer
         """
         s = np.searchsorted(self.knots, x)
-        # If x is before the first knot use the first segment
-        if len(s) > 1:
+        if isinstance(s, np.ndarray):
+            # if x is before the first knot use the first segment
             s[s <= 0] = 1
+            # if x is after the last knot use last segment to extrapolate
             s[s >= len(self.knots)] = len(self.knots) - 1
         else:
             if s <= 0:
+                # if x is before the first knot use the first segment
                 return 0
             if s >= len(self.knots):
-                # if the not extrapolates right it is 1 more than number of
-                # knots and 2 more than number of segments
-                return len(self.knots) - 1
+                # if x is after the last knot use last segment to extrapolate
+                return len(self.knots) - 2
         return s - 1
 
     def f(self, x):
@@ -231,14 +232,14 @@ class CsplineParameters:
         s = self.segment(x)
         return self.a1[s] + self.a2[s] * x + self.a3[s] * x**2 + self.a4[s] * x**3
 
-    def fx(self, x):
-        """Get f(x)
+    def dfdx(self, x):
+        """Get d/dx(f(x))
 
         Args:
             x: location, numpy array float
 
         Returns:
-            f(x) numpy array if x is numpy array or float
+            df/dx numpy array if x is numpy array or float
         """
         s = self.segment(x)
         return self.a2[s] + 2 * self.a3[s] * x + 3 * self.a4[s] * x**2
