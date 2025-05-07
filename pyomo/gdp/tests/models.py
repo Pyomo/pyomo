@@ -862,6 +862,16 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     return m
 
 
+def makeTrivialGDP():
+    m = ConcreteModel()
+
+    m.numeric = Disjunction(expr=[Constraint.Feasible, Constraint.Infeasible])
+    m.logical = Disjunction(
+        expr=[LogicalConstraint.Feasible, LogicalConstraint.Infeasible]
+    )
+    return m
+
+
 def makeNetworkDisjunction(minimize=True):
     """creates a GDP model with pyomo.network components"""
     m = ConcreteModel()
