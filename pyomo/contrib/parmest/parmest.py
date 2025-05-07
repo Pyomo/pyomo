@@ -61,6 +61,8 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
 
+from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
+
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
 from pyomo.dae import ContinuousSet
@@ -226,7 +228,6 @@ def _experiment_instance_creation_callback(
 
     return instance
 
-
 def SSE(model):
     """
     Sum of squared error between the model prediction of measured variables and data values,
@@ -240,25 +241,48 @@ def SSE_weighted(model):
     Weighted sum of squared error between the model prediction of measured variables and data values,
     assuming Gaussian i.i.d errors, with measurement error standard deviation defined in the annotated Pyomo model
     """
-    expr = (1 / 2) * sum(
-        ((y - y_hat) / model.measurement_error[y_hat]) ** 2
-        for y_hat, y in model.experiment_outputs.items()
-    )
-    return expr
+    if not hasattr(model, "measurement_error"):
+        raise AttributeError('The model must have a `measurement_error` attribute. Please define it')
 
-# Compute the Jacobian matrix of measurement predictions with respect to changes in parameter values
-def _compute_jacobian(model, absolute_perturbation, solver_object):
+    if all(model.measurement_error[y_hat] is None for y_hat in model.experiment_outputs):
+        raise ValueError('Measurement error values are missing. Please ensure all are supplied')
+    elif all(model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs):
+        expr = (1 / 2) * sum(
+            ((y - y_hat) / model.measurement_error[y_hat]) ** 2
+            for y_hat, y in model.experiment_outputs.items()
+        )
+        return expr
+    else:
+        raise ValueError('One or more values of the measurement errors have not been supplied')
+
+# Compute the Jacobian matrix of measured variables with respect to the parameters
+def _compute_jacobian(experiment, thetavals, absolute_perturbation, solver, tee):
     """
-    Computes the Jacobian matrix of measurement predictions with respect to changes in parameter values
+    Computes the Jacobian matrix of the measured variables with respect to the parameters
     using central finite difference scheme
 
     Arguments:
-        model: Pyomo model containing experiment_outputs and measurement_error
-        absolute_perturbation: value used to perturb the parameters
+        experiment: Estimator class object that contains the model for a particular experimental condition
+        thetavals: estimated parameter values
+        absolute_perturbation: value used to perturb the objectives
+        solver: A ``solver`` object specified by the user
+        tee: Solver option to be passed for verbose output
 
     Returns:
         J: Jacobian matrix
     """
+    # grab and clone the model
+    model = experiment.get_labeled_model().clone()
+
+    # fix the parameter values to the optimal values estimated
+    params = [k for k, v in model.unknown_parameters.items()]
+    for param in params:
+        param.fix(thetavals[param.name])
+
+    # resolve the model with the estimated parameters
+    solver = pyo.SolverFactory(solver)
+    solver.solve(model, tee=tee)
+
     # get the measured variables
     y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
 
@@ -281,8 +305,7 @@ def _compute_jacobian(model, absolute_perturbation, solver_object):
         param.fix(orig_value + absolute_perturbation)
 
         # solve model
-        solver = pyo.SolverFactory(solver_object)
-        solver.solve(model)
+        solver.solve(model, tee=tee)
 
         # forward perturbation measured variables
         y_hat_plus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
@@ -291,7 +314,7 @@ def _compute_jacobian(model, absolute_perturbation, solver_object):
         param.fix(orig_value - absolute_perturbation)
 
         # resolve model
-        solver.solve(model)
+        solver.solve(model, tee=tee)
 
         # backward perturbation measured variables
         y_hat_minus = [pyo.value(y_hat) for y_hat, y in model.experiment_outputs.items()]
@@ -304,58 +327,209 @@ def _compute_jacobian(model, absolute_perturbation, solver_object):
 
     return J
 
-# compute the Fisher information matrix of the estimated parameters
-def compute_FIM(experiment, thetavals, absolute_perturbation, solver_object, estimated_var=None):
+# Compute the covariance matrix of the estimated parameters
+def compute_cov(experiment_list, method, thetavals, absolute_perturbation, solver, tee, estimated_var=None):
     """
-    Compute the Fisher information matrix from the Jacobian matrix and measurement errors
+    Computes the parameter covariance matrix from the list of experimental conditions using jacobian and kaug methods
 
     Arguments:
-        model: Pyomo model containing the experiment outputs and measurement errors
+        experiment_list: list of Estimator class objects containing the model for different experimental conditions
+        method: a ``method`` object specified by the user (e.g., jacobian or kaug)
+        thetavals: estimated parameter values
         absolute_perturbation: value used to perturb the objectives
+        solver: a ``solver`` object specified by the user (e.g., ipopt)
+        tee: Solver option to be passed for verbose output
+        estimated_var: estimated variance of the measurement error when the measurement error standard deviation
+                       is not supplied by user
 
     Returns:
-        FIM: Fisher information matrix
+        cov: covariance matrix of the estimated parameters
     """
-    if not isinstance(solver_object, str):
-        raise TypeError("Expected a string for the solver object")
+    if method == "jacobian":
+        # store the FIM of all experiments
+        FIM_all_exp = []
+        for experiment in experiment_list:  # loop through the experiments and compute the FIM
+            FIM_all_exp.append(
+                _jac_FIM(experiment, thetavals=thetavals, absolute_perturbation=absolute_perturbation,
+                            solver=solver, tee=tee, estimated_var=estimated_var))
 
+        FIM = np.sum(FIM_all_exp, axis=0)
+
+        # covariance matrix
+        cov = np.linalg.inv(FIM)
+        cov = pd.DataFrame(
+            cov, index=thetavals.keys(), columns=thetavals.keys()
+        )
+    elif method == "kaug":
+        # store the FIM of all experiments
+        FIM_all_exp = []
+        for experiment in experiment_list:  # loop through the experiments and compute the FIM
+            FIM_all_exp.append(
+                _kaug_FIM(experiment, thetavals=thetavals, solver=solver, tee=tee, estimated_var=estimated_var))
+
+        FIM = np.sum(FIM_all_exp, axis=0)
+
+        # covariance matrix
+        cov = np.linalg.inv(FIM)
+        cov = pd.DataFrame(
+            cov, index=thetavals.keys(), columns=thetavals.keys()
+        )
+    else:
+        raise ValueError("The method provided, {}, must be either `jacobian` or `kaug`".format(method))
+
+    return cov
+
+# compute the Fisher information matrix of the estimated parameters
+def _jac_FIM(experiment, thetavals, absolute_perturbation, solver, tee, estimated_var=None):
+    """
+    Compute the Fisher information matrix from the Jacobian matrix and
+    measurement errors standard deviation defined in the annotated Pyomo model
+
+    Arguments:
+        experiment: Estimator class object that contains the model
+        thetavals: estimated parameter values
+        absolute_perturbation: value used to perturb the objectives
+        solver: A ``solver`` object specified by the user
+        tee: Solver option to be passed for verbose output
+        estimated_var: estimated variance of the measurement error when the measurement error standard deviation
+                       is not supplied by user
+
+    Returns:
+        FIM: Fisher information matrix about the parameters
+    """
+    # compute the Jacobian matrix
+    J = _compute_jacobian(experiment, thetavals, absolute_perturbation, solver, tee)
+
+    # computing the condition number of the Jacobian matrix
+    cond_number_jac = np.linalg.cond(J)
+    print("The condition number of the Jacobian matrix is:", cond_number_jac)
+
+    # grab the model
+    model = experiment.get_labeled_model()
+
+    # extract the measured variables and measurement errors
+    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
+
+    # check if the model has a defined measurement_error attribute and supplied measurement error standard deviation
+    if hasattr(model, "measurement_error") and all(model.measurement_error[y_hat] is not None for y_hat in
+                                                   model.experiment_outputs):
+        error_list = [model.measurement_error[y_hat] for y_hat in model.experiment_outputs]
+
+        # compute the matrix of the inverse of the measurement variance
+        # the following assumes independent measurement errors
+        W = np.diag([1 / (err ** 2) for err in error_list])
+
+        # check if error list is consistent
+        if len(error_list) == 0 or len(y_hat_list) == 0:
+            raise ValueError("Experiment outputs and measurement errors cannot be empty")
+
+        # check if the dimension of error_list is same with that of y_hat_list
+        if len(error_list) != len(y_hat_list):
+            raise ValueError("Experiment outputs and measurement errors are not the same length")
+
+        # calculate the FIM
+        FIM = J.T @ W @ J
+    else:
+        FIM = (1 / estimated_var) * (J.T @ J)
+
+    return FIM
+
+def _kaug_FIM(experiment, thetavals, solver, tee, estimated_var=None):
+    """
+    Compute the FIM using kaug, a sensitivity-based approach that uses the annotated Pyomo model optimality conditions
+    and user-defined measurement errors standard deviation
+
+    Disclaimer - code adopted from the kaug function implemented in Pyomo.DoE
+
+    Arguments:
+        experiment: Estimator class object that contains the model
+        thetavals: estimated parameter values
+        solver: A ``solver`` object specified by the user
+        tee: Solver option to be passed for verbose output
+        estimated_var: estimated variance of the measurement error when the measurement error standard deviation
+                       is not supplied by user
+
+    Returns:
+        FIM: Fisher information matrix about the parameters
+    """
+    # grab and clone the model
     model = experiment.get_labeled_model().clone()
 
-    # fix the parameter values to the optimal values estimated
+    # fix the parameter values to the estimated values
     params = [k for k, v in model.unknown_parameters.items()]
     for param in params:
         param.fix(thetavals[param.name])
 
-    # resolve the model
-    solver = pyo.SolverFactory(solver_object)
-    solver.solve(model)
+    # resolve the model with the estimated parameters
+    solver = pyo.SolverFactory(solver)
+    solver.solve(model, tee=tee)
 
-    # extract the measured variables and measurement errors
-    y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
-    error_list = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
+    # add zero (dummy/placeholder) objective function
+    if not hasattr(model, "objective"):
+        model.objective = pyo.Objective(expr=0, sense=pyo.minimize)
 
-    # check if error list is consistent
-    if len(error_list) == 0 or len(y_hat_list) == 0:
-        raise ValueError("Experiment outputs and measurement errors cannot be empty.")
+    # Fix design variables to make the problem square
+    for comp in model.experiment_inputs:
+        comp.fix()
 
-    # check if the dimension of error_list is same with that of y_hat_list
-    if len(error_list) != len(y_hat_list):
-        raise ValueError("Experiment outputs and measurement errors are not the same length.")
+    solver.solve(model, tee=tee)
 
-    if estimated_var is None: # user supplies the measurement errors
-        W = np.diag([1 / (err**2) for err in error_list]) # matrix of the inverse of measurement variance
-    else: # user does not supply the measurement errors
-        W = 1 / estimated_var
+    # Probe the solved model for dsdp results (sensitivities s.t. parameters)
+    params_dict = {k.name: v for k, v in model.unknown_parameters.items()}
+    params_names = list(params_dict.keys())
 
-    # compute the Jacobian matrix
-    J = _compute_jacobian(model, absolute_perturbation, solver_object)
+    dsdp_re, col = get_dsdp(model, params_names, params_dict, tee=tee)
 
-    # computing the condition number of the Jacobian matrix
-    cond_number_jac = np.linalg.cond(J)
-    print("The condition number of the Jacobian matrix is:",cond_number_jac)
+    # analyze result
+    dsdp_array = dsdp_re.toarray().T
 
-    # calculate the FIM
-    FIM = J.T @ W @ J
+    # store dsdp returned
+    dsdp_extract = []
+
+    # get right lines from results
+    measurement_index = []
+
+    # loop over measurement variables and their time points
+    for k, v in model.experiment_outputs.items():
+        name = k.name
+        try:
+            kaug_no = col.index(name)
+            measurement_index.append(kaug_no)
+            # get right line of dsdp
+            dsdp_extract.append(dsdp_array[kaug_no])
+        except:
+            # k_aug does not provide value for fixed variables
+            logging.getLogger(__name__).debug("The variable is fixed:  %s", name)
+            # produce the sensitivity for fixed variables
+            zero_sens = np.zeros(len(params_names))
+            # for fixed variables, the sensitivity are a zero vector
+            dsdp_extract.append(zero_sens)
+
+    # Extract and calculate sensitivity if scaled by constants or parameters.
+    jac = [[] for k in params_names]
+
+    for d in range(len(dsdp_extract)):
+        for k, v in model.unknown_parameters.items():
+            p = params_names.index(k.name)  # Index of parameter in np array
+            sensi = dsdp_extract[d][p]
+            jac[p].append(sensi)
+
+    # record kaug jacobian
+    kaug_jac = np.array(jac).T
+
+    # compute FIM
+    # compute matrix of the inverse of the measurement variance
+    # The following assumes independent measurement error.
+    W = np.zeros((len(model.measurement_error), len(model.measurement_error)))
+    count = 0
+    for k, v in model.measurement_error.items():
+        if all(model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs):
+            W[count, count] = 1 / (v ** 2)
+        else:
+            W[count, count] = 1 / (estimated_var)
+        count += 1
+
+    FIM = kaug_jac.T @ W @ kaug_jac
 
     return FIM
 
@@ -654,6 +828,8 @@ class Estimator(object):
                 )
             )
 
+            self.inv_red_hes = inv_red_hes
+
             if self.diagnostic_mode:
                 print(
                     '    Solver termination condition = ',
@@ -719,34 +895,16 @@ class Estimator(object):
         cov_n,
     ):
         """
-        Parameter estimation using all scenarios in the data
+        Covariance matrix calculation using all scenarios in the data
 
-        Parameters
-        ----------
-        solver: string, optional
-            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
-        return_values: list, optional
-            List of Variable names, used to return values from the model for data reconciliation
-        calc_cov: boolean, optional
-            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver).
-            Default is False.
-        cov_n: int, optional
-            If calc_cov=True, then the user needs to supply the number of datapoints
-            that are used in the objective function.
+        Argument:
+            method: str, a ``method`` object specified by the user (e.g., jacobian or kaug)
+            solver: str, a ``solver`` object specified by the user (e.g., ipopt)
+            cov_n: int, the user needs to supply the number of datapoints that are used in the objective function
 
-        Returns
-        -------
-        objectiveval: float
-            The objective function value
-        thetavals: pd.Series
-            Estimated values for theta
-        variable values: pd.DataFrame
-            Variable values for each variable name in return_values (only for solver='ef_ipopt')
-        cov: pd.DataFrame
-            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
-
+        Returns:
+            cov: pd.DataFrame, covariance matrix of the estimated parameters
         """
-
         # Number of data points considered
         n = cov_n
 
@@ -766,92 +924,78 @@ class Estimator(object):
         the constant cancels out. (was scaled by 1/n because it computes an
         expected value.)
         '''
-        if self.obj_function == 'SSE':
-            # get the model
-            model = self.exp_list[0].get_labeled_model()
+        # get the model
+        model = self.exp_list[0].get_labeled_model()
 
-            if hasattr(model, "measurement_error"):  # user defined the measurement_error attribute
+        # check if the user specified SSE or SSE_weighted as objective function
+        if self.obj_function == 'SSE':
+            # check if user defined the measurement_error attribute
+            if hasattr(model, "measurement_error"):
                 # get the measurement errors
                 meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
 
-                if all(item is None for item in meas_error):  # user does not supply the value of the errors
+                # check if the user supplied the values of the measurement errors
+                if all(item is None for item in meas_error):
                     measurement_var = sse / (n - l)  # estimate of the measurement variance
                     if method == "reduced_hessian":
-                        cov = 2 * measurement_var * inv_red_hes  # covariance matrix
+                        cov = 2 * measurement_var * self.inv_red_hes  # covariance matrix
                         cov = pd.DataFrame(
                             cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
                         )
                     elif method == "jacobian":
-                        FIM_all_exp = []
-                        for experiment in self.exp_list:  # loop through the experiments and compute the FIM
-                            FIM_all_exp.append(compute_FIM(experiment, self.estimated_theta, absolute_perturbation=1e-6,
-                                                           solver_object=solver, estimated_var=measurement_var))
-
-                        # Total FIM of experiments
-                        FIM_total = np.sum(FIM_all_exp, axis=0)
-
-                        # covariance matrix
-                        cov = np.linalg.inv(FIM_total)
-                        cov = pd.DataFrame(
-                            cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
-                        )
+                        cov = compute_cov(self.exp_list, method, thetavals=self.estimated_theta, solver=solver,
+                                          absolute_perturbation=1e-6, tee=self.tee, estimated_var=measurement_var)
+                    elif method == "kaug":
+                        cov = compute_cov(self.exp_list, method, thetavals=self.estimated_theta, solver=solver,
+                                          absolute_perturbation=1e-6, tee=self.tee, estimated_var=measurement_var)
                     else:
-                        raise NotImplementedError('Only jacobian, reduced_hessian, and kaug methods are '
-                                                  'supported for covariance calculation')
-                else:  # user supplies the value of the errors
+                        raise NotImplementedError('Only `jacobian`, `reduced_hessian`, and `kaug` methods are '
+                                                  'supported')
+                elif all(item is not None for item in meas_error):
                     if method == "reduced_hessian":
-                        cov = 2 * (meas_error[0] ** 2) * inv_red_hes
+                        cov = 2 * (meas_error[0] ** 2) * self.inv_red_hes
                         cov = pd.DataFrame(
                             cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
                         )
                     elif method == "jacobian":
-                        FIM_all_exp = []
-                        for experiment in self.exp_list:  # loop through the experiments and compute the FIM
-                            FIM_all_exp.append(compute_FIM(experiment, self.estimated_theta, absolute_perturbation=1e-6,
-                                                           solver_object=solver))
+                        cov = compute_cov(self.exp_list, method, thetavals=self.estimated_theta, solver=solver,
+                                          absolute_perturbation=1e-6, tee=self.tee)
+                    elif method == "kaug":
+                        cov = compute_cov(self.exp_list, method, thetavals=self.estimated_theta,
+                                          absolute_perturbation=1e-6, solver=solver, tee=self.tee)
+                    else:
+                        raise NotImplementedError('Only `jacobian`, `reduced_hessian`, and `kaug` methods are '
+                                                  'supported')
+                else:
+                    raise ValueError('One or more values of the measurement errors have not been supplied')
+            else:
+                raise AttributeError('The model must have a `measurement_error` attribute. Please define it')
+        elif self.obj_function == 'SSE_weighted':
+            # check if the user defined the measurement_error attribute
+            if hasattr(model, "measurement_error"):
+                meas_error = [model.measurement_error[y_hat] for y_hat, y in model.experiment_outputs.items()]
 
-                        # Total FIM of experiments
-                        FIM_total = np.sum(FIM_all_exp, axis=0)
-
-                        # covariance matrix
-                        cov = np.linalg.inv(FIM_total)
+                # check if the user supplied values for the measurement errors
+                if all(item is not None for item in meas_error):
+                    if method == "jacobian":
+                        cov = compute_cov(self.exp_list, method, thetavals=self.estimated_theta,
+                                          absolute_perturbation=1e-6, solver=solver, tee=self.tee)
+                    elif method == "kaug":
+                        cov = compute_cov(self.exp_list, method, thetavals=self.estimated_theta,
+                                          absolute_perturbation=1e-6, solver=solver, tee=self.tee)
+                    elif method == "reduced_hessian":
+                        cov = self.inv_red_hes
                         cov = pd.DataFrame(
                             cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
                         )
                     else:
-                        raise NotImplementedError('Only jacobian, reduced_hessian, and kaug methods are '
-                                                  'supported for covariance calculation')
-            else:  # user did not define the measurement_error attribute
-                measurement_var = sse / (n - l)  # estimate of the measurement variance
-                cov = 2 * measurement_var * inv_red_hes
-                cov = pd.DataFrame(
-                    cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
-                )
-        elif self.obj_function == 'SSE_weighted':
-            if method == "jacobian":
-                FIM_all_exp = []
-                for experiment in self.exp_list:  # loop through the experiments and compute the FIM
-                    FIM_all_exp.append(compute_FIM(experiment, self.estimated_theta, absolute_perturbation=1e-6,
-                                                   solver_object=solver))
-
-                # Total FIM of experiments
-                FIM_total = np.sum(FIM_all_exp, axis=0)
-
-                # covariance matrix
-                cov = np.linalg.inv(FIM_total)
-                cov = pd.DataFrame(
-                    cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
-                )
-            elif method == "reduced_hessian":
-                cov = inv_red_hes
-                cov = pd.DataFrame(
-                    cov, index=self.estimated_theta.keys(), columns=self.estimated_theta.keys()
-                )
+                        raise NotImplementedError('Only `jacobian`, `reduced_hessian`, and `kaug` methods are supported')
+                else:
+                    raise ValueError('One or more values of the measurement errors have not been supplied')
             else:
-                raise NotImplementedError('Only jacobian, reduced_hessian, and kaug methods are supported '
-                                          'for covariance calculation')
+                raise AttributeError('The model must have a "measurement_error" attribute. Please define it')
         else:
-            raise NotImplementedError('Covariance calculation is only supported for SSE and SSE_weighted objectives')
+            raise NotImplementedError('Covariance calculation is only supported for `SSE` and `SSE_weighted` objectives')
 
         return cov
 
@@ -1096,12 +1240,6 @@ class Estimator(object):
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
             List of Variable names, used to return values from the model for data reconciliation
-        calc_cov: boolean, optional
-            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver).
-            Default is False.
-        cov_n: int, optional
-            If calc_cov=True, then the user needs to supply the number of datapoints
-            that are used in the objective function.
 
         Returns
         -------
@@ -1111,8 +1249,6 @@ class Estimator(object):
             Estimated values for theta
         variable values: pd.DataFrame
             Variable values for each variable name in return_values (only for solver='ef_ipopt')
-        cov: pd.DataFrame
-            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
         """
 
         assert isinstance(solver, str)
@@ -1128,34 +1264,23 @@ class Estimator(object):
         self, method="jacobian", solver="ipopt", cov_n=None
     ):
         """
-        Parameter estimation using all scenarios in the data
+        Covariance matrix calculation using all scenarios in the data
 
-        Parameters
-        ----------
-        solver: string, optional
-            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
-        return_values: list, optional
-            List of Variable names, used to return values from the model for data reconciliation
-        calc_cov: boolean, optional
-            If True, calculate and return the covariance matrix (only for "ef_ipopt" solver).
-            Default is False.
-        cov_n: int, optional
-            If calc_cov=True, then the user needs to supply the number of datapoints
-            that are used in the objective function.
+        Argument:
+            method: str, a ``method`` object specified by the user (e.g., jacobian or kaug)
+            solver: str, a ``solver`` object specified by the user (e.g., ipopt)
+            cov_n: int, the user needs to supply the number of datapoints that are used in the objective function
 
-        Returns
-        -------
-        objectiveval: float
-            The objective function value
-        thetavals: pd.Series
-            Estimated values for theta
-        variable values: pd.DataFrame
-            Variable values for each variable name in return_values (only for solver='ef_ipopt')
-        cov: pd.DataFrame
-            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
+        Returns:
+            cov: pd.DataFrame, covariance matrix of the estimated parameters
         """
+        # check if the solver input is a string
+        if not isinstance(solver, str):
+            raise TypeError("Expected a string for the solver")
 
-        assert isinstance(solver, str)
+        # check if the method input is a string
+        if not isinstance(method, str):
+            raise TypeError("Expected a string for the method")
 
         # number of unknown parameters
         num_unknowns = max(
