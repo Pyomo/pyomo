@@ -240,6 +240,8 @@ class capture_output(object):
 
     """
 
+    startup_shutdown = threading.Lock()
+
     def __init__(self, output=None, capture_fd=False):
         if output is None:
             output = io.StringIO()
@@ -285,6 +287,35 @@ class capture_output(object):
         return FAIL
 
     def __enter__(self):
+        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+            # This situation *shouldn't* happen.  If it does, it is
+            # unlikely that the user can fix it (or even debug it).
+            # Instead they should report it back to us.
+            #
+            # Breadcrumbs:
+            #
+            #   - The last time we hit this [5/2025], it was because we
+            #     were using capture_output in a solver's __del__.  This
+            #     led to the GC deleting the solver while another solver
+            #     was trying to start up / run (so the other solver held
+            #     the lock, but the GC interrupted that thread and
+            #     wouldn't let go).
+            raise DeveloperError("Deadlock starting capture_output")
+        try:
+            return self._enter_impl()
+        finally:
+            capture_output.startup_shutdown.release()
+
+    def __exit__(self, et, ev, tb):
+        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+            # See comments & breadcrumbs in __enter__() above.
+            raise DeveloperError("Deadlock closing capture_output")
+        try:
+            return self._exit_impl(et, ev, tb)
+        finally:
+            capture_output.startup_shutdown.release()
+
+    def _enter_impl(self):
         self.old = (sys.stdout, sys.stderr)
         old_fd = []
         for stream in self.old:
@@ -399,7 +430,7 @@ class capture_output(object):
             buf = buf[0]
         return buf
 
-    def __exit__(self, et, ev, tb):
+    def _exit_impl(self, et, ev, tb):
         # Check that we were nested correctly
         FAIL = []
         if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
