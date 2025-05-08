@@ -180,15 +180,20 @@ class GurobiSolverMixin:
     _gurobipy_available = gurobipy_available
 
     def available(self):
-        if self._available is not None:
-            return self._available
-        # this triggers the deferred import, and for the persistent
-        # interface, may update the _available flag
-        if not self._gurobipy_available:
-            if self._available is None:
-                self.__class__._available = Availability.NotFound
-        else:
-            self.__class__._available = self._check_license()
+        if self._available is None:
+            # this triggers the deferred import, and for the persistent
+            # interface, may update the _available flag
+            #
+            # Note that we set the _available flag on the *mode derived
+            # class* and not on the instance, or on the base class.  That
+            # allows different derived interfaces to have different
+            # availability (e.g., persistent has a minimum version
+            # requirement that the direct interface doesn't)
+            if not self._gurobipy_available:
+                if self._available is None:
+                    self.__class__._available = Availability.NotFound
+            else:
+                self.__class__._available = self._check_license()
         return self._available
 
     @staticmethod
