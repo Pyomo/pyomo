@@ -68,7 +68,7 @@ def _import_gurobipy():
         raise
     if gurobipy.GRB.VERSION_MAJOR < 7:
         GurobiPersistent._available = Availability.BadVersion
-        raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
+        raise ImportError('The Persistent Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
 
