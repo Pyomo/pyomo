@@ -244,8 +244,6 @@ class capture_output(object):
     startup_shutdown = threading.Lock()
 
     def __init__(self, output=None, capture_fd=False):
-        if output is None:
-            output = io.StringIO()
         self.output = output
         self.old = None
         self.tee = None
@@ -360,6 +358,8 @@ class capture_output(object):
 
             if isinstance(self.output, str):
                 self.output_stream = self._enter_context(open(self.output, 'w'))
+            elif self.output is None:
+                self.output_stream = io.StringIO()
             else:
                 self.output_stream = self.output
             if isinstance(self.output, TeeStream):

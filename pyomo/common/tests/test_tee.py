@@ -336,6 +336,17 @@ class TestCapture(unittest.TestCase):
         finally:
             capture.reset()
 
+    def test_reset_capture_output_twice(self):
+        capture = tee.capture_output()
+        with capture as OUT1:
+            print("test1")
+        capture.reset()
+        capture.reset()
+        with capture as OUT2:
+            print("test2")
+        self.assertEqual(OUT1.getvalue(), "test1\n")
+        self.assertEqual(OUT2.getvalue(), "test2\n")
+
     def test_capture_output_logfile_string(self):
         with TempfileManager.new_context() as tempfile:
             logfile = tempfile.create_tempfile()
