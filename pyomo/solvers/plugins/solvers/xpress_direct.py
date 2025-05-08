@@ -270,7 +270,7 @@ class XpressDirect(DirectSolver):
         # message "User solution (_) stored" is wrote to the
         # correct place, i.e., the console or the log or both
         self._apply_warmstart = kwds.pop("warmstart", False)
-        return super(XpressDirect, self)._presolve(*args, **kwds)
+        return super()._presolve(*args, **kwds)
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
