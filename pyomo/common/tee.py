@@ -827,19 +827,18 @@ class TeeStream(object):
             if _mswindows:
                 for handle in list(handles):
                     try:
-                        if handle.flush:
-                            flush = True
-                            handle.flush = False
                         pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)
                             handle.decoder_buffer += new_data
                             break
+                        elif handle.flush:
+                            break
                     except:
                         handles.remove(handle)
                         new_data = ''  # not None so the poll interval doesn't increase
-                if new_data is None and not flush:
+                if new_data is None and not handle.flush:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
                     time.sleep(_poll)
@@ -864,15 +863,14 @@ class TeeStream(object):
                 else:
                     for handle in handles:
                         if handle.flush:
-                            new_data = ''
                             break
                     else:
-                        new_data = None
                         continue
 
-                if handle.flush:
-                    flush = True
-                    handle.flush = False
+            if handle.flush:
+                new_data = ''
+                flush = True
+                handle.flush = False
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer
