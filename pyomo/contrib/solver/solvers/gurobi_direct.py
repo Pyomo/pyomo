@@ -176,14 +176,20 @@ class GurobiSolverMixin:
 
     _num_gurobipy_env_clients = 0
     _gurobipy_env = None
+    _available = None
     _gurobipy_available = gurobipy_available
 
     def available(self):
-        if not gurobipy_available:  # this triggers the deferred import
-            return Availability.NotFound
-        if self._available == Availability.BadVersion:
-            return Availability.BadVersion
-        return self._check_license()
+        if self._available is not None:
+            return self._available
+        # this triggers the deferred import, and for the persistent
+        # interface, may update the _available flag
+        if not self._gurobipy_available:
+            if self._available is None:
+                self.__class__._available = Availability.NotFound
+        else:
+            self.__class__._available = self._check_license()
+        return self._available
 
     @staticmethod
     def release_license():
@@ -218,23 +224,11 @@ class GurobiSolverMixin:
             GurobiSolverMixin.release_license()
 
     def _check_license(self):
-        avail = False
         try:
-            m = gurobipy.Model(env=self.env())
-            avail = True
+            model = gurobipy.Model(env=self.env())
         except gurobipy.GurobiError:
-            avail = False
+            return Availability.BadLicense
 
-        if avail:
-            if self._available is None:
-                self._available = self._check_full_license(m)
-            return self._available
-        return Availability.BadLicense
-
-    @classmethod
-    def _check_full_license(cls, model=None):
-        if model is None:
-            model = gurobipy.Model()
         model.setParam('OutputFlag', 0)
         try:
             model.addVars(range(2001))
@@ -242,6 +236,8 @@ class GurobiSolverMixin:
             return Availability.FullLicense
         except gurobipy.GurobiError:
             return Availability.LimitedLicense
+        finally:
+            model.dispose()
 
     def version(self):
         version = (
