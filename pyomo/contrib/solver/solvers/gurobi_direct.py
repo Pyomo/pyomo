@@ -92,7 +92,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         self._pyo_cons = pyo_cons
         self._pyo_vars = pyo_vars
         self._pyo_obj = pyo_obj
-        GurobiDirect._num_instances += 1
+        GurobiDirect._register_env_client()
 
     def __del__(self):
         if python_is_shutting_down():
@@ -110,9 +110,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         # Release the gurobi license if this is the last reference to
         # the environment (either through a results object or solver
         # interface)
-        GurobiDirect._num_instances -= 1
-        if GurobiDirect._num_instances == 0:
-            GurobiDirect.release_license()
+        GurobiDirect._release_env_client()
 
     def load_vars(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
@@ -176,6 +174,10 @@ class GurobiSolverMixin:
     duplicate code.
     """
 
+    _num_gurobipy_env_clients = 0
+    _gurobipy_env = None
+    _gurobipy_available = gurobipy_available
+
     def available(self):
         if not gurobipy_available:  # this triggers the deferred import
             return Availability.NotFound
@@ -183,13 +185,42 @@ class GurobiSolverMixin:
             return Availability.BadVersion
         return self._check_license()
 
+    @staticmethod
+    def release_license():
+        if GurobiSolverMixin._gurobipy_env is None:
+            return
+        if GurobiSolverMixin._num_gurobipy_env_clients:
+            logger.warning(
+                "Call to GurobiSolverMixin.release_license() with %s remaining "
+                "environment clients." % (GurobiSolverMixin._num_gurobipy_env_clients,)
+            )
+        GurobiSolverMixin._gurobipy_env.close()
+        GurobiSolverMixin._gurobipy_env = None
+
+    @staticmethod
+    def env():
+        if GurobiSolverMixin._gurobipy_env is None:
+            with capture_output(capture_fd=True):
+                GurobiSolverMixin._gurobipy_env = gurobipy.Env()
+        return GurobiSolverMixin._gurobipy_env
+
+    @staticmethod
+    def _register_env_client():
+        GurobiSolverMixin._num_gurobipy_env_clients += 1
+
+    @staticmethod
+    def _release_env_client():
+        GurobiSolverMixin._num_gurobipy_env_clients -= 1
+        if GurobiSolverMixin._num_gurobipy_env_clients <= 0:
+            # Note that _num_gurobipy_env_clients should never be <0,
+            # but if it is, release_license will issue a warning (that
+            # we want to know about)
+            GurobiSolverMixin.release_license()
+
     def _check_license(self):
         avail = False
         try:
-            # Gurobipy writes out license file information when creating
-            # the environment
-            with capture_output(capture_fd=True):
-                m = gurobipy.Model()
+            m = gurobipy.Model(env=self.env())
             avail = True
         except gurobipy.GurobiError:
             avail = False
@@ -228,25 +259,15 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
 
     CONFIG = GurobiConfig()
 
-    _available = None
-    _num_instances = 0
     _tc_map = None
 
     def __init__(self, **kwds):
         super().__init__(**kwds)
-        GurobiDirect._num_instances += 1
-
-    @staticmethod
-    def release_license():
-        if gurobipy_available:
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
+        self._register_env_client()
 
     def __del__(self):
         if not python_is_shutting_down():
-            GurobiDirect._num_instances -= 1
-            if GurobiDirect._num_instances == 0:
-                self.release_license()
+            self._release_env_client()
 
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -304,7 +325,7 @@ class GurobiDirect(GurobiSolverMixin, SolverBase):
             if config.working_dir:
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
-                gurobi_model = gurobipy.Model()
+                gurobi_model = gurobipy.Model(env=self.env())
 
                 timer.start('transfer_model')
                 x = gurobi_model.addMVar(
