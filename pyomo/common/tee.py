@@ -245,6 +245,7 @@ class capture_output(object):
 
     def __init__(self, output=None, capture_fd=False):
         self.output = output
+        self.output_stream = None
         self.old = None
         self.tee = None
         self.capture_fd = capture_fd
@@ -437,23 +438,25 @@ class capture_output(object):
     def _exit_impl(self, et, ev, tb):
         # Check that we were nested correctly
         FAIL = []
-        if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
-            FAIL.append(
-                'Captured output (%s) does not match sys.stdout (%s).'
-                % (self.tee._stdout, sys.stdout)
-            )
-        if self.tee._stderr is not None and self.tee.STDERR is not sys.stderr:
-            FAIL.append(
-                'Captured output (%s) does not match sys.stderr (%s).'
-                % (self.tee._stdout, sys.stdout)
-            )
+        if self.tee is not None:
+            if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
+                FAIL.append(
+                    'Captured output (%s) does not match sys.stdout (%s).'
+                    % (self.tee._stdout, sys.stdout)
+                )
+            if self.tee._stderr is not None and self.tee.STDERR is not sys.stderr:
+                FAIL.append(
+                    'Captured output (%s) does not match sys.stderr (%s).'
+                    % (self.tee._stdout, sys.stdout)
+                )
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
         #  - Close any opened files
         FAIL.extend(self._exit_context_stack(et, ev, tb))
-        sys.stdout, sys.stderr = self.old
-        self.old = None
+        if self.old is not None:
+            sys.stdout, sys.stderr = self.old
+            self.old = None
         self.tee = None
         self.output_stream = None
         if FAIL:
