@@ -754,7 +754,8 @@ class TeeStream(object):
         if not self._enter_count:
             raise RuntimeError("TeeStream: exiting a context that was not entered")
         self._enter_count -= 1
-        self.close(et is not None)
+        if not self._enter_count:
+            self.close(et is not None)
 
     def __del__(self):
         # Implement __del__ to guarantee that file descriptors are closed
