@@ -34,8 +34,8 @@ _poll_rampup = 10
 # polling timeout when waiting to close threads.  This will bail on
 # closing threast after a minimum of 13.1 seconds and a worst case of
 # ~(13.1 * #threads) seconds
-_poll_timeout = 3  # 15 rounds: 0.0001 * 2**15 == 3.2768
-_poll_timeout_deadlock = 200  # 21 rounds: 0.0001 * 2**21 == 209.7152
+_poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
+_poll_timeout_deadlock = 100  # seconds
 
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
@@ -698,15 +698,18 @@ class TeeStream(object):
 
         # Join all stream processing threads
         _poll = _poll_interval
+        _timeout = 0.0
         FAIL = False
         while True:
             for th in self._threads:
                 th.join(_poll)
+                _timeout += _poll
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            _poll *= 2
-            if _poll_timeout <= _poll < 2 * _poll_timeout:
+            if _poll < _poll_timeout:
+                _poll *= 2.0
+            if _poll_timeout * 0.5 <= _poll < _poll_timeout:
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another, nor to deadlock for an
@@ -718,7 +721,7 @@ class TeeStream(object):
                     "Significant delay observed waiting to join reader "
                     "threads, possible output stream deadlock"
                 )
-            elif _poll >= _poll_timeout_deadlock:
+            elif _timeout > _poll_timeout_deadlock:
                 logger.error("TeeStream: deadlock observed joining reader threads")
                 # Defer raising the exception until after we have
                 # cleaned things up
