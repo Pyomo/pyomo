@@ -319,10 +319,13 @@ class capture_output(object):
         self.old = (sys.stdout, sys.stderr)
         old_fd = []
         for stream in self.old:
-            stream.flush()
             try:
-                old_fd.append(stream.fileno())
-            except (AttributeError, OSError):
+                stream.flush()
+                try:
+                    old_fd.append(stream.fileno())
+                except (AttributeError, OSError):
+                    old_fd.append(None)
+            except (ValueError, OSError):
                 old_fd.append(None)
         try:
             # We have an issue where we are (very aggressively)

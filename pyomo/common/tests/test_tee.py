@@ -537,6 +537,14 @@ class TestCapture(unittest.TestCase):
             with T:
                 self.assertEqual(len(T.context_stack), 6)
 
+    def test_closed_stdout(self):
+        with tee.capture_output() as T_outer:
+            sys.stdout.close()
+            with tee.capture_output() as T_inner:
+                print("test")
+        self.assertEqual(T_outer.getvalue(), "")
+        self.assertEqual(T_inner.getvalue(), "test\n")
+
     def test_capture_output_stack_error(self):
         OUT1 = StringIO()
         OUT2 = StringIO()
