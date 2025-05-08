@@ -20,10 +20,11 @@ import sys
 
 from io import StringIO, BytesIO
 
+from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
-import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.tee as tee
+import pyomo.common.unittest as unittest
 
 
 class timestamper:
@@ -566,6 +567,31 @@ class TestCapture(unittest.TestCase):
             os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old
             logging.getLogger('pyomo.common.tee').handlers.clear()
+
+    def test_atomic_deadlock(self):
+        save_poll = tee._poll_timeout_deadlock
+        tee._poll_timeout_deadlock = 0.01
+
+        co = tee.capture_output()
+        try:
+            tee.capture_output.startup_shutdown.acquire()
+            with self.assertRaisesRegex(
+                DeveloperError, "Deadlock starting capture_output"
+            ):
+                with tee.capture_output():
+                    pass
+            tee.capture_output.startup_shutdown.release()
+
+            with self.assertRaisesRegex(
+                DeveloperError, "Deadlock closing capture_output"
+            ):
+                with co:
+                    tee.capture_output.startup_shutdown.acquire()
+        finally:
+            tee._poll_timeout_deadlock = save_poll
+            if tee.capture_output.startup_shutdown.locked():
+                tee.capture_output.startup_shutdown.release()
+            co.reset()
 
     def test_capture_output_invalid_ostream(self):
         # Test that capture_output does not suppress errors from the tee

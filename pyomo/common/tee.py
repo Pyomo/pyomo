@@ -24,6 +24,7 @@ import sys
 import threading
 import time
 
+from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 
 _poll_interval = 0.0001
