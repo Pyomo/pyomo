@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def _guess_format(filename):
+    "Return a standardized file format by looking at the filename extension"
     return {'.json': 'json', '.jsn': 'json', '.yaml': 'yaml', '.yml': 'yaml'}.get(
         os.path.splitext(filename)[1].lower(), None
     )
