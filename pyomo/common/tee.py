@@ -24,6 +24,7 @@ import sys
 import threading
 import time
 
+from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 
 _poll_interval = 0.0001
@@ -34,8 +35,8 @@ _poll_rampup = 10
 # polling timeout when waiting to close threads.  This will bail on
 # closing threast after a minimum of 13.1 seconds and a worst case of
 # ~(13.1 * #threads) seconds
-_poll_timeout = 3  # 15 rounds: 0.0001 * 2**15 == 3.2768
-_poll_timeout_deadlock = 200  # 21 rounds: 0.0001 * 2**21 == 209.7152
+_poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
+_poll_timeout_deadlock = 100  # seconds
 
 _noop = lambda: None
 _mswindows = sys.platform.startswith('win')
@@ -240,10 +241,11 @@ class capture_output(object):
 
     """
 
+    startup_shutdown = threading.Lock()
+
     def __init__(self, output=None, capture_fd=False):
-        if output is None:
-            output = io.StringIO()
         self.output = output
+        self.output_stream = None
         self.old = None
         self.tee = None
         self.capture_fd = capture_fd
@@ -285,13 +287,45 @@ class capture_output(object):
         return FAIL
 
     def __enter__(self):
+        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+            # This situation *shouldn't* happen.  If it does, it is
+            # unlikely that the user can fix it (or even debug it).
+            # Instead they should report it back to us.
+            #
+            # Breadcrumbs:
+            #
+            #   - The last time we hit this [5/2025], it was because we
+            #     were using capture_output in a solver's __del__.  This
+            #     led to the GC deleting the solver while another solver
+            #     was trying to start up / run (so the other solver held
+            #     the lock, but the GC interrupted that thread and
+            #     wouldn't let go).
+            raise DeveloperError("Deadlock starting capture_output")
+        try:
+            return self._enter_impl()
+        finally:
+            capture_output.startup_shutdown.release()
+
+    def __exit__(self, et, ev, tb):
+        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+            # See comments & breadcrumbs in __enter__() above.
+            raise DeveloperError("Deadlock closing capture_output")
+        try:
+            return self._exit_impl(et, ev, tb)
+        finally:
+            capture_output.startup_shutdown.release()
+
+    def _enter_impl(self):
         self.old = (sys.stdout, sys.stderr)
         old_fd = []
         for stream in self.old:
-            stream.flush()
             try:
-                old_fd.append(stream.fileno())
-            except (AttributeError, OSError):
+                stream.flush()
+                try:
+                    old_fd.append(stream.fileno())
+                except (AttributeError, OSError):
+                    old_fd.append(None)
+            except (ValueError, OSError):
                 old_fd.append(None)
         try:
             # We have an issue where we are (very aggressively)
@@ -325,6 +359,8 @@ class capture_output(object):
 
             if isinstance(self.output, str):
                 self.output_stream = self._enter_context(open(self.output, 'w'))
+            elif self.output is None:
+                self.output_stream = io.StringIO()
             else:
                 self.output_stream = self.output
             if isinstance(self.output, TeeStream):
@@ -399,26 +435,28 @@ class capture_output(object):
             buf = buf[0]
         return buf
 
-    def __exit__(self, et, ev, tb):
+    def _exit_impl(self, et, ev, tb):
         # Check that we were nested correctly
         FAIL = []
-        if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
-            FAIL.append(
-                'Captured output (%s) does not match sys.stdout (%s).'
-                % (self.tee._stdout, sys.stdout)
-            )
-        if self.tee._stderr is not None and self.tee.STDERR is not sys.stderr:
-            FAIL.append(
-                'Captured output (%s) does not match sys.stderr (%s).'
-                % (self.tee._stdout, sys.stdout)
-            )
+        if self.tee is not None:
+            if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
+                FAIL.append(
+                    'Captured output (%s) does not match sys.stdout (%s).'
+                    % (self.tee._stdout, sys.stdout)
+                )
+            if self.tee._stderr is not None and self.tee.STDERR is not sys.stderr:
+                FAIL.append(
+                    'Captured output (%s) does not match sys.stderr (%s).'
+                    % (self.tee._stdout, sys.stdout)
+                )
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
         #  - Close any opened files
         FAIL.extend(self._exit_context_stack(et, ev, tb))
-        sys.stdout, sys.stderr = self.old
-        self.old = None
+        if self.old is not None:
+            sys.stdout, sys.stderr = self.old
+            self.old = None
         self.tee = None
         self.output_stream = None
         if FAIL:
@@ -667,15 +705,18 @@ class TeeStream(object):
 
         # Join all stream processing threads
         _poll = _poll_interval
+        _timeout = 0.0
         FAIL = False
         while True:
             for th in self._threads:
                 th.join(_poll)
+                _timeout += _poll
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            _poll *= 2
-            if _poll_timeout <= _poll < 2 * _poll_timeout:
+            if _poll < _poll_timeout:
+                _poll *= 2.0
+            if _poll_timeout * 0.5 <= _poll < _poll_timeout:
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another, nor to deadlock for an
@@ -687,7 +728,7 @@ class TeeStream(object):
                     "Significant delay observed waiting to join reader "
                     "threads, possible output stream deadlock"
                 )
-            elif _poll >= _poll_timeout_deadlock:
+            elif _timeout > _poll_timeout_deadlock:
                 logger.error("TeeStream: deadlock observed joining reader threads")
                 # Defer raising the exception until after we have
                 # cleaned things up
@@ -713,7 +754,8 @@ class TeeStream(object):
         if not self._enter_count:
             raise RuntimeError("TeeStream: exiting a context that was not entered")
         self._enter_count -= 1
-        self.close(et is not None)
+        if not self._enter_count:
+            self.close(et is not None)
 
     def __del__(self):
         # Implement __del__ to guarantee that file descriptors are closed
@@ -785,19 +827,18 @@ class TeeStream(object):
             if _mswindows:
                 for handle in list(handles):
                     try:
-                        if handle.flush:
-                            flush = True
-                            handle.flush = False
                         pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)
                             handle.decoder_buffer += new_data
                             break
+                        elif handle.flush:
+                            break
                     except:
                         handles.remove(handle)
                         new_data = ''  # not None so the poll interval doesn't increase
-                if new_data is None and not flush:
+                if new_data is None and not handle.flush:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
                     time.sleep(_poll)
@@ -822,15 +863,14 @@ class TeeStream(object):
                 else:
                     for handle in handles:
                         if handle.flush:
-                            new_data = ''
                             break
                     else:
-                        new_data = None
                         continue
 
-                if handle.flush:
-                    flush = True
-                    handle.flush = False
+            if handle.flush:
+                new_data = ''
+                flush = True
+                handle.flush = False
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer
