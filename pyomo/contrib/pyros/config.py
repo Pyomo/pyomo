@@ -762,8 +762,8 @@ def pyros_config():
                 component to a value specifying the separation priority
                 for all constraints derived from the component.
                 A separation priority can be a numeric value or None.
-                Constraints for which no priorities are specified
-                assume a priority of 0.
+                A higher numeric value indicates a higher priority.
+                For all constraints, the default priority is 0.
                 (Inequality and equality) constraints with a
                 priority of None are excluded from
                 the separation problems and enforced subject to only
