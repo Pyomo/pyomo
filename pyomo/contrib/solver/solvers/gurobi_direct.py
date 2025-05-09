@@ -184,7 +184,7 @@ class GurobiSolverMixin:
             # this triggers the deferred import, and for the persistent
             # interface, may update the _available flag
             #
-            # Note that we set the _available flag on the *mode derived
+            # Note that we set the _available flag on the *most derived
             # class* and not on the instance, or on the base class.  That
             # allows different derived interfaces to have different
             # availability (e.g., persistent has a minimum version
