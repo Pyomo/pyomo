@@ -67,22 +67,13 @@ class Solution(MapContainer):
 
     def load(self, repn):
         # delete key from dictionary, call base class load, handle variable loading.
-        if "Variable" in repn:
-            tmp_ = repn["Variable"]
-            del repn["Variable"]
-            self.variable = tmp_
-        if "Constraint" in repn:
-            tmp_ = repn["Constraint"]
-            del repn["Constraint"]
-            self.constraint = tmp_
-        if "Problem" in repn:
-            tmp_ = repn["Problem"]
-            del repn["Problem"]
-            self.problem = tmp_
-        if "Objective" in repn:
-            tmp_ = repn["Objective"]
-            del repn["Objective"]
-            self.objective = tmp_
+        for field in ("Variable", "Constraint", "Problem", "Objective"):
+            if field in repn:
+                tmp_ = repn[field]
+                del repn[field]
+            if tmp_ == "No values":
+                tmp_ = {}
+            setattr(self, field.lower(), tmp_)
         MapContainer.load(self, repn)
 
     def pprint(self, ostream, option, from_list=False, prefix="", repn=None):
@@ -92,11 +83,10 @@ class Solution(MapContainer):
         # at a minimum an "id" element per sub-dictionary.
         #
         first = True
-        for key in self._order:
+        for key, item in self.items():
             if not key in repn or key == 'Problem':
                 continue
-            item = dict.__getitem__(self, key)
-            if not type(item.value) is dict:
+            if type(item.value) is not dict:
                 #
                 # Do a normal print
                 #
