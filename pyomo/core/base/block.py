@@ -2399,10 +2399,36 @@ class ScalarCustomBlockMixin(object):
                 break
 
 
+def _default_rule(model_options):
+    """
+    Default rule for custom blocks
+
+    Parameters
+    ----------
+    model_options : dict
+        Dictionary of options needed to construct the block model
+    """
+
+    def _rule(blk, *args):
+        try:
+            # Attempt to build the model
+            blk.build(*args, **model_options)
+
+        except AttributeError:
+            # build method is not implemented in the BlockData class
+            # Returning an empty Pyomo Block
+            pass
+
+    return _rule
+
+
 class CustomBlock(Block):
     """The base class used by instances of custom block components"""
 
     def __init__(self, *args, **kwargs):
+        model_options = kwargs.pop("options", {})
+        kwargs.setdefault("rule", _default_rule(model_options))
+
         if self._default_ctype is not None:
             kwargs.setdefault('ctype', self._default_ctype)
         Block.__init__(self, *args, **kwargs)
@@ -2431,7 +2457,20 @@ def declare_custom_block(name, new_ctype=None):
     >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
     ...    # custom block data class
-    ...    pass
+    ...    # CustomBlock returns an empty block if `build` method is not implemented
+    ...    def build(self, *args, option_1, option_2):
+    ...        # args contains the index (for indexed blocks)
+    ...        # option_1, option_2, ... are additional arguments
+    ...        self.x = Var()
+    ...        self.cost = Param(initialize=option_1)
+
+    Usage:
+    >>> m = ConcreteModel()
+    >>> m.blk = FooBlock([1, 2], options={"option_1": 1, "option_2": 2})
+
+    Specify `rule` argument to ignore the default rule argument.
+    >>> m = ConcreteModel()
+    >>> m.blk = FooBlock([1, 2], rule=my_custom_block_rule)
     """
 
     def block_data_decorator(block_data):
