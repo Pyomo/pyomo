@@ -433,10 +433,7 @@ class GurobiPersistent(
         else:
             self._labeler = NumericLabeler('x')
 
-        if model.name is not None:
-            self._solver_model = gurobipy.Model(model.name, env=self.env())
-        else:
-            self._solver_model = gurobipy.Model(env=self.env())
+        self._solver_model = gurobipy.Model(name=model.name or '', env=self.env())
 
         self.add_block(model)
         if self._objective is None:
