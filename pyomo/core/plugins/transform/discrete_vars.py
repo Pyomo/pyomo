@@ -177,14 +177,11 @@ class RelaxIntegerVars(Transformation):
                 )
 
         return reverse_token
-    
 
     def _relax_block(self, block, config, reverse_dict):
         self._relax_vars_from_block(block, config, reverse_dict)
-        
-        for b in block.component_data_objects(
-            Block, active=None, descend_into=True
-        ):
+
+        for b in block.component_data_objects(Block, active=None, descend_into=True):
             if not b.active:
                 if config.transform_deactivated_blocks:
                     deprecation_warning(
@@ -196,22 +193,16 @@ class RelaxIntegerVars(Transformation):
                     continue
             self._relax_vars_from_block(b, config, reverse_dict)
 
-
     def _relax_vars_from_block(self, block, config, reverse_dict):
         if config.var_collector is VarCollector.FromVarComponents:
-            model_vars = block.component_data_objects(
-                Var, descend_into=False
-            )
+            model_vars = block.component_data_objects(Var, descend_into=False)
         else:
             model_vars = get_vars_from_components(
-                block,
-                ctype=(Constraint, Objective),
-                descend_into=False,
+                block, ctype=(Constraint, Objective), descend_into=False
             )
         for var in model_vars:
             if id(var) not in reverse_dict:
                 self._relax_var(var, reverse_dict)
-
 
     def _relax_var(self, v, reverse_dict):
         var_datas = v.values() if v.is_indexed() else (v,)
