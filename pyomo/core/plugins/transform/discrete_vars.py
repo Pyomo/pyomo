@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 from pyomo.common import deprecated
-from pyomo.common.config import ConfigDict, ConfigValue, In
+from pyomo.common.config import ConfigDict, ConfigValue, In, IsInstance
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.base import (
     Transformation,
@@ -60,6 +60,7 @@ class RelaxIntegerVars(Transformation):
         'reverse',
         ConfigValue(
             default=None,
+            domain=IsInstance(ReverseTransformationToken),
             description="The token returned by a (forward) call to this "
             "transformation, if you wish to reverse the transformation.",
             doc="""
