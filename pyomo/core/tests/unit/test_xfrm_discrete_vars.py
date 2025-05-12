@@ -26,6 +26,7 @@ from pyomo.environ import (
     Reals,
     Block,
     Integers,
+    value
 )
 from pyomo.opt import check_available_solvers
 
@@ -214,6 +215,46 @@ class Test(unittest.TestCase):
         self.assertEqual(m.y.lb, 0)
         self.assertEqual(m.y.ub, 1)
 
+    def test_relax_integer_vars_fixed_vars(self):
+        m = _make_hierarchical_model()
+        m.y.fix(0)
+        m.b.y.fix(1)
+        reverse = TransformationFactory('core.relax_integer_vars').apply_to(m)
+
+        # change the domain, but don't unfix
+        self.assertIs(m.y.domain, Reals)
+        self.assertEqual(m.y.lb, 0)
+        self.assertEqual(m.y.ub, 1)
+        self.assertEqual(value(m.y), 0)
+        self.assertTrue(m.y.fixed)
+        
+        self.assertIs(m.b.y.domain, Reals)
+        self.assertEqual(m.b.y.lb, 0)
+        self.assertEqual(m.b.y.ub, 1)
+        self.assertEqual(value(m.b.y), 1)
+        self.assertTrue(m.b.y.fixed)
+
+        # transformed
+        for i in [1, 2]:
+            self.assertIs(m.b.x[i].domain, Reals)
+            self.assertEqual(m.b.x[i].lb, 2)
+            self.assertEqual(m.b.x[i].ub, 45)
+
+        # reverse and make sure fixed guys are still fixed
+        TransformationFactory('core.relax_integer_vars').apply_to(m,
+                                                                  reverse=reverse)
+        self.assertIs(m.y.domain, Binary)
+        self.assertEqual(m.y.lb, 0)
+        self.assertEqual(m.y.ub, 1)
+        self.assertEqual(value(m.y), 0)
+        self.assertTrue(m.y.fixed)
+        
+        self.assertIs(m.b.y.domain, Binary)
+        self.assertEqual(m.b.y.lb, 0)
+        self.assertEqual(m.b.y.ub, 1)
+        self.assertEqual(value(m.b.y), 1)
+        self.assertTrue(m.b.y.fixed)        
+        
     @unittest.skipIf(len(solvers) == 0, "LP/MIP solver not available")
     def test_solve_fix_transform(self):
         s = SolverFactory(solvers[0])
