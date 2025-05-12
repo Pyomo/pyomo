@@ -228,9 +228,6 @@ class TestTeeStream(unittest.TestCase):
                 os.write(t.STDOUT.fileno(), bytes_ref[:-1])
         self.assertEqual(
             log.getvalue(),
-            "Stream handle closed with a partial line in the output buffer "
-            "that was not emitted to the output stream(s):\n"
-            "\t'Hello, '\n"
             "Stream handle closed with un-decoded characters in the decoder "
             "buffer that was not emitted to the output stream(s):\n"
             "\tb'\\xc2'\n",
@@ -280,6 +277,26 @@ class TestTeeStream(unittest.TestCase):
             f"Incomplete write to output stream <.*fake_stream @ {_id}>."
             r"\nThe following was left in the output buffer:\n    'i\\n'\n$",
         )
+
+    def test_context_mismatch(self):
+        with self.assertRaisesRegex(
+            RuntimeError, "TeeStream: exiting a context that was not entered"
+        ):
+            with tee.TeeStream() as t:
+                t.__exit__(None, None, None)
+
+    def test_handle_prematurely_closed(self):
+        # Close the TextIO object
+        with LoggingIntercept() as LOG:
+            with tee.TeeStream() as t:
+                t.STDOUT.close()
+        self.assertEqual(LOG.getvalue(), "")
+
+        # Close the underlying file descriptor
+        with LoggingIntercept() as LOG:
+            with tee.TeeStream() as t:
+                os.close(t.STDOUT.fileno())
+        self.assertEqual(LOG.getvalue(), "")
 
 
 class TestCapture(unittest.TestCase):
@@ -506,19 +523,19 @@ class TestCapture(unittest.TestCase):
         sys.stderr = os.fdopen(os.dup(2), closefd=True)
         with sys.stdout, sys.stderr:
             with T:
-                self.assertEqual(len(T.context_stack), 7)
+                self.assertEqual(len(T.context_stack), 8)
         # out & err point to fd 1 and 2
         sys.stdout = os.fdopen(1, closefd=False)
         sys.stderr = os.fdopen(2, closefd=False)
         with sys.stdout, sys.stderr:
             with T:
-                self.assertEqual(len(T.context_stack), 5)
+                self.assertEqual(len(T.context_stack), 6)
         # out & err have no fileno
         sys.stdout = StringIO()
         sys.stderr = StringIO()
         with sys.stdout, sys.stderr:
             with T:
-                self.assertEqual(len(T.context_stack), 5)
+                self.assertEqual(len(T.context_stack), 6)
 
     def test_capture_output_stack_error(self):
         OUT1 = StringIO()
@@ -531,11 +548,12 @@ class TestCapture(unittest.TestCase):
             b = tee.capture_output(OUT2)
             b.setup()
             with self.assertRaisesRegex(
-                RuntimeError, 'Captured output does not match sys.stdout'
+                RuntimeError, 'Captured output .* does not match sys.stdout'
             ):
                 a.reset()
-            b.tee = None
         finally:
+            # Clear b so that it doesn't call __exit__ and corrupt stdout/stderr
+            b.tee = None
             os.dup2(old_fd[0], 1)
             os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old
@@ -615,7 +633,6 @@ class TestCapture(unittest.TestCase):
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
-
         try:
             with LoggingIntercept() as LOG, self.assertRaisesRegex(
                 RuntimeError, 'deadlock'
@@ -628,6 +645,20 @@ class TestCapture(unittest.TestCase):
                 'TeeStream: deadlock observed joining reader threads\n',
                 LOG.getvalue(),
             )
+        finally:
+            tee._poll_timeout, tee._poll_timeout_deadlock = _save
+
+        _save = tee._poll_timeout, tee._poll_timeout_deadlock
+        tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
+        tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
+        try:
+            with LoggingIntercept() as LOG, self.assertRaisesRegex(
+                ValueError, 'testing'
+            ):
+                with tee.TeeStream(MockStream()) as t:
+                    t.STDERR.write('*')
+                    raise ValueError('testing')
+            self.assertEqual("", LOG.getvalue())
         finally:
             tee._poll_timeout, tee._poll_timeout_deadlock = _save
 
