@@ -98,12 +98,8 @@ class RelaxIntegerVars(Transformation):
         'transform_deactivated_blocks',
         ConfigValue(
             default=True,
-            description="Whether or not to search for Var components to relax on "
-            "deactivated Blocks. True by default",
-            doc="""
-            This option controls whether the transformation relaxes Var components on
-            deactivated Blocks or not. It is True by default.
-            """,
+            description="[DEPRECATED]: Whether or not to search for Var components to "
+            "relax on deactivated Blocks. True by default",
         ),
     )
     CONFIG.declare(
@@ -142,7 +138,6 @@ class RelaxIntegerVars(Transformation):
             model.del_component("_relaxed_integer_vars")
             return
 
-        active = None if config.transform_deactivated_blocks else True
         targets = (model,) if config.targets is None else config.targets
 
         if config.reverse is None:
@@ -172,19 +167,7 @@ class RelaxIntegerVars(Transformation):
             if isinstance(t, Block):
                 blocks = t.values() if t.is_indexed() else (t,)
                 for block in blocks:
-                    if config.var_collector is VarCollector.FromVarComponents:
-                        model_vars = block.component_data_objects(
-                            Var, active=active, descend_into=True
-                        )
-                    else:
-                        model_vars = get_vars_from_components(
-                            block,
-                            ctype=(Constraint, Objective),
-                            active=active,
-                            descend_into=True,
-                        )
-                    for var in model_vars:
-                        self._relax_var(var, reverse_dict)
+                    self._relax_block(block, config, reverse_dict)
             elif t.ctype is Var:
                 self._relax_var(t, reverse_dict)
             else:
@@ -194,6 +177,41 @@ class RelaxIntegerVars(Transformation):
                 )
 
         return reverse_token
+    
+
+    def _relax_block(self, block, config, reverse_dict):
+        self._relax_vars_from_block(block, config, reverse_dict)
+        
+        for b in block.component_data_objects(
+            Block, active=None, descend_into=True
+        ):
+            if not b.active:
+                if config.transform_deactivated_blocks:
+                    deprecation_warning(
+                        "The `transform_deactivated_blocks` arguments is deprecated. "
+                        "Either specify deactivated Blocks as targets to activate them "
+                        "if transforming them is the desired behavior."
+                    )
+                else:
+                    continue
+            self._relax_vars_from_block(b, config, reverse_dict)
+
+
+    def _relax_vars_from_block(self, block, config, reverse_dict):
+        if config.var_collector is VarCollector.FromVarComponents:
+            model_vars = block.component_data_objects(
+                Var, descend_into=False
+            )
+        else:
+            model_vars = get_vars_from_components(
+                block,
+                ctype=(Constraint, Objective),
+                descend_into=False,
+            )
+        for var in model_vars:
+            if id(var) not in reverse_dict:
+                self._relax_var(var, reverse_dict)
+
 
     def _relax_var(self, v, reverse_dict):
         var_datas = v.values() if v.is_indexed() else (v,)
