@@ -86,11 +86,11 @@ class RelaxIntegerVars(Transformation):
             doc="""
             This specifies the method for collecting the Var components to relax.
             The default, VarCollector.FromVarComponents, assumes that all relevant
-            Vars are on the active tree passed to the transformation. If this is
-            true, then this is the most performant option. However, in more complex
-            cases where some Vars may not be in the active tree, specify
-            VarCollector.FromExpressions to relax all Vars that appear in expressions
-            in the active tree.
+            Vars are on the active tree. If this is true, then this is the most
+            performant option. However, in more complex cases where some Vars may not
+            be in the active tree (e.g. some are on deactivated Blocks or come from
+            other models), specify VarCollector.FromExpressions to relax all Vars that
+            appear in expressions in the active tree.
             """,
         ),
     )
