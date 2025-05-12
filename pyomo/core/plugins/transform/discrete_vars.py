@@ -187,7 +187,8 @@ class RelaxIntegerVars(Transformation):
                     deprecation_warning(
                         "The `transform_deactivated_blocks` arguments is deprecated. "
                         "Either specify deactivated Blocks as targets to activate them "
-                        "if transforming them is the desired behavior."
+                        "if transforming them is the desired behavior.",
+                        version='6.9.3.dev0',
                     )
                 else:
                     continue
