@@ -86,7 +86,7 @@ class TestGurobiMINLPWriter(CommonTest):
         quad_constrs = grb_model.getQConstrs()
         self.assertEqual(len(quad_constrs), 1)
         nonlinear_constrs = grb_model.getGenConstrs()
-        self.assertEqual(nonlinear_constrs, 2)
+        self.assertEqual(len(nonlinear_constrs), 2)
 
         grb_model.optimize()
 

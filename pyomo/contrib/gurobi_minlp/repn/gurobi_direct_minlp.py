@@ -179,7 +179,11 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
 
 
 def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
-    return (data[0], visitor._eval_expr_visitor.visit(node, data[1]))
+    """
+    Calls expression evaluation visitor on nodes that have an invariant
+    expression type in the return.
+    """
+    return (data[0], visitor._eval_expr_visitor.visit(node, (data[1],)))
 
 
 def _handle_node_with_eval_expr_visitor_unknown(visitor, node, *data):
@@ -308,6 +312,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
+        print(node.__class__)
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
