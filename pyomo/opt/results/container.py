@@ -50,6 +50,9 @@ class UndefinedData(object):
         # Prevent deepcopy from duplicating this object
         return self
 
+    def __reduce__(self):
+        return self.__class__, (self.name,)
+
     def __str__(self):
         return f"<{self.name}>"
 

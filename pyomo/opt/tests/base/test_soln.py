@@ -25,7 +25,7 @@ from pyomo.common.dependencies import yaml, yaml_available
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.results.container import MapContainer, ListContainer, UndefinedData
+import pyomo.opt.results.container as container
 from pyomo.opt import SolverResults
 
 currdir = this_file_dir()
@@ -545,19 +545,19 @@ Solution:
 
 class TestContainer(unittest.TestCase):
     def test_declare_and_str(self):
-        class LocalContainer(MapContainer):
+        class LocalContainer(container.MapContainer):
             def __init__(self, **kwds):
                 super().__init__(**kwds)
                 self.declare('a')
                 self.declare('b', value=2)
                 self.declare('c', value=3)
 
-        d = MapContainer()
+        d = container.MapContainer()
         d.declare('f')
         d.declare('g')
         d.declare('h')
-        d.declare('i', value=ListContainer(UndefinedData))
-        d.declare('j', value=ListContainer(LocalContainer), active=False)
+        d.declare('i', value=container.ListContainer(container.UndefinedData))
+        d.declare('j', value=container.ListContainer(LocalContainer), active=False)
         self.assertEqual(list(d.keys()), ['F', 'G', 'H', 'I', 'J'])
 
         self.assertEqual(
@@ -603,6 +603,17 @@ J:
 """,
             str(d.j),
         )
+
+    def test_pickle(self):
+        d = container.MapContainer()
+        d.declare('a', value=container.ignore)
+        d.declare('b', value=container.undefined)
+        d.declare('c', value=42)
+        e = pickle.loads(pickle.dumps(d))
+        self.assertEqual(list(d.keys()), list(e.keys()))
+        self.assertIs(d.a, e.a)
+        self.assertIs(d.b, e.b)
+        self.assertEqual(d.c, e.c)
 
 
 if __name__ == "__main__":
