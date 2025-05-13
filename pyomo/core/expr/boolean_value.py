@@ -30,7 +30,7 @@ def _generate_logical_proposition(etype, _self, _other):
 
 
 def as_boolean(obj):
-    """A function that converts its argument to a Pyomo Boolean (logiacl) object.
+    """A function that converts its argument to a Pyomo Boolean (logical) object.
 
     If `obj` is a Pyomo logical value (usually a BooleanValue subclass),
     then `obj` is returned.  If `obj` is in `native_logical_types`, then

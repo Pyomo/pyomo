@@ -267,7 +267,7 @@ def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None, binary_varlist=
             return []
         else:
             # Trivially infeasible: we will return an infeasible
-            # constant expression, because is we are nested within
+            # constant expression, because if we are nested within
             # something like a Disjunct, the model may still be feasible
             # (only this disjunct is not feasible).
             return [InequalityExpression((1, 0), False)]
