@@ -129,16 +129,16 @@ class TestGurobiMINLPWriter(CommonTest):
         ## general nonlinear constraints
         obj_cons = nonlinear_constrs[0]
         res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(obj_cons)
-        self.assertEqual(len(opcode), 2) # two nodes in the expression tree
+        self.assertEqual(len(opcode), 2)  # two nodes in the expression tree
         self.assertEqual(opcode[0], GRB.OPCODE_LOG)
         # log has no data
-        self.assertEqual(parent[0], -1) # it's the root
+        self.assertEqual(parent[0], -1)  # it's the root
         self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
         self.assertIs(data[1], x1)
         self.assertEqual(parent[1], 0)
-        
+
         # we can check that res_var is the objective
-        self.assertEqual(grb_model.ModelSense, 1) # minimizing
+        self.assertEqual(grb_model.ModelSense, 1)  # minimizing
         obj = grb_model.getObjective()
         self.assertEqual(obj.size(), 1)
         self.assertEqual(obj.getCoeff(0), 1)
@@ -152,11 +152,11 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(opcode), 6)
         self.assertEqual(opcode[0], GRB.OPCODE_PLUS)
         # plus has no data
-        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(parent[0], -1)  # root
         self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
         self.assertIs(data[1], x3)
         self.assertEqual(parent[1], 0)
-        self.assertEqual(opcode[2], GRB.OPCODE_UMINUS) # negation
+        self.assertEqual(opcode[2], GRB.OPCODE_UMINUS)  # negation
         # negation has no data
         self.assertEqual(parent[2], 0)
         self.assertEqual(opcode[3], GRB.OPCODE_POW)

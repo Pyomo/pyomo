@@ -219,7 +219,6 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(aux_var, aux)
         return opcode, data, parent
 
-
     def test_write_nonquadratic_power_expression_var_const(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**3 >= 3)
