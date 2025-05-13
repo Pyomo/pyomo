@@ -32,6 +32,8 @@ from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
 from pytest import set_trace
 
 gurobipy, gurobipy_available = attempt_import('gurobipy', minimum_version='12.0.0')
+if gurobipy_available:
+    from gurobipy import GRB
 
 
 def make_model():
@@ -53,6 +55,7 @@ def make_model():
     return m
 
 
+@unittest.skipUnless(gurobipy_available, "Gurobipy 12 is not available")
 class TestGurobiMINLPWriter(CommonTest):
     def test_small_model(self):
         grb_model = gurobipy.Model()
@@ -88,9 +91,58 @@ class TestGurobiMINLPWriter(CommonTest):
         nonlinear_constrs = grb_model.getGenConstrs()
         self.assertEqual(len(nonlinear_constrs), 2)
 
-        grb_model.optimize()
+        ## linear constraints
+        c = lin_constrs[0]
+        c_expr = grb_model.getRow(c)
+        # TODO
 
-        # TODO: assert something! :P
+        c3 = lin_constrs[1]
+        c3_expr = grb_model.getRow(c3)
+        self.assertEqual(c3_expr.size(), 3)
+        self.assertIs(c3_expr.getVar(0), y2)
+        self.assertEqual(c3_expr.getCoeff(0), 1)
+        self.assertIs(c3_expr.getVar(1), y3)
+        self.assertEqual(c3_expr.getCoeff(1), 1)
+        self.assertIs(c3_expr.getVar(2), z1)
+        self.assertEqual(c3_expr.getCoeff(2), 5)
+        self.assertEqual(c3_expr.getConstant(), 0)
+        self.assertEqual(c3.RHS, 17)
+        self.assertEqual(c3.Sense, '>')
+
+        ## quadratic constraint
+        c2 = quad_constrs[0]
+        c2_expr = grb_model.getQCRow(c2)
+        lin_expr = c2_expr.getLinExpr()
+        self.assertEqual(lin_expr.size(), 0)
+        self.assertEqual(c2.QCRHS, 7)
+        self.assertEqual(c2.QCSense, '<')
+        self.assertEqual(c2_expr.size(), 1)
+        self.assertIs(c2_expr.getVar1(0), y1)
+        self.assertIs(c2_expr.getVar2(0), y1)
+        self.assertEqual(c2_expr.getCoeff(0), 1)
+
+        ## general nonlinear constraints
+        obj_cons = nonlinear_constrs[0]
+        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(obj_cons)
+        self.assertEqual(len(opcode), 2) # two nodes in the expression tree
+        self.assertEqual(opcode[0], GRB.OPCODE_LOG)
+        # log has no data
+        self.assertEqual(parent[0], -1) # it's the root
+        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[1], x1)
+        self.assertEqual(parent[1], 0)
+        
+        # we can check that res_var is the objective
+        self.assertEqual(grb_model.ModelSense, 1) # minimizing
+        obj = grb_model.getObjective()
+        self.assertEqual(obj.size(), 1)
+        self.assertEqual(obj.getCoeff(0), 1)
+        self.assertIs(obj.getVar(0), res_var)
+
+        c1 = nonlinear_constrs[1]
+        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c1)
+
+        set_trace()
 
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
