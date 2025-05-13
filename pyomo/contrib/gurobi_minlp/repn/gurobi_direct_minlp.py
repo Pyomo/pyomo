@@ -478,6 +478,7 @@ class GurobiMINLPWriter(object):
                 if cons.ub is not None:
                     grb_model.addConstr(cons.ub >= expr)
 
+        grb_model.update()
         return grb_model, visitor.var_map
 
 
