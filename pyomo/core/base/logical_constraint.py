@@ -112,17 +112,9 @@ class LogicalConstraintData(ActiveComponentData):
         #
         # Ignore an 'empty' constraint
         #
-        if expr.__class__ is type:
-            if expr is LogicalConstraint.Skip:
-                del self.parent_component()[self.index()]
-                return
-            elif expr is LogicalConstraint.Infeasible:
-                self._expr = BooleanConstant(False)
-                return
-            elif expr is LogicalConstraint.Feasible:
-                self._expr = BooleanConstant(True)
-                return
-            # else: fall through to the ValueError below
+        if expr is LogicalConstraint.Skip:
+            del self.parent_component()[self.index()]
+            return
 
         elif expr.__class__ in native_logical_types:
             self._expr = as_boolean(expr)
@@ -218,11 +210,8 @@ class LogicalConstraint(ActiveIndexedComponent):
 
     _ComponentDataClass = LogicalConstraintData
 
-    class Infeasible(object):
-        pass
-
-    class Feasible(object):
-        pass
+    Infeasible = BooleanConstant(False, 'Infeasible')
+    Feasible = BooleanConstant(True, 'Feasible')
 
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
