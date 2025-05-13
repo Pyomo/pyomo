@@ -39,6 +39,7 @@ from pyomo.core.expr import (
     RangedExpression,
 )
 from pyomo.core.expr.expr_common import _type_check_exception_arg
+from pyomo.core.expr.relational_expr import TrivialRelationalExpression
 from pyomo.core.expr.template_expr import templatize_constraint
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -67,6 +68,7 @@ _known_relational_expression_types = {
     EqualityExpression,
     InequalityExpression,
     RangedExpression,
+    TrivialRelationalExpression,
 }
 _strict_relational_exprs = {True, (False, True), (True, False), (True, True)}
 _rule_returned_none_error = """Constraint '%s': rule returned None.
@@ -443,24 +445,9 @@ class ConstraintData(ActiveComponentData):
         #
         # Ignore an 'empty' constraint
         #
-        elif expr.__class__ is type:
-            if expr is Constraint.Skip:
-                del self.parent_component()[self.index()]
-                return
-            elif expr is Constraint.Infeasible:
-                # Note that an inequality is sufficient to induce
-                # infeasibility and is simpler to relax (in the Big-M
-                # sense) than an equality.
-                self._expr = InequalityExpression((1, 0), False)
-                return
-            elif expr is Constraint.Feasible:
-                # Note that we do not want to provide a trivial equality
-                # constraint as that can confuse solvers like Ipopt into
-                # believing that the model has fewer degrees of freedom
-                # than it actually has.
-                self._expr = InequalityExpression((0, 0), False)
-                return
-            # else: fall through to the ValueError below
+        if expr is Constraint.Skip:
+            del self.parent_component()[self.index()]
+            return
 
         elif expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
@@ -620,11 +607,8 @@ class Constraint(ActiveIndexedComponent):
 
     _ComponentDataClass = ConstraintData
 
-    class Infeasible(object):
-        pass
-
-    class Feasible(object):
-        pass
+    Infeasible = TrivialRelationalExpression('Infeasible', (1, 0))
+    Feasible = TrivialRelationalExpression('Feasible', (0, 0))
 
     NoConstraint = ActiveIndexedComponent.Skip
     Violated = Infeasible
