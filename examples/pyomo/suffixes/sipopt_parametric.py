@@ -21,16 +21,14 @@
 # solver (distributed with Ipopt) is in the current search
 # path for executables on this system.
 
-import pyomo.environ
-from pyomo.core import *
-from pyomo.opt import SolverFactory
+import pyomo.environ as pyo
 
 ### Create the ipopt_sens solver plugin using the ASL interface
 solver = 'ipopt_sens'
 solver_io = 'nl'
 stream_solver = True  # True prints solver output to screen
 keepfiles = False  # True prints intermediate file names (.nl,.sol,...)
-opt = SolverFactory(solver, solver_io=solver_io)
+opt = pyo.SolverFactory(solver, solver_io=solver_io)
 ###
 
 if opt is None:
@@ -46,30 +44,30 @@ nominal_eta2 = 1.0
 perturbed_eta2 = 1.0
 
 ### Create the model
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 # variables
-model.x1 = Var(initialize=0.15, within=NonNegativeReals)
-model.x2 = Var(initialize=0.15, within=NonNegativeReals)
-model.x3 = Var(initialize=0.0, within=NonNegativeReals)
+model.x1 = pyo.Var(initialize=0.15, within=pyo.NonNegativeReals)
+model.x2 = pyo.Var(initialize=0.15, within=pyo.NonNegativeReals)
+model.x3 = pyo.Var(initialize=0.0, within=pyo.NonNegativeReals)
 # parameters
-model.eta1 = Var()
-model.eta2 = Var()
+model.eta1 = pyo.Var()
+model.eta2 = pyo.Var()
 # constraints + objective
-model.const1 = Constraint(
+model.const1 = pyo.Constraint(
     expr=6 * model.x1 + 3 * model.x2 + 2 * model.x3 - model.eta1 == 0
 )
-model.const2 = Constraint(expr=model.eta2 * model.x1 + model.x2 - model.x3 - 1 == 0)
-model.cost = Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
-model.consteta1 = Constraint(expr=model.eta1 == nominal_eta1)
-model.consteta2 = Constraint(expr=model.eta2 == nominal_eta2)
+model.const2 = pyo.Constraint(expr=model.eta2 * model.x1 + model.x2 - model.x3 - 1 == 0)
+model.cost = pyo.Objective(expr=model.x1**2 + model.x2**2 + model.x3**2)
+model.consteta1 = pyo.Constraint(expr=model.eta1 == nominal_eta1)
+model.consteta2 = pyo.Constraint(expr=model.eta2 == nominal_eta2)
 ###
 
 ### declare suffixes
-model.sens_state_0 = Suffix(direction=Suffix.EXPORT)
-model.sens_state_1 = Suffix(direction=Suffix.EXPORT)
-model.sens_state_value_1 = Suffix(direction=Suffix.EXPORT)
-model.sens_sol_state_1 = Suffix(direction=Suffix.IMPORT)
-model.sens_init_constr = Suffix(direction=Suffix.EXPORT)
+model.sens_state_0 = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.sens_state_1 = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.sens_state_value_1 = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+model.sens_sol_state_1 = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+model.sens_init_constr = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 ###
 
 ### set sIPOPT data
@@ -91,5 +89,5 @@ results = opt.solve(model, keepfiles=keepfiles, tee=stream_solver)
 ### Print Solution
 print("Nominal and perturbed solution:")
 for v in [model.x1, model.x2, model.x3, model.eta1, model.eta2]:
-    print("%5s %14g %14g" % (v, value(v), model.sens_sol_state_1[v]))
+    print("%5s %14g %14g" % (v, pyo.value(v), model.sens_sol_state_1[v]))
 ###

@@ -9,33 +9,33 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.places = Set()
-model.routes = Set(within=model.places * model.places)
-model.supply = Param(model.places)
-model.demand = Param(model.places)
-model.cost = Param(model.routes)
-model.minimum = Param(model.routes)
-model.maximum = Param(model.routes)
-model.amount = Var(model.routes, within=NonNegativeReals)
-model.excess = Var(model.places, within=NonNegativeReals)
+model.places = pyo.Set()
+model.routes = pyo.Set(within=model.places * model.places)
+model.supply = pyo.Param(model.places)
+model.demand = pyo.Param(model.places)
+model.cost = pyo.Param(model.routes)
+model.minimum = pyo.Param(model.routes)
+model.maximum = pyo.Param(model.routes)
+model.amount = pyo.Var(model.routes, within=pyo.NonNegativeReals)
+model.excess = pyo.Var(model.places, within=pyo.NonNegativeReals)
 
 
 def costRule(model):
     return sum(model.cost[n] * model.amount[n] for n in model.routes)
 
 
-model.costTotal = Objective(rule=costRule)
+model.costTotal = pyo.Objective(rule=costRule)
 
 
 def loadRule(model, i, j):
     return (model.minimum[i, j], model.amount[i, j], model.maximum[i, j])
 
 
-model.loadOnRoad = Constraint(model.routes, rule=loadRule)
+model.loadOnRoad = pyo.Constraint(model.routes, rule=loadRule)
 
 
 def supplyDemandRule(model, nn):
@@ -48,4 +48,4 @@ def supplyDemandRule(model, nn):
     return input == output
 
 
-model.supplyDemand = Constraint(model.places, rule=supplyDemandRule)
+model.supplyDemand = pyo.Constraint(model.places, rule=supplyDemandRule)
