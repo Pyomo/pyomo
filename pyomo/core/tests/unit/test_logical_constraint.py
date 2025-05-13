@@ -293,17 +293,17 @@ Constructing component 'q' from data=None failed:
         self.assertExpressionsStructurallyEqual(m.p.expr, BooleanConstant(False))
 
         with self.assertRaisesRegex(
-            ValueError, "Assigning improper value to LogicalConstraint 'p':"
+            ValueError, "Assigning improper value to LogicalConstraint 'p'."
         ):
             m.p = LogicalConstraint
 
         with self.assertRaisesRegex(
-            ValueError, "Assigning improper value to LogicalConstraint 'p':"
+            ValueError, "Assigning improper value to LogicalConstraint 'p'."
         ):
             m.p = {}
 
         with self.assertRaisesRegex(
-            ValueError, "Assigning improper value to LogicalConstraint 'p':"
+            ValueError, "Assigning improper value to LogicalConstraint 'p'."
         ):
             m.p = Param(mutable=True) + 1
 
