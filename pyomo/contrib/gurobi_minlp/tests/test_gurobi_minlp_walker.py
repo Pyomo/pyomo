@@ -199,9 +199,26 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(expr.size(), 1)
         lin_expr = expr.getLinExpr()
         self.assertEqual(lin_expr.size(), 0)
+        self.assertEqual(lin_expr.getConstant(), 0)
         self.assertIs(expr.getVar1(0), x1)
         self.assertIs(expr.getVar2(0), x1)
         self.assertEqual(expr.getCoeff(0), 1.0)
+
+    def _get_nl_expr_tree(self, visitor, expr):
+        # This is a bit hacky, but the only way that I know to get the expression tree
+        # publicly is from a general nonlinear constraint. So we can create it, and
+        # then pull out the expression we just used to test it
+        grb_model = visitor.grb_model
+        aux = grb_model.addVar()
+        grb_model.addConstr(aux == expr)
+        grb_model.update()
+        constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(constrs), 1)
+
+        aux_var, opcode, data, parent = grb_model.getGenConstrNLAdv(constrs[0])
+        self.assertIs(aux_var, aux)
+        return opcode, data, parent
+
 
     def test_write_nonquadratic_power_expression_var_const(self):
         m = self.get_model()
@@ -212,11 +229,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # This is general nonlinear
         x1 = visitor.var_map[id(m.x1)]
 
-        # TODO: It looks like this representation gets printed to the LP file,
-        # so I can get it publicly that way... But I need to figure out how
-        # to intercept writing to a file because they don't let me give the
-        # string. It's also the transpose of this, but whatever...
-        opcode, data, parent = expr._to_array_repr()
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         # three nodes
         self.assertEqual(len(opcode), 3)
@@ -249,7 +262,7 @@ class TestGurobiMINLPWalker(CommonTest):
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
 
-        opcode, data, parent = expr._to_array_repr()
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         # three nodes
         self.assertEqual(len(opcode), 3)
@@ -278,7 +291,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
         x2 = visitor.var_map[id(m.x2)]
 
-        opcode, data, parent = expr._to_array_repr()
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         # three nodes
         self.assertEqual(len(opcode), 3)
@@ -355,7 +368,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # expr is nonlinear
         x2 = visitor.var_map[id(m.x2)]
 
-        opcode, data, parent = expr._to_array_repr()
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         # three nodes
         self.assertEqual(len(opcode), 3)
@@ -414,8 +427,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # expr is nonlinear
         x1 = visitor.var_map[id(m.x1)]
 
-        opcode, data, parent = expr._to_array_repr()
-        print(expr._to_array_repr())
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
 
         # two nodes
         self.assertEqual(len(opcode), 2)

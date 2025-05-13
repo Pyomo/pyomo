@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
 from pyomo.environ import (
     Binary,
@@ -80,10 +81,6 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(grb_model.numIntVars, 4)
         self.assertEqual(grb_model.numBinVars, 1)
 
-        grb_model.printStats()
-
-        grb_model.write("nonlinear_stuff.lp")
-
         lin_constrs = grb_model.getConstrs()
         self.assertEqual(len(lin_constrs), 2)
         quad_constrs = grb_model.getQConstrs()
@@ -92,9 +89,16 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(len(nonlinear_constrs), 2)
 
         ## linear constraints
+
+        # this is the linear piece of c1
         c = lin_constrs[0]
         c_expr = grb_model.getRow(c)
-        # TODO
+        self.assertEqual(c.RHS, 0)
+        self.assertEqual(c.Sense, '<')
+        self.assertEqual(c_expr.size(), 1)
+        self.assertEqual(c_expr.getCoeff(0), 1)
+        self.assertEqual(c_expr.getConstant(), 0)
+        aux_var = c_expr.getVar(0)
 
         c3 = lin_constrs[1]
         c3_expr = grb_model.getRow(c3)
@@ -114,6 +118,7 @@ class TestGurobiMINLPWriter(CommonTest):
         c2_expr = grb_model.getQCRow(c2)
         lin_expr = c2_expr.getLinExpr()
         self.assertEqual(lin_expr.size(), 0)
+        self.assertEqual(lin_expr.getConstant(), 0)
         self.assertEqual(c2.QCRHS, 7)
         self.assertEqual(c2.QCSense, '<')
         self.assertEqual(c2_expr.size(), 1)
@@ -141,8 +146,28 @@ class TestGurobiMINLPWriter(CommonTest):
 
         c1 = nonlinear_constrs[1]
         res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c1)
-
-        set_trace()
+        # This is where we link into the linear inequality constraint
+        self.assertIs(res_var, aux_var)
+        # test the tree for the expression x3  + (- (2 ** x2))
+        self.assertEqual(len(opcode), 6)
+        self.assertEqual(opcode[0], GRB.OPCODE_PLUS)
+        # plus has no data
+        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(opcode[1], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[1], x3)
+        self.assertEqual(parent[1], 0)
+        self.assertEqual(opcode[2], GRB.OPCODE_UMINUS) # negation
+        # negation has no data
+        self.assertEqual(parent[2], 0)
+        self.assertEqual(opcode[3], GRB.OPCODE_POW)
+        # pow has no data
+        self.assertEqual(parent[3], 2)
+        self.assertEqual(opcode[4], GRB.OPCODE_CONSTANT)
+        self.assertEqual(data[4], 2)
+        self.assertEqual(parent[4], 3)
+        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[5], x2)
+        self.assertEqual(parent[5], 3)
 
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
