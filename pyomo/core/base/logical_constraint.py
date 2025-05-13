@@ -49,7 +49,7 @@ class LogicalConstraintData(ActiveComponentData):
 
     Constructor arguments:
         component
-            The LogicalStatement object that owns this data.
+            The LogicalConstraint object that owns this data.
         expr
             The Pyomo expression stored in this logical constraint.
 
@@ -152,7 +152,7 @@ class LogicalConstraintData(ActiveComponentData):
                 pass
 
         raise ValueError(
-            "LogicalStatement '%s' does not have a proper value. "
+            "Assigning improper value to LogicalConstraint '%s'. "
             "Found %s '%s'.\n"
             "Expecting a logical expression or Boolean value. Examples:"
             "\n   (m.Y1 & m.Y2).implies(m.Y3)"
