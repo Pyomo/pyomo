@@ -192,9 +192,10 @@ class GurobiEnvironmentTests(GurobiBase):
 
     def test_close_global(self):
         # method releases the license and syncs the flag
-        with patch("gurobipy.Model") as PatchModel, patch(
-            "gurobipy.disposeDefaultEnv"
-        ) as patch_dispose:
+        with (
+            patch("gurobipy.Model") as PatchModel,
+            patch("gurobipy.disposeDefaultEnv") as patch_dispose,
+        ):
             with SolverFactory("gurobi_direct") as opt:
                 opt.available()
                 opt.available()
@@ -207,9 +208,10 @@ class GurobiEnvironmentTests(GurobiBase):
 
         # _default_env_started flag was correctly synced, so available() is
         # checked again
-        with patch("gurobipy.Model") as PatchModel, patch(
-            "gurobipy.disposeDefaultEnv"
-        ) as patch_dispose:
+        with (
+            patch("gurobipy.Model") as PatchModel,
+            patch("gurobipy.disposeDefaultEnv") as patch_dispose,
+        ):
             with SolverFactory("gurobi_direct") as opt:
                 opt.available()
                 opt.available()
@@ -278,9 +280,10 @@ class GurobiEnvironmentTests(GurobiBase):
     def test_multiple_solvers_managed(self):
         # Multiple managed solvers will create their own envs
 
-        with SolverFactory("gurobi_direct", manage_env=True) as opt1, SolverFactory(
-            "gurobi_direct", manage_env=True
-        ) as opt2:
+        with (
+            SolverFactory("gurobi_direct", manage_env=True) as opt1,
+            SolverFactory("gurobi_direct", manage_env=True) as opt2,
+        ):
             results1 = opt1.solve(self.model)
             self.assert_optimal_result(results1)
             results2 = opt2.solve(self.model)
@@ -289,9 +292,10 @@ class GurobiEnvironmentTests(GurobiBase):
     def test_multiple_solvers_nonmanaged(self):
         # Multiple solvers will share the default environment
 
-        with SolverFactory("gurobi_direct") as opt1, SolverFactory(
-            "gurobi_direct"
-        ) as opt2:
+        with (
+            SolverFactory("gurobi_direct") as opt1,
+            SolverFactory("gurobi_direct") as opt2,
+        ):
             results1 = opt1.solve(self.model)
             self.assert_optimal_result(results1)
             results2 = opt2.solve(self.model)
@@ -305,8 +309,9 @@ class GurobiEnvironmentTests(GurobiBase):
         gp.setParam("IterationLimit", 100)
 
         # On the patched environment, solve times out due to parameter setting
-        with gp.Env(params={"IterationLimit": 0, "Presolve": 0}) as use_env, patch(
-            "gurobipy.Env", return_value=use_env
+        with (
+            gp.Env(params={"IterationLimit": 0, "Presolve": 0}) as use_env,
+            patch("gurobipy.Env", return_value=use_env),
         ):
             with SolverFactory("gurobi_direct", manage_env=True) as opt:
                 results = opt.solve(self.model)
@@ -392,9 +397,10 @@ class GurobiSingleUseTests(GurobiBase):
         # One environment per solver would break this pattern. Test that
         # global env is still used by default (manage_env=False)
 
-        with SolverFactory("gurobi_direct") as opt1, SolverFactory(
-            "gurobi_direct"
-        ) as opt2:
+        with (
+            SolverFactory("gurobi_direct") as opt1,
+            SolverFactory("gurobi_direct") as opt2,
+        ):
             opt1.solve(self.model)
             opt2.solve(self.model)
 

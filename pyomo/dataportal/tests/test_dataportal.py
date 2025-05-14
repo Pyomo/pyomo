@@ -928,7 +928,7 @@ class TestOnlyTextPortal(unittest.TestCase):
             select=('A', 'W', 'X'),
             index='B',
             param=('R', 'S'),
-            **self.create_options('XW')
+            **self.create_options('XW'),
         )
         self.assertEqual(set(dp.data('B')), set(['A1', 'A2', 'A3']))
         self.assertEqual(dp.data('S'), {'A1': 3.3, 'A2': 3.4, 'A3': 3.5})
@@ -1051,16 +1051,18 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
 
     def compare_data(self, name, file_suffix):
         if file_suffix == '.json':
-            with open(join(currdir, name + file_suffix), 'r') as out, open(
-                join(currdir, name + '.baseline' + file_suffix), 'r'
-            ) as txt:
+            with (
+                open(join(currdir, name + file_suffix), 'r') as out,
+                open(join(currdir, name + '.baseline' + file_suffix), 'r') as txt,
+            ):
                 self.assertStructuredAlmostEqual(
                     json.load(txt), json.load(out), allow_second_superset=True, abstol=0
                 )
         elif file_suffix == '.yaml':
-            with open(join(currdir, name + file_suffix), 'r') as out, open(
-                join(currdir, name + '.baseline' + file_suffix), 'r'
-            ) as txt:
+            with (
+                open(join(currdir, name + file_suffix), 'r') as out,
+                open(join(currdir, name + '.baseline' + file_suffix), 'r') as txt,
+            ):
                 self.assertStructuredAlmostEqual(
                     yaml.full_load(txt),
                     yaml.full_load(out),
@@ -1068,9 +1070,10 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
                     abstol=0,
                 )
         else:
-            with open(join(currdir, name + file_suffix), 'r') as f1, open(
-                join(currdir, name + '.baseline' + file_suffix), 'r'
-            ) as f2:
+            with (
+                open(join(currdir, name + file_suffix), 'r') as f1,
+                open(join(currdir, name + '.baseline' + file_suffix), 'r') as f2,
+            ):
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
                 for item1, item2 in zip_longest(f1_contents, f2_contents):
@@ -1138,7 +1141,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(
             data=(model.p, model.q),
             columns=('a', 'b', 'c', 'd'),
-            **self.create_write_options('param4')
+            **self.create_write_options('param4'),
         )
         self.compare_data('param4', self.suffix)
 
@@ -1178,16 +1181,18 @@ class TestTextPortal(unittest.TestCase):
 
     def compare_data(self, name, file_suffix):
         if file_suffix == '.json':
-            with open(join(currdir, name + file_suffix), 'r') as out, open(
-                join(currdir, name + '.baseline' + file_suffix), 'r'
-            ) as txt:
+            with (
+                open(join(currdir, name + file_suffix), 'r') as out,
+                open(join(currdir, name + '.baseline' + file_suffix), 'r') as txt,
+            ):
                 self.assertStructuredAlmostEqual(
                     json.load(txt), json.load(out), allow_second_superset=True, abstol=0
                 )
         elif file_suffix == '.yaml':
-            with open(join(currdir, name + file_suffix), 'r') as out, open(
-                join(currdir, name + '.baseline' + file_suffix), 'r'
-            ) as txt:
+            with (
+                open(join(currdir, name + file_suffix), 'r') as out,
+                open(join(currdir, name + '.baseline' + file_suffix), 'r') as txt,
+            ):
                 self.assertStructuredAlmostEqual(
                     yaml.full_load(txt),
                     yaml.full_load(out),
@@ -1196,17 +1201,19 @@ class TestTextPortal(unittest.TestCase):
                 )
         else:
             try:
-                with open(join(currdir, name + file_suffix), 'r') as f1, open(
-                    join(currdir, name + '.baseline' + file_suffix), 'r'
-                ) as f2:
+                with (
+                    open(join(currdir, name + file_suffix), 'r') as f1,
+                    open(join(currdir, name + '.baseline' + file_suffix), 'r') as f2,
+                ):
                     f1_contents = list(filter(None, f1.read().split()))
                     f2_contents = list(filter(None, f2.read().split()))
                     for item1, item2 in zip_longest(f1_contents, f2_contents):
                         self.assertEqual(item1, item2)
             except:
-                with open(join(currdir, name + file_suffix), 'r') as out, open(
-                    join(currdir, name + '.baseline' + file_suffix), 'r'
-                ) as txt:
+                with (
+                    open(join(currdir, name + file_suffix), 'r') as out,
+                    open(join(currdir, name + '.baseline' + file_suffix), 'r') as txt,
+                ):
                     self.assertEqual(
                         out.read().strip().replace(' ', ''),
                         txt.read().strip().replace(' ', ''),
@@ -1347,7 +1354,7 @@ class TestTextPortal(unittest.TestCase):
             select=('A', 'W', 'X'),
             index=model.B,
             param=(model.R, model.S),
-            **self.create_options('XW')
+            **self.create_options('XW'),
         )
         instance = model.create_instance(data)
         self.assertEqual(set(instance.B.data()), set(['A1', 'A2', 'A3']))

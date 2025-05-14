@@ -59,17 +59,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Create pyproject.toml
-        run: |
-          # Per the cibuildwheel documentation, you can technically use
-          # CIBW_BEFORE_BUILD to do these steps; however, as of the newest
-          # version (2.21.3) this feature does not work. This is a hack
-          # to make cibuildwheel recognize our pre-build requirements
-          echo -e '[build-system]\n\nrequires = [ "setuptools", "wheel", "cython", "pybind11" ]' > $GITHUB_WORKSPACE/pyproject.toml
-          cat $GITHUB_WORKSPACE/pyproject.toml
-          ls -la $GITHUB_WORKSPACE
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@main
         with:
           output-dir: dist
         env:
@@ -118,17 +109,8 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: all
-      - name: Create pyproject.toml
-        run: |
-          # Per the cibuildwheel documentation, you can technically use
-          # CIBW_BEFORE_BUILD to do these steps; however, as of the newest
-          # version (2.21.3) this feature does not work. This is a hack
-          # to make cibuildwheel recognize our pre-build requirements
-          echo -e '[build-system]\n\nrequires = [ "setuptools", "wheel", "cython", "pybind11" ]' > $GITHUB_WORKSPACE/pyproject.toml
-          cat $GITHUB_WORKSPACE/pyproject.toml
-          ls -la $GITHUB_WORKSPACE
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@main
         with:
           output-dir: dist
         env:
@@ -158,10 +140,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install twine wheel setuptools pybind11
+          pip install build twine wheel setuptools pybind11
       - name: Build pure python wheel
         run: |
-          python setup.py --without-cython sdist --format=gztar bdist_wheel
+          export PYOMO_SETUP_ARGS=--without-cython
+          python -m build --wheel --outdir dist --config-setting="--build-option=--without-cython"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -189,10 +172,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine wheel setuptools pybind11
+        pip install build twine wheel 'setuptools>=65' pybind11
     - name: Build generic tarball
       run: |
-        python setup.py --without-cython sdist --format=gztar
+        export PYOMO_SETUP_ARGS=--without-cython
+        python -m build --sdist --outdir dist --config-setting="--build-option=--without-cython"
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:

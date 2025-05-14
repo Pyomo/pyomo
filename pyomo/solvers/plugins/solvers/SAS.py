@@ -756,7 +756,7 @@ class SASCAS(SASAbc):
                     r = s.optimization.solveMilp(
                         data={"name": mpsdata_table_name},
                         primalOut={"name": primalout_table_name, "replace": True},
-                        **self.options
+                        **self.options,
                     )
                 else:
                     dualout_table_name = "dout" + unique
@@ -764,7 +764,7 @@ class SASCAS(SASAbc):
                         data={"name": mpsdata_table_name},
                         primalOut={"name": primalout_table_name, "replace": True},
                         dualOut={"name": dualout_table_name, "replace": True},
-                        **self.options
+                        **self.options,
                     )
 
                 # Prepare the solver results

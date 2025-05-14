@@ -205,7 +205,7 @@ def check_improperly_deactivated_disjuncts(self, transformation, **kwargs):
         r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -615,7 +615,7 @@ def check_target_not_a_component_error(self, transformation, **kwargs):
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[decoy.block],
-        **kwargs
+        **kwargs,
     )
 
 
@@ -755,7 +755,7 @@ def check_warn_for_untransformed(self, transformation, **kwargs):
         TransformationFactory('gdp.%s' % transformation).create_using,
         m,
         targets=[m.disjunction1[1]],
-        **kwargs
+        **kwargs,
     )
     m.disjunct1[1, 1].innerdisjunction.activate()
 
@@ -1308,7 +1308,7 @@ def check_transform_empty_disjunction(self, transformation, **kwargs):
         "modeling error.*",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1326,7 +1326,7 @@ def check_deactivated_disjunct_nonzero_indicator_var(self, transformation, **kwa
         r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1347,7 +1347,7 @@ def check_deactivated_disjunct_unfixed_indicator_var(self, transformation, **kwa
         r"indicator_var to False.\)",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1409,7 +1409,7 @@ def check_silly_target(self, transformation, **kwargs):
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[m.d[1].c1],
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1440,7 +1440,7 @@ def check_error_for_same_disjunct_in_multiple_disjunctions(
         r"Putting the same disjunct in multiple disjunctions is not supported.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1456,7 +1456,7 @@ def check_cannot_call_transformation_on_disjunction(self, transformation, **kwar
         trans.apply_to,
         m.disjunction,
         targets=m.disjunction[1],
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1510,7 +1510,7 @@ def check_disjunction_target_err(self, transformation, **kwargs):
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[m.disjunction],
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1850,7 +1850,7 @@ def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
         "transformation, please transform them first." % transformation,
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        **kwargs
+        **kwargs,
     )
 
 

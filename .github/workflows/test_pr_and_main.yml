@@ -127,7 +127,6 @@ jobs:
         - os: ubuntu-latest
           python: 3.12
           other: /cython
-          setup_options: --with-cython
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
@@ -706,6 +705,11 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        # Turn on cython through env vars
+        if [[ "${{ matrix.other }}" == *cython* ]]; then
+            echo "Cython requested; turning on cythonization options in environment"
+            export PYOMO_SETUP_ARGS=--with-cython
+        fi
         echo ""
         echo "Clone Pyomo-model-libraries..."
         URL=https://github.com/Pyomo/pyomo-model-libraries.git
@@ -713,7 +717,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -843,7 +847,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        python setup.py develop
+        python -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -921,13 +925,18 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        # Turn on cython through env vars
+        if [[ "${{ matrix.other }}" == *cython* ]]; then
+            echo "Cython requested; turning on cythonization options in environment"
+            export PYOMO_SETUP_ARGS=--with-cython
+        fi
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""

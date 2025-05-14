@@ -829,11 +829,14 @@ class TestArrayVar(TestSimpleVar):
         self.assertIs(m.x[1].domain, Reals)
         self.assertIs(m.x[2].domain, Integers)
         self.assertIs(m.x[3].domain, NonNegativeReals)
-        with LoggingIntercept() as LOG, self.assertRaisesRegex(
-            TypeError,
-            'Cannot create a Set from data that does not support __contains__.  '
-            'Expected set-like object supporting collections.abc.Collection '
-            "interface, but received 'NoneType'",
+        with (
+            LoggingIntercept() as LOG,
+            self.assertRaisesRegex(
+                TypeError,
+                'Cannot create a Set from data that does not support __contains__.  '
+                'Expected set-like object supporting collections.abc.Collection '
+                "interface, but received 'NoneType'",
+            ),
         ):
             m.x.domain = {1: None, 2: None, 3: None}
         self.assertIn(

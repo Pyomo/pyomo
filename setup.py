@@ -16,6 +16,7 @@ Script to generate the installer for pyomo.
 import os
 import platform
 import sys
+from pathlib import Path
 from setuptools import setup, find_packages, Command
 
 try:
@@ -204,47 +205,8 @@ class DependenciesCommand(Command):
 
 
 setup_kwargs = dict(
-    name='pyomo',
-    #
-    # Note: the release number is set in pyomo/version/info.py
-    #
     cmdclass={'dependencies': DependenciesCommand},
     version=get_version(),
-    maintainer='Pyomo Developer Team',
-    maintainer_email='pyomo-developers@googlegroups.com',
-    url='http://pyomo.org',
-    project_urls={
-        'Documentation': 'https://pyomo.readthedocs.io/',
-        'Source': 'https://github.com/Pyomo/pyomo',
-    },
-    license='BSD',
-    platforms=["any"],
-    description='Pyomo: Python Optimization Modeling Objects',
-    long_description=read('README.md'),
-    long_description_content_type='text/markdown',
-    keywords=['optimization'],
-    classifiers=[
-        'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: End Users/Desktop',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License',
-        'Natural Language :: English',
-        'Operating System :: MacOS',
-        'Operating System :: Microsoft :: Windows',
-        'Operating System :: Unix',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
-        'Programming Language :: Python :: 3.12',
-        'Programming Language :: Python :: 3.13',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
-        'Topic :: Scientific/Engineering :: Mathematics',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-    ],
-    python_requires='>=3.9',
     install_requires=['ply'],
     extras_require={
         # There are certain tests that also require pytest-qt, but because those
@@ -315,18 +277,22 @@ setup_kwargs = dict(
         "pyomo.contrib.simplification.ginac": ["src/*.cpp", "src/*.hpp"],
     },
     ext_modules=ext_modules,
-    entry_points="""
-    [console_scripts]
-    pyomo = pyomo.scripting.pyomo_main:main_console_script
-
-    [pyomo.command]
-    pyomo.help = pyomo.scripting.driver_help
-    pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
-    """,
 )
 
 
 try:
+    # setuptools.build_meta (>=68) forbids absolute paths in the `sources=` list.
+    # This resets the extensions (only for those items that are absolute paths)
+    # to use relative paths
+    ROOT = Path(__file__).parent.resolve()
+    for ext in ext_modules:
+        rel_sources = []
+        for src in ext.sources:
+            p = Path(src)
+            if p.is_absolute():
+                p = p.relative_to(ROOT)
+            rel_sources.append(p.as_posix())
+        ext.sources[:] = rel_sources
     setup(**setup_kwargs)
 except SystemExit as e_info:
     # Cython can generate a SystemExit exception on Windows if the

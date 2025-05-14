@@ -333,13 +333,11 @@ class Ipopt(SolverBase):
             # be terminated with '\n' regardless of platform.  We will
             # disable universal newlines in the NL file to prevent
             # Python from mapping those '\n' to '\r\n' on Windows.
-            with open(
-                basename + '.nl', 'w', newline='\n', encoding='utf-8'
-            ) as nl_file, open(
-                basename + '.row', 'w', encoding='utf-8'
-            ) as row_file, open(
-                basename + '.col', 'w', encoding='utf-8'
-            ) as col_file:
+            with (
+                open(basename + '.nl', 'w', newline='\n', encoding='utf-8') as nl_file,
+                open(basename + '.row', 'w', encoding='utf-8') as row_file,
+                open(basename + '.col', 'w', encoding='utf-8') as col_file,
+            ):
                 timer.start('write_nl_file')
                 self._writer.config.set_value(config.writer_config)
                 try:
