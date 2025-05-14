@@ -272,7 +272,7 @@ def define_exit_node_handlers(_exit_node_handlers=None):
 
     ## TODO: named expressions, ExprIf, RangedExpressions (if we do exprif...
 
-    # There are special becuase of quirks of Gurobi's current support for general
+    # These are special because of quirks of Gurobi's current support for general
     # nonlinear:
     _exit_node_handlers[AbsExpression] = {
         None: _handle_abs_expression,
