@@ -460,7 +460,10 @@ class Estimator(object):
     # This method will be used to generate the initial theta values for multistart
     # optimization. It will take the theta names and the initial theta values
     # and return a dictionary of theta names and their corresponding values.
-    def _generate_initial_theta(self, parmest_model, seed=None, n_restarts=None, multistart_sampling_method=None, user_provided=None):
+    def _generate_initial_theta(self, parmest_model=None, seed=None, n_restarts=None, multistart_sampling_method=None, user_provided=None):
+        """
+        Generate initial theta values for multistart optimization using selected sampling method.
+        """    
         if n_restarts == 1:
             # If only one restart, return an empty list
             return print("No multistart optimization needed. Please use normal theta_est()")
@@ -484,25 +487,31 @@ class Estimator(object):
                 "The length of theta_names and initial_theta must be the same."
             )
         
-        if multistart_sampling_method == "random":
+        if multistart_sampling_method == "uniform":
+            # Generate random theta values using uniform distribution, with set seed for reproducibility
             np.random.seed(seed)
             # Generate random theta values
             theta_vals_multistart = np.random.uniform(lower_bound, upper_bound, size=len(theta_names))
 
-            # Generate theta values using Latin hypercube sampling or Sobol sampling
+  
 
         elif multistart_sampling_method == "latin_hypercube":
+            # Generate theta values using Latin hypercube sampling or Sobol sampling
             # Generate theta values using Latin hypercube sampling
+            # Create a Latin Hypercube sampler that uses the dimensions of the theta names
             sampler = scipy.stats.qmc.LatinHypercube(d=len(theta_names), seed=seed)
+            # Generate random samples in the range of [0, 1] for number of restarts
             samples = sampler.random(n=n_restarts)
-            theta_vals_multistart = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
-
+            # Resulting samples should be size (n_restarts, len(theta_names))
 
         elif multistart_sampling_method == "sobol":
             sampler = scipy.stats.qmc.Sobol(d=len(theta_names), seed=seed)
             # Generate theta values using Sobol sampling
             # The first value of the Sobol sequence is 0, so we skip it
             samples = sampler.random(n=n_restarts+1)[1:]
+
+        if multistart_sampling_method == "sobol" or multistart_sampling_method == "latin_hypercube":
+            # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
             theta_vals_multistart = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
 
         elif multistart_sampling_method == "user_provided":
@@ -1073,9 +1082,13 @@ class Estimator(object):
         ----------
         n_restarts: int, optional
             Number of restarts for multistart. Default is 1.
-        theta_sampling_method: string, optional
+        th_sampling_method: string, optional
             Method used to sample theta values. Options are "random", "latin_hypercube", or "sobol".
             Default is "random".
+        buffer: int, optional
+            Number of iterations to save results dynamically. Default is 10.
+        user_provided: pd.DataFrame, optional
+            User provided dataframe of theta values for multistart optimization.
         solver: string, optional
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
@@ -1157,8 +1170,17 @@ class Estimator(object):
                     best_objectiveval = objectiveval
                     best_theta = thetavals
                     
-                # Store the results in a list or DataFrame
-                # depending on the number of restarts
+                # Store the results in a list or DataFrame depending on the number of restarts
+                ''' General structure for dataframe:
+                theta_names = ['theta1', 'theta2', ...]
+                results_df = pd.DataFrame(columns=theta_names + ['converged_theta1', 'converged_theta2', ...,
+                                                                'initial objective', 'final objective',
+                                                                'solver termination', 'solve_time'])
+                Each row of the dataframe corresponds to a restart, and the columns
+                correspond to the theta names, the converged theta values, the initial and final objective values,
+                the solver termination condition, and the solve time.
+                '''
+            
                 results_df.iloc[i, len(theta_names):len(theta_names) + len(theta_names)] = converged_theta_vals[i, :]
                 results_df.iloc[i, -4] = init_objectiveval
                 results_df.iloc[i, -3] = objectiveval
