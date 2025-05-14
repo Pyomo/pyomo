@@ -1,8 +1,15 @@
+from scipy.sparse import coo_matrix
+
+from pyomo.common.dependencies import numpy as np
+
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+
+import pyomo.environ as pyo
 
 
-
-class FIMExternalGreyBox(ExternalGreyBoxModel):
-    def __init__(self, ):
+class SumEGB(ExternalGreyBoxModel):
+    def __init__(self, n_inputs):
         """
         Grey box model for metrics on the FIM. This methodology reduces numerical complexity for the
         computation of FIM metrics related to eigenvalue decomposition.
@@ -22,10 +29,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
            is None, or equivalently, use the logging level of doe_object. Use logging.DEBUG for all
            messages.
         """
-        # Grab parameter list from the doe_object model
-        self._param_names = [i for i in self.doe_object.model.parameter_names]
-        self._n_params = len(self._param_names)
-
+        self._n_inputs = n_inputs
+        
+        self._input_names_list = ["x_" + str(i) for i in range(self._n_inputs)]
+        
         self._n_inputs = len(self._input_values)
         # print(self._input_values)
 
@@ -34,10 +41,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
         # input_names_list = list(itertools.product(self._param_names, self._param_names))
-        input_names_list = list(
-            itertools.combinations_with_replacement(self._param_names, 2)
-        )
-        return input_names_list
+        return self._inputs_names_list
 
     def equality_constraint_names(self):
         # ToDo: Are there any objectives that will have constraints?
@@ -73,7 +77,11 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Initialize grey box FIM values
         for ind, val in enumerate(self.input_names()):
-            pyomo_block.inputs[val] = self.doe_object.fim_initial.flatten()[ind]
+            pyomo_block.inputs[val] = ind
+            pyomo_block.inputs[val].setlb(0)
+            pyomo_block.inputs[val].setub(20)
+        
+        pyomo_block.outputs["obj"] = sum(range(n_inputs))
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
@@ -88,6 +96,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         #
         # ToDo: there will be significant bookkeeping for more
         # complicated objective functions and the Hessian
+        
+        jac_M = np.eye(self._n_inputs)
+        M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
+        M_cols = np.arange(len(jac_M.flatten()))
         
         return coo_matrix(
             (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
@@ -107,3 +119,14 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         self._output_con_mult_values = np.asarray(
             output_con_multiplier_values, dtype=np.float64
         )
+
+
+# Simple grey box problem to test determinism.
+m = pyo.ConcreteModel()
+
+grey_box = SumEGB(5)
+
+m.egb_block = ExternalGreyBoxBlock(external_model=grey_box)
+
+solver = pyo.SolverFactory("cyipopt")
+solver.solve(m, tee=True)
