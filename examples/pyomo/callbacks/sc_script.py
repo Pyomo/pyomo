@@ -10,9 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.opt import *
-from pyomo.core import *
-
+import pyomo.environ as pyo
 import sc
 
 model = sc.pyomo_create_model()
@@ -32,7 +30,7 @@ def node_callback(solver, model):
 
 instance = model.create()
 
-opt = SolverFactory('_cplex_direct')
+opt = pyo.SolverFactory('_cplex_direct')
 opt.set_callback('cut-callback', cut_callback)
 opt.set_callback('node-callback', node_callback)
 opt.set_callback('solve-callback', solve_callback)

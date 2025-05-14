@@ -165,6 +165,55 @@ class TestReactorExampleErrors(unittest.TestCase):
         ):
             doe_obj.create_doe_model()
 
+    def test_reactor_check_bad_prior_negative_eigenvalue(self):
+        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
+
+        fd_method = "central"
+        obj_used = "trace"
+        flag_val = 0  # Value for faulty model build mode - 0: full model
+
+        prior_FIM = -np.ones((4, 4))
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args['prior_FIM'] = prior_FIM
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"FIM provided is not positive definite. It has one or more negative eigenvalue\(s\) less than -{:.1e}".format(
+                _SMALL_TOLERANCE_DEFINITENESS
+            ),
+        ):
+            doe_obj.create_doe_model()
+
+    def test_reactor_check_bad_prior_not_symmetric(self):
+        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_SYMMETRY
+
+        fd_method = "central"
+        obj_used = "trace"
+        flag_val = 0  # Value for faulty model build mode - 0: full model
+
+        prior_FIM = np.zeros((4, 4))
+        prior_FIM[0, 1] = 1e-3
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+
+        DoE_args = get_standard_args(experiment, fd_method, obj_used, flag_val)
+        DoE_args['prior_FIM'] = prior_FIM
+
+        doe_obj = DesignOfExperiments(**DoE_args)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "FIM provided is not symmetric using absolute tolerance {}".format(
+                _SMALL_TOLERANCE_SYMMETRY
+            ),
+        ):
+            doe_obj.create_doe_model()
+
     def test_reactor_check_bad_jacobian_init_size(self):
         fd_method = "central"
         obj_used = "trace"

@@ -30,6 +30,7 @@ from pyomo.contrib.pyros.util import (
     call_solver,
     DR_POLISHING_PARAM_PRODUCT_ZERO_TOL,
     enforce_dr_degree,
+    get_all_first_stage_eq_cons,
     get_dr_expression,
     check_time_limit_reached,
     generate_all_decision_rule_var_data_objects,
@@ -137,7 +138,7 @@ def add_scenario_block_to_master_problem(
         new_blk = master_model.scenarios[scenario_idx]
         for con in new_blk.first_stage.inequality_cons.values():
             con.deactivate()
-        for con in new_blk.first_stage.equality_cons.values():
+        for con in get_all_first_stage_eq_cons(new_blk):
             con.deactivate()
 
 
@@ -588,13 +589,21 @@ def minimize_dr_vars(master_data):
 def get_master_dr_degree(master_data):
     """
     Determine DR polynomial degree to enforce based on
-    the iteration number.
+    the iteration number and/or the presence of first-stage
+    equality constraints that depend on the decision rule variables.
 
-    Currently, the degree is set to:
+    If there are first-stage equality constraints that depend
+    on the decision rule variables, such as equalities derived
+    from coefficient matching or discretization of state-variable
+    independent equalities, then the degree is set to
+    ``config.decision_rule_order``.
+
+    Otherwise, the degree is set to:
 
     - 0 if iteration number is 0
     - min(1, config.decision_rule_order) if iteration number
-      otherwise does not exceed number of uncertain parameters
+      otherwise does not exceed number of effective
+      uncertain parameters
     - min(2, config.decision_rule_order) otherwise.
 
     Parameters
@@ -607,9 +616,13 @@ def get_master_dr_degree(master_data):
     int
         DR order, or polynomial degree, to enforce.
     """
+    nom_scenario_blk = master_data.master_model.scenarios[0, 0]
+    if nom_scenario_blk.first_stage.dr_dependent_equality_cons:
+        return master_data.config.decision_rule_order
+
     if master_data.iteration == 0:
         return 0
-    elif master_data.iteration <= len(master_data.config.uncertain_params):
+    elif master_data.iteration <= len(nom_scenario_blk.effective_uncertain_params):
         return min(1, master_data.config.decision_rule_order)
     else:
         return min(2, master_data.config.decision_rule_order)

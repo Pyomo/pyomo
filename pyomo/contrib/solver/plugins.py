@@ -10,10 +10,11 @@
 #  ___________________________________________________________________________
 
 
-from .factory import SolverFactory
-from .ipopt import Ipopt
-from .gurobi import Gurobi
-from .gurobi_direct import GurobiDirect
+from .common.factory import SolverFactory
+from .solvers.ipopt import Ipopt
+from .solvers.gurobi_persistent import GurobiPersistent
+from .solvers.gurobi_direct import GurobiDirect
+from .solvers.highs import Highs
 
 
 def load():
@@ -21,10 +22,15 @@ def load():
         name='ipopt', legacy_name='ipopt_v2', doc='The IPOPT NLP solver'
     )(Ipopt)
     SolverFactory.register(
-        name='gurobi', legacy_name='gurobi_v2', doc='Persistent interface to Gurobi'
-    )(Gurobi)
+        name='gurobi_persistent',
+        legacy_name='gurobi_persistent_v2',
+        doc='Persistent interface to Gurobi',
+    )(GurobiPersistent)
     SolverFactory.register(
         name='gurobi_direct',
         legacy_name='gurobi_direct_v2',
         doc='Direct (scipy-based) interface to Gurobi',
     )(GurobiDirect)
+    SolverFactory.register(
+        name='highs', legacy_name='highs', doc='Persistent interface to HiGHS'
+    )(Highs)

@@ -24,17 +24,17 @@ example of using an APPSI solver interface.
 
 .. code-block:: python
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.contrib import appsi
     >>> import numpy as np
     >>> from pyomo.common.timing import HierarchicalTimer
-    >>> m = pe.ConcreteModel()
-    >>> m.x = pe.Var()
-    >>> m.y = pe.Var()
-    >>> m.p = pe.Param(mutable=True)
-    >>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-    >>> m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
-    >>> m.c2 = pe.Constraint(expr=m.y >= (m.x - m.p)**2)
+    >>> m = pyo.ConcreteModel()
+    >>> m.x = pyo.Var()
+    >>> m.y = pyo.Var()
+    >>> m.p = pyo.Param(mutable=True)
+    >>> m.obj = pyo.Objective(expr=m.x**2 + m.y**2)
+    >>> m.c1 = pyo.Constraint(expr=m.y >= pyo.exp(m.x))
+    >>> m.c2 = pyo.Constraint(expr=m.y >= (m.x - m.p)**2)
     >>> opt = appsi.solvers.Ipopt()
     >>> timer = HierarchicalTimer()
     >>> for p_val in np.linspace(1, 10, 100):
@@ -43,6 +43,15 @@ example of using an APPSI solver interface.
     >>>     assert res.termination_condition == appsi.base.TerminationCondition.optimal
     >>>     print(res.best_feasible_objective)
     >>> print(timer)
+
+Alternatively, you can access the APPSI solvers through the classic
+``SolverFactory`` using the pattern ``appsi_solvername``.
+
+.. code-block:: python
+
+    >>> import pyomo.environ as pyo
+    >>> opt_ipopt = pyo.SolverFactory('appsi_ipopt')
+    >>> opt_highs = pyo.SolverFactory('appsi_highs')
 
 Extra performance improvements can be made if you know exactly what
 changes will be made in your model. In the example above, only

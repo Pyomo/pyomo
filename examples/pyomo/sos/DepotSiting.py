@@ -11,33 +11,35 @@
 
 # a simple SOS example from "Modeling Building in Mathematical Programming", H. Paul Williams, 4th Edition, p. 166.
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
 # the set of customers.
-model.Customers = Set()
+model.Customers = pyo.Set()
 
 # the possible locations of the facility that you're trying to place.
-model.Sites = Set()
+model.Sites = pyo.Set()
 
 # the cost of satisfying customer demand from each of the potential sites.
-model.SatisfactionCost = Param(model.Customers, model.Sites, within=NonNegativeReals)
+model.SatisfactionCost = pyo.Param(
+    model.Customers, model.Sites, within=pyo.NonNegativeReals
+)
 
 # indicators of which sites are selected. constraints ensure only one site is selected,
 # and allow the binary integrality to be implicit.
-model.SiteSelected = Var(model.Sites, bounds=(0, 1))
+model.SiteSelected = pyo.Var(model.Sites, bounds=(0, 1))
 
 # ensure that only one of the site selected variables is non-zero.
-model.SiteSelectedSOS = SOSConstraint(var=model.SiteSelected, sos=1)
+model.SiteSelectedSOS = pyo.SOSConstraint(var=model.SiteSelected, sos=1)
 
 
 # ensure that one of the sites is selected (enforce binary).
 def enforce_site_selected_binary_rule(model):
-    return sum_product(model.SiteSelected) == 1
+    return pyo.sum_product(model.SiteSelected) == 1
 
 
-model.EnforceSiteSelectedBinary = Constraint(rule=enforce_site_selected_binary_rule)
+model.EnforceSiteSelectedBinary = pyo.Constraint(rule=enforce_site_selected_binary_rule)
 
 
 # the objective is to minimize the cost to satisfy all customers.
@@ -51,4 +53,4 @@ def minimize_cost_rule(model):
     )
 
 
-model.MinimizeCost = Objective(rule=minimize_cost_rule, sense=minimize)
+model.MinimizeCost = pyo.Objective(rule=minimize_cost_rule, sense=pyo.minimize)

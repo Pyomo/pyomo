@@ -19,7 +19,7 @@ from typing import Mapping, Optional, Sequence
 from pyomo.common import Executable
 from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
 from pyomo.common.errors import (
-    PyomoException,
+    ApplicationError,
     DeveloperError,
     InfeasibleConstraintException,
 )
@@ -28,22 +28,27 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.base.var import VarData
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn.plugins.nl_writer import NLWriter, NLWriterInfo
-from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.config import SolverConfig
-from pyomo.contrib.solver.results import Results, TerminationCondition, SolutionStatus
-from pyomo.contrib.solver.sol_reader import parse_sol_file
-from pyomo.contrib.solver.solution import SolSolutionLoader
+from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.config import SolverConfig
+from pyomo.contrib.solver.common.results import (
+    Results,
+    TerminationCondition,
+    SolutionStatus,
+)
+from pyomo.contrib.solver.solvers.sol_reader import parse_sol_file, SolSolutionLoader
+from pyomo.contrib.solver.common.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+    NoSolutionError,
+)
 from pyomo.common.tee import TeeStream
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap
+from pyomo.solvers.amplfunc_merge import amplfunc_merge
 
 logger = logging.getLogger(__name__)
-
-
-class IpoptSolverError(PyomoException):
-    """General exception to catch solver system errors"""
 
 
 class IpoptConfig(SolverConfig):
@@ -77,14 +82,9 @@ class IpoptConfig(SolverConfig):
 
 
 class IpoptSolutionLoader(SolSolutionLoader):
-    def get_reduced_costs(
-        self, vars_to_load: Optional[Sequence[VarData]] = None
-    ) -> Mapping[VarData, float]:
+    def _error_check(self):
         if self._nl_info is None:
-            raise RuntimeError(
-                'Solution loader does not currently have a valid solution. Please '
-                'check results.TerminationCondition and/or results.SolutionStatus.'
-            )
+            raise NoSolutionError()
         if len(self._nl_info.eliminated_vars) > 0:
             raise NotImplementedError(
                 'For now, turn presolve off (opt.config.writer_config.linear_presolve=False) '
@@ -95,6 +95,11 @@ class IpoptSolutionLoader(SolSolutionLoader):
                 "Solution data is empty. This should not "
                 "have happened. Report this error to the Pyomo Developers."
             )
+
+    def get_reduced_costs(
+        self, vars_to_load: Optional[Sequence[VarData]] = None
+    ) -> Mapping[VarData, float]:
+        self._error_check()
         if self._nl_info.scaling is None:
             scale_list = [1] * len(self._nl_info.variables)
             obj_scale = 1
@@ -105,7 +110,7 @@ class IpoptSolutionLoader(SolSolutionLoader):
         nl_info = self._nl_info
         zl_map = sol_data.var_suffixes['ipopt_zL_out']
         zu_map = sol_data.var_suffixes['ipopt_zU_out']
-        rc = dict()
+        rc = {}
         for ndx, v in enumerate(nl_info.variables):
             scale = scale_list[ndx]
             v_id = id(v)
@@ -210,9 +215,9 @@ class Ipopt(SolverBase):
         pth = config.executable.path()
         if self._available_cache is None or self._available_cache[0] != pth:
             if pth is None:
-                self._available_cache = (None, self.Availability.NotFound)
+                self._available_cache = (None, Availability.NotFound)
             else:
-                self._available_cache = (pth, self.Availability.FullLicense)
+                self._available_cache = (pth, Availability.FullLicense)
         return self._available_cache[1]
 
     def version(self, config=None):
@@ -229,6 +234,7 @@ class Ipopt(SolverBase):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     universal_newlines=True,
+                    check=False,
                 )
                 version = results.stdout.splitlines()[0]
                 version = version.split(' ')[1].strip()
@@ -263,7 +269,7 @@ class Ipopt(SolverBase):
         for k, val in options.items():
             if k not in ipopt_command_line_options:
                 opt_file_exists = True
-                with open(filename + '.opt', 'a+') as opt_file:
+                with open(filename + '.opt', 'a+', encoding='utf-8') as opt_file:
                     opt_file.write(str(k) + ' ' + str(val) + '\n')
         return opt_file_exists
 
@@ -296,13 +302,14 @@ class Ipopt(SolverBase):
         # Check if solver is available
         avail = self.available(config)
         if not avail:
-            raise IpoptSolverError(
+            raise ApplicationError(
                 f'Solver {self.__class__} is not available ({avail}).'
             )
         if config.threads:
             logger.log(
                 logging.WARNING,
-                msg=f"The `threads` option was specified, but this is not used by {self.__class__}.",
+                msg="The `threads` option was specified, "
+                f"but this is not used by {self.__class__}.",
             )
         if config.timer is None:
             timer = HierarchicalTimer()
@@ -326,9 +333,13 @@ class Ipopt(SolverBase):
             # be terminated with '\n' regardless of platform.  We will
             # disable universal newlines in the NL file to prevent
             # Python from mapping those '\n' to '\r\n' on Windows.
-            with open(basename + '.nl', 'w', newline='\n') as nl_file, open(
-                basename + '.row', 'w'
-            ) as row_file, open(basename + '.col', 'w') as col_file:
+            with open(
+                basename + '.nl', 'w', newline='\n', encoding='utf-8'
+            ) as nl_file, open(
+                basename + '.row', 'w', encoding='utf-8'
+            ) as row_file, open(
+                basename + '.col', 'w', encoding='utf-8'
+            ) as col_file:
                 timer.start('write_nl_file')
                 self._writer.config.set_value(config.writer_config)
                 try:
@@ -347,9 +358,9 @@ class Ipopt(SolverBase):
                 # Get a copy of the environment to pass to the subprocess
                 env = os.environ.copy()
                 if nl_info.external_function_libraries:
-                    if env.get('AMPLFUNC'):
-                        nl_info.external_function_libraries.append(env.get('AMPLFUNC'))
-                    env['AMPLFUNC'] = "\n".join(nl_info.external_function_libraries)
+                    env['AMPLFUNC'] = amplfunc_merge(
+                        env, *nl_info.external_function_libraries
+                    )
                 # Write the opt_file, if there should be one; return a bool to say
                 # whether or not we have one (so we can correctly build the command line)
                 opt_file = self._write_options_file(
@@ -378,6 +389,7 @@ class Ipopt(SolverBase):
                         universal_newlines=True,
                         stdout=t.STDOUT,
                         stderr=t.STDERR,
+                        check=False,
                     )
                     timer.stop('subprocess')
                     # This is the stuff we need to parse to get the iterations
@@ -408,7 +420,7 @@ class Ipopt(SolverBase):
                     results.timing_info.total_seconds = 0
             else:
                 if os.path.isfile(basename + '.sol'):
-                    with open(basename + '.sol', 'r') as sol_file:
+                    with open(basename + '.sol', 'r', encoding='utf-8') as sol_file:
                         timer.start('parse_sol')
                         results = self._parse_solution(sol_file, nl_info)
                         timer.stop('parse_sol')
@@ -433,23 +445,14 @@ class Ipopt(SolverBase):
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
         ):
-            raise RuntimeError(
-                'Solver did not find the optimal solution. Set '
-                'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
-            )
+            raise NoOptimalSolutionError()
 
         results.solver_name = self.name
         results.solver_version = self.version(config)
-        if (
-            config.load_solutions
-            and results.solution_status == SolutionStatus.noSolution
-        ):
-            raise RuntimeError(
-                'A feasible solution was not found, so no solution can be loaded.'
-                'Please set opt.config.load_solutions=False to bypass this error.'
-            )
 
         if config.load_solutions:
+            if results.solution_status == SolutionStatus.noSolution:
+                raise NoFeasibleSolutionError()
             results.solution_loader.load_vars()
             if (
                 hasattr(model, 'dual')
@@ -483,7 +486,7 @@ class Ipopt(SolverBase):
                     )
                 )
 
-        results.solver_configuration = config
+        results.solver_config = config
         if not proven_infeasible and len(nl_info.variables) > 0:
             results.solver_log = ostreams[0].getvalue()
 

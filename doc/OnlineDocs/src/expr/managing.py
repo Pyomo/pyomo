@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+import pyomo.environ as pyo
 from math import isclose
 import math
 import copy
@@ -18,10 +18,10 @@ import copy
 # @ex1
 import pyomo.core.expr as EXPR
 
-M = ConcreteModel()
-M.x = Var()
+M = pyo.ConcreteModel()
+M.x = pyo.Var()
 
-e = sin(M.x) + 2 * M.x
+e = pyo.sin(M.x) + 2 * M.x
 
 # sin(x) + 2*x
 print(EXPR.expression_to_string(e))
@@ -34,22 +34,22 @@ print(EXPR.expression_to_string(e, verbose=True))
 # @ex2
 import pyomo.core.expr as EXPR
 
-M = ConcreteModel()
-M.x = Var()
-M.y = Var()
+M = pyo.ConcreteModel()
+M.x = pyo.Var()
+M.y = pyo.Var()
 
-e = sin(M.x) + 2 * M.y
+e = pyo.sin(M.x) + 2 * M.y
 
 # sin(x1) + 2*x2
-print(EXPR.expression_to_string(e, labeler=NumericLabeler('x')))
+print(EXPR.expression_to_string(e, labeler=pyo.NumericLabeler('x')))
 # @ex2
 
 # ---------------------------------------------
 # @ex5
-M = ConcreteModel()
-M.x = Var()
+M = pyo.ConcreteModel()
+M.x = pyo.Var()
 M.x.value = math.pi / 2.0
-val = value(M.x)
+val = pyo.value(M.x)
 assert isclose(val, math.pi / 2.0)
 # @ex5
 # @ex6
@@ -59,9 +59,9 @@ assert isclose(val, math.pi / 2.0)
 
 # ---------------------------------------------
 # @ex7
-M = ConcreteModel()
-M.x = Var()
-val = value(M.x, exception=False)
+M = pyo.ConcreteModel()
+M.x = pyo.Var()
+val = pyo.value(M.x, exception=False)
 assert val is None
 # @ex7
 
@@ -69,9 +69,9 @@ assert val is None
 # @ex8
 import pyomo.core.expr as EXPR
 
-M = ConcreteModel()
-M.x = Var()
-M.p = Param(mutable=True)
+M = pyo.ConcreteModel()
+M.x = pyo.Var()
+M.p = pyo.Param(mutable=True)
 
 e = M.p + M.x
 s = set([type(M.p)])
@@ -82,9 +82,9 @@ assert list(EXPR.identify_components(e, s)) == [M.p]
 # @ex9
 import pyomo.core.expr as EXPR
 
-M = ConcreteModel()
-M.x = Var()
-M.y = Var()
+M = pyo.ConcreteModel()
+M.x = pyo.Var()
+M.y = pyo.Var()
 
 e = M.x + M.y
 M.y.value = 1
@@ -129,9 +129,9 @@ def sizeof_expression(expr):
 
 
 # Test:
-m = ConcreteModel()
-m.x = Var()
-m.p = Param(mutable=True)
+m = pyo.ConcreteModel()
+m.x = pyo.Var()
+m.p = pyo.Param(mutable=True)
 assert sizeof_expression(m.x) == 1
 assert sizeof_expression(m.x + m.p) == 3
 assert sizeof_expression(2 * m.x + m.p) == 5
@@ -155,7 +155,7 @@ class CloneVisitor(EXPR.ExpressionValueVisitor):
         #
         # Clone leaf nodes in the expression tree
         #
-        if node.__class__ in native_numeric_types or not node.is_expression_type():
+        if node.__class__ in pyo.native_numeric_types or not node.is_expression_type():
             return True, copy.deepcopy(node, self.memo)
 
         return False, None
@@ -178,9 +178,9 @@ def clone_expression(expr):
 
 
 # Test:
-m = ConcreteModel()
-m.x = Var(range(2))
-m.p = Param(range(5), mutable=True)
+m = pyo.ConcreteModel()
+m.x = pyo.Var(range(2))
+m.p = pyo.Param(range(5), mutable=True)
 e = m.x[0] + 5 * m.x[1]
 ce = clone_expression(e)
 print(e is not ce)
@@ -210,7 +210,7 @@ class ScalingVisitor(EXPR.ExpressionReplacementVisitor):
         # nodes that do not conform to the ExpressionBase API (i.e.,
         # define is_variable_type)
         #
-        if child.__class__ in native_numeric_types:
+        if child.__class__ in pyo.native_numeric_types:
             return False, child
         #
         # Replace leaf variables with scaled variables
@@ -241,15 +241,15 @@ def scale_expression(expr, scale):
 
 # ---------------------------------------------
 # @visitor7
-M = ConcreteModel()
-M.x = Var(range(5))
-M.p = Param(range(5), mutable=True)
+M = pyo.ConcreteModel()
+M.x = pyo.Var(range(5))
+M.p = pyo.Param(range(5), mutable=True)
 
 scale = {}
 for i in M.x:
     scale[id(M.x[i])] = M.p[i]
 
-e = quicksum(M.x[i] for i in M.x)
+e = pyo.quicksum(M.x[i] for i in M.x)
 f = scale_expression(e, scale)
 
 # p[0]*x[0] + p[1]*x[1] + p[2]*x[2] + p[3]*x[3] + p[4]*x[4]
