@@ -311,7 +311,7 @@ def _compute_jacobian(experiment, thetavals, step, solver, tee):
     Arguments:
         experiment: Estimator class object, that contains the model for a particular experimental condition
         thetavals: dictionary containing the estimates of the unknown parameters
-        step: float or integer used to perturb the objectives
+        step: float used to perturb the parameters
         solver: string ``solver`` object specified by the user
         tee: boolean solver option to be passed for verbose output
 
@@ -434,10 +434,10 @@ def compute_cov(
 
     Arguments:
         experiment_list: list of Estimator class objects containing the model for different experimental conditions
-        method: string `method` object specified by the user (e.g., kaug)
+        method: string ``method`` object specified by the user (e.g., kaug)
         thetavals: dictionary containing the estimates of the unknown parameters
-        step: float or integer used to perturb the objectives
-        solver: string `solver` object specified by the user (e.g., ipopt)
+        step: float used to perturb the parameters
+        solver: string ``solver`` object specified by the user (e.g., ipopt)
         tee: boolean solver option to be passed for verbose output
         estimated_var: value of the estimated variance of the measurement error in cases where
                        the user does not supply the measurement error standard deviation
@@ -523,7 +523,7 @@ def _finite_difference_FIM(
     Arguments:
         experiment: Estimator class object that contains the model for a particular experimental condition
         thetavals: dictionary containing the estimates of the unknown parameters
-        step: float or integer used to perturb the objectives
+        step: float used to perturb the parameters
         solver: string ``solver`` object specified by the user
         tee: boolean solver option to be passed for verbose output
         estimated_var: value of the estimated variance of the measurement error in cases where
@@ -537,7 +537,10 @@ def _finite_difference_FIM(
 
     # computing the condition number of the Jacobian matrix
     cond_number_jac = np.linalg.cond(J)
-    print("The condition number of the Jacobian matrix is:", cond_number_jac)
+
+    # set up logging
+    logging.basicConfig(level=logging.INFO)
+    logging.info("The condition number of the Jacobian matrix is:", cond_number_jac)
 
     # grab the model
     model = experiment.get_labeled_model()
@@ -1046,9 +1049,10 @@ class Estimator(object):
         Covariance matrix calculation using all scenarios in the data
 
         Argument:
-            method: str, a ``method`` object specified by the user (e.g., jacobian or kaug)
-            solver: str, a ``solver`` object specified by the user (e.g., ipopt)
-            cov_n: int, the user needs to supply the number of datapoints that are used in the objective function
+            method: string ``method`` object specified by the user (e.g., kaug)
+            solver: string ``solver`` object specified by the user (e.g., ipopt)
+            cov_n: integer, number of datapoints specified by the user which is used in the objective function
+            step: float used to perturb the parameters
 
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
@@ -1455,9 +1459,10 @@ class Estimator(object):
         Covariance matrix calculation using all scenarios in the data
 
         Argument:
-            method: str, a ``method`` object specified by the user (e.g., jacobian or kaug)
-            solver: str, a ``solver`` object specified by the user (e.g., ipopt)
-            cov_n: int, the user needs to supply the number of datapoints that are used in the objective function
+            method: string ``method`` object specified by the user (e.g., kaug)
+            solver: string ``solver`` object specified by the user (e.g., ipopt)
+            cov_n: integer, number of datapoints specified by the user which is used in the objective function
+            step: float used to perturb the parameters
 
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
@@ -1469,6 +1474,10 @@ class Estimator(object):
         # check if the method input is a string
         if not isinstance(method, str):
             raise TypeError("Expected a string for the method.")
+
+        # check if the supplied number of datapoints is an integer
+        if not isinstance(cov_n, int):
+            raise TypeError("Expected an integer for " + '"cov_n".')
 
         # number of unknown parameters
         num_unknowns = max(
