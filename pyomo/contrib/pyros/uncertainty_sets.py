@@ -48,6 +48,8 @@ from pyomo.contrib.pyros.util import (
     POINT_IN_UNCERTAINTY_SET_TOL,
     standardize_component_data,
 )
+from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.common.errors import InfeasibleConstraintException
 
 
 valid_num_types = native_numeric_types
@@ -584,8 +586,13 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         else:
             # initialize uncertain parameter variables
             param_bounds_arr = np.array(
-                self._compute_parameter_bounds(solver=config.global_solver)
+                self._fbbt_parameter_bounds(config)
             )
+            if not all(map(lambda x: all(x), param_bounds_arr)):
+                # solve bounding problems if FBBT cannot find bounds
+                param_bounds_arr = np.array(
+                    self._compute_parameter_bounds(solver=config.global_solver)
+                )
             all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
 
         # log result
@@ -799,6 +806,37 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             obj.deactivate()
 
         return param_bounds
+
+    def _fbbt_parameter_bounds(self, config):
+        """
+        Obtain parameter bounds of the uncertainty set using FBBT.
+
+        Parameters
+        ----------
+        config : ConfigDict
+            PyROS solver configuration.
+        """
+        bounding_model = self._create_bounding_model()
+
+        # calculate bounds with FBBT
+        fbbt_exception_str = f"Error computing parameter bounds with FBBT for {self}"
+        try:
+            fbbt(bounding_model)
+        except InfeasibleConstraintException as fbbt_infeasible_con_exception:
+            config.progress_logger.error(
+                f"{fbbt_exception_str}\n"
+                f"{fbbt_infeasible_con_exception}"
+            )
+        except Exception as fbbt_exception:
+            config.progress_logger.error(
+                f"{fbbt_exception_str}\n"
+                f"{fbbt_exception}"
+            )
+
+        param_bounds = [(var.lower, var.upper) for var in bounding_model.param_vars.values()]
+
+        return param_bounds
+
 
     def _solve_feasibility(self, solver):
         """
