@@ -58,11 +58,13 @@ class NoReducedCostsError(PyomoException):
 
 
 class IncompatibleModelError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'Model is not compatible with the chosen solver. Please check '
-            'the model and solver.'
-        )
+    def __init__(self, msg=None):
+        if msg is None:
+            msg = (
+                'Model is not compatible with the chosen solver. Please check '
+                + 'the model and solver.'
+            )
+        super().__init__(msg)
 
 
 def get_objective(block):
