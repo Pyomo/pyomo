@@ -360,63 +360,63 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # No constraints so this returns `None`
         return None
 
-    # def evaluate_hessian_outputs(self, FIM=None):
-    #     # ToDo: significant bookkeeping if the hessian's require vectorized
-    #     # operations. Just need mapping that works well and we are good.
-    #     if FIM is None:
-    #         current_FIM = self._get_FIM()
-    #     else:
-    #         current_FIM = FIM
-    #     M = np.asarray(current_FIM, dtype=np.float64).reshape(
-    #         self._n_params, self._n_params
-    #     )
+    def evaluate_hessian_outputs(self, FIM=None):
+        # ToDo: significant bookkeeping if the hessian's require vectorized
+        # operations. Just need mapping that works well and we are good.
+        current_FIM = self._get_FIM()
 
-    #     # Hessian with correct size for using only the
-    #     # lower (upper) triangle of the FIM
-    #     hess = np.zeros((self._n_inputs, self._n_inputs))
+        M = np.asarray(current_FIM, dtype=np.float64).reshape(
+            self._n_params, self._n_params
+        )
 
-    #     from pyomo.contrib.doe import ObjectiveLib
-    #     if self.objective_option == ObjectiveLib.determinant:
-    #         # Grab inverse
-    #         Minv = np.linalg.pinv(M)
+        # Hessian with correct size for using only the
+        # lower (upper) triangle of the FIM
+        hess = np.zeros((self._n_inputs, self._n_inputs))
 
-    #         # Equation derived, shown in greybox
-    #         # pyomo.DoE 2.0 paper
-    #         # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] +
-    #         #                          Minv[i, l]Minv[k, j])
-    #         lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
-    #         for curr_location in lower_tri_inds_4D:
-    #             # For quadruples (i, j, k, l)...
-    #             # Row of hessian is sum from
-    #             # n - i + 1 to n minus i plus j
-    #             #
-    #             # Column of hessian is sum from
-    #             # n - k + 1 to n minus k plus l
-    #             i, j, k, l = curr_location
-    #             print(i, j, k, l)
-    #             row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
-    #             col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
-    #             #hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
-    #             # New Formula (tested with finite differencing)
-    #             hess[row, col] = -(Minv[i, l] * Minv[k, j])
+        from pyomo.contrib.doe import ObjectiveLib
+        if self.objective_option == ObjectiveLib.trace:
+            pass
+        elif self.objective_option == ObjectiveLib.determinant:
+            # Grab inverse
+            Minv = np.linalg.pinv(M)
 
-    #         print(hess)
-    #         # Complete the full matrix
-    #         hess = hess.transpose()
-    #     elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-    #         pass
-    #     elif self.objective_option == ObjectiveLib.condition_number:
-    #         pass
+            # Equation derived, shown in greybox
+            # pyomo.DoE 2.0 paper
+            # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] +
+            #                          Minv[i, l]Minv[k, j])
+            lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
+            for curr_location in lower_tri_inds_4D:
+                # For quadruples (i, j, k, l)...
+                # Row of hessian is sum from
+                # n - i + 1 to n minus i plus j
+                #
+                # Column of hessian is sum from
+                # n - k + 1 to n minus k plus l
+                i, j, k, l = curr_location
+                print(i, j, k, l)
+                row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
+                col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
+                #hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
+                # New Formula (tested with finite differencing)
+                hess[row, col] = -(Minv[i, l] * Minv[k, j])
 
-    #     # Select only lower triangular values as a flat array
-    #     hess_masking_matrix = np.tril(np.ones_like(hess))
-    #     hess_data = hess[hess_masking_matrix > 0]
-    #     hess_rows, hess_cols  = np.tril_indices_from(hess)
+            print(hess)
+            # Complete the full matrix
+            hess = hess.transpose()
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            pass
+        elif self.objective_option == ObjectiveLib.condition_number:
+            pass
 
-    #     print(hess_rows)
-    #     print(hess_cols)
+        # Select only lower triangular values as a flat array
+        hess_masking_matrix = np.tril(np.ones_like(hess))
+        hess_data = hess[hess_masking_matrix > 0]
+        hess_rows, hess_cols  = np.tril_indices_from(hess)
 
-    #     # Returns coo_matrix of the correct shape
-    #     return coo_matrix(
-    #         (hess_data, (hess_rows, hess_cols)), shape=hess.shape
-    #     )
+        print(hess_rows)
+        print(hess_cols)
+
+        # Returns coo_matrix of the correct shape
+        return coo_matrix(
+            (hess_data, (hess_rows, hess_cols)), shape=hess.shape
+        )
