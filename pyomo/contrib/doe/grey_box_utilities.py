@@ -448,7 +448,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             # Also need the min location
             all_eig_vals, all_eig_vecs = np.linalg.eig(M)
             min_eig_loc = np.argmin(all_eig_vals)
-            
+
             # Grabbing min eigenvalue and corresponding
             # eigenvector
             min_eig = all_eig_vals[min_eig_loc]
@@ -467,7 +467,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 k = self._param_names.index(d2[0])
                 l = self._param_names.index(d2[1])
 
-                # For lop to iterate over all 
+                # For lop to iterate over all
                 # eigenvalues/vectors
                 curr_hess_val = 0
                 for curr_eig in range(len(all_eig_vals)):
@@ -478,14 +478,26 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                         continue
 
                     # Formula derived in Pyomo.DoE Paper
-                    curr_hess_val += 1 * (min_eig_vec[0, i] * 
-                                      all_eig_vecs[j, curr_eig] * 
-                                      min_eig_vec[0, l] * 
-                                      all_eig_vecs[k, curr_eig]) / (min_eig - all_eig_vals[curr_eig])
-                    curr_hess_val += 1 * (min_eig_vec[0, k] * 
-                                      all_eig_vecs[i, curr_eig] * 
-                                      min_eig_vec[0, j] * 
-                                      all_eig_vecs[l, curr_eig]) / (min_eig - all_eig_vals[curr_eig])
+                    curr_hess_val += (
+                        1
+                        * (
+                            min_eig_vec[0, i]
+                            * all_eig_vecs[j, curr_eig]
+                            * min_eig_vec[0, l]
+                            * all_eig_vecs[k, curr_eig]
+                        )
+                        / (min_eig - all_eig_vals[curr_eig])
+                    )
+                    curr_hess_val += (
+                        1
+                        * (
+                            min_eig_vec[0, k]
+                            * all_eig_vecs[i, curr_eig]
+                            * min_eig_vec[0, j]
+                            * all_eig_vecs[l, curr_eig]
+                        )
+                        / (min_eig - all_eig_vals[curr_eig])
+                    )
                 hess_vals.append(curr_hess_val)
                 hess_rows.append(row)
                 hess_cols.append(col)

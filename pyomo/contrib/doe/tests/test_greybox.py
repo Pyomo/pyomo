@@ -607,7 +607,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
-    
 
     def test_hessian_E_opt(self):
         objective_option = "minimum_eigenvalue"
