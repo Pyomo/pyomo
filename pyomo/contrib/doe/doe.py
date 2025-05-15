@@ -364,7 +364,7 @@ class DesignOfExperiments:
                 model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
             elif self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(
+                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
                     np.log(det_val)
                 )
             elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
@@ -1435,7 +1435,7 @@ class DesignOfExperiments:
             )
         elif self.objective_option == ObjectiveLib.determinant:
             model.objective = pyo.Objective(
-                expr=model.obj_cons.egb_fim_block.outputs["log10-D-opt"],
+                expr=model.obj_cons.egb_fim_block.outputs["log-D-opt"],
                 sense=pyo.maximize,
             )
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
