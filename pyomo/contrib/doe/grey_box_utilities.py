@@ -202,7 +202,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Calculate initial values for the output
         output_value = self.evaluate_outputs()[0]
-        
+
         # Set the value of the output for the given
         # objective function.
         if self.objective_option == ObjectiveLib.trace:
