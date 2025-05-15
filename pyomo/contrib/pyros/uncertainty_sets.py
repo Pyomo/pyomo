@@ -827,11 +827,6 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 f"{fbbt_exception_str}\n"
                 f"{fbbt_infeasible_con_exception}"
             )
-        except Exception as fbbt_exception:
-            config.progress_logger.error(
-                f"{fbbt_exception_str}\n"
-                f"{fbbt_exception}"
-            )
 
         param_bounds = [(var.lower, var.upper) for var in bounding_model.param_vars.values()]
 
