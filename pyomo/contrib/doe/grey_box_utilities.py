@@ -469,7 +469,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
                 # For lop to iterate over all 
                 # eigenvalues/vectors
-                hess_val = 0
+                curr_hess_val = 0
                 for curr_eig in range(len(all_eig_vals)):
                     # Skip if we are at the minimum
                     # eigenvalue. Denominator is
@@ -478,15 +478,15 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                         continue
 
                     # Formula derived in Pyomo.DoE Paper
-                    hess_val += 1 * (min_eig_vec[0, i] * 
+                    curr_hess_val += 1 * (min_eig_vec[0, i] * 
                                       all_eig_vecs[j, curr_eig] * 
                                       min_eig_vec[0, l] * 
                                       all_eig_vecs[k, curr_eig]) / (min_eig - all_eig_vals[curr_eig])
-                    hess_val += 1 * (min_eig_vec[0, k] * 
+                    curr_hess_val += 1 * (min_eig_vec[0, k] * 
                                       all_eig_vecs[i, curr_eig] * 
                                       min_eig_vec[0, j] * 
                                       all_eig_vecs[l, curr_eig]) / (min_eig - all_eig_vals[curr_eig])
-                hess_vals.append(-(Minv[i, l] * Minv[k, j]))
+                hess_vals.append(curr_hess_val)
                 hess_rows.append(row)
                 hess_cols.append(col)
         elif self.objective_option == ObjectiveLib.condition_number:
