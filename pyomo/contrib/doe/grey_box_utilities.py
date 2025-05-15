@@ -444,7 +444,51 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 hess_rows.append(row)
                 hess_cols.append(col)
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            pass
+            # Grab eigenvalues and eigenvectors
+            # Also need the min location
+            all_eig_vals, all_eig_vecs = np.linalg.eig(M)
+            min_eig_loc = np.argmin(all_eig_vals)
+            
+            # Grabbing min eigenvalue and corresponding
+            # eigenvector
+            min_eig = all_eig_vals[min_eig_loc]
+            min_eig_vec = np.array([all_eig_vecs[:, min_eig_loc]])
+
+            for current_differential in input_differentials_2D:
+                # Row, Col and i, j, k, l values are
+                # obtained identically as in the trace
+                # for loop above.
+                d1, d2 = current_differential
+                row = self.input_names().index(d1)
+                col = self.input_names().index(d2)
+
+                i = self._param_names.index(d1[0])
+                j = self._param_names.index(d1[1])
+                k = self._param_names.index(d2[0])
+                l = self._param_names.index(d2[1])
+
+                # For lop to iterate over all 
+                # eigenvalues/vectors
+                hess_val = 0
+                for curr_eig in range(len(all_eig_vals)):
+                    # Skip if we are at the minimum
+                    # eigenvalue. Denominator is
+                    # zero.
+                    if curr_eig == min_eig_loc:
+                        continue
+
+                    # Formula derived in Pyomo.DoE Paper
+                    hess_val += 1 * (min_eig_vec[0, i] * 
+                                      all_eig_vecs[j, curr_eig] * 
+                                      min_eig_vec[0, l] * 
+                                      all_eig_vecs[k, curr_eig]) / (min_eig - all_eig_vals[curr_eig])
+                    hess_val += 1 * (min_eig_vec[0, k] * 
+                                      all_eig_vecs[i, curr_eig] * 
+                                      min_eig_vec[0, j] * 
+                                      all_eig_vecs[l, curr_eig]) / (min_eig - all_eig_vals[curr_eig])
+                hess_vals.append(-(Minv[i, l] * Minv[k, j]))
+                hess_rows.append(row)
+                hess_cols.append(col)
         elif self.objective_option == ObjectiveLib.condition_number:
             pass
 
