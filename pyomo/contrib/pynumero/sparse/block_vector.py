@@ -1526,6 +1526,9 @@ class BlockVector(BaseBlockVector, np.ndarray):
         return True
 
     def __getitem__(self, item):
+        # numpy: __getitem__[()] is identity
+        if item.__class__ is tuple and not item:
+            return self
         if not self._has_equal_structure(item):
             raise ValueError(
                 'BlockVector.__getitem__ only accepts slices in the form of BlockVectors of the same structure'
