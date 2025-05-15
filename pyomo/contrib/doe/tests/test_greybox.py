@@ -277,6 +277,7 @@ def make_greybox_and_doe_objects(objective_option):
 
     DoE_args = get_standard_args(experiment, fd_method, obj_used)
     DoE_args["use_grey_box_objective"] = True
+    DoE_args["prior_FIM"] = testing_matrix
 
     doe_obj = DesignOfExperiments(**DoE_args)
     doe_obj.create_doe_model()
@@ -585,6 +586,67 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # should be `None` as there are no
         # equality constraints
         self.assertIsNone(hess_eq_con_vals_gb)
+    
+    # The following few tests will test whether
+    # the DoE problem with grey box is built
+    # properly.
+    def test_A_opt_greybox_build(self):
+        objective_option = "trace"
+        doe_obj, _ = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Build the greybox objective block
+        # on the DoE object
+        doe_obj.create_grey_box_objective_function()
+
+        # Check to see if each component exists
+        all_exist = True
+        
+        # Check output and value
+        A_opt_val = np.trace(np.linalg.inv(testing_matrix))
+
+        try:
+            A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"]()
+        except:
+            A_opt_val_gb = -10.0  # Trace should never be negative
+            all_exist = False
+        
+        # Intermediate check for output existence
+        self.assertTrue(all_exist)
+        # self.assertAlmostEqual(A_opt_val, A_opt_val_gb)
+
+        # Check inputs and values
+        try:
+            input_values = []
+            for i in _.input_names():
+                input_values.append(doe_obj.model.obj_cons.egb_fim_block.inputs[i]())
+        except:
+            input_values = np.zeros_like(testing_matrix)
+            all_exist = False
+        
+        # Final check on existence of inputs
+        self.assertTrue(all_exist)
+        current_FIM = np.zeros_like(testing_matrix)
+        current_FIM[np.triu_indices_from(current_FIM)] = input_values
+        print("Checkpoint before doing some math")
+        print(input_values)
+        print(current_FIM)
+        current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
+        
+        print("FIM from input values")
+        print(current_FIM)
+        print("FIM from testing file")
+        print(testing_matrix + np.eye(4))
+        print("FIM from doe object")
+        print(np.asarray(doe_obj.get_FIM()))
+
+        self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
+
+
+
+
+
 
 
 if __name__ == "__main__":

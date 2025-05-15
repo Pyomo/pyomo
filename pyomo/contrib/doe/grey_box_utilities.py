@@ -98,6 +98,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         self._input_values = np.asarray(
             self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
         )
+        print(self.doe_object.fim_initial[self._masking_matrix > 0])
         self._n_inputs = len(self._input_values)
         # print(self._input_values)
 
