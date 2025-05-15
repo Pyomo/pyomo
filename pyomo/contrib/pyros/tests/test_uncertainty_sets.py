@@ -363,7 +363,7 @@ class TestBoxSet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = Bunch()
 
@@ -373,17 +373,39 @@ class TestBoxSet(unittest.TestCase):
         # validate raises no issues on valid set
         box_set.validate(config=CONFIG)
 
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct valid box set
+        box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
+
         # check when values are not finite
         box_set.bounds[0][0] = np.nan
-        exc_str = r"Not all bounds are finite. \nGot bounds:.*"
+        exc_str = (
+            r"Entry 'nan' of the argument `bounds` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
+
+    def test_validate_bounds(self):
+        """
+        Test validate bounds check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct valid box set
+        box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
 
         # check when LB >= UB
         box_set.bounds[0][0] = 5
         exc_str = r"Lower bound 5.0 exceeds upper bound 2.0"
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
+
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -618,7 +640,7 @@ class TestBudgetSet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = Bunch()
 
@@ -630,24 +652,55 @@ class TestBudgetSet(unittest.TestCase):
         # validate raises no issues on valid set
         budget_set.validate(config=CONFIG)
 
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid budget set
+        budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
+        budget_rhs_vec = [1.0, 3.0]
+        budget_set = BudgetSet(budget_mat, budget_rhs_vec)
+
         # check when values are not finite
         budget_set.origin[0] = np.nan
-        exc_str = r"Origin, LHS coefficient matrix or RHS vector are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `origin` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
         budget_set.origin[0] = 0
 
         budget_set.budget_rhs_vec[0] = np.nan
-        exc_str = r"Origin, LHS coefficient matrix or RHS vector are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `budget_rhs_vec` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
         budget_set.budget_rhs_vec[0] = 1
 
         budget_set.budget_membership_mat[0][0] = np.nan
-        exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `budget_membership_mat` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
         budget_set.budget_membership_mat[0][0] = 1
+
+    def test_validate_rhs(self):
+        """
+        Test validate RHS check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid budget set
+        budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
+        budget_rhs_vec = [1.0, 3.0]
+        budget_set = BudgetSet(budget_mat, budget_rhs_vec)
 
         # check when rhs has negative element
         budget_set.budget_rhs_vec = [1, -1]
@@ -656,11 +709,28 @@ class TestBudgetSet(unittest.TestCase):
             budget_set.validate(config=CONFIG)
         budget_set.budget_rhs_vec = budget_rhs_vec
 
+    def test_validate_non_bool_budget_mat_entry(self):
+        """
+        Test validate LHS matrix 0-1 entries check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid budget set
+        budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
+        budget_rhs_vec = [1.0, 3.0]
+        budget_set = BudgetSet(budget_mat, budget_rhs_vec)
+
         # check when not all lhs entries are 0-1
         budget_set.budget_membership_mat = [[1, 0, 1], [1, 1, 0.1]]
         exc_str = r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
+
+    def test_validate_budget_mat_all_zero_rows(self):
+        """
+        Test validate LHS matrix all zero row check performs as expected.
+        """
+        CONFIG = Bunch()
 
         # check when row has all zeros
         invalid_row_mat = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
@@ -670,9 +740,16 @@ class TestBudgetSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
 
+    def test_validate_budget_mat_all_zero_columns(self):
+        """
+        Test validate LHS matrix all zero column check performs as expected.
+        """
+        CONFIG = Bunch()
+
         # check when column has all zeros
-        budget_set.budget_membership_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
-        budget_set.budget_rhs_vec = [1, 1, 2]
+        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        budget_rhs_vec = [1, 1, 2]
+        budget_set = BudgetSet(invalid_col_mat, budget_rhs_vec)
         exc_str = r".*all entries zero in columns at indexes: 0, 1.*"
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
@@ -1012,7 +1089,7 @@ class TestFactorModelSet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = Bunch()
 
@@ -1026,12 +1103,40 @@ class TestFactorModelSet(unittest.TestCase):
         # validate raises no issues on valid set
         factor_set.validate(config=CONFIG)
 
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid factor model set
+        origin = [0.0, 0.0, 0.0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+        factor_set = FactorModelSet(origin, number_of_factors, psi_mat, beta)
+
         # check when values are not finite
         factor_set.origin[0] = np.nan
-        exc_str = r"Origin is not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `origin` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             factor_set.validate(config=CONFIG)
-        factor_set.origin[0] = 0
+
+    def test_validate_beta(self):
+        """
+        Test validate beta check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid factor model set
+        origin = [0.0, 0.0, 0.0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+        factor_set = FactorModelSet(origin, number_of_factors, psi_mat, beta)
 
         # check when beta is invalid
         neg_beta = -0.5
@@ -1046,6 +1151,12 @@ class TestFactorModelSet(unittest.TestCase):
         factor_set.beta = big_beta
         with self.assertRaisesRegex(ValueError, big_exc_str):
             factor_set.validate(config=CONFIG)
+
+    def test_validate_psi_matrix(self):
+        """
+        Test validate psi matrix check performs as expected.
+        """
+        CONFIG = Bunch()
 
         # check when psi matrix is rank defficient
         with self.assertRaisesRegex(ValueError, r"full column rank.*\(2, 3\)"):
@@ -1662,7 +1773,7 @@ class TestCardinalitySet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = Bunch()
 
@@ -1674,17 +1785,45 @@ class TestCardinalitySet(unittest.TestCase):
         # validate raises no issues on valid set
         cardinality_set.validate(config=CONFIG)
 
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid cardinality set
+        cardinality_set = CardinalitySet(
+            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+        )
+
         # check when values are not finite
         cardinality_set.origin[0] = np.nan
-        exc_str = r"Origin value and/or positive deviation are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `origin` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
 
         cardinality_set.origin[0] = 0
         cardinality_set.positive_deviation[0] = np.nan
-        exc_str = r"Origin value and/or positive deviation are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `positive_deviation` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
+
+    def test_validate_pos_deviation(self):
+        """
+        Test validate positive deviation check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid cardinality set
+        cardinality_set = CardinalitySet(
+            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+        )
 
         # check when deviation is negative
         cardinality_set.positive_deviation[0] = -2
@@ -1692,8 +1831,18 @@ class TestCardinalitySet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
 
+    def test_validate_gamma(self):
+        """
+        Test validate gamma check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid cardinality set
+        cardinality_set = CardinalitySet(
+            origin=[0.0, 0.0], positive_deviation=[1.0, 1.0], gamma=2
+        )
+
         # check when gamma is invalid
-        cardinality_set.positive_deviation[0] = 1
         cardinality_set.gamma = 3
         exc_str = (
             r".*attribute 'gamma' must be a real number "
@@ -1838,7 +1987,42 @@ class TestDiscreteScenarioSet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid discrete scenario set
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+
+        # validate raises no issues on valid set
+        discrete_set.validate(config=CONFIG)
+
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid discrete scenario set
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+
+        # validate raises no issues on valid set
+        discrete_set.validate(config=CONFIG)
+
+        # check when not all scenarios are finite
+        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
+        for val_str in ["inf", "nan"]:
+            exc_str = (
+                fr"Entry '{val_str}' of the argument `scenarios` "
+                r"is not a finite numeric value"
+            )
+            discrete_set.scenarios[0] = [1, float(val_str)]
+            with self.assertRaisesRegex(ValueError, exc_str):
+                discrete_set.validate(config=CONFIG)
+
+    def test_validate_nonemptiness(self):
+        """
+        Test validate finiteness check performs as expected.
         """
         CONFIG = Bunch()
 
@@ -1849,23 +2033,12 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         discrete_set.validate(config=CONFIG)
 
         # check when scenario set is empty
-        # TODO should this method can be used to create ragged arrays
-        # after a set is created. There are currently no checks for this
-        # in any validate method. It may be good to included validate_array
-        # in all validate methods as well to guard against it.
         discrete_set = DiscreteScenarioSet([[0]])
-        discrete_set.scenarios.pop(0)
-        exc_str = r"Scenarios set must be nonempty. .*"
+        discrete_set.scenarios.pop(0)  # remove initial scenario
+        discrete_set.scenarios.append([])  # add empty scenario
+        exc_str = r".* argument `scenarios` must be non-empty"
         with self.assertRaisesRegex(ValueError, exc_str):
             discrete_set.validate(config=CONFIG)
-
-        # check when not all scenarios are finite
-        discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
-        exc_str = r"Not all scenarios are finite. .*"
-        for val_str in ["inf", "nan"]:
-            discrete_set.scenarios[0] = [1, float(val_str)]
-            with self.assertRaisesRegex(ValueError, exc_str):
-                discrete_set.validate(config=CONFIG)
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -2033,7 +2206,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = Bunch()
 
@@ -2045,18 +2218,46 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         # validate raises no issues on valid set
         a_ellipsoid_set.validate(config=CONFIG)
 
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid axis aligned ellipsoidal set
+        center = [0.0, 0.0]
+        half_lengths = [1.0, 3.0]
+        a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
+
         # check when values are not finite
         a_ellipsoid_set.center[0] = np.nan
-        exc_str = r"Center or half-lengths are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `center` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             a_ellipsoid_set.validate(config=CONFIG)
         a_ellipsoid_set.center[0] = 0
 
         a_ellipsoid_set.half_lengths[0] = np.nan
-        exc_str = r"Center or half-lengths are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `half_lengths` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             a_ellipsoid_set.validate(config=CONFIG)
         a_ellipsoid_set.half_lengths[0] = 1
+
+    def test_validate_half_length(self):
+        """
+        Test validate half-lengths check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid axis aligned ellipsoidal set
+        center = [0.0, 0.0]
+        half_lengths = [1.0, 3.0]
+        a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
 
         # check when half lengths are negative
         a_ellipsoid_set.half_lengths = [1, -1]
@@ -2389,7 +2590,7 @@ class TestEllipsoidalSet(unittest.TestCase):
 
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = Bunch()
 
@@ -2402,12 +2603,38 @@ class TestEllipsoidalSet(unittest.TestCase):
         # validate raises no issues on valid set
         ellipsoid_set.validate(config=CONFIG)
 
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid ellipsoidal set
+        center = [0.0, 0.0]
+        shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
+        scale = 1
+        ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
+
         # check when values are not finite
         ellipsoid_set.center[0] = np.nan
-        exc_str = r"Center is not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `center` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             ellipsoid_set.validate(config=CONFIG)
-        ellipsoid_set.center[0] = 0
+
+    def test_validate_scale(self):
+        """
+        Test validate scale check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid ellipsoidal set
+        center = [0.0, 0.0]
+        shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
+        scale = 1
+        ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
 
         # check when scale is not positive
         ellipsoid_set.scale = -1
@@ -2415,11 +2642,22 @@ class TestEllipsoidalSet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             ellipsoid_set.validate(config=CONFIG)
 
+    def test_validate_shape_matrix(self):
+        """
+        Test validate shape matrix check performs as expected.
+        """
+        CONFIG = Bunch()
+
+        # construct a valid ellipsoidal set
+        center = [0.0, 0.0]
+        shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
+        scale = 1
+        ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
+
         # check when shape matrix is invalid
         center = [0, 0]
         scale = 3
 
-        # assert error on construction
         with self.assertRaisesRegex(
             ValueError,
             r"Shape matrix must be symmetric",
@@ -2439,6 +2677,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         ):
             ellipsoid_set = EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
             ellipsoid_set.validate(config=CONFIG)
+
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -2647,7 +2886,7 @@ class TestPolyhedralSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_validate(self):
         """
-        Test validate checks perform as expected.
+        Test validate performs as expected.
         """
         CONFIG = pyros_config()
         CONFIG.global_solver = global_solver
@@ -2661,17 +2900,51 @@ class TestPolyhedralSet(unittest.TestCase):
         # validate raises no issues on valid set
         polyhedral_set.validate(config=CONFIG)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_validate_finiteness(self):
+        """
+        Test validate finiteness check performs as expected.
+        """
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # construct a valid polyhedral set
+        polyhedral_set = PolyhedralSet(
+            lhs_coefficients_mat=[[1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]],
+            rhs_vec=[2.0, -1.0, -1.0],
+        )
+
         # check when values are not finite
         polyhedral_set.rhs_vec[0] = np.nan
-        exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `rhs_vec` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             polyhedral_set.validate(config=CONFIG)
 
         polyhedral_set.rhs_vec[0] = 2
         polyhedral_set.coefficients_mat[0][0] = np.nan
-        exc_str = r"LHS coefficient matrix or RHS vector are not finite. .*"
+        exc_str = (
+            r"Entry 'nan' of the argument `coefficients_mat` "
+            r"is not a finite numeric value"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             polyhedral_set.validate(config=CONFIG)
+
+    @unittest.skipUnless(baron_available, "BARON is not available")
+    def test_validate_full_column_rank(self):
+        """
+        Test validate full column rank check performs as expected.
+        """
+        CONFIG = pyros_config()
+        CONFIG.global_solver = global_solver
+
+        # construct a valid polyhedral set
+        polyhedral_set = PolyhedralSet(
+            lhs_coefficients_mat=[[1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]],
+            rhs_vec=[2.0, -1.0, -1.0],
+        )
 
         # check when LHS matrix is not full column rank
         polyhedral_set.coefficients_mat = [[0.0, 0.0], [0.0, 1.0], [0.0, -1.0]]
