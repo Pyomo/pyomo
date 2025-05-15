@@ -140,8 +140,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # name for the objective function at all times.
         from pyomo.contrib.doe import ObjectiveLib
 
-        if self.objective_option == ObjectiveLib.determinant:
-            obj_name = "log10-D-opt"
+        if self.objective_option == ObjectiveLib.trace:
+            obj_name = "A-opt"
+        elif self.objective_option == ObjectiveLib.determinant:
+            obj_name = "log-D-opt"
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             obj_name = "E-opt"
         elif self.objective_option == ObjectiveLib.condition_number:
@@ -201,7 +203,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         if self.objective_option == ObjectiveLib.trace:
             pyomo_block.outputs["A-opt"] = 0
         elif self.objective_option == ObjectiveLib.determinant:
-            pyomo_block.outputs["log10-D-opt"] = 0
+            pyomo_block.outputs["log-D-opt"] = 0
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             pyomo_block.outputs["E-opt"] = 0
         elif self.objective_option == ObjectiveLib.condition_number:
