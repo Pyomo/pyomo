@@ -559,6 +559,28 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
 
     # Testing Hessian Computation
+    def test_hessian_A_opt(self):
+        objective_option = "trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        hess_gb = hess_vals_from_gb
+        hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
+
+        # Get numerical derivative matrix
+        hess_FD = get_numerical_second_derivative(grey_box_object)
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
+    
     def test_hessian_D_opt(self):
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
@@ -577,8 +599,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Get numerical derivative matrix
         hess_FD = get_numerical_second_derivative(grey_box_object)
-
-        print(np.abs((hess_gb - hess_FD) / hess_gb))
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
