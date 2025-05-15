@@ -1649,45 +1649,6 @@ class PolyhedralSet(UncertaintySet):
         self.coefficients_mat = lhs_coefficients_mat
         self.rhs_vec = rhs_vec
 
-        # validate nonemptiness and boundedness here.
-        # This check is only performed at construction.
-        self._validate()
-
-    # TODO this has a _validate method...
-    # seems redundant with new validate method and should be consolidated
-    def _validate(self):
-        """
-        Check polyhedral set attributes are such that set is nonempty
-        (solve a feasibility problem).
-
-        Raises
-        ------
-        ValueError
-            If set is empty, or the check was not
-            successfully completed due to numerical issues.
-        """
-        # solve LP
-        res = sp.optimize.linprog(
-            c=np.zeros(self.coefficients_mat.shape[1]),
-            A_ub=self.coefficients_mat,
-            b_ub=self.rhs_vec,
-            method="highs",
-            bounds=(None, None),
-        )
-
-        # check termination
-        if res.status == 1 or res.status == 4:
-            raise ValueError(
-                "Could not verify nonemptiness of the "
-                "polyhedral set (`scipy.optimize.linprog(method='highs')` "
-                f" status {res.status}) "
-            )
-        elif res.status == 2:
-            raise ValueError(
-                "PolyhedralSet defined by 'coefficients_mat' and "
-                "'rhs_vec' is empty. Check arguments"
-            )
-
     @property
     def type(self):
         """

@@ -2540,17 +2540,6 @@ class TestPolyhedralSet(unittest.TestCase):
             # 3-vector mismatches 2 rows
             pset.rhs_vec = [1, 3, 2]
 
-    def test_error_on_empty_set(self):
-        """
-        Check ValueError raised if nonemptiness check performed
-        at construction returns a negative result.
-        """
-        exc_str = r"PolyhedralSet.*is empty.*"
-
-        # assert error on construction
-        with self.assertRaisesRegex(ValueError, exc_str):
-            PolyhedralSet([[1], [-1]], rhs_vec=[1, -3])
-
     def test_set_as_constraint(self):
         """
         Test method for setting up constraints works correctly.
