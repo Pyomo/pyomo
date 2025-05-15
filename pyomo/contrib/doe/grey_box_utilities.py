@@ -200,14 +200,19 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Initialize log_determinant value
         from pyomo.contrib.doe import ObjectiveLib
 
+        # Calculate initial values for the output
+        output_value = self.evaluate_outputs()[0]
+        
+        # Set the value of the output for the given
+        # objective function.
         if self.objective_option == ObjectiveLib.trace:
-            pyomo_block.outputs["A-opt"] = 0
+            pyomo_block.outputs["A-opt"] = output_value
         elif self.objective_option == ObjectiveLib.determinant:
-            pyomo_block.outputs["log-D-opt"] = 0
+            pyomo_block.outputs["log-D-opt"] = output_value
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
-            pyomo_block.outputs["E-opt"] = 0
+            pyomo_block.outputs["E-opt"] = output_value
         elif self.objective_option == ObjectiveLib.condition_number:
-            pyomo_block.outputs["ME-opt"] = 0
+            pyomo_block.outputs["ME-opt"] = output_value
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
