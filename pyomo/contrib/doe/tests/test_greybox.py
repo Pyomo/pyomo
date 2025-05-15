@@ -869,6 +869,23 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
+    
+    # Testing all the error messages
+    def test_constructor_doe_object_error(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "DoE Object must be provided to build external grey box of the FIM.",
+        ):
+            grey_box_object = FIMExternalGreyBox(doe_object=None)
+
+    def test_constructor_objective_lib_error(self):
+        objective_option = "trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects(objective_option=objective_option)
+        with self.assertRaisesRegex(
+            ValueError,
+            "'Bad Objective Option' is not a valid ObjectiveLib",
+        ):
+            bad_grey_box_object = FIMExternalGreyBox(doe_object=doe_object, objective_option="Bad Objective Option")
 
 
 if __name__ == "__main__":

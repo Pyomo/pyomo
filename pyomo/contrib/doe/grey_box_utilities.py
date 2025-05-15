@@ -73,12 +73,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Check if the doe_object has model components that are required
         # TODO: add checks for the model --> doe_object.model needs FIM; all other checks should
         #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
-        if objective_option == "determinant":
-            from pyomo.contrib.doe import ObjectiveLib
-
-            objective_option = ObjectiveLib(objective_option)
+        from pyomo.contrib.doe import ObjectiveLib
+        objective_option = ObjectiveLib(objective_option)
         self.objective_option = (
-            objective_option  # Add failsafe to make sure this is ObjectiveLib object?
+            objective_option
         )
         # Will anyone ever call this without calling DoE? --> intended to be no; but maybe more utility?
 
