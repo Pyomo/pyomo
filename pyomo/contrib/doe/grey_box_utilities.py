@@ -383,31 +383,35 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             # Grab inverse
             Minv = np.linalg.pinv(M)
 
-            # Equation derived, shown in greybox
-            # pyomo.DoE 2.0 paper
-            # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] +
-            #                          Minv[i, l]Minv[k, j])
-            lower_tri_inds_4D = itertools.combinations_with_replacement(
-                range(self._n_params), 4
+            input_differentials_2D = itertools.combinations_with_replacement(
+                self.input_names(), 2
             )
-            for curr_location in lower_tri_inds_4D:
-                # For quadruples (i, j, k, l)...
-                # Row of hessian is sum from
-                # n - i + 1 to n minus i plus j
+            for current_differential in input_differentials_2D:
+                # Row will be the location of the
+                # first ordered pair (d1) in input names
                 #
-                # Column of hessian is sum from
-                # n - k + 1 to n minus k plus l
-                i, j, k, l = curr_location
-                print(i, j, k, l)
-                row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
-                col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
-                # hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
-                # New Formula (tested with finite differencing)
-                hess[row, col] = -(Minv[i, l] * Minv[k, j])
+                # Col will be the location of the
+                # second ordered pair (d2) in input names
+                d1, d2 = current_differential
+                row = self.input_names().index(d1)
+                col = self.input_names().index(d2)
 
-            print(hess)
-            # Complete the full matrix
-            hess = hess.transpose()
+                # Grabbing the ordered quadruple (i, j, k, l)
+                # `location` here refers to the index in the
+                # self._param_names list
+                #
+                # i is the location of the first element of d1
+                # j is the location of the second element of d1
+                # k is the location of the first element of d2
+                # l is the location of the second element of d2
+                i = self._param_names.index(d1[0])
+                j = self._param_names.index(d1[1])
+                k = self._param_names.index(d2[0])
+                l = self._param_names.index(d2[2])
+
+                # New Formula (tested with finite differencing)
+                # Will be cited from the Pyomo.DoE 2.0 paper
+                hess[row, col] = -(Minv[i, l] * Minv[k, j])
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             pass
         elif self.objective_option == ObjectiveLib.condition_number:
