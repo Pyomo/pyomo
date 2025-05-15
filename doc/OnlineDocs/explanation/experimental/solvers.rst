@@ -386,3 +386,109 @@ implemented. For example, for ``ipopt``:
    :members:
    :show-inheritance:
    :inherited-members:
+
+
+Dual Sign Convention
+--------------------
+For all future solver interfaces, Pyomo adopts the following sign convention. Given the problem
+
+.. math::
+
+   \begin{aligned}
+   \min\quad      & f(x) \\
+   \text{s.t.}\quad & c_i(x) = 0 \quad \forall i \in \mathcal{E} \\
+                    & g_i(x) \le 0 \quad \forall i \in \mathcal{U} \\
+                    & h_i(x) \ge 0 \quad \forall i \in \mathcal{L}
+   \end{aligned}
+
+We define the Lagrangian as
+
+.. math::
+
+   \begin{aligned}
+   L(x, \lambda, \nu, \delta)
+     &= f(x)
+        - \sum_{i \in \mathcal{E}} \lambda_i\,c_i(x)
+        - \sum_{i \in \mathcal{U}} \nu_i\,g_i(x)
+        - \sum_{i \in \mathcal{L}} \delta_i\,h_i(x)
+   \end{aligned}
+
+Then, the KKT conditions are [NW99]_
+
+.. math::
+
+   \begin{aligned}
+   \nabla_x L(x, \lambda, \nu, \delta) &= 0 \\
+   c(x)                                &= 0 \\
+   g(x)                                &\le 0 \\
+   h(x)                                &\ge 0 \\
+   \nu                                 &\le 0 \\
+   \delta                              &\ge 0 \\
+   \nu_i\,g_i(x)                       &= 0 \\
+   \delta_i\,h_i(x)                    &= 0
+   \end{aligned}
+
+Note that this sign convention is based on the ``(lower, body, upper)``
+representation of constraints rather than the expression provided by a
+user. Users can specify constraints with variables on both the left- and
+right-hand sides of equalities and inequalities. However, the
+``(lower, body, upper)`` representation ensures that all variables
+appear in the ``body``, matching the form of the problem above.
+
+For maximization problems of the form
+
+.. math::
+
+   \begin{aligned}
+   \max\quad      & f(x) \\
+   \text{s.t.}\quad & c_i(x) = 0 \quad \forall i \in \mathcal{E} \\
+                    & g_i(x) \le 0 \quad \forall i \in \mathcal{U} \\
+                    & h_i(x) \ge 0 \quad \forall i \in \mathcal{L}
+   \end{aligned}
+
+we define the Lagrangian to be the same as above:
+
+.. math::
+
+   \begin{aligned}
+   L(x, \lambda, \nu, \delta)
+     &= f(x)
+        - \sum_{i \in \mathcal{E}} \lambda_i\,c_i(x)
+        - \sum_{i \in \mathcal{U}} \nu_i\,g_i(x)
+        - \sum_{i \in \mathcal{L}} \delta_i\,h_i(x)
+   \end{aligned}
+
+As a result, the signs of the duals change. The KKT conditions are 
+
+.. math::
+
+   \begin{aligned}
+   \nabla_x L(x, \lambda, \nu, \delta) &= 0 \\
+   c(x)                                &= 0 \\
+   g(x)                                &\le 0 \\
+   h(x)                                &\ge 0 \\
+   \nu                                 &\ge 0 \\
+   \delta                              &\le 0 \\
+   \nu_i\,g_i(x)                       &= 0 \\
+   \delta_i\,h_i(x)                    &= 0
+   \end{aligned}
+
+
+Pyomo also supports "range constraints" which are inequalities with both upper
+and lower bounds, where the bounds are not equal. For example,
+
+.. math::
+
+   -1 \leq x + y \leq 1
+
+These are handled very similarly to variable bounds in terms of dual sign
+conventions. For these, at most one "side" of the inequality can be active
+at a time. If neither side is active, then the dual will be zero. If the dual
+is nonzero, then the dual corresponds to the side of the constraint that is
+active. The dual for the other side will be implicitly zero. When accessing
+duals, the keys are the constraints. As a result, there is only one key for
+a range constraint, even though it is really two constraints. Therefore, the
+dual for the inactive side will not be reported explicitly. Again, the sign
+convention is based on the ``(lower, body, upper)`` representation of the
+constraint. Therefore, the left side of this inequality belongs to
+:math:`\mathcal{L}` and the right side belongs to :math:`\mathcal{U}`.
