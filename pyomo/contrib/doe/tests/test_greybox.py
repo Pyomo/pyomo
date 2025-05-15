@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import copy
+import itertools
 import json
 import os.path
 
@@ -40,7 +41,8 @@ with open(file_path) as f:
 
 data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
-_FD_EPSILON = 1e-6  # Epsilon for numerical comparison of derivatives
+_FD_EPSILON_FIRST = 1e-6  # Epsilon for numerical comparison of derivatives
+_FD_EPSILON_SECOND = 1e-4  # Epsilon for numerical comparison of derivatives
 
 if numpy_available:
     # Randomly generated P.S.D. matrix
@@ -85,7 +87,7 @@ def get_numerical_derivative(grey_box_object=None):
     for i in range(dim):
         for j in range(dim):
             FIM_perturbed = copy.deepcopy(current_FIM)
-            FIM_perturbed[i, j] += _FD_EPSILON
+            FIM_perturbed[i, j] += _FD_EPSILON_FIRST
 
             new_value_ij = 0
             # Test which method is being used:
@@ -100,14 +102,14 @@ def get_numerical_derivative(grey_box_object=None):
                 new_value_ij = np.linalg.cond(FIM_perturbed)
 
             # Calculate the derivative value from forward difference
-            diff = (new_value_ij - unperturbed_value) / _FD_EPSILON
+            diff = (new_value_ij - unperturbed_value) / _FD_EPSILON_FIRST
 
             numerical_derivative[i, j] = diff
 
     return numerical_derivative
 
 
-def get_numerical_second_derivative(grey_box_object=None):
+def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
     # Internal import to avoid circular imports
     from pyomo.contrib.doe import ObjectiveLib
 
@@ -134,17 +136,17 @@ def get_numerical_second_derivative(grey_box_object=None):
                     # + (FIM +/- eps one each)
                     # + (FIM -/+ eps one each)
                     # + (FIM - eps (both))] / (4*eps**2)
-                    FIM_perturbed_1[i, j] += _FD_EPSILON
-                    FIM_perturbed_1[k, l] += _FD_EPSILON
+                    FIM_perturbed_1[i, j] += _FD_EPSILON_SECOND
+                    FIM_perturbed_1[k, l] += _FD_EPSILON_SECOND
 
-                    FIM_perturbed_2[i, j] += _FD_EPSILON
-                    FIM_perturbed_2[k, l] += -_FD_EPSILON
+                    FIM_perturbed_2[i, j] += _FD_EPSILON_SECOND
+                    FIM_perturbed_2[k, l] += -_FD_EPSILON_SECOND
 
-                    FIM_perturbed_3[i, j] += -_FD_EPSILON
-                    FIM_perturbed_3[k, l] += _FD_EPSILON
+                    FIM_perturbed_3[i, j] += -_FD_EPSILON_SECOND
+                    FIM_perturbed_3[k, l] += _FD_EPSILON_SECOND
 
-                    FIM_perturbed_4[i, j] += -_FD_EPSILON
-                    FIM_perturbed_4[k, l] += -_FD_EPSILON
+                    FIM_perturbed_4[i, j] += -_FD_EPSILON_SECOND
+                    FIM_perturbed_4[k, l] += -_FD_EPSILON_SECOND
 
                     new_values = np.array([0.0, 0.0, 0.0, 0.0])
                     # Test which method is being used:
@@ -182,10 +184,33 @@ def get_numerical_second_derivative(grey_box_object=None):
                     # Calculate the derivative value from second order difference formula
                     diff = (
                         new_values[0] - new_values[1] - new_values[2] + new_values[3]
-                    ) / (4 * _FD_EPSILON**2)
+                    ) / (4 * _FD_EPSILON_SECOND**2)
 
                     numerical_derivative[i, j, k, l] = diff
 
+    if return_reduced:
+        # This considers a 4-parameter system
+        # which is what these tests are based
+        # upon. This can be generalized but
+        # requires checking the parameter length.
+        #
+        # Make ordered quads with no repeats
+        # of the ordered pairs
+        ordered_pairs = itertools.combinations_with_replacement(range(4), 2)
+        ordered_pairs_list = list(itertools.combinations_with_replacement(range(4), 2))
+        ordered_quads = itertools.combinations_with_replacement(ordered_pairs, 2)
+
+        numerical_derivative_reduced = np.zeros((10, 10))
+
+        for i in ordered_quads:
+            row = ordered_pairs_list.index(i[0])
+            col = ordered_pairs_list.index(i[1])
+            numerical_derivative_reduced[row, col] = numerical_derivative[i[0][0], i[0][1], i[1][0], i[1][1]]
+        
+        numerical_derivative_reduced += numerical_derivative_reduced.transpose() - np.diag(np.diag(numerical_derivative_reduced))
+        return numerical_derivative_reduced
+    
+    # Otherwise return numerical derivative as normal
     return numerical_derivative
 
 
@@ -532,6 +557,31 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+
+    # Testing Hessian Computation
+    def test_hessian_D_opt(self):
+        objective_option = "determinant"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Set input values to the random testing matrix
+        grey_box_object.set_input_values(testing_matrix[masking_matrix > 0])
+
+        # Grab the Jacobian values
+        hess_vals_from_gb = grey_box_object.evaluate_hessian_outputs().toarray()
+
+        # Recover the Jacobian in Matrix Form
+        hess_gb = hess_vals_from_gb
+        hess_gb += hess_gb.transpose() - np.diag(np.diag(hess_gb))
+
+        # Get numerical derivative matrix
+        hess_FD = get_numerical_second_derivative(grey_box_object)
+
+        print(np.abs((hess_gb - hess_FD) / hess_gb))
+
+        # assert that each component is close
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
 
     def test_equality_constraint_names(self):
         objective_option = "condition_number"

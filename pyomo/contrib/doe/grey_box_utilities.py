@@ -152,8 +152,6 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
     def set_input_values(self, input_values):
         # Set initial values to be flattened initial FIM (aligns with input names)
-        print("Called set input values")
-        print(input_values)
         np.copyto(self._input_values, input_values)
         # self._input_values = list(self.doe_object.fim_initial.flatten())
 
@@ -373,19 +371,25 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Hessian with correct size for using only the
         # lower (upper) triangle of the FIM
-        hess = np.zeros((self._n_inputs, self._n_inputs))
+        hess_vals = []
+        hess_rows = []
+        hess_cols = []
+
+        # Need to iterate over the unique 
+        # differentials
+        input_differentials_2D = itertools.combinations_with_replacement(
+                self.input_names(), 2
+            )
 
         from pyomo.contrib.doe import ObjectiveLib
 
         if self.objective_option == ObjectiveLib.trace:
-            pass
-        elif self.objective_option == ObjectiveLib.determinant:
-            # Grab inverse
+            # Grab Inverse
             Minv = np.linalg.pinv(M)
+            
+            # Also grab inverse squared
+            Minv_sq = Minv @ Minv
 
-            input_differentials_2D = itertools.combinations_with_replacement(
-                self.input_names(), 2
-            )
             for current_differential in input_differentials_2D:
                 # Row will be the location of the
                 # first ordered pair (d1) in input names
@@ -407,23 +411,41 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 i = self._param_names.index(d1[0])
                 j = self._param_names.index(d1[1])
                 k = self._param_names.index(d2[0])
-                l = self._param_names.index(d2[2])
+                l = self._param_names.index(d2[1])
 
                 # New Formula (tested with finite differencing)
                 # Will be cited from the Pyomo.DoE 2.0 paper
-                hess[row, col] = -(Minv[i, l] * Minv[k, j])
+                hess_vals.append((Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j]))
+                hess_rows.append(row)
+                hess_cols.append(col)
+
+        elif self.objective_option == ObjectiveLib.determinant:
+            # Grab inverse
+            Minv = np.linalg.pinv(M)
+
+            for current_differential in input_differentials_2D:
+                # Row, Col and i, j, k, l values are
+                # obtained identically as in the trace
+                # for loop above.
+                d1, d2 = current_differential
+                row = self.input_names().index(d1)
+                col = self.input_names().index(d2)
+
+                i = self._param_names.index(d1[0])
+                j = self._param_names.index(d1[1])
+                k = self._param_names.index(d2[0])
+                l = self._param_names.index(d2[1])
+
+                # New Formula (tested with finite differencing)
+                # Will be cited from the Pyomo.DoE 2.0 paper
+                hess_vals.append(-(Minv[i, l] * Minv[k, j]))
+                hess_rows.append(row)
+                hess_cols.append(col)
         elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
             pass
         elif self.objective_option == ObjectiveLib.condition_number:
             pass
 
-        # Select only lower triangular values as a flat array
-        hess_masking_matrix = np.tril(np.ones_like(hess))
-        hess_data = hess[hess_masking_matrix > 0]
-        hess_rows, hess_cols = np.tril_indices_from(hess)
-
-        print(hess_rows)
-        print(hess_cols)
 
         # Returns coo_matrix of the correct shape
-        return coo_matrix((hess_data, (hess_rows, hess_cols)), shape=hess.shape)
+        return coo_matrix((np.asarray(hess_vals), (hess_rows, hess_cols)), shape=(self._n_inputs, self._n_inputs))
