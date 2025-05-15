@@ -1312,15 +1312,21 @@ class BoxSet(UncertaintySet):
         Raises
         ------
         ValueError
-            If finiteness and LB<=UB checks fail.
+            If any uncertainty set attributes are not valid.
+            If bound are not valid or finiteness and LB<=UB checks fail.
         """
         bounds_arr = np.array(self.parameter_bounds)
 
-        # finiteness check
-        if not np.all(np.isfinite(bounds_arr)):
-            raise ValueError(
-                "Not all bounds are finite. " f"\nGot bounds:\n {bounds_arr}"
-            )
+        # check bounds are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=bounds_arr,
+            arr_name="bounds",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=[None, 2],
+        )
 
         # check LB <= UB
         for lb, ub in bounds_arr:
@@ -1578,18 +1584,30 @@ class CardinalitySet(UncertaintySet):
         Raises
         ------
         ValueError
+            If any uncertainty set attributes are not valid.
             If finiteness, positive deviation, or gamma checks fail.
         """
         orig_val = self.origin
         pos_dev = self.positive_deviation
         gamma = self.gamma
 
-        # finiteness check
-        if not (np.all(np.isfinite(orig_val)) and np.all(np.isfinite(pos_dev))):
-            raise ValueError(
-                "Origin value and/or positive deviation are not finite. "
-                f"Got origin: {orig_val}, positive deviation: {pos_dev}"
-            )
+        # check origin, positive deviation, and gamma are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=orig_val,
+            arr_name="origin",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_array(
+            arr=pos_dev,
+            arr_name="positive_deviation",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_arg_type("gamma", gamma, valid_num_types, "a valid numeric type", False)
 
         # check deviation is positive
         for dev_val in pos_dev:
@@ -1786,20 +1804,31 @@ class PolyhedralSet(UncertaintySet):
         Raises
         ------
         ValueError
+            If any uncertainty set attributes are not valid.
             If finiteness, full column rank of LHS matrix, is_bounded,
             or is_nonempty checks fail.
         """
         lhs_coeffs_arr = self.coefficients_mat
         rhs_vec_arr = self.rhs_vec
 
-        # finiteness check
-        if not (
-            np.all(np.isfinite(lhs_coeffs_arr)) and np.all(np.isfinite(rhs_vec_arr))
-        ):
-            raise ValueError(
-                "LHS coefficient matrix or RHS vector are not finite. "
-                f"\nGot LHS matrix:\n{lhs_coeffs_arr},\nRHS vector:\n{rhs_vec_arr}"
-            )
+        # check lhs matrix and rhs vector are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=lhs_coeffs_arr,
+            arr_name="coefficients_mat",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=rhs_vec_arr,
+            arr_name="rhs_vec",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
 
         # check no column is all zeros. otherwise, set is unbounded
         cols_with_all_zeros = np.nonzero(
@@ -2069,6 +2098,7 @@ class BudgetSet(UncertaintySet):
         Raises
         ------
         ValueError
+            If any uncertainty set attributes are not valid.
             If finiteness, full 0 column or row of LHS matrix,
             or positive RHS vector checks fail.
         """
@@ -2076,16 +2106,32 @@ class BudgetSet(UncertaintySet):
         rhs_vec_arr = self.budget_rhs_vec
         orig_val = self.origin
 
-        # finiteness check
-        if not (
-            np.all(np.isfinite(lhs_coeffs_arr))
-            and np.all(np.isfinite(rhs_vec_arr))
-            and np.all(np.isfinite(orig_val))
-        ):
-            raise ValueError(
-                "Origin, LHS coefficient matrix or RHS vector are not finite. "
-                f"\nGot origin:\n{orig_val},\nLHS matrix:\n{lhs_coeffs_arr},\nRHS vector:\n{rhs_vec_arr}"
-            )
+        # check budget matrix, budget limits, and origin are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=lhs_coeffs_arr,
+            arr_name="budget_membership_mat",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=rhs_vec_arr,
+            arr_name="budget_rhs_vec",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=orig_val,
+            arr_name="origin",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
 
         # check no row, col, are all zeros and all values are 0-1.
         # ensure all entries are 0-1 values
@@ -2465,6 +2511,7 @@ class FactorModelSet(UncertaintySet):
         Raises
         ------
         ValueError
+            If any uncertainty set attributes are not valid.
             If finiteness full column rank of Psi matrix, or
             beta between 0 and 1 checks fail.
         """
@@ -2472,9 +2519,24 @@ class FactorModelSet(UncertaintySet):
         psi_mat_arr = self.psi_mat
         beta = self.beta
 
-        # finiteness check
-        if not np.all(np.isfinite(orig_val)):
-            raise ValueError("Origin is not finite. " f"Got origin: {orig_val}")
+        # check origin, psi matrix, and beta are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=orig_val,
+            arr_name="origin",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+        )
+        validate_array(
+            arr=psi_mat_arr,
+            arr_name="psi_mat",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_arg_type("beta", beta, valid_num_types, "a valid numeric type", False)
 
         # check psi is full column rank
         psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
@@ -2672,17 +2734,30 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         Raises
         ------
         ValueError
+            If any uncertainty set attributes are not valid.
             If finiteness or positive half-length checks fail.
         """
         ctr = self.center
         half_lengths = self.half_lengths
 
-        # finiteness check
-        if not (np.all(np.isfinite(ctr)) and np.all(np.isfinite(half_lengths))):
-            raise ValueError(
-                "Center or half-lengths are not finite. "
-                f"Got center: {ctr}, half-lengths: {half_lengths}"
-            )
+        # check center and half lengths are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=ctr,
+            arr_name="center",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=half_lengths,
+            arr_name="half_lengths",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
 
         # ensure half-lengths are non-negative
         for half_len in half_lengths:
@@ -3046,6 +3121,7 @@ class EllipsoidalSet(UncertaintySet):
         Raises
         ------
         ValueError
+            If any uncertainty set attributes are not valid.
             If finiteness, positive semi-definite, or
             positive scale checks fail.
         """
@@ -3053,9 +3129,25 @@ class EllipsoidalSet(UncertaintySet):
         shape_mat_arr = self.shape_matrix
         scale = self.scale
 
-        # finiteness check
-        if not np.all(np.isfinite(ctr)):
-            raise ValueError("Center is not finite. " f"Got center: {ctr}")
+        # check center, shape matrix, and scale are valid
+        # this includes a finiteness check
+        validate_array(
+            arr=ctr,
+            arr_name="center",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_array(
+            arr=shape_mat_arr,
+            arr_name="shape_matrix",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+        validate_arg_type("scale", scale, valid_num_types, "a valid numeric type", False)
 
         # check shape matrix is positive semidefinite
         self._verify_positive_definite(shape_mat_arr)
@@ -3247,18 +3339,17 @@ class DiscreteScenarioSet(UncertaintySet):
         """
         scenario_arr = self.scenarios
 
-        # check nonemptiness
-        if len(scenario_arr) < 1:
-            raise ValueError(
-                "Scenarios set must be nonempty. " f"Got scenarios: {scenario_arr}"
-            )
-
-        # check finiteness
-        for scenario in scenario_arr:
-            if not np.all(np.isfinite(scenario)):
-                raise ValueError(
-                    "Not all scenarios are finite. " f"Got scenario: {scenario}"
-                )
+        # check that all scenarios are valid
+        # this includes a nonemptiness check and a finiteness check
+        # using the validate_arr method
+        validate_array(
+            arr=scenario_arr,
+            arr_name="scenarios",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
 
 
 class IntersectionSet(UncertaintySet):
