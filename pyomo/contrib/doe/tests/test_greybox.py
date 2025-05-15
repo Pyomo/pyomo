@@ -604,17 +604,20 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         all_exist = True
         
         # Check output and value
-        A_opt_val = np.trace(np.linalg.inv(testing_matrix))
+        # FIM Initial will be the prior FIM
+        # added with the identity matrix.
+        A_opt_val = np.trace(np.linalg.inv(testing_matrix + np.eye(4)))
 
         try:
-            A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"]()
+            doe_obj.model.obj_cons.egb_fim_block.outputs.pprint()
+            A_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["A-opt"].value
         except:
             A_opt_val_gb = -10.0  # Trace should never be negative
             all_exist = False
         
         # Intermediate check for output existence
         self.assertTrue(all_exist)
-        # self.assertAlmostEqual(A_opt_val, A_opt_val_gb)
+        self.assertAlmostEqual(A_opt_val, A_opt_val_gb)
 
         # Check inputs and values
         try:
@@ -627,19 +630,11 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         
         # Final check on existence of inputs
         self.assertTrue(all_exist)
+        # Rebuild the current FIM from the input
+        # values taken from the egb_fim_block
         current_FIM = np.zeros_like(testing_matrix)
         current_FIM[np.triu_indices_from(current_FIM)] = input_values
-        print("Checkpoint before doing some math")
-        print(input_values)
-        print(current_FIM)
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
-        
-        print("FIM from input values")
-        print(current_FIM)
-        print("FIM from testing file")
-        print(testing_matrix + np.eye(4))
-        print("FIM from doe object")
-        print(np.asarray(doe_obj.get_FIM()))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
 
