@@ -145,6 +145,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             obj_name = "E-opt"
         elif self.objective_option == ObjectiveLib.condition_number:
             obj_name = "ME-opt"
+        else:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
         return [obj_name]
 
     def set_input_values(self, input_values):
@@ -180,6 +184,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             eig, _ = np.linalg.eig(M)
             obj_value = np.max(eig) / np.min(eig)
+        else:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
 
         # print(obj_value)
 
@@ -212,6 +220,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             pyomo_block.outputs["E-opt"] = output_value
         elif self.objective_option == ObjectiveLib.condition_number:
             pyomo_block.outputs["ME-opt"] = output_value
+        else:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
@@ -308,6 +320,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 1
                 / (min_eig + np.sign(min_eig) * min_eig_epsilon)
                 * (max_eig_term - safe_cond_number * min_eig_term)
+            )
+        else:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
             )
 
         # print(jac_M)
@@ -500,6 +516,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 hess_cols.append(col)
         elif self.objective_option == ObjectiveLib.condition_number:
             pass
+        else:
+            raise AttributeError(
+                "Objective option not recognized. Please contact the developers as you should not see this error."
+            )
 
         # Returns coo_matrix of the correct shape
         return coo_matrix(
