@@ -207,8 +207,8 @@ class DesignOfExperiments:
         # if not given, use default solver
         else:
             solver = pyo.SolverFactory("ipopt")
-            # solver.options["linear_solver"] = "ma57"
-            solver.options["linear_solver"] = "MUMPS"
+            solver.options["linear_solver"] = "ma57"
+            # solver.options["linear_solver"] = "MUMPS"
             solver.options["halt_on_ampl_error"] = "yes"
             solver.options["max_iter"] = 3000
             # solver.options["tol"] = 1e-4
