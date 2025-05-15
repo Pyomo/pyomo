@@ -146,9 +146,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             obj_name = "ME-opt"
         else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
+            ObjectiveLib(self.objective_option)
         return [obj_name]
 
     def set_input_values(self, input_values):
@@ -185,9 +183,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             eig, _ = np.linalg.eig(M)
             obj_value = np.max(eig) / np.min(eig)
         else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
+            ObjectiveLib(self.objective_option)
 
         # print(obj_value)
 
@@ -220,10 +216,6 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             pyomo_block.outputs["E-opt"] = output_value
         elif self.objective_option == ObjectiveLib.condition_number:
             pyomo_block.outputs["ME-opt"] = output_value
-        else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
 
     def evaluate_jacobian_equality_constraints(self):
         # ToDo: Do any objectives require constraints?
@@ -322,9 +314,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 * (max_eig_term - safe_cond_number * min_eig_term)
             )
         else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
+            ObjectiveLib(self.objective_option)
 
         # print(jac_M)
         # Filter jac_M using the
@@ -517,9 +507,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             pass
         else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
+            ObjectiveLib(self.objective_option)
 
         # Returns coo_matrix of the correct shape
         return coo_matrix(

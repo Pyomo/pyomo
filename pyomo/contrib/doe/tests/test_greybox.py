@@ -890,6 +890,57 @@ class TestFIMExternalGreyBox(unittest.TestCase):
                 doe_object=doe_object, objective_option="Bad Objective Option"
             )
 
+    def test_output_names_obj_lib_error(self):
+        objective_option = "trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        grey_box_object.objective_option = "Bad Objective Option"
+
+        with self.assertRaisesRegex(
+            ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
+        ):
+            grey_box_object.output_names()
+    
+    def test_evaluate_outputs_obj_lib_error(self):
+        objective_option = "trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        grey_box_object.objective_option = "Bad Objective Option"
+
+        with self.assertRaisesRegex(
+            ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
+        ):
+            grey_box_object.evaluate_outputs()
+
+    def test_evaluate_jacobian_outputs_obj_lib_error(self):
+        objective_option = "trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        grey_box_object.objective_option = "Bad Objective Option"
+
+        with self.assertRaisesRegex(
+            ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
+        ):
+            grey_box_object.evaluate_jacobian_outputs()
+
+    def test_evaluate_hessian_outputs_obj_lib_error(self):
+        objective_option = "trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        grey_box_object.objective_option = "Bad Objective Option"
+
+        with self.assertRaisesRegex(
+            ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
+        ):
+            grey_box_object.evaluate_hessian_outputs()
 
 if __name__ == "__main__":
     unittest.main()
