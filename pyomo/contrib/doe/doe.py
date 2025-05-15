@@ -354,16 +354,14 @@ class DesignOfExperiments:
                         print(j, i)
                     else:  # REMOVE THIS IF USING LOWER TRIANGLE
                         pass
-                        #model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                        # model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
                         #    pyo.value(model.fim[(j, i)])
-                        #)
+                        # )
             # Set objective value
             if self.objective_option == ObjectiveLib.trace:
                 # Do safe inverse here?
                 trace_val = 1 / np.trace(np.array(self.get_FIM()))
-                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(
-                    trace_val
-                )
+                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
             elif self.objective_option == ObjectiveLib.determinant:
                 det_val = np.linalg.det(np.array(self.get_FIM()))
                 model.obj_cons.egb_fim_block.outputs["log10-D-opt"].set_value(

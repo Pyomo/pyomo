@@ -307,7 +307,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         grey_box_FIM = grey_box_object._get_FIM()
 
         self.assertTrue(np.all(np.isclose(grey_box_FIM, testing_matrix)))
-    
+
     # Testing that getting the
     # input names works properly
     def test_input_names(self):
@@ -317,16 +317,24 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         )
 
         # Hard-coded names of the inputs, in the order we expect
-        input_names = [('A1', 'A1'), ('A1', 'A2'), ('A1', 'E1'), 
-                       ('A1', 'E2'), ('A2', 'A2'), ('A2', 'E1'),
-                       ('A2', 'E2'), ('E1', 'E1'), ('E1', 'E2'),
-                       ('E2', 'E2')]
-        
+        input_names = [
+            ('A1', 'A1'),
+            ('A1', 'A2'),
+            ('A1', 'E1'),
+            ('A1', 'E2'),
+            ('A2', 'A2'),
+            ('A2', 'E1'),
+            ('A2', 'E2'),
+            ('E1', 'E1'),
+            ('E1', 'E2'),
+            ('E2', 'E2'),
+        ]
+
         # Grabbing input names from grey box object
         input_names_gb = grey_box_object.input_names()
 
         self.assertListEqual(input_names, input_names_gb)
-    
+
     # Testing that getting the
     # output names works properly
     def test_input_names(self):
@@ -356,10 +364,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         )
 
         # Hard-coded names of the outputs
-        # There is one element per 
+        # There is one element per
         # objective type
         output_names = ['A-opt', 'log-D-opt', 'E-opt', 'ME-opt']
-        
+
         # Grabbing input names from grey box object
         output_names_gb = []
         output_names_gb.extend(grey_box_object_A.output_names())
