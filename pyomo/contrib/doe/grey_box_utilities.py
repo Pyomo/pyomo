@@ -353,10 +353,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             output_con_multiplier_values, dtype=np.float64
         )
 
-    # def evaluate_hessian_equality_constraints(self):
-    #     #ToDo: Do any objectives require constraints?
-    #     #Returns coo_matrix of the correct shape
-    #     return None
+    def evaluate_hessian_equality_constraints(self):
+        # Returns coo_matrix of the correct shape
+        # No constraints so this returns `None`
+        return None
 
     # def evaluate_hessian_outputs(self, FIM=None):
     #     # ToDo: significant bookkeeping if the hessian's require vectorized
