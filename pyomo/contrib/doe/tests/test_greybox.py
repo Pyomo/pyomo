@@ -902,7 +902,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
         ):
             grey_box_object.output_names()
-    
+
     def test_evaluate_outputs_obj_lib_error(self):
         objective_option = "trace"
         doe_object, grey_box_object = make_greybox_and_doe_objects(
@@ -941,6 +941,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
         ):
             grey_box_object.evaluate_hessian_outputs()
+
 
 if __name__ == "__main__":
     unittest.main()
