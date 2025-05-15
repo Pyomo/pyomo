@@ -572,7 +572,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # equality constraints
         self.assertIsNone(jac_eq_con_vals_gb)
 
-    def evaluate_hessian_equality_constraints(self):
+    def test_evaluate_hessian_equality_constraints(self):
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
             objective_option=objective_option
