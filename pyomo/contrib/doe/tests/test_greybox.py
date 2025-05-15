@@ -307,6 +307,67 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         grey_box_FIM = grey_box_object._get_FIM()
 
         self.assertTrue(np.all(np.isclose(grey_box_FIM, testing_matrix)))
+    
+    # Testing that getting the
+    # input names works properly
+    def test_input_names(self):
+        objective_option = "trace"
+        doe_obj, grey_box_object = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Hard-coded names of the inputs, in the order we expect
+        input_names = [('A1', 'A1'), ('A1', 'A2'), ('A1', 'E1'), 
+                       ('A1', 'E2'), ('A2', 'A2'), ('A2', 'E1'),
+                       ('A2', 'E2'), ('E1', 'E1'), ('E1', 'E2'),
+                       ('E2', 'E2')]
+        
+        # Grabbing input names from grey box object
+        input_names_gb = grey_box_object.input_names()
+
+        self.assertListEqual(input_names, input_names_gb)
+    
+    # Testing that getting the
+    # output names works properly
+    def test_input_names(self):
+        # Need to test for each objective type
+        # A-opt
+        objective_option = "trace"
+        doe_obj_A, grey_box_object_A = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # D-opt
+        objective_option = "determinant"
+        doe_obj_D, grey_box_object_D = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # E-opt
+        objective_option = "minimum_eigenvalue"
+        doe_obj_E, grey_box_object_E = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # ME-opt
+        objective_option = "condition_number"
+        doe_obj_ME, grey_box_object_ME = make_greybox_and_doe_objects(
+            objective_option=objective_option
+        )
+
+        # Hard-coded names of the outputs
+        # There is one element per 
+        # objective type
+        output_names = ['A-opt', 'log-D-opt', 'E-opt', 'ME-opt']
+        
+        # Grabbing input names from grey box object
+        output_names_gb = []
+        output_names_gb.extend(grey_box_object_A.output_names())
+        output_names_gb.extend(grey_box_object_D.output_names())
+        output_names_gb.extend(grey_box_object_E.output_names())
+        output_names_gb.extend(grey_box_object_ME.output_names())
+
+        self.assertListEqual(output_names, output_names_gb)
 
     # Testing output computation
     def test_outputs_A_opt(self):
