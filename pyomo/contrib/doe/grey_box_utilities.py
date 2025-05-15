@@ -375,18 +375,18 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         hess_rows = []
         hess_cols = []
 
-        # Need to iterate over the unique 
+        # Need to iterate over the unique
         # differentials
         input_differentials_2D = itertools.combinations_with_replacement(
-                self.input_names(), 2
-            )
+            self.input_names(), 2
+        )
 
         from pyomo.contrib.doe import ObjectiveLib
 
         if self.objective_option == ObjectiveLib.trace:
             # Grab Inverse
             Minv = np.linalg.pinv(M)
-            
+
             # Also grab inverse squared
             Minv_sq = Minv @ Minv
 
@@ -415,7 +415,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
                 # New Formula (tested with finite differencing)
                 # Will be cited from the Pyomo.DoE 2.0 paper
-                hess_vals.append((Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j]))
+                hess_vals.append(
+                    (Minv[i, l] * Minv_sq[k, j]) + (Minv_sq[i, l] * Minv[k, j])
+                )
                 hess_rows.append(row)
                 hess_cols.append(col)
 
@@ -446,6 +448,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         elif self.objective_option == ObjectiveLib.condition_number:
             pass
 
-
         # Returns coo_matrix of the correct shape
-        return coo_matrix((np.asarray(hess_vals), (hess_rows, hess_cols)), shape=(self._n_inputs, self._n_inputs))
+        return coo_matrix(
+            (np.asarray(hess_vals), (hess_rows, hess_cols)),
+            shape=(self._n_inputs, self._n_inputs),
+        )

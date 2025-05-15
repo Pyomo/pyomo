@@ -205,11 +205,16 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
         for i in ordered_quads:
             row = ordered_pairs_list.index(i[0])
             col = ordered_pairs_list.index(i[1])
-            numerical_derivative_reduced[row, col] = numerical_derivative[i[0][0], i[0][1], i[1][0], i[1][1]]
-        
-        numerical_derivative_reduced += numerical_derivative_reduced.transpose() - np.diag(np.diag(numerical_derivative_reduced))
+            numerical_derivative_reduced[row, col] = numerical_derivative[
+                i[0][0], i[0][1], i[1][0], i[1][1]
+            ]
+
+        numerical_derivative_reduced += (
+            numerical_derivative_reduced.transpose()
+            - np.diag(np.diag(numerical_derivative_reduced))
+        )
         return numerical_derivative_reduced
-    
+
     # Otherwise return numerical derivative as normal
     return numerical_derivative
 
@@ -580,7 +585,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
-    
+
     def test_hessian_D_opt(self):
         objective_option = "determinant"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
