@@ -531,7 +531,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # assert that each component is close
         self.assertTrue(np.all(np.isclose(jac, jac_FD)))
-    
+
     def test_equality_constraint_names(self):
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
@@ -544,7 +544,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Equality constraint names should be an
         # empty list.
         self.assertListEqual(eq_con_names_gb, [])
-    
+
     def test_evaluate_equality_constraints(self):
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
@@ -557,7 +557,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Equality constraint values should be `None`
         # There are no equality constraints.
         self.assertIsNone(eq_con_vals_gb)
-    
+
     def test_evaluate_jacobian_equality_constraints(self):
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
@@ -571,7 +571,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # should be `None` as there are no
         # equality constraints
         self.assertIsNone(jac_eq_con_vals_gb)
-    
+
     def evaluate_hessian_equality_constraints(self):
         objective_option = "condition_number"
         doe_obj, grey_box_object = make_greybox_and_doe_objects(
