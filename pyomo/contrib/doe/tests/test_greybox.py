@@ -586,15 +586,13 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # should be `None` as there are no
         # equality constraints
         self.assertIsNone(hess_eq_con_vals_gb)
-    
+
     # The following few tests will test whether
     # the DoE problem with grey box is built
     # properly.
     def test_A_opt_greybox_build(self):
         objective_option = "trace"
-        doe_obj, _ = make_greybox_and_doe_objects(
-            objective_option=objective_option
-        )
+        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Build the greybox objective block
         # on the DoE object
@@ -602,7 +600,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Check to see if each component exists
         all_exist = True
-        
+
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
@@ -613,7 +611,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             A_opt_val_gb = -10.0  # Trace should never be negative
             all_exist = False
-        
+
         # Intermediate check for output existence
         self.assertTrue(all_exist)
         self.assertAlmostEqual(A_opt_val, A_opt_val_gb)
@@ -626,7 +624,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             input_values = np.zeros_like(testing_matrix)
             all_exist = False
-        
+
         # Final check on existence of inputs
         self.assertTrue(all_exist)
         # Rebuild the current FIM from the input
@@ -636,12 +634,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
-    
+
     def test_D_opt_greybox_build(self):
         objective_option = "determinant"
-        doe_obj, _ = make_greybox_and_doe_objects(
-            objective_option=objective_option
-        )
+        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Build the greybox objective block
         # on the DoE object
@@ -649,18 +645,20 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Check to see if each component exists
         all_exist = True
-        
+
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
         D_opt_val = np.log(np.linalg.det(testing_matrix + np.eye(4)))
 
         try:
-            D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs["log-D-opt"].value
+            D_opt_val_gb = doe_obj.model.obj_cons.egb_fim_block.outputs[
+                "log-D-opt"
+            ].value
         except:
             D_opt_val_gb = -100.0  # Determinant should never be negative beyond -64
             all_exist = False
-        
+
         # Intermediate check for output existence
         self.assertTrue(all_exist)
         self.assertAlmostEqual(D_opt_val, D_opt_val_gb)
@@ -673,7 +671,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             input_values = np.zeros_like(testing_matrix)
             all_exist = False
-        
+
         # Final check on existence of inputs
         self.assertTrue(all_exist)
         # Rebuild the current FIM from the input
@@ -683,12 +681,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
-    
+
     def test_E_opt_greybox_build(self):
         objective_option = "minimum_eigenvalue"
-        doe_obj, _ = make_greybox_and_doe_objects(
-            objective_option=objective_option
-        )
+        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Build the greybox objective block
         # on the DoE object
@@ -696,7 +692,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Check to see if each component exists
         all_exist = True
-        
+
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
@@ -708,7 +704,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             E_opt_val_gb = -10.0  # Determinant should never be negative
             all_exist = False
-        
+
         # Intermediate check for output existence
         self.assertTrue(all_exist)
         self.assertAlmostEqual(E_opt_val, E_opt_val_gb)
@@ -721,7 +717,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             input_values = np.zeros_like(testing_matrix)
             all_exist = False
-        
+
         # Final check on existence of inputs
         self.assertTrue(all_exist)
         # Rebuild the current FIM from the input
@@ -731,12 +727,10 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
-    
+
     def test_ME_opt_greybox_build(self):
         objective_option = "condition_number"
-        doe_obj, _ = make_greybox_and_doe_objects(
-            objective_option=objective_option
-        )
+        doe_obj, _ = make_greybox_and_doe_objects(objective_option=objective_option)
 
         # Build the greybox objective block
         # on the DoE object
@@ -744,7 +738,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         # Check to see if each component exists
         all_exist = True
-        
+
         # Check output and value
         # FIM Initial will be the prior FIM
         # added with the identity matrix.
@@ -755,7 +749,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             ME_opt_val_gb = -10.0  # Condition number should not be negative
             all_exist = False
-        
+
         # Intermediate check for output existence
         self.assertTrue(all_exist)
         self.assertAlmostEqual(ME_opt_val, ME_opt_val_gb)
@@ -768,7 +762,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         except:
             input_values = np.zeros_like(testing_matrix)
             all_exist = False
-        
+
         # Final check on existence of inputs
         self.assertTrue(all_exist)
         # Rebuild the current FIM from the input
@@ -778,7 +772,6 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         current_FIM += current_FIM.transpose() - np.diag(np.diag(current_FIM))
 
         self.assertTrue(np.all(np.isclose(current_FIM, testing_matrix + np.eye(4))))
-
 
 
 if __name__ == "__main__":

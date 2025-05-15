@@ -197,7 +197,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Initialize grey box FIM values
         for ind, val in enumerate(self.input_names()):
-            pyomo_block.inputs[val] = self.doe_object.fim_initial[self._masking_matrix > 0][ind]
+            pyomo_block.inputs[val] = self.doe_object.fim_initial[
+                self._masking_matrix > 0
+            ][ind]
 
         # Initialize log_determinant value
         from pyomo.contrib.doe import ObjectiveLib
@@ -374,6 +376,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         hess = np.zeros((self._n_inputs, self._n_inputs))
 
         from pyomo.contrib.doe import ObjectiveLib
+
         if self.objective_option == ObjectiveLib.trace:
             pass
         elif self.objective_option == ObjectiveLib.determinant:
@@ -384,7 +387,9 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             # pyomo.DoE 2.0 paper
             # dMinv/dM(i,j,k,l) = -1/2(Minv[i, k]Minv[l, j] +
             #                          Minv[i, l]Minv[k, j])
-            lower_tri_inds_4D = itertools.combinations_with_replacement(range(self._n_params), 4)
+            lower_tri_inds_4D = itertools.combinations_with_replacement(
+                range(self._n_params), 4
+            )
             for curr_location in lower_tri_inds_4D:
                 # For quadruples (i, j, k, l)...
                 # Row of hessian is sum from
@@ -396,7 +401,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 print(i, j, k, l)
                 row = sum(range(self._n_params - i + 1, self._n_params + 1)) - i + j
                 col = sum(range(self._n_params - k + 1, self._n_params + 1)) - k + l
-                #hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
+                # hess[row, col] = -(1/2) * (Minv[i, k] * Minv[l, j] + Minv[i, l] * Minv[j, k])
                 # New Formula (tested with finite differencing)
                 hess[row, col] = -(Minv[i, l] * Minv[k, j])
 
@@ -411,12 +416,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Select only lower triangular values as a flat array
         hess_masking_matrix = np.tril(np.ones_like(hess))
         hess_data = hess[hess_masking_matrix > 0]
-        hess_rows, hess_cols  = np.tril_indices_from(hess)
+        hess_rows, hess_cols = np.tril_indices_from(hess)
 
         print(hess_rows)
         print(hess_cols)
 
         # Returns coo_matrix of the correct shape
-        return coo_matrix(
-            (hess_data, (hess_rows, hess_cols)), shape=hess.shape
-        )
+        return coo_matrix((hess_data, (hess_rows, hess_cols)), shape=hess.shape)
