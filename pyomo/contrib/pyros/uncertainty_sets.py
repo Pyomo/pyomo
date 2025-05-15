@@ -585,9 +585,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
         else:
             # initialize uncertain parameter variables
-            param_bounds_arr = np.array(
-                self._fbbt_parameter_bounds(config)
-            )
+            param_bounds_arr = np.array(self._fbbt_parameter_bounds(config))
             if not all(map(lambda x: all(x), param_bounds_arr)):
                 # solve bounding problems if FBBT cannot find bounds
                 param_bounds_arr = np.array(
@@ -824,14 +822,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             fbbt(bounding_model)
         except InfeasibleConstraintException as fbbt_infeasible_con_exception:
             config.progress_logger.error(
-                f"{fbbt_exception_str}\n"
-                f"{fbbt_infeasible_con_exception}"
+                f"{fbbt_exception_str}\n" f"{fbbt_infeasible_con_exception}"
             )
 
-        param_bounds = [(var.lower, var.upper) for var in bounding_model.param_vars.values()]
+        param_bounds = [
+            (var.lower, var.upper) for var in bounding_model.param_vars.values()
+        ]
 
         return param_bounds
-
 
     def _solve_feasibility(self, solver):
         """
@@ -1607,7 +1605,9 @@ class CardinalitySet(UncertaintySet):
             valid_types=valid_num_types,
             valid_type_desc="a valid numeric type",
         )
-        validate_arg_type("gamma", gamma, valid_num_types, "a valid numeric type", False)
+        validate_arg_type(
+            "gamma", gamma, valid_num_types, "a valid numeric type", False
+        )
 
         # check deviation is positive
         for dev_val in pos_dev:
@@ -3147,7 +3147,9 @@ class EllipsoidalSet(UncertaintySet):
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
-        validate_arg_type("scale", scale, valid_num_types, "a valid numeric type", False)
+        validate_arg_type(
+            "scale", scale, valid_num_types, "a valid numeric type", False
+        )
 
         # check shape matrix is positive semidefinite
         self._verify_positive_definite(shape_mat_arr)

@@ -385,8 +385,7 @@ class TestBoxSet(unittest.TestCase):
         # check when values are not finite
         box_set.bounds[0][0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `bounds` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `bounds` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
@@ -405,7 +404,6 @@ class TestBoxSet(unittest.TestCase):
         exc_str = r"Lower bound 5.0 exceeds upper bound 2.0"
         with self.assertRaisesRegex(ValueError, exc_str):
             box_set.validate(config=CONFIG)
-
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -666,8 +664,7 @@ class TestBudgetSet(unittest.TestCase):
         # check when values are not finite
         budget_set.origin[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `origin` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `origin` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             budget_set.validate(config=CONFIG)
@@ -1119,8 +1116,7 @@ class TestFactorModelSet(unittest.TestCase):
         # check when values are not finite
         factor_set.origin[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `origin` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `origin` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             factor_set.validate(config=CONFIG)
@@ -1799,8 +1795,7 @@ class TestCardinalitySet(unittest.TestCase):
         # check when values are not finite
         cardinality_set.origin[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `origin` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `origin` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
@@ -2232,8 +2227,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         # check when values are not finite
         a_ellipsoid_set.center[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `center` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `center` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             a_ellipsoid_set.validate(config=CONFIG)
@@ -2618,8 +2612,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         # check when values are not finite
         ellipsoid_set.center[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `center` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `center` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             ellipsoid_set.validate(config=CONFIG)
@@ -2677,7 +2670,6 @@ class TestEllipsoidalSet(unittest.TestCase):
         ):
             ellipsoid_set = EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
             ellipsoid_set.validate(config=CONFIG)
-
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
@@ -2917,8 +2909,7 @@ class TestPolyhedralSet(unittest.TestCase):
         # check when values are not finite
         polyhedral_set.rhs_vec[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `rhs_vec` "
-            r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `rhs_vec` " r"is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             polyhedral_set.validate(config=CONFIG)
