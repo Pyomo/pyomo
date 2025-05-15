@@ -98,6 +98,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         self._input_values = np.asarray(
             self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
         )
+        print(self.doe_object.fim_initial)
         print(self.doe_object.fim_initial[self._masking_matrix > 0])
         self._n_inputs = len(self._input_values)
         # print(self._input_values)
@@ -153,6 +154,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
     def set_input_values(self, input_values):
         # Set initial values to be flattened initial FIM (aligns with input names)
+        print("Called set input values")
+        print(input_values)
         np.copyto(self._input_values, input_values)
         # self._input_values = list(self.doe_object.fim_initial.flatten())
 
@@ -196,7 +199,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
 
         # Initialize grey box FIM values
         for ind, val in enumerate(self.input_names()):
-            pyomo_block.inputs[val] = self.doe_object.fim_initial.flatten()[ind]
+            pyomo_block.inputs[val] = self.doe_object.fim_initial[self._masking_matrix > 0][ind]
 
         # Initialize log_determinant value
         from pyomo.contrib.doe import ObjectiveLib
