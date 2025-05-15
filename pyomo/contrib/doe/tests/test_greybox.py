@@ -337,7 +337,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Testing that getting the
     # output names works properly
-    def test_input_names(self):
+    def test_output_names(self):
         # Need to test for each objective type
         # A-opt
         objective_option = "trace"
