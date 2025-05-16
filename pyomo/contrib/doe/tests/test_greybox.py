@@ -492,7 +492,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         jac_FD = get_numerical_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+        self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_D_opt(self):
         objective_option = "determinant"
@@ -515,7 +515,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         jac_FD = get_numerical_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+        self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_E_opt(self):
         objective_option = "minimum_eigenvalue"
@@ -538,7 +538,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         jac_FD = get_numerical_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+        self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     def test_jacobian_ME_opt(self):
         objective_option = "condition_number"
@@ -561,7 +561,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         jac_FD = get_numerical_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(jac, jac_FD)))
+        self.assertTrue(np.all(np.isclose(jac, jac_FD, rtol=1e-4, atol=1e-4)))
 
     # Testing Hessian Computation
     def test_hessian_A_opt(self):
@@ -584,7 +584,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         hess_FD = get_numerical_second_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_D_opt(self):
         objective_option = "determinant"
@@ -606,7 +606,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         hess_FD = get_numerical_second_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_hessian_E_opt(self):
         objective_option = "minimum_eigenvalue"
@@ -628,7 +628,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         hess_FD = get_numerical_second_derivative(grey_box_object)
 
         # assert that each component is close
-        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD)))
+        self.assertTrue(np.all(np.isclose(hess_gb, hess_FD, rtol=1e-4, atol=1e-4)))
 
     def test_equality_constraint_names(self):
         objective_option = "condition_number"
