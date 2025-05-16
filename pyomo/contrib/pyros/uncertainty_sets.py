@@ -570,8 +570,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This check is carried out by checking if all parameter bounds
         are finite.
 
-        If no parameter bounds are available, the check is done by
-        solving a sequence of maximization and minimization problems
+        If no parameter bounds are available, the following processes are run
+        to perform the check:
+        (i) feasibility-based bounds tightening is used to obtain parameter
+        bounds, and if not all bound are found,
+        (ii) solving a sequence of maximization and minimization problems
         (in which the objective for each problem is the value of a
         single uncertain parameter).
         If any of the optimization models cannot be solved successfully to
@@ -1311,7 +1314,7 @@ class BoxSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If bound are not valid or finiteness and LB<=UB checks fail.
+            If finiteness or bounds checks fail.
         """
         bounds_arr = np.array(self.parameter_bounds)
 
@@ -1805,8 +1808,8 @@ class PolyhedralSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness, full column rank of LHS matrix, is_bounded,
-            or is_nonempty checks fail.
+            If finiteness, full column rank of LHS matrix, bounded,
+            or nonempty checks fail.
         """
         lhs_coeffs_arr = self.coefficients_mat
         rhs_vec_arr = self.rhs_vec
@@ -2512,7 +2515,7 @@ class FactorModelSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness full column rank of Psi matrix, or
+            If finiteness, full column rank of Psi matrix, or
             beta between 0 and 1 checks fail.
         """
         orig_val = self.origin
