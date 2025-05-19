@@ -288,7 +288,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
                 f'({self.available()}).'
             )
 
-        with TeeStream(*ostreams) as t, capture_output(t.STDOUT, capture_fd=True):
+        with capture_output(TeeStream(*ostreams), capture_fd=True):
             self._reinit()
             self._model = model
 
