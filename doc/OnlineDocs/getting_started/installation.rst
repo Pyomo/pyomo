@@ -106,6 +106,7 @@ On Windows:
    set PYOMO_SETUP_ARGS=--with-cython
    # Via powershell
    $env:PYOMO_SETUP_ARGS="--with-cython"
+   pip install pyomo
 
 
 From source (recommended for advanced users only):
