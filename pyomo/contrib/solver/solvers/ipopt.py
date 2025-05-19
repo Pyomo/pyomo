@@ -57,6 +57,10 @@ from pyomo.solvers.amplfunc_merge import amplfunc_merge
 
 logger = logging.getLogger(__name__)
 
+# Acceptable chars for the end of the alpha_pr column
+# in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
+_ALPHA_PR_CHARS = set("fFhHkKnNRwstTr")
+
 
 class IpoptConfig(SolverConfig):
     def __init__(
@@ -551,7 +555,7 @@ class Ipopt(SolverBase):
             return parsed_data
 
         # Extract number of iterations
-        iter_match = re.search(r'Number of Iterations\.\.\.\.:\s+(\d+)', output)
+        iter_match = re.search(r'Number of Iterations.*:\s+(\d+)', output)
         if iter_match:
             parsed_data['iters'] = int(iter_match.group(1))
         # Gather all the iteration data
@@ -571,73 +575,71 @@ class Ipopt(SolverBase):
             ]
             all_iterations = []
 
+            iterations = 0
             for line in iter_table:
                 tokens = line.strip().split()
                 if len(tokens) == len(columns):
                     iter_data = dict(zip(columns, tokens))
 
                     # Extract restoration flag from 'iter'
-                    iter_val = iter_data["iter"]
-                    iter_match = re.match(r"(\d+)(r?)", iter_val)
-                    if iter_match:
-                        iter_data["restoration"] = bool(
-                            iter_match.group(2)
-                        )  # True if 'r' is present
-                    else:
-                        iter_data["restoration"] = False
-                    iter_data.pop('iter')
+                    iter_data['restoration'] = iter_data['iter'].endswith('r')
+                    if iter_data['restoration']:
+                        iter_data['iter'] = iter_data['iter'][:-1]
+                    assert str(iterations) == iter_data.pop(
+                        'iter'
+                    ), f"Number of iterations ({iterations}) does not match the "
+                    "parsed row in the iterations table"
 
                     # Separate alpha_pr into numeric part and optional tag
-                    alpha_pr_val = iter_data["alpha_pr"]
-                    match = re.match(r"([0-9.eE+-]+)([a-zA-Z]?)", alpha_pr_val)
-                    if match:
-                        iter_data["alpha_pr"] = match.group(1)
-                        iter_data["step_acceptance"] = (
-                            match.group(2) if match.group(2) else None
-                        )
+                    iter_data['step_acceptance'] = iter_data['alpha_pr'][-1]
+                    if iter_data['step_acceptance'] in _ALPHA_PR_CHARS:
+                        iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
                     else:
-                        iter_data["step_acceptance"] = None
+                        iter_data['step_acceptance'] = None
 
                     # Attempt to cast all values to float where possible
-                    for key in iter_data:
-                        try:
-                            if iter_data[key] == '-':
-                                iter_data[key] = None
-                                continue
-                            if isinstance(iter_data[key], bool):
-                                continue
-                            iter_data[key] = float(iter_data[key])
-                        except (ValueError, TypeError):
-                            pass
+                    for key in columns:
+                        if key == 'iter':
+                            continue
+                        if iter_data[key] == '-':
+                            iter_data[key] = None
+                        else:
+                            try:
+                                iter_data[key] = float(iter_data[key])
+                            except (ValueError, TypeError):
+                                logger.warning(
+                                    "Error converting Ipopt log entry to "
+                                    f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
+                                )
 
                     all_iterations.append(iter_data)
+                    iterations += 1
 
             parsed_data['iteration_log'] = all_iterations
 
         # Extract scaled and unscaled table
         scaled_unscaled_match = re.findall(
-            r'Objective\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
-            r'Dual infeasibility\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
-            r'Constraint violation\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
-            r'Complementarity\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+).*?'
-            r'Overall NLP error\.\.+:\s+([-+eE0-9.]+)\s+([-+eE0-9.]+)',
+            r'Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
+            r'Dual infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
+            r'Constraint violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
+            r'Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
+            r'Overall NLP error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)',
             output,
             re.DOTALL,
         )
         if scaled_unscaled_match:
+            fields = [
+                "incumbent_objective",
+                "dual_infeasibility",
+                "constraint_violation",
+                "complementarity_error",
+                "overall_nlp_error",
+            ]
             scaled = {
-                "incumbent_objective": float(scaled_unscaled_match[0][0]),
-                "dual_infeasibility": float(scaled_unscaled_match[0][2]),
-                "constraint_violation": float(scaled_unscaled_match[0][4]),
-                "complementarity_error": float(scaled_unscaled_match[0][6]),
-                "overall_nlp_error": float(scaled_unscaled_match[0][8]),
+                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][0:10:2])
             }
             unscaled = {
-                "incumbent_objective": float(scaled_unscaled_match[0][1]),
-                "dual_infeasibility": float(scaled_unscaled_match[0][3]),
-                "constraint_violation": float(scaled_unscaled_match[0][5]),
-                "complementarity": float(scaled_unscaled_match[0][7]),
-                "overall_nlp_error": float(scaled_unscaled_match[0][9]),
+                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][1:10:2])
             }
 
             parsed_data.update(unscaled)
