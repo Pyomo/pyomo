@@ -262,6 +262,7 @@ setup_kwargs = dict(
             'numpy',  # Needed by autodoc for pynumero
             'scipy',  # Needed by autodoc for pynumero
         ],
+        'gams':['gamsapi'],
         'optional': [
             'dill',  # No direct use, but improves lambda pickle
             'ipython',  # contrib.viewer
