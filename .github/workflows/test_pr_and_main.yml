@@ -127,6 +127,7 @@ jobs:
         - os: ubuntu-latest
           python: 3.12
           other: /cython
+          setup_options: --with-cython
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
@@ -705,11 +706,7 @@ jobs:
 
     - name: Install Pyomo
       run: |
-        # Turn on cython through env vars
-        if [[ "${{ matrix.other }}" == *cython* ]]; then
-            echo "Cython requested; turning on cythonization options in environment"
-            export PYOMO_SETUP_ARGS=--with-cython
-        fi
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         URL=https://github.com/Pyomo/pyomo-model-libraries.git
@@ -925,11 +922,7 @@ jobs:
 
     - name: Install Pyomo
       run: |
-        # Turn on cython through env vars
-        if [[ "${{ matrix.other }}" == *cython* ]]; then
-            echo "Cython requested; turning on cythonization options in environment"
-            export PYOMO_SETUP_ARGS=--with-cython
-        fi
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
