@@ -449,20 +449,21 @@ class Ipopt(SolverBase):
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
                     try:
-                        results.iteration_count = parsed_output_data['iters']
-                        parsed_output_data.pop('iters')
-                        if 'total_time' in parsed_output_data['cpu_seconds']:
-                            results.timing_info.total_seconds = parsed_output_data[
-                                'cpu_seconds'
-                            ]['total_time']
-                        if 'nofunc_time' in parsed_output_data['cpu_seconds']:
+                        results.iteration_count = parsed_output_data.pop('iters')
+                        cpu_seconds = parsed_output_data.pop('cpu_seconds')
+                        if 'total_time' in cpu_seconds:
+                            results.timing_info.total = cpu_seconds.pop('total_time')
+                        if 'nofunc_time' in cpu_seconds:
                             results.timing_info.ipopt_excluding_nlp_functions = (
-                                parsed_output_data['cpu_seconds']['nofunc_time']
+                                cpu_seconds.pop('nofunc_time')
                             )
                             results.timing_info.nlp_function_evaluations = (
-                                parsed_output_data['cpu_seconds']['func_time']
+                                cpu_seconds.pop('func_time')
                             )
-                        parsed_output_data.pop('cpu_seconds')
+                        assert (
+                            not cpu_seconds
+                        ), f"Extra timing data ({cpu_seconds}) remains in the output - "
+                        "please report this issue to the Pyomo Developers."
                         results.extra_info = parsed_output_data
                         # Set iteration_log visibility to ADVANCED_OPTION because it's
                         # a lot to print out with `display`
