@@ -622,6 +622,8 @@ class Ipopt(SolverBase):
             r'Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
             r'Dual infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
             r'Constraint violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
+            # Next field is optional because it shows up in new-style ipopt output, but not old style
+            r'(?:Variable bound violation: *([-+eE0-9.]+) *([-+eE0-9.]+) *\s*)?'
             r'Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
             r'Overall NLP error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)',
             output,
@@ -636,10 +638,14 @@ class Ipopt(SolverBase):
                 "overall_nlp_error",
             ]
             scaled = {
-                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][0:10:2])
+                k: float(v)
+                for k, v in zip(fields, scaled_unscaled_match[0][0:10:2])
+                if v
             }
             unscaled = {
-                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][1:10:2])
+                k: float(v)
+                for k, v in zip(fields, scaled_unscaled_match[0][1:10:2])
+                if v
             }
 
             parsed_data.update(unscaled)
