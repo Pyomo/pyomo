@@ -140,7 +140,7 @@ class LogicalConstraintData(ActiveComponentData):
                 if hasattr(expr, '_resolve_template'):
                     self._expr = expr
                     return
-            except AttributeError:
+            except (AttributeError, TypeError):
                 pass
 
         raise ValueError(
