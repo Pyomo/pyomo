@@ -588,9 +588,11 @@ class DisjunctionData(ActiveComponentData):
                         continue
                 except AttributeError:
                     pass
-                if _tmp_e in (Constraint.Feasible, Constraint.Infeasible):
-                    expressions.append(_tmp_e)
-                    continue
+                # Note: Constraint.(In)Feasible is now a full relational
+                # expression, so we don't need to check for it.
+                # LogicalConstraint.(In)Feasible is a BooleanConstant,
+                # so is not an expression and needs to be explicitly
+                # checked for.
                 if _tmp_e in (LogicalConstraint.Feasible, LogicalConstraint.Infeasible):
                     propositions.append(_tmp_e)
                     continue

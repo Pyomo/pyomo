@@ -278,14 +278,32 @@ class BooleanConstant(BooleanValue):
         value           The initial value.
     """
 
-    __slots__ = ('value',)
+    __slots__ = ('value', '_name')
+    singleton = {}
 
-    def __init__(self, value):
-        if value not in native_logical_values:
-            raise TypeError(
-                'Not a valid BooleanValue. Unable to create a logical constant'
-            )
-        self.value = value
+    def __new__(cls, value, name=None):
+        if name is None:
+            name = value
+        if name not in cls.singleton:
+            if value not in native_logical_values:
+                raise TypeError(
+                    'Not a valid BooleanValue. Unable to create a logical constant'
+                )
+            cls.singleton[name] = super().__new__(cls)
+            cls.singleton[name].value = value
+            cls.singleton[name]._name = name
+        return cls.singleton[name]
+
+    def __deepcopy__(self, memo):
+        # Prevent deepcopy from duplicating this object
+        return self
+
+    def __reduce__(self):
+        return self.__class__, (self._name, self._args_)
+
+    def __init__(self, value, name=None):
+        # note that the meat of __init__ is called as part of __new__ above.
+        assert self.value == value
 
     def is_constant(self):
         return True
@@ -297,7 +315,7 @@ class BooleanConstant(BooleanValue):
         return False
 
     def __str__(self):
-        return str(self.value)
+        return str(self._name)
 
     def __nonzero__(self):
         return self.value
