@@ -606,32 +606,42 @@ class Ipopt(SolverBase):
             parsed_data['iteration_log'] = all_iterations
 
         # Extract scaled and unscaled table
-        scaled_unscaled_match = re.findall(
-            r'Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
-            r'Dual infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
-            r'Constraint violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
-            # Next field is optional because it shows up in new-style ipopt
-            # output, but not old style
-            r'(?:Variable bound violation: *([-+eE0-9.]+) *([-+eE0-9.]+) *\s*)?'
-            r'Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
-            r'Overall NLP error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)',
+        scaled_unscaled_match = re.search(
+            r'''
+        Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+        Dual\ infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+        Constraint\ violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+        (?:Variable\ bound\ violation:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*)?
+        Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+        Overall\ NLP\ error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)
+    ''',
             output,
-            re.DOTALL,
+            re.DOTALL | re.VERBOSE,
         )
+
         if scaled_unscaled_match:
-            fields = [
+            groups = scaled_unscaled_match.groups()
+            all_fields = [
                 "incumbent_objective",
                 "dual_infeasibility",
                 "constraint_violation",
+                "variable_bound_violation",  # optional
                 "complementarity_error",
                 "overall_nlp_error",
             ]
-            scaled = {
-                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][0::2]) if v
-            }
-            unscaled = {
-                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][1::2]) if v
-            }
+
+            # Filter out None values and create final fields and values.
+            # Nones occur in old-style IPOPT output (<= 3.13)
+            zipped = [
+                (field, scaled, unscaled)
+                for field, scaled, unscaled in zip(
+                    all_fields, groups[0::2], groups[1::2]
+                )
+                if scaled is not None and unscaled is not None
+            ]
+
+            scaled = {k: float(s) for k, s, _ in zipped}
+            unscaled = {k: float(u) for k, _, u in zipped}
 
             parsed_data.update(unscaled)
             parsed_data['final_scaled_results'] = scaled
