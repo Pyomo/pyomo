@@ -51,7 +51,7 @@ def define_model(**kwds):
         pw_pts=DOMAIN_PTS,
         f_rule=F,
         unbounded_domain_var=True,
-        **kwds
+        **kwds,
     )
 
     # Fix the answer for testing purposes
