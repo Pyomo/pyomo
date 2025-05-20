@@ -9,150 +9,385 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# Unit Tests for pyomo.opt.base.solution
+# Unit Tests for pyomo.opt.results
 #
-
+import copy
 import json
 import pickle
 import os
-from os.path import abspath, dirname, join
 
-pyomodir = dirname(abspath(__file__)) + os.sep + ".." + os.sep + ".." + os.sep
-currdir = dirname(abspath(__file__)) + os.sep
-
+from io import StringIO
+from os.path import join
 from filecmp import cmp
+
 import pyomo.common.unittest as unittest
-
-from pyomo.common.tempfiles import TempfileManager
-import pyomo.opt
-
 from pyomo.common.dependencies import yaml, yaml_available
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.tempfiles import TempfileManager
 
-old_tempdir = TempfileManager.tempdir
+import pyomo.opt.results.container as container
+from pyomo.opt import SolverResults
+
+currdir = this_file_dir()
+
+ref_yaml_soln = """\
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: -Infinity
+  Upper bound: Infinity
+  Number of objectives: 1
+  Number of constraints: 24
+  Number of variables: 32
+  Sense: unknown
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: PICO Solver\\x3a final f = 88.200000
+  Termination condition: optimal
+  Id: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: optimal
+  Variable: 
+    v4:
+      Value: 46.6666666667
+    v11:
+      Value: 933.333333333
+    v12:
+      Value: 10000
+    v13:
+      Value: 10000
+    v14:
+      Value: 10000
+    v15:
+      Value: 10000
+    v17:
+      Value: 100
+    v19:
+      Value: 100
+    v21:
+      Value: 100
+    v23:
+      Value: 100
+    v24:
+      Value: 46.6666666667
+    v25:
+      Value: 53.3333333333
+    v27:
+      Value: 100
+    v29:
+      Value: 100
+    v31:
+      Value: 100
+  Constraint: 
+    c2: 
+      Dual: 0.126
+  Status description: OPTIMAL SOLUTION FOUND!
+"""
+
+ref_json_soln = """\
+{
+    "Problem": [
+        {
+            "Lower bound": -Infinity, 
+            "Number of constraints": 24, 
+            "Number of objectives": 1, 
+            "Number of variables": 32, 
+            "Sense": "unknown", 
+            "Upper bound": Infinity
+        }
+    ], 
+    "Solution": [
+        {
+            "number of solutions": 1, 
+            "number of solutions displayed": 1
+        }, 
+        {
+            "Constraint": {
+                "c2": {
+                    "Dual": 0.12599999999999997
+                }
+            }, 
+            "Message": "PICO Solver\\\\x3a final f = 88.200000", 
+            "Status": "optimal", 
+            "Status description": "OPTIMAL SOLUTION FOUND!", 
+            "Variable": {
+                "v11": {
+                    "Value": 933.3333333333336
+                }, 
+                "v12": {
+                    "Value": 10000.0
+                }, 
+                "v13": {
+                    "Value": 10000.0
+                }, 
+                "v14": {
+                    "Value": 10000.0
+                }, 
+                "v15": {
+                    "Value": 10000.0
+                }, 
+                "v17": {
+                    "Value": 100.0
+                }, 
+                "v19": {
+                    "Value": 100.0
+                }, 
+                "v21": {
+                    "Value": 100.0
+                }, 
+                "v23": {
+                    "Value": 100.0
+                }, 
+                "v24": {
+                    "Value": 46.666666666666664
+                }, 
+                "v25": {
+                    "Value": 53.333333333333336
+                }, 
+                "v27": {
+                    "Value": 100.0
+                }, 
+                "v29": {
+                    "Value": 100.0
+                }, 
+                "v31": {
+                    "Value": 100.0
+                }, 
+                "v4": {
+                    "Value": 46.666666666666664
+                }
+            }
+        }
+    ], 
+    "Solver": [
+        {
+            "Id": 0, 
+            "Message": "PICO Solver\\\\x3a final f = 88.200000", 
+            "Status": "ok", 
+            "Termination condition": "optimal"
+        }
+    ]
+}
+"""
 
 
 class Test(unittest.TestCase):
-    def setUp(self):
-        TempfileManager.tempdir = currdir
-        self.results = pyomo.opt.SolverResults()
-        self.soln = self.results.solution.add()
-        self.soln.variable[1] = {"Value": 0}
-        self.soln.variable[2] = {"Value": 0}
-        self.soln.variable[4] = {"Value": 0}
 
-    def tearDown(self):
-        TempfileManager.clear_tempfiles()
-        TempfileManager.tempdir = old_tempdir
-        del self.results
+    def test_write_solution(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
 
-    def test_write_solution1(self):
-        """Write a SolverResults Object with solutions"""
-        self.results.write(filename=join(currdir, "write_solution1.txt"))
-        if not os.path.exists(join(currdir, "write_solution1.txt")):
-            self.fail("test_write_solution - failed to write write_solution1.txt")
-        _log, _out = join(currdir, "write_solution1.txt"), join(
-            currdir, "test1_soln.txt"
+        OUT = StringIO()
+        results.write(ostream=OUT)
+        self.assertEqual(
+            """
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable: No nonzero values
+  Constraint: No values
+            """.strip(),
+            OUT.getvalue().strip(),
         )
-        self.assertTrue(cmp(_out, _log), msg="Files %s and %s differ" % (_out, _log))
 
-    def test_write_solution2(self):
-        """Write a SolverResults Object without solutions"""
-        self.results.write(num=None, filename=join(currdir, "write_solution2.txt"))
-        if not os.path.exists(join(currdir, "write_solution2.txt")):
-            self.fail("test_write_solution - failed to write write_solution2.txt")
-        _out, _log = join(currdir, "write_solution2.txt"), join(
-            currdir, "test2_soln.txt"
+    def test_write_empty_solution(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        OUT = StringIO()
+        results.write(num=None, ostream=OUT)
+        self.assertEqual(
+            """
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable: No nonzero values
+  Constraint: No values
+            """.strip(),
+            OUT.getvalue().strip(),
         )
-        self.assertTrue(cmp(_out, _log), msg="Files %s and %s differ" % (_out, _log))
 
-    @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
-    def test_read_solution1(self):
+    @unittest.skipIf(not yaml_available, "Test requires 'yaml'")
+    def test_read_write_yaml_solution(self):
         """Read a SolverResults Object"""
-        self.results = pyomo.opt.SolverResults()
-        self.results.read(filename=join(currdir, "test4_sol.txt"))
-        self.results.write(filename=join(currdir, "read_solution1.out"))
-        if not os.path.exists(join(currdir, "read_solution1.out")):
-            self.fail("test_read_solution1 - failed to write read_solution1.out")
-        with open(join(currdir, "read_solution1.out"), 'r') as out, open(
-            join(currdir, "test4_sol.txt"), 'r'
-        ) as txt:
-            self.assertStructuredAlmostEqual(
-                yaml.full_load(txt), yaml.full_load(out), allow_second_superset=True
-            )
+        IN = StringIO(ref_yaml_soln)
+        results = SolverResults()
+        results.read(istream=IN, format='yaml')
+        OUT = StringIO()
+        results.write(ostream=OUT, format='yaml')
 
-    @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
-    def test_pickle_solution1(self):
-        """Read a SolverResults Object"""
-        self.results = pyomo.opt.SolverResults()
-        self.results.read(filename=join(currdir, "test4_sol.txt"))
-        str = pickle.dumps(self.results)
-        res = pickle.loads(str)
-        self.results.write(filename=join(currdir, "read_solution1.out"))
-        if not os.path.exists(join(currdir, "read_solution1.out")):
-            self.fail("test_read_solution1 - failed to write read_solution1.out")
-        with open(join(currdir, "read_solution1.out"), 'r') as out, open(
-            join(currdir, "test4_sol.txt"), 'r'
-        ) as txt:
-            self.assertStructuredAlmostEqual(
-                yaml.full_load(txt), yaml.full_load(out), allow_second_superset=True
-            )
+        self.assertStructuredAlmostEqual(
+            yaml.full_load(StringIO(ref_yaml_soln)),
+            yaml.full_load(StringIO(OUT.getvalue())),
+            allow_second_superset=True,
+        )
 
-    def test_read_solution2(self):
-        """Read a SolverResults Object"""
-        self.results = pyomo.opt.SolverResults()
-        self.results.read(filename=join(currdir, "test4_sol.jsn"), format='json')
-        self.results.write(filename=join(currdir, "read_solution2.out"), format='json')
-        if not os.path.exists(join(currdir, "read_solution2.out")):
-            self.fail("test_read_solution2 - failed to write read_solution2.out")
-        with open(join(currdir, "read_solution2.out"), 'r') as out, open(
-            join(currdir, "test4_sol.jsn"), 'r'
-        ) as txt:
-            self.assertStructuredAlmostEqual(
-                json.load(txt), json.load(out), allow_second_superset=True
-            )
+    @unittest.skipIf(not yaml_available, "Test requires 'yaml'")
+    def test_pickle_yaml_solution(self):
+        IN = StringIO(ref_yaml_soln)
+        results = SolverResults()
+        results.read(istream=IN, format='yaml')
 
-    def test_pickle_solution2(self):
-        """Read a SolverResults Object"""
-        self.results = pyomo.opt.SolverResults()
-        self.results.read(filename=join(currdir, "test4_sol.jsn"), format='json')
-        str = pickle.dumps(self.results)
-        res = pickle.loads(str)
-        self.results.write(filename=join(currdir, "read_solution2.out"), format='json')
-        if not os.path.exists(join(currdir, "read_solution2.out")):
-            self.fail("test_read_solution2 - failed to write read_solution2.out")
-        with open(join(currdir, "read_solution2.out"), 'r') as out, open(
-            join(currdir, "test4_sol.jsn"), 'r'
-        ) as txt:
-            self.assertStructuredAlmostEqual(
-                json.load(txt), json.load(out), allow_second_superset=True
-            )
+        new_results = pickle.loads(pickle.dumps(results))
+        OUT = StringIO()
+        new_results.write(ostream=OUT, format='yaml')
+
+        self.assertStructuredAlmostEqual(
+            yaml.full_load(StringIO(ref_yaml_soln)),
+            yaml.full_load(StringIO(OUT.getvalue())),
+            allow_second_superset=True,
+        )
+
+    @unittest.skipIf(not yaml_available, "Test requires 'yaml'")
+    def test_write_read_yaml_file(self):
+        IN = StringIO(ref_yaml_soln)
+        results = SolverResults()
+        results.read(istream=IN, format='yaml')
+
+        with TempfileManager.new_context() as temp:
+            fname = temp.create_tempfile('yaml')
+            results.write(filename=fname)
+            new_results = SolverResults()
+            new_results.read(filename=fname)
+
+        self.assertStructuredAlmostEqual(
+            results, new_results, allow_second_superset=True
+        )
+
+    def test_read_write_json_solution(self):
+        IN = StringIO(ref_json_soln)
+        results = SolverResults()
+        results.read(istream=IN, format='json')
+        OUT = StringIO()
+        results.write(ostream=OUT, format='json')
+
+        self.assertStructuredAlmostEqual(
+            json.loads(ref_json_soln),
+            json.loads(OUT.getvalue()),
+            allow_second_superset=True,
+        )
+
+    def test_pickle_json_solution(self):
+        IN = StringIO(ref_json_soln)
+        results = SolverResults()
+        results.read(istream=IN, format='json')
+
+        new_results = pickle.loads(pickle.dumps(results))
+        OUT = StringIO()
+        new_results.write(ostream=OUT, format='json')
+
+        self.assertStructuredAlmostEqual(
+            json.loads(ref_json_soln),
+            json.loads(OUT.getvalue()),
+            allow_second_superset=True,
+        )
+
+    def test_write_read_json_file(self):
+        IN = StringIO(ref_json_soln)
+        results = SolverResults()
+        results.read(istream=IN, format='json')
+
+        with TempfileManager.new_context() as temp:
+            fname = temp.create_tempfile('.jsn')
+            results.write(filename=fname)
+            new_results = SolverResults()
+            new_results.read(filename=fname)
+
+        self.assertStructuredAlmostEqual(
+            results, new_results, allow_second_superset=True
+        )
+
+    def test_deepcopy_solution(self):
+        IN = StringIO(ref_json_soln)
+        result = SolverResults()
+        result.read(istream=IN, format='json')
+        result_copy = copy.deepcopy(result)
+        self.assertEqual(list(result.keys()), list(result_copy.keys()))
+        self.assertEqual(str(result), str(result_copy))
+        self.assertEqual(result, result)
+        self.assertEqual(result, result_copy)
 
     #
     # deleting is not supported right now
     #
-    def Xtest_delete_solution(self):
-        """Delete a solution from a SolverResults object"""
-        self.results.solution.delete(0)
-        self.results.write(filename=join(currdir, "delete_solution.txt"))
-        if not os.path.exists(join(currdir, "delete_solution.txt")):
-            self.fail("test_write_solution - failed to write delete_solution.txt")
-        _out, _log = join(currdir, "delete_solution.txt"), join(
-            currdir, "test4_soln.txt"
+    def test_delete_solution(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        results.solution.delete(0)
+
+        OUT = StringIO()
+        results.write(ostream=OUT)
+        self.assertEqual(
+            """
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 0
+  number of solutions displayed: 0
+            """.strip(),
+            OUT.getvalue().strip(),
         )
-        self.assertTrue(cmp(_out, _log), msg="Files %s and %s differ" % (_out, _log))
 
     def test_get_solution(self):
         """Get a solution from a SolverResults object"""
-        tmp = self.results.solution[0]
-        self.assertEqual(tmp, self.soln)
+        results = SolverResults()
+        soln = results.solution.add()
+        self.assertIs(results.solution[0], soln)
 
     def test_get_solution_attr_error(self):
         """Create an error with a solution suffix"""
-        try:
-            tmp = self.soln.bad
-            self.fail("Expected attribute error failure for 'bad'")
-        except AttributeError:
-            pass
+        results = SolverResults()
+        soln = results.solution.add()
+        with self.assertRaisesRegex(
+            AttributeError,
+            r"Unknown attribute `bad' for object with type <.*\.Solution'>",
+        ):
+            tmp = soln.bad
 
     #
     # This is currently allowed, although soln.variable = True is equivalent to
@@ -166,44 +401,219 @@ class Test(unittest.TestCase):
         except AttributeError:
             pass
 
-    def test_soln_pprint1(self):
-        """Write a solution with only zero values, using the results 'write()' method"""
-        self.soln.variable[1]["Value"] = 0.0
-        self.soln.variable[2]["Value"] = 0.0
-        self.soln.variable[4]["Value"] = 0.0
-        self.results.write(filename=join(currdir, "soln_pprint.txt"))
-        if not os.path.exists(join(currdir, "soln_pprint.txt")):
-            self.fail("test_write_solution - failed to write soln_pprint.txt")
-        _out, _log = join(currdir, "soln_pprint.txt"), join(currdir, "test3_soln.txt")
-        self.assertTrue(cmp(_out, _log), msg="Files %s and %s differ" % (_out, _log))
+    def test_soln_write_zeros(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
 
-    def test_soln_pprint2(self):
-        """Write a solution with only zero values, using the Solution.pprint() method"""
-        self.soln.variable[1]["Value"] = 0.0
-        self.soln.variable[2]["Value"] = 0.0
-        self.soln.variable[4]["Value"] = 0.0
-        with open(join(currdir, 'soln_pprint2.out'), 'w') as f:
-            f.write(str(self.soln))
-        with open(join(currdir, "soln_pprint2.out"), 'r') as f1, open(
-            join(currdir, "soln_pprint2.txt"), 'r'
-        ) as f2:
-            self.assertEqual(f1.read().strip(), f2.read().strip())
+        soln.variable[1]["Value"] = 0.0
+        soln.variable[2]["Value"] = 0.0
+        soln.variable[4]["Value"] = 0.0
 
-    def test_soln_suffix_getiter(self):
-        self.soln.variable[1]["Value"] = 0.0
-        self.soln.variable[2]["Value"] = 0.1
-        self.soln.variable[4]["Value"] = 0.3
-        self.assertEqual(self.soln.variable[4]["Value"], 0.3)
-        self.assertEqual(self.soln.variable[2]["Value"], 0.1)
+        OUT = StringIO()
+        results.write(ostream=OUT)
+        self.assertEqual(
+            """
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable: No nonzero values
+  Constraint: No values
+            """.strip(),
+            OUT.getvalue().strip(),
+        )
 
-    def test_soln_suffix_setattr(self):
-        self.soln.variable[1]["Value"] = 0.0
-        self.soln.variable[4]["Value"] = 0.3
-        self.soln.variable[4]["Slack"] = 0.4
-        self.assertEqual(list(self.soln.variable.keys()), [1, 2, 4])
-        self.assertEqual(self.soln.variable[1]["Value"], 0.0)
-        self.assertEqual(self.soln.variable[4]["Value"], 0.3)
-        self.assertEqual(self.soln.variable[4]["Slack"], 0.4)
+    def test_soln_write_nonzeros(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        soln.variable[1]["Value"] = 1.0
+        soln.variable[2]["Value"] = 3.0
+        soln.variable[4]["Value"] = 5.0
+
+        OUT = StringIO()
+        results.write(ostream=OUT)
+        self.assertEqual(
+            """
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable:
+    1:
+      Value: 1
+    2:
+      Value: 3
+    4:
+      Value: 5
+  Constraint: No values
+            """.strip(),
+            OUT.getvalue().strip(),
+        )
+
+    def test_soln_suffix_getattr(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        soln.variable[1]["Value"] = 0.0
+        soln.variable[2]["Value"] = 0.1
+        soln.variable[4]["Value"] = 0.3
+        self.assertEqual(soln.variable[4]["Value"], 0.3)
+        self.assertEqual(soln.variable[2]["Value"], 0.1)
+
+    def test_soln_suffix_setattr_getattr(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        soln.variable[1]["Value"] = 0.0
+        soln.variable[4]["Value"] = 0.3
+        soln.variable[4]["Slack"] = 0.4
+        self.assertEqual(list(soln.variable.keys()), [1, 2, 4])
+        self.assertEqual(soln.variable[1]["Value"], 0.0)
+        self.assertEqual(soln.variable[4]["Value"], 0.3)
+        self.assertEqual(soln.variable[4]["Slack"], 0.4)
+
+    def test_soln_to_str(self):
+        results = SolverResults()
+        soln = results.solution.add()
+        soln.variable[1] = {"Value": 0}
+        soln.variable[2] = {"Value": 0}
+        soln.variable[4] = {"Value": 0}
+
+        self.assertEqual(
+            """
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable: No nonzero values
+  Constraint: No values
+            """.strip(),
+            str(results).strip(),
+        )
+
+        soln.variable[1]["Value"] = 1.0
+        soln.variable[2]["Value"] = 3.0
+        soln.variable[4]["Value"] = 5.0
+
+        self.assertEqual(
+            """
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: unknown
+  Objective: No values
+  Variable:
+    1:
+      Value: 1
+    2:
+      Value: 3
+    4:
+      Value: 5
+  Constraint: No values
+            """.strip(),
+            str(results).strip(),
+        )
+
+
+class TestContainer(unittest.TestCase):
+    def test_declare_and_str(self):
+        class LocalContainer(container.MapContainer):
+            def __init__(self, **kwds):
+                super().__init__(**kwds)
+                self.declare('a')
+                self.declare('b', value=2)
+                self.declare('c', value=3)
+
+        d = container.MapContainer()
+        d.declare('f')
+        d.declare('g')
+        d.declare('h')
+        d.declare('i', value=container.ListContainer(container.UndefinedData))
+        d.declare('j', value=container.ListContainer(LocalContainer), active=False)
+        self.assertEqual(list(d.keys()), ['F', 'G', 'H', 'I', 'J'])
+
+        self.assertEqual(
+            """
+I: 
+""",
+            str(d),
+        )
+
+        # Assigning to a field activates it
+        d.f = 1
+        self.assertEqual(
+            """
+F: 1
+I: 
+""",
+            str(d),
+        )
+        self.assertEqual(d.f, 1)
+
+        # Adding to a list also activates it, even if it was declared
+        # with active=False
+        self.assertTrue(d.i._active)
+        self.assertFalse(d.j._active)
+        d.j.add()
+        self.assertTrue(d.i._active)
+        self.assertTrue(d.j._active)
+        self.assertEqual(
+            """
+F: 1
+I: 
+J: 
+- B: 2
+  C: 3
+""",
+            str(d),
+        )
+
+        self.assertEqual(
+            """
+- B: 2
+  C: 3
+""",
+            str(d.j),
+        )
+
+    def test_pickle(self):
+        d = container.MapContainer()
+        d.declare('a', value=container.ignore)
+        d.declare('b', value=container.undefined)
+        d.declare('c', value=42)
+        e = pickle.loads(pickle.dumps(d))
+        self.assertEqual(list(d.keys()), list(e.keys()))
+        self.assertIs(d.a, e.a)
+        self.assertIs(d.b, e.b)
+        self.assertEqual(d.c, e.c)
 
 
 if __name__ == "__main__":
