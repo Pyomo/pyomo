@@ -149,3 +149,6 @@ Bibliography
 .. [VAN10] J. P. Vielma, S. Ahmed, and G. Nemhauser. "Mixed-Integer
    Models for Non-separable Piecewise Linear Optimization: Unifying
    framework and Extensions", *Operations Research* 58(2), 303-315. 2010.
+
+.. [NW99] Nocedal, Jorge, and Stephen J. Wright, eds. Numerical
+   optimization. New York, NY: Springer New York, 1999.

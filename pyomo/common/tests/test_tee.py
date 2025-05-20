@@ -20,10 +20,11 @@ import sys
 
 from io import StringIO, BytesIO
 
+from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
-import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.tee as tee
+import pyomo.common.unittest as unittest
 
 
 class timestamper:
@@ -335,6 +336,17 @@ class TestCapture(unittest.TestCase):
         finally:
             capture.reset()
 
+    def test_reset_capture_output_twice(self):
+        capture = tee.capture_output()
+        with capture as OUT1:
+            print("test1")
+        capture.reset()
+        capture.reset()
+        with capture as OUT2:
+            print("test2")
+        self.assertEqual(OUT1.getvalue(), "test1\n")
+        self.assertEqual(OUT2.getvalue(), "test2\n")
+
     def test_capture_output_logfile_string(self):
         with TempfileManager.new_context() as tempfile:
             logfile = tempfile.create_tempfile()
@@ -537,6 +549,14 @@ class TestCapture(unittest.TestCase):
             with T:
                 self.assertEqual(len(T.context_stack), 6)
 
+    def test_closed_stdout(self):
+        with tee.capture_output() as T_outer:
+            sys.stdout.close()
+            with tee.capture_output() as T_inner:
+                print("test")
+        self.assertEqual(T_outer.getvalue(), "")
+        self.assertEqual(T_inner.getvalue(), "test\n")
+
     def test_capture_output_stack_error(self):
         OUT1 = StringIO()
         OUT2 = StringIO()
@@ -558,6 +578,31 @@ class TestCapture(unittest.TestCase):
             os.dup2(old_fd[1], 2)
             sys.stdout, sys.stderr = old
             logging.getLogger('pyomo.common.tee').handlers.clear()
+
+    def test_atomic_deadlock(self):
+        save_poll = tee._poll_timeout_deadlock
+        tee._poll_timeout_deadlock = 0.01
+
+        co = tee.capture_output()
+        try:
+            tee.capture_output.startup_shutdown.acquire()
+            with self.assertRaisesRegex(
+                DeveloperError, "Deadlock starting capture_output"
+            ):
+                with tee.capture_output():
+                    pass
+            tee.capture_output.startup_shutdown.release()
+
+            with self.assertRaisesRegex(
+                DeveloperError, "Deadlock closing capture_output"
+            ):
+                with co:
+                    tee.capture_output.startup_shutdown.acquire()
+        finally:
+            tee._poll_timeout_deadlock = save_poll
+            if tee.capture_output.startup_shutdown.locked():
+                tee.capture_output.startup_shutdown.release()
+            co.reset()
 
     def test_capture_output_invalid_ostream(self):
         # Test that capture_output does not suppress errors from the tee
@@ -634,8 +679,9 @@ class TestCapture(unittest.TestCase):
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
         try:
-            with LoggingIntercept() as LOG, self.assertRaisesRegex(
-                RuntimeError, 'deadlock'
+            with (
+                LoggingIntercept() as LOG,
+                self.assertRaisesRegex(RuntimeError, 'deadlock'),
             ):
                 with tee.TeeStream(MockStream()) as t:
                     t.STDERR.write('*')
@@ -652,8 +698,9 @@ class TestCapture(unittest.TestCase):
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
         try:
-            with LoggingIntercept() as LOG, self.assertRaisesRegex(
-                ValueError, 'testing'
+            with (
+                LoggingIntercept() as LOG,
+                self.assertRaisesRegex(ValueError, 'testing'),
             ):
                 with tee.TeeStream(MockStream()) as t:
                     t.STDERR.write('*')
