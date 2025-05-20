@@ -1,0 +1,88 @@
+[build-system]
+requires = [
+    "setuptools>=65",
+    "wheel",
+    # leave Cython as an optional, runtime‑selectable extra
+    # setuptools will still import it from setup.py when requested
+    "cython",
+    "pybind11",
+]
+build-backend = "setuptools.build_meta"
+
+# project metadata
+
+[project]
+name = "pyomo"
+description = "The Pyomo optimization modeling framework"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+authors = [{name = "Pyomo Development Team", email = "pyomo-developers@googlegroups.com"}]
+requires-python = ">=3.9"
+keywords=['optimization']
+classifiers=[
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: End Users/Desktop',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: BSD License',
+    'Natural Language :: English',
+    'Operating System :: MacOS',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: Unix',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Programming Language :: Python :: Implementation :: PyPy',
+    'Topic :: Scientific/Engineering :: Mathematics',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+]
+
+# All fields that are generated in setup.py must be declared dynamic
+dynamic = [
+    "version",
+    "dependencies",
+    "optional-dependencies",
+]
+
+[project.urls]
+Homepage        = "https://www.pyomo.org"
+Documentation   = "https://pyomo.readthedocs.io/en/stable/"
+Source          = "https://github.com/Pyomo/pyomo"
+
+
+[project.scripts]
+pyomo = "pyomo.scripting.pyomo_main:main_console_script"
+
+[project.entry-points."pyomo.command"]
+"pyomo.help"   = "pyomo.scripting.driver_help"
+"pyomo.viewer" = "pyomo.contrib.viewer.pyomo_viewer"
+
+[tool.setuptools.dynamic]
+version = {attr = "pyomo.version.info.__version__"}
+
+# pytest configuration (moved from setup.cfg)
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::RuntimeWarning"]
+junit_family = "xunit2"
+markers = [
+    "default: mark a test that should always run by default",
+    "expensive: marks tests as expensive",
+    "mpi: marks tests that require MPI",
+    "neos: marks tests that require NEOS server connections",
+    "importtest: marks tests that checks for warnings when importing modules",
+    "book: marks tests from the Pyomo book",
+    "performance: marks performance tests",
+    "long: marks long performance tests",
+    "short: marks short performance tests",
+    "devel: marks developer-created performance tests",
+    "nl: marks nl tests",
+    "lp: marks lp tests",
+    "gams: marks gams tests",
+    "bar: marks bar tests",
+    "builders: tests that should be run when testing custom (extension) builders",
+]
