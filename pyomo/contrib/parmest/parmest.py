@@ -1100,7 +1100,7 @@ class Estimator(object):
             sse_val = pyo.value(sse_expr)
             sse_vals.append(sse_val)
 
-        sse = sum(sse_vals) # total SSE
+        sse = sum(sse_vals)  # total SSE
 
         """Calculate covariance assuming experimental observation errors are
         independent and follow a Gaussian distribution with constant variance.
