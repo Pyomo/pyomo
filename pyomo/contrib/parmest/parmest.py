@@ -1009,7 +1009,6 @@ class Estimator(object):
 
             # add the estimated theta and objective value to the class
             self.estimated_theta = thetavals
-            self.objective_value = objval
 
             thetavals = pd.Series(thetavals)
 
@@ -1068,8 +1067,40 @@ class Estimator(object):
         # Extract number of fitted parameters
         l = len(self.estimated_theta)
 
-        # Assumption: Objective value is sum of squared errors
-        sse = self.objective_value
+        # calculate the sum of squared errors at the estimated parameters
+        sse_vals = []
+        for experiment in self.exp_list:
+            model = _get_labeled_model_helper(experiment)
+
+            # fix the value of the unknown parameters to the estimated values
+            params = [k for k, v in model.unknown_parameters.items()]
+            for param in params:
+                param.fix(self.estimated_theta[param.name])
+
+            # resolve the model with the estimated parameters
+            try:
+                res = pyo.SolverFactory(solver).solve(model, tee=self.tee)
+                pyo.assert_optimal_termination(res)
+            except:
+                raise RuntimeError(
+                    "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                )
+
+            # choose and evaluate the objective expression
+            if self.obj_function == ObjectiveLib.SSE:
+                sse_expr = SSE(model)
+            elif self.obj_function == ObjectiveLib.SSE_weighted:
+                sse_expr = SSE_weighted(model)
+            else:
+                raise NotImplementedError(
+                    "Covariance calculation is only supported for `SSE` and `SSE_weighted` objectives."
+                )
+
+            # evaluate numerical SSE and store it
+            sse_val = pyo.value(sse_expr)
+            sse_vals.append(sse_val)
+
+        sse = sum(sse_vals) # total SSE
 
         """Calculate covariance assuming experimental observation errors are
         independent and follow a Gaussian distribution with constant variance.
@@ -1088,9 +1119,6 @@ class Estimator(object):
             raise ValueError(
                 f"Invalid method: '{method}'. Choose from {[e.value for e in CovMethodLib]}."
             )
-
-        # get a version of the model to check if it has a `measurement_error` attribute
-        model = self.exp_list[0].get_labeled_model()
 
         # check if the user specified `SSE` or `SSE_weighted` as the objective function
         if self.obj_function == ObjectiveLib.SSE:
