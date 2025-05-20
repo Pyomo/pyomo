@@ -117,14 +117,14 @@ class _BaseTestModel(object):
                         symbolic_solver_labels=symbolic_labels,
                         warmstart=True,
                         load_solutions=load_solutions,
-                        **io_options
+                        **io_options,
                     )
                 else:
                     results = opt.solve(
                         self.model,
                         symbolic_solver_labels=symbolic_labels,
                         load_solutions=load_solutions,
-                        **io_options
+                        **io_options,
                     )
 
             return opt, results
