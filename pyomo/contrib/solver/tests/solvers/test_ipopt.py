@@ -233,6 +233,9 @@ EXIT: Optimal Solution Found.
         self.assertEqual(len(parsed_output["iteration_log"]), 12)
         self.assertEqual(parsed_output["incumbent_objective"], 7.0136459513364959e-25)
         self.assertIn("final_scaled_results", parsed_output.keys())
+        self.assertIn(
+            'IPOPT (w/o function evaluations)', parsed_output['cpu_seconds'].keys()
+        )
 
         # New ipopt style (3.14+)
         output = """******************************************************************************
@@ -301,6 +304,7 @@ Ipopt 3.14.17: Optimal Solution Found
         self.assertEqual(len(parsed_output["iteration_log"]), 12)
         self.assertEqual(parsed_output["incumbent_objective"], 7.0136459513364959e-25)
         self.assertIn("final_scaled_results", parsed_output.keys())
+        self.assertIn('IPOPT', parsed_output['cpu_seconds'].keys())
 
     def test_empty_output_parsing(self):
         with self.assertLogs(
@@ -488,7 +492,13 @@ class TestIpopt(unittest.TestCase):
 
     def test_ipopt_timer_object(self):
         model = self.create_model()
-        results = ipopt.Ipopt().solve(model)
+        ipopt_instance = ipopt.Ipopt()
+        results = ipopt_instance.solve(model)
         timing_info = results.timing_info
-        self.assertIn('ipopt_excluding_nlp_functions', timing_info.keys())
-        self.assertIn('nlp_function_evaluations', timing_info.keys())
+        if ipopt_instance.version()[0:1] <= (3, 13):
+            # We are running an older version of IPOPT (<= 3.13)
+            self.assertIn('IPOPT (w/o function evaluations)', timing_info.keys())
+            self.assertIn('NLP function evaluations', timing_info.keys())
+        else:
+            # Newer version of IPOPT
+            self.assertIn('IPOPT', timing_info.keys())

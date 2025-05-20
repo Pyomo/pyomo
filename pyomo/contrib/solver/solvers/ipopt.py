@@ -397,9 +397,9 @@ class Ipopt(SolverBase):
                     timeout = None
 
                 ostreams = [io.StringIO()] + config.tee
+                timer.start('subprocess')
                 try:
                     with TeeStream(*ostreams) as t:
-                        timer.start('subprocess')
                         process = subprocess.run(
                             cmd,
                             timeout=timeout,
@@ -409,11 +409,12 @@ class Ipopt(SolverBase):
                             stderr=t.STDERR,
                             check=False,
                         )
-                        timer.stop('subprocess')
                 except OSError:
                     err = sys.exc_info()[1]
                     msg = 'Could not execute the command: %s\tError message: %s'
                     raise ApplicationError(msg % (cmd, err))
+                finally:
+                    timer.stop('subprocess')
 
                 # This is the data we need to parse to get the iterations
                 # and time
@@ -455,19 +456,8 @@ class Ipopt(SolverBase):
                     try:
                         results.iteration_count = parsed_output_data.pop('iters')
                         cpu_seconds = parsed_output_data.pop('cpu_seconds')
-                        if 'total_time' in cpu_seconds:
-                            results.timing_info.total = cpu_seconds.pop('total_time')
-                        if 'nofunc_time' in cpu_seconds:
-                            results.timing_info.ipopt_excluding_nlp_functions = (
-                                cpu_seconds.pop('nofunc_time')
-                            )
-                            results.timing_info.nlp_function_evaluations = (
-                                cpu_seconds.pop('func_time')
-                            )
-                        assert (
-                            not cpu_seconds
-                        ), f"Extra timing data ({cpu_seconds}) remains in the output - "
-                        "please report this issue to the Pyomo Developers."
+                        for k, v in cpu_seconds.items():
+                            results.timing_info[k] = v
                         results.extra_info = parsed_output_data
                         # Set iteration_log visibility to ADVANCED_OPTION because it's
                         # a lot to print out with `display`
@@ -622,7 +612,8 @@ class Ipopt(SolverBase):
             r'Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
             r'Dual infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
             r'Constraint violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
-            # Next field is optional because it shows up in new-style ipopt output, but not old style
+            # Next field is optional because it shows up in new-style ipopt
+            # output, but not old style
             r'(?:Variable bound violation: *([-+eE0-9.]+) *([-+eE0-9.]+) *\s*)?'
             r'Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*'
             r'Overall NLP error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)',
@@ -638,14 +629,10 @@ class Ipopt(SolverBase):
                 "overall_nlp_error",
             ]
             scaled = {
-                k: float(v)
-                for k, v in zip(fields, scaled_unscaled_match[0][0:10:2])
-                if v
+                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][0::2]) if v
             }
             unscaled = {
-                k: float(v)
-                for k, v in zip(fields, scaled_unscaled_match[0][1:10:2])
-                if v
+                k: float(v) for k, v in zip(fields, scaled_unscaled_match[0][1::2]) if v
             }
 
             parsed_data.update(unscaled)
@@ -654,19 +641,12 @@ class Ipopt(SolverBase):
         # Newer versions of IPOPT no longer separate timing into
         # two different values. This is so we have compatibility with
         # both new and old versions
-        cpu_time = re.findall(r'Total CPU secs in .*? =\s+([0-9.]+)', output)
-        ipopt_seconds_match = re.search(
-            r'Total seconds in IPOPT\s+=\s+([0-9.]+)', output
-        )
-        if cpu_time and len(cpu_time) >= 2:
-            parsed_data['cpu_seconds'] = {
-                'nofunc_time': float(cpu_time[0]),
-                'func_time': float(cpu_time[1]),
-            }
-        elif ipopt_seconds_match:
-            parsed_data['cpu_seconds'] = {
-                'total_time': float(ipopt_seconds_match.group(1))
-            }
+        parsed_data['cpu_seconds'] = {
+            k.strip(): float(v)
+            for k, v in re.findall(
+                r'Total(?: CPU)? sec(?:ond)?s in ([^=]+)=\s*([0-9.]+)', output
+            )
+        }
 
         return parsed_data
 
