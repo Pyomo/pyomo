@@ -117,8 +117,10 @@ Constructing component 'q' from data=None failed:
             ],
         )
 
-        self.assertExpressionsStructurallyEqual(m.p[0].expr, BooleanConstant(True))
-        self.assertExpressionsStructurallyEqual(m.p[1].expr, BooleanConstant(False))
+        self.assertExpressionsStructurallyEqual(m.p[0].expr, LogicalConstraint.Feasible)
+        self.assertExpressionsStructurallyEqual(
+            m.p[1].expr, LogicalConstraint.Infeasible
+        )
         self.assertNotIn(2, m.p)
         with self.assertRaises(KeyError):
             m.p[2].expr
@@ -202,13 +204,13 @@ Constructing component 'q' from data=None failed:
         m.p.pprint(ostream=OUT)
         self.assertEqual(
             """p : Size=6, Index={0, 1, 2, 3, 4, 5, 6}, Active=True
-    Key : Body    : Active
-      0 :    True :   True
-      1 :   False :   True
-      3 : x --> y :   True
-      4 :       x :   True
-      5 :    True :   True
-      6 :   False :   True
+    Key : Body       : Active
+      0 :   Feasible :   True
+      1 : Infeasible :   True
+      3 :    x --> y :   True
+      4 :          x :   True
+      5 :       True :   True
+      6 :      False :   True
 """,
             OUT.getvalue(),
         )
@@ -229,8 +231,10 @@ Constructing component 'q' from data=None failed:
 
         m.p = LogicalConstraint(NonNegativeIntegers, rule=p_rule)
 
-        self.assertExpressionsStructurallyEqual(m.p[0].expr, BooleanConstant(True))
-        self.assertExpressionsStructurallyEqual(m.p[1].expr, BooleanConstant(False))
+        self.assertExpressionsStructurallyEqual(m.p[0].expr, LogicalConstraint.Feasible)
+        self.assertExpressionsStructurallyEqual(
+            m.p[1].expr, LogicalConstraint.Infeasible
+        )
         self.assertNotIn(2, m.p)
         with self.assertRaises(KeyError):
             m.p[2].expr
@@ -287,10 +291,10 @@ Constructing component 'q' from data=None failed:
         self.assertEqual(len(m.p), 0)
 
         m.p = LogicalConstraint.Feasible
-        self.assertExpressionsStructurallyEqual(m.p.expr, BooleanConstant(True))
+        self.assertExpressionsStructurallyEqual(m.p.expr, LogicalConstraint.Feasible)
 
         m.p = LogicalConstraint.Infeasible
-        self.assertExpressionsStructurallyEqual(m.p.expr, BooleanConstant(False))
+        self.assertExpressionsStructurallyEqual(m.p.expr, LogicalConstraint.Infeasible)
 
         with self.assertRaisesRegex(
             ValueError, "Assigning improper value to LogicalConstraint 'p'."
