@@ -57,11 +57,11 @@ class TestModelVariants(unittest.TestCase):
         # create the Rooney-Biegler model
         def rooney_biegler_model():
             """
-           Formulates the Pyomo model of the Rooney-Biegler example
+            Formulates the Pyomo model of the Rooney-Biegler example
 
-           Returns:
-               m: Pyomo model
-           """
+            Returns:
+                m: Pyomo model
+            """
             m = pyo.ConcreteModel()
 
             m.asymptote = pyo.Var(within=pyo.NonNegativeReals, initialize=10)
@@ -72,7 +72,7 @@ class TestModelVariants(unittest.TestCase):
 
             @m.Constraint()
             def response_rule(m):
-                return m.y == m.asymptote * (1 - pyo.exp(- m.rate_constant * m.hour))
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour))
 
             return m
 
@@ -84,7 +84,6 @@ class TestModelVariants(unittest.TestCase):
                 self.experiment_number = experiment_number
                 self.model = None
 
-
             def get_labeled_model(self):
                 if self.model is None:
                     self.create_model()
@@ -92,12 +91,10 @@ class TestModelVariants(unittest.TestCase):
                     self.label_model()
                 return self.model
 
-
             def create_model(self):
                 m = self.model = rooney_biegler_model()
 
                 return m
-
 
             def finalize_model(self):
                 m = self.model
@@ -107,32 +104,28 @@ class TestModelVariants(unittest.TestCase):
 
                 return m
 
-
             def label_model(self):
                 m = self.model
 
                 # add experiment inputs
                 m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_inputs.update(
-                    [(m.hour, self.hour)]
-                )
+                m.experiment_inputs.update([(m.hour, self.hour)])
 
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [(m.y, self.y)]
-                )
+                m.experiment_outputs.update([(m.y, self.y)])
 
                 # add unknown parameters
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.unknown_parameters.update((k, pyo.value(k)) for k in [m.asymptote, m.rate_constant])
+                m.unknown_parameters.update(
+                    (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
+                )
 
                 # add measurement error
                 m.measurement_error = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.measurement_error.update([(m.y, None)])
 
                 return m
-
 
         # creat the experiments list
         rooney_biegler_exp_list = []
@@ -145,7 +138,9 @@ class TestModelVariants(unittest.TestCase):
 
         self.exp_list = rooney_biegler_exp_list
 
-        self.objective_function = "SSE" # testing the new covariance calculations for the `SSE` objective
+        self.objective_function = (
+            "SSE"  # testing the new covariance calculations for the `SSE` objective
+        )
 
     def check_rooney_biegler_results(self, objval, cov):
         """
@@ -177,20 +172,16 @@ class TestModelVariants(unittest.TestCase):
             cov.iloc[rate_constant_index, rate_constant_index], 0.041242, places=2
         )  # 0.04124 from paper
 
-
     def test_parmest_basics(self):
         """
         Calculates the parameter estimates and covariance matrix, and compares them with the results of Rooney-Biegler
         """
-        pest = parmest.Estimator(
-            self.exp_list, obj_function=self.objective_function
-        )
+        pest = parmest.Estimator(self.exp_list, obj_function=self.objective_function)
 
         objval, thetavals = pest.theta_est()
         cov = pest.cov_est(cov_n=6, method="finite_difference")
 
         self.check_rooney_biegler_results(objval, cov)
-
 
     def test_cov_scipy_least_squares_comparison(self):
         """
