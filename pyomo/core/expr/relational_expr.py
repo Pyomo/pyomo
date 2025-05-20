@@ -439,13 +439,13 @@ def _invalid_relational(op_type, op_str, a, b):
     elif getattr(a, 'is_component_type', no)() and a.is_indexed():
         msg = (
             f"Argument for {op_type} is an indexed numeric "
-            "value specified without an index:\n\t{a.name}\nIs this "
+            f"value specified without an index:\n\t{a.name}\nIs this "
             "value defined over an index that you did not specify?"
         )
     elif getattr(b, 'is_component_type', no)() and b.is_indexed():
         msg = (
             f"Argument for {op_type} is an indexed numeric "
-            "value specified without an index:\n\t{b.name}\nIs this "
+            f"value specified without an index:\n\t{b.name}\nIs this "
             "value defined over an index that you did not specify?"
         )
     else:
