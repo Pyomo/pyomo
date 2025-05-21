@@ -400,8 +400,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 # Col will be the location of the
                 # second ordered pair (d2) in input names
                 d1, d2 = current_differential
-                row = self.input_names().index(d1)
-                col = self.input_names().index(d2)
+                row = self.input_names().index(d2)
+                col = self.input_names().index(d1)
 
                 # Grabbing the ordered quadruple (i, j, k, l)
                 # `location` here refers to the index in the
@@ -433,8 +433,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 # obtained identically as in the trace
                 # for loop above.
                 d1, d2 = current_differential
-                row = self.input_names().index(d1)
-                col = self.input_names().index(d2)
+                row = self.input_names().index(d2)
+                col = self.input_names().index(d1)
 
                 i = self._param_names.index(d1[0])
                 j = self._param_names.index(d1[1])
@@ -462,8 +462,8 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
                 # obtained identically as in the trace
                 # for loop above.
                 d1, d2 = current_differential
-                row = self.input_names().index(d1)
-                col = self.input_names().index(d2)
+                row = self.input_names().index(d2)
+                col = self.input_names().index(d1)
 
                 i = self._param_names.index(d1[0])
                 j = self._param_names.index(d1[1])
