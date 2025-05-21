@@ -2795,8 +2795,9 @@ class _MindtPyAlgorithm(object):
             )
 
         self.create_utility_block(self.working_model, 'MindtPy_utils')
-        with time_code(self.timing, 'total', is_main_timer=True), lower_logger_level_to(
-            config.logger, new_logging_level
+        with (
+            time_code(self.timing, 'total', is_main_timer=True),
+            lower_logger_level_to(config.logger, new_logging_level),
         ):
             self._log_solver_intro_message()
             self.initialize_subsolvers()
