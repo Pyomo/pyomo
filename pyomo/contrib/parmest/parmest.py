@@ -920,7 +920,7 @@ class Estimator(object):
             calc_cov=calc_cov,
             cov_n=cov_n,
         )
-
+    # Need to fix to allow use of obj_function = 'SSE'
     def theta_est_bootstrap(
         self,
         bootstrap_samples,
@@ -994,7 +994,7 @@ class Estimator(object):
             del bootstrap_theta['samples']
 
         return bootstrap_theta
-
+    # Need to fix to allow use of obj_function = 'SSE'
     def theta_est_leaveNout(
         self, lNo, lNo_samples=None, seed=None, return_samples=False
     ):
