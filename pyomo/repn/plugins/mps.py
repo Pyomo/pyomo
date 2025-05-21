@@ -725,9 +725,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         % (var1_label, var2_label, _no_negative_zero(coef * 2))
                     )
                 else:
-                    # the Q matrix is symmetric (but remember it is divided by 2)
-                    # for the QUADOBJ section we only output a single non-zero element
-                    # in the upper (or lower) triangle of the Q matrix.
+                    # The Q matrix is symmetric (but remember it is divided by 2).
+                    # For the QUADOBJ section we output only the upper (or lower)
+                    # triangle of the Q matrix, so a single element represents a pair
+                    # of non-zero elements.
                     output_file.write(
                         column_template
                         % (var1_label, var2_label, _no_negative_zero(coef))
