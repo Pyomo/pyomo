@@ -290,7 +290,7 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['L_diagonal_lower_bound'] = 1e-7
     # Change when we can access other solvers
     solver = SolverFactory("ipopt")
-    solver.options["linear_solver"] = "MUMPS"
+    # solver.options["linear_solver"] = "MUMPS"
     args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
