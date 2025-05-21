@@ -561,60 +561,57 @@ class Ipopt(SolverBase):
                 "alpha_pr",
                 "ls",
             ]
-            all_iterations = []
+            iterations = []
 
-            iterations = 0
             for line in iter_table:
                 tokens = line.strip().split()
-                if len(tokens) == len(columns):
-                    iter_data = dict(zip(columns, tokens))
+                if len(tokens) != len(columns):
+                    continue
+                iter_data = dict(zip(columns, tokens))
 
-                    # Extract restoration flag from 'iter'
-                    iter_data['restoration'] = iter_data['iter'].endswith('r')
-                    if iter_data['restoration']:
-                        iter_data['iter'] = iter_data['iter'][:-1]
-                    assert str(iterations) == iter_data.pop(
-                        'iter'
-                    ), f"Number of iterations ({iterations}) does not match the "
-                    "parsed row in the iterations table"
+                # Extract restoration flag from 'iter'
+                iter_data['restoration'] = iter_data['iter'].endswith('r')
+                if iter_data['restoration']:
+                    iter_data['iter'] = iter_data['iter'][:-1]
 
-                    # Separate alpha_pr into numeric part and optional tag
-                    iter_data['step_acceptance'] = iter_data['alpha_pr'][-1]
-                    if iter_data['step_acceptance'] in _ALPHA_PR_CHARS:
-                        iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
+                # Separate alpha_pr into numeric part and optional tag
+                iter_data['step_acceptance'] = iter_data['alpha_pr'][-1]
+                if iter_data['step_acceptance'] in _ALPHA_PR_CHARS:
+                    iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
+                else:
+                    iter_data['step_acceptance'] = None
+
+                # Attempt to cast all values to float where possible
+                for key in columns:
+                    if iter_data[key] == '-':
+                        iter_data[key] = None
                     else:
-                        iter_data['step_acceptance'] = None
+                        try:
+                            iter_data[key] = float(iter_data[key])
+                        except (ValueError, TypeError):
+                            logger.warning(
+                                "Error converting Ipopt log entry to "
+                                f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
+                            )
 
-                    # Attempt to cast all values to float where possible
-                    for key in columns:
-                        if key == 'iter':
-                            continue
-                        if iter_data[key] == '-':
-                            iter_data[key] = None
-                        else:
-                            try:
-                                iter_data[key] = float(iter_data[key])
-                            except (ValueError, TypeError):
-                                logger.warning(
-                                    "Error converting Ipopt log entry to "
-                                    f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
-                                )
+                assert len(iterations) == iter_data.pop('iter'), (
+                    f"Parsed row in the iterations table\n\t{line}\ndoes not "
+                    f"match the next expected iteration number ({len(iterations)})"
+                )
+                iterations.append(iter_data)
 
-                    all_iterations.append(iter_data)
-                    iterations += 1
-
-            parsed_data['iteration_log'] = all_iterations
+            parsed_data['iteration_log'] = iterations
 
         # Extract scaled and unscaled table
         scaled_unscaled_match = re.search(
             r'''
-        Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
-        Dual\ infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
-        Constraint\ violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
-        (?:Variable\ bound\ violation:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*)?
-        Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
-        Overall\ NLP\ error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)
-    ''',
+            Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            Dual\ infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            Constraint\ violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            (?:Variable\ bound\ violation:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*)?
+            Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            Overall\ NLP\ error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)
+            ''',
             output,
             re.DOTALL | re.VERBOSE,
         )
