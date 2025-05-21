@@ -265,7 +265,7 @@ class TestNumPy(unittest.TestCase):
     def test_numpy_array_copy_errors(self):
         # Defer testing until here to avoid the unconditional numpy dereference
         if int(np.__version__.split('.')[0]) < 2:
-            self.SkipTest("requires numpy>=2")
+            self.skipTest("requires numpy>=2")
 
         m = ConcreteModel()
         m.x = Var([0, 1, 2])
