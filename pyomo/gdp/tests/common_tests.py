@@ -40,6 +40,7 @@ import random
 import pyomo.opt
 
 linear_solvers = pyomo.opt.check_available_solvers('glpk', 'cbc', 'gurobi', 'cplex')
+nonlinear_solvers = pyomo.opt.check_available_solvers('ipopt')
 
 # utility functions
 
@@ -1852,6 +1853,31 @@ def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
         m,
         **kwargs,
     )
+
+
+def check_trivial_constraints(self, solver, transformation, **kwds):
+    m = models.makeTrivialGDP()
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, **kwds)
+    results = SolverFactory(solver).solve(m)
+    self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal)
+    self.assertTrue(m.numeric.disjuncts[0].indicator_var.value)
+    self.assertFalse(m.numeric.disjuncts[1].indicator_var.value)
+    self.assertTrue(m.logical.disjuncts[0].indicator_var.value)
+    self.assertFalse(m.logical.disjuncts[1].indicator_var.value)
+
+    m.numeric.disjuncts[0].indicator_var.fix(False)
+    results = SolverFactory(solver).solve(m)
+    self.assertEqual(
+        results.solver.termination_condition, TerminationCondition.infeasible
+    )
+    m.numeric.disjuncts[0].indicator_var.unfix()
+
+    m.logical.disjuncts[0].indicator_var.fix(False)
+    results = SolverFactory(solver).solve(m)
+    self.assertEqual(
+        results.solver.termination_condition, TerminationCondition.infeasible
+    )
+    m.logical.disjuncts[0].indicator_var.unfix()
 
 
 def check_network_disjuncts(self, minimize, transformation, **kwds):

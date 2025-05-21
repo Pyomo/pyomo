@@ -307,6 +307,43 @@ class InequalityExpression(RelationalExpression):
         return self._strict
 
 
+class TrivialRelationalExpression(InequalityExpression):
+    """A trivial relational expression
+
+    Note that an inequality is sufficient to induce infeasibility and is
+    simpler to relax (in the Big-M sense) than an equality.
+
+    Note that we do not want to provide a trivial equality constraint as
+    that can confuse solvers like Ipopt into believing that the model
+    has fewer degrees of freedom than it actually has.
+
+    """
+
+    __slots__ = ('_name',)
+    singleton = {}
+
+    def __new__(cls, name, args):
+        if name not in cls.singleton:
+            cls.singleton[name] = super().__new__(cls)
+            super().__init__(cls.singleton[name], args, False)
+            cls.singleton[name]._name = name
+        return cls.singleton[name]
+
+    def __init__(self, name, args):
+        # note that the meat of __init__ is called as part of __new__ above.
+        assert args == self.args
+
+    def __deepcopy__(self, memo):
+        # Prevent deepcopy from duplicating this object
+        return self
+
+    def __reduce__(self):
+        return self.__class__, (self._name, self._args_)
+
+    def _to_string(self, values, verbose, smap):
+        return self._name
+
+
 def inequality(lower=None, body=None, upper=None, strict=False):
     """
     A utility function that can be used to declare inequality and
