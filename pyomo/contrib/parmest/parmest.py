@@ -490,10 +490,10 @@ class Estimator(object):
         if multistart_sampling_method == "uniform":
             # Generate random theta values using uniform distribution, with set seed for reproducibility
             np.random.seed(seed)
-            # Generate random theta values
-            theta_vals_multistart = np.random.uniform(lower_bound, upper_bound, size=len(theta_names))
-
-  
+            # Generate random theta values for each restart (n_restarts x len(theta_names))
+            theta_vals_multistart = np.random.uniform(
+            low=lower_bound, high=upper_bound, size=(n_restarts, len(theta_names))
+            )
 
         elif multistart_sampling_method == "latin_hypercube":
             # Generate theta values using Latin hypercube sampling or Sobol sampling
@@ -509,10 +509,6 @@ class Estimator(object):
             # Generate theta values using Sobol sampling
             # The first value of the Sobol sequence is 0, so we skip it
             samples = sampler.random(n=n_restarts+1)[1:]
-
-        if multistart_sampling_method == "sobol" or multistart_sampling_method == "latin_hypercube":
-            # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
-            theta_vals_multistart = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
 
         elif multistart_sampling_method == "user_provided":
                 # Add user provided dataframe option
@@ -563,29 +559,38 @@ class Estimator(object):
 
         else:
             raise ValueError(
-                "Invalid sampling method. Choose 'random', 'latin_hypercube', 'sobol'  or 'user_provided'."
+                "Invalid sampling method. Choose 'uniform', 'latin_hypercube', 'sobol'  or 'user_provided'."
             )
         
-        # Make an output dataframe with the theta names and their corresponding values for each restart, 
-        # and nan for the output info values
-        df_multistart = pd.DataFrame(
-            theta_vals_multistart, columns=theta_names
-        )
-   
+        if multistart_sampling_method == "sobol" or multistart_sampling_method == "latin_hypercube":
+            # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
+            theta_vals_multistart = np.array([lower_bound + (upper_bound - lower_bound) * theta for theta in samples])
+        
+        # Create a DataFrame where each row is an initial theta vector for a restart,
+        # columns are theta_names, and values are the initial theta values for each restart
+        if multistart_sampling_method == "user_provided":
+            # If user_provided is a DataFrame, use its columns and values directly
+            if isinstance(user_provided, pd.DataFrame):
+                df_multistart = user_provided.copy()
+                df_multistart.columns = theta_names
+            else:
+                df_multistart = pd.DataFrame(theta_vals_multistart, columns=theta_names)
+        else:
+            # Ensure theta_vals_multistart is 2D (n_restarts, len(theta_names))
+            arr = np.atleast_2d(theta_vals_multistart)
+            if arr.shape[0] == 1 and n_restarts > 1:
+                arr = np.tile(arr, (n_restarts, 1))
+            df_multistart = pd.DataFrame(arr, columns=theta_names)
 
-        # Add the initial theta values to the first row of the dataframe
-        for i in range(1, n_restarts):
-            df_multistart.iloc[i, :] = theta_vals_multistart[i, :]
-        df_multistart.iloc[0, :] = initial_theta
-
-
-        # Add the output info values to the dataframe, starting values as nan
-        for i in range(len(theta_names)):
-            df_multistart[f'converged_{theta_names[i]}'] = np.nan        
+        # Add columns for output info, initialized as nan
+        for name in theta_names:
+            df_multistart[f'converged_{name}'] = np.nan
         df_multistart["initial objective"] = np.nan
         df_multistart["final objective"] = np.nan
         df_multistart["solver termination"] = np.nan
         df_multistart["solve_time"] = np.nan
+
+        print(df_multistart)
 
         return df_multistart
 
@@ -1066,7 +1071,7 @@ class Estimator(object):
         self,
         n_restarts=20,
         buffer=10,
-        multistart_sampling_method="random",
+        multistart_sampling_method="uniform",
         user_provided=None,
         seed=None,
         save_results=False,
@@ -1083,8 +1088,8 @@ class Estimator(object):
         n_restarts: int, optional
             Number of restarts for multistart. Default is 1.
         th_sampling_method: string, optional
-            Method used to sample theta values. Options are "random", "latin_hypercube", or "sobol".
-            Default is "random".
+            Method used to sample theta values. Options are "uniform", "latin_hypercube", or "sobol".
+            Default is "uniform".
         buffer: int, optional
             Number of iterations to save results dynamically. Default is 10.
         user_provided: pd.DataFrame, optional
@@ -1139,53 +1144,53 @@ class Estimator(object):
                 # with the theta values generated using the _generalize_initial_theta method
 
                 # set the theta values in the model
-                theta_vals_current = theta_vals.iloc[i, :]
+                theta_vals_current = theta_vals.iloc[i, :].to_dict()
 
 
                 # Call the _Q_opt method with the generated theta values
-                objectiveval, converged_theta, variable_values = self._Q_opt(
+                qopt_result = self._Q_opt(
                     ThetaVals=theta_vals_current,
                     solver=solver,
                     return_values=return_values,
                 )
 
-                # Check if the solver terminated successfully
-                if variable_values.solver.termination_condition != pyo.TerminationCondition.optimal:
-                    # If not, set the objective value to NaN
-                    solver_termination = variable_values.solver.termination_condition
-                    solve_time = variable_values.solver.time
-                    thetavals = np.nan
-
+                # Unpack results depending on return_values
+                if len(return_values) > 0:
+                    objectiveval, converged_theta, variable_values = qopt_result
                 else:
+                    objectiveval, converged_theta = qopt_result
+                    variable_values = None
 
-                    # If the solver terminated successfully, set the objective value
-                    converged_theta_vals[i, :] = converged_theta.values()
+                # Since _Q_opt does not return the solver result object, we cannot check
+                # solver termination condition directly here. Instead, we can assume
+                # that if converged_theta contains NaN, the solve failed.
+                if converged_theta.isnull().any():
+                    solver_termination = "not optimal"
+                    solve_time = np.nan
+                    thetavals = np.nan
+                    final_objectiveval = np.nan
+                    init_objectiveval = np.nan
+                else:
+                    converged_theta_vals[i, :] = converged_theta.values
                     init_objectiveval = objectiveval
-                    final_objectiveval = variable_values.solver.objective()
-                    solver_termination = variable_values.solver.termination_condition
-                    solve_time = variable_values.solver.time
+                    final_objectiveval = objectiveval
+                    solver_termination = "optimal"
+                    solve_time = np.nan
 
                 # Check if the objective value is better than the best objective value  
                 if final_objectiveval < best_objectiveval:
                     best_objectiveval = objectiveval
                     best_theta = thetavals
                     
-                # Store the results in a list or DataFrame depending on the number of restarts
-                ''' General structure for dataframe:
-                theta_names = ['theta1', 'theta2', ...]
-                results_df = pd.DataFrame(columns=theta_names + ['converged_theta1', 'converged_theta2', ...,
-                                                                'initial objective', 'final objective',
-                                                                'solver termination', 'solve_time'])
-                Each row of the dataframe corresponds to a restart, and the columns
-                correspond to the theta names, the converged theta values, the initial and final objective values,
-                the solver termination condition, and the solve time.
-                '''
-            
-                results_df.iloc[i, len(theta_names):len(theta_names) + len(theta_names)] = converged_theta_vals[i, :]
-                results_df.iloc[i, -4] = init_objectiveval
-                results_df.iloc[i, -3] = objectiveval
-                results_df.iloc[i, -2] = variable_values.solver.termination_condition
-                results_df.iloc[i, -1] = variable_values.solver.time
+                # Store the results in the DataFrame for this restart
+                # Fill converged theta values
+                for j, name in enumerate(theta_names):
+                    results_df.at[i, f'converged_{name}'] = converged_theta[j] if not np.isnan(converged_theta_vals[i, j]) else np.nan
+                # Fill initial and final objective values, solver termination, and solve time
+                results_df.at[i, "initial objective"] = init_objectiveval if 'init_objectiveval' in locals() else np.nan
+                results_df.at[i, "final objective"] = objectiveval if 'objectiveval' in locals() else np.nan
+                results_df.at[i, "solver termination"] = solver_termination if 'solver_termination' in locals() else np.nan
+                results_df.at[i, "solve_time"] = solve_time if 'solve_time' in locals() else np.nan
 
                 # Add buffer to save the dataframe dynamically, if save_results is True
                 if save_results and (i + 1) % buffer == 0:
