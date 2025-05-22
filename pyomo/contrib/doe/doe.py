@@ -61,6 +61,13 @@ _SMALL_TOLERANCE_DEFINITENESS = 1e-6
 # below and the tests. The user should not need to adjust it.
 _SMALL_TOLERANCE_SYMMETRY = 1e-6
 
+# This small and positive tolerance is used to check
+# if the imaginary part of the eigenvalues of the FIM is
+# greater than a small tolerance. It is defined as a
+# tolerance here to ensure consistency between the code
+# below and the tests. The user should not need to adjust it.
+_SMALL_TOLERANCE_IMG = 1e-6
+
 
 class ObjectiveLib(Enum):
     determinant = "determinant"
@@ -1383,6 +1390,30 @@ class DesignOfExperiments:
                 )
             )
 
+        # Check FIM is positive definite and symmetric
+        self._check_FIM(FIM)
+
+        self.logger.info(
+            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
+        )
+
+    @staticmethod
+    def _check_FIM(FIM):
+        """Private method for basic diagonists on FIM to ensure that the FIM is square, positive definite and symmetric.
+
+        Parameters
+        ----------
+            FIM: 2D numpy array representing the FIM
+
+        Returns
+        -------
+            None, but will raise error messages as needed
+
+        """
+        # Ensure that the FIM is a square matrix
+        if FIM.shape[0] != FIM.shape[1]:
+            raise ValueError("FIM must be a square matrix")
+
         # Compute the eigenvalues of the FIM
         evals = np.linalg.eigvals(FIM)
 
@@ -1401,10 +1432,6 @@ class DesignOfExperiments:
                     _SMALL_TOLERANCE_SYMMETRY
                 )
             )
-
-        self.logger.info(
-            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
-        )
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
@@ -1455,7 +1482,7 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
@@ -1479,7 +1506,22 @@ class DesignOfExperiments:
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
 
+        Returns
+        -------
+        fim_factorial_results: a dictionary of the results with the following keys and
+        their corresponding values as a list. Each element in the list corresponds to
+        a different design point in the full factorial space.
+            "log10 D-opt": list of log10(D-optimality)
+            "log10 A-opt": list of log10(A-optimality)
+            "log10 E-opt": list of log10(E-optimality)
+            "log10 ME-opt": list of log10(ME-optimality)
+            "eigval_min": list of minimum eigenvalues
+            "eigval_max": list of maximum eigenvalues
+            "det_FIM": list of determinants
+            "trace_FIM": list of traces
+            "solve_time": list of solve times
         """
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -1514,8 +1556,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1523,6 +1565,10 @@ class DesignOfExperiments:
                 "log10 A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1584,24 +1630,9 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
-                self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
-                )
-
-            # If the real value is less than or equal to zero, set the E_opt value to nan
-            if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
-            else:
-                E_opt = np.log10(E_vals.real[E_ind])
-
-            ME_opt = np.log10(np.linalg.cond(FIM))
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                _compute_FIM_metrics(FIM)
+            )
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -1611,6 +1642,10 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["eigval_min"].append(E_vals.min())
+            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results
@@ -2323,3 +2358,95 @@ class DesignOfExperiments:
             return 1
         else:
             return -1
+
+
+# loggers for the functions
+function_logger = logging.getLogger(__name__)
+function_logger.setLevel(logging.WARNING)
+
+
+# Functions to compute FIM metrics
+def _compute_FIM_metrics(FIM):
+    """
+    This private function calculates the FIM metrics and returns them as a tuple.
+
+    Parameters
+    ----------
+    FIM: 2D numpy array of the FIM
+
+    Returns
+    -------
+    det_FIM: determinant of the FIM
+    trace_FIM: trace of the FIM
+    E_vals: eigenvalues of the FIM
+    E_vecs: eigenvectors of the FIM
+    D_opt: log10(D-optimality) metric
+    A_opt: log10(A-optimality) metric
+    E_opt: log10(E-optimality) metric
+    ME_opt: log10(Modified E-optimality) metric
+    """
+
+    # Check whether the FIM is square, positive definite, and symmetric
+    DesignOfExperiments._check_FIM(FIM)
+
+    # Compute FIM metrics
+    det_FIM = np.linalg.det(FIM)
+    D_opt = np.log10(det_FIM)
+
+    trace_FIM = np.trace(FIM)
+    A_opt = np.log10(trace_FIM)
+
+    E_vals, E_vecs = np.linalg.eig(FIM)
+    E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
+
+    # Warn the user if there is a ``large`` imaginary component (should not be)
+    if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
+        function_logger.warning(
+            f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
+        )
+
+    # If the real value is less than or equal to zero, set the E_opt value to nan
+    if E_vals.real[E_ind] <= 0:
+        E_opt = np.nan
+    else:
+        E_opt = np.log10(E_vals.real[E_ind])
+
+    ME_opt = np.log10(np.linalg.cond(FIM))
+
+    return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
+
+
+# Standalone Function for user to calculate FIM metrics directly without using the class
+def get_FIM_metrics(FIM):
+    """
+    This function calculates the FIM metrics and returns them as a dictionary.
+
+    Parameters
+    ----------
+    FIM: 2D numpy array of the FIM
+
+    Returns
+    -------
+    det_FIM: determinant of the FIM
+    trace_FIM: trace of the FIM
+    E_vals: eigenvalues of the FIM
+    E_vecs: eigenvectors of the FIM
+    D_opt: D-optimality metric
+    A_opt: A-optimality metric
+    E_opt: E-optimality metric
+    ME_opt: Modified E-optimality metric
+    """
+    det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+        _compute_FIM_metrics(FIM)
+    )
+
+    return {
+        "Determinanat of FIM": det_FIM,
+        "Trace of FIM": trace_FIM,
+        "Eigenvalues": E_vals,
+        "Eigen vectors": E_vecs,
+        "log10(D-Optimality)": D_opt,
+        "log10(A-Optimality)": A_opt,
+        "log10(E-Optimality)": E_opt,
+        "log10(Modified E-Optimality)": ME_opt,
+    }
