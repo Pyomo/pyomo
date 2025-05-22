@@ -74,7 +74,7 @@ def compare_reactor_doe():
 
     prior_FIM = doe_obj.compute_FIM(method='sequential')
     doe_obj.prior_FIM = prior_FIM
-    
+
     # Begin optimal DoE
     ####################
     doe_obj.run_doe()
