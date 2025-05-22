@@ -291,7 +291,7 @@ def _check_model_labels_helper(model):
         outputs = [k.name for k, v in model.experiment_outputs.items()]
     except:
         raise RuntimeError(
-            "Experiment model does not have suffix " + '"experiment_outputs".'
+            'Experiment model does not have suffix "experiment_outputs".'
         )
 
     # Check that experimental inputs exist
@@ -299,7 +299,7 @@ def _check_model_labels_helper(model):
         inputs = [k.name for k, v in model.experiment_inputs.items()]
     except:
         raise RuntimeError(
-            "Experiment model does not have suffix " + '"experiment_inputs".'
+            'Experiment model does not have suffix "experiment_inputs".'
         )
 
     # Check that unknown parameters exist
@@ -307,7 +307,7 @@ def _check_model_labels_helper(model):
         params = [k.name for k, v in model.unknown_parameters.items()]
     except:
         raise RuntimeError(
-            "Experiment model does not have suffix " + '"unknown_parameters".'
+            'Experiment model does not have suffix "unknown_parameters".'
         )
 
     logger.setLevel(level=logging.INFO)
