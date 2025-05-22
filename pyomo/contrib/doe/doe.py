@@ -645,7 +645,7 @@ class DesignOfExperiments:
 
             # Simulate the model
             try:
-                res = self.solver.solve(model)
+                res = self.solver.solve(model, tee=self.tee)
                 pyo.assert_optimal_termination(res)
             except:
                 # TODO: Make error message more verbose, i.e., add unknown parameter values so the
