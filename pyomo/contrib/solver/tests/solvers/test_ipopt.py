@@ -14,25 +14,15 @@ import subprocess
 
 import pyomo.environ as pyo
 from pyomo.common.fileutils import ExecutableData
-from pyomo.common.config import ConfigDict
+from pyomo.common.config import ConfigDict, ADVANCED_OPTION
 from pyomo.common.errors import DeveloperError
+from pyomo.common.tee import capture_output
 import pyomo.contrib.solver.solvers.ipopt as ipopt
 from pyomo.contrib.solver.common.util import NoSolutionError
 from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.common import unittest, Executable
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.repn.plugins.nl_writer import NLWriter
-
-
-"""
-TODO:
-    - Test unique configuration options
-    - Test unique results options
-    - Ensure that `*.opt` file is only created when needed
-    - Ensure options are correctly parsing to env or opt file
-    - Failures at appropriate times
-"""
-
 
 ipopt_available = ipopt.Ipopt().available()
 
@@ -162,6 +152,170 @@ class TestIpoptInterface(unittest.TestCase):
         self.assertIsNone(opt._version_cache[0])
         self.assertIsNone(opt._version_cache[1])
 
+    def test_parse_output(self):
+        # Old ipopt style (<=3.13)
+        output = """Ipopt 3.13.2: 
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit http://projects.coin-or.org/Ipopt
+
+This version of Ipopt was compiled from source code available at
+    https://github.com/IDAES/Ipopt as part of the Institute for the Design of
+    Advanced Energy Systems Process Systems Engineering Framework (IDAES PSE
+    Framework) Copyright (c) 2018-2019. See https://github.com/IDAES/idaes-pse.
+
+This version of Ipopt was compiled using HSL, a collection of Fortran codes
+    for large-scale scientific computation.  All technical papers, sales and
+    publicity material resulting from use of the HSL codes within IPOPT must
+    contain the following acknowledgement:
+        HSL, a collection of Fortran codes for large-scale scientific
+        computation. See http://www.hsl.rl.ac.uk.
+******************************************************************************
+
+This is Ipopt version 3.13.2, running with linear solver ma27.
+
+Number of nonzeros in equality constraint Jacobian...:        0
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:        3
+
+Total number of variables............................:        2
+                     variables with only lower bounds:        0
+                variables with lower and upper bounds:        0
+                     variables with only upper bounds:        0
+Total number of equality constraints.................:        0
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0  5.6500000e+01 0.00e+00 1.00e+02  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  2.4669972e-01 0.00e+00 2.22e-01  -1.0 7.40e-01    -  1.00e+00 1.00e+00f  1
+   2  1.6256267e-01 0.00e+00 2.04e+00  -1.7 1.48e+00    -  1.00e+00 2.50e-01f  3
+   3  8.6119444e-02 0.00e+00 1.08e+00  -1.7 2.36e-01    -  1.00e+00 1.00e+00f  1
+   4  4.3223836e-02 0.00e+00 1.23e+00  -1.7 2.61e-01    -  1.00e+00 1.00e+00f  1
+   5  1.5610508e-02 0.00e+00 3.54e-01  -1.7 1.18e-01    -  1.00e+00 1.00e+00f  1
+   6  5.3544798e-03 0.00e+00 5.51e-01  -1.7 1.67e-01    -  1.00e+00 1.00e+00f  1
+   7  6.1281576e-04 0.00e+00 5.19e-02  -1.7 3.87e-02    -  1.00e+00 1.00e+00f  1
+   8  2.8893076e-05 0.00e+00 4.52e-02  -2.5 4.53e-02    -  1.00e+00 1.00e+00f  1
+   9  3.4591761e-08 0.00e+00 3.80e-04  -2.5 3.18e-03    -  1.00e+00 1.00e+00f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  10  1.2680803e-13 0.00e+00 3.02e-06  -5.7 3.62e-04    -  1.00e+00 1.00e+00f  1
+  11  7.0136460e-25 0.00e+00 1.72e-12  -8.6 2.13e-07    -  1.00e+00 1.00e+00f  1
+
+Number of Iterations....: 11
+
+                                   (scaled)                 (unscaled)
+Objective...............:   1.5551321399859192e-25    7.0136459513364959e-25
+Dual infeasibility......:   1.7239720368203862e-12    7.7751138860599418e-12
+Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
+Complementarity.........:   0.0000000000000000e+00    0.0000000000000000e+00
+Overall NLP error.......:   1.7239720368203862e-12    7.7751138860599418e-12
+
+
+Number of objective function evaluations             = 18
+Number of objective gradient evaluations             = 12
+Number of equality constraint evaluations            = 0
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 0
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 11
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.000
+Total CPU secs in NLP function evaluations           =      0.000
+
+EXIT: Optimal Solution Found.
+        
+        """
+        parsed_output = ipopt.Ipopt()._parse_ipopt_output(output)
+        self.assertEqual(parsed_output["iters"], 11)
+        self.assertEqual(len(parsed_output["iteration_log"]), 12)
+        self.assertEqual(parsed_output["incumbent_objective"], 7.0136459513364959e-25)
+        self.assertIn("final_scaled_results", parsed_output.keys())
+        self.assertIn(
+            'IPOPT (w/o function evaluations)', parsed_output['cpu_seconds'].keys()
+        )
+
+        # New ipopt style (3.14+)
+        output = """******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************
+
+This is Ipopt version 3.14.17, running with linear solver ma27.
+
+Number of nonzeros in equality constraint Jacobian...:        0
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:        3
+
+Total number of variables............................:        2
+                     variables with only lower bounds:        0
+                variables with lower and upper bounds:        0
+                     variables with only upper bounds:        0
+Total number of equality constraints.................:        0
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0  5.6500000e+01 0.00e+00 1.00e+02  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1  2.4669972e-01 0.00e+00 2.22e-01  -1.0 7.40e-01    -  1.00e+00 1.00e+00f  1
+   2  1.6256267e-01 0.00e+00 2.04e+00  -1.7 1.48e+00    -  1.00e+00 2.50e-01f  3
+   3  8.6119444e-02 0.00e+00 1.08e+00  -1.7 2.36e-01    -  1.00e+00 1.00e+00f  1
+   4  4.3223836e-02 0.00e+00 1.23e+00  -1.7 2.61e-01    -  1.00e+00 1.00e+00f  1
+   5  1.5610508e-02 0.00e+00 3.54e-01  -1.7 1.18e-01    -  1.00e+00 1.00e+00f  1
+   6  5.3544798e-03 0.00e+00 5.51e-01  -1.7 1.67e-01    -  1.00e+00 1.00e+00f  1
+   7  6.1281576e-04 0.00e+00 5.19e-02  -1.7 3.87e-02    -  1.00e+00 1.00e+00f  1
+   8  2.8893076e-05 0.00e+00 4.52e-02  -2.5 4.53e-02    -  1.00e+00 1.00e+00f  1
+   9  3.4591761e-08 0.00e+00 3.80e-04  -2.5 3.18e-03    -  1.00e+00 1.00e+00f  1
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+  10  1.2680803e-13 0.00e+00 3.02e-06  -5.7 3.62e-04    -  1.00e+00 1.00e+00f  1
+  11  7.0136460e-25 0.00e+00 1.72e-12  -8.6 2.13e-07    -  1.00e+00 1.00e+00f  1
+
+Number of Iterations....: 11
+
+                                   (scaled)                 (unscaled)
+Objective...............:   1.5551321399859192e-25    7.0136459513364959e-25
+Dual infeasibility......:   1.7239720368203862e-12    7.7751138860599418e-12
+Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
+Variable bound violation:   0.0000000000000000e+00    0.0000000000000000e+00
+Complementarity.........:   0.0000000000000000e+00    0.0000000000000000e+00
+Overall NLP error.......:   1.7239720368203862e-12    7.7751138860599418e-12
+
+
+Number of objective function evaluations             = 18
+Number of objective gradient evaluations             = 12
+Number of equality constraint evaluations            = 0
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 0
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 11
+Total seconds in IPOPT                               = 0.002
+
+EXIT: Optimal Solution Found.
+
+Ipopt 3.14.17: Optimal Solution Found
+        """
+        parsed_output = ipopt.Ipopt()._parse_ipopt_output(output)
+        self.assertEqual(parsed_output["iters"], 11)
+        self.assertEqual(len(parsed_output["iteration_log"]), 12)
+        self.assertEqual(parsed_output["incumbent_objective"], 7.0136459513364959e-25)
+        self.assertIn("final_scaled_results", parsed_output.keys())
+        self.assertIn('IPOPT', parsed_output['cpu_seconds'].keys())
+
+    def test_empty_output_parsing(self):
+        with self.assertLogs(
+            "pyomo.contrib.solver.solvers.ipopt", level="WARNING"
+        ) as logs:
+            ipopt.Ipopt()._parse_ipopt_output(output=None)
+        self.assertIn(
+            "Returned output from ipopt was empty. Cannot parse for additional data.",
+            logs.output[0],
+        )
+
     def test_write_options_file(self):
         # If we have no options, we should get false back
         opt = ipopt.Ipopt()
@@ -278,6 +432,7 @@ class TestIpoptInterface(unittest.TestCase):
             result = opt._create_command_line('myfile', opt.config, False)
 
 
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestIpopt(unittest.TestCase):
     def create_model(self):
         model = pyo.ConcreteModel()
@@ -302,6 +457,48 @@ class TestIpopt(unittest.TestCase):
         self.assertFalse(solver.config.tee)
         self.assertTrue(solver.config.executable.startswith('/path'))
 
-        # Change value on a solve call
-        # model = self.create_model()
-        # result = solver.solve(model, tee=True)
+    def test_ipopt_solve(self):
+        # Gut check - does it solve?
+        model = self.create_model()
+        ipopt.Ipopt().solve(model)
+
+    def test_ipopt_results(self):
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(model)
+        self.assertEqual(results.solver_name, 'ipopt')
+        self.assertEqual(results.iteration_count, 11)
+        self.assertEqual(results.incumbent_objective, 7.013645951336496e-25)
+        self.assertIn('Optimal Solution Found', results.extra_info.solver_message)
+
+    def test_ipopt_results_display(self):
+        model = self.create_model()
+        results = ipopt.Ipopt().solve(model)
+        # Do not show extra loud stuff
+        with capture_output() as OUT:
+            results.display()
+        contents = OUT.getvalue()
+        self.assertIn('termination_condition', contents)
+        self.assertIn('solution_status', contents)
+        self.assertIn('incumbent_objective', contents)
+        self.assertNotIn('iteration_log', contents)
+        # Now we want to see the iteration log
+        with capture_output() as OUT:
+            results.display(visibility=ADVANCED_OPTION)
+        contents = OUT.getvalue()
+        self.assertIn('termination_condition', contents)
+        self.assertIn('solution_status', contents)
+        self.assertIn('incumbent_objective', contents)
+        self.assertIn('iteration_log', contents)
+
+    def test_ipopt_timer_object(self):
+        model = self.create_model()
+        ipopt_instance = ipopt.Ipopt()
+        results = ipopt_instance.solve(model)
+        timing_info = results.timing_info
+        if ipopt_instance.version()[0:1] <= (3, 13):
+            # We are running an older version of IPOPT (<= 3.13)
+            self.assertIn('IPOPT (w/o function evaluations)', timing_info.keys())
+            self.assertIn('NLP function evaluations', timing_info.keys())
+        else:
+            # Newer version of IPOPT
+            self.assertIn('IPOPT', timing_info.keys())
