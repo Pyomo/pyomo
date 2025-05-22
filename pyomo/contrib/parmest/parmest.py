@@ -260,9 +260,9 @@ def SSE_weighted(model):
     # Check that measurement errors exist
     try:
         errors = [k.name for k, v in model.measurement_error.items()]
-    except:
-        raise RuntimeError(
-            "Experiment model does not have suffix " + '"measurement_error".'
+    except AttributeError:
+        raise AttributeError(
+            'Experiment model does not have suffix "measurement_error". "measurement_error" is a required suffix for the `SSE_weighted` objective.'
         )
 
     # check if all the values of the measurement error standard deviation have been supplied
