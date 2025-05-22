@@ -223,9 +223,9 @@ class DesignOfExperiments:
             grey_box_solver = pyo.SolverFactory("cyipopt")
             # grey_box_solver.config.options['hessian_approximation'] = 'limited-memory'
             grey_box_solver.config.options["linear_solver"] = "ma57"
-            grey_box_solver.config.options['max_iter'] = 1000
-            grey_box_solver.config.options['tol'] = 1e-5
-            # grey_box_solver.config.options['mu_strategy'] = "monotone"
+            #grey_box_solver.config.options['max_iter'] = 1000
+            grey_box_solver.config.options['tol'] = 1e-4
+            grey_box_solver.config.options['mu_strategy'] = "monotone"
 
             self.grey_box_solver = grey_box_solver
 
