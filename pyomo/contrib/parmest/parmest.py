@@ -291,7 +291,7 @@ def _check_model_labels_helper(model):
         outputs = [k.name for k, v in model.experiment_outputs.items()]
     except:
         raise RuntimeError(
-            "Experiment model does not have suffix " + '"experiment_outputs".'
+            'Experiment model does not have suffix "experiment_outputs".'
         )
 
     # Check that experimental inputs exist
