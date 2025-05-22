@@ -72,6 +72,9 @@ def compare_reactor_doe():
         _only_compute_fim_lower=True,
     )
 
+    prior_FIM = doe_obj.compute_FIM(method='sequential')
+    doe_obj.prior_FIM = prior_FIM
+    
     # Begin optimal DoE
     ####################
     doe_obj.run_doe()
@@ -110,7 +113,7 @@ def compare_reactor_doe():
         use_grey_box_objective=True,  # New object with grey box set to True
         scale_constant_value=1,
         scale_nominal_param_value=scale_nominal_param_value,
-        prior_FIM=None,
+        prior_FIM=prior_FIM,
         jac_initial=None,
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
