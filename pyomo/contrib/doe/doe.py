@@ -44,6 +44,10 @@ from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
+from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
+
+from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverStatus
@@ -66,6 +70,7 @@ class ObjectiveLib(Enum):
     determinant = "determinant"
     trace = "trace"
     minimum_eigenvalue = "minimum_eigenvalue"
+    condition_number = "condition_number"
     zero = "zero"
 
 
@@ -82,6 +87,7 @@ class DesignOfExperiments:
         fd_formula="central",
         step=1e-3,
         objective_option="determinant",
+        use_grey_box_objective=False,
         scale_constant_value=1.0,
         scale_nominal_param_value=False,
         prior_FIM=None,
@@ -89,6 +95,7 @@ class DesignOfExperiments:
         fim_initial=None,
         L_diagonal_lower_bound=1e-7,
         solver=None,
+        grey_box_solver=None,
         tee=False,
         get_labeled_model_args=None,
         logger_level=logging.WARNING,
@@ -118,6 +125,9 @@ class DesignOfExperiments:
             String representation of the objective option. Current available options are:
             ``determinant`` (for determinant, or D-optimality) and ``trace`` (for trace or
             A-optimality)
+        use_grey_box_objective:
+            Boolean of whether or not to use the grey-box version of the objective function.
+            True to use grey box, False to use standard. Default: False (do not use grey box)
         scale_constant_value:
             Constant scaling for the sensitivity matrix. Every element will be multiplied by this
             scaling factor.
@@ -176,6 +186,7 @@ class DesignOfExperiments:
 
         # Set the objective type and scaling options:
         self.objective_option = ObjectiveLib(objective_option)
+        self.use_grey_box = use_grey_box_objective
 
         self.scale_constant_value = scale_constant_value
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -202,6 +213,17 @@ class DesignOfExperiments:
             self.solver = solver
 
         self.tee = tee
+
+        # ToDo: allow user to supply grey box solver
+        if grey_box_solver:
+            self.grey_box_solver = grey_box_solver
+        else:
+            grey_box_solver = pyo.SolverFactory("cyipopt")
+            grey_box_solver.config.options["linear_solver"] = "ma57"
+            grey_box_solver.config.options['tol'] = 1e-4
+            grey_box_solver.config.options['mu_strategy'] = "monotone"
+
+            self.grey_box_solver = grey_box_solver
 
         # Set get_labeled_model_args as an empty dict if no arguments are passed
         if get_labeled_model_args is None:
@@ -268,7 +290,10 @@ class DesignOfExperiments:
             self.create_doe_model(model=model)
 
         # Add the objective function to the model
-        self.create_objective_function(model=model)
+        if self.use_grey_box:
+            self.create_grey_box_objective_function(model=model)
+        else:
+            self.create_objective_function(model=model)
 
         # Track time required to build the DoE model
         build_time = sp_timer.toc(msg=None)
@@ -276,9 +301,12 @@ class DesignOfExperiments:
             "Successfully built the DoE model.\nBuild time: %0.1f seconds" % build_time
         )
 
-        # Solve the square problem first to initialize the fim and
-        # sensitivity constraints
-        # Deactivate objective expression and objective constraints (on a block), and fix design variables
+        # Solve the square problem first to
+        # initialize the fim and
+        # sensitivity constraints. First, we
+        # Deactivate objective expression and
+        # objective constraints (on a block),
+        # and fix the design variables.
         model.objective.deactivate()
         model.obj_cons.deactivate()
         for comp in model.scenario_blocks[0].experiment_inputs:
@@ -308,6 +336,38 @@ class DesignOfExperiments:
             comp.unfix()
         model.objective.activate()
         model.obj_cons.activate()
+
+        if self.use_grey_box:
+            # Initialize grey box inputs to be fim values currently
+            for i in model.parameter_names:
+                for j in model.parameter_names:
+                    if list(model.parameter_names).index(i) >= list(
+                        model.parameter_names
+                    ).index(j):
+                        model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                            pyo.value(model.fim[(i, j)])
+                        )
+                    else:  # REMOVE THIS IF USING LOWER TRIANGLE
+                        pass
+                        # model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
+                        #    pyo.value(model.fim[(j, i)])
+                        # )
+            # Set objective value
+            if self.objective_option == ObjectiveLib.trace:
+                # Do safe inverse here?
+                trace_val = 1 / np.trace(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["A-opt"].set_value(trace_val)
+            elif self.objective_option == ObjectiveLib.determinant:
+                det_val = np.linalg.det(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["log-D-opt"].set_value(
+                    np.log(det_val)
+                )
+            elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+                eig, _ = np.linalg.eig(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["E-opt"].set_value(np.min(eig))
+            elif self.objective_option == ObjectiveLib.condition_number:
+                cond_number = np.linalg.cond(np.array(self.get_FIM()))
+                model.obj_cons.egb_fim_block.outputs["ME-opt"].set_value(cond_number)
 
         # If the model has L, initialize it with the solved FIM
         if hasattr(model, "L"):
@@ -354,7 +414,10 @@ class DesignOfExperiments:
             model.determinant.value = np.linalg.det(np.array(self.get_FIM()))
 
         # Solve the full model, which has now been initialized with the square solve
-        res = self.solver.solve(model, tee=self.tee)
+        if self.use_grey_box:
+            res = self.grey_box_solver.solve(model, tee=self.tee)
+        else:
+            res = self.solver.solve(model, tee=self.tee)
 
         # Track time used to solve the DoE model
         solve_time = sp_timer.toc(msg=None)
@@ -367,7 +430,7 @@ class DesignOfExperiments:
             % (build_time + initialization_time + solve_time)
         )
 
-        #
+        # Avoid accidental carry-over of FIM information
         fim_local = self.get_FIM()
 
         # Make sure stale results don't follow the DoE object instance
@@ -1313,6 +1376,74 @@ class DesignOfExperiments:
         elif self.objective_option == ObjectiveLib.zero:
             # add dummy objective function
             model.objective = pyo.Objective(expr=0)
+
+    def create_grey_box_objective_function(self, model=None):
+        # Add external grey box block to a block named ``obj_cons`` to
+        # reuse material for initializing the objective-free square model
+        if model is None:
+            model = model = self.model
+
+        # ToDo: Make this naming convention robust
+        model.obj_cons = pyo.Block()
+
+        # Create FIM External Grey Box object
+        grey_box_FIM = FIMExternalGreyBox(
+            doe_object=self,
+            objective_option=self.objective_option,
+            logger_level=self.logger.getEffectiveLevel(),
+        )
+
+        # Attach External Grey Box Model
+        # to the model as an External
+        # Grey Box Block
+        model.obj_cons.egb_fim_block = ExternalGreyBoxBlock(external_model=grey_box_FIM)
+
+        # Adding constraints to for all grey box input values to equate to fim values
+        def FIM_egb_cons(m, p1, p2):
+            """
+
+            m: Pyomo model
+            p1: parameter 1
+            p2: parameter 2
+
+            """
+            # Using upper triangular FIM to
+            # make numerics better.
+            if list(model.parameter_names).index(p1) >= list(
+                model.parameter_names
+            ).index(p2):
+                return model.fim[(p1, p2)] == m.egb_fim_block.inputs[(p2, p1)]
+            else:
+                return pyo.Constraint.Skip
+
+        # Add the FIM and External Grey
+        # Box inputs constraints
+        model.obj_cons.FIM_equalities = pyo.Constraint(
+            model.parameter_names, model.parameter_names, rule=FIM_egb_cons
+        )
+
+        # Add objective based on user provided
+        # type within ObjectiveLib
+        if self.objective_option == ObjectiveLib.trace:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["A-opt"], sense=pyo.minimize
+            )
+        elif self.objective_option == ObjectiveLib.determinant:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["log-D-opt"],
+                sense=pyo.maximize,
+            )
+        elif self.objective_option == ObjectiveLib.minimum_eigenvalue:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["E-opt"], sense=pyo.maximize
+            )
+        elif self.objective_option == ObjectiveLib.condition_number:
+            model.objective = pyo.Objective(
+                expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize
+            )
+        # Else error not needed for spurious objective
+        # options as the error will always appear
+        # when creating the FIMExternalGreyBox block
 
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, model=None):

@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 from .doe import DesignOfExperiments, ObjectiveLib, FiniteDifferenceStep
 from .utils import rescale_FIM
+from .grey_box_utilities import FIMExternalGreyBox
 
 # Deprecation errors for old Pyomo.DoE interface classes and structures
 from pyomo.common.deprecation import deprecated

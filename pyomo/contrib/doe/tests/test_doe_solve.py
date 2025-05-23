@@ -22,7 +22,8 @@ from pyomo.common.dependencies import (
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
 )
@@ -120,6 +121,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"
@@ -202,6 +204,10 @@ class TestReactorExampleSolving(unittest.TestCase):
         DoE_args['_only_compute_fim_lower'] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
+
+        # Increase numerical performance by adding a prior
+        prior_FIM = doe_obj.compute_FIM()
+        doe_obj.prior_FIM = prior_FIM
 
         doe_obj.run_doe()
 
