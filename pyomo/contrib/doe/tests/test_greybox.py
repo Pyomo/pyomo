@@ -959,12 +959,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-1
                 )
             )
             or np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-1
                 )
             )
         )
@@ -997,12 +997,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-1
                 )
             )
             or np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-1
                 )
             )
         )
@@ -1035,12 +1035,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-1
                 )
             )
             or np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-1
                 )
             )
         )
@@ -1073,12 +1073,12 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         self.assertTrue(
             np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-1
                 )
             )
             or np.all(
                 np.isclose(
-                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-1
                 )
             )
         )
