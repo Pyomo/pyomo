@@ -18,6 +18,7 @@ from pyomo.common.dependencies import (
     numpy_available,
     pandas as pd,
     pandas_available,
+    scipy_available,
 )
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -26,6 +27,7 @@ from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
 )
+from pyomo.contrib.doe.examples.rooney_biegler_example import RooneyBieglerExperimentDoE
 
 import pyomo.environ as pyo
 
@@ -231,9 +233,7 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    # Change when we can access other solvers
     solver = SolverFactory("ipopt")
-    # solver.options["linear_solver"] = "MUMPS"
     args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
@@ -262,8 +262,42 @@ def make_greybox_and_doe_objects(objective_option):
     return doe_obj, grey_box_object
 
 
+def make_greybox_and_doe_objects_rooney_biegler(objective_option):
+    fd_method = "central"
+    obj_used = objective_option
+
+    experiment = RooneyBieglerExperimentDoE(data={'hour': 2, 'y': 10.3})
+
+    DoE_args = get_standard_args(experiment, fd_method, obj_used)
+    DoE_args["use_grey_box_objective"] = True
+
+    data = [[1, 8.3], [7, 19.8]]
+    FIM_prior = np.zeros((2, 2))
+    # Calculate prior using existing experiments
+    for i in range(len(data)):
+        prev_experiment = RooneyBieglerExperimentDoE(
+            data={'hour': data[i][0], 'y': data[i][1]}
+        )
+        doe_obj = DesignOfExperiments(
+            **get_standard_args(prev_experiment, fd_method, obj_used)
+        )
+
+        FIM_prior += doe_obj.compute_FIM(method='sequential')
+    DoE_args["prior_FIM"] = FIM_prior
+
+    doe_obj = DesignOfExperiments(**DoE_args)
+    doe_obj.create_doe_model()
+
+    grey_box_object = FIMExternalGreyBox(
+        doe_object=doe_obj, objective_option=doe_obj.objective_option
+    )
+
+    return doe_obj, grey_box_object
+
+
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestFIMExternalGreyBox(unittest.TestCase):
     # Test that we can properly
     # set the inputs for the
@@ -884,6 +918,157 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             ValueError, "'Bad Objective Option' is not a valid ObjectiveLib"
         ):
             grey_box_object.evaluate_hessian_outputs()
+
+    # Test all versions of solving
+    # using grey box
+    def test_solve_D_optimality_log_determinant(self):
+        # Two locally optimal design points exist
+        # (time, optimal objective value)
+        # Here, the objective value is
+        # log-10(determinant) of the FIM
+        optimal_experimental_designs = [np.array([2.24, 4.33]), np.array([10.00, 4.35])]
+        objective_option = "determinant"
+        doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Set to use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Solve the model
+        doe_object.run_doe()
+
+        optimal_time_val = doe_object.results["Experiment Design"][0]
+        optimal_obj_val = np.log10(np.exp(pyo.value(doe_object.model.objective)))
+
+        optimal_design_np_array = np.array([optimal_time_val, optimal_obj_val])
+
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                )
+            )
+            or np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                )
+            )
+        )
+
+    def test_solve_A_optimality_trace_of_inverse(self):
+        # Two locally optimal design points exist
+        # (time, optimal objective value)
+        # Here, the objective value is
+        # trace(inverse(FIM))
+        optimal_experimental_designs = [
+            np.array([1.94, 0.0295]),
+            np.array([9.9, 0.0366]),
+        ]
+        objective_option = "trace"
+        doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Set to use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Solve the model
+        doe_object.run_doe()
+
+        optimal_time_val = doe_object.results["Experiment Design"][0]
+        optimal_obj_val = doe_object.model.objective()
+
+        optimal_design_np_array = np.array([optimal_time_val, optimal_obj_val])
+
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                )
+            )
+            or np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                )
+            )
+        )
+
+    def test_solve_E_optimality_minimum_eigenvalue(self):
+        # Two locally optimal design points exist
+        # (time, optimal objective value)
+        # Here, the objective value is
+        # minimum eigenvalue of the FIM
+        optimal_experimental_designs = [
+            np.array([1.92, 36.018]),
+            np.array([10.00, 28.349]),
+        ]
+        objective_option = "minimum_eigenvalue"
+        doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Set to use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Solve the model
+        doe_object.run_doe()
+
+        optimal_time_val = doe_object.results["Experiment Design"][0]
+        optimal_obj_val = doe_object.model.objective()
+
+        optimal_design_np_array = np.array([optimal_time_val, optimal_obj_val])
+
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                )
+            )
+            or np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                )
+            )
+        )
+
+    def test_solve_ME_optimality_condition_number(self):
+        # Two locally optimal design points exist
+        # (time, optimal objective value)
+        # Here, the objective value is
+        # condition number of the FIM
+        optimal_experimental_designs = [
+            np.array([1.59, 15.22]),
+            np.array([10.00, 27.675]),
+        ]
+        objective_option = "condition_number"
+        doe_object, grey_box_object = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Set to use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Solve the model
+        doe_object.run_doe()
+
+        optimal_time_val = doe_object.results["Experiment Design"][0]
+        optimal_obj_val = doe_object.model.objective()
+
+        optimal_design_np_array = np.array([optimal_time_val, optimal_obj_val])
+
+        self.assertTrue(
+            np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[0], 1e-2
+                )
+            )
+            or np.all(
+                np.isclose(
+                    optimal_design_np_array, optimal_experimental_designs[1], 1e-2
+                )
+            )
+        )
 
 
 if __name__ == "__main__":
