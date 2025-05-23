@@ -188,7 +188,6 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Make sure FIM and Q.T @ sigma_inv @ Q are close (alternate definition of FIM)
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
-
     def test_reactor_obj_det_solve(self):
         fd_method = "central"
         obj_used = "determinant"
