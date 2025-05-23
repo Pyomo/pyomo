@@ -172,7 +172,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         from pyomo.contrib.doe import ObjectiveLib
 
         if self.objective_option == ObjectiveLib.trace:
-            obj_value = np.trace(np.linalg.inv(M))
+            obj_value = np.trace(np.linalg.pinv(M))
         elif self.objective_option == ObjectiveLib.determinant:
             (sign, logdet) = np.linalg.slogdet(M)
             obj_value = logdet
