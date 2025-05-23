@@ -36,6 +36,7 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
+cyipopt_available = SolverFactory("cyipopt").available()
 
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "examples", "result.json")
@@ -309,6 +310,7 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 @unittest.skipIf(not scipy_available, "scipy is not available")
+@unittest.skipIf(not cyipopt_available, "'cyipopt' is not available")
 class TestFIMExternalGreyBox(unittest.TestCase):
     # Test that we can properly
     # set the inputs for the
