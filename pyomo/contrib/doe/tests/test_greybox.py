@@ -23,7 +23,9 @@ from pyomo.common.dependencies import (
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
+
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
 )
