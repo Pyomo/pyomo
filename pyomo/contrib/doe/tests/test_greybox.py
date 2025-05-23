@@ -271,6 +271,15 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     DoE_args = get_standard_args(experiment, fd_method, obj_used)
     DoE_args["use_grey_box_objective"] = True
 
+    # Make a custom grey box solver
+    grey_box_solver = SolverFactory("cyipopt")
+    grey_box_solver.config.options["linear_solver"] = "ma57"
+    grey_box_solver.config.options['tol'] = 1e-4
+    grey_box_solver.config.options['mu_strategy'] = "monotone"
+
+    # Add the grey box solver ot DoE_args
+    DoE_args["grey_box_solver"] = grey_box_solver
+
     data = [[1, 8.3], [7, 19.8]]
     FIM_prior = np.zeros((2, 2))
     # Calculate prior using existing experiments
