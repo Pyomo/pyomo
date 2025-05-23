@@ -120,6 +120,7 @@ def get_standard_args(experiment, fd_method, obj_used):
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleSolving(unittest.TestCase):
     def test_reactor_fd_central_solve(self):
         fd_method = "central"

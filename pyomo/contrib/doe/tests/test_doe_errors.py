@@ -16,6 +16,7 @@ from pyomo.common.dependencies import (
     numpy_available,
     pandas as pd,
     pandas_available,
+    scipy_available,
 )
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
@@ -59,6 +60,7 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleErrors(unittest.TestCase):
     def test_experiment_none_error(self):
         fd_method = "central"
