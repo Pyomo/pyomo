@@ -60,6 +60,19 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestReactorExampleErrors(unittest.TestCase):
+    def test_experiment_none_error(self):
+        fd_method = "central"
+        obj_used = "trace"
+        flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
+
+        with self.assertRaisesRegex(
+            ValueError, "Experiment object must be provided to perform DoE."
+        ):
+            # Experiment provided as None
+            DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
+
+            doe_obj = DesignOfExperiments(**DoE_args)
+
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
         obj_used = "trace"
