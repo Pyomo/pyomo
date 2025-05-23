@@ -1445,10 +1445,9 @@ class DesignOfExperiments:
             model.objective = pyo.Objective(
                 expr=model.obj_cons.egb_fim_block.outputs["ME-opt"], sense=pyo.minimize
             )
-        else:
-            raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
-            )
+        # Else error not needed for spurious objective
+        # options as the error will always appear
+        # when creating the FIMExternalGreyBox block
 
     # Check to see if the model has all the required suffixes
     def check_model_labels(self, model=None):
