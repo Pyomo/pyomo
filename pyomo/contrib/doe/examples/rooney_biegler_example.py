@@ -27,8 +27,10 @@ import json
 import sys
 
 
-# Example for sensitivity analysis on the reactor experiment
-# After sensitivity analysis is done, we perform optimal DoE
+# Example comparing Cholesky factorization
+# (standard solve) with grey box objective
+# solve for the log-deteriminant of the FIM
+# (D-optimality)
 def run_rooney_biegler_doe():
     # Create a RooneyBiegler Experiment
     experiment = RooneyBieglerExperimentDoE(data={'hour': 2, 'y': 10.3})
