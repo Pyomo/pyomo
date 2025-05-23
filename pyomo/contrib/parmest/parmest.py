@@ -705,15 +705,17 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     # The following assumes independent measurement error.
     W = np.zeros((len(model.measurement_error), len(model.measurement_error)))
     count = 0
-    for k, v in model.measurement_error.items():
-        if all(
-            model.measurement_error[y_hat] is not None
-            for y_hat in model.experiment_outputs
-        ):
-            W[count, count] = 1 / (v**2)
-        else:
-            W[count, count] = 1 / (estimated_var)
-        count += 1
+all_known_errors = all(
+    model.measurement_error[y_hat] is not None
+    for y_hat in model.experiment_outputs
+)
+
+for k, v in model.measurement_error.items():
+    if all_known_errors:
+        W[count, count] = 1 / (v**2)
+    else:
+        W[count, count] = 1 / estimated_var
+    count += 1
 
     FIM = kaug_jac.T @ W @ kaug_jac
 
