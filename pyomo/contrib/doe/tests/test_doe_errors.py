@@ -21,7 +21,8 @@ from pyomo.common.dependencies import (
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     BadExperiment,
     FullReactorExperiment,
