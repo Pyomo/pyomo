@@ -535,8 +535,7 @@ def compute_covariance_matrix(
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
     else:
         raise ValueError(
-            "The method provided, {}, must be either `finite_difference` or `automatic_differentiation_kaug`".format(
-                method
+            f"The method provided, {method}, must be either `finite_difference` or `automatic_differentiation_kaug`"
             )
         )
 
