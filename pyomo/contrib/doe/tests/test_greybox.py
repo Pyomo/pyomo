@@ -219,63 +219,6 @@ def get_numerical_second_derivative(grey_box_object=None, return_reduced=True):
     return numerical_derivative
 
 
-def get_FIM_FIMPrior_Q_L(doe_obj=None):
-    """
-    Helper function to retrieve results to compare.
-
-    """
-    model = doe_obj.model
-
-    n_param = doe_obj.n_parameters
-    n_y = doe_obj.n_experiment_outputs
-
-    FIM_vals = [
-        pyo.value(model.fim[i, j])
-        for i in model.parameter_names
-        for j in model.parameter_names
-    ]
-    FIM_prior_vals = [
-        pyo.value(model.prior_FIM[i, j])
-        for i in model.parameter_names
-        for j in model.parameter_names
-    ]
-    if hasattr(model, "L"):
-        L_vals = [
-            pyo.value(model.L[i, j])
-            for i in model.parameter_names
-            for j in model.parameter_names
-        ]
-    else:
-        L_vals = [[0] * n_param] * n_param
-    Q_vals = [
-        pyo.value(model.sensitivity_jacobian[i, j])
-        for i in model.output_names
-        for j in model.parameter_names
-    ]
-    sigma_inv = [1 / v for k, v in model.scenario_blocks[0].measurement_error.items()]
-    param_vals = np.array(
-        [[v for k, v in model.scenario_blocks[0].unknown_parameters.items()]]
-    )
-
-    FIM_vals_np = np.array(FIM_vals).reshape((n_param, n_param))
-    FIM_prior_vals_np = np.array(FIM_prior_vals).reshape((n_param, n_param))
-
-    for i in range(n_param):
-        for j in range(n_param):
-            if j < i:
-                FIM_vals_np[j, i] = FIM_vals_np[i, j]
-
-    L_vals_np = np.array(L_vals).reshape((n_param, n_param))
-    Q_vals_np = np.array(Q_vals).reshape((n_y, n_param))
-
-    sigma_inv_np = np.zeros((n_y, n_y))
-
-    for ind, v in enumerate(sigma_inv):
-        sigma_inv_np[ind, ind] = v
-
-    return FIM_vals_np, FIM_prior_vals_np, Q_vals_np, L_vals_np, sigma_inv_np
-
-
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
     args['experiment'] = experiment
