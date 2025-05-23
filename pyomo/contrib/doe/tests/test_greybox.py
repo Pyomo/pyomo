@@ -277,7 +277,7 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     grey_box_solver.config.options['tol'] = 1e-4
     grey_box_solver.config.options['mu_strategy'] = "monotone"
 
-    # Add the grey box solver ot DoE_args
+    # Add the grey box solver to DoE_args
     DoE_args["grey_box_solver"] = grey_box_solver
 
     data = [[1, 8.3], [7, 19.8]]
