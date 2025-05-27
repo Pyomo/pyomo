@@ -23,10 +23,10 @@ import pyomo.common.unittest as unittest
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-    BadExperiment,
-    FullReactorExperiment,
-)
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        BadExperiment,
+        FullReactorExperiment,
+    )
 
 from pyomo.opt import SolverFactory
 

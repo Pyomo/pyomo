@@ -23,9 +23,9 @@ import pyomo.common.unittest as unittest
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.examples.reactor_example import (
-    ReactorExperiment as FullReactorExperiment,
-)
+    from pyomo.contrib.doe.examples.reactor_example import (
+        ReactorExperiment as FullReactorExperiment,
+    )
 
 import pyomo.environ as pyo
 

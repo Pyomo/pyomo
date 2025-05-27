@@ -25,11 +25,12 @@ import pyomo.common.unittest as unittest
 
 if scipy_available:
     from pyomo.contrib.doe import DesignOfExperiments, FIMExternalGreyBox
-
-from pyomo.contrib.doe.examples.reactor_example import (
-    ReactorExperiment as FullReactorExperiment,
-)
-from pyomo.contrib.doe.examples.rooney_biegler_example import RooneyBieglerExperimentDoE
+    from pyomo.contrib.doe.examples.reactor_example import (
+        ReactorExperiment as FullReactorExperiment,
+    )
+    from pyomo.contrib.doe.examples.rooney_biegler_example import (
+        RooneyBieglerExperimentDoE,
+    )
 
 import pyomo.environ as pyo
 

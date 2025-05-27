@@ -25,12 +25,19 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import numpy as np, scipy_available
+
 from enum import Enum
 import itertools
 import logging
-from scipy.sparse import coo_matrix
 
-from pyomo.common.dependencies import numpy as np
+if not scipy_available:
+    raise ImportError(
+        "The scipy module is not available. "
+        "You need scipy to utilize the grey "
+        "box functionalities in Pyomo.DoE."
+    )
+from scipy.sparse import coo_matrix
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 
