@@ -18,6 +18,10 @@ from pyomo.common.dependencies import (
     pandas_available,
     scipy_available,
 )
+
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
+
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
