@@ -22,7 +22,6 @@ from pyomo.contrib.doe import DesignOfExperiments
 
 import pyomo.environ as pyo
 
-import matplotlib.pyplot as plt
 import json
 import sys
 
