@@ -59,7 +59,7 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     args['L_diagonal_lower_bound'] = 1e-7
     # Make solver object with
     # good linear subroutines
-    solver = pyo.SolverFactory("ipopt")
+    solver = SolverFactory("ipopt")
     solver.options["linear_solver"] = "ma57"
     solver.options["halt_on_ampl_error"] = "yes"
     solver.options["max_iter"] = 3000
