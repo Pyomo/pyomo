@@ -111,7 +111,13 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    args['solver'] = None
+    # Make solver object with
+    # good linear subroutines
+    solver = pyo.SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
     args['_Cholesky_option'] = True

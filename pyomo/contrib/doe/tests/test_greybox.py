@@ -239,6 +239,20 @@ def get_standard_args(experiment, fd_method, obj_used):
     args['L_diagonal_lower_bound'] = 1e-7
     solver = SolverFactory("ipopt")
     args['solver'] = solver
+    # Make solver object with
+    # good linear subroutines
+    solver = pyo.SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    args['solver'] = solver
+    # Make greybox solver object with
+    # good linear subroutines
+    grey_box_solver = pyo.SolverFactory("cyipopt")
+    grey_box_solver.config.options["linear_solver"] = "ma57"
+    grey_box_solver.config.options['tol'] = 1e-4
+    grey_box_solver.config.options['mu_strategy'] = "monotone"
+    args['grey_box_solver'] = grey_box_solver
     args['tee'] = False
     args['get_labeled_model_args'] = None
     args['_Cholesky_option'] = True
