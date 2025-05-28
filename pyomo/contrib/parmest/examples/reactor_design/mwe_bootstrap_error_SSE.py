@@ -15,7 +15,7 @@ import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
     ReactorDesignExperiment,
 )
-
+import idaes
 
 def main():
 
