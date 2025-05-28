@@ -97,6 +97,7 @@ class DesignOfExperiments:
         solver=None,
         grey_box_solver=None,
         tee=False,
+        grey_box_tee=False,
         get_labeled_model_args=None,
         logger_level=logging.WARNING,
         _Cholesky_option=True,
@@ -213,6 +214,7 @@ class DesignOfExperiments:
             self.solver = solver
 
         self.tee = tee
+        self.grey_box_tee = grey_box_tee
 
         # ToDo: allow user to supply grey box solver
         if grey_box_solver:
@@ -415,7 +417,7 @@ class DesignOfExperiments:
 
         # Solve the full model, which has now been initialized with the square solve
         if self.use_grey_box:
-            res = self.grey_box_solver.solve(model, tee=self.tee)
+            res = self.grey_box_solver.solve(model, tee=self.grey_box_tee)
         else:
             res = self.solver.solve(model, tee=self.tee)
 
