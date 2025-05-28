@@ -42,13 +42,17 @@ testdir = this_file_dir()
     "Cannot test parmest: required dependencies are missing",
 )
 
-# Test class for the built-in Parmest `SSE_weighted` objective function
+# Test class for the built-in Parmest "SSE_weighted" objective function
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
 )
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+@parameterized_class(("objective_function",), [("SSE",), ("SSE_weighted",)])
 class TestModelVariants(unittest.TestCase):
+
+    def objective_runs(self):
+        self.objective_function = objective_function
 
     def setUp(self):
         self.data = pd.DataFrame(
@@ -140,9 +144,9 @@ class TestModelVariants(unittest.TestCase):
 
         self.exp_list = rooney_biegler_exp_list
 
-        self.objective_function = (
-            "SSE"  # testing the new covariance calculations for the `SSE` objective
-        )
+        # self.objective_function = (
+        #     "SSE"  # testing the new covariance calculations for the `SSE` objective
+        # )
 
     def check_rooney_biegler_results(self, objval, cov, cov_method):
         """
@@ -160,45 +164,61 @@ class TestModelVariants(unittest.TestCase):
             idx for idx, s in enumerate(cov_cols) if "rate_constant" in s
         ][0]
 
-        if cov_method == "finite_difference" or cov_method == "automatic_differentiation_kaug":
-            self.assertAlmostEqual(objval, 4.3317112, places=2)
-            self.assertAlmostEqual(
-                cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
-            )  # 6.22864 from paper
-            self.assertAlmostEqual(
-                cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[rate_constant_index, rate_constant_index], 0.041242, places=2
-            )  # 0.04124 from paper
+        if self.objective_function == "SSE":
+            if (
+                cov_method == "finite_difference"
+                or cov_method == "automatic_differentiation_kaug"
+            ):
+                self.assertAlmostEqual(objval, 4.3317112, places=2)
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 6.229612, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -0.432265, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -0.432265, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index], 0.041242, places=2
+                )  # 0.04124 from paper
+            else:
+                self.assertAlmostEqual(objval, 4.3317112, places=2)
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, asymptote_index], 36.935351, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[asymptote_index, rate_constant_index], -2.551392, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, asymptote_index], -2.551392, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[rate_constant_index, rate_constant_index], 0.243428, places=2
+                )  # 0.04124 from paper
         else:
-            self.assertAlmostEqual(objval, 4.3317112, places=2)
-            self.assertAlmostEqual(
-                cov.iloc[asymptote_index, asymptote_index], 36.935351, places=2
-            )  # 6.22864 from paper
-            self.assertAlmostEqual(
-                cov.iloc[asymptote_index, rate_constant_index], -2.551392, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[rate_constant_index, asymptote_index], -2.551392, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[rate_constant_index, rate_constant_index], 0.243428, places=2
-            )  # 0.04124 from paper
+            pass
 
-            """ Why does the covariance matrix from parmest not match the paper? Parmest is
-                calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
-                employed the first order approximation common for nonlinear regression. The paper
-                values were verified with Scipy, which uses the same first order approximation.
-                The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
-                "Nonlinear Parameter Estimation", Y. Bard, 1974.
-                """
+    @parameterized.expand([("finite_difference"), ("automatic_differentiation_kaug"), ("reduced_hessian")])
+    def test_parmest_cov(self, cov_method):
+        """
+        Calculates the parameter estimates and covariance matrix, and compares them with the results of Rooney-Biegler
+        """
+        if self.objective_function == "SSE":
+            pest = parmest.Estimator(self.exp_list, obj_function=self.objective_function)
 
-    # @parameterized.expand([("finite_difference"), ("automatic_differentiation_kaug"), ("reduced_hessian")])
-    # def test_parmest_cov(self, cov_method):
+            # estimate the parameters
+            objval, thetavals = pest.theta_est()
+
+            # calculate the covariance matrix
+            cov = pest.cov_est(cov_n=6, method=cov_method)
+
+            # check the results
+            self.check_rooney_biegler_results(objval, cov, cov_method)
+        else:
+            pass
+
+    # def test_parmest_cov(self):
     #     """
     #     Calculates the parameter estimates and covariance matrix, and compares them with the results of Rooney-Biegler
     #     """
@@ -207,28 +227,16 @@ class TestModelVariants(unittest.TestCase):
     #     # estimate the parameters
     #     objval, thetavals = pest.theta_est()
     #
-    #     # calculate the covariance matrix
-    #     cov = pest.cov_est(cov_n=6, method=cov_method)
+    #     # calculate the covariance matrix using the three supported methods
+    #     cov_methods = [
+    #         "finite_difference",
+    #         "automatic_differentiation_kaug",
+    #         "reduced_hessian",
+    #     ]
+    #     for method in cov_methods:
+    #         cov = pest.cov_est(cov_n=6, method=method)
     #
-    #     # check the results
-    #     self.check_rooney_biegler_results(objval, cov, cov_method)
-
-
-    def test_parmest_cov(self):
-        """
-        Calculates the parameter estimates and covariance matrix, and compares them with the results of Rooney-Biegler
-        """
-        pest = parmest.Estimator(self.exp_list, obj_function=self.objective_function)
-
-        # estimate the parameters
-        objval, thetavals = pest.theta_est()
-
-        # calculate the covariance matrix using the three supported methods
-        cov_methods = ["finite_difference", "automatic_differentiation_kaug", "reduced_hessian"]
-        for method in cov_methods:
-            cov = pest.cov_est(cov_n=6, method=method)
-
-            self.check_rooney_biegler_results(objval, cov, method)
+    #         self.check_rooney_biegler_results(objval, cov, method)
 
     def test_cov_scipy_least_squares_comparison(self):
         """

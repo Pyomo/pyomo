@@ -535,8 +535,7 @@ def compute_covariance_matrix(
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
     else:
         raise ValueError(
-            f"The method provided, {method}, must be either `finite_difference` or `automatic_differentiation_kaug`"
-            )
+            f'The method provided, {method}, must be either "finite_difference" or "automatic_differentiation_kaug".'
         )
 
     return cov
@@ -704,18 +703,16 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     # compute matrix of the inverse of the measurement variance
     # The following assumes independent measurement error.
     W = np.zeros((len(model.measurement_error), len(model.measurement_error)))
+    all_known_errors = all(
+        model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
+    )
     count = 0
-all_known_errors = all(
-    model.measurement_error[y_hat] is not None
-    for y_hat in model.experiment_outputs
-)
-
-for k, v in model.measurement_error.items():
-    if all_known_errors:
-        W[count, count] = 1 / (v**2)
-    else:
-        W[count, count] = 1 / estimated_var
-    count += 1
+    for k, v in model.measurement_error.items():
+        if all_known_errors:
+            W[count, count] = 1 / (v**2)
+        else:
+            W[count, count] = 1 / estimated_var
+        count += 1
 
     FIM = kaug_jac.T @ W @ kaug_jac
 
