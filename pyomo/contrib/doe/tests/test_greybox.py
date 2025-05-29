@@ -1085,7 +1085,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Solve the model
         doe_object.run_doe()
 
+        print("Termination Message")
         print(doe_object.results["Termination Message"])
+        print("End Message")
 
         optimal_time_val = doe_object.results["Experiment Design"][0]
         optimal_obj_val = doe_object.model.objective()
