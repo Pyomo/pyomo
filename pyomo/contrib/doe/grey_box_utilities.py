@@ -305,7 +305,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         M_cols = np.arange(len(jac_M.flatten()))
 
         # Returns coo_matrix of the correct shape
-        return scipy.coo_matrix(
+        return scipy.sparse.coo_matrix(
             (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
         )
 
@@ -476,7 +476,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             ObjectiveLib(self.objective_option)
 
         # Returns coo_matrix of the correct shape
-        return scipy.coo_matrix(
+        return scipy.sparse.coo_matrix(
             (np.asarray(hess_vals), (hess_rows, hess_cols)),
             shape=(self._n_inputs, self._n_inputs),
         )
