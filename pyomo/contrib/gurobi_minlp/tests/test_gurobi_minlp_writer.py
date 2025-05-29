@@ -20,6 +20,7 @@ from pyomo.environ import (
     Integers,
     log,
     LogicalConstraint,
+    maximize,
     NonNegativeIntegers,
     NonNegativeReals,
     NonPositiveIntegers,
@@ -27,10 +28,15 @@ from pyomo.environ import (
     Objective,
     Param,
     Reals,
+    SolverFactory,
+    value,
     Var,
 )
 from pyomo.opt import WriterFactory
-from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
+from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
+    GurobiMINLPSolver,
+    GurobiMINLPVisitor
+)
 from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
 
 ## DEBUG
@@ -323,6 +329,23 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(grb_model.ModelSense, 1)  # minimizing
         obj = grb_model.getObjective()
         self.assertEqual(obj.size(), 0)
+    
+    def test_solve_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+        m.y = Var()
+        m.c = Constraint(expr=m.y == m.x**2)
+        m.obj = Objective(expr=m.x + m.y, sense=maximize)
+
+        results = SolverFactory('gurobi_direct_minlp').solve(m)
+
+        self.assertEqual(value(m.obj.expr), 2)
+
+        self.assertEqual(value(m.x), 1)
+        self.assertEqual(value(m.y), 1)
+
+        self.assertEqual(results.incumbent_objective, 2)
+        self.assertEqual(results.objective_bound, 2)
 
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the

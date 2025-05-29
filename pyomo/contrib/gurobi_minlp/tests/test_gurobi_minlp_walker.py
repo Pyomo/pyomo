@@ -12,7 +12,6 @@
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
-    GurobiMINLPSolver,
     GurobiMINLPVisitor,
 )
 from pyomo.environ import (
@@ -21,7 +20,6 @@ from pyomo.environ import (
     Constraint,
     Integers,
     log,
-    maximize,
     NonNegativeIntegers,
     NonNegativeReals,
     NonPositiveIntegers,
@@ -30,8 +28,6 @@ from pyomo.environ import (
     Param,
     Reals,
     sqrt,
-    SolverFactory,
-    value,
     Var,
 )
 
@@ -504,19 +500,3 @@ class TestGurobiMINLPWalker(CommonTest):
 
         # TODO
 
-    def test_solve_model(self):
-        m = ConcreteModel()
-        m.x = Var(bounds=(0, 1))
-        m.y = Var()
-        m.c = Constraint(expr=m.y == m.x**2)
-        m.obj = Objective(expr=m.x + m.y, sense=maximize)
-
-        results = SolverFactory('gurobi_direct_minlp').solve(m)
-
-        self.assertEqual(value(m.obj.expr), 2)
-
-        self.assertEqual(value(m.x), 1)
-        self.assertEqual(value(m.y), 1)
-
-        self.assertEqual(results.incumbent_objective, 2)
-        self.assertEqual(results.objective_bound, 2)
