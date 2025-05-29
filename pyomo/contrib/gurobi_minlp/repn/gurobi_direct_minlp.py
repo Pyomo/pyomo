@@ -22,6 +22,7 @@ from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
 from pyomo.core.base import (
     Binary,
     Block,
+    BooleanVar,
     Constraint,
     Expression,
     Integers,
@@ -411,6 +412,7 @@ class GurobiMINLPWriter(object):
                 Objective,
                 Constraint,
                 Var,
+                BooleanVar,
                 Param,
                 Suffix,
                 # FIXME: Non-active components should not report as Active

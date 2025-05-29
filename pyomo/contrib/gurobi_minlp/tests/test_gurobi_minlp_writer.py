@@ -13,10 +13,12 @@ import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
 from pyomo.environ import (
     Binary,
+    BooleanVar,
     ConcreteModel,
     Constraint,
     Integers,
     log,
+    LogicalConstraint,
     NonNegativeIntegers,
     NonNegativeReals,
     NonPositiveIntegers,
@@ -176,6 +178,52 @@ class TestGurobiMINLPWriter(CommonTest):
         m.p1 = Param(initialize=3, mutable=True)
         m.c = Constraint(expr=-m.x1 == m.p1)
         m.obj = Objective(expr=m.x1)
+
+        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+            m, symbolic_solver_labels=True
+        )
+
+        self.assertEqual(len(var_map), 1)
+        x1 = var_map[id(m.x1)]
+
+        self.assertEqual(grb_model.numVars, 1)
+        self.assertEqual(grb_model.numIntVars, 0)
+        self.assertEqual(grb_model.numBinVars, 0)
+
+        lin_constrs = grb_model.getConstrs()
+        self.assertEqual(len(lin_constrs), 1)
+        quad_constrs = grb_model.getQConstrs()
+        self.assertEqual(len(quad_constrs), 0)
+        nonlinear_constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(nonlinear_constrs), 0)
+
+        # constraint
+        c = lin_constrs[0]
+        c_expr = grb_model.getRow(c)
+        self.assertEqual(c.RHS, 3)
+        self.assertEqual(c.Sense, '=')
+        self.assertEqual(c_expr.size(), 1)
+        self.assertEqual(c_expr.getCoeff(0), -1)
+        self.assertEqual(c_expr.getConstant(), 0)
+        self.assertIs(c_expr.getVar(0), x1)
+
+        # objective
+        self.assertEqual(grb_model.ModelSense, 1)  # minimizing
+        obj = grb_model.getObjective()
+        self.assertEqual(obj.size(), 1)
+        self.assertEqual(obj.getCoeff(0), 1)
+        self.assertIs(obj.getVar(0), x1)
+
+    def test_writer_ignores_deactivated_logical_constraints(self):
+        m = ConcreteModel()
+        m.x1 = Var()
+        m.p1 = Param(initialize=3, mutable=True)
+        m.c = Constraint(expr=-m.x1 == m.p1)
+        m.obj = Objective(expr=m.x1)
+
+        m.b = BooleanVar()
+        m.whatever = LogicalConstraint(expr=~m.b)
+        m.whatever.deactivate()
 
         grb_model, var_map = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
