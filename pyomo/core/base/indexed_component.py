@@ -1197,7 +1197,17 @@ class IndexedComponent_NDArrayMixin(object):
 
     """
 
-    def __array__(self, dtype=None):
+    def __array__(self, dtype=None, copy=None):
+        if dtype not in (None, object):
+            raise ValueError(
+                "Pyomo IndexedComponents can only be converted to NumPy "
+                f"arrays with dtype=object (received {dtype=})"
+            )
+        if copy is not None and not copy:
+            raise ValueError(
+                "Pyomo IndexedComponents do not support conversion to NumPy "
+                "arrays without generating a new array"
+            )
         if not self.is_indexed():
             ans = _ndarray.NumericNDArray(shape=(1,), dtype=object)
             ans[0] = self
