@@ -265,7 +265,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.e = Expression(expr=m.x ** 2 + m.y)
+        m.e = Expression(expr=m.x**2 + m.y)
         m.c = Constraint(expr=m.e <= 7)
         m.c2 = Constraint(expr=m.e >= -3)
         m.obj = Objective(expr=0)
