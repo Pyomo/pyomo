@@ -207,15 +207,15 @@ def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
 def _handle_node_with_eval_expr_visitor_unknown(visitor, node, *data):
     # ESJ: Is this cheating?
     expr_type = max(map(itemgetter(0), data))
-    return (expr_type, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
+    return (expr_type, visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))))
 
 
 def _handle_node_with_eval_expr_visitor_constant(visitor, node, *data):
-    return (_CONSTANT, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
+    return (_CONSTANT, visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))))
 
 
 def _handle_node_with_eval_expr_visitor_linear(visitor, node, *data):
-    return (_LINEAR, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
+    return (_LINEAR, visitor._eval_expr_visitor.visit(node, tuple(map(itemgetter(1), data))))
 
 
 def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
