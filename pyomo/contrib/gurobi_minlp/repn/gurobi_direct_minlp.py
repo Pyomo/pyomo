@@ -540,55 +540,14 @@ class GurobiMINLPSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
 
-# ESJ TODO: We should probably not do this and actually tack this on to another
-# solver? But I'm not sure. In any case, it should probably at least inerhit
-# from another direct interface to Gurobi since all the handling of licenses and
-# termination conditions and things should be common.
+# ESJ TODO: I just did the most convenient inheritence for the moment--if this is the
+# right thing to do is a different question.
 @SolverFactory.register(
     'gurobi_direct_minlp',
     doc='Direct interface to Gurobi version 12 and up '
     'supporting general nonlinear expressions',
 )
 class GurobiMINLPSolver(GurobiDirect):
-    # CONFIG = ConfigDict("gurobi_minlp_solver")
-    # CONFIG.declare(
-    #     'symbolic_solver_labels',
-    #     ConfigValue(
-    #         default=False,
-    #         domain=bool,
-    #         description='Write Pyomo Var and Constraint names to gurobipy model',
-    #     ),
-    # )
-    # CONFIG.declare(
-    #     'tee',
-    #     ConfigValue(
-    #         default=False, domain=bool, description="Stream solver output to terminal."
-    #     ),
-    # )
-    # CONFIG.declare(
-    #     'options', ConfigValue(default={}, description="Dictionary of solver options.")
-    # )
-
-    # def __init__(self, **kwds):
-    #     self.config = self.CONFIG()
-    #     self.config.set_value(kwds)
-    #     # TODO termination conditions and things
-
-    # # Support use as a context manager under current solver API
-    # def __enter__(self):
-    #     return self
-
-    # def __exit__(self, t, v, traceback):
-    #     pass
-
-    # def available(self, exception_flag=True):
-    #     # TODO
-    #     pass
-
-    # def license_is_valid(self):
-    #     # TODO
-    #     pass
-
     def solve(self, model, **kwds):
         """Solve the model.
 
