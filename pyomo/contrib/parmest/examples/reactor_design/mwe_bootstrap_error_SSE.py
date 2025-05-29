@@ -15,6 +15,10 @@ import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
     ReactorDesignExperiment,
 )
+# Same example as leaveNout_example.py minus additional import below
+# Commented out plotting code to simplify output
+
+# Needed for my conda environment to find ipopt
 import idaes
 
 def main():
@@ -53,7 +57,7 @@ def main():
     lNo_theta = pest.theta_est_leaveNout(1)
     print(lNo_theta.head())
 
-    parmest.graphics.pairwise_plot(lNo_theta, theta)
+    # parmest.graphics.pairwise_plot(lNo_theta, theta)
 
     ### Leave one out/boostrap analysis
     # Example use case: leave 25 data points out, run 20 bootstrap samples with the
@@ -70,18 +74,18 @@ def main():
         lNo, lNo_samples, bootstrap_samples, dist, alphas, seed=524
     )
 
-    # Plot results for a single value of alpha
+    # # Plot results for a single value of alpha
     alpha = 0.8
-    for i in range(lNo_samples):
-        theta_est_N = results[i][1]
-        bootstrap_results = results[i][2]
-        parmest.graphics.pairwise_plot(
-            bootstrap_results,
-            theta_est_N,
-            alpha,
-            ["MVN"],
-            title="Alpha: " + str(alpha) + ", " + str(theta_est_N.loc[0, alpha]),
-        )
+    # for i in range(lNo_samples):
+    #     theta_est_N = results[i][1]
+    #     bootstrap_results = results[i][2]
+    #     parmest.graphics.pairwise_plot(
+    #         bootstrap_results,
+    #         theta_est_N,
+    #         alpha,
+    #         ["MVN"],
+    #         title="Alpha: " + str(alpha) + ", " + str(theta_est_N.loc[0, alpha]),
+    #     )
 
     # Extract the percent of points that are within the alpha region
     r = [results[i][1].loc[0, alpha] for i in range(lNo_samples)]
