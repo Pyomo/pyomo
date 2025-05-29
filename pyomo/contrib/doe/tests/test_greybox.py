@@ -343,29 +343,17 @@ if numpy_available and scipy_available and ipopt_available and cyipopt_available
         doe_object.use_grey_box = True
 
         # Change linear solvers to mumps
-        doe_object.solver.options["linear_solver"] = "mumps"
-        doe_object.grey_box_solver.config.options["linear_solver"] = "mumps"
+        # doe_object.solver.options["linear_solver"] = "mumps"
+        # doe_object.grey_box_solver.config.options["linear_solver"] = "mumps"
         doe_object.grey_box_solver.config.options["max_iter"] = 1
 
         doe_object.run_doe()
 
-        print("Precursor test termination message: ")
-        print(doe_object.results["Termination Message"])
-
         cyipopt_call_working = not (
             bad_message in doe_object.results["Termination Message"]
         )
-        print(
-            "cyipopt call working value in precursor test: {}".format(
-                cyipopt_call_working
-            )
-        )
     except:
         cyipopt_call_working = False
-
-print(
-    "cyipopt call working value after precursor test: {}".format(cyipopt_call_working)
-)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
