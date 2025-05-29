@@ -1123,7 +1123,7 @@ class Estimator(object):
 
             obj, theta = self.theta_est()
 
-            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples,) # seed = seed) # I believe this would resolve the issue
 
             training, test = self.confidence_region_test(
                 bootstrap_theta,

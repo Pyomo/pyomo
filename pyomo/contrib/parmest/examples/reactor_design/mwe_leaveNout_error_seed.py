@@ -54,7 +54,7 @@ def main():
     ### Parameter estimation with 'leave-N-out'
     # Example use case: For each combination of data where one data point is left
     # out, estimate theta
-    lNo_theta = pest.theta_est_leaveNout(1)
+    lNo_theta = pest.theta_est_leaveNout(1, seed = 524) # added seed here as well
     print(lNo_theta.head())
 
     # parmest.graphics.pairwise_plot(lNo_theta, theta)
