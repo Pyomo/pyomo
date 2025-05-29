@@ -247,9 +247,9 @@ class TestGurobiMINLPWalker(CommonTest):
         # linear
         self.assertEqual(expr.size(), 2)
         self.assertEqual(expr.getConstant(), 0)
-        self.assertAlmostEqual(expr.getCoeff(0), 3/10)
+        self.assertAlmostEqual(expr.getCoeff(0), 3 / 10)
         self.assertIs(expr.getVar(0), x1)
-        self.assertAlmostEqual(expr.getCoeff(1), 3/10)
+        self.assertAlmostEqual(expr.getCoeff(1), 3 / 10)
         self.assertIs(expr.getVar(1), x2)
 
     def test_write_quadratic_power_expression_var_const(self):
