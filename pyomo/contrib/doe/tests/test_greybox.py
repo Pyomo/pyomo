@@ -984,7 +984,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # Test all versions of solving
     # using grey box
     @unittest.skipIf(
-        cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
     def test_solve_D_optimality_log_determinant(self):
         # Two locally optimal design points exist
