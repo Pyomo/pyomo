@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from operator import itemgetter
+from operator import attrgetter, itemgetter
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.collections import ComponentMap
@@ -63,6 +63,8 @@ from pyomo.repn.util import (
     BeforeChildDispatcher,
     complex_number_error,
     initialize_exit_node_dispatcher,
+    InvalidNumber,
+    nan,
     OrderedVarRecorder,
 )
 
