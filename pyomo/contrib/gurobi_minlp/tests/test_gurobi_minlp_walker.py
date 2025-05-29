@@ -13,7 +13,7 @@ from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
     GurobiMINLPSolver,
-    GurobiMINLPVisitor
+    GurobiMINLPVisitor,
 )
 from pyomo.environ import (
     Binary,

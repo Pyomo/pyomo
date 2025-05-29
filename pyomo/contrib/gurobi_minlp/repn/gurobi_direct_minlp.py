@@ -478,7 +478,7 @@ class GurobiMINLPWriter(object):
             )
         elif len(active_objs) == 1:
             obj = active_objs[0]
-            pyo_obj = [obj,]
+            pyo_obj = [obj]
             if obj.sense is minimize:
                 sense = GRB.MINIMIZE
             else:
@@ -639,17 +639,11 @@ class GurobiMINLPSolver(GurobiDirect):
 
         for key, option in options.items():
             grb_model.setParam(key, option)
-        
+
         grbsol = grb_model.optimize()
 
         res = self._postsolve(
-            timer,
-            config,
-            GurobiMINLPSolutionLoader(
-                grb_model,
-                var_map,
-                pyo_obj
-            )
+            timer, config, GurobiMINLPSolutionLoader(grb_model, var_map, pyo_obj)
         )
 
         res.solver_config = config
@@ -662,4 +656,3 @@ class GurobiMINLPSolver(GurobiDirect):
         res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
         res.timing_info.timer = timer
         return res
-
