@@ -207,9 +207,9 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args['scale_nominal_param_value'] = (
-            False  # Vanilla determinant solve needs this
-        )
+        DoE_args[
+            'scale_nominal_param_value'
+        ] = False  # Vanilla determinant solve needs this
         DoE_args['_Cholesky_option'] = False
         DoE_args['_only_compute_fim_lower'] = False
 
@@ -247,7 +247,6 @@ class TestReactorExampleSolving(unittest.TestCase):
         self.assertTrue(np.all(np.isclose(FIM, Q.T @ sigma_inv @ Q)))
 
     def test_reactor_obj_cholesky_solve_bad_prior(self):
-
         from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_DEFINITENESS
 
         fd_method = "central"
