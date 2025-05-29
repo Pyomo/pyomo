@@ -187,6 +187,35 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(expr.getVar2(0), x2)
         self.assertEqual(expr.getCoeff(0), 1.0)
 
+    def test_write_division(self):
+        m = self.get_model()
+        m.c = Constraint(expr=1 / m.x1 == 1)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression(m.c.body)
+
+        x1 = visitor.var_map[id(m.x1)]
+
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
+
+        # three nodes
+        self.assertEqual(len(opcode), 3)
+        # the root is a division expression
+        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(opcode[0], GRB.OPCODE_DIVIDE)
+        # divide has no additional data
+        self.assertEqual(data[0], -1)
+
+        # first arg is 1
+        self.assertEqual(parent[1], 0)
+        self.assertEqual(opcode[1], GRB.OPCODE_CONSTANT)
+        self.assertEqual(data[1], 1)
+
+        # second arg is x1
+        self.assertEqual(parent[2], 0)
+        self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[2], x1)
+
     def test_write_quadratic_power_expression_var_const(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**2 >= 3)

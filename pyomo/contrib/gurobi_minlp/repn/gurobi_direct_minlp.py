@@ -202,7 +202,10 @@ def _handle_node_with_eval_expr_visitor_linear(visitor, node, *data):
 
 
 def _handle_node_with_eval_expr_visitor_nonlinear(visitor, node, *data):
-    return (_GENERAL, visitor._eval_expr_visitor.visit(node, map(itemgetter(1), data)))
+    # ESJ: _apply_operation for DivisionExpression expects that result is indexed, so
+    # I'm making it a tuple rather than a map.
+    return (_GENERAL, visitor._eval_expr_visitor.visit(node,
+                                                       tuple(map(itemgetter(1), data))))
 
 
 def _handle_unary(visitor, node, data):
