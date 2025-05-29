@@ -22,6 +22,7 @@ from pyomo.environ import (
     NonPositiveIntegers,
     NonPositiveReals,
     Objective,
+    Param,
     Reals,
     Var,
 )
@@ -169,6 +170,47 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertIs(data[5], x2)
         self.assertEqual(parent[5], 3)
 
+    def test_write_NPV_negation_in_RHS(self):
+        m = ConcreteModel()
+        m.x1 = Var()
+        m.p1 = Param(initialize=3, mutable=True)
+        m.c = Constraint(expr=-m.x1 == m.p1)
+        m.obj = Objective(expr=m.x1)
+
+        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+            m, symbolic_solver_labels=True
+        )
+
+        self.assertEqual(len(var_map), 1)
+        x1 = var_map[id(m.x1)]
+
+        self.assertEqual(grb_model.numVars, 1)
+        self.assertEqual(grb_model.numIntVars, 0)
+        self.assertEqual(grb_model.numBinVars, 0)
+
+        lin_constrs = grb_model.getConstrs()
+        self.assertEqual(len(lin_constrs), 1)
+        quad_constrs = grb_model.getQConstrs()
+        self.assertEqual(len(quad_constrs), 0)
+        nonlinear_constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(nonlinear_constrs), 0)
+
+        # constraint
+        c = lin_constrs[0]
+        c_expr = grb_model.getRow(c)
+        self.assertEqual(c.RHS, 3)
+        self.assertEqual(c.Sense, '=')
+        self.assertEqual(c_expr.size(), 1)
+        self.assertEqual(c_expr.getCoeff(0), -1)
+        self.assertEqual(c_expr.getConstant(), 0)
+        self.assertIs(c_expr.getVar(0), x1)
+
+        # objective
+        self.assertEqual(grb_model.ModelSense, 1)  # minimizing
+        obj = grb_model.getObjective()
+        self.assertEqual(obj.size(), 1)
+        self.assertEqual(obj.getCoeff(0), 1)
+        self.assertIs(obj.getVar(0), x1)
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
 # error in the solver log, so not sure what we want to do about that?

@@ -37,6 +37,7 @@ from pyomo.core.base import (
     SortComponents,
     Suffix,
     Var,
+    value
 )
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.numeric_expr import (
@@ -471,12 +472,12 @@ class GurobiMINLPWriter(object):
                 grb_model.addConstr(aux == expr)
                 expr = aux
             if cons.equality:
-                grb_model.addConstr(cons.lower == expr)
+                grb_model.addConstr(value(cons.lower) == expr)
             else:
                 if cons.lb is not None:
-                    grb_model.addConstr(cons.lb <= expr)
+                    grb_model.addConstr(value(cons.lb) <= expr)
                 if cons.ub is not None:
-                    grb_model.addConstr(cons.ub >= expr)
+                    grb_model.addConstr(value(cons.ub) >= expr)
 
         grb_model.update()
         return grb_model, visitor.var_map
