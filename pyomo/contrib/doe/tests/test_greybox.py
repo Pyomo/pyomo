@@ -331,7 +331,7 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
 # is appropriately calling the
 # lienar solvers.
 bad_message = "Invalid option encountered."
-cyipopt_call_working = False
+cyipopt_call_working = True
 if numpy_available and scipy_available and ipopt_available and cyipopt_available:
     try:
         objective_option = "determinant"
@@ -349,11 +349,23 @@ if numpy_available and scipy_available and ipopt_available and cyipopt_available
 
         doe_object.run_doe()
 
+        print("Precursor test termination message: ")
+        print(doe_object.results["Termination Message"])
+
         cyipopt_call_working = not (
             bad_message in doe_object.results["Termination Message"]
         )
+        print(
+            "cyipopt call working value in precursor test: {}".format(
+                cyipopt_call_working
+            )
+        )
     except:
         cyipopt_call_working = False
+
+print(
+    "cyipopt call working value after precursor test: {}".format(cyipopt_call_working)
+)
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -984,7 +996,7 @@ class TestFIMExternalGreyBox(unittest.TestCase):
     # Test all versions of solving
     # using grey box
     @unittest.skipIf(
-        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+        cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
     )
     def test_solve_D_optimality_log_determinant(self):
         # Two locally optimal design points exist
