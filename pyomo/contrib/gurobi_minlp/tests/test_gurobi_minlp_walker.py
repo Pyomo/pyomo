@@ -217,7 +217,7 @@ class TestGurobiMINLPWalker(CommonTest):
         # three nodes
         self.assertEqual(len(opcode), 3)
         # the root is a division expression
-        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(parent[0], -1)  # root
         self.assertEqual(opcode[0], GRB.OPCODE_DIVIDE)
         # divide has no additional data
         self.assertEqual(data[0], -1)

@@ -212,5 +212,6 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(obj.getCoeff(0), 1)
         self.assertIs(obj.getVar(0), x1)
 
+
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
 # error in the solver log, so not sure what we want to do about that?
