@@ -181,6 +181,15 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
             visitor.var_map[_id] = grb_var
         return False, (_VARIABLE, visitor.var_map[_id])
 
+    @staticmethod
+    def _before_named_expression(visitor, child):
+        _id = id(child)
+        if _id in visitor.subexpression_cache:
+            _type, expr = visitor.subexpression_cache[_id]
+            return False, (_type, expr)
+        else:
+            return True, None
+
 
 def _handle_node_with_eval_expr_visitor_invariant(visitor, node, data):
     """
@@ -221,6 +230,13 @@ def _handle_unary(visitor, node, data):
         "The unary function '%s' is not supported by the Gurobi MINLP writer."
         % node._name
     )
+
+
+def _handle_named_expression(visitor, node, arg1):
+    # Record this common expression
+    visitor.subexpression_cache[id(node)] = arg1
+    _type, arg1 = arg1
+    return _type, arg1
 
 
 def _handle_abs_constant(visitor, node, arg1):
@@ -279,7 +295,8 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     }
     _exit_node_handlers[UnaryFunctionExpression] = {None: _handle_unary}
 
-    ## TODO: named expressions, ExprIf, RangedExpressions (if we do exprif...
+    ## TODO: ExprIf, RangedExpressions (if we do exprif...
+    _exit_node_handlers[Expression] = {None: _handle_named_expression}
 
     # These are special because of quirks of Gurobi's current support for general
     # nonlinear:
@@ -303,7 +320,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         self.grb_model = grb_model
         self.symbolic_solver_labels = symbolic_solver_labels
         self.var_map = {}
-        self._named_expressions = {}
+        self.subexpression_cache = {}
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
 
@@ -411,6 +428,7 @@ class GurobiMINLPWriter(object):
                 Block,
                 Objective,
                 Constraint,
+                Expression,
                 Var,
                 BooleanVar,
                 Param,

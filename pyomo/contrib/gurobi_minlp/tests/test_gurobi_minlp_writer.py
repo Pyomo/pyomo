@@ -16,6 +16,7 @@ from pyomo.environ import (
     BooleanVar,
     ConcreteModel,
     Constraint,
+    Expression,
     Integers,
     log,
     LogicalConstraint,
@@ -259,6 +260,69 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(obj.size(), 1)
         self.assertEqual(obj.getCoeff(0), 1)
         self.assertIs(obj.getVar(0), x1)
+
+    def test_named_expressions(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.e = Expression(expr=m.x ** 2 + m.y)
+        m.c = Constraint(expr=m.e <= 7)
+        m.c2 = Constraint(expr=m.e >= -3)
+        m.obj = Objective(expr=0)
+
+        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+            m, symbolic_solver_labels=True
+        )
+
+        self.assertEqual(len(var_map), 2)
+        x = var_map[id(m.x)]
+        y = var_map[id(m.y)]
+
+        self.assertEqual(grb_model.numVars, 2)
+        self.assertEqual(grb_model.numIntVars, 0)
+        self.assertEqual(grb_model.numBinVars, 0)
+
+        lin_constrs = grb_model.getConstrs()
+        self.assertEqual(len(lin_constrs), 0)
+        quad_constrs = grb_model.getQConstrs()
+        self.assertEqual(len(quad_constrs), 2)
+        nonlinear_constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(nonlinear_constrs), 0)
+
+        # constraint 1
+        c1 = quad_constrs[0]
+        expr = grb_model.getQCRow(c1)
+        lin_expr = expr.getLinExpr()
+        self.assertEqual(lin_expr.size(), 1)
+        self.assertEqual(lin_expr.getConstant(), 0)
+        self.assertEqual(lin_expr.getCoeff(0), 1)
+        self.assertIs(lin_expr.getVar(0), y)
+        self.assertEqual(c1.QCRHS, 7)
+        self.assertEqual(c1.QCSense, '<')
+        self.assertEqual(expr.size(), 1)
+        self.assertIs(expr.getVar1(0), x)
+        self.assertIs(expr.getVar2(0), x)
+        self.assertEqual(expr.getCoeff(0), 1)
+
+        # constraint 2
+        c2 = quad_constrs[1]
+        expr = grb_model.getQCRow(c1)
+        lin_expr = expr.getLinExpr()
+        self.assertEqual(lin_expr.size(), 1)
+        self.assertEqual(lin_expr.getConstant(), 0)
+        self.assertEqual(lin_expr.getCoeff(0), 1)
+        self.assertIs(lin_expr.getVar(0), y)
+        self.assertEqual(c2.QCRHS, -3)
+        self.assertEqual(c2.QCSense, '>')
+        self.assertEqual(expr.size(), 1)
+        self.assertIs(expr.getVar1(0), x)
+        self.assertIs(expr.getVar2(0), x)
+        self.assertEqual(expr.getCoeff(0), 1)
+
+        # objective
+        self.assertEqual(grb_model.ModelSense, 1)  # minimizing
+        obj = grb_model.getObjective()
+        self.assertEqual(obj.size(), 0)
 
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
