@@ -258,6 +258,7 @@ def get_standard_args(experiment, fd_method, obj_used):
     grey_box_solver.config.options['mu_strategy'] = "monotone"
     args['grey_box_solver'] = grey_box_solver
     args['tee'] = False
+    args['grey_box_tee'] = True
     args['get_labeled_model_args'] = None
     args['_Cholesky_option'] = True
     args['_only_compute_fim_lower'] = True
@@ -324,6 +325,35 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
     )
 
     return doe_obj, grey_box_object
+
+
+# Test whether or not cyipopt
+# is appropriately calling the
+# lienar solvers.
+bad_message = "Invalid option encountered."
+cyipopt_call_working = False
+if numpy_available and scipy_available and ipopt_available and cyipopt_available:
+    try:
+        objective_option = "determinant"
+        doe_object, _ = make_greybox_and_doe_objects_rooney_biegler(
+            objective_option=objective_option
+        )
+
+        # Use the grey box objective
+        doe_object.use_grey_box = True
+
+        # Change linear solvers to mumps
+        doe_object.solver.options["linear_solver"] = "mumps"
+        doe_object.grey_box_solver.config.options["linear_solver"] = "mumps"
+        doe_object.grey_box_solver.config.options["max_iter"] = 1
+
+        doe_object.run_doe()
+
+        cyipopt_call_working = not (
+            bad_message in doe_object.results["Termination Message"]
+        )
+    except:
+        cyipopt_call_working = False
 
 
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
@@ -953,6 +983,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
     # Test all versions of solving
     # using grey box
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
     def test_solve_D_optimality_log_determinant(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
@@ -988,6 +1021,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
     def test_solve_A_optimality_trace_of_inverse(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
@@ -1026,6 +1062,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
     def test_solve_E_optimality_minimum_eigenvalue(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
@@ -1046,6 +1085,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
         # Solve the model
         doe_object.run_doe()
 
+        print(doe_object.results["Termination Message"])
+
         optimal_time_val = doe_object.results["Experiment Design"][0]
         optimal_obj_val = doe_object.model.objective()
 
@@ -1064,6 +1105,9 @@ class TestFIMExternalGreyBox(unittest.TestCase):
             )
         )
 
+    @unittest.skipIf(
+        not cyipopt_call_working, "cyipopt is not properly accessing linear solvers"
+    )
     def test_solve_ME_optimality_condition_number(self):
         # Two locally optimal design points exist
         # (time, optimal objective value)
