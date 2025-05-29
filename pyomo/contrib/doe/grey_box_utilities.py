@@ -25,19 +25,11 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np, scipy_available
+from pyomo.common.dependencies import numpy as np, scipy
 
 from enum import Enum
 import itertools
 import logging
-
-if not scipy_available:
-    raise ImportError(
-        "The scipy module is not available. "
-        "You need scipy to utilize the grey "
-        "box functionalities in Pyomo.DoE."
-    )
-from scipy.sparse import coo_matrix
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 
@@ -78,13 +70,11 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         self._n_params = len(self._param_names)
 
         # Check if the doe_object has model components that are required
-        # TODO: add checks for the model --> doe_object.model needs FIM; all other checks should
-        #       have been satisfied before the FIM is created. Can add check for unknown_parameters...
+        # TODO: is this check necessary?
         from pyomo.contrib.doe import ObjectiveLib
 
         objective_option = ObjectiveLib(objective_option)
         self.objective_option = objective_option
-        # Will anyone ever call this without calling DoE? --> intended to be no; but maybe more utility?
 
         # Create logger for FIM egb object
         self.logger = logging.getLogger(__name__)
@@ -98,12 +88,10 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Set initial values for inputs
         # Need a mask structure
         self._masking_matrix = np.triu(np.ones_like(self.doe_object.fim_initial))
-        # self._input_values = np.asarray(self.doe_object.fim_initial.flatten(), dtype=np.float64)
         self._input_values = np.asarray(
             self.doe_object.fim_initial[self._masking_matrix > 0], dtype=np.float64
         )
         self._n_inputs = len(self._input_values)
-        # print(self._input_values)
 
     def _get_FIM(self):
         # Grabs the current FIM subject
@@ -127,7 +115,6 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Cartesian product gives us matrix indices flattened in row-first format
         # Can use itertools.combinations(self._param_names, 2) with added
         # diagonal elements, or do double for loops if we switch to upper triangular
-        # input_names_list = list(itertools.product(self._param_names, self._param_names))
         input_names_list = list(
             itertools.combinations_with_replacement(self._param_names, 2)
         )
@@ -159,7 +146,6 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
     def set_input_values(self, input_values):
         # Set initial values to be flattened initial FIM (aligns with input names)
         np.copyto(self._input_values, input_values)
-        # self._input_values = list(self.doe_object.fim_initial.flatten())
 
     def evaluate_equality_constraints(self):
         # ToDo: are there any objectives that will have constraints?
@@ -169,7 +155,6 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Evaluates the objective value for the specified
         # ObjectiveLib type.
         current_FIM = self._get_FIM()
-        # current_FIM = self._input_values
 
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
@@ -191,8 +176,6 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             obj_value = np.max(eig) / np.min(eig)
         else:
             ObjectiveLib(self.objective_option)
-
-        # print(obj_value)
 
         return np.asarray([obj_value], dtype=np.float64)
 
@@ -234,25 +217,17 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         # Compute the jacobian of the objective function with
         # respect to the fisher information matrix. Then return
         # a coo_matrix that aligns with what IPOPT will expect.
-        #
-        # ToDo: there will be significant bookkeeping for more
-        # complicated objective functions and the Hessian
         current_FIM = self._get_FIM()
-        # current_FIM = self._input_values
+
         M = np.asarray(current_FIM, dtype=np.float64).reshape(
             self._n_params, self._n_params
         )
 
-        # print(current_FIM)
-
-        # May remove this warning. If so, we
-        # should put the eigenvalue computation
-        # within the eigenvalue-dependent
-        # objective options...
+        # ToDo: Add inertia correction for
+        #       negative/small eigenvalues
         eig_vals, eig_vecs = np.linalg.eig(M)
-        if min(eig_vals) <= 1:
+        if min(eig_vals) <= 1e-3:
             pass
-            # print("Warning: {:0.6f}".format(min(eig_vals)))
 
         from pyomo.contrib.doe import ObjectiveLib
 
@@ -323,30 +298,14 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
         else:
             ObjectiveLib(self.objective_option)
 
-        # print(jac_M)
         # Filter jac_M using the
         # masking matrix
         jac_M = jac_M[self._masking_matrix > 0]
-        # M_rows = np.zeros_like(jac_M)
-        # M_cols = np.arange(len(jac_M))
-
-        # # Rows are the integer division by number of columns
-        # M_rows = np.arange(len(jac_M.flatten())) // jac_M.shape[1]
-
-        # # Columns are the remaindar (mod) by number of rows
-        # M_cols = np.arange(len(jac_M.flatten())) % jac_M.shape[0]
-
-        # Need to be flat?
         M_rows = np.zeros((len(jac_M.flatten()), 1)).flatten()
-
-        # Need to be flat?
         M_cols = np.arange(len(jac_M.flatten()))
 
         # Returns coo_matrix of the correct shape
-        # print(coo_matrix((jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))))
-        # print(jac_M)
-        # print(self.input_names())
-        return coo_matrix(
+        return scipy.coo_matrix(
             (jac_M.flatten(), (M_rows, M_cols)), shape=(1, len(jac_M.flatten()))
         )
 
@@ -517,7 +476,7 @@ class FIMExternalGreyBox(ExternalGreyBoxModel):
             ObjectiveLib(self.objective_option)
 
         # Returns coo_matrix of the correct shape
-        return coo_matrix(
+        return scipy.coo_matrix(
             (np.asarray(hess_vals), (hess_rows, hess_cols)),
             shape=(self._n_inputs, self._n_inputs),
         )
