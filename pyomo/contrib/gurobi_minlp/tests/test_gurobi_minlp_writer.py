@@ -68,7 +68,7 @@ class TestGurobiMINLPWriter(CommonTest):
 
         m = make_model()
 
-        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -180,7 +180,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c = Constraint(expr=-m.x1 == m.p1)
         m.obj = Objective(expr=m.x1)
 
-        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -226,7 +226,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.whatever = LogicalConstraint(expr=~m.b)
         m.whatever.deactivate()
 
-        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 
@@ -270,7 +270,7 @@ class TestGurobiMINLPWriter(CommonTest):
         m.c2 = Constraint(expr=m.e >= -3)
         m.obj = Objective(expr=0)
 
-        grb_model, var_map = WriterFactory('gurobi_minlp').write(
+        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
             m, symbolic_solver_labels=True
         )
 

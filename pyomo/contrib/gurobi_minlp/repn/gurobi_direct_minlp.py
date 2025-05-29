@@ -9,15 +9,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import datetime
+import io
 from operator import attrgetter, itemgetter
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.numeric_types import native_complex_types
+from pyomo.common.timing import HierarchicalTimer
 
 # ESJ TODO: We should move this somewhere sensible
 from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
 
 from pyomo.core.base import (
     Binary,
@@ -54,6 +59,7 @@ from pyomo.core.expr.numeric_expr import (
     SumExpression,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
+from pyomo.core.staleflag import StaleFlagManager
 
 from pyomo.opt import SolverFactory, WriterFactory
 from pyomo.repn.quadratic import QuadraticRepnVisitor
@@ -167,8 +173,7 @@ def _create_grb_var(visitor, pyomo_var, name=""):
 class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
     @staticmethod
     def _before_var(visitor, child):
-        _id = id(child)
-        if _id not in visitor.var_map:
+        if child not in visitor.var_map:
             if child.fixed:
                 # ESJ TODO: I want the linear walker implementation of
                 # check_constant... Could it be in the base class or something?
@@ -178,8 +183,8 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
                 child,
                 name=child.name if visitor.symbolic_solver_labels else "",
             )
-            visitor.var_map[_id] = grb_var
-        return False, (_VARIABLE, visitor.var_map[_id])
+            visitor.var_map[child] = grb_var
+        return False, (_VARIABLE, visitor.var_map[child])
 
     @staticmethod
     def _before_named_expression(visitor, child):
@@ -319,7 +324,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         super().__init__()
         self.grb_model = grb_model
         self.symbolic_solver_labels = symbolic_solver_labels
-        self.var_map = {}
+        self.var_map = ComponentMap()
         self.subexpression_cache = {}
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
@@ -473,6 +478,7 @@ class GurobiMINLPWriter(object):
             )
         elif len(active_objs) == 1:
             obj = active_objs[0]
+            pyo_obj = [obj,]
             if obj.sense is minimize:
                 sense = GRB.MINIMIZE
             else:
@@ -488,6 +494,9 @@ class GurobiMINLPWriter(object):
             else:
                 grb_model.setObjective(obj_expr, sense=sense)
         # else it's fine--Gurobi doesn't require us to give an objective, so we don't
+        # either, but we do have to pass the info through for the results object
+        else:
+            pyo_obj = []
 
         # write constraints
         for cons in components[Constraint]:
@@ -506,7 +515,29 @@ class GurobiMINLPWriter(object):
                     grb_model.addConstr(value(cons.ub) >= expr)
 
         grb_model.update()
-        return grb_model, visitor.var_map
+        return grb_model, visitor.var_map, pyo_obj
+
+
+class GurobiMINLPSolutionLoader(SolutionLoaderBase):
+    def __init__(self, grb_model, var_map, pyo_obj):
+        self._grb_model = grb_model
+        self._pyo_to_grb_var_map = var_map
+        self._pyo_obj = pyo_obj
+
+    def load_vars(self, vars_to_load=None, solution_number=0):
+        assert solution_number == 0
+        if self._grb_model.SolCount == 0:
+            raise NoSolutionError()
+
+        if vars_to_load:
+            vars_to_load = ComponentSet(vars_to_load)
+        else:
+            vars_to_load = ComponentSet(self._pyo_to_grb_var_map.keys())
+
+        for pyo_var, grb_var in self._pyo_to_grb_var_map.items():
+            if pyo_var in vars_to_load:
+                pyo_var.set_value(grb_var.x, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
 
 # ESJ TODO: We should probably not do this and actually tack this on to another
@@ -518,45 +549,45 @@ class GurobiMINLPWriter(object):
     doc='Direct interface to Gurobi version 12 and up '
     'supporting general nonlinear expressions',
 )
-class GurobiMINLPSolver(object):
-    CONFIG = ConfigDict("gurobi_minlp_solver")
-    CONFIG.declare(
-        'symbolic_solver_labels',
-        ConfigValue(
-            default=False,
-            domain=bool,
-            description='Write Pyomo Var and Constraint names to gurobipy model',
-        ),
-    )
-    CONFIG.declare(
-        'tee',
-        ConfigValue(
-            default=False, domain=bool, description="Stream solver output to terminal."
-        ),
-    )
-    CONFIG.declare(
-        'options', ConfigValue(default={}, description="Dictionary of solver options.")
-    )
+class GurobiMINLPSolver(GurobiDirect):
+    # CONFIG = ConfigDict("gurobi_minlp_solver")
+    # CONFIG.declare(
+    #     'symbolic_solver_labels',
+    #     ConfigValue(
+    #         default=False,
+    #         domain=bool,
+    #         description='Write Pyomo Var and Constraint names to gurobipy model',
+    #     ),
+    # )
+    # CONFIG.declare(
+    #     'tee',
+    #     ConfigValue(
+    #         default=False, domain=bool, description="Stream solver output to terminal."
+    #     ),
+    # )
+    # CONFIG.declare(
+    #     'options', ConfigValue(default={}, description="Dictionary of solver options.")
+    # )
 
-    def __init__(self, **kwds):
-        self.config = self.CONFIG()
-        self.config.set_value(kwds)
-        # TODO termination conditions and things
+    # def __init__(self, **kwds):
+    #     self.config = self.CONFIG()
+    #     self.config.set_value(kwds)
+    #     # TODO termination conditions and things
 
-    # Support use as a context manager under current solver API
-    def __enter__(self):
-        return self
+    # # Support use as a context manager under current solver API
+    # def __enter__(self):
+    #     return self
 
-    def __exit__(self, t, v, traceback):
-        pass
+    # def __exit__(self, t, v, traceback):
+    #     pass
 
-    def available(self, exception_flag=True):
-        # TODO
-        pass
+    # def available(self, exception_flag=True):
+    #     # TODO
+    #     pass
 
-    def license_is_valid(self):
-        # TODO
-        pass
+    # def license_is_valid(self):
+    #     # TODO
+    #     pass
 
     def solve(self, model, **kwds):
         """Solve the model.
@@ -564,15 +595,71 @@ class GurobiMINLPSolver(object):
         Args:
             model (Block): a Pyomo model or Block to be solved
         """
-        config = self.config()
-        config.set_value(kwds)
+        start_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        config = self.config(value=kwds, preserve_implicit=True)
+        if not self.available():
+            c = self.__class__
+            raise ApplicationError(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).'
+            )
+        if config.timer is None:
+            config.timer = HierarchicalTimer()
+        timer = config.timer
+
+        StaleFlagManager.mark_all_as_stale()
+
+        timer.start('compile_model')
 
         writer = GurobiMINLPWriter()
-        grb_model, var_map = writer.write(
+        grb_model, var_map, pyo_obj = writer.write(
             model, symbolic_solver_labels=config.symbolic_solver_labels
         )
-        # TODO: Is this right??
-        grbsol = grb_model.optimize(**self.options)
 
-        # TODO: handle results status
-        # return results
+        timer.stop('compile_model')
+
+        ostreams = [io.StringIO()] + config.tee
+
+        # set options
+        options = config.solver_options
+
+        grb_model.setParam('LogToConsole', 1)
+
+        if config.threads is not None:
+            grb_model.setParam('Threads', config.threads)
+        if config.time_limit is not None:
+            grb_model.setParam('TimeLimit', config.time_limit)
+        if config.rel_gap is not None:
+            grb_model.setParam('MIPGap', config.rel_gap)
+        if config.abs_gap is not None:
+            grb_model.setParam('MIPGapAbs', config.abs_gap)
+
+        if config.use_mipstart:
+            raise MouseTrap("MIPSTART not yet supported")
+
+        for key, option in options.items():
+            grb_model.setParam(key, option)
+        
+        grbsol = grb_model.optimize()
+
+        res = self._postsolve(
+            timer,
+            config,
+            GurobiMINLPSolutionLoader(
+                grb_model,
+                var_map,
+                pyo_obj
+            )
+        )
+
+        res.solver_config = config
+        res.solver_name = 'Gurobi'
+        res.solver_version = self.version()
+        res.solver_log = ostreams[0].getvalue()
+
+        end_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        res.timing_info.start_timestamp = start_timestamp
+        res.timing_info.wall_time = (end_timestamp - start_timestamp).total_seconds()
+        res.timing_info.timer = timer
+        return res
+
