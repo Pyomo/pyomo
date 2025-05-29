@@ -187,6 +187,22 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(expr.getVar2(0), x2)
         self.assertEqual(expr.getCoeff(0), 1.0)
 
+    def test_write_product_with_fixed_var(self):
+        m = self.get_model()
+        m.x2.fix(4)
+        m.c = Constraint(expr=m.x1 * m.x2 == 1)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression(m.c.body)
+
+        x1 = visitor.var_map[id(m.x1)]
+
+        # this is linear
+        self.assertEqual(expr.size(), 1)
+        self.assertEqual(expr.getCoeff(0), 4.0)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertEqual(expr.getConstant(), 0.0)
+
     def test_write_division(self):
         m = self.get_model()
         m.c = Constraint(expr=1 / m.x1 == 1)

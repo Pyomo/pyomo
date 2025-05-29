@@ -169,7 +169,7 @@ class GurobiMINLPBeforeChildDispatcher(BeforeChildDispatcher):
             if child.fixed:
                 # ESJ TODO: I want the linear walker implementation of
                 # check_constant... Could it be in the base class or something?
-                return False, visitor.check_constant(child.value, child)
+                return False, (_CONSTANT, visitor.check_constant(child.value, child))
             grb_var = _create_grb_var(
                 visitor,
                 child,
@@ -316,7 +316,6 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         return self.before_child_dispatcher[child.__class__](self, child)
 
     def exitNode(self, node, data):
-        print(node.__class__)
         return self.exit_node_dispatcher[(node.__class__, *map(itemgetter(0), data))](
             self, node, *data
         )
