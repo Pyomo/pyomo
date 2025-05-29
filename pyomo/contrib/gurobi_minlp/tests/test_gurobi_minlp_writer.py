@@ -35,7 +35,7 @@ from pyomo.environ import (
 from pyomo.opt import WriterFactory
 from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
     GurobiMINLPSolver,
-    GurobiMINLPVisitor
+    GurobiMINLPVisitor,
 )
 from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
 
@@ -329,7 +329,7 @@ class TestGurobiMINLPWriter(CommonTest):
         self.assertEqual(grb_model.ModelSense, 1)  # minimizing
         obj = grb_model.getObjective()
         self.assertEqual(obj.size(), 0)
-    
+
     def test_solve_model(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))

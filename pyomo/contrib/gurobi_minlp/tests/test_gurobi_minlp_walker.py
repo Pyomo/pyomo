@@ -11,9 +11,7 @@
 
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
-    GurobiMINLPVisitor,
-)
+from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import GurobiMINLPVisitor
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -234,6 +232,25 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertEqual(parent[2], 0)
         self.assertEqual(opcode[2], GRB.OPCODE_VARIABLE)
         self.assertIs(data[2], x1)
+
+    def test_write_division_linear(self):
+        m = self.get_model()
+        m.p = Param(initialize=3, mutable=True)
+        m.c = Constraint(expr=(m.x1 + m.x2) * m.p / 10 == 1)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression(m.c.body)
+
+        x1 = visitor.var_map[id(m.x1)]
+        x2 = visitor.var_map[id(m.x2)]
+
+        # linear
+        self.assertEqual(expr.size(), 2)
+        self.assertEqual(expr.getConstant(), 0)
+        self.assertAlmostEqual(expr.getCoeff(0), 3/10)
+        self.assertIs(expr.getVar(0), x1)
+        self.assertAlmostEqual(expr.getCoeff(1), 3/10)
+        self.assertIs(expr.getVar(1), x2)
 
     def test_write_quadratic_power_expression_var_const(self):
         m = self.get_model()
@@ -499,4 +516,3 @@ class TestGurobiMINLPWalker(CommonTest):
         expr = visitor.walk_expression(m.c.body)
 
         # TODO
-
