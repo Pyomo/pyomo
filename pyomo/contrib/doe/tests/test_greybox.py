@@ -1005,6 +1005,8 @@ class TestFIMExternalGreyBox(unittest.TestCase):
 
         print("Termination Message")
         print(doe_object.results["Termination Message"])
+        print(cyipopt_call_working)
+        print(bad message in doe_object.results["Termination Message"])
         print("End Message")
 
         optimal_time_val = doe_object.results["Experiment Design"][0]
