@@ -440,6 +440,7 @@ class DesignOfExperiments:
 
         self.results["Solver Status"] = res.solver.status
         self.results["Termination Condition"] = res.solver.termination_condition
+        self.results["Termination Message"] = res.solver.message.decode("utf-8")
 
         # Important quantities for optimal design
         self.results["FIM"] = fim_local
