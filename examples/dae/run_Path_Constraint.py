@@ -9,27 +9,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 from Path_Constraint import m
 
 # Discretize model using Finite Difference Method
-# discretizer = TransformationFactory('dae.finite_difference')
+# discretizer = pyo.TransformationFactory('dae.finite_difference')
 # discretizer.apply_to(m,nfe=20,scheme='BACKWARD')
 
 # Discretize model using Orthogonal Collocation
-discretizer = TransformationFactory('dae.collocation')
+discretizer = pyo.TransformationFactory('dae.collocation')
 discretizer.apply_to(m, nfe=7, ncp=6, scheme='LAGRANGE-RADAU')
 discretizer.reduce_collocation_points(m, var=m.u, ncp=1, contset=m.t)
 
-results = SolverFactory('ipopt').solve(m, tee=True)
+results = pyo.SolverFactory('ipopt').solve(m, tee=True)
 
 
 def plotter(subplot, x, *series, **kwds):
     plt.subplot(subplot)
     for i, y in enumerate(series):
         plt.plot(
-            list(x), [value(y[t]) for t in x], 'brgcmk'[i % 6] + kwds.get('points', '')
+            list(x),
+            [pyo.value(y[t]) for t in x],
+            'brgcmk'[i % 6] + kwds.get('points', ''),
         )
     plt.title(kwds.get('title', ''))
     plt.legend(tuple(y.name for y in series), frameon=True, edgecolor='k').draw_frame(

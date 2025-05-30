@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.contrib.alternative_solutions import aos_utils
 from pyomo.contrib.alternative_solutions import Solution
 from pyomo.contrib import appsi
@@ -160,7 +160,7 @@ def obbt_analysis_bounds_and_solutions(
     else:
         variable_list = list(variables)
     if warmstart:
-        solutions = pe.ComponentMap()
+        solutions = pyo.ComponentMap()
         for var in all_variables:
             solutions[var] = []
 
@@ -184,7 +184,7 @@ def obbt_analysis_bounds_and_solutions(
         unbdd_tc = appsi.base.TerminationCondition.unbounded
         use_appsi = True
     else:
-        opt = pe.SolverFactory(solver)
+        opt = pyo.SolverFactory(solver)
         opt.available()
         for parameter, value in solver_options.items():
             opt.options[parameter] = value
@@ -196,9 +196,9 @@ def obbt_analysis_bounds_and_solutions(
             # An exception occurs if the solver does not recognize the warmstart option
             results = opt.solve(model, tee=tee, load_solutions=False)
         condition = results.solver.termination_condition
-        optimal_tc = pe.TerminationCondition.optimal
-        infeas_or_unbdd_tc = pe.TerminationCondition.infeasibleOrUnbounded
-        unbdd_tc = pe.TerminationCondition.unbounded
+        optimal_tc = pyo.TerminationCondition.optimal
+        infeas_or_unbdd_tc = pyo.TerminationCondition.infeasibleOrUnbounded
+        unbdd_tc = pyo.TerminationCondition.unbounded
     logger.info("Performing initial solve of model.")
 
     if condition != optimal_tc:
@@ -213,17 +213,17 @@ def obbt_analysis_bounds_and_solutions(
         model.solutions.load_from(results)
     if warmstart:
         _add_solution(solutions)
-    orig_objective_value = pe.value(orig_objective)
+    orig_objective_value = pyo.value(orig_objective)
     logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
     aos_block = aos_utils._add_aos_block(model, name="_obbt")
     # placeholder for objective
-    aos_block.var_objective = pe.Objective(expr=0)
+    aos_block.var_objective = pyo.Objective(expr=0)
     logger.info("Added block {} to the model.".format(aos_block))
     obj_constraints = aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
     if refine_discrete_bounds:
-        aos_block.bound_constraints = pe.ConstraintList()
+        aos_block.bound_constraints = pyo.ConstraintList()
     new_constraint = False
     if len(obj_constraints) > 0:
         new_constraint = True
@@ -241,10 +241,10 @@ def obbt_analysis_bounds_and_solutions(
         opt.update_config.update_objective = True
         opt.update_config.treat_fixed_vars_as_params = False
 
-    variable_bounds = pe.ComponentMap()
+    variable_bounds = pyo.ComponentMap()
     solns = [Solution(model, all_variables, objective=orig_objective)]
 
-    senses = [(pe.minimize, "LB"), (pe.maximize, "UB")]
+    senses = [(pyo.minimize, "LB"), (pyo.maximize, "UB")]
 
     iteration = 1
     total_iterations = len(senses) * num_vars
@@ -288,22 +288,22 @@ def obbt_analysis_bounds_and_solutions(
 
                 if warmstart:
                     _add_solution(solutions)
-                obj_val = pe.value(var)
+                obj_val = pyo.value(var)
                 variable_bounds[var][idx] = obj_val
 
                 if refine_discrete_bounds and not var.is_continuous():
-                    if sense == pe.minimize and var.lb < obj_val:
+                    if sense == pyo.minimize and var.lb < obj_val:
                         aos_block.bound_constraints.add(var >= obj_val)
                         new_constraint = True
 
-                    if sense == pe.maximize and var.ub > obj_val:
+                    if sense == pyo.maximize and var.ub > obj_val:
                         aos_block.bound_constraints.add(var <= obj_val)
                         new_constraint = True
 
             # An infeasibleOrUnbounded status code will imply the problem is
             # unbounded since feasibility has been established previously
             elif condition == infeas_or_unbdd_tc or condition == unbdd_tc:
-                if sense == pe.minimize:
+                if sense == pyo.minimize:
                     variable_bounds[var][idx] = float("-inf")
                 else:
                     variable_bounds[var][idx] = float("inf")
@@ -338,7 +338,7 @@ def obbt_analysis_bounds_and_solutions(
 def _add_solution(solutions):
     """Add the current variable values to the solution list."""
     for var in solutions:
-        solutions[var].append(pe.value(var))
+        solutions[var].append(pyo.value(var))
 
 
 def _update_values(var, bound_dir, solutions):

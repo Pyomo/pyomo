@@ -24,7 +24,7 @@ class ProblemSense(IntEnum, metaclass=ExtendedEnumType):
 
 class ProblemInformation(MapContainer):
     def __init__(self):
-        MapContainer.__init__(self)
+        super().__init__()
         self.declare('name')
         self.declare('lower_bound', value=float('-inf'))
         self.declare('upper_bound', value=float('inf'))

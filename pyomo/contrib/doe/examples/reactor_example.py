@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.common.dependencies import numpy as np
+from pyomo.common.dependencies import numpy as np, pathlib
 
 from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe import DesignOfExperiments
@@ -16,14 +16,13 @@ from pyomo.contrib.doe import DesignOfExperiments
 import pyomo.environ as pyo
 
 import json
-from pathlib import Path
-import idaes
+
 
 # Example for sensitivity analysis on the reactor experiment
 # After sensitivity analysis is done, we perform optimal DoE
 def run_reactor_doe():
     # Read in file
-    DATA_DIR = Path(__file__).parent
+    DATA_DIR = pathlib.Path(__file__).parent
     file_path = DATA_DIR / "result.json"
 
     with open(file_path) as f:
@@ -121,8 +120,6 @@ def run_reactor_doe():
     )
 
     print(doe_obj.results["Experiment Design Names"])
-    print("\n Measurement Error: \n\t", doe_obj.results['Measurement Error'])
-    print("\n Experiment Outputs: \n\t", doe_obj.results['Experiment Outputs'])
 
     ###################
     # End optimal DoE

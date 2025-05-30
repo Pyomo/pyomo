@@ -18,6 +18,7 @@ from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
+from pyomo.common.dependencies import pathlib
 from pyomo.common.collections import Bunch
 from pyomo.common.tee import TeeStream
 
@@ -300,7 +301,7 @@ class GAMSDirect(_GAMSSolver):
                 filename=output_file,
                 format=ProblemFormat.gams,
                 _called_by_solver=True,
-                **io_options
+                **io_options,
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
@@ -739,6 +740,32 @@ class GAMSShell(_GAMSSolver):
             return sys.float_info.epsilon
         return value
 
+    def _rewrite_path_win8p3(self, path):
+        """
+        Return the 8.3 short path on Windows; unchanged elsewhere.
+
+        This change is in response to Pyomo/pyomo#3579 which reported
+        that GAMS (direct) fails on Windows if there is a space in
+        the path. This utility converts paths to their 8.3 short-path version
+        (which never have spaces).
+        """
+        if not sys.platform.startswith("win"):
+            return str(path)
+
+        import ctypes, ctypes.wintypes as wt
+
+        GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+        GetShortPathNameW.argtypes = [wt.LPCWSTR, wt.LPWSTR, wt.DWORD]
+
+        # the file must exist, or Windows will not create a short name
+        pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path).touch(exist_ok=True)
+
+        buf = ctypes.create_unicode_buffer(260)
+        if GetShortPathNameW(str(path), buf, 260):
+            return buf.value
+        return str(path)
+
     def solve(self, *args, **kwds):
         """
         Solve a model via the GAMS executable.
@@ -845,7 +872,7 @@ class GAMSShell(_GAMSSolver):
                 filename=output_filename,
                 format=ProblemFormat.gams,
                 _called_by_solver=True,
-                **io_options
+                **io_options,
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
@@ -881,7 +908,7 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            command.append("lf=" + str(logfile))
+            command.append(f"lf={self._rewrite_path_win8p3(logfile)}")
 
         try:
             ostreams = [StringIO()]

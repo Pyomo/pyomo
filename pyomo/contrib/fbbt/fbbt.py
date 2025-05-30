@@ -69,13 +69,13 @@ on either x or y.
 
 .. testcode::
 
-   import pyomo.environ as pe
-   m = pe.ConcreteModel()
-   m.x = pe.Var(bounds=(-1,1))
-   m.y = pe.Var(bounds=(-2,2))
-   m.z = pe.Var()
+   import pyomo.environ as pyo
+   m = pyo.ConcreteModel()
+   m.x = pyo.Var(bounds=(-1,1))
+   m.y = pyo.Var(bounds=(-2,2))
+   m.z = pyo.Var()
    from pyomo.contrib.fbbt.fbbt import fbbt
-   m.c = pe.Constraint(expr=m.x*m.y + m.z == 1)
+   m.c = pyo.Constraint(expr=m.x*m.y + m.z == 1)
    fbbt(m)
    print(f"z bounds = {m.z.bounds}")
 
@@ -1105,7 +1105,9 @@ def _before_external_function(visitor, child):
 def _register_new_before_child_handler(visitor, child):
     handlers = _before_child_handlers
     child_type = child.__class__
-    if child.is_variable_type():
+    if child_type in native_types:
+        handlers[child_type] = _before_constant
+    elif child.is_variable_type():
         handlers[child_type] = _before_var
     elif not child.is_potentially_variable():
         handlers[child_type] = _before_NPV
@@ -1298,13 +1300,13 @@ def _fbbt_con(con, config):
     in the constraint based on the bounds of the constraint and the bounds of the other variables in the constraint.
     For example:
 
-    >>> import pyomo.environ as pe
+    >>> import pyomo.environ as pyo
     >>> from pyomo.contrib.fbbt.fbbt import fbbt
-    >>> m = pe.ConcreteModel()
-    >>> m.x = pe.Var(bounds=(-1,1))
-    >>> m.y = pe.Var(bounds=(-2,2))
-    >>> m.z = pe.Var()
-    >>> m.c = pe.Constraint(expr=m.x*m.y + m.z == 1)
+    >>> m = pyo.ConcreteModel()
+    >>> m.x = pyo.Var(bounds=(-1,1))
+    >>> m.y = pyo.Var(bounds=(-2,2))
+    >>> m.z = pyo.Var()
+    >>> m.c = pyo.Constraint(expr=m.x*m.y + m.z == 1)
     >>> fbbt(m.c)
     >>> print(m.z.lb, m.z.ub)
     -1.0 3.0

@@ -4,6 +4,13 @@ PyROS CHANGELOG
 
 
 -------------------------------------------------------------------------------
+PyROS 1.3.7    06 Mar 2025
+-------------------------------------------------------------------------------
+- Modify reformulation of state-variable independent second-stage
+  equality constraints for problems with discrete uncertainty sets
+
+
+-------------------------------------------------------------------------------
 PyROS 1.3.6    06 Mar 2025
 -------------------------------------------------------------------------------
 - Add uncertain parameter reduction to preprocessor and subproblems
