@@ -3,7 +3,7 @@ Sensitivity Toolbox
 
 The sensitivity toolbox provides a Pyomo interface to sIPOPT and k_aug to very quickly compute approximate solutions to nonlinear programs with a small perturbation in model parameters.
 
-See the `sIPOPT documentation <https://projects.coin-or.org/Ipopt/wiki/sIpopt>`_ or the `following paper <https://link.springer.com/article/10.1007/s12532-012-0043-2>`_ for additional details:
+See the `sIPOPT documentation <https://coin-or.github.io/Ipopt/SPECIALS.html#SIPOPT>`_ or the `following paper <https://link.springer.com/article/10.1007/s12532-012-0043-2>`_ for additional details:
 
   H. Pirnay, R. Lopez-Negrete, and L.T. Biegler, Optimal Sensitivity based on IPOPT, Math. Prog. Comp., 4(4):307--331, 2012.
 
@@ -185,7 +185,7 @@ Installing sIPOPT and k_aug
 The sensitivity toolbox requires either sIPOPT or k_aug to be installed and available in your system PATH. See the sIPOPT and k_aug documentation for detailed instructions:
 
 * https://coin-or.github.io/Ipopt/INSTALL.html
-* https://projects.coin-or.org/Ipopt/wiki/sIpopt
+* https://coin-or.github.io/Ipopt/SPECIALS.html#SIPOPT
 * https://coin-or.github.io/coinbrew/
 * https://github.com/dthierry/k_aug
 
