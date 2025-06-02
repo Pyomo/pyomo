@@ -578,7 +578,7 @@ class DesignOfExperiments:
 
             # Simulate the model
             try:
-                res = self.solver.solve(model)
+                res = self.solver.solve(model, tee=self.tee)
                 pyo.assert_optimal_termination(res)
             except:
                 # TODO: Make error message more verbose, i.e., add unknown parameter values so the
@@ -1119,7 +1119,16 @@ class DesignOfExperiments:
             pyo.ComponentUID(param, context=m.base_model).find_component_on(
                 b
             ).set_value(m.base_model.unknown_parameters[param] * (1 + diff))
+
+            # Fix experiment inputs before solve (enforce square solve)
+            for comp in b.experiment_inputs:
+                comp.fix()
+
             res = self.solver.solve(b, tee=self.tee)
+
+            # Unfix experiment inputs after square solve
+            for comp in b.experiment_inputs:
+                comp.unfix()
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
