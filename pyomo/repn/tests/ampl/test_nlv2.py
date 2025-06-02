@@ -2839,9 +2839,4 @@ k0
 G0 1
 0 0
 """
-        self.assertEqual(
-            *nl_diff(
-                expected,
-                out.getvalue(),
-            ),
-        )
+        self.assertEqual(*nl_diff(expected, out.getvalue()))

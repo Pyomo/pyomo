@@ -1168,7 +1168,9 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         val = self.check_constant(child.value, child)
         if self.check_fixed_variable_bounds:
             lb, ub = child.bounds
-            if (lb is not None and lb - val > TOL) or (ub is not None and ub - val < -TOL):
+            if (lb is not None and lb - val > TOL) or (
+                ub is not None and ub - val < -TOL
+            ):
                 raise InfeasibleConstraintException(
                     "model contains a trivially infeasible "
                     f"variable '{child.name}' (fixed value "
