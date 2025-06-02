@@ -12,7 +12,6 @@
 from pyomo.common.dependencies import numpy as np
 import pyomo.environ as pyo
 from pyomo.core.base.block import BlockData, declare_custom_block
-import idaes
 
 
 def _f_cubic(x, alpha, s=None):
