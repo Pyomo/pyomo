@@ -15,10 +15,6 @@ import os
 from pyomo.contrib.cspline_external.cspline_parameters import (
     cubic_parameters_model,
     CsplineParameters,
-    add_increasing_constraints,
-    add_decreasing_constraints,
-    add_convex_constraints,
-    add_concave_constraints,
 )
 from pyomo.opt import check_available_solvers
 from pyomo.common.dependencies import numpy as np, numpy_available
@@ -95,7 +91,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         y_data = [1, 4, 9, 16, 25]
 
         m = cubic_parameters_model(x_data, y_data, objective_form=True)
-        add_increasing_constraints(m)
+        m.add_increasing_constraints()
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
 
@@ -120,7 +116,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         y_data = [1, 4, 9, 16, 25]
 
         m = cubic_parameters_model(x_data, y_data, objective_form=True)
-        add_increasing_constraints(m)
+        m.add_increasing_constraints()
 
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
@@ -144,7 +140,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         y_data = [1, 4, 9, 16, 25]
 
         m = cubic_parameters_model(x_data, y_data, objective_form=True)
-        add_decreasing_constraints(m)
+        m.add_decreasing_constraints()
 
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
@@ -172,7 +168,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         m = cubic_parameters_model(
             x_data, y_data, objective_form=True, end_point_constraint=False
         )
-        add_convex_constraints(m, tol=0.1)
+        m.add_convex_constraints(tol=0.1)
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
         params = CsplineParameters(model=m)
@@ -187,7 +183,7 @@ class CsplineExternalParamsTest(unittest.TestCase):
         m = cubic_parameters_model(
             x_data, y_data, objective_form=True, end_point_constraint=False
         )
-        add_concave_constraints(m, tol=0.1)
+        m.add_concave_constraints(tol=0.1)
         solver_obj = pyo.SolverFactory("ipopt")
         solver_obj.solve(m)
         params = CsplineParameters(model=m)
