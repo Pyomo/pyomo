@@ -408,6 +408,7 @@ class Estimator(object):
         # Add objective function (optional)
         if self.obj_function:
 
+            # IS THIS NECESSARY???
             # Check for component naming conflicts
             reserved_names = [
                 'Total_Cost_Objective',
