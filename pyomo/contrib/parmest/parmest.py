@@ -1128,7 +1128,7 @@ class Estimator(object):
             # and the theta names from the estimator object
             parmest_model = self._create_parmest_model(experiment_number=0)
             theta_names = self._return_theta_names()
-            initial_theta = [parmest_model.find_component(name)() for name in theta_names]
+            # initial_theta = [parmest_model.find_component(name)() for name in theta_names]
 
             # Generate theta values using the sampling method
             results_df = self._generate_initial_theta(parmest_model, seed=seed, n_restarts=n_restarts, 
@@ -1146,20 +1146,24 @@ class Estimator(object):
                 # set the theta values in the model
                 theta_vals_current = theta_vals.iloc[i, :].to_dict()
 
+                # Set current theta values in the model
+                for name, value in theta_vals_current.items():
+                    parmest_model.find_component(name).set_value(value)
+
+                # Print the current theta values being set
+                    print(f"Setting {name} to {value}")
+
 
                 # Call the _Q_opt method with the generated theta values
                 qopt_result = self._Q_opt(
-                    ThetaVals=theta_vals_current,
+                    bootlist=None,
                     solver=solver,
                     return_values=return_values,
                 )
 
-                # Unpack results depending on return_values
-                if len(return_values) > 0:
-                    objectiveval, converged_theta, variable_values = qopt_result
-                else:
-                    objectiveval, converged_theta = qopt_result
-                    variable_values = None
+                # Unpack results 
+                objectiveval, converged_theta = qopt_result
+        
 
                 # Since _Q_opt does not return the solver result object, we cannot check
                 # solver termination condition directly here. Instead, we can assume
@@ -1175,13 +1179,18 @@ class Estimator(object):
                     init_objectiveval = objectiveval
                     final_objectiveval = objectiveval
                     solver_termination = "optimal"
-                    solve_time = np.nan
+                    solve_time = converged_theta.get('solve_time', np.nan)
 
-                # Check if the objective value is better than the best objective value  
-                if final_objectiveval < best_objectiveval:
-                    best_objectiveval = objectiveval
-                    best_theta = thetavals
+                # # Check if the objective value is better than the best objective value
+                # # Set a very high initial best objective value
+                # best_objectiveval = np.inf  
+                # best_theta = np.inf
+                # if final_objectiveval < best_objectiveval:
+                #     best_objectiveval = objectiveval
+                #     best_theta = thetavals
                     
+                print(f"Restart {i+1}/{n_restarts}: Objective Value = {final_objectiveval}, Theta = {converged_theta}")
+
                 # Store the results in the DataFrame for this restart
                 # Fill converged theta values
                 for j, name in enumerate(theta_names):
@@ -1191,6 +1200,9 @@ class Estimator(object):
                 results_df.at[i, "final objective"] = objectiveval if 'objectiveval' in locals() else np.nan
                 results_df.at[i, "solver termination"] = solver_termination if 'solver_termination' in locals() else np.nan
                 results_df.at[i, "solve_time"] = solve_time if 'solve_time' in locals() else np.nan
+
+                # Diagnostic: print the table after each restart
+                print(results_df)
 
                 # Add buffer to save the dataframe dynamically, if save_results is True
                 if save_results and (i + 1) % buffer == 0:
@@ -1206,7 +1218,7 @@ class Estimator(object):
                 results_df.to_csv(file_name, mode='a', header=False, index=False)
                 print("Final results saved.")
 
-            return results_df, best_theta, best_objectiveval
+            return results_df # just this for now, then best_theta, best_objectiveval
 
 
 
