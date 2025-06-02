@@ -1099,6 +1099,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         symbolic_solver_labels,
         use_named_exprs,
         sorter,
+        check_fixed_variable_bounds=True,
     ):
         super().__init__()
         self.subexpression_cache = subexpression_cache
@@ -1113,6 +1114,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self._eval_expr_visitor = _EvaluationVisitor(True)
         self.evaluate = self._eval_expr_visitor.dfs_postorder_stack
         self.sorter = sorter
+        self.check_fixed_variable_bounds = check_fixed_variable_bounds
 
         if symbolic_solver_labels:
             self.Result = DebugAMPLRepn
@@ -1164,13 +1166,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def cache_fixed_var(self, _id, child):
         val = self.check_constant(child.value, child)
-        lb, ub = child.bounds
-        if (lb is not None and lb - val > TOL) or (ub is not None and ub - val < -TOL):
-            raise InfeasibleConstraintException(
-                "model contains a trivially infeasible "
-                f"variable '{child.name}' (fixed value "
-                f"{val} outside bounds [{lb}, {ub}])."
-            )
+        if self.check_fixed_variable_bounds:
+            lb, ub = child.bounds
+            if (lb is not None and lb - val > TOL) or (ub is not None and ub - val < -TOL):
+                raise InfeasibleConstraintException(
+                    "model contains a trivially infeasible "
+                    f"variable '{child.name}' (fixed value "
+                    f"{val} outside bounds [{lb}, {ub}])."
+                )
         self.fixed_vars[_id] = self.check_constant(child.value, child)
 
     def node_result_to_amplrepn(self, data):

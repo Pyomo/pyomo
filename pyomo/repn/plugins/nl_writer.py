@@ -281,6 +281,18 @@ class NLWriter(object):
         variable elimination (without fill-in).""",
         ),
     )
+    CONFIG.declare(
+        'check_fixed_variable_bounds',
+        ConfigValue(
+            default=True,
+            domain=bool,
+            description='Check the bounds on fixed variables',
+            doc="""
+            If True, the writer will ensure that the values of fixed 
+            variables are within the variable bounds.
+            """,
+        ),
+    )
 
     def __init__(self):
         self.config = self.CONFIG()
@@ -521,6 +533,7 @@ class _NLWriter_impl(object):
             self.symbolic_solver_labels,
             self.config.export_defined_variables,
             self.sorter,
+            check_fixed_variable_bounds=config.check_fixed_variable_bounds,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
