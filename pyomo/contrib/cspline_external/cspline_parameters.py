@@ -14,6 +14,7 @@ import pyomo.environ as pyo
 from pyomo.core.base.block import BlockData, declare_custom_block
 import idaes
 
+
 def _f_cubic(x, alpha, s=None):
     """
     Cubic function:
@@ -84,7 +85,7 @@ def _fxx_cubic(x, alpha, s=None):
 
 
 def _yxx_endpoint_is_zero_eqn(blk, s):
-    """Rule which is used to add a constraint to set the second derivative 
+    """Rule which is used to add a constraint to set the second derivative
     at the first and last knot to zero.
     """
     if s == blk.seg_idx.last():
@@ -96,8 +97,7 @@ def _yxx_endpoint_is_zero_eqn(blk, s):
 
 class _increasing_constraint:
     def __init__(self, tol=0):
-        """Rule functor for concave constraints on cubics.
-        """
+        """Rule functor for concave constraints on cubics."""
         self.tol = tol
 
     def __call__(self, blk, k):
@@ -110,8 +110,7 @@ class _increasing_constraint:
 
 class _decreasing_constraint:
     def __init__(self, tol=0):
-        """Rule functor for concave constraints on cubics.
-        """
+        """Rule functor for concave constraints on cubics."""
         self.tol = tol
 
     def __call__(self, blk, k):
@@ -124,10 +123,9 @@ class _decreasing_constraint:
 
 class _convex_constraint:
     def __init__(self, tol=0):
-        """Rule functor for concave constraints on cubics.
-        """
+        """Rule functor for concave constraints on cubics."""
         self.tol = tol
-    
+
     def __call__(self, blk, k):
         if k >= len(blk.knt_idx):
             s = k - 1
@@ -138,10 +136,9 @@ class _convex_constraint:
 
 class _concave_constraint:
     def __init__(self, tol=0):
-        """Rule functor for concave constraints on cubics.
-        """
+        """Rule functor for concave constraints on cubics."""
         self.tol = tol
-    
+
     def __call__(self, blk, k):
         if k >= len(blk.knt_idx):
             s = k - 1
@@ -321,19 +318,19 @@ class CubicParametersModelData(BlockData):
     def add_model(
         self,
         x_data,
-        y_data, 
+        y_data,
         x_knots=None,
         end_point_constraint=True,
         objective_form=False,
     ):
-        """Add parameter model to the block.  By default this creates a square 
-        linear model, but optionally it can leave off the endpoint second 
+        """Add parameter model to the block.  By default this creates a square
+        linear model, but optionally it can leave off the endpoint second
         derivative constraints and add an objective function for fitting data
         instead.  The purpose of the alternative least squares form is to allow
-        the spline to be constrained in other ways that don't require a perfect 
-        data match. The knots don't need to be the same as the x data to allow, 
+        the spline to be constrained in other ways that don't require a perfect
+        data match. The knots don't need to be the same as the x data to allow,
         for example, additional segments for extrapolation. This is not the most
-        computationally efficient way to calculate parameters, but since it is 
+        computationally efficient way to calculate parameters, but since it is
         used to precalculate parameters, speed is not important.
 
         Args:
@@ -361,9 +358,15 @@ class CubicParametersModelData(BlockData):
         self.seg_idx = pyo.RangeSet(n_knots - 1)
         self.dat_idx = pyo.RangeSet(n_data)
 
-        self.x_data = pyo.Param(self.dat_idx, initialize={i + 1: x for i, x in enumerate(x_data)})
-        self.y_data = pyo.Param(self.dat_idx, initialize={i + 1: x for i, x in enumerate(y_data)})
-        self.x = pyo.Param(self.knt_idx, initialize={i + 1: x for i, x in enumerate(x_knots)})
+        self.x_data = pyo.Param(
+            self.dat_idx, initialize={i + 1: x for i, x in enumerate(x_data)}
+        )
+        self.y_data = pyo.Param(
+            self.dat_idx, initialize={i + 1: x for i, x in enumerate(y_data)}
+        )
+        self.x = pyo.Param(
+            self.knt_idx, initialize={i + 1: x for i, x in enumerate(x_knots)}
+        )
         self.alpha = pyo.Var(self.seg_idx, {1, 2, 3, 4}, initialize=1)
 
         # f_s(x) = f_s+1(x)
@@ -371,7 +374,9 @@ class CubicParametersModelData(BlockData):
         def y_eqn(blk, s):
             if s == self.seg_idx.last():
                 return pyo.Constraint.Skip
-            return _f_cubic(self.x[s + 1], self.alpha, s) == _f_cubic(self.x[s + 1], self.alpha, s + 1)
+            return _f_cubic(self.x[s + 1], self.alpha, s) == _f_cubic(
+                self.x[s + 1], self.alpha, s + 1
+            )
 
         # f'_s(x) = f'_s+1(x)
         @self.Constraint(self.seg_idx)
@@ -421,8 +426,7 @@ class CubicParametersModelData(BlockData):
         derivative is zero.  This function adds those constraints to a model
         """
         self.second_derivative_at_endpoints = pyo.Constraint(
-            [self.seg_idx.first(), self.seg_idx.last()],
-            rule=_yxx_endpoint_is_zero_eqn
+            [self.seg_idx.first(), self.seg_idx.last()], rule=_yxx_endpoint_is_zero_eqn
         )
 
     def add_decreasing_constraints(self, tol=0):
@@ -434,8 +438,9 @@ class CubicParametersModelData(BlockData):
         decreasing, since the segments are cubic, but you can either check the
         resulting curve or pair it with convex or concave constraints.
         """
-        self.decreasing_ineq = pyo.Constraint(self.knt_idx, rule=_decreasing_constraint(tol))
-
+        self.decreasing_ineq = pyo.Constraint(
+            self.knt_idx, rule=_decreasing_constraint(tol)
+        )
 
     def add_increasing_constraints(self, tol=0):
         """If the objective form of the parameter calculation is used, the
@@ -446,23 +451,23 @@ class CubicParametersModelData(BlockData):
         increasing, since the segments are cubic, but you can either check the
         resulting curve or pair it with convex or concave constraints.
         """
-        self.increasing_ineq = pyo.Constraint(self.knt_idx, rule=_increasing_constraint(tol))
-
+        self.increasing_ineq = pyo.Constraint(
+            self.knt_idx, rule=_increasing_constraint(tol)
+        )
 
     def add_concave_constraints(self, tol=0):
         """If the objective form of the parameter calculation is used, the
         data and the spline don't need to match exactly, and we can add
         constraints on the second derivatives that they are always negative.
         """
-        self.concave_ineq = pyo.Constraint(self.knt_idx, rule=_concave_constraint(tol)) 
-
+        self.concave_ineq = pyo.Constraint(self.knt_idx, rule=_concave_constraint(tol))
 
     def add_convex_constraints(self, tol=0):
         """If the objective form of the parameter calculation is used, the
         data and the spline don't need to match exactly, and we can add
         constraints on the second derivatives that they are always positive.
         """
-        self.convex_ineq = pyo.Constraint(self.knt_idx, rule=_convex_constraint(tol)) 
+        self.convex_ineq = pyo.Constraint(self.knt_idx, rule=_convex_constraint(tol))
 
 
 def cubic_parameters_model(
@@ -523,7 +528,7 @@ def add_concave_constraints(m, tol=0):
     data and the spline don't need to match exactly, and we can add
     constraints on the second derivatives that they are always negative.
     """
-    m.concave_ineq = pyo.Constraint(m.knt_idx, rule=_concave_constraint(tol)) 
+    m.concave_ineq = pyo.Constraint(m.knt_idx, rule=_concave_constraint(tol))
 
 
 def add_increasing_constraints(m, tol=0):
@@ -544,4 +549,3 @@ def add_convex_constraints(m, tol=0):
     constraints on the second derivatives that they are always positive.
     """
     m.convex_ineq = pyo.Constraint(m.knt_idx, rule=_convex_constraint(tol))
-
