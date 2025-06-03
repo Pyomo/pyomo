@@ -154,12 +154,14 @@ class TestIpoptInterface(unittest.TestCase):
 
     def test_parse_output(self):
         # Old ipopt style (<=3.13)
-        output = """Ipopt 3.13.2: 
+        # Note: we are removing the URLs from the baseline because they
+        # do not impact the test (and checking the URLs is fragile)
+        output = """Ipopt 3.13.2:
 
 ******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
  Ipopt is released as open source code under the Eclipse Public License (EPL).
-         For more information visit http://projects.coin-or.org/Ipopt
+         For more information visit
 
 This version of Ipopt was compiled from source code available at
     https://github.com/IDAES/Ipopt as part of the Institute for the Design of
@@ -171,7 +173,7 @@ This version of Ipopt was compiled using HSL, a collection of Fortran codes
     publicity material resulting from use of the HSL codes within IPOPT must
     contain the following acknowledgement:
         HSL, a collection of Fortran codes for large-scale scientific
-        computation. See http://www.hsl.rl.ac.uk.
+        computation. See
 ******************************************************************************
 
 This is Ipopt version 3.13.2, running with linear solver ma27.
@@ -226,7 +228,7 @@ Total CPU secs in IPOPT (w/o function evaluations)   =      0.000
 Total CPU secs in NLP function evaluations           =      0.000
 
 EXIT: Optimal Solution Found.
-        
+
         """
         parsed_output = ipopt.Ipopt()._parse_ipopt_output(output)
         self.assertEqual(parsed_output["iters"], 11)
@@ -241,7 +243,7 @@ EXIT: Optimal Solution Found.
         output = """******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
  Ipopt is released as open source code under the Eclipse Public License (EPL).
-         For more information visit https://github.com/coin-or/Ipopt
+         For more information visit
 ******************************************************************************
 
 This is Ipopt version 3.14.17, running with linear solver ma27.
