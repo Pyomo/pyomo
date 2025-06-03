@@ -192,7 +192,7 @@ class ExtendedPyomoException(PyomoException):
 
     message = None
 
-    def __init__(self, message=None, *, prolog=None, extra_message=None):
+    def __init__(self, message=None, *, prolog=None, extra_message=None, width=120):
         main_message = message or self.message or "An error occurred."
 
         formatted_message = format_exception(
@@ -200,6 +200,7 @@ class ExtendedPyomoException(PyomoException):
             prolog=prolog,
             epilog=extra_message,
             exception=self.__class__,
+            width=width,
         )
 
         super().__init__(formatted_message)
