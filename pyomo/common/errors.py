@@ -126,7 +126,7 @@ class PyomoException(Exception):
     """
 
 
-class AppendedPyomoException(PyomoException):
+class ExtendedPyomoException(PyomoException):
     """
     Exception class that mixes the base PyomoException and format_exception
     to allow developers to create custom (and prettily formatted) exceptions
@@ -148,7 +148,7 @@ class AppendedPyomoException(PyomoException):
     --------
     Basic usage with default message:
 
-    >>> class NoFeasibleSolutionError(AppendedPyomoException):
+    >>> class NoFeasibleSolutionError(ExtendedPyomoException):
     ...     message = "No feasible solution found."
 
     >>> raise NoFeasibleSolutionError()
