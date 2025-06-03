@@ -1126,6 +1126,8 @@ class Estimator(object):
             
             # Find the initialized values of theta from the labeled parmest model
             # and the theta names from the estimator object
+
+            # @Reviewers, pyomo team: Use this or use instance creation callback?
             parmest_model = self._create_parmest_model(experiment_number=0)
             theta_names = self._return_theta_names()
             # initial_theta = [parmest_model.find_component(name)() for name in theta_names]
@@ -1139,6 +1141,8 @@ class Estimator(object):
             converged_theta_vals = np.zeros((n_restarts, len(theta_names)))
 
             # make empty list to store results
+            # @ Pyomo team, each of these instances are independent and thus embarassingly parallelizable,
+            # Do you have recommendations on how to parallelize this for loop on a multicore machine
             for i in range(n_restarts):
                 # for number of restarts, call the self._Q_opt method
                 # with the theta values generated using the _generalize_initial_theta method
@@ -1179,7 +1183,10 @@ class Estimator(object):
                     init_objectiveval = objectiveval
                     final_objectiveval = objectiveval
                     solver_termination = "optimal"
-                    solve_time = converged_theta.get('solve_time', np.nan)
+
+                    # plan to add solve time if available, @Reviewers, recommendations on how from current pyomo examples would
+                    # be appreciated
+                    solve_time = converged_theta.solve_time if hasattr(converged_theta, 'solve_time') else np.nan
 
                 # # Check if the objective value is better than the best objective value
                 # # Set a very high initial best objective value
