@@ -232,7 +232,7 @@ def _experiment_instance_creation_callback(
 
 def SSE(model):
     """
-    Returns an expression that is used to compute the sum of squared error (`SSE`) objective,
+    Returns an expression that is used to compute the sum of squared error ('SSE') objective,
     assuming Gaussian i.i.d. errors
 
     Argument:
@@ -248,7 +248,7 @@ def SSE(model):
 
 def SSE_weighted(model):
     """
-    Returns an expression that is used to compute the `SSE_weighted` objective,
+    Returns an expression that is used to compute the 'SSE_weighted' objective,
     assuming Gaussian i.i.d. errors, with measurement error standard deviation defined in the annotated Pyomo model
 
     Argument:
@@ -285,7 +285,7 @@ def SSE_weighted(model):
 
 def _check_model_labels_helper(model):
     """
-    Checks if the annotated Pyomo model contains the necessary suffixes.
+    Checks if the annotated Pyomo model contains the necessary suffixes
 
     Argument:
         model: annotated Pyomo model for suffix checking
@@ -773,8 +773,10 @@ class Estimator(object):
         try:
             self.obj_function = ObjectiveLib(obj_function)
         except ValueError:
-            raise ValueError(f"Invalid objective function: '{obj_function}'. "
-                             f"Choose from {[e.value for e in ObjectiveLib]}.")
+            raise ValueError(
+                f"Invalid objective function: '{obj_function}'. "
+                f"Choose from {[e.value for e in ObjectiveLib]}."
+            )
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
@@ -1542,7 +1544,9 @@ class Estimator(object):
 
         # check if the method input is a string
         if not isinstance(method, str):
-            raise TypeError("Expected a string for the method, e.g., 'finite_difference'")
+            raise TypeError(
+                "Expected a string for the method, e.g., 'finite_difference'"
+            )
 
         # check if the supplied number of datapoints is an integer
         if not isinstance(cov_n, int):
