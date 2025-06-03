@@ -2724,9 +2724,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, "solve1.out"), format='json')
-        with open(join(currdir, "solve1.out"), 'r') as out, open(
-            join(currdir, "solve1.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve1.out"), 'r') as out,
+            open(join(currdir, "solve1.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2740,9 +2741,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, "solve1x.out"), format='json')
-        with open(join(currdir, "solve1x.out"), 'r') as out, open(
-            join(currdir, "solve1.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve1x.out"), 'r') as out,
+            open(join(currdir, "solve1.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2751,9 +2753,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, "solve1a.out"), format='json')
-        with open(join(currdir, "solve1a.out"), 'r') as out, open(
-            join(currdir, "solve1a.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve1a.out"), 'r') as out,
+            open(join(currdir, "solve1a.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2769,9 +2772,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, "solve1y.out"), format='json')
-        with open(join(currdir, "solve1y.out"), 'r') as out, open(
-            join(currdir, "solve1.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve1y.out"), 'r') as out,
+            open(join(currdir, "solve1.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2780,9 +2784,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, "solve1b.out"), format='json')
-        with open(join(currdir, "solve1b.out"), 'r') as out, open(
-            join(currdir, "solve1b.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve1b.out"), 'r') as out,
+            open(join(currdir, "solve1b.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2809,9 +2814,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, 'solve4.out'), format='json')
-        with open(join(currdir, "solve4.out"), 'r') as out, open(
-            join(currdir, "solve1.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve4.out"), 'r') as out,
+            open(join(currdir, "solve1.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2845,9 +2851,10 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir, 'solve6.out'), format='json')
-        with open(join(currdir, "solve6.out"), 'r') as out, open(
-            join(currdir, "solve6.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve6.out"), 'r') as out,
+            open(join(currdir, "solve6.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
@@ -2882,9 +2889,10 @@ class TestBlock(unittest.TestCase):
         # model.display()
         model.solutions.store_to(results)
         results.write(filename=join(currdir, 'solve7.out'), format='json')
-        with open(join(currdir, "solve7.out"), 'r') as out, open(
-            join(currdir, "solve7.txt"), 'r'
-        ) as txt:
+        with (
+            open(join(currdir, "solve7.out"), 'r') as out,
+            open(join(currdir, "solve7.txt"), 'r') as txt,
+        ):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )

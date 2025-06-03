@@ -126,6 +126,63 @@ class TestSeriesData(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, msg):
             new_data = data.get_data_at_time(-0.01, tolerance=1e-3)
 
+    def test_get_data_interpolate(self):
+        m = self._make_model()
+        data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
+        data = TimeSeriesData(data_dict, m.time)
+        new_data = data.get_interpolated_data(0.05)
+        self.assertEqual(ScalarData({m.var[:, "A"]: 1.5, m.var[:, "B"]: 3}), new_data)
+
+        t1 = 0.05
+        new_data = data.get_interpolated_data([t1])
+        self.assertEqual(
+            TimeSeriesData({m.var[:, "A"]: [1.5], m.var[:, "B"]: [3]}, [t1]), new_data
+        )
+
+        new_t = [0.05, 0.15]
+        new_data = data.get_interpolated_data(new_t)
+        self.assertEqual(
+            TimeSeriesData({m.var[:, "A"]: [1.5, 2.5], m.var[:, "B"]: [3, 5]}, new_t),
+            new_data,
+        )
+
+    def test_get_data_interpolate_range_check(self):
+        m = self._make_model()
+        data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
+        data = TimeSeriesData(data_dict, m.time)
+        msg = "Requesting interpolation outside data range."
+        with self.assertRaisesRegex(RuntimeError, msg):
+            new_data = data.get_interpolated_data(0.2 + 1e-6)
+        with self.assertRaisesRegex(RuntimeError, msg):
+            new_data = data.get_interpolated_data(0.0 - 1e-6)
+        new_data = data.get_interpolated_data(0.2 + 1e-6, tolerance=1e-5)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"]), 3, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"]), 6, 4)
+
+        t1 = 0.2 + 1e-6
+        with self.assertRaisesRegex(RuntimeError, msg):
+            new_data = data.get_interpolated_data([t1])
+        new_data = data.get_interpolated_data([t1], tolerance=1e-5)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[0], 3, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[0], 6, 4)
+
+        new_t = [0.0 - 1e-6, 0.2 + 1e-6]
+        with self.assertRaisesRegex(RuntimeError, msg):
+            new_data = data.get_interpolated_data(new_t)
+        new_data = data.get_interpolated_data(new_t, tolerance=1e-5)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[0], 1, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[0], 2, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[1], 3, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[1], 6, 4)
+
+        # check that the exact endpoints don't raise an exception with 0 tol
+        new_t = [0.0, 0.2]
+        new_data = data.get_interpolated_data(new_t, tolerance=0.0)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[0], 1, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[0], 2, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "A"])[1], 3, 4)
+        self.assertAlmostEqual(new_data.get_data_from_key(m.var[:, "B"])[1], 6, 4)
+
     def test_to_serializable(self):
         m = self._make_model()
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}

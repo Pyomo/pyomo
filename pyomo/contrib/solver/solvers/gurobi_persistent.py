@@ -68,7 +68,7 @@ def _import_gurobipy():
         raise
     if gurobipy.GRB.VERSION_MAJOR < 7:
         GurobiPersistent._available = Availability.BadVersion
-        raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
+        raise ImportError('The Persistent Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
 
@@ -244,9 +244,7 @@ class GurobiPersistent(
     """
 
     CONFIG = GurobiConfig()
-
-    _available = None
-    _num_instances = 0
+    _gurobipy_available = gurobipy_available
 
     def __init__(self, **kwds):
         treat_fixed_vars_as_params = kwds.pop('treat_fixed_vars_as_params', True)
@@ -254,7 +252,7 @@ class GurobiPersistent(
         PersistentSolverUtils.__init__(
             self, treat_fixed_vars_as_params=treat_fixed_vars_as_params
         )
-        GurobiPersistent._num_instances += 1
+        self._register_env_client()
         self._solver_model = None
         self._symbol_map = SymbolMap()
         self._labeler = None
@@ -276,15 +274,11 @@ class GurobiPersistent(
 
     def release_license(self):
         self._reinit()
-        if gurobipy_available:
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
+        self.__class__.release_license()
 
     def __del__(self):
         if not python_is_shutting_down():
-            GurobiPersistent._num_instances -= 1
-            if GurobiPersistent._num_instances == 0:
-                self.release_license()
+            self._release_env_client()
 
     @property
     def symbol_map(self):
@@ -416,6 +410,9 @@ class GurobiPersistent(
         saved_config = self.config
         saved_tmp_config = self._active_config
         self.__init__(treat_fixed_vars_as_params=self._treat_fixed_vars_as_params)
+        # Note that __init__ registers a new env client, so we need to
+        # release it here:
+        self._release_env_client()
         self.config = saved_config
         self._active_config = saved_tmp_config
 
@@ -436,10 +433,7 @@ class GurobiPersistent(
         else:
             self._labeler = NumericLabeler('x')
 
-        if model.name is not None:
-            self._solver_model = gurobipy.Model(model.name)
-        else:
-            self._solver_model = gurobipy.Model()
+        self._solver_model = gurobipy.Model(name=model.name or '', env=self.env())
 
         self.add_block(model)
         if self._objective is None:
@@ -1226,15 +1220,15 @@ class GurobiPersistent(
             as an MILP using extended cutting planes in callbacks.
 
                 >>> from gurobipy import GRB # doctest:+SKIP
-                >>> import pyomo.environ as pe
+                >>> import pyomo.environ as pyo
                 >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
                 >>> from pyomo.contrib import appsi
                 >>>
-                >>> m = pe.ConcreteModel()
-                >>> m.x = pe.Var(bounds=(0, 4))
-                >>> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-                >>> m.obj = pe.Objective(expr=2*m.x + m.y)
-                >>> m.cons = pe.ConstraintList()  # for the cutting planes
+                >>> m = pyo.ConcreteModel()
+                >>> m.x = pyo.Var(bounds=(0, 4))
+                >>> m.y = pyo.Var(within=pyo.Integers, bounds=(0, None))
+                >>> m.obj = pyo.Objective(expr=2*m.x + m.y)
+                >>> m.cons = pyo.ConstraintList()  # for the cutting planes
                 >>>
                 >>> def _add_cut(xval):
                 ...     # a function to generate the cut

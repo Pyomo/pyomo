@@ -519,7 +519,7 @@ class Component(ComponentBase):
             self.local_name,
             self.doc,
             self.is_constructed(),
-            *self._pprint()
+            *self._pprint(),
         )
 
     def display(self, ostream=None, verbose=False, prefix=""):

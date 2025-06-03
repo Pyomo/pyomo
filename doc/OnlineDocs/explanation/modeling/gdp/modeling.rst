@@ -17,11 +17,6 @@ Modeling in Pyomo.GDP
     from pyomo.gdp import Disjunct, Disjunction
     from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 
-    # This is to make unicode comparison work in python 2.7.
-    import sys
-    if sys.version[0] == '2':
-        reload(sys)
-        sys.setdefaultencoding("utf-8")
 
 Disjunctions
 ============
@@ -389,22 +384,22 @@ The following models all work and are equivalent for :math:`\left[x = 0\right] \
 
    Option 1: Rule-based construction
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.gdp import Disjunct, Disjunction
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> # Two conditions
    >>> def _d(disjunct, flag):
    ...    model = disjunct.model()
    ...    if flag:
    ...       # x == 0
-   ...       disjunct.c = Constraint(expr=model.x == 0)
+   ...       disjunct.c = pyo.Constraint(expr=model.x == 0)
    ...    else:
    ...       # y == 0
-   ...       disjunct.c = Constraint(expr=model.y == 0)
+   ...       disjunct.c = pyo.Constraint(expr=model.y == 0)
    >>> model.d = Disjunct([0,1], rule=_d)
 
    >>> # Define the disjunction
@@ -414,29 +409,29 @@ The following models all work and are equivalent for :math:`\left[x = 0\right] \
 
    Option 2: Explicit disjuncts
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.gdp import Disjunct, Disjunction
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> model.fix_x = Disjunct()
-   >>> model.fix_x.c = Constraint(expr=model.x == 0)
+   >>> model.fix_x.c = pyo.Constraint(expr=model.x == 0)
 
    >>> model.fix_y = Disjunct()
-   >>> model.fix_y.c = Constraint(expr=model.y == 0)
+   >>> model.fix_y.c = pyo.Constraint(expr=model.y == 0)
 
    >>> model.c = Disjunction(expr=[model.fix_x, model.fix_y])
 
    Option 3: Implicit disjuncts (disjunction rule returns a list of
    expressions or a list of lists of expressions)
 
-   >>> from pyomo.environ import *
-   >>> from pyomo.gdp import *
-   >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.gdp import Disjunction
+   >>> model = pyo.ConcreteModel()
 
-   >>> model.x = Var()
-   >>> model.y = Var()
+   >>> model.x = pyo.Var()
+   >>> model.y = pyo.Var()
 
    >>> model.c = Disjunction(expr=[model.x == 0, model.y == 0])
