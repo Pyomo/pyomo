@@ -9,24 +9,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.errors import PyomoException
+from pyomo.common.errors import AppendedPyomoException
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 import pyomo.core.expr as EXPR
 from pyomo.core.base.objective import Objective
 
 
-class AppendedPyomoException(PyomoException):
-    _message = ''
-
-    def __init__(self, extra_message=None):
-        message = self._message
-        if extra_message:
-            message += f'\n\nAdditional info: {extra_message}'
-        super().__init__(message)
-
-
 class NoFeasibleSolutionError(AppendedPyomoException):
-    _message = (
+    message = (
         'A feasible solution was not found, so no solution can be loaded. '
         'Please set opt.config.load_solutions=False and check '
         'results.solution_status and '
@@ -35,35 +25,35 @@ class NoFeasibleSolutionError(AppendedPyomoException):
 
 
 class NoOptimalSolutionError(AppendedPyomoException):
-    _message = (
+    message = (
         'Solver did not find the optimal solution. Set '
         'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
     )
 
 
 class NoSolutionError(AppendedPyomoException):
-    _message = (
+    message = (
         'Solution loader does not currently have a valid solution. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
 class NoDualsError(AppendedPyomoException):
-    _message = (
+    message = (
         'Solver does not currently have valid duals. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
 class NoReducedCostsError(AppendedPyomoException):
-    _message = (
+    message = (
         'Solver does not currently have valid reduced costs. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
 class IncompatibleModelError(AppendedPyomoException):
-    _message = (
+    message = (
         'Model is not compatible with the chosen solver. Please check '
         'the model and solver.'
     )

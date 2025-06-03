@@ -117,8 +117,6 @@ class ApplicationError(Exception):
     An exception used when an external application generates an error.
     """
 
-    pass
-
 
 class PyomoException(Exception):
     """
@@ -127,7 +125,84 @@ class PyomoException(Exception):
     (e.g., in other applications that use Pyomo).
     """
 
-    pass
+
+class AppendedPyomoException(PyomoException):
+    """
+    Exception class that mixes the base PyomoException and format_exception
+    to allow developers to create custom (and prettily formatted) exceptions
+    while still inheriting from a common exception class
+
+    Parameters
+    ----------
+    message : str, optional
+        Main message for the exception. If not provided, subclasses can supply
+        a default message via the `message` attribute.
+
+    prolog : str, optional
+        A message to output before the main message (like a header).
+
+    extra_message : str, optional
+        Additional details or context, appended to the epilog.
+
+    Examples
+    --------
+    Basic usage with default message:
+
+    >>> class NoFeasibleSolutionError(AppendedPyomoException):
+    ...     message = "No feasible solution found."
+
+    >>> raise NoFeasibleSolutionError()
+    Traceback (most recent call last):
+    ...
+    NoFeasibleSolutionError: No feasible solution found.
+
+    Providing extra information:
+
+    >>> raise NoFeasibleSolutionError(extra_message="Solver status: infeasible.")
+    Traceback (most recent call last):
+    ...
+    NoFeasibleSolutionError: No feasible solution found.
+        Additional info: Solver status: infeasible.
+
+    Overriding the default message:
+
+    >>> raise NoFeasibleSolutionError("Custom error message.")
+    Traceback (most recent call last):
+    ...
+    NoFeasibleSolutionError: Custom error message.
+
+    Adding a prolog:
+
+    >>> raise NoFeasibleSolutionError(prolog="Optimization error:")
+    Traceback (most recent call last):
+    ...
+    NoFeasibleSolutionError: Optimization error:
+        No feasible solution found.
+
+    Combining prolog and extra_message:
+
+    >>> raise NoFeasibleSolutionError(prolog="Optimization error:",
+                                      extra_message="Solver log at /tmp/log.txt")
+    Traceback (most recent call last):
+    ...
+    NoFeasibleSolutionError: Optimization error:
+        No feasible solution found.
+            Additional info: Solver log at /tmp/log.txt
+    """
+
+    message = None
+
+    def __init__(self, message=None, *, prolog=None, extra_message=None):
+        main_message = message or self.message or "An error occurred."
+
+        formatted_message = format_exception(
+            msg=main_message,
+            prolog=prolog,
+            epilog=extra_message,
+            exception=self.__class__,
+        )
+
+        super().__init__(formatted_message)
 
 
 class DeferredImportError(ImportError):
@@ -136,8 +211,6 @@ class DeferredImportError(ImportError):
     import failed.
 
     """
-
-    pass
 
 
 class DeveloperError(PyomoException, NotImplementedError):
@@ -163,8 +236,6 @@ class InfeasibleConstraintException(PyomoException):
     the course of range reduction).
     """
 
-    pass
-
 
 class IterationLimitError(PyomoException, RuntimeError):
     """A subclass of :py:class:`RuntimeError`, raised by an iterative method
@@ -182,15 +253,11 @@ class IntervalException(PyomoException, ValueError):
     Exception class used for errors in interval arithmetic.
     """
 
-    pass
-
 
 class InvalidValueError(PyomoException, ValueError):
     """
     Exception class used for value errors in compiled model representations
     """
-
-    pass
 
 
 class MouseTrap(PyomoException, NotImplementedError):
@@ -218,16 +285,12 @@ class MouseTrap(PyomoException, NotImplementedError):
 class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
 
-    pass
-
 
 class TempfileContextError(PyomoException, IndexError):
     """A Pyomo-specific IndexError raised when attempting to use the
     TempfileManager when it does not have a currently active context.
 
     """
-
-    pass
 
 
 class TemplateExpressionError(ValueError):

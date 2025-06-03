@@ -10,11 +10,15 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.errors import format_exception
+from pyomo.common.errors import format_exception, AppendedPyomoException
 
 
 class LocalException(Exception):
     pass
+
+
+class CustomLocalException(AppendedPyomoException):
+    message = 'Default message.'
 
 
 class TestFormatException(unittest.TestCase):
@@ -137,3 +141,34 @@ class TestFormatException(unittest.TestCase):
             "        inevitably wrap onto another line.\n"
             "Hello world:\n    This is an epilog:",
         )
+
+
+class TestAppendedPyomoException(unittest.TestCase):
+    def test_default_message(self):
+        exception = CustomLocalException()
+        output = str(exception).replace("\n", " ").strip()
+        self.assertIn("Default message.", output)
+
+    def test_custom_message_override(self):
+        exception = CustomLocalException("Non-default message.")
+        self.assertNotIn("Default message.", str(exception))
+        self.assertIn("Non-default message.", str(exception))
+
+    def test_extra_message_epilog(self):
+        exception = CustomLocalException(extra_message="Epilog message.")
+        self.assertIn("Epilog message.", str(exception))
+
+    def test_prolog_message(self):
+        exception = CustomLocalException(prolog="Prolog message.")
+        self.assertIn("Prolog message.", str(exception))
+
+    def test_multiple_features(self):
+        exception = CustomLocalException(
+            "Non-default message.",
+            extra_message="Epilog message.",
+            prolog="Prolog message.",
+        )
+        self.assertNotIn("Default message.", str(exception))
+        self.assertIn("Non-default message.", str(exception))
+        self.assertIn("Epilog message.", str(exception))
+        self.assertIn("Prolog message.", str(exception))
