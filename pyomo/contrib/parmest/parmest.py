@@ -590,7 +590,8 @@ class Estimator(object):
         df_multistart["solver termination"] = np.nan
         df_multistart["solve_time"] = np.nan
 
-        print(df_multistart)
+        # Debugging output
+        # print(df_multistart)
 
         return df_multistart
 
@@ -1209,7 +1210,7 @@ class Estimator(object):
                 results_df.at[i, "solve_time"] = solve_time if 'solve_time' in locals() else np.nan
 
                 # Diagnostic: print the table after each restart
-                print(results_df)
+                # print(results_df)
 
                 # Add buffer to save the dataframe dynamically, if save_results is True
                 if save_results and (i + 1) % buffer == 0:
