@@ -162,7 +162,7 @@ class ExtendedPyomoException(PyomoException):
     Traceback (most recent call last):
     ...
     NoFeasibleSolutionError: No feasible solution found.
-        Additional info: Solver status: infeasible.
+        Solver status: infeasible.
 
     Overriding the default message:
 
@@ -185,8 +185,8 @@ class ExtendedPyomoException(PyomoException):
     Traceback (most recent call last):
     ...
     NoFeasibleSolutionError: Optimization error:
-        No feasible solution found.
-            Additional info: Solver log at /tmp/log.txt
+            No feasible solution found.
+        Solver log at /tmp/log.txt
     """
 
     message = None
