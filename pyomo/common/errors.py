@@ -181,8 +181,7 @@ class ExtendedPyomoException(PyomoException):
 
     Combining prolog and extra_message:
 
-    >>> raise NoFeasibleSolutionError(prolog="Optimization error:",
-                                      extra_message="Solver log at /tmp/log.txt")
+    >>> raise NoFeasibleSolutionError(prolog="Optimization error:", extra_message="Solver log at /tmp/log.txt")
     Traceback (most recent call last):
     ...
     NoFeasibleSolutionError: Optimization error:
