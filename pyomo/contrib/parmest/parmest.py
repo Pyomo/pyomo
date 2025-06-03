@@ -359,7 +359,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
         experiment: Estimator class object that contains the model for a particular experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
         step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
-        solver: string ``solver`` object specified by the user
+        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
 
     Returns:
@@ -463,10 +463,10 @@ def compute_covariance_matrix(
 
     Arguments:
         experiment_list: list of Estimator class objects containing the model for different experimental conditions
-        method: string ``method`` object specified by the user (e.g., `finite_difference`)
+        method: string ``method`` object specified by the user, e.g., 'finite_difference'
         theta_vals: dictionary containing the estimates of the unknown parameters
         step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
-        solver: string ``solver`` object specified by the user
+        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
         estimated_var: value of the estimated variance of the measurement error in cases where
                        the user does not supply the measurement error standard deviation
@@ -553,7 +553,7 @@ def _finite_difference_FIM(
         experiment: Estimator class object that contains the model for a particular experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
         step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
-        solver: string ``solver`` object specified by the user
+        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
         estimated_var: value of the estimated variance of the measurement error in cases where
                        the user does not supply the measurement error standard deviation
@@ -619,7 +619,7 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     Arguments:
         experiment: Estimator class object that contains the model for a particular experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
-        solver: string ``solver`` object specified by the user
+        solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
         estimated_var: value of the estimated variance of the measurement error in cases where
                        the user does not supply the measurement error standard deviation
@@ -770,7 +770,11 @@ class Estimator(object):
         _check_model_labels_helper(model)
 
         # populate keyword argument options
-        self.obj_function = ObjectiveLib(obj_function)
+        try:
+            self.obj_function = ObjectiveLib(obj_function)
+        except ValueError:
+            raise ValueError(f"Invalid objective function: '{obj_function}'. "
+                             f"Choose from {[e.value for e in ObjectiveLib]}.")
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
@@ -1065,8 +1069,8 @@ class Estimator(object):
         Covariance matrix calculation using all scenarios in the data
 
         Argument:
-            method: string ``method`` object specified by the user (e.g., `finite_difference`)
-            solver: string ``solver`` object specified by the user (e.g., `ipopt`)
+            method: string ``method`` object specified by the user, e.g., 'finite_difference'
+            solver: string ``solver`` object specified by the user, e.g., 'ipopt'
             cov_n: integer, number of datapoints specified by the user which is used in the objective function
             step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
 
@@ -1524,8 +1528,8 @@ class Estimator(object):
 
         Argument:
             method: string ``method`` object specified by the user
-                    options - `finite_difference`, `reduced_hessian`, and `automatic_differentiation_kaug`
-            solver: string ``solver`` object specified by the user (e.g., `ipopt`)
+                    options - 'finite_difference', 'reduced_hessian', and 'automatic_differentiation_kaug'
+            solver: string ``solver`` object specified by the user, e.g., 'ipopt'
             cov_n: integer, number of datapoints specified by the user which is used in the objective function
             step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
 
@@ -1534,11 +1538,11 @@ class Estimator(object):
         """
         # check if the solver input is a string
         if not isinstance(solver, str):
-            raise TypeError("Expected a string for the solver.")
+            raise TypeError("Expected a string for the solver, e.g., 'ipopt'")
 
         # check if the method input is a string
         if not isinstance(method, str):
-            raise TypeError("Expected a string for the method.")
+            raise TypeError("Expected a string for the method, e.g., 'finite_difference'")
 
         # check if the supplied number of datapoints is an integer
         if not isinstance(cov_n, int):
