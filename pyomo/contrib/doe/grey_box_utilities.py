@@ -25,13 +25,19 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import numpy as np, scipy
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    scipy,
+    scipy_available,
+)
 
 from enum import Enum
 import itertools
 import logging
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
+if scipy_available and numpy_available:
+    from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel
 
 import pyomo.environ as pyo
 
