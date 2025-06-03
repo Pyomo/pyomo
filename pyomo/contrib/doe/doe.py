@@ -38,15 +38,17 @@ from pyomo.common.dependencies import (
     pandas as pd,
     pathlib,
     matplotlib as plt,
+    scipy_available,
 )
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
-from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
+if numpy_available and scipy_available:
+    from pyomo.contrib.doe.grey_box_utilities import FIMExternalGreyBox
 
-from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
+    from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 
 import pyomo.environ as pyo
 
