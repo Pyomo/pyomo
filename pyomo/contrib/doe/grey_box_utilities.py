@@ -42,7 +42,9 @@ if scipy_available and numpy_available:
 import pyomo.environ as pyo
 
 
-class FIMExternalGreyBox(ExternalGreyBoxModel):
+class FIMExternalGreyBox(
+    ExternalGreyBoxModel if (scipy_available and numpy_available) else object
+):
     def __init__(self, doe_object, objective_option="determinant", logger_level=None):
         """
         Grey box model for metrics on the FIM. This methodology reduces numerical complexity for the
