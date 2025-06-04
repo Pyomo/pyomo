@@ -21,7 +21,7 @@ Python package dependencies
 IPOPT
 -----
 
-IPOPT can be downloaded from https://projects.coin-or.org/Ipopt. 
+The IPOPT project homepage is https://github.com/coin-or/Ipopt
 
 Testing
 -------

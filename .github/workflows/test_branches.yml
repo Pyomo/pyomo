@@ -660,6 +660,7 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         URL=https://github.com/Pyomo/pyomo-model-libraries.git
@@ -667,7 +668,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -796,7 +797,7 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        python setup.py develop
+        python -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -874,13 +875,14 @@ jobs:
 
     - name: Install Pyomo
       run: |
+        export PYOMO_SETUP_ARGS=${{ matrix.setup_options }}
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        $PYTHON_EXE -m pip install -e .
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
