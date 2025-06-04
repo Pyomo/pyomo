@@ -1128,37 +1128,38 @@ class Estimator(object):
             # Find the initialized values of theta from the labeled parmest model
             # and the theta names from the estimator object
 
-            # @Reviewers, pyomo team: Use this or use instance creation callback?
-            parmest_model = self._create_parmest_model(experiment_number=0)
-            theta_names = self._return_theta_names()
-            # initial_theta = [parmest_model.find_component(name)() for name in theta_names]
+            # print statement to indicate multistart optimization is starting
+            print(f"Starting multistart optimization with {n_restarts} restarts using {multistart_sampling_method} sampling method.")
 
+            # @Reviewers, pyomo team: Use this or use instance creation callback?
+            theta_names = self._return_theta_names()
             # Generate theta values using the sampling method
-            results_df = self._generate_initial_theta(parmest_model, seed=seed, n_restarts=n_restarts, 
-                                                                  multistart_sampling_method=multistart_sampling_method, user_provided=user_provided)
+            parmest_model_for_bounds = self._create_parmest_model(experiment_number=0)
+            results_df = self._generate_initial_theta(
+                parmest_model_for_bounds, seed=seed, n_restarts=n_restarts,
+                multistart_sampling_method=multistart_sampling_method, user_provided=user_provided
+            )
             results_df = pd.DataFrame(results_df)
             # Extract theta_vals from the dataframe
             theta_vals = results_df.iloc[:, :len(theta_names)]
             converged_theta_vals = np.zeros((n_restarts, len(theta_names)))
 
-            # make empty list to store results
-            # @ Pyomo team, each of these instances are independent and thus embarassingly parallelizable,
-            # Do you have recommendations on how to parallelize this for loop on a multicore machine
+            # Each restart uses a fresh model instance
             for i in range(n_restarts):
-                # for number of restarts, call the self._Q_opt method
-                # with the theta values generated using the _generalize_initial_theta method
-
-                # set the theta values in the model
+                # Create a fresh model for each restart
+                parmest_model = self._create_parmest_model(experiment_number=0)
                 theta_vals_current = theta_vals.iloc[i, :].to_dict()
 
                 # Set current theta values in the model
                 for name, value in theta_vals_current.items():
                     parmest_model.find_component(name).set_value(value)
 
-                # Print the current theta values being set
-                    print(f"Setting {name} to {value}")
-
-
+                # Optional: Print the current theta values being set
+                print(f"Setting {name} to {value}")
+                for name in theta_names:
+                    current_value = parmest_model.find_component(name)()
+                    print(f"Current value of {name} is {current_value}")
+                                    
                 # Call the _Q_opt method with the generated theta values
                 qopt_result = self._Q_opt(
                     bootlist=None,
@@ -1174,16 +1175,18 @@ class Estimator(object):
                 # solver termination condition directly here. Instead, we can assume
                 # that if converged_theta contains NaN, the solve failed.
                 if converged_theta.isnull().any():
-                    solver_termination = "not optimal"
+                    solver_termination = "not successful"
                     solve_time = np.nan
                     thetavals = np.nan
                     final_objectiveval = np.nan
                     init_objectiveval = np.nan
                 else:
                     converged_theta_vals[i, :] = converged_theta.values
-                    init_objectiveval = objectiveval
+                    # Calculate the initial objective value using the current theta values
+                    # Use the _Q_at_theta method to evaluate the objective at these theta values
+                    init_objectiveval, _, _ = self._Q_at_theta(theta_vals_current)
                     final_objectiveval = objectiveval
-                    solver_termination = "optimal"
+                    solver_termination = "successful"
 
                     # plan to add solve time if available, @Reviewers, recommendations on how from current pyomo examples would
                     # be appreciated
