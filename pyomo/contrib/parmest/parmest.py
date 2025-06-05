@@ -91,7 +91,7 @@ def ef_nonants(ef):
 
 
 def _experiment_instance_creation_callback(
-    scenario_name, node_names=None, cb_data=None
+    scenario_name, node_names=None, cb_data=None, fix_vars=False, 
 ):
     """
     This is going to be called by mpi-sppy or the local EF and it will call into
@@ -107,6 +107,8 @@ def _experiment_instance_creation_callback(
                         that is the "callback" value.
               "BootList" is None or bootstrap experiment number list.
                        (called cb_data by mpisppy)
+    fix_vars: `bool` If True, the theta variables are fixed to the values
+                provided in the cb_data["ThetaVals"] dictionary.
 
 
     Returns:
@@ -217,6 +219,7 @@ def _experiment_instance_creation_callback(
     # This is the only way I see to pass the theta values to the model
     # Can we add an optional argument to fix them or not?
     # Curently, thetavals provided are fixed if not None
+    # Suggested fix in this function and _Q_at_theta
     if "ThetaVals" in outer_cb_data:
         thetavals = outer_cb_data["ThetaVals"]
 
@@ -224,9 +227,14 @@ def _experiment_instance_creation_callback(
         for name, val in thetavals.items():
             theta_cuid = ComponentUID(name)
             theta_object = theta_cuid.find_component_on(instance)
-            if val is not None:
+            if val is not None and fix_vars is True:
                 # print("Fixing",vstr,"at",str(thetavals[vstr]))
                 theta_object.fix(val)
+            # ADDED OPTION: Set initial value, but do not fix
+            elif val is not None and fix_vars is False:
+                # print("Setting",vstr,"to",str(thetavals[vstr]))
+                theta_object.set_value(val)
+                theta_object.unfix()
             else:
                 # print("Freeing",vstr)
                 theta_object.unfix()
@@ -829,7 +837,7 @@ class Estimator(object):
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _experiment_instance_creation_callback("FOO0", None, dummy_cb)
+        instance = _experiment_instance_creation_callback("FOO0", None, dummy_cb,)
         try:  # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
             active_constraints = True
@@ -846,7 +854,7 @@ class Estimator(object):
 
         for snum in scenario_numbers:
             sname = "scenario_NODE" + str(snum)
-            instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
+            instance = _experiment_instance_creation_callback(sname, None, dummy_cb, fix_vars=True)
             model_theta_names = self._expand_indexed_unknowns(instance)
 
             if initialize_parmest_model:
@@ -1214,11 +1222,14 @@ class Estimator(object):
 
                 # # Check if the objective value is better than the best objective value
                 # # Set a very high initial best objective value
-                best_objectiveval = np.inf
-                best_theta = np.inf
+                if i == 0:
+                    # Initialize best objective value and theta
+                    best_objectiveval = np.inf
+                    best_theta = np.inf
+                # Check if the final objective value is better than the best found so far    
                 if final_objectiveval < best_objectiveval:
                     best_objectiveval = objectiveval
-                    best_theta = theta_vals_current
+                    best_theta = converged_theta.values
                     
                 print(f"Restart {i+1}/{n_restarts}: Objective Value = {final_objectiveval}, Theta = {converged_theta}")
 

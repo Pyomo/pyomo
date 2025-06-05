@@ -29,3 +29,11 @@ class Experiment:
 
     def get_labeled_model(self):
         return self.model
+
+    def reinitialize_unknown_parameters(self):
+        raise NotImplementedError(
+            "The reinitialize_unknown_parameters method should implemented in the subclass." \
+            "Thi method will take new values for the unknown parameters from the Suffix "
+            "and allow users to reinitialize the model."
+        )
+
