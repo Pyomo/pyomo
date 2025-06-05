@@ -65,6 +65,10 @@ import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
 from pyomo.dae import ContinuousSet
 
+# Add imports for HierchicalTimer
+import time
+from pyomo.common.timing import TicTocTimer
+
 from pyomo.common.deprecation import deprecated
 from pyomo.common.deprecation import deprecation_warning
 
@@ -209,7 +213,10 @@ def _experiment_instance_creation_callback(
                 scen_model=instance,
             )
         ]
-
+    # @Reviewers, here is where the parmest model is made for each run
+    # This is the only way I see to pass the theta values to the model
+    # Can we add an optional argument to fix them or not?
+    # Curently, thetavals provided are fixed if not None
     if "ThetaVals" in outer_cb_data:
         thetavals = outer_cb_data["ThetaVals"]
 
@@ -1088,28 +1095,34 @@ class Estimator(object):
         ----------
         n_restarts: int, optional
             Number of restarts for multistart. Default is 1.
-        th_sampling_method: string, optional
-            Method used to sample theta values. Options are "uniform", "latin_hypercube", or "sobol".
+        multistart_sampling_method: string, optional
+            Method used to sample theta values. Options are "uniform", "latin_hypercube", "sobol", or "user_provided".
             Default is "uniform".
         buffer: int, optional
             Number of iterations to save results dynamically. Default is 10.
-        user_provided: pd.DataFrame, optional
-            User provided dataframe of theta values for multistart optimization.
+        user_provided: pd.DataFrame or np.ndarray, optional
+            User provided array or dataframe of theta values for multistart optimization.
+        seed: int, optional
+            Random seed for reproducibility.
+        save_results: bool, optional
+            If True, intermediate and final results are saved to file_name.
+        theta_vals: pd.DataFrame, optional
+            Initial theta values for restarts (overrides sampling).
         solver: string, optional
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
+        file_name: str, optional
+            File name for saving results if save_results is True.
         return_values: list, optional
-            List of Variable names, used to return values from the model for data reconciliation
-
+            List of Variable names, used to return values from the model for data reconciliation.
 
         Returns
         -------
-        objectiveval: float
-            The objective function value
-        thetavals: pd.Series
-            Estimated values for theta
-        variable values: pd.DataFrame
-            Variable values for each variable name in return_values (only for solver='ef_ipopt')
-
+        results_df: pd.DataFrame
+            DataFrame containing initial and converged theta values, objectives, and solver info for each restart.
+        best_theta: dict
+            Dictionary of theta values corresponding to the best (lowest) objective value found.
+        best_objectiveval: float
+            The best (lowest) objective function value found across all restarts.
         """
 
         # check if we are using deprecated parmest
@@ -1144,24 +1157,32 @@ class Estimator(object):
             theta_vals = results_df.iloc[:, :len(theta_names)]
             converged_theta_vals = np.zeros((n_restarts, len(theta_names)))
 
+            timer = TicTocTimer()
+
             # Each restart uses a fresh model instance
             for i in range(n_restarts):
-                # Create a fresh model for each restart
-                parmest_model = self._create_parmest_model(experiment_number=0)
+
+                # Add a timer for each restart
+                timer.tic(f"Restart {i+1}/{n_restarts}")
+
+                # No longer needed, keeping until confirming update works as expected
+                # # Create a fresh model for each restart
+                # parmest_model = self._create_parmest_model(experiment_number=0)
                 theta_vals_current = theta_vals.iloc[i, :].to_dict()
 
-                # Set current theta values in the model
-                for name, value in theta_vals_current.items():
-                    parmest_model.find_component(name).set_value(value)
+                # # Set current theta values in the model
+                # for name, value in theta_vals_current.items():
+                #     parmest_model.find_component(name).set_value(value)
 
-                # Optional: Print the current theta values being set
-                print(f"Setting {name} to {value}")
-                for name in theta_names:
-                    current_value = parmest_model.find_component(name)()
-                    print(f"Current value of {name} is {current_value}")
+                # # Optional: Print the current theta values being set
+                # print(f"Setting {name} to {value}")
+                # for name in theta_names:
+                #     current_value = parmest_model.find_component(name)()
+                #     print(f"Current value of {name} is {current_value}")
                                     
                 # Call the _Q_opt method with the generated theta values
                 qopt_result = self._Q_opt(
+                    ThetaVals=theta_vals_current,
                     bootlist=None,
                     solver=solver,
                     return_values=return_values,
@@ -1177,7 +1198,6 @@ class Estimator(object):
                 if converged_theta.isnull().any():
                     solver_termination = "not successful"
                     solve_time = np.nan
-                    thetavals = np.nan
                     final_objectiveval = np.nan
                     init_objectiveval = np.nan
                 else:
@@ -1194,13 +1214,16 @@ class Estimator(object):
 
                 # # Check if the objective value is better than the best objective value
                 # # Set a very high initial best objective value
-                # best_objectiveval = np.inf  
-                # best_theta = np.inf
-                # if final_objectiveval < best_objectiveval:
-                #     best_objectiveval = objectiveval
-                #     best_theta = thetavals
+                best_objectiveval = np.inf
+                best_theta = np.inf
+                if final_objectiveval < best_objectiveval:
+                    best_objectiveval = objectiveval
+                    best_theta = theta_vals_current
                     
                 print(f"Restart {i+1}/{n_restarts}: Objective Value = {final_objectiveval}, Theta = {converged_theta}")
+
+                # Stop the timer for this restart
+                solve_time = timer.toc(f"Restart {i+1}/{n_restarts}")
 
                 # Store the results in the DataFrame for this restart
                 # Fill converged theta values
@@ -1229,7 +1252,7 @@ class Estimator(object):
                 results_df.to_csv(file_name, mode='a', header=False, index=False)
                 print("Final results saved.")
 
-            return results_df # just this for now, then best_theta, best_objectiveval
+            return results_df, best_theta, best_objectiveval
 
 
 
