@@ -382,7 +382,8 @@ def value(obj, exception=True):
             tmp = obj(exception=True)
             if tmp is None:
                 raise ValueError(
-                    "No value for uninitialized NumericValue object %s" % (obj.name,)
+                    "No value for uninitialized %s object %s"
+                    % (type(obj).__name__, obj.name)
                 )
             return tmp
         except TemplateExpressionError:
