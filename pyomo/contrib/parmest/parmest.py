@@ -407,8 +407,6 @@ class Estimator(object):
 
         # Add objective function (optional)
         if self.obj_function:
-
-            # IS THIS NECESSARY???
             # Check for component naming conflicts
             reserved_names = [
                 'Total_Cost_Objective',
@@ -1124,7 +1122,7 @@ class Estimator(object):
 
             obj, theta = self.theta_est()
 
-            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples,) # seed = seed) # I believe this would resolve the issue
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples, seed=seed)
 
             training, test = self.confidence_region_test(
                 bootstrap_theta,

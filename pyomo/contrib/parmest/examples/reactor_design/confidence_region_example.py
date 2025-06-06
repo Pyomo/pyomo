@@ -39,7 +39,7 @@ def main():
     obj, theta = pest.theta_est()
 
     # Bootstrapping
-    bootstrap_theta = pest.theta_est_bootstrap(10, seed = 524)
+    bootstrap_theta = pest.theta_est_bootstrap(10, seed=524)
     print(bootstrap_theta)
 
     # Confidence region test
