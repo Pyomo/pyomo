@@ -32,8 +32,12 @@ is_osx = platform.mac_ver()[0] != ""
 ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
+SET_GLOBAL_SEED = True
 
-
+if SET_GLOBAL_SEED:
+    # Set the global seed for reproducibility
+    seed= 524
+    np.random.seed(seed)  # Set seed for reproducibility
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -93,7 +97,7 @@ class TestRooneyBiegler(unittest.TestCase):
         objval, thetavals = self.pest.theta_est()
 
         num_bootstraps = 10
-        theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True)
+        theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True, seed=seed)
 
         num_samples = theta_est["samples"].apply(len)
         self.assertEqual(len(theta_est.index), 10)
@@ -109,9 +113,9 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertEqual(CR[0.75].sum(), 7)
         self.assertEqual(CR[1.0].sum(), 10)  # all true
 
-        graphics.pairwise_plot(theta_est)
-        graphics.pairwise_plot(theta_est, thetavals)
-        graphics.pairwise_plot(theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"])
+        graphics.pairwise_plot(theta_est, seed=seed)
+        graphics.pairwise_plot(theta_est, thetavals, seed=seed)
+        graphics.pairwise_plot(theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"], seed=seed)
 
     @unittest.skipIf(
         not graphics.imports_available, "parmest.graphics imports are unavailable"
