@@ -16,15 +16,21 @@ from pyomo.common.dependencies import (
     numpy_available,
     pandas as pd,
     pandas_available,
+    scipy_available,
 )
+
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.tests.experiment_class_example_flags import (
-    BadExperiment,
-    FullReactorExperiment,
-)
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest("Pyomo.DoE needs scipy and numpy to run tests")
+
+if scipy_available:
+    from pyomo.contrib.doe import DesignOfExperiments
+    from pyomo.contrib.doe.tests.experiment_class_example_flags import (
+        BadExperiment,
+        FullReactorExperiment,
+    )
 
 from pyomo.opt import SolverFactory
 
@@ -50,7 +56,13 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
     args['jac_initial'] = None
     args['fim_initial'] = None
     args['L_diagonal_lower_bound'] = 1e-7
-    args['solver'] = None
+    # Make solver object with
+    # good linear subroutines
+    solver = SolverFactory("ipopt")
+    solver.options["linear_solver"] = "ma57"
+    solver.options["halt_on_ampl_error"] = "yes"
+    solver.options["max_iter"] = 3000
+    args['solver'] = solver
     args['tee'] = False
     args['get_labeled_model_args'] = {"flag": flag}
     args['_Cholesky_option'] = True
@@ -59,7 +71,21 @@ def get_standard_args(experiment, fd_method, obj_used, flag):
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not scipy_available, "scipy is not available")
 class TestReactorExampleErrors(unittest.TestCase):
+    def test_experiment_none_error(self):
+        fd_method = "central"
+        obj_used = "trace"
+        flag_val = 1  # Value for faulty model build mode - 1: No exp outputs
+
+        with self.assertRaisesRegex(
+            ValueError, "Experiment object must be provided to perform DoE."
+        ):
+            # Experiment provided as None
+            DoE_args = get_standard_args(None, fd_method, obj_used, flag_val)
+
+            doe_obj = DesignOfExperiments(**DoE_args)
+
     def test_reactor_check_no_get_labeled_model(self):
         fd_method = "central"
         obj_used = "trace"
