@@ -263,12 +263,14 @@ def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None, binary_varlist=
     # Screen for constants
     if type(cnf_expr) in native_types or cnf_expr.is_constant():
         if value(cnf_expr) is True:
+            # Trivially feasible: no constraints
             return []
         else:
-            raise ValueError(
-                "Cannot build linear constraint for logical expression with "
-                "constant value False: %s" % cnf_expr
-            )
+            # Trivially infeasible: we will return an infeasible
+            # constant expression, because if we are nested within
+            # something like a Disjunct, the model may still be feasible
+            # (only this disjunct is not feasible).
+            return [InequalityExpression((1, 0), False)]
     if cnf_expr.is_expression_type():
         return CnfToLinearVisitor(indicator_var, binary_varlist).walk_expression(
             cnf_expr
