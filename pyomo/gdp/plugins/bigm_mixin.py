@@ -9,12 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import logging
+
 from pyomo.gdp import GDP_Error
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
 
+logger = logging.getLogger('pyomo.gdp.bigm')
 
 def _convert_M_to_tuple(M, constraint, disjunct=None):
     if not isinstance(M, (tuple, list)):
@@ -23,7 +26,7 @@ def _convert_M_to_tuple(M, constraint, disjunct=None):
         else:
             try:
                 M = (-M, M)
-            except:
+            except Exception:
                 logger.error(
                     "Error converting scalar M-value %s "
                     "to (-M,M).  Is %s not a numeric type?" % (M, type(M))
