@@ -218,6 +218,7 @@ def pairwise_plot(
     add_obj_contour=True,
     add_legend=True,
     filename=None,
+    seed=None,
 ):
     """
     Plot pairwise relationship for theta values, and optionally alpha-level
@@ -282,6 +283,10 @@ def pairwise_plot(
     assert isinstance(title, (type(None), str))
     assert isinstance(add_obj_contour, bool)
     assert isinstance(filename, (type(None), str))
+
+    if seed is not None:
+        np.random.seed(seed)
+
 
     # If theta_values is a tuple containing (mean, cov, n), create a DataFrame of values
     if isinstance(theta_values, tuple):
@@ -512,7 +517,7 @@ def fit_rect_dist(theta_values, alpha):
     return lower_bound, upper_bound
 
 
-def fit_mvn_dist(theta_values):
+def fit_mvn_dist(theta_values, seed=None):
     """
     Fit a multivariate normal distribution to theta values
 
@@ -527,13 +532,18 @@ def fit_mvn_dist(theta_values):
     """
     assert isinstance(theta_values, pd.DataFrame)
 
+    if seed is not None:
+        np.random.seed(seed)
+
     dist = stats.multivariate_normal(
-        theta_values.mean(), theta_values.cov(), allow_singular=True
+        theta_values.mean(), theta_values.cov(), allow_singular=True,
+        seed=seed
     )
+    
     return dist
 
 
-def fit_kde_dist(theta_values):
+def fit_kde_dist(theta_values, seed=None):
     """
     Fit a Gaussian kernel-density distribution to theta values
 
@@ -547,8 +557,10 @@ def fit_kde_dist(theta_values):
     scipy.stats.gaussian_kde distribution
     """
     assert isinstance(theta_values, pd.DataFrame)
+    if seed is not None:
+        np.random.seed(seed)
 
-    dist = stats.gaussian_kde(theta_values.transpose().values)
+    dist = stats.gaussian_kde(theta_values.transpose().values, seed=seed)
 
     return dist
 
