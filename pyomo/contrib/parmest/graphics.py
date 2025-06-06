@@ -297,7 +297,7 @@ def pairwise_plot(
         if isinstance(mean, dict):
             mean = pd.Series(mean)
         theta_names = mean.index
-        mvn_dist = stats.multivariate_normal(mean, cov)
+        mvn_dist = stats.multivariate_normal(mean, cov, seed=seed)
         theta_values = pd.DataFrame(
             mvn_dist.rvs(n, random_state=1), columns=theta_names
         )
@@ -407,7 +407,7 @@ def pairwise_plot(
                 )
 
             elif dist == "MVN":
-                mvn_dist = fit_mvn_dist(thetas)
+                mvn_dist = fit_mvn_dist(thetas, seed=seed)
                 Z = mvn_dist.pdf(thetas)
                 score = stats.scoreatpercentile(Z, (1 - alpha) * 100)
                 g.map_offdiag(
@@ -424,7 +424,7 @@ def pairwise_plot(
                 )
 
             elif dist == "KDE":
-                kde_dist = fit_kde_dist(thetas)
+                kde_dist = fit_kde_dist(thetas, seed=seed)
                 Z = kde_dist.pdf(thetas.transpose())
                 score = stats.scoreatpercentile(Z, (1 - alpha) * 100)
                 g.map_offdiag(
@@ -560,7 +560,7 @@ def fit_kde_dist(theta_values, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
-    dist = stats.gaussian_kde(theta_values.transpose().values, seed=seed)
+    dist = stats.gaussian_kde(theta_values.transpose().values)
 
     return dist
 
