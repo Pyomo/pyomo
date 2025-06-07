@@ -27,7 +27,7 @@ Pyomo Model Components:
     construction of components.
 
  Connector
-    A bundle of variables that can be manipilated together.
+    A bundle of variables that can be manipulated together.
 
  Constraint
     General constraint expressions.
