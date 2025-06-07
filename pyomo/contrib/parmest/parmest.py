@@ -788,7 +788,7 @@ class Estimator(object):
         # We could collect the union (or intersect?) of thetas when the models are built
         theta_names = []
         for experiment in self.exp_list:
-            model = experiment.get_labeled_model()
+            model = _get_labeled_model_helper(experiment)
             theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
         # Utilize list(dict.fromkeys(theta_names)) to preserve parameter
         # order compared with list(set(theta_names)), which had
@@ -881,7 +881,7 @@ class Estimator(object):
         Modify the Pyomo model for parameter estimation
         """
 
-        model = self.exp_list[experiment_number].get_labeled_model()
+        model = _get_labeled_model_helper(self.exp_list[experiment_number])
 
         if len(model.unknown_parameters) == 0:
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
@@ -896,7 +896,7 @@ class Estimator(object):
                 "SecondStageCost",
             ]
             for n in reserved_names:
-                if model.component(n) is not None or hasattr(model, n):
+                if model.component(n) or hasattr(model, n):
                     raise RuntimeError(
                         f"Parmest will not override the existing model component named {n}. "
                         f"Rerun the Estimator object before running theta_est again"
@@ -913,8 +913,10 @@ class Estimator(object):
             elif self.obj_function == ObjectiveLib.SSE_weighted:
                 second_stage_rule = SSE_weighted
             else:
-                # A custom function uses model.experiment_outputs as data
-                second_stage_rule = self.obj_function
+                raise ValueError(
+                    f"Invalid objective function: '{self.obj_function.value}'. "
+                    f"Choose from {[e.value for e in ObjectiveLib]}."
+                )
 
             model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=second_stage_rule)
@@ -1111,8 +1113,9 @@ class Estimator(object):
             elif self.obj_function == ObjectiveLib.SSE_weighted:
                 sse_expr = SSE_weighted(model)
             else:
-                raise NotImplementedError(
-                    'Covariance calculation is only supported for "SSE" and "SSE_weighted" objectives.'
+                raise ValueError(
+                    f"Invalid objective function: '{self.obj_function.value}'. "
+                    f"Choose from {[e.value for e in ObjectiveLib]}."
                 )
 
             # evaluate numerical SSE and store it
@@ -1139,9 +1142,9 @@ class Estimator(object):
                 f"Invalid method: '{method}'. Choose from {[e.value for e in CovarianceMethodLib]}."
             )
 
-        # check if the user specified `SSE` or `SSE_weighted` as the objective function
+        # check if the user specified 'SSE' or 'SSE_weighted' as the objective function
         if self.obj_function == ObjectiveLib.SSE:
-            # check if user defined the `measurement_error` attribute
+            # check if the user defined the 'measurement_error' attribute
             if hasattr(model, "measurement_error"):
                 # get the measurement errors
                 meas_error = [
@@ -1217,14 +1220,14 @@ class Estimator(object):
                     'Experiment model does not have suffix "measurement_error".'
                 )
         elif self.obj_function == ObjectiveLib.SSE_weighted:
-            # check if the user defined the `measurement_error` attribute
+            # check if the user defined the 'measurement_error' attribute
             if hasattr(model, "measurement_error"):
                 meas_error = [
                     model.measurement_error[y_hat]
                     for y_hat, y in model.experiment_outputs.items()
                 ]
 
-                # check if the user supplied values for the measurement errors
+                # check if the user supplied the values for the measurement errors
                 if all(item is not None for item in meas_error):
                     if (
                         cov_method == CovarianceMethodLib.finite_difference
@@ -1516,6 +1519,13 @@ class Estimator(object):
         variable values: pd.DataFrame
             Variable values for each variable name in return_values (only for solver='ef_ipopt')
         """
+
+        # check if we are using deprecated parmest
+        if self.pest_deprecated is not None:
+            return self.pest_deprecated.theta_est(
+                solver=solver,
+                return_values=return_values
+            )
 
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
