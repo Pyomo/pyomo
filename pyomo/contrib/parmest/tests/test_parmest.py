@@ -96,10 +96,9 @@ class TestRooneyBiegler(unittest.TestCase):
                 self.measurement_error_std = measurement_error_std
 
             def get_labeled_model(self):
-                if self.model is None:
-                    self.create_model()
-                    self.finalize_model()
-                    self.label_model()
+                self.create_model()
+                self.finalize_model()
+                self.label_model()
                 return self.model
 
             def create_model(self):
@@ -152,6 +151,20 @@ class TestRooneyBiegler(unittest.TestCase):
             )
 
         self.exp_list = rooney_biegler_exp_list
+
+        if self.objective_function == "incorrect_obj":
+            with pytest.raises(
+                    ValueError,
+                    match="Invalid objective function: 'incorrect_obj'\. "
+                          "Choose from \['SSE', 'SSE_weighted'\]\.",
+            ):
+                self.pest = parmest.Estimator(
+                self.exp_list, obj_function=self.objective_function, tee=True
+                )
+        else:
+            self.pest = parmest.Estimator(
+                self.exp_list, obj_function=self.objective_function, tee=True
+            )
 
     def check_rooney_biegler_parameters(
         self, obj_val, theta_vals, obj_function, measurement_error
@@ -307,12 +320,12 @@ class TestRooneyBiegler(unittest.TestCase):
         """
         if self.measurement_std is None:
             if self.objective_function == "SSE":
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
+                # pest = parmest.Estimator(
+                #     self.exp_list, obj_function=self.objective_function
+                # )
 
                 # estimate the parameters
-                obj_val, theta_vals = pest.theta_est()
+                obj_val, theta_vals = self.pest.theta_est()
 
                 # check the parameter estimation result
                 self.check_rooney_biegler_parameters(
@@ -328,7 +341,7 @@ class TestRooneyBiegler(unittest.TestCase):
                     "automatic_differentiation_kaug",
                     "reduced_hessian",
                 ):
-                    cov = pest.cov_est(cov_n=6, method=cov_method)
+                    cov = self.pest.cov_est(cov_n=6, method=cov_method)
 
                     # check the covariance calculation results
                     self.check_rooney_biegler_covariance(
@@ -343,7 +356,7 @@ class TestRooneyBiegler(unittest.TestCase):
                         match=r"Invalid method: 'unsupported_method'\. Choose from \['finite_difference', "
                         "'automatic_differentiation_kaug', 'reduced_hessian'\]\.",
                     ):
-                        cov = pest.cov_est(cov_n=6, method=cov_method)
+                        cov = self.pest.cov_est(cov_n=6, method=cov_method)
             elif self.objective_function == "SSE_weighted":
                 with pytest.raises(
                     ValueError,
@@ -351,32 +364,15 @@ class TestRooneyBiegler(unittest.TestCase):
                     '"measurement_error". All values of the measurement errors are '
                     'required for the "SSE_weighted" objective.',
                 ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
-
                     # we expect this error when estimating the parameters
-                    obj_val, theta_vals = pest.theta_est()
-            else:
-                with pytest.raises(
-                    ValueError,
-                    match=r"Invalid objective function: 'incorrect_obj'\. "
-                    r"Choose from \['SSE', 'SSE_weighted'\]\.",
-                ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
+                    obj_val, theta_vals = self.pest.theta_est()
         else:
             if (
                 self.objective_function == "SSE"
                 or self.objective_function == "SSE_weighted"
             ):
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
-
                 # estimate the parameters
-                obj_val, theta_vals = pest.theta_est()
+                obj_val, theta_vals = self.pest.theta_est()
 
                 # check the parameter estimation results
                 self.check_rooney_biegler_parameters(
@@ -392,7 +388,7 @@ class TestRooneyBiegler(unittest.TestCase):
                     "automatic_differentiation_kaug",
                     "reduced_hessian",
                 ):
-                    cov = pest.cov_est(cov_n=6, method=cov_method)
+                    cov = self.pest.cov_est(cov_n=6, method=cov_method)
 
                     # check the covariance calculation results
                     self.check_rooney_biegler_covariance(
@@ -407,16 +403,7 @@ class TestRooneyBiegler(unittest.TestCase):
                         match=r"Invalid method: 'unsupported_method'\. Choose from \['finite_difference', "
                         "'automatic_differentiation_kaug', 'reduced_hessian'\]\.",
                     ):
-                        cov = pest.cov_est(cov_n=6, method=cov_method)
-            else:
-                with pytest.raises(
-                    ValueError,
-                    match="Invalid objective function: 'incorrect_obj'\. "
-                    "Choose from \['SSE', 'SSE_weighted'\]\.",
-                ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
+                        cov = self.pest.cov_est(cov_n=6, method=cov_method)
 
     @unittest.skipIf(
         not graphics.imports_available, "parmest.graphics imports are unavailable"
@@ -433,21 +420,13 @@ class TestRooneyBiegler(unittest.TestCase):
                     '"measurement_error". All values of the measurement errors are '
                     'required for the "SSE_weighted" objective.',
                 ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
-
                     # we expect this error when estimating the parameters
-                    obj_val, theta_vals = pest.theta_est()
+                    obj_val, theta_vals = self.pest.theta_est()
             else:
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
-
-                obj_val, theta_vals = pest.theta_est()
+                obj_val, theta_vals = self.pest.theta_est()
 
                 num_bootstraps = 10
-                theta_est = pest.theta_est_bootstrap(
+                theta_est = self.pest.theta_est_bootstrap(
                     num_bootstraps, return_samples=True
                 )
 
@@ -458,7 +437,7 @@ class TestRooneyBiegler(unittest.TestCase):
                 del theta_est["samples"]
 
                 # apply confidence region test
-                CR = pest.confidence_region_test(theta_est, "MVN", [0.5, 0.75, 1.0])
+                CR = self.pest.confidence_region_test(theta_est, "MVN", [0.5, 0.75, 1.0])
 
                 self.assertTrue(set(CR.columns) >= set([0.5, 0.75, 1.0]))
                 self.assertEqual(CR[0.5].sum(), 5)
@@ -469,15 +448,6 @@ class TestRooneyBiegler(unittest.TestCase):
                 graphics.pairwise_plot(theta_est, theta_vals)
                 graphics.pairwise_plot(
                     theta_est, theta_vals, 0.8, ["MVN", "KDE", "Rect"]
-                )
-        else:
-            with pytest.raises(
-                ValueError,
-                match="Invalid objective function: 'incorrect_obj'\. "
-                "Choose from \['SSE', 'SSE_weighted'\]\.",
-            ):
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
                 )
 
     @unittest.skipIf(
@@ -495,43 +465,26 @@ class TestRooneyBiegler(unittest.TestCase):
                     '"measurement_error". All values of the measurement errors are '
                     'required for the "SSE_weighted" objective.',
                 ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
-
                     # we expect this error when estimating the parameters
-                    obj_val, theta_vals = pest.theta_est()
+                    obj_val, theta_vals = self.pest.theta_est()
             else:
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
-
-                obj_val, theta_vals = pest.theta_est()
+                objval, thetavals = self.pest.theta_est()
 
                 asym = np.arange(10, 30, 2)
                 rate = np.arange(0, 1.5, 0.25)
                 theta_vals = pd.DataFrame(
                     list(product(asym, rate)), columns=['asymptote', 'rate_constant']
                 )
-                obj_at_theta = pest.objective_at_theta(theta_vals)
+                obj_at_theta = self.pest.objective_at_theta(theta_vals)
 
-                LR = pest.likelihood_ratio_test(obj_at_theta, obj_val, [0.8, 0.9, 1.0])
+                LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.9, 1.0])
 
                 self.assertTrue(set(LR.columns) >= set([0.8, 0.9, 1.0]))
                 self.assertEqual(LR[0.8].sum(), 6)
                 self.assertEqual(LR[0.9].sum(), 10)
                 self.assertEqual(LR[1.0].sum(), 60)  # all true
 
-                graphics.pairwise_plot(LR, theta_vals, 0.8)
-        else:
-            with pytest.raises(
-                ValueError,
-                match="Invalid objective function: 'incorrect_obj'\. "
-                "Choose from \['SSE', 'SSE_weighted'\]\.",
-            ):
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
+                graphics.pairwise_plot(LR, thetavals, 0.8)
 
     def test_leaveNout(self):
         if self.objective_function in ("SSE", "SSE_weighted"):
@@ -545,21 +498,13 @@ class TestRooneyBiegler(unittest.TestCase):
                     '"measurement_error". All values of the measurement errors are '
                     'required for the "SSE_weighted" objective.',
                 ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
-
                     # we expect this error when estimating the parameters
-                    obj_val, theta_vals = pest.theta_est()
+                    obj_val, theta_vals = self.pest.theta_est()
             else:
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
-
-                lNo_theta = pest.theta_est_leaveNout(1)
+                lNo_theta = self.pest.theta_est_leaveNout(1)
                 self.assertTrue(lNo_theta.shape == (6, 2))
 
-                results = pest.leaveNout_bootstrap_test(
+                results = self.pest.leaveNout_bootstrap_test(
                     1, None, 3, "Rect", [0.5, 1.0], seed=5436
                 )
                 self.assertEqual(len(results), 6)  # 6 lNo samples
@@ -573,15 +518,6 @@ class TestRooneyBiegler(unittest.TestCase):
                 self.assertEqual(lno_theta[1.0].sum(), 1)  # all true
                 self.assertEqual(bootstrap_theta.shape[0], 3)  # bootstrap for sample 1
                 self.assertEqual(bootstrap_theta[1.0].sum(), 3)  # all true
-        else:
-            with pytest.raises(
-                ValueError,
-                match="Invalid objective function: 'incorrect_obj'\. "
-                "Choose from \['SSE', 'SSE_weighted'\]\.",
-            ):
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
 
     def test_diagnostic_mode(self):
         if self.objective_function in ("SSE", "SSE_weighted"):
@@ -595,20 +531,12 @@ class TestRooneyBiegler(unittest.TestCase):
                     '"measurement_error". All values of the measurement errors are '
                     'required for the "SSE_weighted" objective.',
                 ):
-                    pest = parmest.Estimator(
-                        self.exp_list, obj_function=self.objective_function
-                    )
-
                     # we expect this error when estimating the parameters
-                    obj_val, theta_vals = pest.theta_est()
+                    obj_val, theta_vals = self.pest.theta_est()
             else:
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
+                self.pest.diagnostic_mode = True
 
-                pest.diagnostic_mode = True
-
-                obj_val, theta_vals = pest.theta_est()
+                objval, thetavals = self.pest.theta_est()
 
                 asym = np.arange(10, 30, 2)
                 rate = np.arange(0, 1.5, 0.25)
@@ -616,18 +544,9 @@ class TestRooneyBiegler(unittest.TestCase):
                     list(product(asym, rate)), columns=['asymptote', 'rate_constant']
                 )
 
-                obj_at_theta = pest.objective_at_theta(theta_vals)
+                obj_at_theta = self.pest.objective_at_theta(theta_vals)
 
-                pest.diagnostic_mode = False
-        else:
-            with pytest.raises(
-                ValueError,
-                match="Invalid objective function: 'incorrect_obj'\. "
-                "Choose from \['SSE', 'SSE_weighted'\]\.",
-            ):
-                pest = parmest.Estimator(
-                    self.exp_list, obj_function=self.objective_function
-                )
+                self.pest.diagnostic_mode = False
 
     @unittest.skip("Presently having trouble with mpiexec on appveyor")
     def test_parallel_parmest(self):
@@ -968,35 +887,39 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero_ASL is not available")
     def test_theta_est_cov(self):
-        objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
+        with pytest.raises(
+                TypeError,
+                match=r"Estimator\.theta_est\(\) got an unexpected keyword argument 'calc_cov'",
+        ):
+            objval, thetavals, cov = self.pest.theta_est(calc_cov=True, cov_n=6)
 
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(
-            thetavals["asymptote"], 19.1426, places=2
-        )  # 19.1426 from the paper
-        self.assertAlmostEqual(
-            thetavals["rate_constant"], 0.5311, places=2
-        )  # 0.5311 from the paper
+            self.assertAlmostEqual(objval, 4.3317112, places=2)
+            self.assertAlmostEqual(
+                thetavals["asymptote"], 19.1426, places=2
+            )  # 19.1426 from the paper
+            self.assertAlmostEqual(
+                thetavals["rate_constant"], 0.5311, places=2
+            )  # 0.5311 from the paper
 
-        # Covariance matrix
-        self.assertAlmostEqual(
-            cov.iloc[0, 0], 6.30579403, places=2
-        )  # 6.22864 from paper
-        self.assertAlmostEqual(
-            cov.iloc[0, 1], -0.4395341, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(
-            cov.iloc[1, 0], -0.4395341, places=2
-        )  # -0.4322 from paper
-        self.assertAlmostEqual(cov.iloc[1, 1], 0.04124, places=2)  # 0.04124 from paper
+            # Covariance matrix
+            self.assertAlmostEqual(
+                cov.iloc[0, 0], 6.30579403, places=2
+            )  # 6.22864 from paper
+            self.assertAlmostEqual(
+                cov.iloc[0, 1], -0.4395341, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(
+                cov.iloc[1, 0], -0.4395341, places=2
+            )  # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1, 1], 0.04124, places=2)  # 0.04124 from paper
 
-        """ Why does the covariance matrix from parmest not match the paper? Parmest is
-        calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
-        employed the first order approximation common for nonlinear regression. The paper
-        values were verified with Scipy, which uses the same first order approximation.
-        The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
-        "Nonlinear Parameter Estimation", Y. Bard, 1974.
-        """
+            """ Why does the covariance matrix from parmest not match the paper? Parmest is
+            calculating the exact reduced Hessian. The paper (Rooney and Bielger, 2001) likely
+            employed the first order approximation common for nonlinear regression. The paper
+            values were verified with Scipy, which uses the same first order approximation.
+            The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
+            "Nonlinear Parameter Estimation", Y. Bard, 1974.
+            """
 
     def test_cov_scipy_least_squares_comparison(self):
         """
@@ -1234,24 +1157,28 @@ class TestModelVariantsDeprecated(unittest.TestCase):
                 self.objective_function,
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            with pytest.raises(
+                    TypeError,
+                    match=r"Estimator\.theta_est\(\) got an unexpected keyword argument 'calc_cov'",
+            ):
+                objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
 
-            self.assertAlmostEqual(objval, 4.3317112, places=2)
-            self.assertAlmostEqual(
-                cov.iloc[0, 0], 6.30579403, places=2
-            )  # 6.22864 from paper
-            self.assertAlmostEqual(
-                cov.iloc[0, 1], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 0], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 1], 0.04193591, places=2
-            )  # 0.04124 from paper
+                self.assertAlmostEqual(objval, 4.3317112, places=2)
+                self.assertAlmostEqual(
+                    cov.iloc[0, 0], 6.30579403, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[0, 1], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 0], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 1], 0.04193591, places=2
+                )  # 0.04124 from paper
 
-            obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+                obj_at_theta = pest.objective_at_theta(parmest_input["theta_vals"])
+                self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_initialize_parmest_model_option(self):
@@ -1263,27 +1190,31 @@ class TestModelVariantsDeprecated(unittest.TestCase):
                 self.objective_function,
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            with pytest.raises(
+                    TypeError,
+                    match=r"Estimator\.theta_est\(\) got an unexpected keyword argument 'calc_cov'",
+            ):
+                objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
 
-            self.assertAlmostEqual(objval, 4.3317112, places=2)
-            self.assertAlmostEqual(
-                cov.iloc[0, 0], 6.30579403, places=2
-            )  # 6.22864 from paper
-            self.assertAlmostEqual(
-                cov.iloc[0, 1], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 0], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 1], 0.04193591, places=2
-            )  # 0.04124 from paper
+                self.assertAlmostEqual(objval, 4.3317112, places=2)
+                self.assertAlmostEqual(
+                    cov.iloc[0, 0], 6.30579403, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[0, 1], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 0], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 1], 0.04193591, places=2
+                )  # 0.04124 from paper
 
-            obj_at_theta = pest.objective_at_theta(
-                parmest_input["theta_vals"], initialize_parmest_model=True
-            )
+                obj_at_theta = pest.objective_at_theta(
+                    parmest_input["theta_vals"], initialize_parmest_model=True
+                )
 
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+                self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve(self):
@@ -1299,23 +1230,27 @@ class TestModelVariantsDeprecated(unittest.TestCase):
                 parmest_input["theta_vals"], initialize_parmest_model=True
             )
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            with pytest.raises(
+                    TypeError,
+                    match=r"Estimator\.theta_est\(\) got an unexpected keyword argument 'calc_cov'",
+            ):
+                objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
 
-            self.assertAlmostEqual(objval, 4.3317112, places=2)
-            self.assertAlmostEqual(
-                cov.iloc[0, 0], 6.30579403, places=2
-            )  # 6.22864 from paper
-            self.assertAlmostEqual(
-                cov.iloc[0, 1], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 0], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 1], 0.04193591, places=2
-            )  # 0.04124 from paper
+                self.assertAlmostEqual(objval, 4.3317112, places=2)
+                self.assertAlmostEqual(
+                    cov.iloc[0, 0], 6.30579403, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[0, 1], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 0], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 1], 0.04193591, places=2
+                )  # 0.04124 from paper
 
-            self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
+                self.assertAlmostEqual(obj_at_theta["obj"][0], 16.531953, places=2)
 
     @unittest.skipUnless(pynumero_ASL_available, 'pynumero_ASL is not available')
     def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
@@ -1329,21 +1264,25 @@ class TestModelVariantsDeprecated(unittest.TestCase):
 
             obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
 
-            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+            with pytest.raises(
+                    TypeError,
+                    match=r"Estimator\.theta_est\(\) got an unexpected keyword argument 'calc_cov'",
+            ):
+                objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
 
-            self.assertAlmostEqual(objval, 4.3317112, places=2)
-            self.assertAlmostEqual(
-                cov.iloc[0, 0], 6.30579403, places=2
-            )  # 6.22864 from paper
-            self.assertAlmostEqual(
-                cov.iloc[0, 1], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 0], -0.4395341, places=2
-            )  # -0.4322 from paper
-            self.assertAlmostEqual(
-                cov.iloc[1, 1], 0.04193591, places=2
-            )  # 0.04124 from paper
+                self.assertAlmostEqual(objval, 4.3317112, places=2)
+                self.assertAlmostEqual(
+                    cov.iloc[0, 0], 6.30579403, places=2
+                )  # 6.22864 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[0, 1], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 0], -0.4395341, places=2
+                )  # -0.4322 from paper
+                self.assertAlmostEqual(
+                    cov.iloc[1, 1], 0.04193591, places=2
+                )  # 0.04124 from paper
 
 
 @unittest.skipIf(
@@ -1674,24 +1613,28 @@ class TestReactorDesign_DAE_Deprecated(unittest.TestCase):
         n = 60
 
         # Compute covariance using parmest
-        obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
+        with pytest.raises(
+                TypeError,
+                match=r"Estimator\.theta_est\(\) got an unexpected keyword argument 'calc_cov'",
+        ):
+            obj, theta, cov = self.pest_df.theta_est(calc_cov=True, cov_n=n)
 
-        # Compute covariance using interior_point
-        vars_list = [self.m_df.k1, self.m_df.k2]
-        solve_result, inv_red_hes = inv_reduced_hessian_barrier(
-            self.m_df, independent_variables=vars_list, tee=True
-        )
-        l = len(vars_list)
-        cov_interior_point = 2 * obj / (n - l) * inv_red_hes
-        cov_interior_point = pd.DataFrame(
-            cov_interior_point, ["k1", "k2"], ["k1", "k2"]
-        )
+            # Compute covariance using interior_point
+            vars_list = [self.m_df.k1, self.m_df.k2]
+            solve_result, inv_red_hes = inv_reduced_hessian_barrier(
+                self.m_df, independent_variables=vars_list, tee=True
+            )
+            l = len(vars_list)
+            cov_interior_point = 2 * obj / (n - l) * inv_red_hes
+            cov_interior_point = pd.DataFrame(
+                cov_interior_point, ["k1", "k2"], ["k1", "k2"]
+            )
 
-        cov_diff = (cov - cov_interior_point).abs().sum().sum()
+            cov_diff = (cov - cov_interior_point).abs().sum().sum()
 
-        self.assertTrue(cov.loc["k1", "k1"] > 0)
-        self.assertTrue(cov.loc["k2", "k2"] > 0)
-        self.assertAlmostEqual(cov_diff, 0, places=6)
+            self.assertTrue(cov.loc["k1", "k1"] > 0)
+            self.assertTrue(cov.loc["k2", "k2"] > 0)
+            self.assertAlmostEqual(cov_diff, 0, places=6)
 
 
 @unittest.skipIf(
