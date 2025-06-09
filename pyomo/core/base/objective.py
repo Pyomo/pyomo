@@ -26,6 +26,7 @@ from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.template_expr import templatize_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent,
@@ -249,11 +250,11 @@ class Objective(ActiveIndexedComponent):
 
     def __new__(cls, *args, **kwds):
         if cls != Objective:
-            return super(Objective, cls).__new__(cls)
+            return super().__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return ScalarObjective.__new__(ScalarObjective)
+            return super().__new__(AbstractScalarObjective)
         else:
-            return IndexedObjective.__new__(IndexedObjective)
+            return super().__new__(IndexedObjective)
 
     @overload
     def __init__(
@@ -414,50 +415,27 @@ class ScalarObjective(ObjectiveData, Objective):
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
-    #
-    # Override abstract interface methods to first check for
-    # construction
-    #
-
     def __call__(self, exception=NOTSET):
         exception = _type_check_exception_arg(self, exception)
-        if self._constructed:
-            if len(self._data) == 0:
-                raise ValueError(
-                    "Evaluating the expression of ScalarObjective "
-                    "'%s' before the Objective has been assigned "
-                    "a sense or expression (there is currently "
-                    "no value to return)." % (self.name)
-                )
-            return super().__call__(exception)
-        raise ValueError(
-            "Evaluating the expression of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no value to return)." % (self.name)
-        )
+        if not self._data:
+            raise ValueError(
+                "Evaluating the expression of ScalarObjective "
+                "'%s' before the Objective has been assigned "
+                "a sense or expression (there is currently "
+                "no value to return)." % (self.name)
+            )
+        return super().__call__(exception)
 
-    @property
-    def expr(self):
-        """Access the expression of this objective."""
-        if self._constructed:
-            if len(self._data) == 0:
-                raise ValueError(
-                    "Accessing the expression of ScalarObjective "
-                    "'%s' before the Objective has been assigned "
-                    "a sense or expression (there is currently "
-                    "no value to return)." % (self.name)
-                )
-            return ObjectiveData.expr.fget(self)
-        raise ValueError(
-            "Accessing the expression of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no value to return)." % (self.name)
-        )
-
-    @expr.setter
-    def expr(self, expr):
-        """Set the expression of this objective."""
-        self.set_value(expr)
+    #
+    # Singleton objectives are strange in that we want them to be
+    # both be constructed but have len() == 0 when not initialized with
+    # anything (at least according to the unit tests that are
+    # currently in place). So during initialization only, we will
+    # treat them as "indexed" objects where things like
+    # Objective.Skip are managed. But after that they will behave
+    # like ObjectiveData objects where set_value does not handle
+    # Objective.Skip but expects a valid expression or None
+    #
 
     @property
     def sense(self):
@@ -482,43 +460,20 @@ class ScalarObjective(ObjectiveData, Objective):
         """Set the sense (direction) of this objective."""
         self.set_sense(sense)
 
-    #
-    # Singleton objectives are strange in that we want them to be
-    # both be constructed but have len() == 0 when not initialized with
-    # anything (at least according to the unit tests that are
-    # currently in place). So during initialization only, we will
-    # treat them as "indexed" objects where things like
-    # Objective.Skip are managed. But after that they will behave
-    # like ObjectiveData objects where set_value does not handle
-    # Objective.Skip but expects a valid expression or None
-    #
-
     def clear(self):
         self._data = {}
 
     def set_value(self, expr):
         """Set the expression of this objective."""
-        if not self._constructed:
-            raise ValueError(
-                "Setting the value of objective '%s' "
-                "before the Objective has been constructed (there "
-                "is currently no object to set)." % (self.name)
-            )
         if not self._data:
             self._data[None] = self
         return super().set_value(expr)
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
-        if self._constructed:
-            if len(self._data) == 0:
-                self._data[None] = self
-            return ObjectiveData.set_sense(self, sense)
-        raise ValueError(
-            "Setting the sense of objective '%s' "
-            "before the Objective has been constructed (there "
-            "is currently no object to set)." % (self.name)
-        )
+        if len(self._data) == 0:
+            self._data[None] = self
+        return ObjectiveData.set_sense(self, sense)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -538,6 +493,11 @@ class ScalarObjective(ObjectiveData, Objective):
 class SimpleObjective(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarObjective
     __renamed__version__ = '6.0'
+
+
+@disable_methods({'__call__', 'add', 'expr', 'sense', 'set_sense', 'set_value'})
+class AbstractScalarObjective(ScalarObjective):
+    pass
 
 
 class IndexedObjective(Objective):
