@@ -9,32 +9,21 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import copy
-
 from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     ProductExpression,
     DivisionExpression,
     PowExpression,
-    AbsExpression,
-    UnaryFunctionExpression,
     Expr_ifExpression,
-    LinearExpression,
-    MonomialTermExpression,
     mutable_expression,
 )
-from pyomo.core.expr.relational_expr import (
-    EqualityExpression,
-    InequalityExpression,
-    RangedExpression,
-)
-from pyomo.core.base.expression import Expression
-from . import linear
-from . import util
-from .linear import _merge_dict, to_expression
-from pyomo.repn.util import val2str
+import pyomo.repn.linear as linear
+import pyomo.repn.util as util
+from pyomo.repn.linear import _merge_dict, to_expression
+from pyomo.repn.util import sum_like_expression_types, val2str
 
 _CONSTANT = linear.ExprType.CONSTANT
+_FIXED = linear.ExprType.FIXED
 _LINEAR = linear.ExprType.LINEAR
 _GENERAL = linear.ExprType.GENERAL
 _QUADRATIC = linear.ExprType.QUADRATIC
@@ -148,7 +137,7 @@ class QuadraticRepn(object):
         # change). Omitting the assertion for efficiency.
         # assert self.multiplier == 1
         _type, other = other
-        if _type is _CONSTANT:
+        if _type <= _FIXED:
             self.constant += other
             return
 
@@ -297,7 +286,9 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         {
             None: _handle_product_nonlinear,
             (_CONSTANT, _QUADRATIC): linear._handle_product_constant_ANY,
+            (_FIXED, _QUADRATIC): linear._handle_product_constant_ANY,
             (_QUADRATIC, _CONSTANT): linear._handle_product_ANY_constant,
+            (_QUADRATIC, _FIXED): linear._handle_product_ANY_constant,
             # Replace handler from the linear walker
             (_LINEAR, _LINEAR): _handle_product_linear_linear,
         }
@@ -306,13 +297,19 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     # DIVISION
     #
     _exit_node_handlers[DivisionExpression].update(
-        {(_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant}
+        {
+            (_QUADRATIC, _CONSTANT): linear._handle_division_ANY_constant,
+            (_QUADRATIC, _FIXED): linear._handle_division_ANY_fixed,
+        }
     )
     #
     # EXPONENTIATION
     #
     _exit_node_handlers[PowExpression].update(
-        {(_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant}
+        {
+            (_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant,
+            (_QUADRATIC, _FIXED): linear._handle_pow_ANY_constant,
+        }
     )
     #
     # ABS and UNARY handlers
@@ -325,18 +322,16 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     #
     # EXPR_IF handlers
     #
-    # Note: it is easier to just recreate the entire data structure, rather
-    # than update it
     _exit_node_handlers[Expr_ifExpression].update(
         {
             (_CONSTANT, i, _QUADRATIC): linear._handle_expr_if_const
-            for i in (_CONSTANT, _LINEAR, _QUADRATIC, _GENERAL)
+            for i in (_CONSTANT, _FIXED, _LINEAR, _QUADRATIC, _GENERAL)
         }
     )
     _exit_node_handlers[Expr_ifExpression].update(
         {
             (_CONSTANT, _QUADRATIC, i): linear._handle_expr_if_const
-            for i in (_CONSTANT, _LINEAR, _GENERAL)
+            for i in (_CONSTANT, _FIXED, _LINEAR, _GENERAL)
         }
     )
     #

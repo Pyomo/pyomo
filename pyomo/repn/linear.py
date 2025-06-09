@@ -63,6 +63,8 @@ from pyomo.repn.util import (
 logger = logging.getLogger(__name__)
 
 _CONSTANT = ExprType.CONSTANT
+_FIXED = ExprType.FIXED
+_VARIABLE = ExprType.VARIABLE
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 
@@ -165,7 +167,7 @@ class LinearRepn(object):
         # change). Omitting the assertion for efficiency.
         # assert self.multiplier == 1
         _type, other = other
-        if _type is _CONSTANT:
+        if _type <= _FIXED:
             self.constant += other
             return
 
@@ -190,7 +192,7 @@ class LinearRepn(object):
 
 
 def to_expression(visitor, arg):
-    if arg[0] is _CONSTANT:
+    if arg[0] <= _VARIABLE:
         return arg[1]
     else:
         return arg[1].to_expression(visitor)
@@ -203,6 +205,10 @@ def to_expression(visitor, arg):
 
 def _handle_negation_constant(visitor, node, arg):
     return (_CONSTANT, -1 * arg[1])
+
+
+def _handle_negation_fixed(visitor, node, arg):
+    return (_FIXED, -1 * arg[1])
 
 
 def _handle_negation_ANY(visitor, node, arg):
@@ -230,6 +236,11 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
             )
             return _CONSTANT, 0
     return _CONSTANT, ans
+
+
+def _handle_product_fixed_fixed(visitor, node, arg1, arg2):
+    # This is valid for fixed * constant, and fixed * fixed
+    return _FIXED, arg1[1] * arg2[1]
 
 
 def _handle_product_constant_ANY(visitor, node, arg1, arg2):
@@ -289,8 +300,29 @@ def _handle_division_constant_constant(visitor, node, arg1, arg2):
     return _CONSTANT, apply_node_operation(node, (arg1[1], arg2[1]))
 
 
+def _handle_division_fixed_fixed(visitor, node, arg1, arg2):
+    return _FIXED, arg1[1] / arg2[1]
+
+
 def _handle_division_ANY_constant(visitor, node, arg1, arg2):
-    arg1[1].multiplier = apply_node_operation(node, (arg1[1].multiplier, arg2[1]))
+    repn = arg1[1]
+    # We can only apply the division operation (and reduce the
+    # multiplier to a native value) if both the multiplier is a native
+    # value AND the divisor is a constant.  We know the latter is true
+    # here, but must check the former.  There is also a special case if
+    # the divisor is 0: then we can reduce the multiplier to an
+    # InvalidNumber (using apply_node_operation) regardless of what the
+    # dividend is.  Again, note that arg2 is a constant, so we can check
+    # it for 0 with bool()
+    if repn.multiplier.__class__ in native_numeric_types or not arg2[1]:
+        repn.multiplier = apply_node_operation(node, (repn.multiplier, arg2[1]))
+    else:
+        repn.multiplier /= arg2[1]
+    return arg1
+
+
+def _handle_division_ANY_fixed(visitor, node, arg1, arg2):
+    arg1[1].multiplier /= arg2[1]
     return arg1
 
 
@@ -347,6 +379,10 @@ def _handle_unary_constant(visitor, node, arg):
     if ans.__class__ in native_complex_types:
         ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
+
+
+def _handle_unary_fixed(visitor, node, arg):
+    return _FIXED, node.create_node_with_local_data((arg[1],))
 
 
 def _handle_unary_nonlinear(visitor, node, arg):
@@ -485,36 +521,56 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     _exit_node_handlers[NegationExpression] = {
         None: _handle_negation_ANY,
         (_CONSTANT,): _handle_negation_constant,
+        (_FIXED,): _handle_negation_fixed,
     }
     _exit_node_handlers[ProductExpression] = {
         None: _handle_product_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
+        (_CONSTANT, _FIXED): _handle_product_fixed_fixed,
         (_CONSTANT, _LINEAR): _handle_product_constant_ANY,
         (_CONSTANT, _GENERAL): _handle_product_constant_ANY,
+        (_FIXED, _CONSTANT): _handle_product_fixed_fixed,
+        (_FIXED, _FIXED): _handle_product_fixed_fixed,
+        (_FIXED, _LINEAR): _handle_product_constant_ANY,
+        (_FIXED, _GENERAL): _handle_product_constant_ANY,
         (_LINEAR, _CONSTANT): _handle_product_ANY_constant,
+        (_LINEAR, _FIXED): _handle_product_ANY_constant,
         (_GENERAL, _CONSTANT): _handle_product_ANY_constant,
+        (_GENERAL, _FIXED): _handle_product_ANY_constant,
     }
     _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
     _exit_node_handlers[DivisionExpression] = {
         None: _handle_division_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_division_constant_constant,
+        (_CONSTANT, _FIXED): _handle_division_fixed_fixed,
+        (_FIXED, _CONSTANT): _handle_division_fixed_fixed,
+        (_FIXED, _FIXED): _handle_division_fixed_fixed,
         (_LINEAR, _CONSTANT): _handle_division_ANY_constant,
+        (_LINEAR, _FIXED): _handle_division_ANY_fixed,
         (_GENERAL, _CONSTANT): _handle_division_ANY_constant,
+        (_GENERAL, _FIXED): _handle_division_ANY_fixed,
     }
     _exit_node_handlers[PowExpression] = {
         None: _handle_pow_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_pow_constant_constant,
+        (_CONSTANT, _FIXED): _handle_pow_fixed_fixed,
+        (_FIXED, _CONSTANT): _handle_pow_fixed_fixed,
+        (_FIXED, _FIXED): _handle_pow_fixed_fixed,
         (_LINEAR, _CONSTANT): _handle_pow_ANY_constant,
+        (_LINEAR, _FIXED): _handle_pow_ANY_constant,
         (_GENERAL, _CONSTANT): _handle_pow_ANY_constant,
+        (_GENERAL, _FIXED): _handle_pow_ANY_constant,
     }
     _exit_node_handlers[UnaryFunctionExpression] = {
         None: _handle_unary_nonlinear,
         (_CONSTANT,): _handle_unary_constant,
+        (_FIXED,): _handle_unary_fixed,
     }
     _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
     _exit_node_handlers[Expression] = {
         None: _handle_named_ANY,
         (_CONSTANT,): _handle_named_constant,
+        (_FIXED,): _handle_named_constant,
     }
     _exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if_nonlinear}
     for j in (_CONSTANT, _LINEAR, _GENERAL):
