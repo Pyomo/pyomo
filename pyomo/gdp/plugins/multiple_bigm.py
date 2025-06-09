@@ -376,13 +376,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                                 continue
                             # First check args
                             if (constraint, other_disjunct) in arg_Ms:
-                                print("Getting Ms from arg")
+                                # print("Getting Ms from arg")
                                 (lower_M, upper_M) = _convert_M_to_tuple(
                                     arg_Ms[constraint, other_disjunct], constraint, other_disjunct
                                 )
                                 self.used_args[constraint, other_disjunct] = (lower_M, upper_M)
                             else:
-                                print("Did not find Ms in arg")
+                                # print("Did not find Ms in arg")
                                 (lower_M, upper_M) = (None, None)
                             unsuccessful_solve_msg = (
                                 "Unsuccessful solve to calculate M value to "
@@ -414,7 +414,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         threads = self._config.threads if self._config.threads is not None else max(1, len(os.sched_getaffinity(0)) - 1)
         # threads = self._config.threads if self._config.threads is not None else 1
         running = {}
-        print(f"Before processing, {Ms=}")
+        # print(f"Before processing, {Ms=}")
         print(f"Executing {len(jobs)} jobs on {threads} worker threads.")
         with ThreadPoolExecutor(max_workers=threads, thread_name_prefix="mBigM-Worker-Thread") as executor:
             for constraint, other_disjunct, scratch, unsuccessful_solve_msg, upper in jobs:
@@ -435,7 +435,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             for (constraint, other_disjunct, upper), future in running.items():
                 try:
                     M, disjunct_infeasible = future.result()
-                    print(f"Got result: {M}, {disjunct_infeasible}")
+                    # print(f"Got result: {M}, {disjunct_infeasible}")
                 except Exception as e:
                     import traceback
                     print("@@@@@@@@@@@ PRINTING ERROR! @@@@@@@@@")
@@ -479,7 +479,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for con in transformed_constraints:
             con.deactivate()
 
-        print(f"Final {Ms.values()=}")
+        # print(f"Final {Ms.values()=}")
         # Iterate the Disjunctions again to actually transform them
         for disjunction, (transBlock, algebraic_constraint) in disjunction_setup.items():
             or_expr = 0
@@ -517,7 +517,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # scratch.pprint()
         solver = SolverFactory('baron')
         # solver = self._config.solver
-        print("About to call solver")
+        # print("About to call solver")
         results = solver.solve(scratch, tee=False, load_solutions=False)
 
         if results.solver.termination_condition is TerminationCondition.infeasible:
@@ -541,17 +541,17 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 # and then we can abandon this hack
                 raise GDP_Error(unsuccessful_message)
         elif results.solver.termination_condition is not TerminationCondition.optimal:
-            print("We had a solver error!")
+            # print("We had a solver error!")
             raise GDP_Error(unsuccessful_message)
         else:
-            print("We were optimal; getting M from objective bound")
+            # print("We were optimal; getting M from objective bound")
             # note: This tranformation can be made faster by allowing the solver a gap. As
             # long as we have a bound, it's still valid (though not as tight)
             if upper:
                 M = results.problem.upper_bound
             else:
                 M = results.problem.lower_bound
-            print(f"{M=}")
+            # print(f"{M=}")
             return (M, False)
 
     def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
@@ -785,136 +785,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     if id(var) not in seen:
                         seen.add(id(var))
                         yield var
-
-    def _calculate_missing_M_values(
-        self, active_disjuncts, arg_Ms, transBlock, transformed_constraints
-    ):
-        scratch_blocks = {}
-        all_vars = list(self._get_all_var_objects(active_disjuncts))
-        for disjunct, other_disjunct in itertools.product(
-            active_disjuncts, active_disjuncts
-        ):
-            if disjunct is other_disjunct:
-                continue
-            elif id(other_disjunct) in scratch_blocks:
-                scratch = scratch_blocks[id(other_disjunct)]
-            else:
-                scratch = scratch_blocks[id(other_disjunct)] = Block()
-                other_disjunct.add_component(
-                    unique_component_name(other_disjunct, "scratch"), scratch
-                )
-                scratch.obj = Objective(expr=0)  # placeholder, but I want to
-                # take the name before I add a
-                # bunch of random reference
-                # objects.
-
-                # If the writers don't assume Vars are declared on the Block
-                # being solved, we won't need this!
-                for v in all_vars:
-                    ref = Reference(v)
-                    scratch.add_component(unique_component_name(scratch, v.name), ref)
-
-            for constraint in disjunct.component_data_objects(
-                Constraint,
-                active=True,
-                descend_into=Block,
-                sort=SortComponents.deterministic,
-            ):
-                if constraint in transformed_constraints:
-                    continue
-                # First check args
-                if (constraint, other_disjunct) in arg_Ms:
-                    (lower_M, upper_M) = _convert_M_to_tuple(
-                        arg_Ms[constraint, other_disjunct], constraint, other_disjunct
-                    )
-                    self.used_args[constraint, other_disjunct] = (lower_M, upper_M)
-                else:
-                    (lower_M, upper_M) = (None, None)
-                unsuccessful_solve_msg = (
-                    "Unsuccessful solve to calculate M value to "
-                    "relax constraint '%s' on Disjunct '%s' when "
-                    "Disjunct '%s' is selected."
-                    % (constraint.name, disjunct.name, other_disjunct.name)
-                )
-                if constraint.lower is not None and lower_M is None:
-                    # last resort: calculate
-                    if lower_M is None:
-                        scratch.obj.expr = constraint.body - constraint.lower
-                        scratch.obj.sense = minimize
-                        lower_M = self._solve_disjunct_for_M(
-                            other_disjunct,
-                            scratch,
-                            unsuccessful_solve_msg,
-                            active_disjuncts,
-                        )
-                if constraint.upper is not None and upper_M is None:
-                    # last resort: calculate
-                    if upper_M is None:
-                        scratch.obj.expr = constraint.body - constraint.upper
-                        scratch.obj.sense = maximize
-                        upper_M = self._solve_disjunct_for_M(
-                            other_disjunct,
-                            scratch,
-                            unsuccessful_solve_msg,
-                            active_disjuncts,
-                        )
-                arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
-                transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
-
-        # clean up the scratch blocks
-        for blk in scratch_blocks.values():
-            blk.parent_block().del_component(blk)
-
-        return arg_Ms
-
-    def _solve_disjunct_for_M(
-        self, other_disjunct, scratch_block, unsuccessful_solve_msg, active_disjuncts
-    ):
-        if not other_disjunct.active:
-            # If a Disjunct is infeasible, we will discover that and deactivate
-            # it when we are calculating the M values. We remove that disjunct
-            # from active_disjuncts inside of the loop in
-            # _calculate_missing_M_values. So that means that we might have
-            # deactivated Disjuncts here that we should skip over.
-            return 0
-
-        solver = self._config.solver
-
-        print("About to call a solver")
-        results = solver.solve(other_disjunct, load_solutions=False)
-        if results.solver.termination_condition is TerminationCondition.infeasible:
-            # [2/18/24]: TODO: After the solver rewrite is complete, we will not
-            # need this check since we can actually determine from the
-            # termination condition whether or not the solver proved
-            # infeasibility or just terminated at local infeasiblity. For now,
-            # while this is not complete, it catches most of the solvers we
-            # trust, and, unless someone is so pathological as to *rename* an
-            # untrusted solver using a trusted solver name, it will never do the
-            # *wrong* thing.
-            if any(s in solver.name for s in _trusted_solvers):
-                logger.debug(
-                    "Disjunct '%s' is infeasible, deactivating." % other_disjunct.name
-                )
-                other_disjunct.deactivate()
-                active_disjuncts.remove(other_disjunct)
-                M = 0
-            else:
-                # This is a solver that might report
-                # 'infeasible' for local infeasibility, so we
-                # can't deactivate with confidence. To be
-                # conservative, we'll just complain about
-                # it. Post-solver-rewrite we will want to change
-                # this so that we check for 'proven_infeasible'
-                # and then we can abandon this hack
-                raise GDP_Error(unsuccessful_solve_msg)
-        elif results.solver.termination_condition is not TerminationCondition.optimal:
-            raise GDP_Error(unsuccessful_solve_msg)
-        else:
-            print("We were optimal; loading sol")
-            other_disjunct.solutions.load_from(results)
-            M = value(scratch_block.obj.expr)
-            print(f"{M=}")
-        return M
 
     def _warn_for_active_suffix(self, suffix, disjunct, active_disjuncts, Ms):
         if suffix.local_name == 'BigM':
