@@ -166,11 +166,14 @@ class InvalidNumber(PyomoObject):
         args, causes = InvalidNumber.parse_args(*args)
         try:
             return InvalidNumber(op(*args), causes)
-        except (TypeError, ArithmeticError):
+        except TypeError:
             # TypeError will be raised when operating on incompatible
-            # types (e.g., int + None); ArithmeticError can be raised by
-            # invalid operations (like divide by zero)
+            # types (e.g., int + None);
             return InvalidNumber(self.value, causes)
+        except (ArithmeticError, ValueError):
+            # ArithmeticError and ValueError can be raised by invalid
+            # operations (like divide by zero or log of a negative number)
+            return InvalidNumber(float('nan'), causes)
 
     def __eq__(self, other):
         ans = self._cmp(operator.eq, other)
