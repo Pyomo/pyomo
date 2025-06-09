@@ -9,10 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
 import sys
 from operator import itemgetter
-from itertools import filterfalse
 
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.numeric_types import (
@@ -59,8 +57,6 @@ from pyomo.repn.util import (
     sum_like_expression_types,
     val2str,
 )
-
-logger = logging.getLogger(__name__)
 
 _CONSTANT = ExprType.CONSTANT
 _FIXED = ExprType.FIXED
@@ -146,8 +142,8 @@ class LinearRepn(object):
     def to_expression(self, visitor):
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
-            # assignment) in case the term is a non-numeric node (like a
-            # relational expression)
+            # assignment to ans instead of addition) in case the term is
+            # a non-numeric node (like a relational expression)
             ans = self.nonlinear
         else:
             ans = 0
@@ -697,7 +693,8 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 )
             visitor.var_recorder.add(arg2)
 
-        # Trap multiplication by 0 and nan.
+        # Trap multiplication by 0 and nan.  Note that arg1 was reduced
+        # to a numeric value at the beginning of this method.
         if not arg1:
             if arg2.fixed:
                 arg2 = visitor.check_constant(arg2.value, arg2)
@@ -730,7 +727,9 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     except (ValueError, ArithmeticError):
                         return True, None
 
-                # Trap multiplication by 0 and nan.
+                # Trap multiplication by 0 and nan.  Note that arg1 was
+                # reduced to a numeric value at the beginning of this
+                # method.
                 if not arg1:
                     if arg2.fixed:
                         arg2 = visitor.check_constant(arg2.value, arg2)
