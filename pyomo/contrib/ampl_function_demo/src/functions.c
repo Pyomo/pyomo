@@ -159,6 +159,27 @@ extern real scbrt(arglist *al){
 }
 
 
+/* A function where f(x) = sgn(x)x^2  
+ */
+extern real sgnsqr(arglist *al){
+   real x = al->ra[al->at[0]];
+
+   real y = copysign(x * x, x);
+
+   // Compute the first derivative, if requested.
+   if (al->derivs!=NULL) {
+      al->derivs[0] = copysign(2 * x, x);
+   }
+
+   // Compute the second derivative, if requested.
+   if (al->hes!=NULL) {
+      al->hes[0] = copysign(2, x);
+   }
+
+   return y;
+}
+
+
 // Register external functions defined in this library with the ASL
 void funcadd(AmplExports *ae){
     /* Arguments for addfunc (this is not fully detailed; see funcadd.h)
@@ -172,6 +193,8 @@ void funcadd(AmplExports *ae){
      * 5) Void pointer to function info
      */
     addfunc("safe_cbrt", (rfunc)scbrt,
+            FUNCADD_REAL_VALUED, 1, NULL);
+    addfunc("sgnsqr", (rfunc)sgnsqr,
             FUNCADD_REAL_VALUED, 1, NULL);
     addfunc("demo_function", (rfunc)demo_function,
             FUNCADD_REAL_VALUED|FUNCADD_STRING_ARGS, -2, NULL);

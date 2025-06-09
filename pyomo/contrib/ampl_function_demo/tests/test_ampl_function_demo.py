@@ -68,3 +68,18 @@ class TestAMPLExternalFunction(unittest.TestCase):
         solver = pyo.SolverFactory("ipopt")
         solver.solve(m, tee=True)
         self.assertAlmostEqual(m.x(), 6, 4)
+
+    @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
+    def test_eval_sqnsqr_function_fgh(self):
+        m = pyo.ConcreteModel()
+        m.tf = pyo.ExternalFunction(library=flib, function="sgnsqr")
+
+        f, g, h = m.tf.evaluate_fgh((2,))
+        self.assertEqual(f, 4)
+        self.assertEqual(g, [4])
+        self.assertEqual(h, [2])
+
+        f, g, h = m.tf.evaluate_fgh((-2,))
+        self.assertAlmostEqual(f, -4)
+        self.assertStructuredAlmostEqual(g, [-4])
+        self.assertStructuredAlmostEqual(h, [-2])
