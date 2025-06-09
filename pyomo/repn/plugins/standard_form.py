@@ -330,7 +330,7 @@ class _LinearStandardFormCompiler_impl(object):
         self.var_map = var_map = {}
         initialize_var_map_from_column_order(model, self.config, var_map)
 
-        var_recorder = TemplateVarRecorder(var_map, None, sorter)
+        var_recorder = TemplateVarRecorder(var_map, sorter)
         visitor = self._get_visitor({}, var_recorder=var_recorder)
         template_visitor = LinearTemplateRepnVisitor({}, var_recorder=var_recorder)
 

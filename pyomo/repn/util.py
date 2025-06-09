@@ -823,12 +823,32 @@ class OrderedVarRecorder(object):
 
 
 class TemplateVarRecorder(object):
-    def __init__(self, var_map, var_order, sorter):
+    def __init__(self, var_map, sorter):
         self.var_map = var_map
-        self._var_order = var_order
+        self._var_order = None
         self.sorter = sorter
         self.env = {None: 0}
         self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
+        if var_map:
+            # If the user provided an initial var_map, we want to honor
+            # that ordering.  This means we need to both initialize the
+            # env dict with all the Vars referenced, PLUS fill in any
+            # additional vars that we would have indexed/recorded in
+            # add()
+            next_i = len(var_map)
+            for i, v in enumerate(list(var_map.values())):
+                var_comp = v.parent_component()
+                name = self.symbolmap.getSymbol(var_comp)
+                ve = self.env.get(name, None)
+                if ve is None:
+                    ve = self.env[name] = {}
+                    for idx, vdata in var_comp.items():
+                        vid = id(vdata)
+                        if vid not in var_map:
+                            var_map[vid] = v
+                            ve[idx] = next_i
+                            next_i += 1
+                ve[v.index()] = i
 
     @property
     def var_order(self):
@@ -854,18 +874,18 @@ class TemplateVarRecorder(object):
         # order in which we would see the variables)
         vm = self.var_map
         ve = self.env[name] = {}
-        vo = self._var_order
         try:
             _iter = var_comp.items(self.sorter)
         except AttributeError:
             # Note that this only works for the AML, as kernel does not
             # provide a parent_component()
-            _iter = (var,)
-        if vo is None:
+            _iter = (None, var)
+        if self._var_order is None:
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vm[id(v)] = v
                 ve[idx] = i
         else:
+            vo = self._var_order
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vid = id(v)
                 vm[vid] = v
