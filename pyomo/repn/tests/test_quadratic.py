@@ -86,8 +86,8 @@ class TestQuadratic(unittest.TestCase):
         visitor.expand_nonlinear_products = True
         repn = visitor.walk_expression(e)
 
-        QE4 = SumExpression([4 * m.x**2])
-        QE7 = SumExpression([7 * m.x**2])
+        QE4 = 4 * m.x**2
+        QE7 = 7 * m.x**2
         LE3 = MonomialTermExpression((3, m.x))
         LE6 = MonomialTermExpression((6, m.x))
         NL = +QE4 * (QE7 + LE6) + (LE3) * (QE7)
@@ -380,7 +380,7 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.quadratic, None)
-        self.assertEqual(repn.nonlinear, None)
+        assertExpressionsEqual(self, repn.nonlinear, 0 * log(m.x[3]))
 
         m.p = Param(mutable=True, within=Any, initialize=None)
         e = m.p * m.x[0] + m.p * m.x[1] * m.x[2] + m.p * log(m.x[3])

@@ -94,7 +94,7 @@ class TestRepnUtils(unittest.TestCase):
     @unittest.skipIf(not numpy_available, "NumPy is not available")
     def test_ftoa_precision(self):
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.core', logging.WARNING):
+        with LoggingIntercept(log, 'pyomo', logging.WARNING):
             f = np.longdouble('1.1234567890123456789')
             a = ftoa(f)
         self.assertEqual(a, '1.1234567890123457')
