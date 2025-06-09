@@ -166,7 +166,27 @@ class _GeneralObjectiveData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class TemplateObjectiveData(ObjectiveData):
+class TemplateDataMixin(object):
+    __slots__ = ()
+
+    @property
+    def args(self):
+        # Note that it is faster to just generate the expression from
+        # scratch than it is to clone it and replace the IndexTemplate objects
+        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
+        return self._args_
+
+    def template_expr(self):
+        return self._args_
+
+    def set_value(self, expr):
+        self.__class__ = self.__class__.__mro__[
+            self.__class__.__mro__.index(TemplateDataMixin) + 1
+        ]
+        return self.set_value(expr)
+
+
+class TemplateObjectiveData(TemplateDataMixin, ObjectiveData):
     __slots__ = ()
 
     def __init__(self, template_info, component, index, sense):
@@ -181,20 +201,6 @@ class TemplateObjectiveData(ObjectiveData):
         self._index = index
         self._args_ = template_info
         self._sense = sense
-
-    @property
-    def args(self):
-        # Note that it is faster to just generate the expression from
-        # scratch than it is to clone it and replace the IndexTemplate objects
-        self.set_value(self.parent_component().rule(self.parent_block(), self.index()))
-        return self._args_
-
-    def template_expr(self):
-        return self._args_
-
-    def set_value(self, expr):
-        self.__class__ = ObjectiveData
-        return self.set_value(expr)
 
 
 @ModelComponentFactory.register("Expressions that are minimized or maximized.")
@@ -321,13 +327,23 @@ class Objective(ActiveIndexedComponent):
                 if TEMPLATIZE_OBJECTIVES:
                     try:
                         template_info = templatize_rule(block, rule, self.index_set())
-                        comp = weakref_ref(self)
-                        self._data = {
-                            idx: TemplateObjectiveData(
-                                template_info, comp, idx, self._init_sense(block, index)
-                            )
-                            for idx in self.index_set()
-                        }
+                        if self.is_indexed():
+                            comp = weakref_ref(self)
+                            self._data = {
+                                idx: TemplateObjectiveData(
+                                    template_info,
+                                    comp,
+                                    idx,
+                                    self._init_sense(block, index),
+                                )
+                                for idx in self.index_set()
+                            }
+                        else:
+                            assert self.__class__ is ScalarObjective
+                            self.__class__ = TemplateScalarObjective
+                            self._expr = template_info
+                            self._data = {None: self}
+                            self.set_sense(self._init_sense(self, self.index()))
                         return
                     except TemplateExpressionError:
                         pass
@@ -497,6 +513,10 @@ class SimpleObjective(metaclass=RenamedClass):
 
 @disable_methods({'__call__', 'add', 'expr', 'sense', 'set_sense', 'set_value'})
 class AbstractScalarObjective(ScalarObjective):
+    pass
+
+
+class TemplateScalarObjective(TemplateDataMixin, ScalarObjective):
     pass
 
 

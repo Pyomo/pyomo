@@ -538,19 +538,8 @@ class _GeneralConstraintData(metaclass=RenamedClass):
     __renamed__version__ = '6.7.2'
 
 
-class TemplateConstraintData(ConstraintData):
+class TemplateDataMixin(object):
     __slots__ = ()
-
-    def __init__(self, template_info, component, index):
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ConstraintData,
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = component
-        self._active = True
-        self._index = index
-        self._expr = template_info
 
     @property
     def expr(self):
@@ -563,7 +552,9 @@ class TemplateConstraintData(ConstraintData):
         return self._expr
 
     def set_value(self, expr):
-        self.__class__ = ConstraintData
+        self.__class__ = self.__class__.__mro__[
+            self.__class__.__mro__.index(TemplateDataMixin) + 1
+        ]
         return self.set_value(expr)
 
     def to_bounded_expression(self, evaluate_bounds=False):
@@ -572,6 +563,21 @@ class TemplateConstraintData(ConstraintData):
             return super().to_bounded_expression(evaluate_bounds)
         finally:
             self._expr = tmp
+
+
+class TemplateConstraintData(TemplateDataMixin, ConstraintData):
+    __slots__ = ()
+
+    def __init__(self, template_info, component, index):
+        # These lines represent in-lining of the
+        # following constructors:
+        #   - ConstraintData,
+        #   - ActiveComponentData
+        #   - ComponentData
+        self._component = component
+        self._active = True
+        self._index = index
+        self._expr = template_info
 
 
 @ModelComponentFactory.register("General constraint expressions.")
@@ -706,11 +712,17 @@ class Constraint(ActiveIndexedComponent):
                 if TEMPLATIZE_CONSTRAINTS:
                     try:
                         template_info = templatize_constraint(self)
-                        comp = weakref_ref(self)
-                        self._data = {
-                            idx: TemplateConstraintData(template_info, comp, idx)
-                            for idx in self.index_set()
-                        }
+                        if self.is_indexed():
+                            comp = weakref_ref(self)
+                            self._data = {
+                                idx: TemplateConstraintData(template_info, comp, idx)
+                                for idx in self.index_set()
+                            }
+                        else:
+                            assert self.__class__ is ScalarConstraint
+                            self.__class__ = TemplateScalarConstraint
+                            self._expr = template_info
+                            self._data = {None: self}
                         return
                     except TemplateExpressionError:
                         pass
@@ -942,6 +954,10 @@ class AbstractScalarConstraint(ScalarConstraint):
 class AbstractSimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractScalarConstraint
     __renamed__version__ = '6.0'
+
+
+class TemplateScalarConstraint(TemplateDataMixin, ScalarConstraint):
+    pass
 
 
 class IndexedConstraint(Constraint):
