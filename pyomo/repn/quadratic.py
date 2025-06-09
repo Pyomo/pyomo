@@ -32,6 +32,7 @@ from pyomo.core.base.expression import Expression
 from . import linear
 from . import util
 from .linear import _merge_dict, to_expression
+from pyomo.repn.util import val2str
 
 _CONSTANT = linear.ExprType.CONSTANT
 _LINEAR = linear.ExprType.LINEAR
@@ -50,9 +51,26 @@ class QuadraticRepn(object):
         self.nonlinear = None
 
     def __str__(self):
+        linear = (
+            "{"
+            + ", ".join(f"{val2str(k)}: {val2str(v)}" for k, v in self.linear.items())
+            + "}"
+        )
+        if self.quadratic is None:
+            quadratic = None
+        else:
+            quadratic = (
+                "{"
+                + ", ".join(
+                    f"({val2str(k1)}, {val2str(k2)}): {val2str(v)}"
+                    for (k1, k2), v in self.quadratic.items()
+                )
+                + "}"
+            )
         return (
-            f"QuadraticRepn(mult={self.multiplier}, const={self.constant}, "
-            f"linear={self.linear}, quadratic={self.quadratic}, "
+            f"{self.__class__.__name__}(mult={val2str(self.multiplier)}, "
+            f"const={val2str(self.constant)}, "
+            f"linear={linear}, quadratic={quadratic}, "
             f"nonlinear={self.nonlinear})"
         )
 

@@ -57,6 +57,7 @@ from pyomo.repn.util import (
     initialize_exit_node_dispatcher,
     nan,
     sum_like_expression_types,
+    val2str,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,10 +65,6 @@ logger = logging.getLogger(__name__)
 _CONSTANT = ExprType.CONSTANT
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
-
-
-def _inv2str(val):
-    return f"{val._str() if hasattr(val, '_str') else val}"
 
 
 def _merge_dict(dest_dict, mult, src_dict):
@@ -95,9 +92,16 @@ class LinearRepn(object):
         self.nonlinear = None
 
     def __str__(self):
+        linear = (
+            "{"
+            + ", ".join(f"{val2str(k)}: {val2str(v)}" for k, v in self.linear.items())
+            + "}"
+        )
         return (
-            f"LinearRepn(mult={self.multiplier}, const={self.constant}, "
-            f"linear={self.linear}, nonlinear={self.nonlinear})"
+            f"{self.__class__.__name__}(mult={val2str(self.multiplier)}, "
+            f"const={val2str(self.constant)}, "
+            f"linear={linear}, "
+            f"nonlinear={self.nonlinear})"
         )
 
     def __repr__(self):
@@ -586,7 +590,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 arg2 = visitor.check_constant(arg2.value, arg2)
                 if arg2 != arg2:
                     deprecation_warning(
-                        f"Encountered {arg1}*{_inv2str(arg2)} in expression "
+                        f"Encountered {arg1}*{val2str(arg2)} in expression "
                         "tree.  Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -619,7 +623,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                         arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
-                                f"Encountered {arg1}*{_inv2str(arg2)} in expression "
+                                f"Encountered {arg1}*{val2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the lp_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",

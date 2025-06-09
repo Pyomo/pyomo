@@ -119,6 +119,20 @@ class FileDeterminism(enums.IntEnum):
         return super()._missing_(value)
 
 
+@staticmethod
+def val2str(val):
+    """Converts an object to str with special handling for InvalidNumber
+
+    This will convert the ``val`` to a string.  If ``val`` is an
+    InvalidNumber, the conversion to string will bypass the exception
+    raised by :py:meth:`InvalidNumber.__str__`.
+
+    """
+    if hasattr(val, '_str'):
+        return val._str()
+    return str(val)
+
+
 class InvalidNumber(PyomoObject):
     def __init__(self, value, cause=""):
         self.value = value
