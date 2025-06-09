@@ -16,7 +16,7 @@ import unittest
 from pyomo.core.expr import SumExpression, MonomialTermExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import Any, ConcreteModel, log, Param, Var
-from pyomo.repn.parameterized_quadratic import ParameterizedQuadraticRepnVisitor
+from pyomo.repn.parameterized import ParameterizedQuadraticRepnVisitor
 from pyomo.repn.tests.test_linear import VisitorConfig
 from pyomo.repn.util import InvalidNumber
 

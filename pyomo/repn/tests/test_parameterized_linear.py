@@ -13,7 +13,7 @@ from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import Any, Binary, ConcreteModel, log, Param, Var
-from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
+from pyomo.repn.parameterized import ParameterizedLinearRepnVisitor
 from pyomo.repn.tests.test_linear import VisitorConfig
 from pyomo.repn.util import InvalidNumber
 
