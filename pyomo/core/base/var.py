@@ -248,6 +248,38 @@ class VarData(ComponentData, NumericValue):
         """
         self.upper = val
 
+    def _resolve_bound_value(self, bound, domain_bound, unbounded, resolver):
+        if bound is None:
+            return domain_bound
+
+        if bound.__class__ not in native_numeric_types:
+            bound = value(bound)
+            if bound.__class__ not in native_numeric_types:
+                # Starting in numpy 1.25, casting 1-element ndarray to
+                # float is deprecated.  We still want to support
+                # that... but without enforcing a hard numpy dependence
+                for cls in bound.__class__.__mro__:
+                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                        if len(bound) == 1:
+                            bound = bound[0]
+                        break
+                bound = float(bound)
+        if bound in _nonfinite_values or bound != bound:
+            if bound == unbounded:
+                bound = None
+            else:
+                raise ValueError(
+                    "Var '%s' created with an invalid non-finite "
+                    "%s bound (%s)."
+                    % (self.name, "lower" if unbounded == _ninf else "upper", bound)
+                )
+        if domain_bound is not None:
+            if bound is None:
+                return domain_bound
+            else:
+                return resolver(bound, domain_bound)
+        return bound
+
     @property
     def bounds(self):
         """Returns (or set) the tuple (lower bound, upper bound).
@@ -260,43 +292,11 @@ class VarData(ComponentData, NumericValue):
         # Custom implementation of lb / ub to avoid unnecessary
         # expression generation and duplicate calls to domain.bounds()
         domain_lb, domain_ub = self.domain.bounds()
-        # lb is the tighter of the domain and bounds
-        lb = self._lb
-        if lb.__class__ not in native_numeric_types:
-            if lb is not None:
-                lb = float(value(lb))
-        if lb in _nonfinite_values or lb != lb:
-            if lb == _ninf:
-                lb = None
-            else:
-                raise ValueError(
-                    "Var '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, lb)
-                )
-        if domain_lb is not None:
-            if lb is None:
-                lb = domain_lb
-            else:
-                lb = max(lb, domain_lb)
-        # ub is the tighter of the domain and bounds
-        ub = self._ub
-        if ub.__class__ not in native_numeric_types:
-            if ub is not None:
-                ub = float(value(ub))
-        if ub in _nonfinite_values or ub != ub:
-            if ub == _inf:
-                ub = None
-            else:
-                raise ValueError(
-                    "Var '%s' created with an invalid non-finite "
-                    "upper bound (%s)." % (self.name, ub)
-                )
-        if domain_ub is not None:
-            if ub is None:
-                ub = domain_ub
-            else:
-                ub = min(ub, domain_ub)
-        return lb, ub
+        # return the tighter of the domain and bounds
+        return (
+            self._resolve_bound_value(self._lb, domain_lb, _ninf, max),
+            self._resolve_bound_value(self._ub, domain_ub, _inf, min),
+        )
 
     @bounds.setter
     def bounds(self, val):
@@ -308,24 +308,7 @@ class VarData(ComponentData, NumericValue):
         # Note: Implementation avoids unnecessary expression generation
         domain_lb, domain_ub = self.domain.bounds()
         # lb is the tighter of the domain and bounds
-        lb = self._lb
-        if lb.__class__ not in native_numeric_types:
-            if lb is not None:
-                lb = float(value(lb))
-        if lb in _nonfinite_values or lb != lb:
-            if lb == _ninf:
-                lb = None
-            else:
-                raise ValueError(
-                    "Var '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, lb)
-                )
-        if domain_lb is not None:
-            if lb is None:
-                lb = domain_lb
-            else:
-                lb = max(lb, domain_lb)
-        return lb
+        return self._resolve_bound_value(self._lb, domain_lb, _ninf, max)
 
     @lb.setter
     def lb(self, val):
@@ -337,24 +320,7 @@ class VarData(ComponentData, NumericValue):
         # Note: implementation avoids unnecessary expression generation
         domain_lb, domain_ub = self.domain.bounds()
         # ub is the tighter of the domain and bounds
-        ub = self._ub
-        if ub.__class__ not in native_numeric_types:
-            if ub is not None:
-                ub = float(value(ub))
-        if ub in _nonfinite_values or ub != ub:
-            if ub == _inf:
-                ub = None
-            else:
-                raise ValueError(
-                    "Var '%s' created with an invalid non-finite "
-                    "upper bound (%s)." % (self.name, ub)
-                )
-        if domain_ub is not None:
-            if ub is None:
-                ub = domain_ub
-            else:
-                ub = min(ub, domain_ub)
-        return ub
+        return self._resolve_bound_value(self._ub, domain_ub, _inf, min)
 
     @ub.setter
     def ub(self, val):

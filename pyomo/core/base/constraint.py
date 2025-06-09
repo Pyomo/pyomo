@@ -63,7 +63,8 @@ logger = logging.getLogger('pyomo.core')
 TEMPLATIZE_CONSTRAINTS = False
 
 _inf = float('inf')
-_nonfinite_values = {_inf, -_inf}
+_ninf = -_inf
+_nonfinite_values = {_inf, _ninf}
 _known_relational_expression_types = {
     EqualityExpression,
     InequalityExpression,
@@ -246,21 +247,31 @@ class ConstraintData(ActiveComponentData):
 
         if evaluate_bounds:
             lb, body, ub = ans
-            return self._evaluate_bound(lb, True), body, self._evaluate_bound(ub, False)
+            return self._evaluate_bound(lb, _ninf), body, self._evaluate_bound(ub, _inf)
         return ans
 
-    def _evaluate_bound(self, bound, is_lb):
+    def _evaluate_bound(self, bound, unbounded):
         if bound is None:
             return None
         if bound.__class__ not in native_numeric_types:
-            bound = float(value(bound))
+            bound = value(bound)
+            if bound.__class__ not in native_numeric_types:
+                # Starting in numpy 1.25, casting 1-element ndarray to
+                # float is deprecated.  We still want to support
+                # that... but without enforcing a hard numpy dependence
+                for cls in bound.__class__.__mro__:
+                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                        if len(bound) == 1:
+                            bound = bound[0]
+                        break
+                bound = float(bound)
         # Note that "bound != bound" catches float('nan')
         if bound in _nonfinite_values or bound != bound:
-            if bound == (-_inf if is_lb else _inf):
+            if bound == unbounded:
                 return None
             raise ValueError(
                 f"Constraint '{self.name}' created with an invalid non-finite "
-                f"{'lower' if is_lb else 'upper'} bound ({bound})."
+                f"{'upper' if unbounded==_inf else 'lower'} bound ({bound})."
             )
         return bound
 
@@ -333,12 +344,12 @@ class ConstraintData(ActiveComponentData):
     @property
     def lb(self):
         """float : the value of the lower bound of a constraint expression."""
-        return self._evaluate_bound(self.to_bounded_expression()[0], True)
+        return self._evaluate_bound(self.to_bounded_expression()[0], _ninf)
 
     @property
     def ub(self):
         """float : the value of the upper bound of a constraint expression."""
-        return self._evaluate_bound(self.to_bounded_expression()[2], False)
+        return self._evaluate_bound(self.to_bounded_expression()[2], _inf)
 
     @property
     def equality(self):
@@ -555,10 +566,10 @@ class TemplateConstraintData(ConstraintData):
         self.__class__ = ConstraintData
         return self.set_value(expr)
 
-    def to_bounded_expression(self):
+    def to_bounded_expression(self, evaluate_bounds=False):
         tmp, self._expr = self._expr, self._expr[0]
         try:
-            return super().to_bounded_expression()
+            return super().to_bounded_expression(evaluate_bounds)
         finally:
             self._expr = tmp
 
