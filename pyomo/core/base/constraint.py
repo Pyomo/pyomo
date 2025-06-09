@@ -935,6 +935,7 @@ class SimpleConstraint(metaclass=RenamedClass):
 
 @disable_methods(
     {
+        '__call__',
         'add',
         'set_value',
         'to_bounded_expression',
