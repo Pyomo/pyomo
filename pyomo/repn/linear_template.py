@@ -37,19 +37,43 @@ class LinearTemplateRepn(LinearRepn):
         self.linear_sum = []
 
     def __str__(self):
+        linear = (
+            "{"
+            + ", ".join(f"{_str(k)}: {_str(v)}" for k, v in self.linear.items())
+            + "}"
+        )
         return (
-            f"LinearTemplateRepn(mult={self.multiplier}, const={self.constant}, "
-            f"linear={self.linear}, linear_sum={self.linear_sum}, "
+            f"{self.__class__.__name__}(mult={_str(self.multiplier)}, "
+            f"const={_str(self.constant)}, "
+            f"linear={linear}, "
+            f"linear_sum={self.linear_sum}, "
             f"nonlinear={self.nonlinear})"
         )
 
+    @staticmethod
+    def constant_flag(val):
+        if val.__class__ in native_numeric_types:
+            return val
+        return 2  # something not 0 or 1
+
+    @staticmethod
+    def multiplier_flag(val):
+        if val.__class__ in native_numeric_types:
+            return val
+        return 2  # something not 0 or 1
+
     def walker_exitNode(self):
-        if self.nonlinear is not None:
-            return _GENERAL, self
-        elif self.linear or self.linear_sum:
-            return _LINEAR, self
+        if not self.linear and self.linear_sum:
+            # "LINEAR" is "linear or linear_sum"; (temporarily) move
+            # linear_sum to linear so this node is recognized as "LINEAR".
+            linear = self.linear
+            self.linear = self.linear_sum
+            try:
+                return super().walker_exitNode()
+            finally:
+                self.linear = linear
         else:
-            return _CONSTANT, self.multiplier * self.constant
+            return super().walker_exitNode()
 
     def duplicate(self):
         ans = super().duplicate()
@@ -62,7 +86,7 @@ class LinearTemplateRepn(LinearRepn):
         Notes
         -----
         This method assumes that the operator was "+". It is implemented
-        so that we can directly use a QuadraticRepn() as a data object in
+        so that we can directly use a LinearTemplateRepn() as a data object in
         the expression walker (thereby avoiding the function call for a
         custom callback)
 
@@ -70,10 +94,8 @@ class LinearTemplateRepn(LinearRepn):
         super().append(other)
         _type, other = other
         if getattr(other, 'linear_sum', None):
-            mult = other.multiplier
-            if not mult:
-                return
-            if mult != 1:
+            if self.multiplier_flag(other.multiplier) != 1:
+                mult = other.multiplier
                 for term in other.linear_sum:
                     term[0].multiplier *= mult
             self.linear_sum.extend(other.linear_sum)
@@ -210,35 +232,82 @@ class LinearTemplateRepn(LinearRepn):
 
 
 class LinearTemplateBeforeChildDispatcher(linear.LinearBeforeChildDispatcher):
+    @staticmethod
+    def _before_var(visitor, child):
+        # Note: the LinearBeforeChildDispatcher returns Var ids as
+        # id(var), whereas we are returning the actual variable order
+        # here.
+        #
+        # TODO(?): add a "_id" field to all VarData so that walkers can
+        # assign "useful local IDs" to variables that they encounter?
+        desc, ans = linear.LinearBeforeChildDispatcher._before_var(visitor, child)
+        if ans[0] is _LINEAR:
+            vo = visitor.var_recorder.var_order
+            ans[1].linear = {vo[_id]: coef for _id, coef in ans[1].linear.items()}
+        return desc, ans
 
-    def _before_indexed_var(self, visitor, child):
+    @staticmethod
+    def _before_monomial(visitor, child):
+        # Note: the LinearBeforeChildDispatcher returns Var ids as
+        # id(var), whereas we are returning the actual variable order
+        # here.
+        #
+        # TODO(?): add a "_id" field to all VarData so that walkers can
+        # assign "useful local IDs" to variables that they encounter?
+        desc, ans = linear.LinearBeforeChildDispatcher._before_monomial(visitor, child)
+        if not desc and ans[0] is _LINEAR:
+            vo = visitor.var_recorder.var_order
+            ans[1].linear = {vo[_id]: coef for _id, coef in ans[1].linear.items()}
+        return desc, ans
+
+    @staticmethod
+    def _before_linear(visitor, child):
+        # Note: the LinearBeforeChildDispatcher returns Var ids as
+        # id(var), whereas we are returning the actual variable order
+        # here.
+        #
+        # TODO(?): add a "_id" field to all VarData so that walkers can
+        # assign "useful local IDs" to variables that they encounter?
+        desc, ans = linear.LinearBeforeChildDispatcher._before_linear(visitor, child)
+        if not desc and ans[0] is _LINEAR:
+            vo = visitor.var_recorder.var_order
+            ans[1].linear = {vo[_id]: coef for _id, coef in ans[1].linear.items()}
+        return desc, ans
+
+    @staticmethod
+    def _before_indexed_var(visitor, child):
         if child not in visitor.indexed_vars:
             visitor.var_recorder.add(child)
             visitor.indexed_vars.add(child)
         return False, (_VARIABLE, child)
 
-    def _before_indexed_param(self, visitor, child):
+    @staticmethod
+    def _before_indexed_param(visitor, child):
         if child not in visitor.indexed_params:
             visitor.indexed_params.add(child)
             name = visitor.symbolmap.getSymbol(child)
             visitor.env[name] = child.extract_values()
         return False, (_CONSTANT, child)
 
-    def _before_indexed_component(self, visitor, child):
+    @staticmethod
+    def _before_indexed_component(visitor, child):
         visitor.env[visitor.symbolmap.getSymbol(child)] = child
         return False, (_CONSTANT, child)
 
-    def _before_index_template(self, visitor, child):
+    @staticmethod
+    def _before_index_template(visitor, child):
         symb = visitor.symbolmap.getSymbol(child)
         visitor.env[symb] = 0
         visitor.expr_cache[id(child)] = child
         return False, (_CONSTANT, child)
 
-    def _before_component(self, visitor, child):
+    @staticmethod
+    def _before_component(visitor, child):
         visitor.env[visitor.symbolmap.getSymbol(child)] = child
         return False, (_CONSTANT, child)
 
-    def _before_named_expression(self, visitor, child):
+    @staticmethod
+    def _before_named_expression(visitor, child):
         raise MouseTrap("We do not yet support Expression components")
 
 
