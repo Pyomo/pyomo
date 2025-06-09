@@ -13,7 +13,7 @@ from itertools import chain
 
 from pyomo.common.collections import ComponentSet
 from pyomo.common.errors import MouseTrap
-from pyomo.common.numeric_types import native_types
+from pyomo.common.numeric_types import native_types, native_numeric_types
 
 import pyomo.core.expr as expr
 import pyomo.repn.linear as linear
