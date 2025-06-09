@@ -46,7 +46,7 @@ from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger(__name__)
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
