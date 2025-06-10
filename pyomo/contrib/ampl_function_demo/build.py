@@ -15,10 +15,10 @@ from pyomo.common.cmake_builder import build_cmake_project
 
 def build_ampl_function_demo(user_args=[], parallel=None):
     return build_cmake_project(
-        targets=['src'],
-        package_name='asl_external_demo',
-        description='AMPL External function demo library',
-        user_args=['-DBUILD_AMPLASL_IF_NEEDED=ON'] + user_args,
+        targets=["src"],
+        package_name="asl_external_demo",
+        description="AMPL External function demo library",
+        user_args=["-DBUILD_AMPLASL_IF_NEEDED=ON"] + user_args,
         parallel=parallel,
     )
 

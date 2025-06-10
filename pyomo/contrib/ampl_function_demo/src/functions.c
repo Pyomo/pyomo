@@ -168,7 +168,7 @@ extern real sgnsqr(arglist *al){
 
    // Compute the first derivative, if requested.
    if (al->derivs!=NULL) {
-      al->derivs[0] = copysign(2 * x, x);
+      al->derivs[0] = copysign(1, x) * 2 * x;
    }
 
    // Compute the second derivative, if requested.

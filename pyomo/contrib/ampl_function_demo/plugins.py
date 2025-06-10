@@ -14,4 +14,4 @@ from pyomo.contrib.ampl_function_demo.build import AMPLFunctionDemoBuilder
 
 
 def load():
-    ExtensionBuilderFactory.register('ampl_function_demo')(AMPLFunctionDemoBuilder)
+    ExtensionBuilderFactory.register("ampl_function_demo")(AMPLFunctionDemoBuilder)
