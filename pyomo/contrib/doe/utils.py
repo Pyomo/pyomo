@@ -32,6 +32,19 @@ from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
 
+# This small and positive tolerance is used when checking
+# if the prior is negative definite or approximately
+# indefinite. It is defined as a tolerance here to ensure
+# consistency between the code below and the tests. The
+# user should not need to adjust it.
+_SMALL_TOLERANCE_DEFINITENESS = 1e-6
+
+# This small and positive tolerance is used to check
+# the FIM is approximately symmetric. It is defined as
+# a tolerance here to ensure consistency between the code
+# below and the tests. The user should not need to adjust it.
+_SMALL_TOLERANCE_SYMMETRY = 1e-6
+
 
 # Rescale FIM (a scaling function to help rescale FIM from parameter values)
 def rescale_FIM(FIM, param_vals):
@@ -68,35 +81,70 @@ def rescale_FIM(FIM, param_vals):
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM
 
+    # TODO: Add swapping parameters for variables helper function
+    # def get_parameters_from_suffix(suffix, fix_vars=False):
+    #     """
+    #     Finds the Params within the suffix provided. It will also check to see
+    #     if there are Vars in the suffix provided. ``fix_vars`` will indicate
+    #     if we should fix all the Vars in the set or not.
+    #
+    #     Parameters
+    #     ----------
+    #     suffix: pyomo Suffix object, contains the components to be checked
+    #             as keys
+    #     fix_vars: boolean, whether or not to fix the Vars, default = False
+    #
+    #     Returns
+    #     -------
+    #     param_list: list of Param
+    #     """
+    #     param_list = []
+    #
+    #     # FIX THE MODEL TREE ISSUE WHERE I GET base_model.<param> INSTEAD OF <param>
+    #     # Check keys if they are Param or Var. Fix the vars if ``fix_vars`` is True
+    #     for k, v in suffix.items():
+    #         if isinstance(k, ParamData):
+    #             param_list.append(k.name)
+    #         elif isinstance(k, VarData):
+    #             if fix_vars:
+    #                 k.fix()
+    #         else:
+    #             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
+    #
+    #     return param_list
 
-# TODO: Add swapping parameters for variables helper function
-# def get_parameters_from_suffix(suffix, fix_vars=False):
-#     """
-#     Finds the Params within the suffix provided. It will also check to see
-#     if there are Vars in the suffix provided. ``fix_vars`` will indicate
-#     if we should fix all the Vars in the set or not.
-#
-#     Parameters
-#     ----------
-#     suffix: pyomo Suffix object, contains the components to be checked
-#             as keys
-#     fix_vars: boolean, whether or not to fix the Vars, default = False
-#
-#     Returns
-#     -------
-#     param_list: list of Param
-#     """
-#     param_list = []
-#
-#     # FIX THE MODEL TREE ISSUE WHERE I GET base_model.<param> INSTEAD OF <param>
-#     # Check keys if they are Param or Var. Fix the vars if ``fix_vars`` is True
-#     for k, v in suffix.items():
-#         if isinstance(k, ParamData):
-#             param_list.append(k.name)
-#         elif isinstance(k, VarData):
-#             if fix_vars:
-#                 k.fix()
-#         else:
-#             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
-#
-#     return param_list
+
+def check_FIM(FIM):
+    """Checks that the FIM is square, positive definite, and symmetric.
+
+    Parameters
+    ----------
+    FIM: 2D numpy array representing the FIM
+
+    Returns
+    -------
+    None, but will raise error messages as needed
+
+    """
+    # Check that the FIM is a square matrix
+    if FIM.shape[0] != FIM.shape[1]:
+        raise ValueError("FIM must be a square matrix")
+
+    # Compute the eigenvalues of the FIM
+    evals = np.linalg.eigvals(FIM)
+
+    # Check if the FIM is positive definite
+    if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
+        raise ValueError(
+            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
+                _SMALL_TOLERANCE_DEFINITENESS
+            )
+        )
+
+    # Check if the FIM is symmetric
+    if not np.allclose(FIM, FIM.T, atol=_SMALL_TOLERANCE_SYMMETRY):
+        raise ValueError(
+            "FIM provided is not symmetric using absolute tolerance {}".format(
+                _SMALL_TOLERANCE_SYMMETRY
+            )
+        )
