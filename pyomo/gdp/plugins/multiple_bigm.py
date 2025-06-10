@@ -11,6 +11,7 @@
 
 import itertools
 import logging
+import math
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
@@ -59,6 +60,7 @@ from pyomo.repn import generate_standard_repn
 
 from weakref import ref as weakref_ref
 
+import threading
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 import os
 
@@ -76,6 +78,8 @@ _trusted_solvers = {
     'highs',
 }
 
+# Keep Solver objects in thread-local storage
+_thread_local = threading.local()
 
 def Solver(val):
     if isinstance(val, str):
@@ -140,7 +144,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     CONFIG.declare(
         'solver',
         ConfigValue(
-            default='gurobi',
+            default='baron',  # TODO restore this to gurobi after fixing deadlock
             domain=Solver,
             description="A solver to use to solve the continuous subproblems for "
             "calculating the M values",
@@ -229,8 +233,22 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             domain=int,
             description="Number of worker threads to use when estimating M values",
             doc="""
-            If not specified, use up to the number of cores available, minus
+            If not specified, use up to the number of available cores, minus
             one (but at least one).
+            """
+        )
+    )
+    CONFIG.declare(
+        'use_primal_bound',
+        ConfigValue(
+            default=False,
+            domain=bool,
+            description="When estimating M values, use the primal bound instead of dual bound",
+            doc="""
+            This is necessary when using a local solver such as ipopt, but be
+            aware that interior feasible points for this subproblem do not give
+            valid values for M. That is, in the presence of any numerical error,
+            this option will lead to a slightly wrong reformulation.
             """
         )
     )
@@ -298,19 +316,21 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _transform_disjunctionDatas_threaded(self, preprocessed_targets, arg_Ms, gdp_tree):
         # We wish we could do this one Disjunction at a time, but we also want to
         # calculate the Ms in parallel. So we do a slightly convoluted dance of iterating
-        # the Disjunctions to get a list of M calculation jobs, then actually calculating
-        # Ms, then iterating Disjunctions again to actually transform the constraints.
+        # the Disjunctions to get a list of M calculation jobs, then calculating Ms
+        # multithreaded, then iterating Disjunctions again to actually transform the
+        # constraints.
 
         # To-do list in form (constraint, other_disj, scratch, unsucc_msg, upper)
         jobs = []
         # map Disjunction -> set of its active Disjuncts
         active_disjuncts = ComponentMap()
-        # set of Constraints processed during special handling of bound constraints; we
+        # set of Constraints processed during special handling of bound constraints: we
         # will deactivate these, but not until we're done calculating Ms
         transformed_constraints = set()
-        # Ms ready for use
+        # Finished M values
         Ms = {}
-        # Disjunctions and their setup components. We will need to return to these later
+        # Disjunctions and their setup components. We will return to these after
+        # calculating Ms.
         disjunction_setup = {}
 
         for t in preprocessed_targets:
@@ -357,7 +377,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     ))
                 # Get the jobs to calculate missing M values for this Disjunction. We can
                 # skip this if we are only doing bound constraints.
-
                 if not self._config.only_mbigm_bound_constraints:
                     all_vars = list(self._get_all_var_objects(active_disjuncts[t]))
                     for disjunct, other_disjunct in itertools.product(
@@ -407,12 +426,12 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 # transform_constraint parse it
                 #
                 # TODO revisit what's going on here. Can we just skip half the
-                # transformation instead of doing this? We have queued zero jobs.
+                # transformation instead of doing this? We have queued zero jobs so
+                # none of the threads stuff will run.
                 else:
                     Ms = arg_Ms
         # (Now exiting the DisjunctionDatas loop)
         threads = self._config.threads if self._config.threads is not None else max(1, len(os.sched_getaffinity(0)) - 1)
-        # threads = self._config.threads if self._config.threads is not None else 1
         running = {}
         # print(f"Before processing, {Ms=}")
         print(f"Executing {len(jobs)} jobs on {threads} worker threads.")
@@ -433,14 +452,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
             to_deactivate = set()
             for (constraint, other_disjunct, upper), future in running.items():
-                try:
-                    M, disjunct_infeasible = future.result()
-                    # print(f"Got result: {M}, {disjunct_infeasible}")
-                except Exception as e:
-                    import traceback
-                    print("@@@@@@@@@@@ PRINTING ERROR! @@@@@@@@@")
-                    traceback.print_tb(e.__traceback__)
-                    raise e
+                # try:
+                M, disjunct_infeasible = future.result()
+                # print(f"Got result: {M}, {disjunct_infeasible}")
+                # except Exception as e:
+                #     import traceback
+                #     print("@@@@@@@@@@@ PRINTING ERROR! @@@@@@@@@")
+                #     traceback.print_tb(e.__traceback__)
+                #     raise e
                 if disjunct_infeasible:
                     # Don't deactivate live because we have concurrent jobs still running
                     if other_disjunct not in to_deactivate:
@@ -452,30 +471,18 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         to_deactivate.add(other_disjunct)
                     continue
                 # Note that we can't just transform immediately because we might be
-                # waiting on the other one of upper_M/lower_M and I'd like to do
-                # constraints all at once.
+                # waiting on the other one of upper_M or lower_M.
                 if upper:
                     Ms[constraint, other_disjunct] = (Ms[constraint, other_disjunct][0], M)
                 else:
                     Ms[constraint, other_disjunct] = (M, Ms[constraint, other_disjunct][1])
                 transBlock._mbm_values[constraint, other_disjunct] = Ms[constraint, other_disjunct]
 
-        # Now exiting threaded context
-        # TODO: make this not awful
-        if to_deactivate:
-            for disjunction in disjunction_setup.keys():
-                for disjunct in set(active_disjuncts[disjunction]):
-                    if disjunct in to_deactivate:
-                        disjunct.deactivate()
-                        active_disjuncts[disjunction].remove(disjunct)
-        # for disjunct in to_deactivate:
-        #     print("Deactivating a disjunct.")
-        #     disjunct.deactivate()
-            # want something like
-            # active_disjuncts[disjunct.parent_disjunction()].remove(disjunct), but there
-            # is no such method on Disjunct. Instead we will do something terrible
+        # Now exiting threaded context. Cleanup:
+        for disjunct in to_deactivate:
+            disjunct.deactivate()
+            active_disjuncts[gdp_tree.parent(disjunct)].remove(disjunct)
 
-        # We now have all the M values. Do some cleanup:
         for con in transformed_constraints:
             con.deactivate()
 
@@ -502,7 +509,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # Create a Block component (reference) that actually points to a DisjunctData, as
         # we want the writer to write it as if it were an ordinary Block rather than
         # getting any special handling. DisjunctData inherits BlockData, so this should
-        # be legal.
+        # be valid.
         scratch.disjunct_ref = Reference(other_disjunct, ctype=Block)
         # If the writers don't assume Vars are declared on the Block
         # being solved, we won't need this!
@@ -513,10 +520,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return scratch
 
     def _calc_M(self, scratch, unsuccessful_message, upper):
-
-        # scratch.pprint()
-        solver = SolverFactory('baron')
-        # solver = self._config.solver
+        # Retrieve a solver object from thread-local storage; if we don't have one, make
+        # a new solver reasonably similar to the one passed via config.
+        if hasattr(_thread_local, 'solver'):
+            solver = _thread_local.solver
+        else:
+            solver_arg = self._config.solver
+            solver = _thread_local.solver = SolverFactory(solver_arg.name, options=solver_arg.options)
         # print("About to call solver")
         results = solver.solve(scratch, tee=False, load_solutions=False)
 
@@ -546,11 +556,25 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         else:
             # print("We were optimal; getting M from objective bound")
             # note: This tranformation can be made faster by allowing the solver a gap. As
-            # long as we have a bound, it's still valid (though not as tight)
-            if upper:
+            # long as we have a bound, it's still valid (though not as tight).
+
+            # We should use the dual bound here. The primal bound is mathematically
+            # incorrect in the presence of error, but local solvers need it.
+            if upper != self._config.use_primal_bound:
                 M = results.problem.upper_bound
             else:
                 M = results.problem.lower_bound
+            if not math.isfinite(M):
+                raise GDP_Error(
+                    "Subproblem solved to optimality, but no finite dual bound was "
+                    "obtained. If you would like to instead use the best obtained "
+                    "solution, set the option use_primal_bound=True. This is "
+                    "necessary when using a local solver such as ipopt, but be "
+                    "aware that interior feasible points for this subproblem do "
+                    "not give valid values for M."
+                    if not self._config.use_primal_bound else
+                    "No finite objective after optimal solve."
+                )
             # print(f"{M=}")
             return (M, False)
 

@@ -1062,7 +1062,7 @@ class EdgeCases(unittest.TestCase):
             r"Disjunct 'disjunction_disjuncts\[0\]' is selected.",
         ):
             TransformationFactory('gdp.mbigm').apply_to(
-                m, solver=SolverFactory('ipopt'), reduce_bound_constraints=False
+                m, solver=SolverFactory('ipopt'), reduce_bound_constraints=False, use_primal_bound=True
             )
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
