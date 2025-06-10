@@ -1509,9 +1509,10 @@ class DesignOfExperiments:
 
         Returns
         -------
-        fim_factorial_results: a dictionary of the results with the following keys and
-        their corresponding values as a list. Each element in the list corresponds
-        to a different design point in the full factorial space.
+        fim_factorial_results: a dictionary of the results with the
+        following keys and their corresponding values as a list.
+        Each element in the list corresponds to a different design
+        point in the full factorial space.
             "log10 D-opt": list of log10(D-optimality)
             "log10 A-opt": list of log10(A-optimality)
             "log10 E-opt": list of log10(E-optimality)
