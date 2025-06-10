@@ -17,12 +17,12 @@ from pyomo.opt import check_available_solvers
 from pyomo.core.base.external import nan
 
 flib = find_library("asl_external_demo")
-is_pypy = platform.python_implementation().lower().startswith('pypy')
+is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
 @unittest.skipUnless(flib, 'Could not find the "asl_external_demo.so" library')
 class TestAMPLExternalFunction(unittest.TestCase):
-    @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
+    @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
     def test_eval_function(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="demo_function")
@@ -34,7 +34,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
             m.cbrt.evaluate_fgh([0]), (0, [100951], [-1.121679e13]), reltol=1e-5
         )
 
-    @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
+    @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
     def test_eval_function_fgh(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="demo_function")
@@ -52,7 +52,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
         )
 
     @unittest.skipUnless(
-        check_available_solvers('ipopt'), "The 'ipopt' solver is not available"
+        check_available_solvers("ipopt"), "The 'ipopt' solver is not available"
     )
     def test_solve_function(self):
         m = pyo.ConcreteModel()
@@ -68,3 +68,18 @@ class TestAMPLExternalFunction(unittest.TestCase):
         solver = pyo.SolverFactory("ipopt")
         solver.solve(m, tee=True)
         self.assertAlmostEqual(m.x(), 6, 4)
+
+    @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
+    def test_eval_sqnsqr_function_fgh(self):
+        m = pyo.ConcreteModel()
+        m.tf = pyo.ExternalFunction(library=flib, function="sgnsqr")
+
+        f, g, h = m.tf.evaluate_fgh((2,))
+        self.assertEqual(f, 4)
+        self.assertEqual(g, [4])
+        self.assertEqual(h, [2])
+
+        f, g, h = m.tf.evaluate_fgh((-2,))
+        self.assertAlmostEqual(f, -4)
+        self.assertStructuredAlmostEqual(g, [4])
+        self.assertStructuredAlmostEqual(h, [-2])
