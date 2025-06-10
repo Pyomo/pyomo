@@ -32,6 +32,12 @@ from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.core.base.param import ParamData
 from pyomo.core.base.var import VarData
 
+import logging
+
+# loggers for the functions
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
+
 # This small and positive tolerance is used when checking
 # if the prior is negative definite or approximately
 # indefinite. It is defined as a tolerance here to ensure
@@ -44,6 +50,13 @@ _SMALL_TOLERANCE_DEFINITENESS = 1e-6
 # a tolerance here to ensure consistency between the code
 # below and the tests. The user should not need to adjust it.
 _SMALL_TOLERANCE_SYMMETRY = 1e-6
+
+# This small and positive tolerance is used to check
+# if the imaginary part of the eigenvalues of the FIM is
+# greater than a small tolerance. It is defined as a
+# tolerance here to ensure consistency between the code
+# below and the tests. The user should not need to adjust it.
+_SMALL_TOLERANCE_IMG = 1e-6
 
 
 # Rescale FIM (a scaling function to help rescale FIM from parameter values)
@@ -148,3 +161,91 @@ def check_FIM(FIM):
                 _SMALL_TOLERANCE_SYMMETRY
             )
         )
+
+
+# Functions to compute FIM metrics
+def compute_FIM_metrics(FIM):
+    """
+    This private function calculates the FIM metrics and returns them as a tuple.
+
+    Parameters
+    ----------
+    FIM: 2D numpy array of the FIM
+
+    Returns
+    -------
+    det_FIM: determinant of the FIM\\
+    trace_FIM: trace of the FIM\\
+    E_vals: eigenvalues of the FIM\\
+    E_vecs: eigenvectors of the FIM\\
+    D_opt: log10(D-optimality) metric\\
+    A_opt: log10(A-optimality) metric\\
+    E_opt: log10(E-optimality) metric\\
+    ME_opt: log10(Modified E-optimality) metric
+    """
+
+    # Check whether the FIM is square, positive definite, and symmetric
+    check_FIM(FIM)
+
+    # Compute FIM metrics
+    det_FIM = np.linalg.det(FIM)
+    D_opt = np.log10(det_FIM)
+
+    trace_FIM = np.trace(FIM)
+    A_opt = np.log10(trace_FIM)
+
+    E_vals, E_vecs = np.linalg.eig(FIM)
+    E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
+
+    # Warn the user if there is a ``large`` imaginary component (should not be)
+    if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
+        logger.warning(
+            f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG},"
+            + "contact developers if this issue persists."
+        )
+
+    # If the real value is less than or equal to zero, set the E_opt value to nan
+    if E_vals.real[E_ind] <= 0:
+        E_opt = np.nan
+    else:
+        E_opt = np.log10(E_vals.real[E_ind])
+
+    ME_opt = np.log10(np.linalg.cond(FIM))
+
+    return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
+
+
+# Standalone Function for user to calculate FIM metrics directly without using the class
+def get_FIM_metrics(FIM):
+    """
+    This function calculates the FIM metrics and returns them as a dictionary.
+
+    Parameters
+    ----------
+    FIM: 2D numpy array of the FIM
+
+    Returns
+    -------
+    det_FIM: determinant of the FIM
+    trace_FIM: trace of the FIM
+    E_vals: eigenvalues of the FIM
+    E_vecs: eigenvectors of the FIM
+    D_opt: D-optimality metric
+    A_opt: A-optimality metric
+    E_opt: E-optimality metric
+    ME_opt: Modified E-optimality metric
+    """
+    det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+        compute_FIM_metrics(FIM)
+    )
+
+    return {
+        "Determinanat of FIM": det_FIM,
+        "Trace of FIM": trace_FIM,
+        "Eigenvalues": E_vals,
+        "Eigen vectors": E_vecs,
+        "log10(D-Optimality)": D_opt,
+        "log10(A-Optimality)": A_opt,
+        "log10(E-Optimality)": E_opt,
+        "log10(Modified E-Optimality)": ME_opt,
+    }

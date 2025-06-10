@@ -45,7 +45,7 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
-from pyomo.contrib.doe.utils import check_FIM
+from pyomo.contrib.doe.utils import check_FIM, compute_FIM_metrics
 
 from pyomo.opt import SolverStatus
 
@@ -1512,16 +1512,16 @@ class DesignOfExperiments:
         fim_factorial_results: a dictionary of the results with the
         following keys and their corresponding values as a list.
         Each element in the list corresponds to a different design
-        point in the full factorial space.
-            "log10 D-opt": list of log10(D-optimality)
-            "log10 A-opt": list of log10(A-optimality)
-            "log10 E-opt": list of log10(E-optimality)
-            "log10 ME-opt": list of log10(ME-optimality)
-            "eigval_min": list of minimum eigenvalues
-            "eigval_max": list of maximum eigenvalues
-            "det_FIM": list of determinants
-            "trace_FIM": list of traces
-            "solve_time": list of solve times
+        point in the full factorial space.\\
+        "log10 D-opt": list of log10(D-optimality)\\
+        "log10 A-opt": list of log10(A-optimality)\\
+        "log10 E-opt": list of log10(E-optimality)\\
+        "log10 ME-opt": list of log10(ME-optimality)\\
+        "eigval_min": list of minimum eigenvalues\\
+        "eigval_max": list of maximum eigenvalues\\
+        "det_FIM": list of determinants\\
+        "trace_FIM": list of traces\\
+        "solve_time": list of solve times
         """
 
         # Start timer
@@ -1633,7 +1633,7 @@ class DesignOfExperiments:
             FIM = self._computed_FIM
 
             det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
-                _compute_FIM_metrics(FIM)
+                compute_FIM_metrics(FIM)
             )
 
             # Append the values for each of the experiment inputs
@@ -2360,95 +2360,3 @@ class DesignOfExperiments:
             return 1
         else:
             return -1
-
-
-# loggers for the functions
-function_logger = logging.getLogger(__name__)
-function_logger.setLevel(logging.WARNING)
-
-
-# Functions to compute FIM metrics
-def _compute_FIM_metrics(FIM):
-    """
-    This private function calculates the FIM metrics and returns them as a tuple.
-
-    Parameters
-    ----------
-    FIM: 2D numpy array of the FIM
-
-    Returns
-    -------
-    det_FIM: determinant of the FIM
-    trace_FIM: trace of the FIM
-    E_vals: eigenvalues of the FIM
-    E_vecs: eigenvectors of the FIM
-    D_opt: log10(D-optimality) metric
-    A_opt: log10(A-optimality) metric
-    E_opt: log10(E-optimality) metric
-    ME_opt: log10(Modified E-optimality) metric
-    """
-
-    # Check whether the FIM is square, positive definite, and symmetric
-    DesignOfExperiments._check_FIM(FIM)
-
-    # Compute FIM metrics
-    det_FIM = np.linalg.det(FIM)
-    D_opt = np.log10(det_FIM)
-
-    trace_FIM = np.trace(FIM)
-    A_opt = np.log10(trace_FIM)
-
-    E_vals, E_vecs = np.linalg.eig(FIM)
-    E_ind = np.argmin(E_vals.real)  # index of smallest eigenvalue
-
-    # Warn the user if there is a ``large`` imaginary component (should not be)
-    if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
-        function_logger.warning(
-            f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
-        )
-
-    # If the real value is less than or equal to zero, set the E_opt value to nan
-    if E_vals.real[E_ind] <= 0:
-        E_opt = np.nan
-    else:
-        E_opt = np.log10(E_vals.real[E_ind])
-
-    ME_opt = np.log10(np.linalg.cond(FIM))
-
-    return det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt
-
-
-# Standalone Function for user to calculate FIM metrics directly without using the class
-def get_FIM_metrics(FIM):
-    """
-    This function calculates the FIM metrics and returns them as a dictionary.
-
-    Parameters
-    ----------
-    FIM: 2D numpy array of the FIM
-
-    Returns
-    -------
-    det_FIM: determinant of the FIM
-    trace_FIM: trace of the FIM
-    E_vals: eigenvalues of the FIM
-    E_vecs: eigenvectors of the FIM
-    D_opt: D-optimality metric
-    A_opt: A-optimality metric
-    E_opt: E-optimality metric
-    ME_opt: Modified E-optimality metric
-    """
-    det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
-        _compute_FIM_metrics(FIM)
-    )
-
-    return {
-        "Determinanat of FIM": det_FIM,
-        "Trace of FIM": trace_FIM,
-        "Eigenvalues": E_vals,
-        "Eigen vectors": E_vecs,
-        "log10(D-Optimality)": D_opt,
-        "log10(A-Optimality)": A_opt,
-        "log10(E-Optimality)": E_opt,
-        "log10(Modified E-Optimality)": ME_opt,
-    }
