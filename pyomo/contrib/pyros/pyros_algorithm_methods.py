@@ -327,6 +327,7 @@ def ROSolver_iterative_solve(model_data):
             from_block=nominal_master_blk,
             clone_first_stage_components=False,
         )
+
         separation_data.points_added_to_master[(k + 1, 0)] = (
             separation_results.violating_param_realization
         )
