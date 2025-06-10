@@ -9,6 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
+## TODO
+
+# Look into if I can piggyback off of ipopt writer and just plug in my walker
+# Why did I have to make a custom solution loader?
+# Move into contrib.solver: doc/onlinedoc/explanation/experimental has information about future solvers. Put some docs here.
+# Is there a half-matrix half-explicit way to give MINLPs to Gurobi? Soren thinks yes...
+# Open a PR into Miranda's fork.
+
 import datetime
 import io
 from operator import attrgetter, itemgetter
@@ -357,7 +366,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
         )
 
     def finalizeResult(self, result):
-        self.grb_model.update()
+        #self.grb_model.update()
         return result[1]
 
     # ESJ TODO: THIS IS COPIED FROM THE LINEAR WALKER--CAN WE PUT IT IN UTIL OR
@@ -399,7 +408,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
     'gurobi_minlp',
     'Direct interface to Gurobi that allows for general nonlinear expressions',
 )
-class GurobiMINLPWriter(object):
+class GurobiMINLPWriter():
     CONFIG = ConfigDict('gurobi_minlp_writer')
     CONFIG.declare(
         'symbolic_solver_labels',
@@ -549,7 +558,7 @@ class GurobiMINLPSolutionLoader(SolutionLoaderBase):
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
 
-# ESJ TODO: I just did the most convenient inheritence for the moment--if this is the
+# ESJ TODO: I just did the most convenient inheritance for the moment--if this is the
 # right thing to do is a different question.
 @SolverFactory.register(
     'gurobi_direct_minlp',
