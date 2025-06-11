@@ -55,9 +55,7 @@ def rescale_FIM(FIM, param_vals):
         ):
             raise ValueError(
                 "param_vals should be a vector of dimensions: 1 by `n_params`. "
-                "The shape you provided is {}.".format(
-                    param_vals.shape
-                )
+                "The shape you provided is {}.".format(param_vals.shape)
             )
         if len(param_vals.shape) == 1:
             param_vals = np.array([param_vals])
