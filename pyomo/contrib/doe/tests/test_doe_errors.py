@@ -185,7 +185,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+            "Shape of FIM provided should be n parameters by n parameters, "
+            "or {} by {}, FIM provided has shape {} by {}".format(
                 4, 4, prior_FIM.shape[0], prior_FIM.shape[1]
             ),
         ):
@@ -209,7 +210,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            r"FIM provided is not positive definite. It has one or more negative eigenvalue\(s\) less than -{:.1e}".format(
+            r"FIM provided is not positive definite. It has one or more "
+            r"negative eigenvalue\(s\) less than -{:.1e}".format(
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
@@ -256,9 +258,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
-                27, 4, jac_init.shape[0], jac_init.shape[1]
-            ),
+            "Shape of Jacobian provided should be n experiment outputs "
+            "by n parameters, or {} by {}, Jacobian provided has "
+            "shape {} by {}".format(27, 4, jac_init.shape[0], jac_init.shape[1]),
         ):
             doe_obj.create_doe_model()
 
@@ -277,7 +279,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "``fim`` is not defined on the model provided. Please build the model first.",
+            "``fim`` is not defined on the model provided. "
+            "Please build the model first.",
         ):
             doe_obj.update_FIM_prior(FIM=FIM_update)
 
@@ -331,9 +334,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
-                27, 1
-            ),
+            "Number of experiment outputs, {}, and length of measurement error, "
+            "{}, do not match. Please check model labeling.".format(27, 1),
         ):
             doe_obj.create_doe_model()
 
@@ -373,7 +375,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Results must be provided or the compute_FIM_full_factorial function must be run.",
+            "Results must be provided "
+            "or the compute_FIM_full_factorial function must be run.",
         ):
             doe_obj.draw_factorial_figure()
 
@@ -397,7 +400,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "If results object is provided, you must include all the design variable names.",
+            "If results object is provided, you must "
+            "include all the design variable names.",
         ):
             doe_obj.draw_factorial_figure(results=doe_obj.fim_factorial_results)
 
@@ -494,7 +498,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Sensitivity design variables do not all appear in the results object keys.",
+            "Sensitivity design variables do not all appear "
+            "in the results object keys.",
         ):
             doe_obj.draw_factorial_figure(
                 sensitivity_design_variables={"bad": "entry"},
@@ -516,7 +521,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`",
+            "Model provided does not have variable `fim`. Please make sure "
+            "the model is built properly before calling `get_FIM`",
         ):
             doe_obj.get_FIM()
 
@@ -535,7 +541,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`",
+            "Model provided does not have variable `sensitivity_jacobian`. "
+            "Please make sure the model is built properly before calling "
+            "`get_sensitivity_matrix`",
         ):
             doe_obj.get_sensitivity_matrix()
 
@@ -554,7 +562,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`",
+            "Model provided does not have expected structure. "
+            "Please make sure model is built properly before "
+            "calling `get_experiment_input_values`",
         ):
             doe_obj.get_experiment_input_values()
 
@@ -573,7 +583,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_output_values`",
+            "Model provided does not have expected structure. Please make "
+            "sure model is built properly before calling "
+            "`get_experiment_output_values`",
         ):
             doe_obj.get_experiment_output_values()
 
@@ -592,7 +604,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_unknown_parameter_values`",
+            "Model provided does not have expected structure. Please make "
+            "sure model is built properly before calling "
+            "`get_unknown_parameter_values`",
         ):
             doe_obj.get_unknown_parameter_values()
 
@@ -611,7 +625,9 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have expected structure. Please make sure model is built properly before calling `get_measurement_error_values`",
+            "Model provided does not have expected structure. Please make "
+            "sure model is built properly before calling "
+            "`get_measurement_error_values`",
         ):
             doe_obj.get_measurement_error_values()
 
@@ -685,7 +701,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             AttributeError,
-            "Finite difference option not recognized. Please contact the developers as you should not see this error.",
+            "Finite difference option not recognized. Please "
+            "contact the developers as you should not see this error.",
         ):
             doe_obj.fd_formula = "bad things"
             doe_obj._generate_scenario_blocks()
@@ -706,7 +723,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             AttributeError,
-            "Finite difference option not recognized. Please contact the developers as you should not see this error.",
+            "Finite difference option not recognized. Please "
+            "contact the developers as you should not see this error.",
         ):
             doe_obj.fd_formula = "bad things"
             doe_obj.compute_FIM(method="sequential")
@@ -726,7 +744,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             AttributeError,
-            "Objective option not recognized. Please contact the developers as you should not see this error.",
+            "Objective option not recognized. Please "
+            "contact the developers as you should not see this error.",
         ):
             doe_obj.objective_option = "bad things"
             doe_obj.create_objective_function()
@@ -746,7 +765,8 @@ class TestReactorExampleErrors(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model provided does not have variable `fim`. Please make sure the model is built properly before creating the objective.",
+            "Model provided does not have variable `fim`. Please make "
+            "sure the model is built properly before creating the objective.",
         ):
             doe_obj.create_objective_function()
 
