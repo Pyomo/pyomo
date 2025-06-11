@@ -1191,7 +1191,8 @@ class DesignOfExperiments:
             self.logger.info("Model from experiment solved.")
         except:
             raise RuntimeError(
-                "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                "Model from experiment did not solve appropriately. "
+                "Make sure the model is well-posed."
             )
 
         for comp in model.base_model.experiment_inputs:
@@ -1203,7 +1204,8 @@ class DesignOfExperiments:
             m = b.model()
             b.transfer_attributes_from(m.base_model.clone())
 
-            # Forward/Backward difference have a stationary case (s == 0), no parameter to perturb
+            # Forward/Backward difference have a stationary
+            # case (s == 0), no parameter to perturb
             if self.fd_formula in [
                 FiniteDifferenceStep.forward,
                 FiniteDifferenceStep.backward,
@@ -1223,7 +1225,7 @@ class DesignOfExperiments:
             elif self.fd_formula == FiniteDifferenceStep.forward:
                 diff = self.step  # Forward always positive
             else:
-                # To-Do: add an error message for this as not being implemented yet
+                # TODO: add an error message for this as not being implemented yet
                 diff = 0
                 pass
 
@@ -1244,8 +1246,8 @@ class DesignOfExperiments:
 
         model.scenario_blocks = pyo.Block(model.scenarios, rule=build_block_scenarios)
 
-        # To-Do: this might have to change if experiment inputs have
-        # a different value in the Suffix (currently it is the CUID)
+        # TODO: this might have to change if experiment inputs have
+        #       a different value in the Suffix (currently it is the CUID)
         design_vars = [k for k, v in model.scenario_blocks[0].experiment_inputs.items()]
 
         # Add constraints to equate block design with global design:
@@ -1268,7 +1270,7 @@ class DesignOfExperiments:
         # Clean up the base model used to generate the scenarios
         model.del_component(model.base_model)
 
-        # ToDo: consider this logic? Multi-block systems need something more fancy
+        # TODO: consider this logic? Multi-block systems need something more fancy
         self._built_scenarios = True
 
     # Create objective function
@@ -1295,12 +1297,14 @@ class DesignOfExperiments:
             ObjectiveLib.zero,
         ]:
             raise AttributeError(
-                "Objective option not recognized. Please contact the developers as you should not see this error."
+                "Objective option not recognized. Please contact the "
+                "developers as you should not see this error."
             )
 
         if not hasattr(model, "fim"):
             raise RuntimeError(
-                "Model provided does not have variable `fim`. Please make sure the model is built properly before creating the objective."
+                "Model provided does not have variable `fim`. Please make "
+                "sure the model is built properly before creating the objective."
             )
 
         small_number = 1e-10
@@ -1323,7 +1327,8 @@ class DesignOfExperiments:
             # Calculate the eigenvalues of the FIM matrix
             eig = np.linalg.eigvals(fim)
 
-            # If the smallest eigenvalue is (practically) negative, add a diagonal matrix to make it positive definite
+            # If the smallest eigenvalue is (practically) negative,
+            # add a diagonal matrix to make it positive definite
             small_number = 1e-10
             if min(eig) < small_number:
                 fim = fim + np.eye(len(model.parameter_names)) * (
@@ -1379,12 +1384,14 @@ class DesignOfExperiments:
             for i in range(len(list_p)):
                 name_order = []
                 x_order = list_p[i]
-                # sigma_i is the value in the i-th position after the reordering \sigma
+                # sigma_i is the value in the i-th
+                # position after the reordering \sigma
                 for x in range(len(x_order)):
                     for y, element in enumerate(m.parameter_names):
                         if x_order[x] == y:
                             name_order.append(element)
-            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) *
+            #          \Prod_{i=1}^n a_{i,\sigma_i})
             det_perm = sum(
                 self._sgn(list_p[d])
                 * math.prod(
@@ -1405,7 +1412,8 @@ class DesignOfExperiments:
             )
 
         elif self.objective_option == ObjectiveLib.determinant:
-            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            # if not Cholesky but determinant, calculating
+            # det and evaluate the OBJ with det
             model.determinant = pyo.Var(
                 initialize=np.linalg.det(fim), bounds=(small_number, None)
             )
@@ -1415,13 +1423,16 @@ class DesignOfExperiments:
             )
 
         elif self.objective_option == ObjectiveLib.trace:
-            # if not determinant or cholesky, calculating the OBJ with trace
+            # if not determinant or Cholesky, calculating
+            # the OBJ with trace
             model.trace = pyo.Var(initialize=np.trace(fim), bounds=(small_number, None))
             model.obj_cons.trace_rule = pyo.Constraint(rule=trace_calc)
             model.objective = pyo.Objective(
                 expr=pyo.log10(model.trace), sense=pyo.maximize
             )
 
+        # TODO: Add warning (should be unreachable) if the user calls
+        #       the grey box objectives with the standard model
         elif self.objective_option == ObjectiveLib.zero:
             # add dummy objective function
             model.objective = pyo.Objective(expr=0)
@@ -1558,7 +1569,8 @@ class DesignOfExperiments:
 
         if FIM.shape != (self.n_parameters, self.n_parameters):
             raise ValueError(
-                "Shape of FIM provided should be n parameters by n parameters, or {} by {}, FIM provided has shape {} by {}".format(
+                "Shape of FIM provided should be n parameters by n parameters, "
+                "or {} by {}, FIM provided has shape {} by {}".format(
                     self.n_parameters, self.n_parameters, FIM.shape[0], FIM.shape[1]
                 )
             )
@@ -1569,7 +1581,8 @@ class DesignOfExperiments:
         # Check if the FIM is positive definite
         if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
             raise ValueError(
-                "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
+                "FIM provided is not positive definite. It has one or more "
+                "negative eigenvalue(s) less than -{:.1e}".format(
                     _SMALL_TOLERANCE_DEFINITENESS
                 )
             )
@@ -1583,14 +1596,17 @@ class DesignOfExperiments:
             )
 
         self.logger.info(
-            "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
+            "FIM provided matches expected dimensions from model "
+            "and is approximately positive (semi) definite."
         )
 
     # Check the jacobian shape against what is expected from the model.
     def check_model_jac(self, jac=None):
         if jac.shape != (self.n_experiment_outputs, self.n_parameters):
             raise ValueError(
-                "Shape of Jacobian provided should be n experiment outputs by n parameters, or {} by {}, Jacobian provided has shape {} by {}".format(
+                "Shape of Jacobian provided should be n experiment outputs "
+                "by n parameters, or {} by {}, Jacobian provided has "
+                "shape {} by {}".format(
                     self.n_experiment_outputs,
                     self.n_parameters,
                     jac.shape[0],
@@ -1623,7 +1639,8 @@ class DesignOfExperiments:
 
         if not hasattr(model, "fim"):
             raise RuntimeError(
-                "``fim`` is not defined on the model provided. Please build the model first."
+                "``fim`` is not defined on the model provided. "
+                "Please build the model first."
             )
 
         self.check_model_FIM(model=model, FIM=FIM)
@@ -1635,14 +1652,15 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
-    # Or leave this to the user?????
+    # TODO: Add an update function for the parameter values?
+    #       Closed loop parameter estimation?
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
             "Updating unknown parameter values not yet supported."
         )
 
-    # Evaluates FIM and statistics for a full factorial space (same as run_grid_search)
+    # Evaluates FIM and statistics for a
+    # full factorial space (same as run_grid_search)
     def compute_FIM_full_factorial(
         self, model=None, design_ranges=None, method="sequential"
     ):
@@ -1769,13 +1787,16 @@ class DesignOfExperiments:
             A_opt = np.log10(np.trace(FIM))
             E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
             E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            # Warn the user if there is a ``large`` imaginary component (should not be)
+            # Warn the user if there is a ``large``
+            # imaginary component (should not be)
             if abs(E_vals.imag[E_ind]) > 1e-8:
                 self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
+                    "Eigenvalue has imaginary component greater than 1e-6, "
+                    "contact developers if this issue persists."
                 )
 
-            # If the real value is less than or equal to zero, set the E_opt value to nan
+            # If the real value is less than or equal to
+            # zero, set the E_opt value to np.nan
             if E_vals.real[E_ind] <= 0:
                 E_opt = np.nan
             else:
@@ -1814,23 +1835,32 @@ class DesignOfExperiments:
         log_scale=True,
     ):
         """
-        Extract results needed for drawing figures from the results dictionary provided by
-        the ``compute_FIM_full_factorial`` function.
+        Extract results needed for drawing figures from
+        the results dictionary provided by the
+        ``compute_FIM_full_factorial`` function.
 
         Draw either the 1D sensitivity curve or 2D heatmap.
 
         Parameters
         ----------
-        results: dictionary, results dictionary from ``compute_FIM_full_factorial``, default: None (self.fim_factorial_results)
+        results: dictionary, results dictionary from ``compute_FIM_full_factorial``
+                 default: None (self.fim_factorial_results)
         sensitivity_design_variables: a list, design variable names to draw sensitivity
-        fixed_design_variables: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
+        fixed_design_variables: a dictionary, keys are the design variable names to be
+                                fixed, values are the value of it to be fixed.
         full_design_variable_names: a list, all the design variables in the problem.
         title_text: a string, name for the figure
-        xlabel_text: a string, label for the x-axis of the figure (default: last design variable name)
-            In a 1D sensitivity curve, it should be design variable by which the curve is drawn.
-            In a 2D heatmap, it should be the second design variable in the design_ranges
-        ylabel_text: a string, label for the y-axis of the figure (default: None (1D); first design variable name (2D))
-            A 1D sensitivity curve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
+        xlabel_text: a string, label for the x-axis of the figure
+                    default: last design variable name
+            In a 1D sensitivity curve, it should be design variable by
+            which the curve is drawn
+            In a 2D heatmap, it should be the second design variable
+            in the design_ranges
+        ylabel_text: a string, label for the y-axis of the figure
+                    default: None (1D); first design variable name (2D)
+            A 1D sensitivity curve does not need it.
+            In a 2D heatmap, it should be the first
+            design variable in the dv_ranges
         figure_file_name: string or Path, path to save the figure as
         font_axes: axes label font size
         font_tick: tick label font size
@@ -1840,7 +1870,8 @@ class DesignOfExperiments:
         if results is None:
             if not hasattr(self, "fim_factorial_results"):
                 raise RuntimeError(
-                    "Results must be provided or the compute_FIM_full_factorial function must be run."
+                    "Results must be provided or the "
+                    "compute_FIM_full_factorial function must be run."
                 )
             results = self.fim_factorial_results
             full_design_variable_names = [
@@ -1849,7 +1880,8 @@ class DesignOfExperiments:
         else:
             if full_design_variable_names is None:
                 raise ValueError(
-                    "If results object is provided, you must include all the design variable names."
+                    "If results object is provided, you must "
+                    "include all the design variable names."
                 )
 
         des_names = full_design_variable_names
