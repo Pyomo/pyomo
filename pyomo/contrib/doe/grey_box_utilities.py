@@ -47,23 +47,27 @@ class FIMExternalGreyBox(
 ):
     def __init__(self, doe_object, objective_option="determinant", logger_level=None):
         """
-        Grey box model for metrics on the FIM. This methodology reduces numerical complexity for the
-        computation of FIM metrics related to eigenvalue decomposition.
+        Grey box model for metrics on the FIM. This methodology reduces
+        numerical complexity for the computation of FIM metrics related
+        to eigenvalue decomposition.
 
         Parameters
         ----------
         doe_object:
-           Design of Experiments object that contains a built model (with sensitivity matrix, Q, and
-           fisher information matrix, FIM). The external grey box model will utilize elements of the
-           doe_object's model to build the FIM metric with consistent naming.
+           Design of Experiments object that contains a built model
+           (with sensitivity matrix, Q, and fisher information matrix, FIM).
+           The external grey box model will utilize elements of the
+           `doe_object` model to build the FIM metric with consistent naming.
         obj_option:
-           String representation of the objective option. Current available option is ``determinant``.
-           Other options that are planned to be implemented soon are ``minimum_eig`` (E-optimality),
-           and ``condition_number`` (modified E-optimality). default option is ``determinant``
+           String representation of the objective option. Current available
+           options are: ``determinant`` (D-optimality), ``trace`` (A-optimality),
+           ``minimum_eigenvalue`` (E-optimality), ``condition_number``
+           (modified E-optimality).
+           default: ``determinant``
         logger_level:
-           logging level to be specified if different from doe_object's logging level. default value
-           is None, or equivalently, use the logging level of doe_object. Use logging.DEBUG for all
-           messages.
+           logging level to be specified if different from doe_object's logging level.
+           default: None, or equivalently, use the logging level of doe_object.
+                    NOTE: Use logging.DEBUG for all messages.
         """
 
         if doe_object is None:
