@@ -78,6 +78,16 @@ _trusted_solvers = {
     'highs',
 }
 
+# Solvers that do not report objective bounds or values in the result and therefore
+# require loading the solution. For now, this prevents the use of multithreading; see the
+# comment in _calc_M for more information.
+
+# TODO: this no longer prevents multithreading unless I go back to the singlethreaded
+# method
+_solvers_require_loading_solutions = {
+    'ipopt',
+}
+
 # Keep Solver objects in thread-local storage
 _thread_local = threading.local()
 
@@ -320,7 +330,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # multithreaded, then iterating Disjunctions again to actually transform the
         # constraints.
 
-        # To-do list in form (constraint, other_disj, scratch, unsucc_msg, upper)
+        # To-do list in form (constraint, other_disj, scratch, unsucc_msg, is_upper)
         jobs = []
         # map Disjunction -> set of its active Disjuncts
         active_disjuncts = ComponentMap()
@@ -432,26 +442,31 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     Ms = arg_Ms
         # (Now exiting the DisjunctionDatas loop)
         threads = self._config.threads if self._config.threads is not None else max(1, len(os.sched_getaffinity(0)) - 1)
+        ## Not doing this, unless I decide to do it again
+        # solver_name = self._config.solver.name
+        # if threads > 1 and solver_name in _solvers_require_loading_solutions:
+        #     logger.warning(f"Solver '{solver_name}' cannot be used in multithreaded M calculations for now - reverting to a single thread. Pass the option threads=1 to silence this warning. ")
+        #     threads = 1
         running = {}
-        # print(f"Before processing, {Ms=}")
-        print(f"Executing {len(jobs)} jobs on {threads} worker threads.")
+        if jobs:
+            logger.info(f"Executing {len(jobs)} jobs on {threads} worker threads.")
         with ThreadPoolExecutor(max_workers=threads, thread_name_prefix="mBigM-Worker-Thread") as executor:
-            for constraint, other_disjunct, scratch, unsuccessful_solve_msg, upper in jobs:
-                running[constraint, other_disjunct, upper] = (
+            for constraint, other_disjunct, scratch, unsuccessful_solve_msg, is_upper in jobs:
+                running[constraint, other_disjunct, is_upper] = (
                     executor.submit(
                         self._calc_M,
                         scratch,
                         unsuccessful_solve_msg,
-                        upper,
+                        is_upper,
                     )
                 )
                 # # cheat for testing purposes
                 # f = Future()
-                # f.set_result(self._calc_M(scratch, unsuccessful_solve_msg, upper))
-                # running[constraint, other_disjunct, upper] = f
+                # f.set_result(self._calc_M(scratch, unsuccessful_solve_msg, is_upper))
+                # running[constraint, other_disjunct, is_upper] = f
 
             to_deactivate = set()
-            for (constraint, other_disjunct, upper), future in running.items():
+            for (constraint, other_disjunct, is_upper), future in running.items():
                 # try:
                 M, disjunct_infeasible = future.result()
                 # print(f"Got result: {M}, {disjunct_infeasible}")
@@ -472,7 +487,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     continue
                 # Note that we can't just transform immediately because we might be
                 # waiting on the other one of upper_M or lower_M.
-                if upper:
+                if is_upper:
                     Ms[constraint, other_disjunct] = (Ms[constraint, other_disjunct][0], M)
                 else:
                     Ms[constraint, other_disjunct] = (M, Ms[constraint, other_disjunct][1])
@@ -499,10 +514,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             disjunction._algebraic_constraint = weakref_ref(algebraic_constraint[disjunction.index()])
             disjunction.deactivate()
             
-    def _get_scratch_block(self, constraint, other_disjunct, all_vars, upper):
+    def _get_scratch_block(self, constraint, other_disjunct, all_vars, is_upper):
         # Should this be a Block or a ConcreteModel?
         scratch = Block()
-        if upper:
+        if is_upper:
             scratch.obj = Objective(expr=constraint.body - constraint.upper, sense=maximize)
         else:
             scratch.obj = Objective(expr=constraint.body - constraint.lower, sense=minimize)
@@ -519,7 +534,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         scratch.construct()  # should this go in _calc_M?
         return scratch
 
-    def _calc_M(self, scratch, unsuccessful_message, upper):
+    def _calc_M(self, scratch, unsuccessful_message, is_upper):
         # Retrieve a solver object from thread-local storage; if we don't have one, make
         # a new solver reasonably similar to the one passed via config.
         if hasattr(_thread_local, 'solver'):
@@ -528,9 +543,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             solver_arg = self._config.solver
             solver = _thread_local.solver = SolverFactory(solver_arg.name, options=solver_arg.options)
         # print("About to call solver")
-        results = solver.solve(scratch, tee=False, load_solutions=False)
+        results = solver.solve(scratch, tee=True, load_solutions=False, keepfiles=False)
 
         if results.solver.termination_condition is TerminationCondition.infeasible:
+            # print("infeasible")
             # [2/18/24]: TODO: After the solver rewrite is complete, we will not
             # need this check since we can actually determine from the
             # termination condition whether or not the solver proved
@@ -560,10 +576,50 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
             # We should use the dual bound here. The primal bound is mathematically
             # incorrect in the presence of error, but local solvers need it.
-            if upper != self._config.use_primal_bound:
-                M = results.problem.upper_bound
+            if not self._config.use_primal_bound:
+                if is_upper:
+                    M = results.problem.upper_bound
+                else:
+                    M = results.problem.lower_bound
+            elif solver.name not in _solvers_require_loading_solutions:
+                if is_upper:
+                    M = results.problem.lower_bound
+                else:
+                    M = results.problem.upper_bound
             else:
-                M = results.problem.lower_bound
+                # In this unfortunate case, we checked earlier and ensured there is only
+                # one worker thread. It's obviously not safe to call load_from without a
+                # lock, but then the call to solver.solve would also need to acquire the
+                # same lock, otherwise the other threads would read a model halfway
+                # through a load_solutions call. But doing that would defeat the purpose
+                # of multithreading. Cloning `scratch` is not enough to fix this problem:
+                # the decision variables live on the original model, so we would have to
+                # clone the entire thing, which is likely expensive enough to negate any
+                # benefit gained by multithreading.
+
+                # TODO: could I evaluate the objective without touching the vars by using
+                # replace_expressions and the var map in the results object? If so, will
+                # it be ipopt-only or will it work on any solver with this problem?
+
+                # Non-multithreaded solution
+                # scratch.solutions.load_from(results)
+                # M = value(scratch.obj)
+
+                # Potentially ipopt-specific workaround (do we always populate
+                # results._smap in the same way?)
+                M = value(
+                    EXPR.replace_expressions(
+                        scratch.obj,
+                        substitution_map={
+                            id: results.solution.variable[name]['Value']
+                            for id, name in results._smap.byObject.items()
+                            if isinstance(results._smap.bySymbol[name], Var)
+                        },
+                        descend_into_named_expressions=True,
+                        remove_named_expressions=True
+                    )
+                )
+
             if not math.isfinite(M):
                 raise GDP_Error(
                     "Subproblem solved to optimality, but no finite dual bound was "
@@ -573,9 +629,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     "aware that interior feasible points for this subproblem do "
                     "not give valid values for M."
                     if not self._config.use_primal_bound else
-                    "No finite objective after optimal solve."
+                    "No finite objective after optimal solve. Possibly the solver "
+                    "does not save the objective value in the results, in which case "
+                    "it may need to be added to `_solvers_require_loading_solutions`"
                 )
-            # print(f"{M=}")
             return (M, False)
 
     def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
