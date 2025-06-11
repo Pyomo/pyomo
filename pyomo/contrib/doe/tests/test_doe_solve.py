@@ -258,7 +258,8 @@ class TestReactorExampleSolving(unittest.TestCase):
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
 
         # Specify a prior that is slightly negative definite
-        # Because it is less than the tolerance, it should be adjusted to be positive definite
+        # Because it is less than the tolerance, it should be
+        # adjusted to be positive definite
         # No error should be thrown
         DoE_args['prior_FIM'] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
 
@@ -355,7 +356,8 @@ class TestReactorExampleSolving(unittest.TestCase):
             design_ranges=design_ranges, method="sequential"
         )
 
-        # Check to make sure the lengths of the inputs in results object are indeed correct
+        # Check to make sure the lengths of the inputs
+        # in results object are indeed correct
         CA_vals = doe_obj.fim_factorial_results["CA[0]"]
         T_vals = doe_obj.fim_factorial_results["T[0]"]
 
@@ -422,7 +424,8 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "Model from experiment did not solve appropriately. Make sure the model is well-posed.",
+            "Model from experiment did not solve appropriately. "
+            "Make sure the model is well-posed.",
         ):
             doe_obj.run_doe()
 
