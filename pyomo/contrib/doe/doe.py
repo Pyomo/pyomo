@@ -1904,11 +1904,13 @@ class DesignOfExperiments:
 
         if not check_des_vars:
             raise ValueError(
-                "Fixed design variables do not all appear in the results object keys."
+                "Fixed design variables do not all appear "
+                "in the results object keys."
             )
         if not check_sens_vars:
             raise ValueError(
-                "Sensitivity design variables do not all appear in the results object keys."
+                "Sensitivity design variables do not all appear "
+                "in the results object keys."
             )
 
         # ToDo: Make it possible to plot pair-wise sensitivities for all variables
@@ -1922,7 +1924,8 @@ class DesignOfExperiments:
             sensitivity_design_variables
         ) != len(des_names):
             raise ValueError(
-                "Error: All design variables that are not used to generate sensitivity plots must be fixed."
+                "Error: All design variables that are not used to "
+                "generate sensitivity plots must be fixed."
             )
 
         if type(results) is dict:
@@ -1930,7 +1933,8 @@ class DesignOfExperiments:
         else:
             results_pd = results
 
-        # generate a combination of logic sentences to filter the results of the DOF needed.
+        # generate a combination of logic to
+        # filter the results of the DOF needed.
         # an example filter: (self.store_all_results_dataframe["CA0"]==5).
         if len(fixed_design_variables.keys()) != 0:
             filter = ""
@@ -1997,7 +2001,8 @@ class DesignOfExperiments:
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
-            In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
+            In a 1D sensitivity curve, it is the design
+            variable by which the curve is drawn.
         font_axes: axes label font size
         font_tick: tick label font size
         figure_file_name: string or Path, path to save the figure as
@@ -2005,7 +2010,7 @@ class DesignOfExperiments:
 
         Returns
         --------
-        4 Figures of 1D sensitivity curves for each criteria
+        4 Figures of 1D sensitivity curves for each criterion
         """
         if figure_file_name is not None:
             show_fig = False
@@ -2130,9 +2135,11 @@ class DesignOfExperiments:
         ----------
         title_text: name of the figure, a string
         xlabel_text: x label title, a string.
-            In a 2D heatmap, it should be the second design variable in the design_ranges
+            In a 2D heatmap, it should be the second
+            design variable in the design_ranges
         ylabel_text: y label title, a string.
-            In a 2D heatmap, it should be the first design variable in the dv_ranges
+            In a 2D heatmap, it should be the first
+            design variable in the dv_ranges
         font_axes: axes label font size
         font_tick: tick label font size
         figure_file_name: string or Path, path to save the figure as
@@ -2140,7 +2147,7 @@ class DesignOfExperiments:
 
         Returns
         --------
-        4 Figures of 2D heatmap for each criteria
+        4 Figures of 2D heatmap for each criterion
         """
         if figure_file_name is not None:
             show_fig = False
@@ -2311,7 +2318,8 @@ class DesignOfExperiments:
 
         if not hasattr(model, "fim"):
             raise RuntimeError(
-                "Model provided does not have variable `fim`. Please make sure the model is built properly before calling `get_FIM`"
+                "Model provided does not have variable `fim`. Please make sure "
+                "the model is built properly before calling `get_FIM`"
             )
 
         fim_vals = [
@@ -2351,7 +2359,9 @@ class DesignOfExperiments:
 
         if not hasattr(model, "sensitivity_jacobian"):
             raise RuntimeError(
-                "Model provided does not have variable `sensitivity_jacobian`. Please make sure the model is built properly before calling `get_sensitivity_matrix`"
+                "Model provided does not have variable `sensitivity_jacobian`. "
+                "Please make sure the model is built properly before calling "
+                "`get_sensitivity_matrix`"
             )
 
         Q_vals = [
@@ -2387,7 +2397,9 @@ class DesignOfExperiments:
         if not hasattr(model, "experiment_inputs"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_input_values`"
+                    "Model provided does not have expected structure. "
+                    "Please make sure model is built properly before "
+                    "calling `get_experiment_input_values`"
                 )
 
             d_vals = [
@@ -2412,7 +2424,8 @@ class DesignOfExperiments:
 
         Returns
         -------
-        theta: 1D list of unknown parameter values at which this experiment was designed
+        theta: 1D list of unknown parameter values at which
+               this experiment was designed
 
         """
         if model is None:
@@ -2421,7 +2434,9 @@ class DesignOfExperiments:
         if not hasattr(model, "unknown_parameters"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_unknown_parameter_values`"
+                    "Model provided does not have expected structure. Please make "
+                    "sure model is built properly before calling "
+                    "`get_unknown_parameter_values`"
                 )
 
             theta_vals = [
@@ -2455,7 +2470,9 @@ class DesignOfExperiments:
         if not hasattr(model, "experiment_outputs"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_experiment_output_values`"
+                    "Model provided does not have expected structure. Please make "
+                    "sure model is built properly before calling "
+                    "`get_experiment_output_values`"
                 )
 
             y_hat_vals = [
@@ -2491,7 +2508,9 @@ class DesignOfExperiments:
         if not hasattr(model, "measurement_error"):
             if not hasattr(model, "scenario_blocks"):
                 raise RuntimeError(
-                    "Model provided does not have expected structure. Please make sure model is built properly before calling `get_measurement_error_values`"
+                    "Model provided does not have expected structure. Please make "
+                    "sure model is built properly before calling "
+                    "`get_measurement_error_values`"
                 )
 
             sigma_vals = [
