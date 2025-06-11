@@ -277,7 +277,8 @@ class TestReactorExampleBuild(unittest.TestCase):
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
             self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
-            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+            # Should not have any constraints sets beyond the
+            # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_fd_backward_design_fixing(self):
@@ -309,7 +310,8 @@ class TestReactorExampleBuild(unittest.TestCase):
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
             self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
-            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+            # Should not have any constraints sets beyond the
+            # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_fd_forward_design_fixing(self):
@@ -341,7 +343,8 @@ class TestReactorExampleBuild(unittest.TestCase):
             # Ensure that each set of constraints has all blocks pairs with scenario 0
             # i.e., (0, 1), (0, 2), ..., (0, N) --> N - 1 constraints
             self.assertEqual(len(getattr(model, con_name)), (len(model.scenarios) - 1))
-            # Should not have any constraints sets beyond the length of design_vars - 1 (started with index 0)
+            # Should not have any constraints sets beyond the
+            # length of design_vars - 1 (started with index 0)
         self.assertFalse(hasattr(model, con_name_base + str(len(design_vars))))
 
     def test_reactor_check_user_initialization(self):
