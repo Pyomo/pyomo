@@ -586,7 +586,7 @@ class DesignOfExperiments:
         else:
             raise ValueError(
                 (
-                    "The method provided, {}, must be either `sequential`"
+                    "The method provided, {}, must be either `sequential` "
                     "or `kaug`".format(method)
                 )
             )
@@ -724,7 +724,8 @@ class DesignOfExperiments:
                 col_1 = 0
                 col_2 = i
 
-            # If scale_nominal_param_value is active, scale by nominal parameter value (v)
+            # If scale_nominal_param_value is active, scale
+            # by nominal parameter value (v)
             scale_factor = (1.0 / curr_step) * self.scale_constant_value
             if self.scale_nominal_param_value:
                 scale_factor *= v
@@ -866,19 +867,23 @@ class DesignOfExperiments:
         else:
             # TODO: Add safe naming when a model is passed by the user.
             # doe_block = pyo.Block()
-            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # doe_block_name = unique_component_name(model,
+            #                                        "design_of_experiments_block")
             # model.add_component(doe_block_name, doe_block)
             pass
 
-        # Developer recommendation: use the Cholesky decomposition for D-optimality
-        # The explicit formula is available for benchmarking purposes and is NOT recommended
+        # Developer recommendation: use the Cholesky
+        # decomposition for D-optimality. The explicit
+        # formula is available for benchmarking purposes
+        # and is NOT recommended.
         if (
             self.only_compute_fim_lower
             and self.objective_option == ObjectiveLib.determinant
             and not self.Cholesky_option
         ):
             raise ValueError(
-                "Cannot compute determinant with explicit formula if only_compute_fim_lower is True."
+                "Cannot compute determinant with explicit formula "
+                "if only_compute_fim_lower is True."
             )
 
         # Generate scenarios for finite difference formulae
@@ -917,7 +922,8 @@ class DesignOfExperiments:
             dict_jac_initialize = {}
             for i, bu in enumerate(model.output_names):
                 for j, un in enumerate(model.parameter_names):
-                    # Jacobian is a numpy array, rows are experimental outputs, columns are unknown parameters
+                    # Jacobian is a numpy array, rows are experimental
+                    # outputs, columns are unknown parameters
                     dict_jac_initialize[(bu, un)] = self.jac_initial[i][j]
 
         # Initialize the Jacobian matrix
@@ -928,7 +934,9 @@ class DesignOfExperiments:
             # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
             else:
                 raise AttributeError(
-                    "Jacobian being initialized when the jac_initial attribute is None. Please contact the developers as you should not see this error."
+                    "Jacobian being initialized when the jac_initial attribute "
+                    "is None. Please contact the developers as you should not "
+                    "see this error."
                 )
 
         model.sensitivity_jacobian = pyo.Var(
@@ -1033,7 +1041,9 @@ class DesignOfExperiments:
             model.parameter_names, model.parameter_names, rule=read_prior
         )
 
-        # Off-diagonal elements are symmetric, so only half of the off-diagonal elements need to be specified.
+        # Off-diagonal elements are symmetric, so only
+        # half of the off-diagonal elements need to be
+        # specified.
         def fim_rule(m, p, q):
             """
             m: Pyomo model
@@ -1118,7 +1128,8 @@ class DesignOfExperiments:
 
         if self.n_measurement_error != self.n_experiment_outputs:
             raise ValueError(
-                "Number of experiment outputs, {}, and length of measurement error, {}, do not match. Please check model labeling.".format(
+                "Number of experiment outputs, {}, and length of measurement error, "
+                "{}, do not match. Please check model labeling.".format(
                     self.n_experiment_outputs, self.n_measurement_error
                 )
             )
@@ -1139,10 +1150,12 @@ class DesignOfExperiments:
         else:
             self.jac_initial = np.eye(self.n_experiment_outputs, self.n_parameters)
 
-        # Make a new Suffix to hold which scenarios are associated with parameters
+        # Make a new Suffix to hold which scenarios
+        # are associated with parameters
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
-        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        # Populate parameter scenarios, and scenario
+        # inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             model.parameter_scenarios.update(
                 (2 * ind, k)
@@ -1164,12 +1177,9 @@ class DesignOfExperiments:
             model.scenarios = range(len(model.base_model.unknown_parameters) + 1)
         else:
             raise AttributeError(
-                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+                "Finite difference option not recognized. Please contact "
+                "the developers as you should not see this error."
             )
-
-        # TODO: Allow Params for `unknown_parameters` and `experiment_inputs`
-        #       May need to make a new converter Param to Var that allows non-string names/references to be passed
-        #       Waiting on updates to the parmest params_to_vars utility function.....
 
         # Run base model to get initialized model and check model function
         for comp in model.base_model.experiment_inputs:
