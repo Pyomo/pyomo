@@ -294,7 +294,8 @@ class DesignOfExperiments:
         else:
             # TODO: Add safe naming when a model is passed by the user.
             # doe_block = pyo.Block()
-            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # doe_block_name = unique_component_name(model,
+            #                                        "design_of_experiments_block")
             # model.add_component(doe_block_name, doe_block)
             pass
 
@@ -340,8 +341,10 @@ class DesignOfExperiments:
         # Track time to initialize the DoE model
         initialization_time = sp_timer.toc(msg=None)
         self.logger.info(
-            "Successfully initialized the DoE model.\nInitialization time: %0.1f seconds"
-            % initialization_time
+            (
+                "Successfully initialized the DoE model."
+                "\nInitialization time: %0.1f seconds" % initialization_time
+            )
         )
 
         model.dummy_obj.deactivate()
@@ -396,7 +399,8 @@ class DesignOfExperiments:
                 (len(model.parameter_names), len(model.parameter_names))
             )
 
-            # Need to compute the full FIM before initializing the Cholesky factorization
+            # Need to compute the full FIM before
+            # initializing the Cholesky factorization
             if self.only_compute_fim_lower:
                 fim_np = fim_np + fim_np.T - np.diag(np.diag(fim_np))
 
@@ -406,7 +410,8 @@ class DesignOfExperiments:
             min_eig = np.min(np.linalg.eigvals(fim_np))
 
             if min_eig < _SMALL_TOLERANCE_DEFINITENESS:
-                # Raise the minimum eigenvalue to at least _SMALL_TOLERANCE_DEFINITENESS
+                # Raise the minimum eigenvalue to at
+                # least _SMALL_TOLERANCE_DEFINITENESS
                 jitter = np.min(
                     [
                         -min_eig + _SMALL_TOLERANCE_DEFINITENESS,
@@ -438,7 +443,10 @@ class DesignOfExperiments:
         solve_time = sp_timer.toc(msg=None)
 
         self.logger.info(
-            "Successfully optimized experiment.\nSolve time: %0.1f seconds" % solve_time
+            (
+                "Successfully optimized experiment."
+                "\nSolve time: %0.1f seconds" % solve_time
+            )
         )
         self.logger.info(
             "Total time for build, initialization, and solve: %0.1f seconds"
@@ -544,7 +552,8 @@ class DesignOfExperiments:
         else:
             # TODO: Add safe naming when a model is passed by the user.
             # doe_block = pyo.Block()
-            # doe_block_name = unique_component_name(model, "design_of_experiments_block")
+            # doe_block_name = unique_component_name(model,
+            #                                        "design_of_experiments_block")
             # model.add_component(doe_block_name, doe_block)
             # self.compute_FIM_model = model
             pass
@@ -576,8 +585,9 @@ class DesignOfExperiments:
             self._computed_FIM = self.kaug_FIM
         else:
             raise ValueError(
-                "The method provided, {}, must be either `sequential` or `kaug`".format(
-                    method
+                (
+                    "The method provided, {}, must be either `sequential`"
+                    "or `kaug`".format(method)
                 )
             )
 
@@ -604,7 +614,8 @@ class DesignOfExperiments:
             model.del_component(model.parameter_scenarios)
         model.parameter_scenarios = pyo.Suffix(direction=pyo.Suffix.LOCAL)
 
-        # Populate parameter scenarios, and scenario inds based on finite difference scheme
+        # Populate parameter scenarios, and scenario
+        # inds based on finite difference scheme
         if self.fd_formula == FiniteDifferenceStep.central:
             model.parameter_scenarios.update(
                 (2 * ind, k) for ind, k in enumerate(model.unknown_parameters.keys())
@@ -624,7 +635,8 @@ class DesignOfExperiments:
             model.scenarios = range(len(model.unknown_parameters) + 1)
         else:
             raise AttributeError(
-                "Finite difference option not recognized. Please contact the developers as you should not see this error."
+                "Finite difference option not recognized. Please "
+                "contact the developers as you should not see this error."
             )
 
         # Fix design variables
@@ -664,13 +676,17 @@ class DesignOfExperiments:
                 res = self.solver.solve(model, tee=self.tee)
                 pyo.assert_optimal_termination(res)
             except:
-                # TODO: Make error message more verbose, i.e., add unknown parameter values so the
-                # user can try to solve the model instance outside of the pyomo.DoE framework.
+                # TODO: Make error message more verbose,
+                #       (i.e., add unknown parameter values so the user
+                #       can try to solve the model instance outside of
+                #       the pyomo.DoE framework)
                 raise RuntimeError(
-                    "Model from experiment did not solve appropriately. Make sure the model is well-posed."
+                    "Model from experiment did not solve appropriately."
+                    " Make sure the model is well-posed."
                 )
 
-            # Reset value of parameter to default value before computing finite difference perturbation
+            # Reset value of parameter to default value
+            # before computing finite difference perturbation
             param.set_value(model.unknown_parameters[param])
 
             # Extract the measurement values for the scenario and append
@@ -691,7 +707,8 @@ class DesignOfExperiments:
         # Counting variable for loop
         i = 0
 
-        # Loop over parameter values and grab correct columns for finite difference calculation
+        # Loop over parameter values and grab correct
+        # columns for finite difference calculation
 
         for k, v in model.unknown_parameters.items():
             curr_step = v * self.step
@@ -720,8 +737,10 @@ class DesignOfExperiments:
             # Increment the count
             i += 1
 
-        # ToDo: As more complex measurement error schemes are put in place, this needs to change
-        # Add independent (non-correlated) measurement error for FIM calculation
+        # ToDo: As more complex measurement error schemes
+        #       are put in place, this needs to change
+        # Add independent (non-correlated) measurement
+        # error for FIM calculation
         cov_y = np.zeros((len(model.measurement_error), len(model.measurement_error)))
         count = 0
         for k, v in model.measurement_error.items():
