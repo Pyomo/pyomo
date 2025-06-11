@@ -115,42 +115,51 @@ class DesignOfExperiments:
         Parameters
         ----------
         experiment:
-            Experiment object that holds the model and labels all the components. The object
-            should have a ``get_labeled_model`` where a model is returned with the following
-            labeled sets: ``unknown_parameters``, ``experimental_inputs``, ``experimental_outputs``
+            Experiment object that holds the model and labels all the components. The
+            object should have a ``get_labeled_model`` where a model is returned with
+            the following labeled sets: ``unknown_parameters``,
+                                        ``experimental_inputs``,
+                                        ``experimental_outputs``
         fd_formula:
-            Finite difference formula for computing the sensitivity matrix. Must be one of
-            [``central``, ``forward``, ``backward``], default: ``central``
+            Finite difference formula for computing the sensitivity matrix. Must be
+            one of [``central``, ``forward``, ``backward``], default: ``central``
         step:
             Relative step size for the finite difference formula.
             default: 1e-3
         objective_option:
-            String representation of the objective option. Current available options are:
-            ``determinant`` (for determinant, or D-optimality) and ``trace`` (for trace or
-            A-optimality)
+            String representation of the objective option. Current available options
+            are: ``determinant`` (for determinant, or D-optimality),
+            ``trace`` (for trace, or A-optimality), ``minimum_eigenvalue``, (for
+            E-optimality), or ``condition_number`` (for ME-optimality)
+            Note: E-optimality and ME-optimality are only supported when using the
+            grey box objective (i.e., ``grey_box_solver`` is True)
+            default: ``determinant``
         use_grey_box_objective:
-            Boolean of whether or not to use the grey-box version of the objective function.
-            True to use grey box, False to use standard. Default: False (do not use grey box)
+            Boolean of whether or not to use the grey-box version of the objective
+            function. True to use grey box, False to use standard.
+            Default: False (do not use grey box)
         scale_constant_value:
-            Constant scaling for the sensitivity matrix. Every element will be multiplied by this
-            scaling factor.
+            Constant scaling for the sensitivity matrix. Every element will be
+            multiplied by this scaling factor.
             default: 1
         scale_nominal_param_value:
-            Boolean for whether or not to scale the sensitivity matrix by the nominal parameter
-            values. Every column of the sensitivity matrix will be divided by the respective
-            nominal parameter value.
+            Boolean for whether or not to scale the sensitivity matrix by the
+            nominal parameter values. Every column of the sensitivity matrix
+            will be divided by the respective nominal parameter value.
             default: False
         prior_FIM:
-            2D numpy array representing information from prior experiments. If no value is given,
-            the assumed prior will be a matrix of zeros. This matrix will be assumed to be scaled
-            as the user has specified (i.e., if scale_nominal_param_value is true, we will assume
-            the FIM provided here has been scaled by the parameter values)
+            2D numpy array representing information from prior experiments. If
+            no value is given, the assumed prior will be a matrix of zeros. This
+            matrix will be assumed to be scaled as the user has specified (i.e.,
+            if scale_nominal_param_value is true, we will assume the FIM provided
+            here has been scaled by the parameter values)
         jac_initial:
             2D numpy array as the initial values for the sensitivity matrix.
         fim_initial:
             2D numpy array as the initial values for the FIM.
         L_diagonal_lower_bound:
-            Lower bound for the values of the lower triangular Cholesky factorization matrix.
+            Lower bound for the values of the lower triangular Cholesky factorization
+            matrix.
             default: 1e-7
         solver:
             A ``solver`` object specified by the user, default=None.
@@ -158,16 +167,17 @@ class DesignOfExperiments:
         tee:
             Solver option to be passed for verbose output.
         get_labeled_model_args:
-            Additional arguments for the ``get_labeled_model`` function on the Experiment object.
+            Additional arguments for the ``get_labeled_model`` function on the
+            Experiment object.
         _Cholesky_option:
-            Boolean value of whether or not to use the cholesky factorization to compute the
-            determinant for the D-optimality criteria. This parameter should not be changed
-            unless the user intends to make performance worse (i.e., compare an existing tool
-            that uses the full FIM to this algorithm)
+            Boolean value of whether or not to use the cholesky factorization to
+            compute the determinant for the D-optimality criteria. This parameter
+            should not be changed unless the user intends to make performance worse
+            (i.e., compare an existing tool that uses the full FIM to this algorithm)
         _only_compute_fim_lower:
-            If True, only the lower triangle of the FIM is computed. This parameter should not
-            be changed unless the user intends to make performance worse (i.e., compare an
-            existing tool that uses the full FIM to this algorithm)
+            If True, only the lower triangle of the FIM is computed. This parameter
+            should not be changed unless the user intends to make performance worse
+            (i.e., compare an existing tool that uses the full FIM to this algorithm)
         logger_level:
             Specify the level of the logger. Change to logging.DEBUG for all messages.
         """
@@ -322,7 +332,8 @@ class DesignOfExperiments:
         # if pyo.check_optimal_termination(res):
         #     model.load_solution(res)
         # else:
-        #     # The solver was unsuccessful, might want to warn the user or terminate gracefully, etc.
+        #     # The solver was unsuccessful, might want to warn the user
+        #     # or terminate gracefully, etc.
         model.dummy_obj = pyo.Objective(expr=0, sense=pyo.minimize)
         self.solver.solve(model, tee=self.tee)
 
