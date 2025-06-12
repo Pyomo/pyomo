@@ -61,7 +61,7 @@ from pyomo.repn import generate_standard_repn
 from weakref import ref as weakref_ref
 
 import threading
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor
 import os
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
@@ -308,17 +308,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         preprocessed_targets = gdp_tree.reverse_topological_sort()
 
         arg_Ms = self._config.bigM if self._config.bigM is not None else {}
-        self._transform_disjunctionDatas_threaded(
-            preprocessed_targets, arg_Ms, gdp_tree
-        )
+        self._transform_disjunctionDatas(preprocessed_targets, arg_Ms, gdp_tree)
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
         _warn_for_unused_bigM_args(self._config.bigM, self.used_args, logger)
 
-    def _transform_disjunctionDatas_threaded(
-        self, preprocessed_targets, arg_Ms, gdp_tree
-    ):
+    def _transform_disjunctionDatas(self, preprocessed_targets, arg_Ms, gdp_tree):
         # We wish we could do this one Disjunction at a time, but we also want to
         # calculate the Ms in parallel. So we do a slightly convoluted dance of iterating
         # the Disjunctions to get a list of M calculation jobs, then calculating Ms
@@ -366,18 +362,16 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
 
                 # start doing transformation
-                (transBlock, algebraic_constraint) = (
+                disjunction_setup[t] = (transBlock, algebraic_constraint) = (
                     self._setup_transform_disjunctionData(t, gdp_tree.root_disjunct(t))
                 )
-                disjunction_setup[t] = (transBlock, algebraic_constraint)
 
                 # already got arg_Ms
                 active_disjuncts[t] = ComponentSet(
                     disj for disj in t.disjuncts if disj.active
                 )
-                # this method returns the constraints transformed on this disjunct,
-                # use update because we are now saving these from all disjuncts for
-                # later
+                # this method returns the constraints transformed on this disjunct;
+                # update because we are saving these from all disjuncts for later
                 if self._config.reduce_bound_constraints:
                     transformed_constraints.update(
                         self._transform_bound_constraints(
@@ -385,151 +379,77 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         )
                     )
                 # Get the jobs to calculate missing M values for this Disjunction. We can
-                # skip this if we are only doing bound constraints.
+                # skip this if we are only doing bound constraints, in which case we pass
+                # through arg_Ms as-is and let transform_constraint parse it.
                 if not self._config.only_mbigm_bound_constraints:
-                    all_vars = list(self._get_all_var_objects(active_disjuncts[t]))
-                    for disjunct, other_disjunct in itertools.product(
-                        active_disjuncts[t], active_disjuncts[t]
-                    ):
-                        if disjunct is other_disjunct:
-                            continue
-
-                        for constraint in disjunct.component_data_objects(
-                            Constraint,
-                            active=True,
-                            descend_into=Block,
-                            sort=SortComponents.deterministic,
-                        ):
-                            if constraint in transformed_constraints:
-                                continue
-                            # First check args
-                            if (constraint, other_disjunct) in arg_Ms:
-                                # print("Getting Ms from arg")
-                                (lower_M, upper_M) = _convert_M_to_tuple(
-                                    arg_Ms[constraint, other_disjunct],
-                                    constraint,
-                                    other_disjunct,
-                                )
-                                self.used_args[constraint, other_disjunct] = (
-                                    lower_M,
-                                    upper_M,
-                                )
-                            else:
-                                # print("Did not find Ms in arg")
-                                (lower_M, upper_M) = (None, None)
-                            unsuccessful_solve_msg = (
-                                "Unsuccessful solve to calculate M value to "
-                                "relax constraint '%s' on Disjunct '%s' when "
-                                "Disjunct '%s' is selected."
-                                % (constraint.name, disjunct.name, other_disjunct.name)
-                            )
-
-                            if constraint.lower is not None and lower_M is None:
-                                scratch = self._get_scratch_block(
-                                    constraint, other_disjunct, all_vars, False
-                                )
-                                jobs.append(
-                                    (
-                                        constraint,
-                                        other_disjunct,
-                                        scratch,
-                                        unsuccessful_solve_msg,
-                                        False,
-                                    )
-                                )
-                            if constraint.upper is not None and upper_M is None:
-                                scratch = self._get_scratch_block(
-                                    constraint, other_disjunct, all_vars, True
-                                )
-                                jobs.append(
-                                    (
-                                        constraint,
-                                        other_disjunct,
-                                        scratch,
-                                        unsuccessful_solve_msg,
-                                        True,
-                                    )
-                                )
-                            # Let's avoid touching arg_Ms and just have one source of
-                            # truth for the current Ms
-                            Ms[constraint, other_disjunct] = (lower_M, upper_M)
-                            transBlock._mbm_values[constraint, other_disjunct] = (
-                                lower_M,
-                                upper_M,
-                            )
-                # (Now exiting: if not only_mbigm_bound_constraints)
-                #
-                # In this case we just pass through arg_Ms as-is and let
-                # transform_constraint parse it
-                #
-                # TODO revisit what's going on here. Can we just skip half the
-                # transformation instead of doing this? We have queued zero jobs so
-                # none of the threads stuff will run.
+                    self._setup_jobs_for_disjunction(
+                        t,
+                        active_disjuncts,
+                        transformed_constraints,
+                        arg_Ms,
+                        Ms,
+                        jobs,
+                        transBlock,
+                    )
                 else:
                     Ms = arg_Ms
         # (Now exiting the DisjunctionDatas loop)
-        threads = (
-            self._config.threads
-            if self._config.threads is not None
-            else max(1, len(os.sched_getaffinity(0)) - 1)
-        )
-        running = {}
+        to_deactivate = set()
         if jobs:
-            logger.info(f"Executing {len(jobs)} jobs on {threads} worker threads.")
-        with ThreadPoolExecutor(
-            max_workers=threads, thread_name_prefix="mBigM-Worker-Thread"
-        ) as executor:
-            for (
-                constraint,
-                other_disjunct,
-                scratch,
-                unsuccessful_solve_msg,
-                is_upper,
-            ) in jobs:
-                running[constraint, other_disjunct, is_upper] = executor.submit(
-                    self._calc_M, scratch, unsuccessful_solve_msg, is_upper
-                )
-                # # cheat for testing purposes
-                # f = Future()
-                # f.set_result(self._calc_M(scratch, unsuccessful_solve_msg, is_upper))
-                # running[constraint, other_disjunct, is_upper] = f
+            threads = (
+                self._config.threads
+                if self._config.threads is not None
+                else max(1, len(os.sched_getaffinity(0)) - 1)
+            )
+            running = {}
+            logger.info(f"Running {len(jobs)} jobs on {threads} worker threads.")
+            with ThreadPoolExecutor(
+                max_workers=threads, thread_name_prefix="mBigM-Worker-Thread"
+            ) as executor:
+                for (
+                    constraint,
+                    other_disjunct,
+                    scratch,
+                    unsuccessful_solve_msg,
+                    is_upper,
+                ) in jobs:
+                    running[constraint, other_disjunct, is_upper] = executor.submit(
+                        self._calc_M, scratch, unsuccessful_solve_msg, is_upper
+                    )
+                    # # cheat for testing purposes
+                    # f = Future()
+                    # f.set_result(self._calc_M(scratch, unsuccessful_solve_msg, is_upper))
+                    # running[constraint, other_disjunct, is_upper] = f
 
-            to_deactivate = set()
-            for (constraint, other_disjunct, is_upper), future in running.items():
-                # try:
-                M, disjunct_infeasible = future.result()
-                # print(f"Got result: {M}, {disjunct_infeasible}")
-                # except Exception as e:
-                #     import traceback
-                #     print("@@@@@@@@@@@ PRINTING ERROR! @@@@@@@@@")
-                #     traceback.print_tb(e.__traceback__)
-                #     raise e
-                if disjunct_infeasible:
-                    # Don't deactivate live because we have concurrent jobs still running
-                    if other_disjunct not in to_deactivate:
-                        # If we made it here without an exception, the solver is on the
-                        # trusted solvers list
-                        logger.debug(
-                            "Disjunct '%s' is infeasible, deactivating."
-                            % other_disjunct.name
+                for (constraint, other_disjunct, is_upper), future in running.items():
+                    M, disjunct_infeasible = future.result()
+                    if disjunct_infeasible:
+                        # Don't deactivate live because we have concurrent jobs still
+                        # running
+                        if other_disjunct not in to_deactivate:
+                            # If we made it here without an exception, the solver is on
+                            # the trusted solvers list
+                            logger.debug(
+                                "Disjunct '%s' is infeasible, deactivating."
+                                % other_disjunct.name
+                            )
+                            to_deactivate.add(other_disjunct)
+                        continue
+                    # Note that we can't just transform immediately because we might be
+                    # waiting on the other one of upper_M or lower_M.
+                    if is_upper:
+                        Ms[constraint, other_disjunct] = (
+                            Ms[constraint, other_disjunct][0],
+                            M,
                         )
-                        to_deactivate.add(other_disjunct)
-                    continue
-                # Note that we can't just transform immediately because we might be
-                # waiting on the other one of upper_M or lower_M.
-                if is_upper:
-                    Ms[constraint, other_disjunct] = (
-                        Ms[constraint, other_disjunct][0],
-                        M,
-                    )
-                else:
-                    Ms[constraint, other_disjunct] = (
-                        M,
-                        Ms[constraint, other_disjunct][1],
-                    )
-                transBlock._mbm_values[constraint, other_disjunct] = Ms[
-                    constraint, other_disjunct
-                ]
+                    else:
+                        Ms[constraint, other_disjunct] = (
+                            M,
+                            Ms[constraint, other_disjunct][1],
+                        )
+                    transBlock._mbm_values[constraint, other_disjunct] = Ms[
+                        constraint, other_disjunct
+                    ]
 
         # Now exiting threaded context. Cleanup:
         for disjunct in to_deactivate:
@@ -539,7 +459,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         for con in transformed_constraints:
             con.deactivate()
 
-        # print(f"Final {Ms.values()=}")
         # Iterate the Disjunctions again to actually transform them
         for disjunction, (
             transBlock,
@@ -583,23 +502,102 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         scratch.construct()  # should this go in _calc_M?
         return scratch
 
+    # Do the inner work setting up M calculation jobs for one disjunction. This mutates
+    # the parameters Ms, jobs, transBlock._mbm_values, and also self.used_args.
+    def _setup_jobs_for_disjunction(
+        self,
+        disjunction,
+        active_disjuncts,
+        transformed_constraints,
+        arg_Ms,
+        Ms,
+        jobs,
+        transBlock,
+    ):
+        all_vars = list(self._get_all_var_objects(active_disjuncts[disjunction]))
+        for disjunct, other_disjunct in itertools.product(
+            active_disjuncts[disjunction], active_disjuncts[disjunction]
+        ):
+            if disjunct is other_disjunct:
+                continue
+
+            for constraint in disjunct.component_data_objects(
+                Constraint,
+                active=True,
+                descend_into=Block,
+                sort=SortComponents.deterministic,
+            ):
+                if constraint in transformed_constraints:
+                    continue
+                # First check args
+                if (constraint, other_disjunct) in arg_Ms:
+                    (lower_M, upper_M) = _convert_M_to_tuple(
+                        arg_Ms[constraint, other_disjunct],
+                        constraint,
+                        other_disjunct,
+                    )
+                    self.used_args[constraint, other_disjunct] = (
+                        lower_M,
+                        upper_M,
+                    )
+                else:
+                    (lower_M, upper_M) = (None, None)
+                unsuccessful_solve_msg = (
+                    "Unsuccessful solve to calculate M value to "
+                    "relax constraint '%s' on Disjunct '%s' when "
+                    "Disjunct '%s' is selected."
+                    % (constraint.name, disjunct.name, other_disjunct.name)
+                )
+
+                if constraint.lower is not None and lower_M is None:
+                    scratch = self._get_scratch_block(
+                        constraint, other_disjunct, all_vars, False
+                    )
+                    jobs.append(
+                        (
+                            constraint,
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            False,
+                        )
+                    )
+                if constraint.upper is not None and upper_M is None:
+                    scratch = self._get_scratch_block(
+                        constraint, other_disjunct, all_vars, True
+                    )
+                    jobs.append(
+                        (
+                            constraint,
+                            other_disjunct,
+                            scratch,
+                            unsuccessful_solve_msg,
+                            True,
+                        )
+                    )
+
+                Ms[constraint, other_disjunct] = (lower_M, upper_M)
+                transBlock._mbm_values[constraint, other_disjunct] = (
+                    lower_M,
+                    upper_M,
+                )
+
     def _calc_M(self, scratch, unsuccessful_message, is_upper):
         # Retrieve a solver object from thread-local storage; if we don't have one, make
-        # a new solver reasonably similar to the one passed via config.
-        if hasattr(_thread_local, 'solver'):
+        # a new solver reasonably similar to the one passed via config. We never actually
+        # use the one we were passed.
+        if hasattr(_thread_local, "solver"):
             solver = _thread_local.solver
         else:
             solver_arg = self._config.solver
             solver = _thread_local.solver = SolverFactory(
                 solver_arg.name, options=solver_arg.options
             )
-        # print("About to call solver")
         results = solver.solve(
             scratch, tee=False, load_solutions=False, keepfiles=False
         )
 
         if results.solver.termination_condition is TerminationCondition.infeasible:
-            # print("infeasible")
             # [2/18/24]: TODO: After the solver rewrite is complete, we will not
             # need this check since we can actually determine from the
             # termination condition whether or not the solver proved
@@ -620,12 +618,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 # and then we can abandon this hack
                 raise GDP_Error(unsuccessful_message)
         elif results.solver.termination_condition is not TerminationCondition.optimal:
-            # print("We had a solver error!")
             raise GDP_Error(unsuccessful_message)
         else:
-            # print("We were optimal; getting M from objective bound")
-
-            # note: This tranformation can be made faster by allowing the solver a
+            # note: This transformation can be made faster by allowing the solver a
             # gap. As long as we have a bound, it's still valid (though not as tight).
 
             # We should use the dual bound here. The primal bound is mathematically
@@ -688,9 +683,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                             "`use_primal_bound` is enabled, but could not find a finite"
                             "objective value after optimal solve. Possibly the solver "
                             "interface does not store the objective value in an easily "
-                            "acessible location."
+                            "accessible location."
                         )
-            # print(f"{M=}")
             return (M, False)
 
     def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
