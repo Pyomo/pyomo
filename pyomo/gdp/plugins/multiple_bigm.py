@@ -532,14 +532,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 # First check args
                 if (constraint, other_disjunct) in arg_Ms:
                     (lower_M, upper_M) = _convert_M_to_tuple(
-                        arg_Ms[constraint, other_disjunct],
-                        constraint,
-                        other_disjunct,
+                        arg_Ms[constraint, other_disjunct], constraint, other_disjunct
                     )
-                    self.used_args[constraint, other_disjunct] = (
-                        lower_M,
-                        upper_M,
-                    )
+                    self.used_args[constraint, other_disjunct] = (lower_M, upper_M)
                 else:
                     (lower_M, upper_M) = (None, None)
                 unsuccessful_solve_msg = (
@@ -577,10 +572,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
 
                 Ms[constraint, other_disjunct] = (lower_M, upper_M)
-                transBlock._mbm_values[constraint, other_disjunct] = (
-                    lower_M,
-                    upper_M,
-                )
+                transBlock._mbm_values[constraint, other_disjunct] = (lower_M, upper_M)
 
     def _calc_M(self, scratch, unsuccessful_message, is_upper):
         # Retrieve a solver object from thread-local storage; if we don't have one, make
