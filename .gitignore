@@ -34,9 +34,3 @@ cplex.log
 
 # Mac tracking files
 *.DS_Store*
-
-# DOE example .png files
-example_reactor_compute_FIM_E_opt.png
-example_reactor_compute_FIM_A_opt.png
-example_reactor_compute_FIM_D_opt.png
-example_reactor_compute_FIM_ME_opt.png
