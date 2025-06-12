@@ -34,9 +34,7 @@ from pyomo.core.base.var import VarData
 
 import logging
 
-# loggers for the functions
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
 
 # This small and positive tolerance is used when checking
 # if the prior is negative definite or approximately
@@ -128,7 +126,8 @@ def rescale_FIM(FIM, param_vals):
 
 
 def check_FIM(FIM):
-    """Checks that the FIM is square, positive definite, and symmetric.
+    """
+    Checks that the FIM is square, positive definite, and symmetric.
 
     Parameters
     ----------
@@ -137,7 +136,6 @@ def check_FIM(FIM):
     Returns
     -------
     None, but will raise error messages as needed
-
     """
     # Check that the FIM is a square matrix
     if FIM.shape[0] != FIM.shape[1]:
@@ -201,8 +199,8 @@ def compute_FIM_metrics(FIM):
     # Warn the user if there is a ``large`` imaginary component (should not be)
     if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
         logger.warning(
-            f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG},"
-            + "contact developers if this issue persists."
+            "Eigenvalue has imaginary component greater than "
+            + f"{_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
         )
 
     # If the real value is less than or equal to zero, set the E_opt value to nan
@@ -227,14 +225,15 @@ def get_FIM_metrics(FIM):
 
     Returns
     -------
-    det_FIM: determinant of the FIM
-    trace_FIM: trace of the FIM
-    E_vals: eigenvalues of the FIM
-    E_vecs: eigenvectors of the FIM
-    D_opt: D-optimality metric
-    A_opt: A-optimality metric
-    E_opt: E-optimality metric
-    ME_opt: Modified E-optimality metric
+    Returns the FIM metrics as a dictionary with the following keys on the left:\\
+    "Determinant of FIM": determinant of the FIM\\
+    "Trace of FIM": trace of the FIM\\
+    "Eigenvalues": eigenvalues of the FIM\\
+    "Eigenvectors": eigenvectors of the FIM\\
+    "log10(D-Optimality)": log10(D-optimality) metric\\
+    "log10(A-Optimality)": log10(A-optimality) metric\\
+    "log10(E-Optimality)": log10(E-optimality) metric\\
+    "log10(Modified E-Optimality)": log10(Modified E-optimality) metric
     """
     det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
         compute_FIM_metrics(FIM)
@@ -244,7 +243,7 @@ def get_FIM_metrics(FIM):
         "Determinant of FIM": det_FIM,
         "Trace of FIM": trace_FIM,
         "Eigenvalues": E_vals,
-        "Eigen vectors": E_vecs,
+        "Eigenvectors": E_vecs,
         "log10(D-Optimality)": D_opt,
         "log10(A-Optimality)": A_opt,
         "log10(E-Optimality)": E_opt,

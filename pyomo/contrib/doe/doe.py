@@ -45,29 +45,13 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
-from pyomo.contrib.doe.utils import check_FIM, compute_FIM_metrics
+from pyomo.contrib.doe.utils import (
+    check_FIM,
+    compute_FIM_metrics,
+    _SMALL_TOLERANCE_DEFINITENESS,
+)
 
 from pyomo.opt import SolverStatus
-
-# This small and positive tolerance is used when checking
-# if the prior is negative definite or approximately
-# indefinite. It is defined as a tolerance here to ensure
-# consistency between the code below and the tests. The
-# user should not need to adjust it.
-_SMALL_TOLERANCE_DEFINITENESS = 1e-6
-
-# This small and positive tolerance is used to check
-# the FIM is approximately symmetric. It is defined as
-# a tolerance here to ensure consistency between the code
-# below and the tests. The user should not need to adjust it.
-_SMALL_TOLERANCE_SYMMETRY = 1e-6
-
-# This small and positive tolerance is used to check
-# if the imaginary part of the eigenvalues of the FIM is
-# greater than a small tolerance. It is defined as a
-# tolerance here to ensure consistency between the code
-# below and the tests. The user should not need to adjust it.
-_SMALL_TOLERANCE_IMG = 1e-6
 
 
 class ObjectiveLib(Enum):
