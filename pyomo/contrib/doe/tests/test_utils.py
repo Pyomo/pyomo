@@ -8,10 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.common.dependencies import (
-    numpy as np,
-    numpy_available,
-)
+from pyomo.common.dependencies import numpy as np, numpy_available
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.utils import (
@@ -47,7 +44,8 @@ class TestUtilsFIM(unittest.TestCase):
         FIM = np.array([[1, 0], [0, -2]])
         with self.assertRaisesRegex(
             ValueError,
-            r"FIM provided is not positive definite. It has one or more negative eigenvalue\(s\) less than -{:.1e}".format(
+            "FIM provided is not positive definite. It has one or more negative "
+            + r"eigenvalue\(s\) less than -{:.1e}".format(
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
@@ -100,7 +98,8 @@ class TestUtilsFIM(unittest.TestCase):
         self.assertEqual(ME_opt, ME_opt_expected)
 
     def test_FIM_eigenvalue_warning(self):
-        # Create a matrix with an imaginary component large enough to trigger the warning
+        # Create a matrix with an imaginary component large enough
+        # to trigger the warning
         FIM = np.array([[6, 5j], [5j, 7]])
         with self.assertLogs("pyomo.contrib.doe.utils", level="WARNING") as cm:
             compute_FIM_metrics(FIM)

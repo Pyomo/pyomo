@@ -78,9 +78,8 @@ def rescale_FIM(FIM, param_vals):
             (len(param_vals.shape) == 2) and (param_vals.shape[0] != 1)
         ):
             raise ValueError(
-                "param_vals should be a vector of dimensions: 1 by `n_params`. The shape you provided is {}.".format(
-                    param_vals.shape
-                )
+                "param_vals should be a vector of dimensions: 1 by `n_params`. "
+                + "The shape you provided is {}.".format(param_vals.shape)
             )
         if len(param_vals.shape) == 1:
             param_vals = np.array([param_vals])
@@ -147,9 +146,8 @@ def check_FIM(FIM):
     # Check if the FIM is positive definite
     if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
         raise ValueError(
-            "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
-                _SMALL_TOLERANCE_DEFINITENESS
-            )
+            "FIM provided is not positive definite. It has one or more negative "
+            + "eigenvalue(s) less than -{:.1e}".format(_SMALL_TOLERANCE_DEFINITENESS)
         )
 
     # Check if the FIM is symmetric
