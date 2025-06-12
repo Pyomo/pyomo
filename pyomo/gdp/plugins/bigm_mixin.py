@@ -19,6 +19,7 @@ from pyomo.core import Suffix
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
+
 def _convert_M_to_tuple(M, constraint, disjunct=None):
     if not isinstance(M, (tuple, list)):
         if M is None:
