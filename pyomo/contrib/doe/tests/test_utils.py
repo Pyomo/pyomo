@@ -16,13 +16,16 @@ from pyomo.common.dependencies import (
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.utils import (
     check_FIM,
+    compute_FIM_metrics,
+    get_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
     _SMALL_TOLERANCE_SYMMETRY,
+    _SMALL_TOLERANCE_IMG,
 )
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
-class TestDesignOfExperimentsCheckFIM(unittest.TestCase):
+class TestUtilsFIM(unittest.TestCase):
     """Test the check_FIM method of the DesignOfExperiments class."""
 
     def test_check_FIM_valid(self):
@@ -61,6 +64,50 @@ class TestDesignOfExperimentsCheckFIM(unittest.TestCase):
             ),
         ):
             check_FIM(FIM)
+
+    def test_compute_FIM_metrics(self):
+        # Create a sample Fisher Information Matrix (FIM)
+        FIM = np.array([[10, 2], [2, 3]])
+
+        det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+            compute_FIM_metrics(FIM)
+        )
+
+        # expected results
+        det_expected = 26.000000000000004
+        D_opt_expected = 1.414973347970818
+
+        trace_expected = 13
+        A_opt_expected = 1.1139433523068367
+
+        E_vals_expected = np.array([10.53112887, 2.46887113])
+        E_vecs_expected = np.array(
+            [[0.96649965, -0.25666794], [0.25666794, 0.96649965]]
+        )
+        E_opt_expected = 0.3924984205140895
+
+        ME_opt_expected = 0.6299765069426388
+
+        # Test results
+        self.assertEqual(det_FIM, det_expected)
+        self.assertEqual(trace_FIM, trace_expected)
+        self.assertTrue(np.allclose(E_vals, E_vals_expected))
+        self.assertTrue(np.allclose(E_vecs, E_vecs_expected))
+        self.assertEqual(D_opt, D_opt_expected)
+        self.assertEqual(A_opt, A_opt_expected)
+        self.assertEqual(E_opt, E_opt_expected)
+        self.assertEqual(ME_opt, ME_opt_expected)
+
+    def test_FIM_eigenvalue_warning(self):
+        # Create a matrix with an imaginary component large enough to trigger the warning
+        FIM = np.array([[6, 5j], [5j, 7]])
+        with self.assertLogs("pyomo.contrib.doe.utils", level="WARNING") as cm:
+            compute_FIM_metrics(FIM)
+            expected_warning = (
+                f"Eigenvalue has imaginary component greater than {_SMALL_TOLERANCE_IMG},"
+                + "contact developers if this issue persists."
+            )
+            self.assertIn(expected_warning, cm.output[0])
 
 
 if __name__ == "__main__":

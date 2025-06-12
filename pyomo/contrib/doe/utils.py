@@ -166,7 +166,7 @@ def check_FIM(FIM):
 # Functions to compute FIM metrics
 def compute_FIM_metrics(FIM):
     """
-    This private function calculates the FIM metrics and returns them as a tuple.
+    This function calculates the FIM metrics and returns them as a tuple.
 
     Parameters
     ----------
@@ -174,6 +174,7 @@ def compute_FIM_metrics(FIM):
 
     Returns
     -------
+    Returns the following metrics as a tuple in the order shown below:\\
     det_FIM: determinant of the FIM\\
     trace_FIM: trace of the FIM\\
     E_vals: eigenvalues of the FIM\\
@@ -240,7 +241,7 @@ def get_FIM_metrics(FIM):
     )
 
     return {
-        "Determinanat of FIM": det_FIM,
+        "Determinant of FIM": det_FIM,
         "Trace of FIM": trace_FIM,
         "Eigenvalues": E_vals,
         "Eigen vectors": E_vecs,
