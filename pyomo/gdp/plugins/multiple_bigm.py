@@ -40,7 +40,7 @@ from pyomo.core import (
     Var,
     ConcreteModel,
 )
-from pyomo.core.base import Reference, TransformationFactory
+from pyomo.core.base import Reference, TransformationFactory, VarData
 import pyomo.core.expr as EXPR
 from pyomo.core.util import target_list
 from pyomo.common.errors import DeveloperError
@@ -76,16 +76,6 @@ _trusted_solvers = {
     'mosek',
     'baron',
     'highs',
-}
-
-# Solvers that do not report objective bounds or values in the result and therefore
-# require loading the solution. For now, this prevents the use of multithreading; see the
-# comment in _calc_M for more information.
-
-# TODO: this no longer prevents multithreading unless I go back to the singlethreaded
-# method
-_solvers_require_loading_solutions = {
-    'ipopt',
 }
 
 # Keep Solver objects in thread-local storage
@@ -442,11 +432,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     Ms = arg_Ms
         # (Now exiting the DisjunctionDatas loop)
         threads = self._config.threads if self._config.threads is not None else max(1, len(os.sched_getaffinity(0)) - 1)
-        ## Not doing this, unless I decide to do it again
-        # solver_name = self._config.solver.name
-        # if threads > 1 and solver_name in _solvers_require_loading_solutions:
-        #     logger.warning(f"Solver '{solver_name}' cannot be used in multithreaded M calculations for now - reverting to a single thread. Pass the option threads=1 to silence this warning. ")
-        #     threads = 1
         running = {}
         if jobs:
             logger.info(f"Executing {len(jobs)} jobs on {threads} worker threads.")
@@ -543,7 +528,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             solver_arg = self._config.solver
             solver = _thread_local.solver = SolverFactory(solver_arg.name, options=solver_arg.options)
         # print("About to call solver")
-        results = solver.solve(scratch, tee=True, load_solutions=False, keepfiles=False)
+        results = solver.solve(scratch, tee=False, load_solutions=False, keepfiles=False)
 
         if results.solver.termination_condition is TerminationCondition.infeasible:
             # print("infeasible")
@@ -571,68 +556,73 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             raise GDP_Error(unsuccessful_message)
         else:
             # print("We were optimal; getting M from objective bound")
-            # note: This tranformation can be made faster by allowing the solver a gap. As
-            # long as we have a bound, it's still valid (though not as tight).
+
+            # note: This tranformation can be made faster by allowing the solver a
+            # gap. As long as we have a bound, it's still valid (though not as tight).
 
             # We should use the dual bound here. The primal bound is mathematically
-            # incorrect in the presence of error, but local solvers need it.
+            # incorrect in the presence of numerical error, but it's the best a local
+            # solver like ipopt can do, so we allow it to be used by setting an option.
             if not self._config.use_primal_bound:
                 if is_upper:
                     M = results.problem.upper_bound
                 else:
                     M = results.problem.lower_bound
-            elif solver.name not in _solvers_require_loading_solutions:
+                if not math.isfinite(M):
+                    raise GDP_Error(
+                        "Subproblem solved to optimality, but no finite dual bound was "
+                        "obtained. If you would like to instead use the best obtained "
+                        "solution, set the option use_primal_bound=True. This is "
+                        "necessary when using a local solver such as ipopt, but be "
+                        "aware that interior feasible points for this subproblem do "
+                        "not give valid values for M in general."
+                    )
+            else:
                 if is_upper:
                     M = results.problem.lower_bound
                 else:
                     M = results.problem.upper_bound
-            else:
-                # In this unfortunate case, we checked earlier and ensured there is only
-                # one worker thread. It's obviously not safe to call load_from without a
-                # lock, but then the call to solver.solve would also need to acquire the
-                # same lock, otherwise the other threads would read a model halfway
-                # through a load_solutions call. But doing that would defeat the purpose
-                # of multithreading. Cloning `scratch` is not enough to fix this problem:
-                # the decision variables live on the original model, so we would have to
-                # clone the entire thing, which is likely expensive enough to negate any
-                # benefit gained by multithreading.
-
-                # TODO: could I evaluate the objective without touching the vars by using
-                # replace_expressions and the var map in the results object? If so, will
-                # it be ipopt-only or will it work on any solver with this problem?
-
-                # Non-multithreaded solution
-                # scratch.solutions.load_from(results)
-                # M = value(scratch.obj)
-
-                # Potentially ipopt-specific workaround (do we always populate
-                # results._smap in the same way?)
-                M = value(
-                    EXPR.replace_expressions(
-                        scratch.obj,
-                        substitution_map={
-                            id: results.solution.variable[name]['Value']
-                            for id, name in results._smap.byObject.items()
-                            if isinstance(results._smap.bySymbol[name], Var)
-                        },
-                        descend_into_named_expressions=True,
-                        remove_named_expressions=True
-                    )
-                )
-
-            if not math.isfinite(M):
-                raise GDP_Error(
-                    "Subproblem solved to optimality, but no finite dual bound was "
-                    "obtained. If you would like to instead use the best obtained "
-                    "solution, set the option use_primal_bound=True. This is "
-                    "necessary when using a local solver such as ipopt, but be "
-                    "aware that interior feasible points for this subproblem do "
-                    "not give valid values for M."
-                    if not self._config.use_primal_bound else
-                    "No finite objective after optimal solve. Possibly the solver "
-                    "does not save the objective value in the results, in which case "
-                    "it may need to be added to `_solvers_require_loading_solutions`"
-                )
+                if not math.isfinite(M):
+                    # We are looking for the incumbent objective value after claiming to
+                    # have solved the problem to optimality, but the primal bound on the
+                    # results object is infinite or nan. It's possible something has gone
+                    # very wrong, but it's more likely that we are using a solver
+                    # interface, like ipopt, that rudely neglects to actually fill in
+                    # that field for us. We will try again to get the value of the
+                    # objective, assuming the results object has an _smap attribute that
+                    # behaves like the one in pyomo.opt.base.solvers.OptSolver (as of
+                    # 06/2025), and give up otherwise.
+                    #
+                    # The most robust way to do this would be to actually load the
+                    # solution and only then evaluate the objective. But this isn't
+                    # possible in the multithreaded context (solve() would read values of
+                    # variables on the main model while we're writing), so we would have
+                    # to switch to passing back the result object and waiting to parse
+                    # until we're singlethreaded again, and I don't want to do that just
+                    # to handle this edge case better.
+                    try:
+                        M = value(
+                            EXPR.replace_expressions(
+                                scratch.obj,
+                                substitution_map={
+                                    id: results.solution.variable[name]['Value']
+                                    for id, name in results._smap.byObject.items()
+                                    if isinstance(results._smap.bySymbol[name], VarData)
+                                },
+                                descend_into_named_expressions=True,
+                                remove_named_expressions=True
+                            )
+                        )
+                        if not math.isfinite(M):
+                            raise ValueError()
+                    except Exception:
+                        raise GDP_Error(
+                            "`use_primal_bound` is enabled, but could not find a finite"
+                            "objective value after optimal solve. Possibly the solver "
+                            "interface does not store the objective value in an easily "
+                            "acessible location."
+                        )
+            # print(f"{M=}")
             return (M, False)
 
     def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
