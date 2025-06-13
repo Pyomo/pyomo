@@ -88,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.9, '3.10', 3.11, 3.12, 3.13 ]
+        python: [ 3.9, '3.10', 3.11, 3.12, '3.13.3' ]  # FIXME: Remove specific 3.13 version once logging tests are fixed
         other: [""]
         category: [""]
 
@@ -400,7 +400,7 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
-        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == 3.13* ]]; then
             # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
             EXCLUDE="qtconsole $EXCLUDE"
         fi
