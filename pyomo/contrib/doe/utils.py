@@ -162,23 +162,31 @@ def check_FIM(FIM):
 # Functions to compute FIM metrics
 def compute_FIM_metrics(FIM):
     """
-    This function calculates the FIM metrics and returns them as a tuple.
-
     Parameters
     ----------
-    FIM: 2D numpy array of the FIM
+    FIM : numpy.ndarray
+        2D array representing the Fisher Information Matrix (FIM).
 
     Returns
     -------
-    Returns the following metrics as a tuple in the order shown below:\\
-    det_FIM: determinant of the FIM\\
-    trace_FIM: trace of the FIM\\
-    E_vals: eigenvalues of the FIM\\
-    E_vecs: eigenvectors of the FIM\\
-    D_opt: log10(D-optimality) metric\\
-    A_opt: log10(A-optimality) metric\\
-    E_opt: log10(E-optimality) metric\\
-    ME_opt: log10(Modified E-optimality) metric
+    Returns the following metrics as a tuple in the order shown below:
+
+    det_FIM : float
+        Determinant of the FIM.
+    trace_FIM : float
+        Trace of the FIM.
+    E_vals : numpy.ndarray
+        1D array of eigenvalues of the FIM.
+    E_vecs : numpy.ndarray
+        2D array of eigenvectors of the FIM.
+    D_opt : float
+        log10(D-optimality) metric.
+    A_opt : float
+        log10(A-optimality) metric.
+    E_opt : float
+        log10(E-optimality) metric.
+    ME_opt : float
+        log10(Modified E-optimality) metric.
     """
 
     # Check whether the FIM is square, positive definite, and symmetric
@@ -214,25 +222,35 @@ def compute_FIM_metrics(FIM):
 
 # Standalone Function for user to calculate FIM metrics directly without using the class
 def get_FIM_metrics(FIM):
-    """
-    This function calculates the FIM metrics and returns them as a dictionary.
+    """This function calculates the FIM metrics and returns them as a dictionary.
 
     Parameters
     ----------
-    FIM: 2D numpy array of the FIM
+    FIM : numpy.ndarray
+        2D numpy array of the FIM
 
     Returns
     -------
-    Returns the FIM metrics as a dictionary with the following keys on the left:\\
-    "Determinant of FIM": determinant of the FIM\\
-    "Trace of FIM": trace of the FIM\\
-    "Eigenvalues": eigenvalues of the FIM\\
-    "Eigenvectors": eigenvectors of the FIM\\
-    "log10(D-Optimality)": log10(D-optimality) metric\\
-    "log10(A-Optimality)": log10(A-optimality) metric\\
-    "log10(E-Optimality)": log10(E-optimality) metric\\
-    "log10(Modified E-Optimality)": log10(Modified E-optimality) metric
+    A dictionary containing the following keys:
+
+    "Determinant of FIM" : float
+        determinant of the FIM
+    "Trace of FIM" : float
+        trace of the FIM
+    "Eigenvalues" : numpy.ndarray
+        eigenvalues of the FIM
+    "Eigenvectors" : numpy.ndarray
+        eigenvectors of the FIM
+    "log10(D-Optimality)" : float
+        log10(D-optimality) metric
+    "log10(A-Optimality)" : float
+        log10(A-optimality) metric
+    "log10(E-Optimality)" : float
+        log10(E-optimality) metric
+    "log10(Modified E-Optimality)" : float
+        log10(Modified E-optimality) metric
     """
+
     det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
         compute_FIM_metrics(FIM)
     )
