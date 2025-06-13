@@ -298,14 +298,6 @@ def _check_model_labels_helper(model):
             'Experiment model does not have suffix "experiment_outputs".'
         )
 
-    # Check that experimental inputs exist
-    if hasattr(model, "experiment_inputs"):
-        pass
-    else:
-        raise AttributeError(
-            'Experiment model does not have suffix "experiment_inputs".'
-        )
-
     # Check that unknown parameters exist
     if hasattr(model, "unknown_parameters"):
         pass
@@ -347,6 +339,11 @@ class CovarianceMethodLib(Enum):
 class ObjectiveLib(Enum):
     SSE = "SSE"
     SSE_weighted = "SSE_weighted"
+
+
+class UnsupportedArgsLib(Enum):
+    calc_cov = "calc_cov"
+    cov_n = "cov_n"
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
@@ -770,13 +767,24 @@ class Estimator(object):
         _check_model_labels_helper(model)
 
         # populate keyword argument options
-        try:
-            self.obj_function = ObjectiveLib(obj_function)
-        except ValueError:
-            raise ValueError(
-                f"Invalid objective function: '{obj_function}'. "
-                f"Choose from {[e.value for e in ObjectiveLib]}."
+        if isinstance(obj_function, str):
+            try:
+                self.obj_function = ObjectiveLib(obj_function)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid objective function: '{obj_function}'. "
+                    f"Choose from {[e.value for e in ObjectiveLib]}."
+                )
+        else:
+            deprecation_warning(
+                "You're using a deprecated input to the `obj_function` argument by "
+                "passing a custom function. This usage will be removed in a "
+                "future release. Please update to the new parmest interface using "
+                "the built-in 'SSE' and 'SSE_weighted' objectives.",
+                version="6.7.2",
             )
+            self.obj_function = obj_function
+
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
@@ -908,15 +916,19 @@ class Estimator(object):
 
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
-            if self.obj_function == ObjectiveLib.SSE:
-                second_stage_rule = SSE
-            elif self.obj_function == ObjectiveLib.SSE_weighted:
-                second_stage_rule = SSE_weighted
+            if isinstance(self.obj_function, Enum):
+                if self.obj_function == ObjectiveLib.SSE:
+                    second_stage_rule = SSE
+                elif self.obj_function == ObjectiveLib.SSE_weighted:
+                    second_stage_rule = SSE_weighted
+                else:
+                    raise ValueError(
+                        f"Invalid objective function: '{self.obj_function.value}'. "
+                        f"Choose from {[e.value for e in ObjectiveLib]}."
+                    )
             else:
-                raise ValueError(
-                    f"Invalid objective function: '{self.obj_function.value}'. "
-                    f"Choose from {[e.value for e in ObjectiveLib]}."
-                )
+                # A custom function uses model.experiment_outputs as data
+                second_stage_rule = self.obj_function
 
             model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=second_stage_rule)
@@ -939,7 +951,7 @@ class Estimator(object):
         return model
 
     def _Q_opt(
-        self, ThetaVals=None, solver="ef_ipopt", return_values=[], bootlist=None
+        self, ThetaVals=None, solver="ef_ipopt", return_values=[], bootlist=None, **kwargs
     ):
         """
         Set up all thetas as first stage Vars, return resulting theta
@@ -988,28 +1000,71 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            # The import error will be raised when we attempt to use
-            # inv_reduced_hessian_barrier below.
-            #
-            # elif not asl_available:
-            #    raise ImportError("parmest requires ASL to calculate the "
-            #                      "covariance matrix with solver 'ipopt'")
+            if not kwargs:
+                # The import error will be raised when we attempt to use
+                # inv_reduced_hessian_barrier below.
+                #
+                # elif not asl_available:
+                #    raise ImportError("parmest requires ASL to calculate the "
+                #                      "covariance matrix with solver 'ipopt'")
 
-            # parmest makes the fitted parameters stage 1 variables
-            ind_vars = []
-            for nd_name, Var, sol_val in ef_nonants(ef):
-                ind_vars.append(Var)
-            # calculate the reduced hessian
-            (solve_result, inv_red_hes) = (
-                inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                    self.ef_instance,
-                    independent_variables=ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee,
+                # parmest makes the fitted parameters stage 1 variables
+                ind_vars = []
+                for nd_name, Var, sol_val in ef_nonants(ef):
+                    ind_vars.append(Var)
+                # calculate the reduced hessian
+                (solve_result, inv_red_hes) = (
+                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                        self.ef_instance,
+                        independent_variables=ind_vars,
+                        solver_options=self.solver_options,
+                        tee=self.tee,
+                    )
                 )
-            )
 
-            self.inv_red_hes = inv_red_hes
+                self.inv_red_hes = inv_red_hes
+            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+                deprecation_warning(
+                    "You're using a deprecated call to the `theta_est()` function "
+                    "with the `calc_cov` and `cov_n` arguments. This usage will be "
+                    "removed in a future release. Please update to the new parmest "
+                    "interface using `cov_est()` function for covariance calculation.",
+                    version="6.7.2",
+                )
+
+                calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
+                cov_n = kwargs[UnsupportedArgsLib.cov_n.value]
+
+                if not calc_cov:
+                    # Do not calculate the reduced hessian
+
+                    solver = SolverFactory('ipopt')
+                    if self.solver_options is not None:
+                        for key in self.solver_options:
+                            solver.options[key] = self.solver_options[key]
+
+                    solve_result = solver.solve(self.ef_instance, tee=self.tee)
+
+                    # The import error will be raised when we attempt to use
+                    # inv_reduced_hessian_barrier below.
+                    #
+                    # elif not asl_available:
+                    #    raise ImportError("parmest requires ASL to calculate the "
+                    #                      "covariance matrix with solver 'ipopt'")
+                else:
+                    # parmest makes the fitted parameters stage 1 variables
+                    ind_vars = []
+                    for ndname, Var, solval in ef_nonants(ef):
+                        ind_vars.append(Var)
+                    # calculate the reduced hessian
+                    (solve_result, inv_red_hes) = (
+                        inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                            self.ef_instance,
+                            independent_variables=ind_vars,
+                            solver_options=self.solver_options,
+                            tee=self.tee,
+                        )
+                    )
 
             if self.diagnostic_mode:
                 print(
@@ -1027,8 +1082,37 @@ class Estimator(object):
 
             obj_val = pyo.value(ef.EF_Obj)
 
-            # add the estimated theta and objective value to the class
+            # add the estimated theta to the class
             self.estimated_theta = theta_vals
+
+            if kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+                if calc_cov:
+                    # Calculate the covariance matrix
+
+                    # Number of data points considered
+                    n = cov_n
+
+                    # Extract number of fitted parameters
+                    l = len(theta_vals)
+
+                    # Assumption: Objective value is sum of squared errors
+                    sse = obj_val
+
+                    '''Calculate covariance assuming experimental observation errors are
+                    independent and follow a Gaussian
+                    distribution with constant variance.
+
+                    The formula used in parmest was verified against equations (7-5-15) and
+                    (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
+
+                    This formula is also applicable if the objective is scaled by a constant;
+                    the constant cancels out. (was scaled by 1/n because it computes an
+                    expected value.)
+                    '''
+                    cov = 2 * sse / (n - l) * inv_red_hes
+                    cov = pd.DataFrame(
+                        cov, index=theta_vals.keys(), columns=theta_vals.keys()
+                    )
 
             theta_vals = pd.Series(theta_vals)
 
@@ -1045,7 +1129,7 @@ class Estimator(object):
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
                         if (
-                            exp_i_var is None
+                                exp_i_var is None
                         ):  # we might have a block such as _mpisppy_data
                             continue
                         # if value to return is ContinuousSet
@@ -1061,9 +1145,21 @@ class Estimator(object):
                         var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
 
-                return obj_val, theta_vals, var_values
+                if not kwargs:
+                    return obj_val, theta_vals, var_values
+                elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+                    if calc_cov:
+                        return obj_val, theta_vals, var_values, cov
+                    else:
+                        return obj_val, theta_vals, var_values
 
-            return obj_val, theta_vals
+            if not kwargs:
+                return obj_val, theta_vals
+            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+                if calc_cov:
+                    return obj_val, theta_vals, cov
+                else:
+                    return obj_val, theta_vals
 
         else:
             raise RuntimeError("Unknown solver in Q_Opt=" + solver)
@@ -1087,7 +1183,7 @@ class Estimator(object):
         # Extract number of fitted parameters
         l = len(self.estimated_theta)
 
-        # calculate the sum of squared errors at the estimated parameters
+        # calculate the sum of squared errors at the estimated parameter values
         sse_vals = []
         for experiment in self.exp_list:
             model = _get_labeled_model_helper(experiment)
@@ -1107,7 +1203,7 @@ class Estimator(object):
                     f"The original error was {e}."
                 )
 
-            # choose and evaluate the objective expression
+            # choose and evaluate the sum of squared errors expression
             if self.obj_function == ObjectiveLib.SSE:
                 sse_expr = SSE(model)
             elif self.obj_function == ObjectiveLib.SSE_weighted:
@@ -1118,7 +1214,7 @@ class Estimator(object):
                     f"Choose from {[e.value for e in ObjectiveLib]}."
                 )
 
-            # evaluate numerical SSE and store it
+            # evaluate the numerical SSE and store it
             sse_val = pyo.value(sse_expr)
             sse_vals.append(sse_val)
 
@@ -1134,7 +1230,7 @@ class Estimator(object):
         the constant cancels out. (was scaled by 1/n because it computes an
         expected value.)
         """
-        # check if the supplied method is supported
+        # check if the user-supplied covariance method is supported
         try:
             cov_method = CovarianceMethodLib(method)
         except ValueError:
@@ -1499,7 +1595,7 @@ class Estimator(object):
 
         return samplelist
 
-    def theta_est(self, solver="ef_ipopt", return_values=[]):
+    def theta_est(self, solver="ef_ipopt", return_values=[], **kwargs):
         """
         Parameter estimation using all scenarios in the data
 
@@ -1522,15 +1618,25 @@ class Estimator(object):
 
         # check if we are using deprecated parmest
         if self.pest_deprecated is not None:
-            return self.pest_deprecated.theta_est(
-                solver=solver,
-                return_values=return_values
-            )
+            if not kwargs:
+                return self.pest_deprecated.theta_est(
+                    solver=solver,
+                    return_values=return_values,
+                )
+            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+                calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
+                cov_n = kwargs[UnsupportedArgsLib.cov_n.value]
+                return self.pest_deprecated.theta_est(
+                    solver=solver,
+                    return_values=return_values,
+                    calc_cov=calc_cov,
+                    cov_n=cov_n,
+                )
 
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
 
-        return self._Q_opt(solver=solver, return_values=return_values, bootlist=None)
+        return self._Q_opt(solver=solver, return_values=return_values, bootlist=None, **kwargs)
 
     def cov_est(
         self, method="finite_difference", solver="ipopt", cov_n=None, step=1e-3
@@ -2362,9 +2468,31 @@ class _DeprecatedEstimator(object):
             objval = pyo.value(ef.EF_Obj)
 
             if calc_cov:
-                raise NotImplementedError(
-                    "Computing the covariance is no longer supported "
-                    "in the deprecated interface"
+                # Calculate the covariance matrix
+
+                # Number of data points considered
+                n = cov_n
+
+                # Extract number of fitted parameters
+                l = len(thetavals)
+
+                # Assumption: Objective value is sum of squared errors
+                sse = objval
+
+                '''Calculate covariance assuming experimental observation errors are
+                independent and follow a Gaussian
+                distribution with constant variance.
+
+                The formula used in parmest was verified against equations (7-5-15) and
+                (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
+
+                This formula is also applicable if the objective is scaled by a constant;
+                the constant cancels out. (was scaled by 1/n because it computes an
+                expected value.)
+                '''
+                cov = 2 * sse / (n - l) * inv_red_hes
+                cov = pd.DataFrame(
+                    cov, index=thetavals.keys(), columns=thetavals.keys()
                 )
 
             thetavals = pd.Series(thetavals)
