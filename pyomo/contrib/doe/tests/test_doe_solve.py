@@ -11,6 +11,7 @@
 import json
 import logging
 import os.path
+import idaes.core.solvers.get_solver
 
 from pyomo.common.dependencies import (
     numpy as np,
@@ -23,6 +24,8 @@ from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.doe import DesignOfExperiments
+from pyomo.contrib.doe.examples.reactor_example import run_reactor_doe
+from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
 )
@@ -37,7 +40,7 @@ from pyomo.opt import SolverFactory
 
 
 ipopt_available = SolverFactory("ipopt").available()
-k_aug_available = SolverFactory('k_aug', solver_io='nl', validate=False)
+k_aug_available = SolverFactory("k_aug", solver_io="nl", validate=False)
 
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "examples", "result.json")
@@ -100,21 +103,21 @@ def get_FIM_Q_L(doe_obj=None):
 
 def get_standard_args(experiment, fd_method, obj_used):
     args = {}
-    args['experiment'] = experiment
-    args['fd_formula'] = fd_method
-    args['step'] = 1e-3
-    args['objective_option'] = obj_used
-    args['scale_constant_value'] = 1
-    args['scale_nominal_param_value'] = True
-    args['prior_FIM'] = None
-    args['jac_initial'] = None
-    args['fim_initial'] = None
-    args['L_diagonal_lower_bound'] = 1e-7
-    args['solver'] = None
-    args['tee'] = False
-    args['get_labeled_model_args'] = None
-    args['_Cholesky_option'] = True
-    args['_only_compute_fim_lower'] = True
+    args["experiment"] = experiment
+    args["fd_formula"] = fd_method
+    args["step"] = 1e-3
+    args["objective_option"] = obj_used
+    args["scale_constant_value"] = 1
+    args["scale_nominal_param_value"] = True
+    args["prior_FIM"] = None
+    args["jac_initial"] = None
+    args["fim_initial"] = None
+    args["L_diagonal_lower_bound"] = 1e-7
+    args["solver"] = None
+    args["tee"] = False
+    args["get_labeled_model_args"] = None
+    args["_Cholesky_option"] = True
+    args["_only_compute_fim_lower"] = True
     return args
 
 
@@ -195,17 +198,17 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperiment(data_ex, 10, 3)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args['scale_nominal_param_value'] = (
+        DoE_args["scale_nominal_param_value"] = (
             False  # Vanilla determinant solve needs this
         )
-        DoE_args['_Cholesky_option'] = False
-        DoE_args['_only_compute_fim_lower'] = False
+        DoE_args["_Cholesky_option"] = False
+        DoE_args["_only_compute_fim_lower"] = False
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
         doe_obj.run_doe()
 
-        self.assertEqual(doe_obj.results['Solver Status'], "ok")
+        self.assertEqual(doe_obj.results["Solver Status"], "ok")
 
     def test_reactor_obj_cholesky_solve(self):
         fd_method = "central"
@@ -244,7 +247,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         # Specify a prior that is slightly negative definite
         # Because it is less than the tolerance, it should be adjusted to be positive definite
         # No error should be thrown
-        DoE_args['prior_FIM'] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
+        DoE_args["prior_FIM"] = -(_SMALL_TOLERANCE_DEFINITENESS / 100) * np.eye(4)
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -366,7 +369,7 @@ class TestReactorExampleSolving(unittest.TestCase):
 
         # Without parameter scaling
         DoE_args2 = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args2['scale_nominal_param_value'] = False
+        DoE_args2["scale_nominal_param_value"] = False
 
         doe_obj2 = DesignOfExperiments(**DoE_args2)
         # Run both problems
@@ -418,7 +421,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         experiment = FullReactorExperimentBad(data_ex, 10, 3)
 
         DoE_args = get_standard_args(experiment, fd_method, obj_used)
-        DoE_args['logger_level'] = logging.ERROR
+        DoE_args["logger_level"] = logging.ERROR
 
         doe_obj = DesignOfExperiments(**DoE_args)
 
@@ -441,6 +444,82 @@ class TestReactorExampleSolving(unittest.TestCase):
             (set(CA_vals).issuperset(set([1, 3, 5])))
             and (set(T_vals).issuperset(set([300, 500, 700])))
         )
+
+
+class TestDoe(unittest.TestCase):
+    def test_doe_full_factorial(self):
+        log10_D_opt_expected = [
+            np.float64(-13.321347741255337),
+            np.float64(3.8035612211158707),
+            np.float64(-7.724323094449262),
+            np.float64(9.395321258173526),
+        ]
+
+        log10_A_opt_expected = [
+            np.float64(3.5646581425454578),
+            np.float64(2.922649226588521),
+            np.float64(4.962598150652743),
+            np.float64(4.3205892352904876),
+        ]
+
+        log10_E_opt_expected = [
+            np.float64(-10.076931572437823),
+            np.float64(-0.6660428224151175),
+            np.float64(-8.67332037872937),
+            np.float64(0.731897189777441),
+        ]
+        log10_ME_opt_expected = [
+            np.float64(13.51143310646149),
+            np.float64(3.570243133023128),
+            np.float64(13.505430874322686),
+            np.float64(3.5702431295446915),
+        ]
+
+        eigval_min_expected = [
+            np.float64(8.376612538754303e-11),
+            np.float64(0.21575316611777548),
+            np.float64(2.1216787236688646e-09),
+            np.float64(5.393829196668378),
+        ]
+
+        eigval_max_expected = [
+            np.float64(2714.297914184112),
+            np.float64(802.0479084262055),
+            np.float64(67857.4478581609),
+            np.float64(20051.197712596462),
+        ]
+
+        det_FIM_expected = [
+            np.float64(4.7714706717649e-14),
+            np.float64(6361.524749138681),
+            np.float64(1.886587295622232e-08),
+            np.float64(2484970618.69026),
+        ]
+
+        trace_FIM_expected = [
+            np.float64(3669.9330583293095),
+            np.float64(836.8530948725596),
+            np.float64(91748.32633892389),
+            np.float64(20921.327373255765),
+        ]
+        ff = run_reactor_doe(
+            n_points_for_design=2,
+            compute_FIM_full_factorial=True,
+            plot_factorial_results=False,
+            save_plots=False,
+            run_optimal_doe=False,
+        )
+
+        ff_results = ff.fim_factorial_results
+
+        self.assertTrue(np.allclose(ff_results["log10 D-opt"], log10_D_opt_expected))
+        self.assertTrue(np.allclose(ff_results["log10 A-opt"], log10_A_opt_expected))
+        self.assertTrue(np.allclose(ff_results["log10 E-opt"], log10_E_opt_expected))
+        self.assertTrue(np.allclose(ff_results["log10 ME-opt"], log10_ME_opt_expected))
+        self.assertTrue(np.allclose(ff_results["eigval_min"], eigval_min_expected))
+        self.assertTrue(np.allclose(ff_results["eigval_max"], eigval_max_expected))
+        self.assertTrue(np.allclose(ff_results["det_FIM"], det_FIM_expected))
+        self.assertTrue(np.allclose(ff_results["trace_FIM"], trace_FIM_expected))
 
 
 if __name__ == "__main__":
