@@ -230,7 +230,7 @@ setup_kwargs = dict(
             'linear-tree',  # contrib.piecewise
             # FIXME: This is a temporary pin that should be removed
             # when the linear-tree dependency is replaced
-            'scikit-learn<1.7.0',
+            'scikit-learn<1.7.0; implementation_name!="pypy"',
             # Note: matplotlib 3.6.1 has bug #24127, which breaks
             # seaborn's histplot (triggering parmest failures)
             # Note: minimum version from community_detection use of
