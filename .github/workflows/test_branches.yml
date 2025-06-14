@@ -76,13 +76,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [3.13]
+        python: ['3.13.3']  # FIXME: Remove specific 3.13 version once logging tests are fixed
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: 3.13
+          python: '3.13.3'  # FIXME: Remove specific 3.13 version once logging tests are fixed
           test_docs: 1
           TARGET: linux
           PYENV: pip
@@ -348,7 +348,7 @@ jobs:
         if test "${{matrix.TARGET}}" == linux; then
             EXCLUDE="casadi numdifftools $EXCLUDE"
         fi
-        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == "3.13" ]]; then
+        if [[ "${{matrix.TARGET}}" == win && "${{matrix.python}}" == 3.13* ]]; then
             # As of Nov 7, 2024, qtconsole is not compatible with python 3.13 on win
             EXCLUDE="qtconsole $EXCLUDE"
         fi
@@ -373,7 +373,7 @@ jobs:
         fi
         # Note: this will fail the build if any installation fails (or
         # possibly if it outputs messages to stderr)
-        conda install --update-deps -q -y $CONDA_DEPENDENCIES
+        conda install --update-deps -q -y python="${{matrix.python}}" $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             # xpress.init() (xpress 9.5.1 from conda) hangs indefinitely
             # on GHA/Windows under Python 3.10 and 3.11.  Exclude that
