@@ -232,8 +232,8 @@ def _experiment_instance_creation_callback(
 
 def SSE(model):
     """
-    Returns an expression that is used to compute the sum of squared error ('SSE') objective,
-    assuming Gaussian i.i.d. errors
+    Returns an expression that is used to compute the sum of squared errors
+    ('SSE') objective, assuming Gaussian i.i.d. errors
 
     Argument:
         model: annotated Pyomo model
@@ -241,7 +241,7 @@ def SSE(model):
     # check if the model has all the required suffixes
     _check_model_labels_helper(model)
 
-    # sum of squared error between the prediction and observation of the measured variables
+    # SSE between the prediction and observation of the measured variables
     expr = sum((y - y_hat) ** 2 for y_hat, y in model.experiment_outputs.items())
     return expr
 
@@ -249,7 +249,8 @@ def SSE(model):
 def SSE_weighted(model):
     """
     Returns an expression that is used to compute the 'SSE_weighted' objective,
-    assuming Gaussian i.i.d. errors, with measurement error standard deviation defined in the annotated Pyomo model
+    assuming Gaussian i.i.d. errors, with measurement error standard deviation
+    defined in the annotated Pyomo model
 
     Argument:
         model: annotated Pyomo model
@@ -262,15 +263,18 @@ def SSE_weighted(model):
         pass
     else:
         raise AttributeError(
-            'Experiment model does not have suffix "measurement_error". "measurement_error" is a required suffix '
-            'for the "SSE_weighted" objective.'
+            'Experiment model does not have suffix "measurement_error". '
+            '"measurement_error" is a required suffix for the "SSE_weighted" '
+            'objective.'
         )
 
-    # check if all the values of the measurement error standard deviation have been supplied
+    # check if all the values of the measurement error standard deviation
+    # have been supplied
     if all(
         model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
     ):
-        # calculate the weighted SSE between the prediction and observation of the measured variables
+        # calculate the weighted SSE between the prediction and observation of the
+        # measured variables
         expr = (1 / 2) * sum(
             ((y - y_hat) / model.measurement_error[y_hat]) ** 2
             for y_hat, y in model.experiment_outputs.items()
@@ -278,8 +282,8 @@ def SSE_weighted(model):
         return expr
     else:
         raise ValueError(
-            'One or more values are missing from "measurement_error". All values of the '
-            'measurement errors are required for the "SSE_weighted" objective.'
+            'One or more values are missing from "measurement_error". All values of '
+            'the measurement errors are required for the "SSE_weighted" objective.'
         )
 
 
@@ -315,7 +319,8 @@ def _get_labeled_model_helper(experiment):
     Checks if the Experiment class object has a "get_labeled_model" function
 
     Argument:
-        experiment: Estimator class object that contains the model for a particular experimental condition
+        experiment: Estimator class object that contains the model for a particular
+                    experimental condition
 
     Returns:
         model: Annotated Pyomo model
@@ -324,7 +329,8 @@ def _get_labeled_model_helper(experiment):
         model = experiment.get_labeled_model().clone()
     except Exception as e:
         raise AttributeError(
-            f'The experiment object must have a "get_labeled_model" function. The original error was {e}.'
+            f'The experiment object must have a "get_labeled_model" function. '
+            f'The original error was {e}.'
         )
 
     return model
@@ -349,13 +355,15 @@ class UnsupportedArgsLib(Enum):
 # Compute the Jacobian matrix of measured variables with respect to the parameters
 def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     """
-    Computes the Jacobian matrix of the measured variables with respect to the parameters
-    using central finite difference scheme
+    Computes the Jacobian matrix of the measured variables with respect to the
+    parameters using the central finite difference scheme
 
     Arguments:
-        experiment: Estimator class object that contains the model for a particular experimental condition
+        experiment: Estimator class object that contains the model for a particular
+                    experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
-        step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
+        step: float used for relative perturbation of the parameters,
+              e.g., step=0.02 is a 2% perturbation
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
 
@@ -380,8 +388,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
         pyo.assert_optimal_termination(res)
     except Exception as e:
         raise RuntimeError(
-            f"Model from experiment did not solve appropriately. Make sure the model is well-posed. "
-            f"The original error was {e}."
+            f"Model from experiment did not solve appropriately. Make sure the "
+            f"model is well-posed. The original error was {e}."
         )
 
     # get the measured variables
@@ -413,8 +421,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
             pyo.assert_optimal_termination(res)
         except Exception as e:
             raise RuntimeError(
-                f"Model from experiment did not solve appropriately. Make sure the model is well-posed. "
-                f"The original error was {e}."
+                f"Model from experiment did not solve appropriately. Make sure the "
+                f"model is well-posed. The original error was {e}."
             )
 
         # forward perturbation measured variables
@@ -429,8 +437,8 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
             pyo.assert_optimal_termination(res)
         except Exception as e:
             raise RuntimeError(
-                f"Model from experiment did not solve appropriately. Make sure the model is well-posed. "
-                f"The original error was {e}."
+                f"Model from experiment did not solve appropriately. Make sure the "
+                f"model is well-posed. The original error was {e}."
             )
 
         # backward perturbation measured variables
@@ -455,18 +463,22 @@ def compute_covariance_matrix(
     experiment_list, method, theta_vals, step, solver, tee, estimated_var=None
 ):
     """
-    Computes the covariance matrix of the estimated parameters using `finite_difference` and
-    `automatic_differentiation_kaug` methods
+    Computes the covariance matrix of the estimated parameters using
+    'finite_difference' and 'automatic_differentiation_kaug' methods
 
     Arguments:
-        experiment_list: list of Estimator class objects containing the model for different experimental conditions
-        method: string ``method`` object specified by the user, e.g., 'finite_difference'
+        experiment_list: list of Estimator class objects containing the model for
+                         different experimental conditions
+        method: string ``method`` object specified by the user,
+                e.g., 'finite_difference'
         theta_vals: dictionary containing the estimates of the unknown parameters
-        step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
+        step: float used for relative perturbation of the parameters,
+              e.g., step=0.02 is a 2% perturbation
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
-        estimated_var: value of the estimated variance of the measurement error in cases where
-                       the user does not supply the measurement error standard deviation
+        estimated_var: value of the estimated variance of the measurement error
+                       in cases where the user does not supply the measurement
+                       error standard deviation
 
     Returns:
         cov: covariance matrix of the estimated parameters
@@ -476,7 +488,8 @@ def compute_covariance_matrix(
         cov_method = CovarianceMethodLib(method)
     except ValueError:
         raise ValueError(
-            f"Invalid method: '{method}'. Choose from {[e.value for e in CovarianceMethodLib]}."
+            f"Invalid method: '{method}'. "
+            f"Choose from {[e.value for e in CovarianceMethodLib]}."
         )
 
     if cov_method == CovarianceMethodLib.finite_difference:
@@ -532,28 +545,33 @@ def compute_covariance_matrix(
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
     else:
         raise ValueError(
-            f'The method provided, {method}, must be either "finite_difference" or "automatic_differentiation_kaug".'
+            f'The method provided, {method}, must be either "finite_difference" or '
+            f'"automatic_differentiation_kaug".'
         )
 
     return cov
 
 
-# compute the Fisher information matrix of the estimated parameters using `finite_difference`
+# compute the Fisher information matrix of the estimated parameters using
+# 'finite_difference'
 def _finite_difference_FIM(
     experiment, theta_vals, step, solver, tee, estimated_var=None
 ):
     """
-    Computes the Fisher information matrix from finite difference Jacobian matrix and
-    measurement errors standard deviation defined in the annotated Pyomo model
+    Computes the Fisher information matrix from 'finite_difference' Jacobian matrix
+    and measurement errors standard deviation defined in the annotated Pyomo model
 
     Arguments:
-        experiment: Estimator class object that contains the model for a particular experimental condition
+        experiment: Estimator class object that contains the model for a particular
+                    experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
-        step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
+        step: float used for relative perturbation of the parameters,
+              e.g., step=0.02 is a 2% perturbation
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
-        estimated_var: value of the estimated variance of the measurement error in cases where
-                       the user does not supply the measurement error standard deviation
+        estimated_var: value of the estimated variance of the measurement error in
+                       cases where the user does not supply the measurement error
+                       standard deviation
 
     Returns:
         FIM: Fisher information matrix about the parameters
@@ -573,7 +591,8 @@ def _finite_difference_FIM(
     # extract the measured variables and measurement errors
     y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
 
-    # check if the model has a defined measurement_error attribute and supplied measurement error standard deviation
+    # check if the model has a 'measurement_error' attribute and the measurement
+    # error standard deviation has been supplied
     if hasattr(model, "measurement_error") and all(
         model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
     ):
@@ -605,21 +624,25 @@ def _finite_difference_FIM(
     return FIM
 
 
-# compute the Fisher information matrix of the estimated parameters using `automatic_differentiation_kaug`
+# compute the Fisher information matrix of the estimated parameters using
+# 'automatic_differentiation_kaug'
 def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     """
-    Computes the FIM using `automatic_differentiation_kaug`, a sensitivity-based approach that uses the annotated
-    Pyomo model optimality condition and user-defined measurement errors standard deviation
+    Computes the FIM using 'automatic_differentiation_kaug', a sensitivity-based
+    approach that uses the annotated Pyomo model optimality condition and
+    user-defined measurement errors standard deviation
 
     Disclaimer - code adopted from the kaug function implemented in Pyomo.DoE
 
     Arguments:
-        experiment: Estimator class object that contains the model for a particular experimental condition
+        experiment: Estimator class object that contains the model for a particular
+                    experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
-        estimated_var: value of the estimated variance of the measurement error in cases where
-                       the user does not supply the measurement error standard deviation
+        estimated_var: value of the estimated variance of the measurement error in
+                       cases where the user does not supply the measurement error
+                       standard deviation
 
     Returns:
         FIM: Fisher information matrix about the parameters
@@ -639,8 +662,8 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
         pyo.assert_optimal_termination(res)
     except Exception as e:
         raise RuntimeError(
-            f"Model from experiment did not solve appropriately. Make sure the model is well-posed. "
-            f"The original error was {e}."
+            f"Model from experiment did not solve appropriately. Make sure the "
+            f"model is well-posed. The original error was {e}."
         )
 
     # add zero (dummy/placeholder) objective function
@@ -951,7 +974,12 @@ class Estimator(object):
         return model
 
     def _Q_opt(
-        self, ThetaVals=None, solver="ef_ipopt", return_values=[], bootlist=None, **kwargs
+        self,
+        ThetaVals=None,
+        solver="ef_ipopt",
+        return_values=[],
+        bootlist=None,
+        **kwargs,
     ):
         """
         Set up all thetas as first stage Vars, return resulting theta
@@ -1098,16 +1126,17 @@ class Estimator(object):
                     # Assumption: Objective value is sum of squared errors
                     sse = obj_val
 
-                    '''Calculate covariance assuming experimental observation errors are
-                    independent and follow a Gaussian
-                    distribution with constant variance.
+                    '''Calculate covariance assuming experimental observation errors 
+                    are independent and follow a Gaussian distribution 
+                    with constant variance.
 
-                    The formula used in parmest was verified against equations (7-5-15) and
-                    (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
+                    The formula used in parmest was verified against equations 
+                    (7-5-15) and (7-5-16) in "Nonlinear Parameter Estimation", 
+                    Y. Bard, 1974.
 
-                    This formula is also applicable if the objective is scaled by a constant;
-                    the constant cancels out. (was scaled by 1/n because it computes an
-                    expected value.)
+                    This formula is also applicable if the objective is scaled by a 
+                    constant; the constant cancels out. 
+                    (was scaled by 1/n because it computes an expected value.)
                     '''
                     cov = 2 * sse / (n - l) * inv_red_hes
                     cov = pd.DataFrame(
@@ -1129,7 +1158,7 @@ class Estimator(object):
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
                         if (
-                                exp_i_var is None
+                            exp_i_var is None
                         ):  # we might have a block such as _mpisppy_data
                             continue
                         # if value to return is ContinuousSet
@@ -1169,10 +1198,13 @@ class Estimator(object):
         Covariance matrix calculation using all scenarios in the data
 
         Argument:
-            method: string ``method`` object specified by the user, e.g., 'finite_difference'
+            method: string ``method`` object specified by the user,
+                    e.g., 'finite_difference'
             solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-            cov_n: integer, number of datapoints specified by the user which is used in the objective function
-            step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
+            cov_n: integer, number of datapoints specified by the user which is used
+                   in the objective function
+            step: float used for relative perturbation of the parameters,
+                  e.g., step=0.02 is a 2% perturbation
 
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
@@ -1199,8 +1231,8 @@ class Estimator(object):
                 pyo.assert_optimal_termination(res)
             except Exception as e:
                 raise RuntimeError(
-                    f"Model from experiment did not solve appropriately. Make sure the model is well-posed. "
-                    f"The original error was {e}."
+                    f"Model from experiment did not solve appropriately. Make sure the "
+                    f"model is well-posed. The original error was {e}."
                 )
 
             # choose and evaluate the sum of squared errors expression
@@ -1235,7 +1267,8 @@ class Estimator(object):
             cov_method = CovarianceMethodLib(method)
         except ValueError:
             raise ValueError(
-                f"Invalid method: '{method}'. Choose from {[e.value for e in CovarianceMethodLib]}."
+                f"Invalid method: '{method}'. Choose "
+                f"from {[e.value for e in CovarianceMethodLib]}."
             )
 
         # check if the user specified 'SSE' or 'SSE_weighted' as the objective function
@@ -1278,8 +1311,8 @@ class Estimator(object):
                         )
                     else:
                         raise NotImplementedError(
-                            'Only "finite_difference", "reduced_hessian", and "automatic_differentiation_kaug" '
-                            'methods are supported.'
+                            'Only "finite_difference", "reduced_hessian", and '
+                            '"automatic_differentiation_kaug" methods are supported.'
                         )
                 elif all(item is not None for item in meas_error):
                     if cov_method == CovarianceMethodLib.reduced_hessian:
@@ -1304,12 +1337,13 @@ class Estimator(object):
                         )
                     else:
                         raise NotImplementedError(
-                            'Only "finite_difference", "reduced_hessian", and "automatic_differentiation_kaug" '
-                            'methods are supported.'
+                            'Only "finite_difference", "reduced_hessian", and '
+                            '"automatic_differentiation_kaug" methods are supported.'
                         )
                 else:
                     raise ValueError(
-                        "One or more values of the measurement errors have not been supplied."
+                        "One or more values of the measurement errors have "
+                        "not been supplied."
                     )
             else:
                 raise AttributeError(
@@ -1347,13 +1381,14 @@ class Estimator(object):
                         )
                     else:
                         raise NotImplementedError(
-                            'Only "finite_difference", "reduced_hessian", and "automatic_differentiation_kaug" '
-                            'methods are supported.'
+                            'Only "finite_difference", "reduced_hessian", and '
+                            '"automatic_differentiation_kaug" methods are supported.'
                         )
                 else:
                     raise ValueError(
-                        'One or more values of the measurement errors have not been supplied. All values of the '
-                        'measurement errors are required for the "SSE_weighted" objective.'
+                        'One or more values of the measurement errors have not been '
+                        'supplied. All values of the measurement errors are required '
+                        'for the "SSE_weighted" objective.'
                     )
             else:
                 raise AttributeError(
@@ -1361,18 +1396,19 @@ class Estimator(object):
                 )
         else:
             raise NotImplementedError(
-                'Covariance calculation is only supported for "SSE" and "SSE_weighted" objectives.'
+                'Covariance calculation is only supported for "SSE" and '
+                '"SSE_weighted" objectives.'
             )
 
         return cov
 
-    def _Q_at_theta(self, theta_vals, initialize_parmest_model=False):
+    def _Q_at_theta(self, thetavals, initialize_parmest_model=False):
         """
         Return the objective function value with fixed theta values.
 
         Parameters
         ----------
-        theta_vals: dict
+        thetavals: dict
             A dictionary of theta values.
 
         initialize_parmest_model: boolean
@@ -1383,7 +1419,7 @@ class Estimator(object):
         -------
         objectiveval: float
             The objective function value.
-        theta_vals: dict
+        thetavals: dict
             A dictionary of all values for theta that were input.
         solvertermination: Pyomo TerminationCondition
             Tries to return the "worst" solver status across the scenarios.
@@ -1391,12 +1427,12 @@ class Estimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
-        optimizer = pyo.SolverFactory("ipopt")
+        optimizer = pyo.SolverFactory('ipopt')
 
-        if len(theta_vals) > 0:
+        if len(thetavals) > 0:
             dummy_cb = {
                 "callback": self._instance_creation_callback,
-                "ThetaVals": theta_vals,
+                "ThetaVals": thetavals,
                 "theta_names": self._return_theta_names(),
                 "cb_data": None,
             }
@@ -1408,10 +1444,10 @@ class Estimator(object):
             }
 
         if self.diagnostic_mode:
-            if len(theta_vals) > 0:
-                print("    Compute objective at theta = ", str(theta_vals))
+            if len(thetavals) > 0:
+                print('    Compute objective at theta = ', str(thetavals))
             else:
-                print("    Compute objective at initial theta")
+                print('    Compute objective at initial theta')
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
@@ -1452,21 +1488,21 @@ class Estimator(object):
                         )
                     else:
                         try:
-                            if len(theta_vals) == 0:
+                            if len(thetavals) == 0:
                                 var_validate.fix()
                             else:
-                                var_validate.fix(theta_vals[theta])
+                                var_validate.fix(thetavals[theta])
                             theta_init_vals.append(var_validate)
                         except:
                             logger.warning(
-                                "Unable to fix model parameter value for %s (not a Pyomo model Var)",
+                                'Unable to fix model parameter value for %s (not a Pyomo model Var)',
                                 (theta),
                             )
 
             if active_constraints:
                 if self.diagnostic_mode:
-                    print("      Experiment = ", snum)
-                    print("     First solve with special diagnostics wrapper")
+                    print('      Experiment = ', snum)
+                    print('     First solve with special diagnostics wrapper')
                     (status_obj, solved, iters, time, regu) = (
                         utils.ipopt_solve_with_stats(
                             instance, optimizer, max_iter=500, max_cpu_time=120
@@ -1484,7 +1520,7 @@ class Estimator(object):
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
                     print(
-                        "standard solve solver termination condition=",
+                        'standard solve solver termination condition=',
                         str(results.solver.termination_condition),
                     )
 
@@ -1523,11 +1559,11 @@ class Estimator(object):
                     scen_dict[sname] = instance
 
             objobject = getattr(instance, self._second_stage_cost_exp)
-            obj_val = pyo.value(objobject)
-            totobj += obj_val
+            objval = pyo.value(objobject)
+            totobj += objval
 
         retval = totobj / len(scenario_numbers)  # -1??
-        if initialize_parmest_model and not hasattr(self, "ef_instance"):
+        if initialize_parmest_model and not hasattr(self, 'ef_instance'):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
@@ -1550,13 +1586,13 @@ class Estimator(object):
             self.model_initialized = True
 
             # return initialized theta values
-            if len(theta_vals) == 0:
+            if len(thetavals) == 0:
                 # use appropriate theta_names member
                 theta_ref = self._return_theta_names()
                 for i, theta in enumerate(theta_ref):
-                    theta_vals[theta] = theta_init_vals[i]()
+                    thetavals[theta] = theta_init_vals[i]()
 
-        return retval, theta_vals, WorstStatus
+        return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
         samplelist = list()
@@ -1620,8 +1656,7 @@ class Estimator(object):
         if self.pest_deprecated is not None:
             if not kwargs:
                 return self.pest_deprecated.theta_est(
-                    solver=solver,
-                    return_values=return_values,
+                    solver=solver, return_values=return_values
                 )
             elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
                 calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
@@ -1636,7 +1671,9 @@ class Estimator(object):
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
 
-        return self._Q_opt(solver=solver, return_values=return_values, bootlist=None, **kwargs)
+        return self._Q_opt(
+            solver=solver, return_values=return_values, bootlist=None, **kwargs
+        )
 
     def cov_est(
         self, method="finite_difference", solver="ipopt", cov_n=None, step=1e-3
@@ -1646,10 +1683,13 @@ class Estimator(object):
 
         Argument:
             method: string ``method`` object specified by the user
-                    options - 'finite_difference', 'reduced_hessian', and 'automatic_differentiation_kaug'
+                    options - 'finite_difference', 'reduced_hessian',
+                    and 'automatic_differentiation_kaug'
             solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-            cov_n: integer, number of datapoints specified by the user which is used in the objective function
-            step: float used for relative perturbation of the parameters, e.g., step=0.02 is a 2% perturbation
+            cov_n: integer, number of datapoints specified by the user which is used
+                   in the objective function
+            step: float used for relative perturbation of the parameters, e.g.,
+                  step=0.02 is a 2% perturbation
 
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
@@ -1747,15 +1787,15 @@ class Estimator(object):
 
         bootstrap_theta = list()
         for idx, sample in local_list:
-            obj_val, theta_vals = self._Q_opt(bootlist=list(sample))
-            theta_vals["samples"] = sample
-            bootstrap_theta.append(theta_vals)
+            objval, thetavals = self._Q_opt(bootlist=list(sample))
+            thetavals['samples'] = sample
+            bootstrap_theta.append(thetavals)
 
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
         bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
-            del bootstrap_theta["samples"]
+            del bootstrap_theta['samples']
 
         return bootstrap_theta
 
@@ -1807,16 +1847,16 @@ class Estimator(object):
 
         lNo_theta = list()
         for idx, sample in local_list:
-            obj_val, theta_vals = self._Q_opt(bootlist=list(sample))
+            objval, thetavals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.exp_list))) - set(sample))
-            theta_vals["lNo"] = np.sort(lNo_s)
-            lNo_theta.append(theta_vals)
+            thetavals['lNo'] = np.sort(lNo_s)
+            lNo_theta.append(thetavals)
 
         global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
         lNo_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
-            del lNo_theta["lNo"]
+            del lNo_theta['lNo']
 
         return lNo_theta
 
@@ -1873,7 +1913,7 @@ class Estimator(object):
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(bootstrap_samples, int)
-        assert distribution in ["Rect", "MVN", "KDE"]
+        assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
         assert isinstance(seed, (type(None), int))
 
@@ -1884,7 +1924,6 @@ class Estimator(object):
 
         results = []
         for idx, sample in global_list:
-
             obj, theta = self.theta_est()
 
             bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
@@ -1964,7 +2003,7 @@ class Estimator(object):
 
             assert len(list(theta_names)) == len(model_theta_list)
 
-            all_thetas = theta_values.to_dict("records")
+            all_thetas = theta_values.to_dict('records')
 
         if all_thetas:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
@@ -1986,13 +2025,13 @@ class Estimator(object):
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
             obj, thetvals, worststatus = self._Q_at_theta(
-                theta_vals={}, initialize_parmest_model=initialize_parmest_model
+                thetavals={}, initialize_parmest_model=initialize_parmest_model
             )
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(theta_names) + ["obj"]
+        dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
@@ -2041,7 +2080,7 @@ class Estimator(object):
         for a in alphas:
             chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
-            LR[a] = LR["obj"] < thresholds[a]
+            LR[a] = LR['obj'] < thresholds[a]
 
         thresholds = pd.Series(thresholds)
 
@@ -2091,7 +2130,7 @@ class Estimator(object):
             )
 
         assert isinstance(theta_values, pd.DataFrame)
-        assert distribution in ["Rect", "MVN", "KDE"]
+        assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
         assert isinstance(
             test_theta_values, (type(None), dict, pd.Series, pd.DataFrame)
@@ -2106,7 +2145,7 @@ class Estimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-            if distribution == "Rect":
+            if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = (theta_values > lb).all(axis=1) & (
                     theta_values < ub
@@ -2118,7 +2157,7 @@ class Estimator(object):
                         test_theta_values < ub
                     ).all(axis=1)
 
-            elif distribution == "MVN":
+            elif distribution == 'MVN':
                 dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
@@ -2129,7 +2168,7 @@ class Estimator(object):
                     Z = dist.pdf(test_theta_values)
                     test_result[a] = Z >= score
 
-            elif distribution == "KDE":
+            elif distribution == 'KDE':
                 dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
@@ -2151,7 +2190,7 @@ class Estimator(object):
 ################################
 
 
-@deprecated(version="6.7.2")
+@deprecated(version='6.7.2')
 def group_data(data, groupby_column_name, use_mean=None):
     """
     Group data by scenario
@@ -2257,7 +2296,7 @@ class _DeprecatedEstimator(object):
         ), "The scenarios in data must be a dictionary, DataFrame or filename"
 
         if len(theta_names) == 0:
-            self.theta_names = ["parmest_dummy_var"]
+            self.theta_names = ['parmest_dummy_var']
         else:
             self.theta_names = theta_names
 
@@ -2275,7 +2314,7 @@ class _DeprecatedEstimator(object):
         Return list of fitted model parameter names
         """
         # if fitted model parameter names differ from theta_names created when Estimator object is created
-        if hasattr(self, "theta_names_updated"):
+        if hasattr(self, 'theta_names_updated'):
             return self.theta_names_updated
 
         else:
@@ -2290,7 +2329,7 @@ class _DeprecatedEstimator(object):
         model = self.model_function(data)
 
         if (len(self.theta_names) == 1) and (
-            self.theta_names[0] == "parmest_dummy_var"
+            self.theta_names[0] == 'parmest_dummy_var'
         ):
             model.parmest_dummy_var = pyo.Var(initialize=1.0)
 
@@ -2341,7 +2380,7 @@ class _DeprecatedEstimator(object):
                     var_validate.unfix()
                     self.theta_names[i] = repr(var_cuid)
                 except:
-                    logger.warning(theta + " is not a variable")
+                    logger.warning(theta + ' is not a variable')
 
         self.parmest_model = model
 
@@ -2354,12 +2393,12 @@ class _DeprecatedEstimator(object):
             pass
         elif isinstance(exp_data, str):
             try:
-                with open(exp_data, "r") as infile:
+                with open(exp_data, 'r') as infile:
                     exp_data = json.load(infile)
             except:
-                raise RuntimeError(f"Could not read {exp_data} as json")
+                raise RuntimeError(f'Could not read {exp_data} as json')
         else:
-            raise RuntimeError(f"Unexpected data format for cb_data={cb_data}")
+            raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
         model = self._create_parmest_model(exp_data)
 
         return model
@@ -2423,7 +2462,7 @@ class _DeprecatedEstimator(object):
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
-                solver = SolverFactory("ipopt")
+                solver = SolverFactory('ipopt')
                 if self.solver_options is not None:
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
@@ -2453,7 +2492,7 @@ class _DeprecatedEstimator(object):
 
             if self.diagnostic_mode:
                 print(
-                    "    Solver termination condition = ",
+                    '    Solver termination condition = ',
                     str(solve_result.solver.termination_condition),
                 )
 
@@ -2563,7 +2602,7 @@ class _DeprecatedEstimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
-        optimizer = pyo.SolverFactory("ipopt")
+        optimizer = pyo.SolverFactory('ipopt')
 
         if len(thetavals) > 0:
             dummy_cb = {
@@ -2581,9 +2620,9 @@ class _DeprecatedEstimator(object):
 
         if self.diagnostic_mode:
             if len(thetavals) > 0:
-                print("    Compute objective at theta = ", str(thetavals))
+                print('    Compute objective at theta = ', str(thetavals))
             else:
-                print("    Compute objective at initial theta")
+                print('    Compute objective at initial theta')
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
@@ -2630,14 +2669,14 @@ class _DeprecatedEstimator(object):
                             theta_init_vals.append(var_validate)
                         except:
                             logger.warning(
-                                "Unable to fix model parameter value for %s (not a Pyomo model Var)",
+                                'Unable to fix model parameter value for %s (not a Pyomo model Var)',
                                 (theta),
                             )
 
             if active_constraints:
                 if self.diagnostic_mode:
-                    print("      Experiment = ", snum)
-                    print("     First solve with special diagnostics wrapper")
+                    print('      Experiment = ', snum)
+                    print('     First solve with special diagnostics wrapper')
                     (status_obj, solved, iters, time, regu) = (
                         utils.ipopt_solve_with_stats(
                             instance, optimizer, max_iter=500, max_cpu_time=120
@@ -2655,7 +2694,7 @@ class _DeprecatedEstimator(object):
                 results = optimizer.solve(instance)
                 if self.diagnostic_mode:
                     print(
-                        "standard solve solver termination condition=",
+                        'standard solve solver termination condition=',
                         str(results.solver.termination_condition),
                     )
 
@@ -2698,7 +2737,7 @@ class _DeprecatedEstimator(object):
             totobj += objval
 
         retval = totobj / len(scenario_numbers)  # -1??
-        if initialize_parmest_model and not hasattr(self, "ef_instance"):
+        if initialize_parmest_model and not hasattr(self, 'ef_instance'):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
@@ -2865,14 +2904,14 @@ class _DeprecatedEstimator(object):
         bootstrap_theta = list()
         for idx, sample in local_list:
             objval, thetavals = self._Q_opt(bootlist=list(sample))
-            thetavals["samples"] = sample
+            thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
 
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
         bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
-            del bootstrap_theta["samples"]
+            del bootstrap_theta['samples']
 
         return bootstrap_theta
 
@@ -2919,14 +2958,14 @@ class _DeprecatedEstimator(object):
         for idx, sample in local_list:
             objval, thetavals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.callback_data))) - set(sample))
-            thetavals["lNo"] = np.sort(lNo_s)
+            thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
 
         global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
         lNo_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
-            del lNo_theta["lNo"]
+            del lNo_theta['lNo']
 
         return lNo_theta
 
@@ -2976,7 +3015,7 @@ class _DeprecatedEstimator(object):
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(bootstrap_samples, int)
-        assert distribution in ["Rect", "MVN", "KDE"]
+        assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
         assert isinstance(seed, (type(None), int))
 
@@ -3033,7 +3072,7 @@ class _DeprecatedEstimator(object):
             Objective value for each theta (infeasible solutions are
             omitted).
         """
-        if len(self.theta_names) == 1 and self.theta_names[0] == "parmest_dummy_var":
+        if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
             pass  # skip assertion if model has no fitted parameters
         else:
             # create a local instance of the pyomo model to access model variables and parameters
@@ -3088,7 +3127,7 @@ class _DeprecatedEstimator(object):
                 )
             assert len(list(theta_names)) == len(model_theta_list)
 
-            all_thetas = theta_values.to_dict("records")
+            all_thetas = theta_values.to_dict('records')
 
         if all_thetas:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
@@ -3116,7 +3155,7 @@ class _DeprecatedEstimator(object):
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
-        dfcols = list(theta_names) + ["obj"]
+        dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
         return obj_at_theta
 
@@ -3158,7 +3197,7 @@ class _DeprecatedEstimator(object):
         for a in alphas:
             chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
-            LR[a] = LR["obj"] < thresholds[a]
+            LR[a] = LR['obj'] < thresholds[a]
 
         thresholds = pd.Series(thresholds)
 
@@ -3200,7 +3239,7 @@ class _DeprecatedEstimator(object):
             with True (inside) or False (outside) for each alpha
         """
         assert isinstance(theta_values, pd.DataFrame)
-        assert distribution in ["Rect", "MVN", "KDE"]
+        assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
         assert isinstance(
             test_theta_values, (type(None), dict, pd.Series, pd.DataFrame)
@@ -3215,7 +3254,7 @@ class _DeprecatedEstimator(object):
             test_result = test_theta_values.copy()
 
         for a in alphas:
-            if distribution == "Rect":
+            if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = (theta_values > lb).all(axis=1) & (
                     theta_values < ub
@@ -3227,7 +3266,7 @@ class _DeprecatedEstimator(object):
                         test_theta_values < ub
                     ).all(axis=1)
 
-            elif distribution == "MVN":
+            elif distribution == 'MVN':
                 dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
@@ -3238,7 +3277,7 @@ class _DeprecatedEstimator(object):
                     Z = dist.pdf(test_theta_values)
                     test_result[a] = Z >= score
 
-            elif distribution == "KDE":
+            elif distribution == 'KDE':
                 dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)

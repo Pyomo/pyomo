@@ -34,8 +34,8 @@ testdir = this_file_dir()
 
 
 # Test class for the built-in "SSE" and "SSE_weighted" objective functions
-# validated the results using the Rooney-Biegler example
-# Rooney-Biegler example is the case when the measurement error is None
+# validated the results using the Rooney-Biegler paper example
+# Rooney-Biegler paper example is the case when the measurement error is None
 # we considered another case when the user supplies the value of the measurement error
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -43,8 +43,9 @@ testdir = this_file_dir()
 )
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 
-# we use parameterized_class to test the two objective functions over the two cases of measurement error
-# included a third objective function to test the error message when an incorrect objective function is supplied
+# we use parameterized_class to test the two objective functions
+# over the two cases of the measurement error. Included a third objective function
+# to test the error message when an incorrect objective function is supplied
 @parameterized_class(
     ("measurement_std", "objective_function"),
     [
@@ -154,12 +155,12 @@ class NewTestRooneyBiegler(unittest.TestCase):
 
         if self.objective_function == "incorrect_obj":
             with pytest.raises(
-                    ValueError,
-                    match="Invalid objective function: 'incorrect_obj'\. "
-                          "Choose from \['SSE', 'SSE_weighted'\]\.",
+                ValueError,
+                match="Invalid objective function: 'incorrect_obj'\. "
+                "Choose from \['SSE', 'SSE_weighted'\]\.",
             ):
                 self.pest = parmest.Estimator(
-                self.exp_list, obj_function=self.objective_function, tee=True
+                    self.exp_list, obj_function=self.objective_function, tee=True
                 )
         else:
             self.pest = parmest.Estimator(
@@ -170,8 +171,8 @@ class NewTestRooneyBiegler(unittest.TestCase):
         self, obj_val, theta_vals, obj_function, measurement_error
     ):
         """
-        Checks if the objective value and parameter estimates are equal to the expected
-        values and agree with the results of the Rooney-Biegler paper
+        Checks if the objective value and parameter estimates are equal to the
+        expected values and agree with the results of the Rooney-Biegler paper
 
         Argument:
             obj_val: the objective value of the annotated Pyomo model
@@ -197,8 +198,8 @@ class NewTestRooneyBiegler(unittest.TestCase):
         self, cov, cov_method, obj_function, measurement_error
     ):
         """
-        Checks if the covariance matrix elements are equal to the expected values
-        and agree with the results of the Rooney-Biegler paper
+        Checks if the covariance matrix elements are equal to the expected
+        values and agree with the results of the Rooney-Biegler paper
 
         Argument:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
@@ -305,8 +306,8 @@ class NewTestRooneyBiegler(unittest.TestCase):
                         places=4,
                     )
 
-    # test and check the covariance calculation for all the three supported methods
-    # added an 'unsupported_method' to test the error message when the method supplied
+    # test the covariance calculation of the three supported methods
+    # added a 'unsupported_method' to test the error message when the method supplied
     # is not supported
     @parameterized.expand(
         [
@@ -318,8 +319,8 @@ class NewTestRooneyBiegler(unittest.TestCase):
     )
     def test_parmest_covariance(self, cov_method):
         """
-        Calculates the parameter estimates and covariance matrix and compares them
-        with the results of Rooney-Biegler
+        Estimates the parameters and covariance matrix and compares them
+        with the results of the Rooney-Biegler paper
 
         Argument:
             cov_method: string ``method`` object specified by the user
@@ -358,8 +359,10 @@ class NewTestRooneyBiegler(unittest.TestCase):
                 else:
                     with pytest.raises(
                         ValueError,
-                        match=r"Invalid method: 'unsupported_method'\. Choose from \['finite_difference', "
-                        "'automatic_differentiation_kaug', 'reduced_hessian'\]\.",
+                        match=r"Invalid method: 'unsupported_method'\. Choose from "
+                        r"\['finite_difference', "
+                        r"'automatic_differentiation_kaug', "
+                        r"'reduced_hessian'\]\.",
                     ):
                         cov = self.pest.cov_est(cov_n=6, method=cov_method)
             elif self.objective_function == "SSE_weighted":
@@ -405,8 +408,10 @@ class NewTestRooneyBiegler(unittest.TestCase):
                 else:
                     with pytest.raises(
                         ValueError,
-                        match=r"Invalid method: 'unsupported_method'\. Choose from \['finite_difference', "
-                        "'automatic_differentiation_kaug', 'reduced_hessian'\]\.",
+                        match=r"Invalid method: 'unsupported_method'\. Choose from "
+                        r"\['finite_difference', "
+                        r"'automatic_differentiation_kaug', "
+                        r"'reduced_hessian'\]\.",
                     ):
                         cov = self.pest.cov_est(cov_n=6, method=cov_method)
 
@@ -1306,13 +1311,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 m = self.model
 
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update(
-                    [
-                        (m.ca, None),
-                        (m.cb, None),
-                        (m.cc, None),
-                    ]
-                )
+                m.experiment_outputs.update([(m.ca, None), (m.cb, None), (m.cc, None)])
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
