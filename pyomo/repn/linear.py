@@ -399,19 +399,18 @@ def _handle_pow_fixed_fixed(visitor, node, arg1, arg2):
 
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     _, exp = arg2
-    if exp.__class__ in native_numeric_types:
-        if exp == 1:
-            return arg1
-        elif exp > 1 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
-            _type, _arg = arg1
-            ans = _type, _arg.duplicate()
-            for i in range(1, int(exp)):
-                ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
-                    visitor, None, ans, (_type, _arg.duplicate())
-                )
-            return ans
-        elif not exp:
-            return _CONSTANT, 1
+    if exp == 1:
+        return arg1
+    elif exp > 1 and exp <= visitor.max_exponential_expansion and int(exp) == exp:
+        _type, _arg = arg1
+        ans = _type, _arg.duplicate()
+        for i in range(1, int(exp)):
+            ans = visitor.exit_node_dispatcher[(ProductExpression, ans[0], _type)](
+                visitor, None, ans, (_type, _arg.duplicate())
+            )
+        return ans
+    elif not exp:
+        return _CONSTANT, 1
     return _handle_pow_nonlinear(visitor, node, arg1, arg2)
 
 
@@ -610,9 +609,7 @@ def define_exit_node_handlers(_exit_node_handlers=None):
         (_FIXED, _CONSTANT): _handle_pow_fixed_fixed,
         (_FIXED, _FIXED): _handle_pow_fixed_fixed,
         (_LINEAR, _CONSTANT): _handle_pow_ANY_constant,
-        (_LINEAR, _FIXED): _handle_pow_ANY_constant,
         (_GENERAL, _CONSTANT): _handle_pow_ANY_constant,
-        (_GENERAL, _FIXED): _handle_pow_ANY_constant,
     }
     _exit_node_handlers[UnaryFunctionExpression] = {
         None: _handle_unary_nonlinear,

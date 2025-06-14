@@ -234,11 +234,13 @@ class QuadraticRepn(object):
 
 
 def _mul_linear_linear(visitor, linear1, linear2):
-    quadratic = {}
     vo = visitor.var_recorder.var_order
+    quadratic = {}
+    l2 = [(k, v, vo[k]) for k, v in linear2.items()]
     for vid1, coef1 in linear1.items():
-        for vid2, coef2 in linear2.items():
-            if vo[vid1] < vo[vid2]:
+        o1 = vo[vid1]
+        for vid2, coef2, o2 in l2:
+            if o1 < o2:
                 key = vid1, vid2
             else:
                 key = vid2, vid1
@@ -259,7 +261,9 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
     # [BA]
     arg1_const_flag = arg1.constant_flag(arg1.constant)
     arg2_const_flag = arg2.constant_flag(arg2.constant)
-    if not arg2_const_flag:
+    if arg2_const_flag == 1:
+        pass
+    elif not arg2_const_flag:
         # linear * 0, so you would think there is nothing to do, but we
         # need to preserve any InvalidNumbers
         arg1.linear = {
@@ -267,7 +271,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
             for key, coef in arg1.linear.items()
             if coef != coef
         }
-    elif arg2_const_flag != 1:
+    else:
         c = arg2.constant
         l = arg1.linear
         for vid, coef in l.items():
@@ -341,6 +345,34 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     return _GENERAL, ans
 
 
+def _handle_pow_linear_constant(visitor, node, arg1, arg2):
+    _, exp = arg2
+    if exp == 2:
+        _, ans = arg1
+        ans.multiplier = ans.multiplier**2
+        ans.quadratic = {(vid, vid): coef * coef for vid, coef in ans.linear.items()}
+        if len(ans.linear) > 1:
+            vo = visitor.var_recorder.var_order
+            l = [(vid, coef, vo[vid]) for vid, coef in ans.linear.items()]
+            for i, (x1, c1, o1) in enumerate(l):
+                for j, (x2, c2, o2) in enumerate(l):
+                    if i == j:
+                        break
+                    if o1 < o2:
+                        ans.quadratic[x1, x2] = 2 * c1 * c2
+                    else:
+                        ans.quadratic[x2, x1] = 2 * c1 * c2
+        if ans.constant_flag(ans.constant):
+            c = 2 * ans.constant
+            for vid in ans.linear:
+                ans.linear[vid] *= c
+            ans.constant = ans.constant**2
+        else:
+            ans.linear = {}
+        return _QUADRATIC, ans
+    return linear._handle_pow_ANY_constant(visitor, node, arg1, arg2)
+
+
 def define_exit_node_handlers(_exit_node_handlers=None):
     if _exit_node_handlers is None:
         _exit_node_handlers = {}
@@ -377,8 +409,8 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     #
     _exit_node_handlers[PowExpression].update(
         {
+            (_LINEAR, _CONSTANT): _handle_pow_linear_constant,
             (_QUADRATIC, _CONSTANT): linear._handle_pow_ANY_constant,
-            (_QUADRATIC, _FIXED): linear._handle_pow_ANY_constant,
         }
     )
     #

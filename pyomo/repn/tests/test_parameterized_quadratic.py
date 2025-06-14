@@ -654,7 +654,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.to_expression(visitor),
-            9 * m.x**2 + 24 * (m.x * m.y) + 16 * m.y**2 + (6 * m.x + 8 * m.y) + 1,
+            9 * m.x**2 + 16 * m.y**2 + 24 * (m.x * m.y) + (6 * m.x + 8 * m.y) + 1,
         )
 
     def test_square_linear_wrt_y(self):
@@ -669,21 +669,15 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.constant, (1 + 4 * m.y) * (1 + 4 * m.y))
+        assertExpressionsEqual(self, repn.constant, (1 + 4 * m.y) ** 2)
         self.assertEqual(len(repn.linear), 1)
-        assertExpressionsEqual(
-            self, repn.linear[id(m.x)], (1 + 4 * m.y) * 3 + (1 + 4 * m.y) * 3
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)], 3 * (2 * (1 + 4 * m.y)))
         self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 9})
         self.assertEqual(repn.nonlinear, None)
         assertExpressionsEqual(
             self,
             repn.to_expression(visitor),
-            (
-                9 * m.x**2
-                + ((1 + 4 * m.y) * 3 + (1 + 4 * m.y) * 3) * m.x
-                + ((1 + 4 * m.y) * (1 + 4 * m.y))
-            ),
+            (9 * m.x**2 + 3 * (2 * (1 + 4 * m.y)) * m.x + (1 + 4 * m.y) ** 2),
         )
 
     def test_square_linear_float(self):
@@ -708,7 +702,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         assertExpressionsEqual(
             self,
             repn.to_expression(visitor),
-            9 * m.x**2 + 24 * (m.x * m.y) + 16 * m.y**2 + (6 * m.x + 8 * m.y) + 1,
+            9 * m.x**2 + 16 * m.y**2 + 24 * (m.x * m.y) + (6 * m.x + 8 * m.y) + 1,
         )
 
     def test_division_quadratic_nonlinear(self):
@@ -1405,21 +1399,15 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(cfg.var_map, {id(m.x): m.x})
         self.assertEqual(cfg.var_order, {id(m.x): 0})
         self.assertEqual(repn.multiplier, 1)
-        assertExpressionsEqual(self, repn.constant, (1 + 3 * m.y) * (1 + 3 * m.y))
+        assertExpressionsEqual(self, repn.constant, (1 + 3 * m.y) ** 2)
         self.assertEqual(len(repn.linear), 1)
-        assertExpressionsEqual(
-            self, repn.linear[id(m.x)], (1 + 3 * m.y) * 2 + (1 + 3 * m.y) * 2
-        )
+        assertExpressionsEqual(self, repn.linear[id(m.x)], 2 * (2 * (1 + 3 * m.y)))
         self.assertEqual(repn.quadratic, {(id(m.x), id(m.x)): 4})
         self.assertIsNone(repn.nonlinear)
         assertExpressionsEqual(
             self,
             repn.to_expression(visitor),
-            (
-                4 * m.x**2
-                + ((1 + 3 * m.y) * 2 + (1 + 3 * m.y) * 2) * m.x
-                + (1 + 3 * m.y) * (1 + 3 * m.y)
-            ),
+            (4 * m.x**2 + (2 * (2 * (1 + 3 * m.y))) * m.x + (1 + 3 * m.y) ** 2),
         )
 
     def test_repr_parameterized_quadratic_repn(self):
