@@ -178,7 +178,7 @@ class TestQuadratic(unittest.TestCase):
         visitor.expand_nonlinear_products = False
         repn = visitor.walk_expression(e)
 
-        NL = m.x * (log(m.x) + (m.x + m.y) + 2)
+        NL = m.x * (log(m.x) + (m.x + m.y + 2))
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})

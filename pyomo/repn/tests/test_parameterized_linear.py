@@ -110,7 +110,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.constant, -3)
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(
-            self, repn.to_expression(visitor), m.y * m.x**2 + m.y * m.x - 3
+            self, repn.to_expression(visitor), m.y * m.x - 3 + m.y * m.x**2
         )
 
     def test_sum_nonlinear_to_nonlinear(self):

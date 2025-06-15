@@ -105,29 +105,25 @@ class QuadraticRepn(object):
             ans = self.nonlinear
         else:
             ans = 0
-        if self.quadratic:
-            with mutable_expression() as e:
+        with mutable_expression() as e:
+            if self.quadratic:
                 for (x1, x2), coef in self.quadratic.items():
                     if self.multiplier_flag(coef):
                         if x1 == x2:
                             e += coef * var_map[x1] ** 2
                         else:
                             e += coef * (var_map[x1] * var_map[x2])
-            ans += e
-        if self.linear:
-            var_map = visitor.var_map
-            with mutable_expression() as e:
+            if self.linear:
+                var_map = visitor.var_map
                 for vid, coef in self.linear.items():
                     if self.multiplier_flag(coef):
                         e += coef * var_map[vid]
-            if e.nargs() > 1:
-                ans += e
-            elif e.nargs() == 1:
-                ans += e.arg(0)
-        if self.constant_flag(self.constant):
-            ans += self.constant
-        if ans.__class__ in sum_like_expression_types and ans.nargs() == 1:
-            ans = ans.arg(0)
+            if self.constant_flag(self.constant):
+                e += self.constant
+        if e.nargs() > 1:
+            ans += e
+        elif e.nargs() == 1:
+            ans += e.arg(0)
         if self.multiplier_flag(self.multiplier) != 1:
             ans *= self.multiplier
         return ans
