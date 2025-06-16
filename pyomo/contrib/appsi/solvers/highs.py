@@ -684,9 +684,12 @@ class Highs(PersistentBase, PersistentSolver):
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == highspy.HighsModelStatus.kIterationLimit:
             results.termination_condition = TerminationCondition.maxIterations
+        elif status == highspy.HighsModelStatus.kSolutionLimit:
+            results.termination_condition = TerminationCondition.maxIterations
         elif status == highspy.HighsModelStatus.kUnknown:
             results.termination_condition = TerminationCondition.unknown
         else:
+            logger.warning(f'Received unhandled {status=} from solver HiGHS.')
             results.termination_condition = TerminationCondition.unknown
 
         timer.start('load solution')
