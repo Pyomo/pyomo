@@ -4,8 +4,7 @@ Using Solvers with Pyomo
 Pyomo supports modeling and scripting but does not install a solver automatically.
 For numerous reasons (including stability and managing intermittent dependency
 conflicts), Pyomo does not bundle solvers or have strict dependencies on any
-third-party solvers. The table below lists solvers that Pyomo supports and
-includes guidance on how to install them using ``pip`` or ``conda``. It includes
+third-party solvers. The table below lists a subset of the solvers compatible with Pyomo that can be installed using ``pip`` or ``conda``. It includes
 both commercial and open-source solvers -- users are responsible for understanding
 the license requirements for their desired solver.
 
