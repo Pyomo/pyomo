@@ -208,13 +208,25 @@ class LegacyPyomoFormatter(logging.Formatter):
 class StdoutHandler(logging.StreamHandler):
     """A logging handler that emits to the current value of sys.stdout"""
 
+    def __init__(self):
+        super().__init__()
+        self.stream = None
+
     def flush(self):
-        self.stream = sys.stdout
-        super(StdoutHandler, self).flush()
+        try:
+            orig = self.stream
+            self.stream = sys.stdout
+            super(StdoutHandler, self).flush()
+        finally:
+            self.stream = orig
 
     def emit(self, record):
-        self.stream = sys.stdout
-        super(StdoutHandler, self).emit(record)
+        try:
+            orig = self.stream
+            self.stream = sys.stdout
+            super(StdoutHandler, self).emit(record)
+        finally:
+            self.stream = orig
 
 
 class Preformatted(object):
