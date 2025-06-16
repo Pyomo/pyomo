@@ -445,23 +445,25 @@ class _StreamRedirector(object):
     def __init__(self, handler, fd):
         self.handler = handler
         self.fd = fd
+        self.local_fd = None
         self.orig_stream = None
 
     def __enter__(self):
+        assert self.local_fd is None
         self.orig_stream = self.handler.stream
         # Note: ideally, we would use closefd=True and let Python handle
         # closing the local file descriptor that we are about to create.
         # However, it appears that closefd is ignored on Windows (see
         # #3587), so we will just handle it explicitly ourselves.
+        self.local_fd = os.dup(self.fd)
         self.handler.stream = os.fdopen(
-            os.dup(self.fd), mode="w", closefd=False
+            self.local_fd, mode="a", closefd=False
         ).__enter__()
 
     def __exit__(self, et, ev, tb):
         try:
-            fd = self.handler.stream.fileno()
             self.handler.stream.__exit__(et, ev, tb)
-            os.close(fd)
+            os.close(self.local_fd)
         finally:
             self.handler.stream = self.orig_stream
 
@@ -469,22 +471,24 @@ class _StreamRedirector(object):
 class _LastResortRedirector(object):
     def __init__(self, fd):
         self.fd = fd
+        self.local_fd = None
         self.orig_stream = None
 
     def __enter__(self):
+        assert self.local_fd is None
         self.orig = logging.lastResort
         # Note: ideally, we would use closefd=True and let Python handle
         # closing the local file descriptor that we are about to create.
         # However, it appears that closefd is ignored on Windows (see
         # #3587), so we will just handle it explicitly ourselves.
+        self.local_fd = os.dup(self.fd)
         logging.lastResort = logging.StreamHandler(
-            os.fdopen(os.dup(self.fd), mode="w", closefd=False).__enter__()
+            os.fdopen(self.local_fd, mode="a", closefd=False).__enter__()
         )
 
     def __exit__(self, et, ev, tb):
         try:
-            fd = logging.lastResort.stream.fileno()
             logging.lastResort.stream.close()
-            os.close(fd)
+            os.close(self.local_fd)
         finally:
             logging.lastResort = self.orig
