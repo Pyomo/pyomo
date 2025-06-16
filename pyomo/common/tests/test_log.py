@@ -668,5 +668,5 @@ class TestStdoutHandler(unittest.TestCase):
             self.assertEqual(sys.stdout.getvalue(), "Test2\n")
         finally:
             logger.removeHandler(handler)
-            logger.propagte = propagate
+            logger.propagate = propagate
             logger.setLevel(level)
