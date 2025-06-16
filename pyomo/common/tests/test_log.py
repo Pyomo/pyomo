@@ -649,3 +649,24 @@ class TestStdoutHandler(unittest.TestCase):
 
         self.assertEqual(sys.stdout.getvalue(), "Test msg\n")
         self.assertIsNone(handler.stream)
+
+    def test_handler(self):
+        logger = logging.getLogger(__name__)
+        propagate, level = logger.propagate, logger.level
+        handler = StdoutHandler()
+        try:
+            logger.addHandler(handler)
+            logger.propagate = False
+            sys.stdout = StringIO()
+
+            logger.setLevel(logging.WARNING)
+            logger.info("Test1")
+            self.assertEqual(sys.stdout.getvalue(), "")
+
+            logger.setLevel(logging.INFO)
+            logger.info("Test2")
+            self.assertEqual(sys.stdout.getvalue(), "Test2\n")
+        finally:
+            logger.removeHandler(handler)
+            logger.propagte = propagate
+            logger.setLevel(level)
