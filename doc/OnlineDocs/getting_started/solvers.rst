@@ -30,7 +30,7 @@ the license requirements for their desired solver.
      - ``conda install -c conda-forge cyipopt``
      - `License <https://cyipopt.readthedocs.io/en/stable/#copyright>`__
      - `Documentation <https://cyipopt.readthedocs.io/en/stable/install.html>`__
-   * - docplex
+   * - DOcplex
      - ``pip install docplex``
      - ``conda install -c ibmdecisionoptimization docplex``
      - `License <https://github.com/IBMDecisionOptimization/docplex-doc/blob/master/LICENSE.txt>`__
