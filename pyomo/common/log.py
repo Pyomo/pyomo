@@ -260,7 +260,7 @@ class _GlobalLogFilter(object):
 # debugging.  It has been updated to suppress output if any handlers
 # have been defined at the root level.
 pyomo_logger = logging.getLogger('pyomo')
-pyomo_handler = StdoutHandler()
+pyomo_handler = logging.StreamHandler(sys.stdout)
 pyomo_formatter = LegacyPyomoFormatter(
     base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
 )
