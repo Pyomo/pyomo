@@ -45,6 +45,7 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
+from pyomo.contrib.doe.utils import generate_snake_zigzag_pattern
 
 from pyomo.opt import SolverStatus
 
@@ -1616,6 +1617,149 @@ class DesignOfExperiments:
         self.fim_factorial_results = fim_factorial_results
 
         return self.fim_factorial_results
+
+    def compute_FIM_factorial(
+        self, model=None, design_ranges=None, method="sequential"
+    ):
+        """
+        Will run a simulation-based factorial exploration of
+        the experimental input space (i.e., a ``grid search`` or
+        ``parameter sweep``) to understand how the FIM metrics
+        change as a function of the experimental design space.
+
+        Parameters
+        ----------
+        model: model to perform the full factorial exploration on
+        design_ranges: dict of lists, of the form {<var_name>: [<var_values>]}
+        method: string to specify which method should be used
+                options are ``kaug`` and ``sequential``
+
+        """
+        # Start timer
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info("Beginning Factorial Design.")
+
+        # Make new model for factorial design
+        self.factorial_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
+        model = self.factorial_model
+
+        # Permute the inputs to be aligned with the experiment input indices
+        design_ranges_enum = design_ranges  # {k: v for k, v in design_ranges.items()}
+        design_map = {
+            ind: (k[0].name, k[0])
+            for ind, k in enumerate(model.experiment_inputs.items())
+        }
+
+        # Check whether the design_ranges keys are in the experiment_inputs
+        design_keys = set(design_ranges.keys())
+        map_keys = set([k.name for k in model.experiment_inputs.keys])
+
+        if not design_keys.issubset(map_keys):
+            raise ValueError(
+                f"design_ranges keys {design_keys} must be a subset of experimental\
+                     design names: {map_keys}."
+            )
+
+        des_ranges = [design_ranges[k] for k in design_ranges.keys()]
+
+        factorial_points = generate_snake_zigzag_pattern(*des_ranges)
+        factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
+        factorial_results.update(
+            {
+                "log10 D-opt": [],
+                "log10 A-opt": [],
+                "log10 E-opt": [],
+                "log10 ME-opt": [],
+                "solve_time": [],
+            }
+        )
+
+        success_count = 0
+        failure_count = 0
+        total_points = len(factorial_points)
+
+        time_set = []
+        curr_point = 1  # Initial current point
+        for design_point in factorial_points:
+            # Fix design variables at fixed experimental design point
+            for i in range(len(design_point)):
+                design_map[i][1].fix(design_point[i])
+
+                self.logger.info(f"=======Iteration Number: {curr_point} ======")
+                iter_timer = TicTocTimer()
+                iter_timer.tic(msg=None)
+
+            try:
+                curr_point = success_count + failure_count + 1
+                self.logger.info(f"This is run {curr_point} out of {total_points}.")
+                self.compute_FIM(model=model, method=method)
+                success_count += 1
+                # iteration time
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+                # More logging
+                self.logger.info(
+                    f"The code has run for {round(sum(time_set), 2)} seconds."
+                )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (curr_point) * (total_points - curr_point + 1),
+                        2,
+                    ),
+                )
+            except:
+                self.logger.warning(
+                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                )
+                failures += 1
+                self.logger.warning("failed count:", failures)
+
+                self._computed_FIM = np.zeros(self.prior_FIM.shape)
+
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+            FIM = self._computed_FIM
+
+            # Compute and record metrics on FIM
+            D_opt = np.log10(np.linalg.det(FIM))
+            A_opt = np.log10(np.trace(FIM))
+            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
+            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
+            # Warn the user if there is a ``large`` imaginary component (should not be)
+            if abs(E_vals.imag[E_ind]) > 1e-8:
+                self.logger.warning(
+                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
+                )
+
+            # If the real value is less than or equal to zero, set the E_opt value to nan
+            if E_vals.real[E_ind] <= 0:
+                E_opt = np.nan
+            else:
+                E_opt = np.log10(E_vals.real[E_ind])
+
+            ME_opt = np.log10(np.linalg.cond(FIM))
+
+            for k, v in model.experiment_inputs.items():
+                factorial_results[k.name].append(pyo.value(k))
+
+            factorial_results["log10 D-opt"].append(D_opt)
+            factorial_results["log10 A-opt"].append(A_opt)
+            factorial_results["log10 E-opt"].append(E_opt)
+            factorial_results["log10 ME-opt"].append(ME_opt)
+            factorial_results["solve_time"].append(time_set[-1])
+
+            self.factorial_results = factorial_results
+            return self.factorial_results
+
+        # for k in design_ranges.keys():
+        #     if k not in [k2 for k2 in model.experiment_inputs.keys()]:
+        #         raise ValueError(
 
     # TODO: Overhaul plotting functions to not use strings
     # TODO: Make the plotting functionalities work for >2 design features

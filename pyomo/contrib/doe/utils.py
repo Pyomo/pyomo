@@ -100,3 +100,60 @@ def rescale_FIM(FIM, param_vals):
 #             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
 #
 #     return param_list
+
+
+def generate_snake_zigzag_pattern(*lists):
+    """
+    Generates a multi-dimensional zigzag pattern for an arbitrary number of lists.
+    This pattern is useful for generating patterns for sensitivity analysis when we want
+    to change one variable at a time.
+
+    This function uses recursion and acts as a generator. The direction of
+    iteration for each list is determined by the sum of the indices from the
+    preceding lists. If the sum is even, the list is iterated forwards;
+    if it's odd, the list is iterated in reverse.
+
+    Parameters
+    ----------
+    lists: A variable number of 1D list arguments.
+
+    Yields
+    ------
+    A tuple representing points in the snake-like zigzag pattern.
+    """
+
+    # The main logic is in a nested recursive helper function.
+    def _generate_recursive(depth, index_sum):
+        """
+        Parameters
+        ----------
+        depth : int
+            corresponds to the index of the current list in the `lists` argument.
+            Represents which list we are currently processing.
+
+        index_sum : int
+            It's a running total of the indices chosen from all the previous lists.
+            The direction of the depth-th list depends entirely on whether index_sum
+            even or odd.
+        """
+        # Base case: If we've processed all lists, we're at the end of a path.
+        if depth == len(lists):
+            yield ()
+            return
+
+        current_list = lists[depth]
+
+        # Determine the iteration direction based on the sum of parent indices.
+        # This is the mathematical rule for the zigzag.
+        is_forward = index_sum % 2 == 0
+        iterable = current_list if is_forward else reversed(current_list)
+
+        # Enumerate to get the index `i` for the *next* recursive call's sum.
+        for i, value in enumerate(iterable):
+            # Recur for the next list, updating the index_sum.
+            for sub_pattern in _generate_recursive(depth + 1, index_sum + i):
+                # Prepend the current value to the results from deeper levels.
+                yield (value,) + sub_pattern
+
+    # Start the recursion at the first list (depth 0) with an initial sum of 0.
+    yield from _generate_recursive(depth=0, index_sum=0)
