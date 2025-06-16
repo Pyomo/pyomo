@@ -74,7 +74,7 @@ from pyomo.common.deprecation import deprecation_warning
 parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
-    "pyomo.contrib.interior_point.inverse_reduced_hessian"
+    'pyomo.contrib.interior_point.inverse_reduced_hessian'
 )
 
 logger = logging.getLogger(__name__)
@@ -119,7 +119,7 @@ def _experiment_instance_creation_callback(
     """
     assert cb_data is not None
     outer_cb_data = cb_data
-    scen_num_str = re.compile(r"(\d+)$").search(scenario_name).group(1)
+    scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
     scen_num = int(scen_num_str)
     basename = scenario_name[: -len(scen_num_str)]  # to reconstruct name
 
@@ -214,14 +214,14 @@ def _experiment_instance_creation_callback(
         ]
 
     if "ThetaVals" in outer_cb_data:
-        theta_vals = outer_cb_data["ThetaVals"]
+        thetavals = outer_cb_data["ThetaVals"]
 
         # dlw august 2018: see mea code for more general theta
-        for name, val in theta_vals.items():
+        for name, val in thetavals.items():
             theta_cuid = ComponentUID(name)
             theta_object = theta_cuid.find_component_on(instance)
             if val is not None:
-                # print("Fixing",vstr,"at",str(theta_vals[vstr]))
+                # print("Fixing",vstr,"at",str(thetavals[vstr]))
                 theta_object.fix(val)
             else:
                 # print("Freeing",vstr)
@@ -851,7 +851,7 @@ class Estimator(object):
             "You're using the deprecated parmest interface (model_function, "
             "data, theta_names). This interface will be removed in a future release, "
             "please update to the new parmest interface using experiment lists.",
-            version="6.7.2",
+            version='6.7.2',
         )
         self.pest_deprecated = _DeprecatedEstimator(
             model_function,
@@ -872,7 +872,7 @@ class Estimator(object):
 
             # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
-            if hasattr(self, "theta_names_updated"):
+            if hasattr(self, 'theta_names_updated'):
                 return self.pest_deprecated.theta_names_updated
 
             else:
@@ -884,7 +884,7 @@ class Estimator(object):
 
             # if fitted model parameter names differ from theta_names
             # created when Estimator object is created
-            if hasattr(self, "theta_names_updated"):
+            if hasattr(self, 'theta_names_updated'):
                 return self.theta_names_updated
 
             else:
@@ -922,15 +922,14 @@ class Estimator(object):
 
             # Check for component naming conflicts
             reserved_names = [
-                "Total_Cost_Objective",
-                "FirstStageCost",
-                "SecondStageCost",
+                'Total_Cost_Objective',
+                'FirstStageCost',
+                'SecondStageCost',
             ]
             for n in reserved_names:
                 if model.component(n) or hasattr(model, n):
                     raise RuntimeError(
-                        f"Parmest will not override the existing model component named {n}. "
-                        f"Rerun the Estimator object before running theta_est again"
+                        f"Parmest will not override the existing model component named {n}"
                     )
 
             # Deactivate any existing objective functions
@@ -1096,7 +1095,7 @@ class Estimator(object):
 
             if self.diagnostic_mode:
                 print(
-                    "    Solver termination condition = ",
+                    '    Solver termination condition = ',
                     str(solve_result.solver.termination_condition),
                 )
 
