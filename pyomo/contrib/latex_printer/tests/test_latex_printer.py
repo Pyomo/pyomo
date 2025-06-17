@@ -503,7 +503,7 @@ class TestLatexPrinter(unittest.TestCase):
         self.assertRaises(
             ValueError,
             latex_printer,
-            **{'pyomo_component': m.constraint, 'latex_component_map': lcm}
+            **{'pyomo_component': m.constraint, 'latex_component_map': lcm},
         )
 
     def test_latexPrinter_indexedParam(self):
@@ -540,7 +540,7 @@ class TestLatexPrinter(unittest.TestCase):
         self.assertRaises(
             ValueError,
             latex_printer,
-            **{'pyomo_component': m, 'latex_component_map': lcm}
+            **{'pyomo_component': m, 'latex_component_map': lcm},
         )
 
     def test_latexPrinter_involvedModel(self):
@@ -767,7 +767,7 @@ class TestLatexPrinter(unittest.TestCase):
         self.assertRaises(
             RuntimeError,
             latex_printer,
-            **{'pyomo_component': m, 'throw_templatization_error': True}
+            **{'pyomo_component': m, 'throw_templatization_error': True},
         )
         pstr = latex_printer(m)
         bstr = dedent(

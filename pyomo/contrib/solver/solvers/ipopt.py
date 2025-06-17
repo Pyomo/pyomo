@@ -14,10 +14,17 @@ import os
 import subprocess
 import datetime
 import io
-from typing import Mapping, Optional, Sequence
+import re
+import sys
+from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 
 from pyomo.common import Executable
-from pyomo.common.config import ConfigValue, document_kwargs_from_configdict, ConfigDict
+from pyomo.common.config import (
+    ConfigValue,
+    document_kwargs_from_configdict,
+    ConfigDict,
+    ADVANCED_OPTION,
+)
 from pyomo.common.errors import (
     ApplicationError,
     DeveloperError,
@@ -49,6 +56,10 @@ from pyomo.common.collections import ComponentMap
 from pyomo.solvers.amplfunc_merge import amplfunc_merge
 
 logger = logging.getLogger(__name__)
+
+# Acceptable chars for the end of the alpha_pr column
+# in ipopt's output, per https://coin-or.github.io/Ipopt/OUTPUT.html
+_ALPHA_PR_CHARS = set("fFhHkKnNRwstTr")
 
 
 class IpoptConfig(SolverConfig):
@@ -202,14 +213,14 @@ ipopt_command_line_options = {
 class Ipopt(SolverBase):
     CONFIG = IpoptConfig()
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwds: Any) -> None:
         super().__init__(**kwds)
         self._writer = NLWriter()
         self._available_cache = None
         self._version_cache = None
         self._version_timeout = 2
 
-    def available(self, config=None):
+    def available(self, config: Optional[IpoptConfig] = None) -> Availability:
         if config is None:
             config = self.config
         pth = config.executable.path()
@@ -220,7 +231,9 @@ class Ipopt(SolverBase):
                 self._available_cache = (pth, Availability.FullLicense)
         return self._available_cache[1]
 
-    def version(self, config=None):
+    def version(
+        self, config: Optional[IpoptConfig] = None
+    ) -> Optional[Tuple[int, int, int]]:
         if config is None:
             config = self.config
         pth = config.executable.path()
@@ -242,7 +255,7 @@ class Ipopt(SolverBase):
                 self._version_cache = (pth, version)
         return self._version_cache[1]
 
-    def has_linear_solver(self, linear_solver):
+    def has_linear_solver(self, linear_solver: str) -> bool:
         import pyomo.core as AML
 
         m = AML.ConcreteModel()
@@ -257,7 +270,9 @@ class Ipopt(SolverBase):
         )
         return 'running with linear solver' in results.solver_log
 
-    def _write_options_file(self, filename: str, options: Mapping):
+    def _write_options_file(
+        self, filename: str, options: Mapping[str, Union[str, int, float]]
+    ) -> bool:
         # First we need to determine if we even need to create a file.
         # If options is empty, then we return False
         opt_file_exists = False
@@ -273,7 +288,9 @@ class Ipopt(SolverBase):
                     opt_file.write(str(k) + ' ' + str(val) + '\n')
         return opt_file_exists
 
-    def _create_command_line(self, basename: str, config: IpoptConfig, opt_file: bool):
+    def _create_command_line(
+        self, basename: str, config: IpoptConfig, opt_file: bool
+    ) -> List[str]:
         cmd = [str(config.executable), basename + '.nl', '-AMPL']
         if opt_file:
             cmd.append('option_file_name=' + basename + '.opt')
@@ -293,7 +310,7 @@ class Ipopt(SolverBase):
         return cmd
 
     @document_kwargs_from_configdict(CONFIG)
-    def solve(self, model, **kwds):
+    def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -333,13 +350,11 @@ class Ipopt(SolverBase):
             # be terminated with '\n' regardless of platform.  We will
             # disable universal newlines in the NL file to prevent
             # Python from mapping those '\n' to '\r\n' on Windows.
-            with open(
-                basename + '.nl', 'w', newline='\n', encoding='utf-8'
-            ) as nl_file, open(
-                basename + '.row', 'w', encoding='utf-8'
-            ) as row_file, open(
-                basename + '.col', 'w', encoding='utf-8'
-            ) as col_file:
+            with (
+                open(basename + '.nl', 'w', newline='\n', encoding='utf-8') as nl_file,
+                open(basename + '.row', 'w', encoding='utf-8') as row_file,
+                open(basename + '.col', 'w', encoding='utf-8') as col_file,
+            ):
                 timer.start('write_nl_file')
                 self._writer.config.set_value(config.writer_config)
                 try:
@@ -370,8 +385,8 @@ class Ipopt(SolverBase):
                 cmd = self._create_command_line(
                     basename=basename, config=config, opt_file=opt_file
                 )
-                # this seems silly, but we have to give the subprocess slightly longer to finish than
-                # ipopt
+                # this seems silly, but we have to give the subprocess slightly
+                # longer to finish than ipopt
                 if config.time_limit is not None:
                     timeout = config.time_limit + min(
                         max(1.0, 0.01 * config.time_limit), 100
@@ -380,23 +395,28 @@ class Ipopt(SolverBase):
                     timeout = None
 
                 ostreams = [io.StringIO()] + config.tee
-                with TeeStream(*ostreams) as t:
-                    timer.start('subprocess')
-                    process = subprocess.run(
-                        cmd,
-                        timeout=timeout,
-                        env=env,
-                        universal_newlines=True,
-                        stdout=t.STDOUT,
-                        stderr=t.STDERR,
-                        check=False,
-                    )
+                timer.start('subprocess')
+                try:
+                    with TeeStream(*ostreams) as t:
+                        process = subprocess.run(
+                            cmd,
+                            timeout=timeout,
+                            env=env,
+                            universal_newlines=True,
+                            stdout=t.STDOUT,
+                            stderr=t.STDERR,
+                            check=False,
+                        )
+                except OSError:
+                    err = sys.exc_info()[1]
+                    msg = 'Could not execute the command: %s\tError message: %s'
+                    raise ApplicationError(msg % (cmd, err))
+                finally:
                     timer.stop('subprocess')
-                    # This is the stuff we need to parse to get the iterations
-                    # and time
-                    (iters, ipopt_time_nofunc, ipopt_time_func, ipopt_total_time) = (
-                        self._parse_ipopt_output(ostreams[0])
-                    )
+
+                # This is the data we need to parse to get the iterations
+                # and time
+                parsed_output_data = self._parse_ipopt_output(ostreams[0])
 
             if proven_infeasible:
                 results = Results()
@@ -431,16 +451,24 @@ class Ipopt(SolverBase):
                     results.termination_condition = TerminationCondition.error
                     results.solution_loader = SolSolutionLoader(None, None)
                 else:
-                    results.iteration_count = iters
-                    if ipopt_time_nofunc is not None:
-                        results.timing_info.ipopt_excluding_nlp_functions = (
-                            ipopt_time_nofunc
+                    try:
+                        results.iteration_count = parsed_output_data.pop('iters')
+                        cpu_seconds = parsed_output_data.pop('cpu_seconds')
+                        for k, v in cpu_seconds.items():
+                            results.timing_info[k] = v
+                        results.extra_info = parsed_output_data
+                        # Set iteration_log visibility to ADVANCED_OPTION because it's
+                        # a lot to print out with `display`
+                        results.extra_info.get("iteration_log")._visibility = (
+                            ADVANCED_OPTION
                         )
-
-                    if ipopt_time_func is not None:
-                        results.timing_info.nlp_function_evaluations = ipopt_time_func
-                    if ipopt_total_time is not None:
-                        results.timing_info.total_seconds = ipopt_total_time
+                    except KeyError as e:
+                        logger.log(
+                            logging.WARNING,
+                            "The solver output data is empty or incomplete.\n"
+                            f"Full error message: {e}\n"
+                            f"Parsed solver data: {parsed_output_data}\n",
+                        )
         if (
             config.raise_exception_on_nonoptimal_result
             and results.solution_status != SolutionStatus.optimal
@@ -499,46 +527,137 @@ class Ipopt(SolverBase):
         results.timing_info.timer = timer
         return results
 
-    def _parse_ipopt_output(self, stream: io.StringIO):
-        """
-        Parse an IPOPT output file and return:
+    def _parse_ipopt_output(self, output: Union[str, io.StringIO]) -> Dict[str, Any]:
+        parsed_data = {}
 
-        * number of iterations
-        * time in IPOPT
+        # Convert output to a string so we can parse it
+        if isinstance(output, io.StringIO):
+            output = output.getvalue()
 
-        """
+        # Stop parsing if there is nothing to parse
+        if not output:
+            logger.log(
+                logging.WARNING,
+                "Returned output from ipopt was empty. Cannot parse for additional data.",
+            )
+            return parsed_data
 
-        iters = None
-        nofunc_time = None
-        func_time = None
-        total_time = None
-        # parse the output stream to get the iteration count and solver time
-        for line in stream.getvalue().splitlines():
-            if line.startswith("Number of Iterations....:"):
-                tokens = line.split()
-                iters = int(tokens[-1])
-            elif line.startswith(
-                "Total seconds in IPOPT                               ="
-            ):
-                # Newer versions of IPOPT no longer separate timing into
-                # two different values. This is so we have compatibility with
-                # both new and old versions
-                tokens = line.split()
-                total_time = float(tokens[-1])
-            elif line.startswith(
-                "Total CPU secs in IPOPT (w/o function evaluations)   ="
-            ):
-                tokens = line.split()
-                nofunc_time = float(tokens[-1])
-            elif line.startswith(
-                "Total CPU secs in NLP function evaluations           ="
-            ):
-                tokens = line.split()
-                func_time = float(tokens[-1])
+        # Extract number of iterations
+        iter_match = re.search(r'Number of Iterations.*:\s+(\d+)', output)
+        if iter_match:
+            parsed_data['iters'] = int(iter_match.group(1))
+        # Gather all the iteration data
+        iter_table = re.findall(r'^(?:\s*\d+.*?)$', output, re.MULTILINE)
+        if iter_table:
+            columns = [
+                "iter",
+                "objective",
+                "inf_pr",
+                "inf_du",
+                "lg_mu",
+                "d_norm",
+                "lg_rg",
+                "alpha_du",
+                "alpha_pr",
+                "ls",
+            ]
+            iterations = []
 
-        return iters, nofunc_time, func_time, total_time
+            for line in iter_table:
+                tokens = line.strip().split()
+                if len(tokens) != len(columns):
+                    continue
+                iter_data = dict(zip(columns, tokens))
 
-    def _parse_solution(self, instream: io.TextIOBase, nl_info: NLWriterInfo):
+                # Extract restoration flag from 'iter'
+                iter_data['restoration'] = iter_data['iter'].endswith('r')
+                if iter_data['restoration']:
+                    iter_data['iter'] = iter_data['iter'][:-1]
+
+                # Separate alpha_pr into numeric part and optional tag
+                iter_data['step_acceptance'] = iter_data['alpha_pr'][-1]
+                if iter_data['step_acceptance'] in _ALPHA_PR_CHARS:
+                    iter_data['alpha_pr'] = iter_data['alpha_pr'][:-1]
+                else:
+                    iter_data['step_acceptance'] = None
+
+                # Attempt to cast all values to float where possible
+                for key in columns:
+                    if iter_data[key] == '-':
+                        iter_data[key] = None
+                    else:
+                        try:
+                            iter_data[key] = float(iter_data[key])
+                        except (ValueError, TypeError):
+                            logger.warning(
+                                "Error converting Ipopt log entry to "
+                                f"float:\n\t{sys.exc_info()[1]}\n\t{line}"
+                            )
+
+                assert len(iterations) == iter_data.pop('iter'), (
+                    f"Parsed row in the iterations table\n\t{line}\ndoes not "
+                    f"match the next expected iteration number ({len(iterations)})"
+                )
+                iterations.append(iter_data)
+
+            parsed_data['iteration_log'] = iterations
+
+        # Extract scaled and unscaled table
+        scaled_unscaled_match = re.search(
+            r'''
+            Objective\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            Dual\ infeasibility\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            Constraint\ violation\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            (?:Variable\ bound\ violation:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*)?
+            Complementarity\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)\s*
+            Overall\ NLP\ error\.*:\s*([-+eE0-9.]+)\s+([-+eE0-9.]+)
+            ''',
+            output,
+            re.DOTALL | re.VERBOSE,
+        )
+
+        if scaled_unscaled_match:
+            groups = scaled_unscaled_match.groups()
+            all_fields = [
+                "incumbent_objective",
+                "dual_infeasibility",
+                "constraint_violation",
+                "variable_bound_violation",  # optional
+                "complementarity_error",
+                "overall_nlp_error",
+            ]
+
+            # Filter out None values and create final fields and values.
+            # Nones occur in old-style IPOPT output (<= 3.13)
+            zipped = [
+                (field, scaled, unscaled)
+                for field, scaled, unscaled in zip(
+                    all_fields, groups[0::2], groups[1::2]
+                )
+                if scaled is not None and unscaled is not None
+            ]
+
+            scaled = {k: float(s) for k, s, _ in zipped}
+            unscaled = {k: float(u) for k, _, u in zipped}
+
+            parsed_data.update(unscaled)
+            parsed_data['final_scaled_results'] = scaled
+
+        # Newer versions of IPOPT no longer separate timing into
+        # two different values. This is so we have compatibility with
+        # both new and old versions
+        parsed_data['cpu_seconds'] = {
+            k.strip(): float(v)
+            for k, v in re.findall(
+                r'Total(?: CPU)? sec(?:ond)?s in ([^=]+)=\s*([0-9.]+)', output
+            )
+        }
+
+        return parsed_data
+
+    def _parse_solution(
+        self, instream: io.TextIOBase, nl_info: NLWriterInfo
+    ) -> Results:
         results = Results()
         res, sol_data = parse_sol_file(
             sol_file=instream, nl_info=nl_info, result=results

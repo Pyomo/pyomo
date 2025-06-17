@@ -71,4 +71,6 @@ EOF = "EOF"
 lst = "lst"
 # Abbreviation of gamma (used in stochpdegas1_automatic.py)
 gam = "gam"
+# Regex search term from contrib/solver/solvers/ipopt
+ond = "ond"
 # AS NEEDED: Add More Words Below

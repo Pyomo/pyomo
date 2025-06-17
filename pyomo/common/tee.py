@@ -24,6 +24,7 @@ import sys
 import threading
 import time
 
+from pyomo.common.errors import DeveloperError
 from pyomo.common.log import LoggingIntercept, LogStream
 
 _poll_interval = 0.0001
@@ -34,9 +35,10 @@ _poll_rampup = 10
 # polling timeout when waiting to close threads.  This will bail on
 # closing threast after a minimum of 13.1 seconds and a worst case of
 # ~(13.1 * #threads) seconds
-_poll_timeout = 3  # 15 rounds: 0.0001 * 2**15 == 3.2768
-_poll_timeout_deadlock = 200  # 21 rounds: 0.0001 * 2**21 == 209.7152
+_poll_timeout = 1  # 14 rounds: 0.0001 * 2**14 == 1.6384
+_poll_timeout_deadlock = 100  # seconds
 
+_noop = lambda: None
 _mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
@@ -76,6 +78,27 @@ class _AutoFlush(_SignalFlush):
     def writelines(self, data):
         self._ostream.writelines(data)
         self.flush()
+
+
+class _fd_closer(object):
+    """A context manager to handle closing a specified file descriptor
+
+    Ideally we would use `os.fdopen(... closefd=True)`; however, it
+    appears that Python ignores `closefd` on Windows.  This would
+    eventually lead to the process exceeding the maximum number of open
+    files (see Pyomo/pyomo#3587).  So, we will explicitly manage closing
+    the file descriptors that we open using this context manager.
+
+    """
+
+    def __init__(self, fd):
+        self.fd = fd
+
+    def __enter__(self):
+        return self.fd
+
+    def __exit__(self, et, ev, tb):
+        os.close(self.fd)
 
 
 class redirect_fd(object):
@@ -218,10 +241,11 @@ class capture_output(object):
 
     """
 
+    startup_shutdown = threading.Lock()
+
     def __init__(self, output=None, capture_fd=False):
-        if output is None:
-            output = io.StringIO()
         self.output = output
+        self.output_stream = None
         self.old = None
         self.tee = None
         self.capture_fd = capture_fd
@@ -255,19 +279,53 @@ class capture_output(object):
         FAIL = []
         while self.context_stack:
             try:
-                self.context_stack.pop().__exit__(et, ev, tb)
+                cm = self.context_stack.pop()
+                cm.__exit__(et, ev, tb)
             except:
-                FAIL.append(str(sys.exc_info()[1]))
+                _stack = self.context_stack
+                FAIL.append(f"{sys.exc_info()[1]} ({len(_stack)+1}: {cm}@{id(cm):x})")
         return FAIL
 
     def __enter__(self):
+        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+            # This situation *shouldn't* happen.  If it does, it is
+            # unlikely that the user can fix it (or even debug it).
+            # Instead they should report it back to us.
+            #
+            # Breadcrumbs:
+            #
+            #   - The last time we hit this [5/2025], it was because we
+            #     were using capture_output in a solver's __del__.  This
+            #     led to the GC deleting the solver while another solver
+            #     was trying to start up / run (so the other solver held
+            #     the lock, but the GC interrupted that thread and
+            #     wouldn't let go).
+            raise DeveloperError("Deadlock starting capture_output")
+        try:
+            return self._enter_impl()
+        finally:
+            capture_output.startup_shutdown.release()
+
+    def __exit__(self, et, ev, tb):
+        if not capture_output.startup_shutdown.acquire(timeout=_poll_timeout_deadlock):
+            # See comments & breadcrumbs in __enter__() above.
+            raise DeveloperError("Deadlock closing capture_output")
+        try:
+            return self._exit_impl(et, ev, tb)
+        finally:
+            capture_output.startup_shutdown.release()
+
+    def _enter_impl(self):
         self.old = (sys.stdout, sys.stderr)
         old_fd = []
         for stream in self.old:
-            stream.flush()
             try:
-                old_fd.append(stream.fileno())
-            except (AttributeError, OSError):
+                stream.flush()
+                try:
+                    old_fd.append(stream.fileno())
+                except (AttributeError, OSError):
+                    old_fd.append(None)
+            except (ValueError, OSError):
                 old_fd.append(None)
         try:
             # We have an issue where we are (very aggressively)
@@ -285,8 +343,15 @@ class capture_output(object):
                 # overwrite it when we get to redirect_fd below).  If
                 # sys.stderr doesn't have a file descriptor, we will
                 # fall back on the process stderr (FD=2).
+                #
+                # Note that we would like to use closefd=True, but can't
+                # (see _fd_closer docs)
                 log_stream = self._enter_context(
-                    os.fdopen(os.dup(old_fd[1] or 2), mode="w", closefd=True)
+                    os.fdopen(
+                        self._enter_context(_fd_closer(os.dup(old_fd[1] or 2))),
+                        mode="w",
+                        closefd=False,
+                    )
                 )
             else:
                 log_stream = self.old[1]
@@ -294,6 +359,8 @@ class capture_output(object):
 
             if isinstance(self.output, str):
                 self.output_stream = self._enter_context(open(self.output, 'w'))
+            elif self.output is None:
+                self.output_stream = io.StringIO()
             else:
                 self.output_stream = self.output
             if isinstance(self.output, TeeStream):
@@ -339,11 +406,17 @@ class capture_output(object):
                         # loop that we really want to break.  Undo
                         # the redirect by pointing our output stream
                         # back to the original file descriptor.
+                        #
+                        # Note that we would like to use closefd=True, but can't
+                        # (see _fd_closer docs)
                         stream = self._enter_context(
                             os.fdopen(
-                                os.dup(fd_redirect[fd].original_fd),
+                                self._enter_context(
+                                    _fd_closer(os.dup(fd_redirect[fd].original_fd)),
+                                    prior_to=self.tee,
+                                ),
                                 mode="w",
-                                closefd=True,
+                                closefd=False,
                             ),
                             prior_to=self.tee,
                         )
@@ -362,20 +435,28 @@ class capture_output(object):
             buf = buf[0]
         return buf
 
-    def __exit__(self, et, ev, tb):
+    def _exit_impl(self, et, ev, tb):
         # Check that we were nested correctly
         FAIL = []
-        if self.tee.STDOUT is not sys.stdout:
-            FAIL.append('Captured output does not match sys.stdout.')
-        if self.tee.STDERR is not sys.stderr:
-            FAIL.append('Captured output does not match sys.stderr.')
+        if self.tee is not None:
+            if self.tee._stdout is not None and self.tee.STDOUT is not sys.stdout:
+                FAIL.append(
+                    'Captured output (%s) does not match sys.stdout (%s).'
+                    % (self.tee._stdout, sys.stdout)
+                )
+            if self.tee._stderr is not None and self.tee.STDERR is not sys.stderr:
+                FAIL.append(
+                    'Captured output (%s) does not match sys.stderr (%s).'
+                    % (self.tee._stdout, sys.stdout)
+                )
         # Exit all context managers.  This includes
         #  - Restore any file descriptors we commandeered
         #  - Close / join the TeeStream
         #  - Close any opened files
         FAIL.extend(self._exit_context_stack(et, ev, tb))
-        sys.stdout, sys.stderr = self.old
-        self.old = None
+        if self.old is not None:
+            sys.stdout, sys.stderr = self.old
+            self.old = None
         self.tee = None
         self.output_stream = None
         if FAIL:
@@ -395,6 +476,18 @@ class capture_output(object):
 
 
 class _StreamHandle(object):
+    """A stream handler object used by TeeStream
+
+    This handler holds the two sides of the pipe used to communicate
+    output generated by the main thread out to the handler thread (which
+    passes the output on to the TeeStream's output streams).
+
+    Note that this class is intimately tied to TeeStream and relies on
+    that class for certain termination / cleanup events (including
+    flushing and closing buffers)
+
+    """
+
     def __init__(self, mode, buffering, encoding, newline):
         self.buffering = buffering
         self.newlines = newline
@@ -436,7 +529,9 @@ class _StreamHandle(object):
         # Close both the file and the underlying file descriptor.  Note
         # that this may get called more than once.
         if self.write_file is not None:
-            self.write_file.close()
+            if not self.write_file.closed:
+                self.write_file.flush()
+                self.write_file.close()
             self.write_file = None
 
         if self.write_pipe is not None:
@@ -449,17 +544,14 @@ class _StreamHandle(object):
             self.write_pipe = None
 
     def finalize(self, ostreams):
+        # Note that this expects to be called by TeeStream *after*
+        # TeeStream has called close(), so the output_buffer should have
+        # been flushed and emptied.
         self.decodeIncomingBuffer()
         if ostreams:
             self.writeOutputBuffer(ostreams, True)
         os.close(self.read_pipe)
 
-        if self.output_buffer:
-            logger.error(
-                "Stream handle closed with a partial line "
-                "in the output buffer that was not emitted to the "
-                "output stream(s):\n\t'%s'" % (self.output_buffer,)
-            )
         if self.decoder_buffer:
             logger.error(
                 "Stream handle closed with un-decoded characters "
@@ -532,7 +624,7 @@ class _StreamHandle(object):
                 )
                 continue
             if flush or (written and not self.buffering):
-                stream.flush()
+                getattr(stream, 'flush', _noop)()
             # Note: some derived file-like objects fail to return the
             # number of characters written (and implicitly return None).
             # If we get None, we will just assume that everything was
@@ -561,6 +653,7 @@ class TeeStream(object):
         self._handles = []
         self._active_handles = []
         self._threads = []
+        self._enter_count = 0
 
     @property
     def STDOUT(self):
@@ -612,24 +705,30 @@ class TeeStream(object):
 
         # Join all stream processing threads
         _poll = _poll_interval
+        _timeout = 0.0
         FAIL = False
         while True:
             for th in self._threads:
                 th.join(_poll)
+                _timeout += _poll
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            _poll *= 2
-            if _poll_timeout <= _poll < 2 * _poll_timeout:
+            if _poll < _poll_timeout:
+                _poll *= 2.0
+            if _poll_timeout * 0.5 <= _poll < _poll_timeout:
                 if in_exception:
                     # We are already processing an exception: no reason
-                    # to trigger another, nor to deadlock for an extended time
+                    # to trigger another, nor to deadlock for an
+                    # extended time.  Silently clean everything up
+                    # (because emitting logger messages could trigger
+                    # yet another exception and mask the true cause).
                     break
                 logger.warning(
                     "Significant delay observed waiting to join reader "
                     "threads, possible output stream deadlock"
                 )
-            elif _poll >= _poll_timeout_deadlock:
+            elif _timeout > _poll_timeout_deadlock:
                 logger.error("TeeStream: deadlock observed joining reader threads")
                 # Defer raising the exception until after we have
                 # cleaned things up
@@ -648,14 +747,19 @@ class TeeStream(object):
             raise RuntimeError("TeeStream: deadlock observed joining reader threads")
 
     def __enter__(self):
+        self._enter_count += 1
         return self
 
     def __exit__(self, et, ev, tb):
-        self.close(et is not None)
+        if not self._enter_count:
+            raise RuntimeError("TeeStream: exiting a context that was not entered")
+        self._enter_count -= 1
+        if not self._enter_count:
+            self.close(et is not None)
 
     def __del__(self):
         # Implement __del__ to guarantee that file descriptors are closed
-        # ... but only if we are not called by the GC in the handler thread
+        # ... but only if we are not called by the GC in a handler thread
         if threading.current_thread() not in self._threads:
             self.close()
 
@@ -723,19 +827,18 @@ class TeeStream(object):
             if _mswindows:
                 for handle in list(handles):
                     try:
-                        if handle.flush:
-                            flush = True
-                            handle.flush = False
                         pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)
                             handle.decoder_buffer += new_data
                             break
+                        elif handle.flush:
+                            break
                     except:
                         handles.remove(handle)
                         new_data = ''  # not None so the poll interval doesn't increase
-                if new_data is None and not flush:
+                if new_data is None and not handle.flush:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
                     time.sleep(_poll)
@@ -760,15 +863,14 @@ class TeeStream(object):
                 else:
                     for handle in handles:
                         if handle.flush:
-                            new_data = ''
                             break
                     else:
-                        new_data = None
                         continue
 
-                if handle.flush:
-                    flush = True
-                    handle.flush = False
+            if handle.flush:
+                new_data = ''
+                flush = True
+                handle.flush = False
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer

@@ -309,9 +309,11 @@ class NLWriter(object):
             _open = lambda fname: open(fname, 'w')
         else:
             _open = nullcontext
-        with open(filename, 'w', newline='') as FILE, _open(
-            row_fname
-        ) as ROWFILE, _open(col_fname) as COLFILE:
+        with (
+            open(filename, 'w', newline='') as FILE,
+            _open(row_fname) as ROWFILE,
+            _open(col_fname) as COLFILE,
+        ):
             info = self.write(model, FILE, ROWFILE, COLFILE, config=config)
         if not info.variables:
             # This exception is included for compatibility with the

@@ -51,12 +51,16 @@ packages including but not limited to: matplotlib, networkx, numpy,
 openpyxl, pandas, pint, pymysql, pyodbc, pyro4, scipy, sympy, and
 xlrd. 
 
-A full list of conditional dependencies can be found in Pyomo's
-``setup.py`` and displayed using:
+A full list of optional dependencies can be found in Pyomo's
+``pyproject.toml`` under the ``[project.optional-dependencies]`` table.
+They can be displayed by running:
 
 ::
 
+   # Legacy format
    python setup.py dependencies --extra optional
+   # Newer format - prints as a JSON
+   python -m pip install --dry-run --report - '.[optional]'
 
 Pyomo extensions that require any of these packages will generate
 an error message for missing dependencies upon use.
@@ -86,16 +90,31 @@ initialized.
 .. note::
    This can only be done via ``pip`` or from source.
 
-Via ``pip``:
+Installation via ``pip`` or from source is done the same way - using environment
+variables. On Linux/MacOS:
 
 ::
 
-   pip install pyomo --global-option="--with-cython"
+   export PYOMO_SETUP_ARGS=--with-cython
+   pip install pyomo
+
+On Windows:
+
+::
+
+   # Via command prompt
+   set PYOMO_SETUP_ARGS=--with-cython
+   # Via powershell
+   $env:PYOMO_SETUP_ARGS="--with-cython"
+   pip install pyomo
+
 
 From source (recommended for advanced users only):
 
 ::
 
+   export PYOMO_SETUP_ARGS=--with-cython
    git clone https://github.com/Pyomo/pyomo.git
    cd pyomo
-   python setup.py install --with-cython
+   # Use -e to install in editable mode
+   pip install .

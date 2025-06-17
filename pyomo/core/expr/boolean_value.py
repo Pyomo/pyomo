@@ -30,17 +30,20 @@ def _generate_logical_proposition(etype, _self, _other):
 
 
 def as_boolean(obj):
-    """
-    A function that creates a BooleanConstant object that
-    wraps Python Boolean values.
+    """A function that converts its argument to a Pyomo Boolean (logical) object.
 
-    Args:
-        obj: The logical value that may be wrapped.
+    If `obj` is a Pyomo logical value (usually a BooleanValue subclass),
+    then `obj` is returned.  If `obj` is in `native_logical_types`, then
+    the value is wrapped in a :py:class:`BooleanConstant` and returned.
 
-    Raises: TypeError if the object is in native_types and not in
-        native_logical_types
+    Parameters
+    ----------
+    obj: The value to process and return / convert.
 
-    Returns: A true or false BooleanConstant or the original object
+    Raises
+    ------
+    TypeError: if `obj` is not a logical value
+
     """
     if obj.__class__ in native_logical_types:
         return BooleanConstant(obj)
@@ -48,8 +51,8 @@ def as_boolean(obj):
     # Ignore objects that are duck types to work with Pyomo expressions
     #
     try:
-        obj.is_expression_type()
-        return obj
+        if obj.is_logical_type():
+            return obj
     except AttributeError:
         pass
     #
@@ -57,9 +60,13 @@ def as_boolean(obj):
     #
     if obj.__class__ in native_types:
         raise TypeError(f"Cannot treat the value '{obj}' as a logical constant")
+    try:
+        _name = obj.name
+    except AttributeError:
+        _name = str(obj)
     raise TypeError(
-        "Cannot treat the value '%s' as a logical constant because it has "
-        "unknown type '%s'" % (str(obj), type(obj).__name__)
+        "The '%s' object '%s' is not a valid type for Pyomo "
+        "logical expressions" % (type(obj).__name__, _name)
     )
 
 
@@ -271,14 +278,32 @@ class BooleanConstant(BooleanValue):
         value           The initial value.
     """
 
-    __slots__ = ('value',)
+    __slots__ = ('value', '_name')
+    singleton = {}
 
-    def __init__(self, value):
-        if value not in native_logical_values:
-            raise TypeError(
-                'Not a valid BooleanValue. Unable to create a logical constant'
-            )
-        self.value = value
+    def __new__(cls, value, name=None):
+        if name is None:
+            name = value
+        if name not in cls.singleton:
+            if value not in native_logical_values:
+                raise TypeError(
+                    'Not a valid BooleanValue. Unable to create a logical constant'
+                )
+            cls.singleton[name] = super().__new__(cls)
+            cls.singleton[name].value = value
+            cls.singleton[name]._name = name
+        return cls.singleton[name]
+
+    def __deepcopy__(self, memo):
+        # Prevent deepcopy from duplicating this object
+        return self
+
+    def __reduce__(self):
+        return self.__class__, (self._name, self._args_)
+
+    def __init__(self, value, name=None):
+        # note that the meat of __init__ is called as part of __new__ above.
+        assert self.value == value
 
     def is_constant(self):
         return True
@@ -290,7 +315,7 @@ class BooleanConstant(BooleanValue):
         return False
 
     def __str__(self):
-        return str(self.value)
+        return str(self._name)
 
     def __nonzero__(self):
         return self.value

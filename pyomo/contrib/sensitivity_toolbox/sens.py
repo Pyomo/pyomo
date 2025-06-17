@@ -214,6 +214,11 @@ def sensitivity_calculation(
     sens.perturb_parameters(perturbList)
 
     if method == 'sipopt':
+        # Notes on sIpopt documentation:
+        # Documentation:
+        #  - https://coin-or.github.io/Ipopt/SPECIALS.html#SIPOPT
+        # Original docs (archived):
+        #  - http://web.archive.org/web/20210412132144/https://projects.coin-or.org/Ipopt/wiki/sIpopt
         ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
         ipopt_sens.options['run_sens'] = 'yes'
         if solver_options is not None:

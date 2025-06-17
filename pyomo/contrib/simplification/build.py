@@ -63,7 +63,7 @@ def build_ginac_library(parallel=None, argv=None, env=None):
         assert subprocess.run(make_cmd, cwd=cln_dir, env=env).returncode == 0
         assert subprocess.run(install_cmd, cwd=cln_dir, env=env).returncode == 0
 
-        url = 'https://www.ginac.de/ginac-1.8.8.tar.bz2'
+        url = 'https://www.ginac.de/ginac-1.8.9.tar.bz2'
         ginac_dir = os.path.join(tmpdir, 'ginac')
         downloader.set_destination_filename(ginac_dir)
         logger.info(

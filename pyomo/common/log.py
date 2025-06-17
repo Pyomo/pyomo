@@ -449,13 +449,19 @@ class _StreamRedirector(object):
 
     def __enter__(self):
         self.orig_stream = self.handler.stream
+        # Note: ideally, we would use closefd=True and let Python handle
+        # closing the local file descriptor that we are about to create.
+        # However, it appears that closefd is ignored on Windows (see
+        # #3587), so we will just handle it explicitly ourselves.
         self.handler.stream = os.fdopen(
-            os.dup(self.fd), mode="w", closefd=True
+            os.dup(self.fd), mode="w", closefd=False
         ).__enter__()
 
     def __exit__(self, et, ev, tb):
         try:
+            fd = self.handler.stream.fileno()
             self.handler.stream.__exit__(et, ev, tb)
+            os.close(fd)
         finally:
             self.handler.stream = self.orig_stream
 
@@ -467,12 +473,18 @@ class _LastResortRedirector(object):
 
     def __enter__(self):
         self.orig = logging.lastResort
+        # Note: ideally, we would use closefd=True and let Python handle
+        # closing the local file descriptor that we are about to create.
+        # However, it appears that closefd is ignored on Windows (see
+        # #3587), so we will just handle it explicitly ourselves.
         logging.lastResort = logging.StreamHandler(
-            os.fdopen(os.dup(self.fd), mode="w", closefd=True).__enter__()
+            os.fdopen(os.dup(self.fd), mode="w", closefd=False).__enter__()
         )
 
     def __exit__(self, et, ev, tb):
         try:
+            fd = logging.lastResort.stream.fileno()
             logging.lastResort.stream.close()
+            os.close(fd)
         finally:
             logging.lastResort = self.orig

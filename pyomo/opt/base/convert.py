@@ -27,7 +27,7 @@ def convert_problem(
     target_problem_type,
     valid_problem_types,
     has_capability=lambda x: False,
-    **kwds
+    **kwds,
 ):
     """
     Convert a problem, defined by the 'args' tuple, into another
