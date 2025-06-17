@@ -34,6 +34,7 @@ from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component,
+    ComponentData,
     ActiveComponentData,
     ModelComponentFactory,
 )
@@ -1125,16 +1126,34 @@ component, use the block del_component() and add_component() methods.
         """
         Delete a component from this block.
         """
-        obj = self.component(name_or_object)
-        # FIXME: Is this necessary?  Should this raise an exception?
+        # in-lining self.component(name_or_object) so that we can add the
+        # additional check of whether or not name_or_object is a ComponentData
+        obj = None
+        if isinstance(name_or_object, str):
+            if name_or_object in self._decl:
+                obj = self._decl_order[self._decl[name_or_object]][0]
+        else:
+            try:
+                obj = name_or_object.parent_component()
+                if obj is not name_or_object:
+                    raise ValueError(
+                        "Argument '%s' to del_component is a ComponentData object. "
+                        "Please use the Python 'del' function to delete members of "
+                        "indexed Pyomo components. The del_component function can "
+                        "only be used to delete IndexedComponents and "
+                        "ScalarComponents." % name_or_object.local_name
+                    )
+                if obj.parent_block() is not self:
+                    obj = None
+            except AttributeError:
+                pass
         if obj is None:
+            # Maintaining current behavior, but perhaps this should raise an
+            # exception?
             return
 
-        # FIXME: Is this necessary?  Should this raise an exception?
-        # if name not in self._decl:
-        #    return
-
         name = obj.local_name
+
         if name in self._Block_reserved_words:
             raise ValueError(
                 "Attempting to delete a reserved block component:\n\t%s" % (obj.name,)

@@ -50,6 +50,7 @@ from pyomo.environ import (
     ComponentUID,
     Any,
 )
+from pyomo.common.collections import ComponentSet
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import (
@@ -1344,6 +1345,37 @@ class TestBlock(unittest.TestCase):
         self.assertFalse(m.contains_component(Var))
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
+
+    def test_del_component_data(self):
+        m = ConcreteModel()
+        self.assertFalse(m.contains_component(Var))
+        x = m.x = Var([1, 2, 3])
+        self.assertTrue(m.contains_component(Var))
+        self.assertIs(m.component('x'), x)
+        del m.x[1]
+        self.assertTrue(m.contains_component(Var))
+        self.assertTrue('x' in m.__dict__)
+        self.assertEqual(len(m.x), 2)
+        self.assertIn(m.x[2], ComponentSet(m.x.values()))
+        self.assertIn(m.x[3], ComponentSet(m.x.values()))
+
+        # This fails:
+        with self.assertRaisesRegex(
+            ValueError,
+            r"Argument 'x\[2\]' to del_component is a ComponentData object. "
+            r"Please use the Python 'del' function to delete members of "
+            r"indexed Pyomo components. The del_component function can "
+            r"only be used to delete IndexedComponents and "
+            r"ScalarComponents.",
+        ):
+            m.del_component(m.x[2])
+
+        # But we can use del
+        del m.x[2]
+        self.assertTrue(m.contains_component(Var))
+        self.assertTrue('x' in m.__dict__)
+        self.assertEqual(len(m.x), 1)
+        self.assertIn(m.x[3], ComponentSet(m.x.values()))
 
     def test_reclassify_component(self):
         m = Block()

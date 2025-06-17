@@ -732,11 +732,7 @@ class ComponentData(ComponentBase):
     This is the base class for the component data used
     in Pyomo modeling components.  Subclasses of ComponentData are
     used in indexed components, and this class assumes that indexed
-    components are subclasses of IndexedComponent.  Note that
-    ComponentData instances do not store their index.  This makes
-    some operations significantly more expensive, but these are (a)
-    associated with I/O generation and (b) this cost can be managed
-    with caches.
+    components are subclasses of IndexedComponent.
 
     Constructor arguments:
         owner           The component that owns this data object
