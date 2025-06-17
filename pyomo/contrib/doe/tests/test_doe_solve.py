@@ -24,10 +24,10 @@ from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe.examples.reactor_example import run_reactor_doe
 from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
+    run_reactor_doe,
 )
 from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     FullReactorExperimentBad,
