@@ -407,7 +407,6 @@ class Estimator(object):
 
         # Add objective function (optional)
         if self.obj_function:
-
             # Check for component naming conflicts
             reserved_names = [
                 'Total_Cost_Objective',
@@ -818,7 +817,7 @@ class Estimator(object):
 
         return retval, thetavals, WorstStatus
 
-    def _get_sample_list(self, samplesize, num_samples, replacement=True):
+    def _get_sample_list(self, samplesize, num_samples, replacement=True, seed=None):
         samplelist = list()
 
         scenario_numbers = list(range(len(self.exp_list)))
@@ -834,7 +833,9 @@ class Estimator(object):
                 duplicate = False  # check for duplicates between samples
                 while (unique_samples <= len(self._return_theta_names())) and (
                     not duplicate
-                ):
+                ):  
+                    # if seed is not None:
+                        # np.random.seed(seed)  # set seed for reproducibility
                     sample = np.random.choice(
                         scenario_numbers, samplesize, replace=replacement
                     )
@@ -920,7 +921,7 @@ class Estimator(object):
             calc_cov=calc_cov,
             cov_n=cov_n,
         )
-
+    
     def theta_est_bootstrap(
         self,
         bootstrap_samples,
@@ -994,7 +995,7 @@ class Estimator(object):
             del bootstrap_theta['samples']
 
         return bootstrap_theta
-
+    
     def theta_est_leaveNout(
         self, lNo, lNo_samples=None, seed=None, return_samples=False
     ):
@@ -1036,7 +1037,7 @@ class Estimator(object):
         if seed is not None:
             np.random.seed(seed)
 
-        global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
+        global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False, seed=seed)
 
         task_mgr = utils.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)
@@ -1116,20 +1117,21 @@ class Estimator(object):
         if seed is not None:
             np.random.seed(seed)
 
-        global_list = self._get_sample_list(lNo, lNo_samples, replacement=False)
+        global_list = self._get_sample_list(lNo, lNo_samples, replacement=False,)
 
         results = []
         for idx, sample in global_list:
 
             obj, theta = self.theta_est()
 
-            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples, seed=seed)
 
             training, test = self.confidence_region_test(
                 bootstrap_theta,
                 distribution=distribution,
                 alphas=alphas,
                 test_theta_values=theta,
+                seed=seed,
             )
 
             results.append((sample, test, training))
@@ -1287,7 +1289,8 @@ class Estimator(object):
             return LR
 
     def confidence_region_test(
-        self, theta_values, distribution, alphas, test_theta_values=None
+        self, theta_values, distribution, alphas, test_theta_values=None,
+        seed=None
     ):
         """
         Confidence region test to determine if theta values are within a
@@ -1341,6 +1344,9 @@ class Estimator(object):
         if test_theta_values is not None:
             test_result = test_theta_values.copy()
 
+        if seed is not None:
+            np.random.seed(seed)
+
         for a in alphas:
             if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
@@ -1355,7 +1361,7 @@ class Estimator(object):
                     ).all(axis=1)
 
             elif distribution == 'MVN':
-                dist = graphics.fit_mvn_dist(theta_values)
+                dist = graphics.fit_mvn_dist(theta_values, seed=seed)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
                 training_results[a] = Z >= score
@@ -1366,7 +1372,7 @@ class Estimator(object):
                     test_result[a] = Z >= score
 
             elif distribution == 'KDE':
-                dist = graphics.fit_kde_dist(theta_values)
+                dist = graphics.fit_kde_dist(theta_values, seed=seed)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
                 training_results[a] = Z >= score
