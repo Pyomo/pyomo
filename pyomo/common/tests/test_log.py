@@ -19,6 +19,7 @@
 
 import logging
 import os
+import sys
 from inspect import currentframe, getframeinfo
 from io import StringIO
 
@@ -30,6 +31,7 @@ from pyomo.common.log import (
     LogHandler,
     LogStream,
     Preformatted,
+    StdoutHandler,
     WrappingFormatter,
     pyomo_formatter,
 )
@@ -619,3 +621,52 @@ class TestLoggingIntercept(unittest.TestCase):
             self.assertEqual(logger.level, 40)
         finally:
             logger.setLevel(30)
+
+
+class TestStdoutHandler(unittest.TestCase):
+    def setUp(self):
+        self.orig = sys.stdout
+
+    def tearDown(self):
+        sys.stdout = self.orig
+
+    def test_emit(self):
+        handler = StdoutHandler()
+        self.assertIsNone(handler.stream)
+
+        sys.stdout = StringIO()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.WARNING,
+            pathname="/path/to/file.py",
+            lineno=42,
+            msg="Test msg",
+            args=(),
+            exc_info=None,
+        )
+        handler.emit(record)
+        handler.flush()
+
+        self.assertEqual(sys.stdout.getvalue(), "Test msg\n")
+        self.assertIsNone(handler.stream)
+
+    def test_handler(self):
+        logger = logging.getLogger(__name__)
+        propagate, level = logger.propagate, logger.level
+        handler = StdoutHandler()
+        try:
+            logger.addHandler(handler)
+            logger.propagate = False
+            sys.stdout = StringIO()
+
+            logger.setLevel(logging.WARNING)
+            logger.info("Test1")
+            self.assertEqual(sys.stdout.getvalue(), "")
+
+            logger.setLevel(logging.INFO)
+            logger.info("Test2")
+            self.assertEqual(sys.stdout.getvalue(), "Test2\n")
+        finally:
+            logger.removeHandler(handler)
+            logger.propagate = propagate
+            logger.setLevel(level)
