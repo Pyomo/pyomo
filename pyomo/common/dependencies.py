@@ -856,7 +856,6 @@ def declare_deferred_modules_as_importable(globals_dict):
        ...     'scipy', callback=_finalize_scipy,
        ...     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
        >>> declare_deferred_modules_as_importable(globals())
-       WARNING: DEPRECATED: ...
 
     Which enables users to use:
 
