@@ -130,7 +130,7 @@ Bibliography
 
 .. [RB01] W. C. Rooney and L. T. Biegler. "Design for model parameter
    uncertainty using nonlinear confidence regions", *AIChE Journal*,
-   47(8). 2001.
+   47(8). 2001.  DOI `10.1002/aic.690470811 <https://doi.org/10.1002/aic.690470811>`_
 
 .. [RG94] R. Raman and I. E. Grossmann. "Modelling and computational
    techniques for logic based integer programming", *Computers and
