@@ -1619,7 +1619,11 @@ class DesignOfExperiments:
         return self.fim_factorial_results
 
     def compute_FIM_factorial(
-        self, model=None, design_ranges=None, method="sequential"
+        self,
+        model=None,
+        design_values: dict = None,
+        method="sequential",
+        file_name: str = None,
     ):
         """
         Will run a simulation-based factorial exploration of
@@ -1630,7 +1634,7 @@ class DesignOfExperiments:
         Parameters
         ----------
         model: model to perform the full factorial exploration on
-        design_ranges: dict of lists, of the form {<var_name>: [<var_values>]}
+        design_values: dict of lists, of the form {<var_name>: [<var_values>]}
         method: string to specify which method should be used
                 options are ``kaug`` and ``sequential``
 
@@ -1647,25 +1651,31 @@ class DesignOfExperiments:
         model = self.factorial_model
 
         # Permute the inputs to be aligned with the experiment input indices
-        design_ranges_enum = design_ranges  # {k: v for k, v in design_ranges.items()}
         design_map = {
             ind: (k[0].name, k[0])
             for ind, k in enumerate(model.experiment_inputs.items())
         }
 
         # Check whether the design_ranges keys are in the experiment_inputs
-        design_keys = set(design_ranges.keys())
-        map_keys = set([k.name for k in model.experiment_inputs.keys])
+        design_keys = set(design_values.keys())
+        map_keys = set([k.name for k in model.experiment_inputs.keys()])
+        print(f"design_keys: {design_keys}, \nmap_keys: {map_keys}")
 
-        if not design_keys.issubset(map_keys):
+        if design_keys != map_keys:
+            incorrect_given_keys = design_keys - map_keys
+            incorrect_map_keys = map_keys - design_keys
             raise ValueError(
-                f"design_ranges keys {design_keys} must be a subset of experimental\
-                     design names: {map_keys}."
+                f"design_values key(s): {incorrect_given_keys} is incorrect."
+                f"Please provide values for the following key(s): {incorrect_map_keys}."
             )
 
-        des_ranges = [design_ranges[k] for k in design_ranges.keys()]
+        des_ranges = [design_values[k] for k in design_values.keys()]
+        print(f"des_ranges: {des_ranges}")
 
         factorial_points = generate_snake_zigzag_pattern(*des_ranges)
+        factorial_points_list = list(factorial_points)
+        print("factorial_points:", factorial_points_list)
+
         factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
         factorial_results.update(
             {
@@ -1679,11 +1689,13 @@ class DesignOfExperiments:
 
         success_count = 0
         failure_count = 0
-        total_points = len(factorial_points)
+        total_points = len(factorial_points_list)
+        print(f"Total points: {total_points}")
 
         time_set = []
         curr_point = 1  # Initial current point
-        for design_point in factorial_points:
+        for design_point in factorial_points_list:
+            print(f"design_point: {design_point}")
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
                 design_map[i][1].fix(design_point[i])
@@ -1696,6 +1708,9 @@ class DesignOfExperiments:
                 curr_point = success_count + failure_count + 1
                 self.logger.info(f"This is run {curr_point} out of {total_points}.")
                 self.compute_FIM(model=model, method=method)
+                print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
+                print("y_hat", model.y.value)
+                print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
                 success_count += 1
                 # iteration time
                 iter_t = iter_timer.toc(msg=None)
@@ -1754,12 +1769,14 @@ class DesignOfExperiments:
             factorial_results["log10 ME-opt"].append(ME_opt)
             factorial_results["solve_time"].append(time_set[-1])
 
-            self.factorial_results = factorial_results
-            return self.factorial_results
+        self.factorial_results = factorial_results
 
-        # for k in design_ranges.keys():
-        #     if k not in [k2 for k2 in model.experiment_inputs.keys()]:
-        #         raise ValueError(
+        if file_name is not None:
+            with open(file_name + ".json", "w") as f:
+                json.dump(self.factorial_results, f, indent=4)  # Save results to file
+                self.logger.info(f"Results saved to {file_name}.json.")
+
+        return self.factorial_results
 
     # TODO: Overhaul plotting functions to not use strings
     # TODO: Make the plotting functionalities work for >2 design features
