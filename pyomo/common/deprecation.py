@@ -169,7 +169,7 @@ def _find_calling_frame(module_offset):
 def deprecation_warning(
     msg, logger=None, version=None, remove_in=None, calling_frame=None
 ):
-    """Standardized formatter for deprecation warnings
+    """Standardized function for formatting and emitting deprecation warnings.
 
     This is a standardized routine for formatting deprecation warnings
     so that things look consistent and "nice".
