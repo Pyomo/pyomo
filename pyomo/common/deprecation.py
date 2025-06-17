@@ -36,6 +36,18 @@ from pyomo.common.flags import NOTSET, in_testing_environment, building_document
 _doc_flag = '.. deprecated::'
 
 
+def _autosummary_doctest_setup():
+    """This function gets called to setup the doctest environment before
+    running any autosummary doctests in this module.
+    """
+
+    # Ensure that all logged messages are sent to stdout
+    # (so they show up in the doctest output and can be tested)
+    import pyomo.common.log as _log
+
+    _log.pyomo_handler.__class__ = _log.StdoutHandler
+
+
 def default_deprecation_msg(obj, user_msg, version, remove_in):
     """Generate the default deprecation message.
 
