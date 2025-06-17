@@ -46,6 +46,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import generate_snake_zigzag_pattern
+from pyomo.contrib.doe.utils_updated import compute_FIM_metrics
 
 from pyomo.opt import SolverStatus
 
@@ -1623,22 +1624,56 @@ class DesignOfExperiments:
         model=None,
         design_values: dict = None,
         method="sequential",
+        change_one_design_at_a_time=True,
         file_name: str = None,
     ):
-        """
-        Will run a simulation-based factorial exploration of
-        the experimental input space (i.e., a ``grid search`` or
-        ``parameter sweep``) to understand how the FIM metrics
-        change as a function of the experimental design space.
+        """Will run a simulation-based factorial exploration of the experimental input
+        space (i.e., a ``grid search`` or ``parameter sweep``) to understand how the
+        FIM metrics change as a function of the experimental design space. This method
+        can be used for both full factorial and fractional factorial designs.
 
         Parameters
         ----------
-        model: model to perform the full factorial exploration on
-        design_values: dict of lists, of the form {<var_name>: [<var_values>]}
-        method: string to specify which method should be used
-                options are ``kaug`` and ``sequential``
+        model : DoE model, optional
+            The model to perform the full factorial exploration on. Default: None
+        design_values : dict, optional
+            dict of lists, of the form {<var_name>: [<var_values>]}. Default: None. The
+            decision variables should be passed in the same order as the model's
+            `experiment_inputs`. If a particular decision variable is not to be changed,
+            it must be set to `None`. For example, design_values= {"x1": [1, 2, 3],
+            "x2": [None], "x3": [7, 8], "x4": [-10]}
+        method : str, optional
+            string to specify which method should be used. options are ``kaug`` and
+            ``sequential`. Default: "sequential"
+        change_one_design_at_a_time : bool, optional
+            If True, will generate a snake-zigzag pattern of the design values that
+            changes only one of the decision variables at a time. If False, will
+            generate a regular nested for loop that can change one to all the design
+            values at a time. Default: True
+        file_name : str, optional
+            if provided, will save the results to a json file. Default: None
 
+        Returns
+        -------
+        factorial_results: dict
+            A dictionary containing the results of the factorial design with the
+            following keys:
+            - keys of model's experiment_inputs
+            - "log10(D-opt)": list of D-optimality values
+            - "log10(A-opt)": list of A-optimality values
+            - "log10(E-opt)": list of E-optimality values
+            - "log10(ME-opt)": list of ME-optimality values
+            - "solve_time": list of solve times
+            - "total_points": total number of points in the factorial design
+            - "success_count": number of successful runs
+            - "failure_count": number of failed runs
+
+        Raises
+        ------
+        ValueError
+            If the design_values' keys do not match the model's experiment_inputs' keys.
         """
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -1659,30 +1694,34 @@ class DesignOfExperiments:
         # Check whether the design_ranges keys are in the experiment_inputs
         design_keys = set(design_values.keys())
         map_keys = set([k.name for k in model.experiment_inputs.keys()])
-        print(f"design_keys: {design_keys}, \nmap_keys: {map_keys}")
 
         if design_keys != map_keys:
             incorrect_given_keys = design_keys - map_keys
-            incorrect_map_keys = map_keys - design_keys
+            unmatched_map_keys = map_keys - design_keys
             raise ValueError(
-                f"design_values key(s): {incorrect_given_keys} is incorrect."
-                f"Please provide values for the following key(s): {incorrect_map_keys}."
+                f"design_values key(s): {incorrect_given_keys} are incorrect."
+                f"Please provide values for the following key(s): {unmatched_map_keys}."
             )
 
         des_ranges = [design_values[k] for k in design_values.keys()]
-        print(f"des_ranges: {des_ranges}")
+        if change_one_design_at_a_time:
+            factorial_points = generate_snake_zigzag_pattern(*des_ranges)
+        else:
+            factorial_points = product(*des_ranges)
 
-        factorial_points = generate_snake_zigzag_pattern(*des_ranges)
         factorial_points_list = list(factorial_points)
-        print("factorial_points:", factorial_points_list)
 
         factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
         factorial_results.update(
             {
-                "log10 D-opt": [],
-                "log10 A-opt": [],
-                "log10 E-opt": [],
-                "log10 ME-opt": [],
+                "log10(D-opt)": [],
+                "log10(A-opt)": [],
+                "log10(E-opt)": [],
+                "log10(ME-opt)": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1690,7 +1729,6 @@ class DesignOfExperiments:
         success_count = 0
         failure_count = 0
         total_points = len(factorial_points_list)
-        print(f"Total points: {total_points}")
 
         time_set = []
         curr_point = 1  # Initial current point
@@ -1698,18 +1736,22 @@ class DesignOfExperiments:
             print(f"design_point: {design_point}")
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
-                design_map[i][1].fix(design_point[i])
+                if design_point[i] is not None:
+                    design_map[i][1].fix(design_point[i])
+                else:
+                    pass
 
-                self.logger.info(f"=======Iteration Number: {curr_point} ======")
-                iter_timer = TicTocTimer()
-                iter_timer.tic(msg=None)
+            # Timing and logging objects
+            self.logger.info(f"=======Iteration Number: {curr_point} =======")
+            iter_timer = TicTocTimer()
+            iter_timer.tic(msg=None)
 
             try:
                 curr_point = success_count + failure_count + 1
                 self.logger.info(f"This is run {curr_point} out of {total_points}.")
                 self.compute_FIM(model=model, method=method)
                 print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-                print("y_hat", model.y.value)
+                print(model.pprint())
                 print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
                 success_count += 1
                 # iteration time
@@ -1731,8 +1773,8 @@ class DesignOfExperiments:
                 self.logger.warning(
                     ":::::::::::Warning: Cannot converge this run.::::::::::::"
                 )
-                failures += 1
-                self.logger.warning("failed count:", failures)
+                failure_count += 1
+                self.logger.warning("failed count:", failure_count)
 
                 self._computed_FIM = np.zeros(self.prior_FIM.shape)
 
@@ -1742,33 +1784,30 @@ class DesignOfExperiments:
             FIM = self._computed_FIM
 
             # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
-                self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
-                )
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                compute_FIM_metrics(FIM)
+            )
 
-            # If the real value is less than or equal to zero, set the E_opt value to nan
-            if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
-            else:
-                E_opt = np.log10(E_vals.real[E_ind])
-
-            ME_opt = np.log10(np.linalg.cond(FIM))
-
-            for k, v in model.experiment_inputs.items():
+            for k in model.experiment_inputs.keys():
                 factorial_results[k.name].append(pyo.value(k))
 
-            factorial_results["log10 D-opt"].append(D_opt)
-            factorial_results["log10 A-opt"].append(A_opt)
-            factorial_results["log10 E-opt"].append(E_opt)
-            factorial_results["log10 ME-opt"].append(ME_opt)
+            factorial_results["log10(D-opt)"].append(D_opt)
+            factorial_results["log10(A-opt)"].append(A_opt)
+            factorial_results["log10(E-opt)"].append(E_opt)
+            factorial_results["log10(ME-opt)"].append(ME_opt)
+            factorial_results["eigval_min"].append(np.min(E_vals))
+            factorial_results["eigval_max"].append(np.max(E_vals))
+            factorial_results["det_FIM"].append(det_FIM)
+            factorial_results["trace_FIM"].append(trace_FIM)
             factorial_results["solve_time"].append(time_set[-1])
 
+        factorial_results.update(
+            {
+                "total_points": total_points,
+                "success_counts": success_count,
+                "failure_counts": failure_count,
+            }
+        )
         self.factorial_results = factorial_results
 
         if file_name is not None:
