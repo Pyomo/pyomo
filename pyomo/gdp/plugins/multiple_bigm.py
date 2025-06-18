@@ -19,31 +19,20 @@ from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.core import (
-    Any,
-    Binary,
     Block,
-    BooleanVar,
-    Connector,
     Constraint,
-    Expression,
-    ExternalFunction,
     maximize,
     minimize,
     NonNegativeIntegers,
     Objective,
-    Param,
-    Set,
-    SetOf,
     SortComponents,
     Suffix,
     value,
-    Var,
-    ConcreteModel,
+    Any,
 )
 from pyomo.core.base import Reference, TransformationFactory
 import pyomo.core.expr as EXPR
 from pyomo.core.util import target_list
-from pyomo.common.errors import DeveloperError
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.bigm_mixin import (
@@ -52,9 +41,7 @@ from pyomo.gdp.plugins.bigm_mixin import (
     _warn_for_unused_bigM_args,
 )
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
-from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import get_gdp_tree, _to_dict
-from pyomo.network import Port
+from pyomo.gdp.util import _to_dict
 from pyomo.opt import SolverFactory, TerminationCondition
 from pyomo.repn import generate_standard_repn
 
@@ -64,6 +51,18 @@ import multiprocessing
 import os
 import threading
 from pyomo.common.dependencies import dill, dill_available
+
+# When using 'spawn' or 'forkserver', Python starts in a new environment
+# and executes only this file, so we need to manually ensure necessary
+# plugins are registered (even if the calling process has already
+# registered them).
+import pyomo.solvers.plugins
+import pyomo.opt.plugins
+import pyomo.repn.plugins
+
+pyomo.solvers.plugins.load()
+pyomo.opt.plugins.load()
+pyomo.repn.plugins.load()
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
 
@@ -455,6 +454,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         else 'forkserver' if len(threading.enumerate()) > 1 else 'fork'
                     )
                 )
+                method = 'spawn'
                 logger.info(
                     f"Running {len(jobs)} jobs on {threads} "
                     f"worker processes with method {method}."
