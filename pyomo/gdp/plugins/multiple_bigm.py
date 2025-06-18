@@ -79,10 +79,11 @@ _trusted_solvers = {
     'highs',
 }
 
-# Whether these are thread-local or at module scope makes no difference for 'spawn' or
-# 'forkserver', but it matters if we run single-threaded, and possibly for edge cases of
-# 'fork' (although it's not correct to use fork() here while having multiple threads
-# anyway, making it moot in theory).
+# Whether these are thread-local or at module scope makes no difference
+# for 'spawn' or 'forkserver', but it matters if we run single-threaded,
+# and possibly for edge cases of 'fork' (although it's not correct to
+# use fork() here while having multiple threads anyway, making it moot
+# in theory).
 _thread_local = threading.local()
 _thread_local.solver = None
 _thread_local.model = None
@@ -356,21 +357,24 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _transform_disjunctionDatas(
         self, instance, preprocessed_targets, arg_Ms, gdp_tree
     ):
-        # We wish we could do this one Disjunction at a time, but we also want to
-        # calculate the Ms in parallel. So we do a slightly convoluted dance of iterating
-        # the Disjunctions to get a list of M calculation jobs, then calculating Ms
-        # multithreaded, then iterating Disjunctions again to actually transform the
+        # We wish we could do this one Disjunction at a time, but we
+        # also want to calculate the Ms in parallel. So we do a slightly
+        # convoluted dance of iterating the Disjunctions to get a list
+        # of M calculation jobs, then calculating Ms multithreaded, then
+        # iterating Disjunctions again to actually transform the
         # constraints.
 
         # To-do list in form (constraint, other_disjunct, unsuccessful_message, is_upper)
         jobs = []
         # map Disjunction -> set of its active Disjuncts
         active_disjuncts = ComponentMap()
-        # set of Constraints processed during special handling of bound constraints: we
-        # will deactivate these, but not until we're done calculating Ms
+        # set of Constraints processed during special handling of bound
+        # constraints: we will deactivate these, but not until we're
+        # done calculating Ms
         transformed_constraints = set()
-        # Finished M values. If we are only doing the bound constraints, we will skip all
-        # the calculation steps and pass these through to transform_constraints.
+        # Finished M values. If we are only doing the bound constraints,
+        # we will skip all the calculation steps and pass these through
+        # to transform_constraints.
         Ms = {}
         if self._config.only_mbigm_bound_constraints:
             Ms = arg_Ms
@@ -518,21 +522,24 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         ) in jobs
                     ],
                 )
+            deactivated = set()
             for (constraint, other_disjunct, _, is_upper), (
                 M,
                 disjunct_infeasible,
             ) in zip(jobs, results):
                 if disjunct_infeasible:
-                    # If we made it here without an exception, the solver is on the
-                    # trusted solvers list
-                    logger.debug(
-                        "Disjunct '%s' is infeasible, deactivating."
-                        % other_disjunct.name
-                    )
-                    other_disjunct.deactivate()
-                    active_disjuncts[gdp_tree.parent(other_disjunct)].remove(
-                        other_disjunct
-                    )
+                    if other_disjunct not in deactivated:
+                        # If we made it here without an exception, the solver is on the
+                        # trusted solvers list
+                        logger.debug(
+                            "Disjunct '%s' is infeasible, deactivating."
+                            % other_disjunct.name
+                        )
+                        other_disjunct.deactivate()
+                        active_disjuncts[gdp_tree.parent(other_disjunct)].remove(
+                            other_disjunct
+                        )
+                        deactivated.add(other_disjunct)
                 # Note that we can't just transform immediately because we might be
                 # waiting on the other one of upper_M or lower_M.
                 if is_upper:
@@ -571,8 +578,9 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             )
             disjunction.deactivate()
 
-    # Do the inner work setting up M calculation jobs for one disjunction. This mutates
-    # the parameters Ms, jobs, transBlock._mbm_values, and also self.used_args.
+    # Do the inner work setting up M calculation jobs for one
+    # disjunction. This mutates the parameters Ms, jobs,
+    # transBlock._mbm_values, and also self.used_args.
     def _setup_jobs_for_disjunction(
         self,
         disjunction,
@@ -919,22 +927,22 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         return all_ms
 
 
-# Things we call in subprocesses. These can't be member functions, or else we'd have to
-# pickle `self`, which is problematic.
+# Things we call in subprocesses. These can't be member functions, or
+# else we'd have to pickle `self`, which is problematic.
 def _setup_spawn(model, solver, use_primal_bound):
     _thread_local.model = dill.loads(model)
     solver_arg = dill.loads(solver)
-    # I'm not sure if this is necessary after it's been pickled, but let's be on the safe
-    # side
-    # _thread_local.solver = SolverFactory(solver_arg.name, options=solver_arg.options)
-    _thread_local.solver = solver_arg
+    # I'm not sure if this is necessary after it's been pickled, but
+    # let's be on the safe side
+    _thread_local.solver = SolverFactory(solver_arg.name, options=solver_arg.options)
     _thread_local.config_use_primal_bound = use_primal_bound
 
 
 def _setup_fork():
-    # model and config_use_primal_bound were already properly set, but remake the solver
-    # instead of using the passed argument. All these processes are copies of the calling
-    # thread so the thread-local still works.
+    # model and config_use_primal_bound were already properly set, but
+    # remake the solver instead of using the passed argument. All these
+    # processes are copies of the calling thread so the thread-local
+    # still works.
     _thread_local.solver = SolverFactory(
         _thread_local.solver.name, options=_thread_local.solver.options
     )
@@ -973,12 +981,14 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
     elif results.solver.termination_condition is not TerminationCondition.optimal:
         raise GDP_Error(unsuccessful_message)
     else:
-        # note: This transformation can be made faster by allowing the solver a
-        # gap. As long as we have a bound, it's still valid (though not as tight).
-
-        # We should use the dual bound here. The primal bound is mathematically
-        # incorrect in the presence of numerical error, but it's the best a local
-        # solver like ipopt can do, so we allow it to be used by setting an option.
+        # NOTE: This transformation can be made faster by allowing the
+        # solver a gap. As long as we have a bound, it's still valid
+        # (though not as tight).
+        #
+        # We should use the dual bound here. The primal bound is
+        # mathematically incorrect in the presence of numerical error,
+        # but it's the best a local solver like ipopt can do, so we
+        # allow it to be used by setting an option.
         if not _thread_local.config_use_primal_bound:
             if is_upper:
                 M = results.problem.upper_bound
@@ -999,9 +1009,9 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
             else:
                 M = results.problem.upper_bound
             if not math.isfinite(M):
-                # Solved to optimality, but we did find an incumbent objective value. Try
-                # again by actually loading the solution and evaluating the objective
-                # expression.
+                # Solved to optimality, but we did not find an incumbent
+                # objective value. Try again by actually loading the
+                # solution and evaluating the objective expression.
                 try:
                     scratch.solutions.load_from(results)
                     M = value(scratch.obj)
@@ -1022,10 +1032,11 @@ def _get_scratch_block(constraint, other_disjunct, is_upper):
         scratch.obj = Objective(expr=constraint.body - constraint.upper, sense=maximize)
     else:
         scratch.obj = Objective(expr=constraint.body - constraint.lower, sense=minimize)
-    # Create a Block component (reference) that actually points to a DisjunctData, as
-    # we want the writer to write it as if it were an ordinary Block rather than
-    # getting any special handling. DisjunctData inherits BlockData, so this should
-    # be valid.
+    # Create a Block component (reference) that actually points to a
+    # DisjunctData, as we want the writer to write it as if it were an
+    # ordinary Block rather than getting any special
+    # handling. DisjunctData inherits BlockData, so this should be
+    # valid.
     scratch.disjunct_ref = Reference(other_disjunct, ctype=Block)
 
     # Add references to every Var that appears in an active constraint.
