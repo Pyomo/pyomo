@@ -10,11 +10,15 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.errors import format_exception
+from pyomo.common.errors import format_exception, PyomoException
 
 
 class LocalException(Exception):
     pass
+
+
+class CustomLocalException(PyomoException):
+    default_message = 'Default message.'
 
 
 class TestFormatException(unittest.TestCase):
@@ -137,3 +141,14 @@ class TestFormatException(unittest.TestCase):
             "        inevitably wrap onto another line.\n"
             "Hello world:\n    This is an epilog:",
         )
+
+
+class TestPyomoException(unittest.TestCase):
+    def test_default_message(self):
+        exception = CustomLocalException()
+        self.assertIn("Default message.", str(exception))
+
+    def test_custom_message_override(self):
+        exception = CustomLocalException("Non-default message.")
+        self.assertNotIn("Default message.", str(exception))
+        self.assertIn("Non-default message.", str(exception))

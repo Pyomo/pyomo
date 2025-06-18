@@ -16,53 +16,47 @@ from pyomo.core.base.objective import Objective
 
 
 class NoFeasibleSolutionError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'A feasible solution was not found, so no solution can be loaded. '
-            'Please set opt.config.load_solutions=False and check '
-            'results.solution_status and '
-            'results.incumbent_objective before loading a solution.'
-        )
+    default_message = (
+        'A feasible solution was not found, so no solution can be loaded. '
+        'Please set opt.config.load_solutions=False and check '
+        'results.solution_status and '
+        'results.incumbent_objective before loading a solution.'
+    )
 
 
 class NoOptimalSolutionError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'Solver did not find the optimal solution. Set '
-            'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
-        )
+    default_message = (
+        'Solver did not find the optimal solution. Set '
+        'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
+    )
 
 
 class NoSolutionError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'Solution loader does not currently have a valid solution. Please '
-            'check results.termination_condition and/or results.solution_status.'
-        )
+    default_message = (
+        'Solution loader does not currently have a valid solution. Please '
+        'check results.termination_condition and/or results.solution_status.'
+    )
 
 
 class NoDualsError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'Solver does not currently have valid duals. Please '
-            'check results.termination_condition and/or results.solution_status.'
-        )
+    default_message = (
+        'Solver does not currently have valid duals. Please '
+        'check results.termination_condition and/or results.solution_status.'
+    )
 
 
 class NoReducedCostsError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'Solver does not currently have valid reduced costs. Please '
-            'check results.termination_condition and/or results.solution_status.'
-        )
+    default_message = (
+        'Solver does not currently have valid reduced costs. Please '
+        'check results.termination_condition and/or results.solution_status.'
+    )
 
 
 class IncompatibleModelError(PyomoException):
-    def __init__(self):
-        super().__init__(
-            'Model is not compatible with the chosen solver. Please check '
-            'the model and solver.'
-        )
+    default_message = (
+        'Model is not compatible with the chosen solver. Please check '
+        'the model and solver.'
+    )
 
 
 def get_objective(block):
