@@ -167,9 +167,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
         self.assertEqual(len(repn.quadratic), 1)
         self.assertEqual(repn.quadratic[(id(m.z), id(m.y))], 1)
         self.assertIsNone(repn.nonlinear)
-        assertExpressionsEqual(
-            self, repn.to_expression(visitor), m.z * m.y + m.x + m.z
-        )
+        assertExpressionsEqual(self, repn.to_expression(visitor), m.z * m.y + m.x + m.z)
 
     def test_ternary_sum_with_product_wrt_z(self):
         m = build_test_model()
@@ -1081,7 +1079,7 @@ class TestParameterizedQuadratic(unittest.TestCase):
             +(-5 * m.y) * (m.x**2)
             + (-3) * m.x
             + (2 + 8 * m.y + 4) * (-1)
-            + 2 * log(m.x) * -1
+            + 2 * log(m.x) * -1,
         )
 
     def test_negation_product_linear_linear(self):
