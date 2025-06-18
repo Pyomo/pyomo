@@ -859,7 +859,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                 # Note that as of NumPy 1.25, blindly casting a
                 # 1-element ndarray to a float will generate a
                 # deprecation warning.  We will explicitly test for
-                # that, but want to do teh test without triggering the
+                # that, but want to do the test without triggering the
                 # numpy import
                 for cls in ans.__class__.__mro__:
                     if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
