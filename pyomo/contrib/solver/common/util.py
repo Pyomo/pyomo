@@ -16,7 +16,7 @@ from pyomo.core.base.objective import Objective
 
 
 class NoFeasibleSolutionError(PyomoException):
-    message = (
+    default_message = (
         'A feasible solution was not found, so no solution can be loaded. '
         'Please set opt.config.load_solutions=False and check '
         'results.solution_status and '
@@ -25,35 +25,35 @@ class NoFeasibleSolutionError(PyomoException):
 
 
 class NoOptimalSolutionError(PyomoException):
-    message = (
+    default_message = (
         'Solver did not find the optimal solution. Set '
         'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
     )
 
 
 class NoSolutionError(PyomoException):
-    message = (
+    default_message = (
         'Solution loader does not currently have a valid solution. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
 class NoDualsError(PyomoException):
-    message = (
+    default_message = (
         'Solver does not currently have valid duals. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
 class NoReducedCostsError(PyomoException):
-    message = (
+    default_message = (
         'Solver does not currently have valid reduced costs. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
 class IncompatibleModelError(PyomoException):
-    message = (
+    default_message = (
         'Model is not compatible with the chosen solver. Please check '
         'the model and solver.'
     )

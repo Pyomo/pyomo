@@ -120,81 +120,16 @@ class ApplicationError(Exception):
 
 class PyomoException(Exception):
     """
-    Exception class that mixes the base Exception and format_exception
-    to allow developers to create custom (and prettily formatted) exceptions
-    while still inheriting from a common exception class
-
-    Parameters
-    ----------
-    message : str, optional
-        Main message for the exception. If not provided, subclasses can supply
-        a default message via the `message` attribute.
-
-    prolog : str, optional
-        A message to output before the main message (like a header).
-
-    extra_message : str, optional
-        Additional details or context, appended to the epilog.
-
-    Examples
-    --------
-    Basic usage with default message:
-
-    >>> class NoFeasibleSolutionError(PyomoException):
-    ...     message = "No feasible solution found."
-
-    >>> raise NoFeasibleSolutionError()
-    Traceback (most recent call last):
-    ...
-    NoFeasibleSolutionError: No feasible solution found.
-
-    Providing extra information:
-
-    >>> raise NoFeasibleSolutionError(extra_message="Solver status: infeasible.")
-    Traceback (most recent call last):
-    ...
-    NoFeasibleSolutionError: No feasible solution found.
-        Solver status: infeasible.
-
-    Overriding the default message:
-
-    >>> raise NoFeasibleSolutionError("Custom error message.")
-    Traceback (most recent call last):
-    ...
-    NoFeasibleSolutionError: Custom error message.
-
-    Adding a prolog:
-
-    >>> raise NoFeasibleSolutionError(prolog="Optimization error:")
-    Traceback (most recent call last):
-    ...
-    NoFeasibleSolutionError: Optimization error:
-        No feasible solution found.
-
-    Combining prolog and extra_message:
-
-    >>> raise NoFeasibleSolutionError(prolog="Optimization error:", extra_message="Solver log at /tmp/log.txt")
-    Traceback (most recent call last):
-    ...
-    NoFeasibleSolutionError: Optimization error:
-            No feasible solution found.
-        Solver log at /tmp/log.txt
+    Exception class for other Pyomo exceptions to inherit from,
+    allowing Pyomo exceptions to be caught in a general way
+    (e.g., in other applications that use Pyomo).
+    Subclasses should define a class-level `default_message` attribute.
     """
 
-    message = None
+    default_message = None
 
-    def __init__(self, message=None, *, prolog=None, extra_message=None, width=120):
-        main_message = message or self.message or "An error occurred."
-
-        formatted_message = format_exception(
-            msg=main_message,
-            prolog=prolog,
-            epilog=extra_message,
-            exception=self.__class__,
-            width=width,
-        )
-
-        super().__init__(formatted_message)
+    def __init__(self, message=None):
+        super().__init__(message or self.default_message)
 
 
 class DeferredImportError(ImportError):
