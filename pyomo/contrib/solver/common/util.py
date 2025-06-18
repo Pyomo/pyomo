@@ -9,13 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.errors import ExtendedPyomoException
+from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 import pyomo.core.expr as EXPR
 from pyomo.core.base.objective import Objective
 
 
-class NoFeasibleSolutionError(ExtendedPyomoException):
+class NoFeasibleSolutionError(PyomoException):
     message = (
         'A feasible solution was not found, so no solution can be loaded. '
         'Please set opt.config.load_solutions=False and check '
@@ -24,35 +24,35 @@ class NoFeasibleSolutionError(ExtendedPyomoException):
     )
 
 
-class NoOptimalSolutionError(ExtendedPyomoException):
+class NoOptimalSolutionError(PyomoException):
     message = (
         'Solver did not find the optimal solution. Set '
         'opt.config.raise_exception_on_nonoptimal_result = False to bypass this error.'
     )
 
 
-class NoSolutionError(ExtendedPyomoException):
+class NoSolutionError(PyomoException):
     message = (
         'Solution loader does not currently have a valid solution. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
-class NoDualsError(ExtendedPyomoException):
+class NoDualsError(PyomoException):
     message = (
         'Solver does not currently have valid duals. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
-class NoReducedCostsError(ExtendedPyomoException):
+class NoReducedCostsError(PyomoException):
     message = (
         'Solver does not currently have valid reduced costs. Please '
         'check results.termination_condition and/or results.solution_status.'
     )
 
 
-class IncompatibleModelError(ExtendedPyomoException):
+class IncompatibleModelError(PyomoException):
     message = (
         'Model is not compatible with the chosen solver. Please check '
         'the model and solver.'

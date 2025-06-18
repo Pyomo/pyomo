@@ -10,14 +10,14 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.common.errors import format_exception, ExtendedPyomoException
+from pyomo.common.errors import format_exception, PyomoException
 
 
 class LocalException(Exception):
     pass
 
 
-class CustomLocalException(ExtendedPyomoException):
+class CustomLocalException(PyomoException):
     message = 'Default message.'
 
 
@@ -143,7 +143,7 @@ class TestFormatException(unittest.TestCase):
         )
 
 
-class TestExtendedPyomoException(unittest.TestCase):
+class TestPyomoException(unittest.TestCase):
     def test_default_message(self):
         exception = CustomLocalException()
         output = str(exception).replace("\n", " ").strip()

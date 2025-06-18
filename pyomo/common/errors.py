@@ -120,15 +120,7 @@ class ApplicationError(Exception):
 
 class PyomoException(Exception):
     """
-    Exception class for other Pyomo exceptions to inherit from,
-    allowing Pyomo exceptions to be caught in a general way
-    (e.g., in other applications that use Pyomo).
-    """
-
-
-class ExtendedPyomoException(PyomoException):
-    """
-    Exception class that mixes the base PyomoException and format_exception
+    Exception class that mixes the base Exception and format_exception
     to allow developers to create custom (and prettily formatted) exceptions
     while still inheriting from a common exception class
 
@@ -148,7 +140,7 @@ class ExtendedPyomoException(PyomoException):
     --------
     Basic usage with default message:
 
-    >>> class NoFeasibleSolutionError(ExtendedPyomoException):
+    >>> class NoFeasibleSolutionError(PyomoException):
     ...     message = "No feasible solution found."
 
     >>> raise NoFeasibleSolutionError()
