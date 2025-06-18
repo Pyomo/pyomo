@@ -123,13 +123,13 @@ class PyomoException(Exception):
     Exception class for other Pyomo exceptions to inherit from,
     allowing Pyomo exceptions to be caught in a general way
     (e.g., in other applications that use Pyomo).
-    Subclasses should define a class-level `default_message` attribute.
+    Subclasses can define a class-level `default_message` attribute.
     """
 
-    default_message = None
-
-    def __init__(self, message=None):
-        super().__init__(message or self.default_message)
+    def __init__(self, *args):
+        if not args and getattr(self, 'default_message', None):
+            args = (self.default_message,)
+        return super().__init__(*args)
 
 
 class DeferredImportError(ImportError):
