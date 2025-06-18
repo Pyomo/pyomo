@@ -119,7 +119,6 @@ class FileDeterminism(enums.IntEnum):
         return super()._missing_(value)
 
 
-@staticmethod
 def val2str(val):
     """Converts an object to str with special handling for InvalidNumber
 
