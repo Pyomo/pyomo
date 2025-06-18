@@ -454,7 +454,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         else 'forkserver' if len(threading.enumerate()) > 1 else 'fork'
                     )
                 )
-                method = 'spawn'
                 logger.info(
                     f"Running {len(jobs)} jobs on {threads} "
                     f"worker processes with method {method}."
