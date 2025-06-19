@@ -800,8 +800,18 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
                 m = self.model
 
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_outputs.update([(m.ca, None), (m.cb, None), (m.cc, None)])
+                m.experiment_outputs.update((m.ca[t], self.data["ca"][t]) for
+                                            t in meas_time_points)
+                m.experiment_outputs.update((m.cb[t], self.data["cb"][t]) for
+                                            t in meas_time_points)
+                m.experiment_outputs.update((m.cc[t], self.data["cc"][t]) for
+                                            t in meas_time_points)
 
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
