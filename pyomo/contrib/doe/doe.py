@@ -1636,20 +1636,24 @@ class DesignOfExperiments:
         ----------
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
-        design_values : dict, optional
-            dict of lists, of the form {<var_name>: [<var_values>]}. Default: None. The
-            decision variables should be passed in the same order as the model's
-            `experiment_inputs`. If a particular decision variable is not to be changed,
-            it must be set to `None`. For example, design_values= {"x1": [1, 2, 3],
-            "x2": [None], "x3": [7, 8], "x4": [-10]}
+        design_values : dict,
+            dict of lists, of the form {<"var_name">: [<var_values>]}. Default: None.
+            The `design_values` should have the same key(s) as the `experiment_inputs`.
+            If one or more design variables are not to be changed, they do not need to
+            be passed in the `design_values` dictionary, but if they are passed in the
+            dictionary, then they must be a list of floats. For example, if our
+            experiment has 4 design variables (i.e., `experiment_inputs`): model.x1,
+            model.x2, model.x3, and model.x4, their values may be passed as,
+            design_values= {"x1": [1, 2, 3], "x3": [7], "x4": [-10, 20]}. In this case,
+            x2 is not be changed and will be fixed at the default value in the model.
         method : str, optional
             string to specify which method should be used. options are ``kaug`` and
             ``sequential`. Default: "sequential"
         change_one_design_at_a_time : bool, optional
-            If True, will generate a snake-zigzag pattern of the design values that
-            changes only one of the decision variables at a time. If False, will
-            generate a regular nested for loop that can change one to all the design
-            values at a time. Default: True
+            If True, will generate a snake-like zigzag pattern of the design values that
+            changes only one of the design variables at a time. If False, will
+            generate a regular nested for loop that can change from one to all the design
+            variables at a time. Default: True
         file_name : str, optional
             if provided, will save the results to a json file. Default: None
 
@@ -1667,11 +1671,14 @@ class DesignOfExperiments:
             - "total_points": total number of points in the factorial design
             - "success_count": number of successful runs
             - "failure_count": number of failed runs
+            - "FIM_all": list of all FIMs computed for each point in the factorial
+              design.
 
         Raises
         ------
         ValueError
-            If the design_values' keys do not match the model's experiment_inputs' keys.
+            If the design_values' keys is not a subset of the model's experiment_inputs'
+            keys or if the design_values are not provided as a dictionary of lists.
         """
 
         # Start timer
@@ -1685,25 +1692,29 @@ class DesignOfExperiments:
         ).clone()
         model = self.factorial_model
 
-        # Permute the inputs to be aligned with the experiment input indices
-        design_map = {
-            ind: (k[0].name, k[0])
-            for ind, k in enumerate(model.experiment_inputs.items())
-        }
+        if not design_values:
+            raise ValueError(
+                "design_values must be provided as a dictionary of lists "
+                "in the form {<'var_name'>: [<var_values>]}."
+            )
 
         # Check whether the design_ranges keys are in the experiment_inputs
         design_keys = set(design_values.keys())
         map_keys = set([k.name for k in model.experiment_inputs.keys()])
-
-        if design_keys != map_keys:
+        if not design_keys.issubset(map_keys):
             incorrect_given_keys = design_keys - map_keys
-            unmatched_map_keys = map_keys - design_keys
             raise ValueError(
-                f"design_values key(s): {incorrect_given_keys} are incorrect."
-                f"Please provide values for the following key(s): {unmatched_map_keys}."
+                f"design_values keys: {incorrect_given_keys} are incorrect."
+                f"The key should be from the following: {map_keys}."
             )
 
-        des_ranges = [design_values[k] for k in design_values.keys()]
+        # Get the design map keys that match the design_values keys
+        design_map_keys = [
+            k for k in model.experiment_inputs.keys() if k.name in design_values.keys()
+        ]
+        # This ensures that the order of the design_values keys matches the order of the
+        # design_map_keys so that design_point can be constructed correctly in the loop.
+        des_ranges = [design_values[k.name] for k in design_map_keys]
         if change_one_design_at_a_time:
             factorial_points = generate_snake_zigzag_pattern(*des_ranges)
         else:
@@ -1730,16 +1741,16 @@ class DesignOfExperiments:
         failure_count = 0
         total_points = len(factorial_points_list)
 
+        # save all the FIMs for each point in the factorial design
+        self.n_parameters = len(model.unknown_parameters)
+        FIM_all = np.zeros((total_points, self.n_parameters, self.n_parameters))
+
         time_set = []
         curr_point = 1  # Initial current point
         for design_point in factorial_points_list:
-            print(f"design_point: {design_point}")
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
-                if design_point[i] is not None:
-                    design_map[i][1].fix(design_point[i])
-                else:
-                    pass
+                design_map_keys[i].fix(design_point[i])
 
             # Timing and logging objects
             self.logger.info(f"=======Iteration Number: {curr_point} =======")
@@ -1750,9 +1761,6 @@ class DesignOfExperiments:
                 curr_point = success_count + failure_count + 1
                 self.logger.info(f"This is run {curr_point} out of {total_points}.")
                 self.compute_FIM(model=model, method=method)
-                print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-                print(model.pprint())
-                print("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
                 success_count += 1
                 # iteration time
                 iter_t = iter_timer.toc(msg=None)
@@ -1783,6 +1791,9 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
+            # Save FIM for the current design point
+            FIM_all[curr_point - 1, :, :] = FIM
+
             # Compute and record metrics on FIM
             det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
                 compute_FIM_metrics(FIM)
@@ -1806,8 +1817,10 @@ class DesignOfExperiments:
                 "total_points": total_points,
                 "success_counts": success_count,
                 "failure_counts": failure_count,
+                "FIM_all": FIM_all.tolist(),  # Save all FIMs
             }
         )
+
         self.factorial_results = factorial_results
 
         if file_name is not None:

@@ -115,7 +115,7 @@ def generate_snake_zigzag_pattern(*lists):
 
     Parameters
     ----------
-    lists: A variable number of 1D list arguments.
+    *lists: A variable number of 1D list arguments.
 
     Yields
     ------
