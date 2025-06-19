@@ -284,13 +284,13 @@ class Estimator(object):
         try:
             outputs = [k.name for k, v in model.experiment_outputs.items()]
         except:
-            RuntimeError(
+            raise RuntimeError(
                 'Experiment list model does not have suffix ' + '"experiment_outputs".'
             )
         try:
             params = [k.name for k, v in model.unknown_parameters.items()]
         except:
-            RuntimeError(
+            raise RuntimeError(
                 'Experiment list model does not have suffix ' + '"unknown_parameters".'
             )
 
