@@ -284,6 +284,20 @@ class SemiBatchExperiment(Experiment):
 
         m = self.model
 
+        m.experiment_outputs = Suffix(direction=Suffix.LOCAL)
+        m.experiment_outputs.update(
+            (m.Ca[t], self.data["Ca_meas"][f"{t}"]) for t in m.measT
+        )
+        m.experiment_outputs.update(
+            (m.Cb[t], self.data["Cb_meas"][f"{t}"]) for t in m.measT
+        )
+        m.experiment_outputs.update(
+            (m.Cc[t], self.data["Cc_meas"][f"{t}"]) for t in m.measT
+        )
+        m.experiment_outputs.update(
+            (m.Tr[t], self.data["Tr_meas"][f"{t}"]) for t in m.measT
+        )
+
         m.unknown_parameters = Suffix(direction=Suffix.LOCAL)
         m.unknown_parameters.update(
             (k, ComponentUID(k)) for k in [m.k1, m.k2, m.E1, m.E2]
