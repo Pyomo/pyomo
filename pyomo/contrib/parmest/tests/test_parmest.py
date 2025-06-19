@@ -800,6 +800,9 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
                 m = self.model
 
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update([(m.ca, None), (m.cb, None), (m.cc, None)])
+
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
