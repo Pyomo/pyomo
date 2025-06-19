@@ -11,6 +11,7 @@
 
 import enum
 import sys
+from pyomo.common import enums
 
 if sys.version_info[:2] >= (3, 11):
     strictEnum = {'boundary': enum.STRICT}
@@ -93,3 +94,8 @@ class SortComponents(enum.Flag, **strictEnum):
     @staticmethod
     def sort_indices(flag):
         return SortComponents.SORTED_INDICES in SortComponents(flag)
+
+
+class VarCollector(enums.IntEnum):
+    FromVarComponents = 1
+    FromExpressions = 2
