@@ -12,11 +12,15 @@
 import itertools
 import logging
 import math
+import multiprocessing
+import os
+import threading
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.dependencies import dill, dill_available
 
 from pyomo.core import (
     Block,
@@ -49,11 +53,6 @@ from pyomo.contrib.solver.common.base import LegacySolverWrapper
 from pyomo.repn import generate_standard_repn
 
 from weakref import ref as weakref_ref
-
-import multiprocessing
-import os
-import threading
-from pyomo.common.dependencies import dill, dill_available
 
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
