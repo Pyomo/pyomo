@@ -31,6 +31,7 @@ class SolverFactoryClass(Factory):
             class LegacySolver(LegacySolverWrapper, cls):
                 pass
 
+            LegacySolver.name = legacy_name
             LegacySolverFactory.register(legacy_name, doc + " (new interface)")(
                 LegacySolver
             )
