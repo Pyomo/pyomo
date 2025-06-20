@@ -506,6 +506,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
                 _thread_local.config_use_primal_bound = self._config.use_primal_bound
+                logger.info(f"Running {len(jobs)} jobs single-threaded.")
                 results = itertools.starmap(
                     _calc_M,
                     [
@@ -848,22 +849,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 NonNegativeIntegers, ['lb', 'ub']
             )
         return transBlock, new_block
-
-    def _get_all_var_objects(self, active_disjuncts):
-        # This is actually a general utility for getting all Vars that appear in
-        # active Disjuncts in a Disjunction.
-        seen = set()
-        for disj in active_disjuncts:
-            for constraint in disj.component_data_objects(
-                Constraint,
-                active=True,
-                sort=SortComponents.deterministic,
-                descend_into=Block,
-            ):
-                for var in EXPR.identify_variables(constraint.expr, include_fixed=True):
-                    if id(var) not in seen:
-                        seen.add(id(var))
-                        yield var
 
     def _warn_for_active_suffix(self, suffix, disjunct, active_disjuncts, Ms):
         if suffix.local_name == 'BigM':

@@ -13,6 +13,7 @@ from io import StringIO
 import logging
 from os.path import join, normpath
 import pickle
+import os
 
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
@@ -43,6 +44,7 @@ from pyomo.gdp.tests.common_tests import (
 )
 from pyomo.gdp.tests.models import make_indexed_equality_model
 from pyomo.repn import generate_standard_repn
+
 
 gurobi_available = (
     SolverFactory('gurobi').available(exception_flag=False)
@@ -334,7 +336,7 @@ class LinearModelDecisionTreeExample(CommonTests):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculated_Ms_correct(self):
         # Calculating all the Ms is expensive, so we just do it in this one test
-        # and then specify them for the others
+        # and then specify them for most of the others
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
         mbm.apply_to(m, reduce_bound_constraints=False)
@@ -905,6 +907,82 @@ class LinearModelDecisionTreeExample(CommonTests):
         self.check_traditionally_bigmed_constraints(
             m, mbm, {m.d1: (-1050, 1050), m.d2: (-2000, 1200), m.d3: (-4000, 4000)}
         )
+
+    # A set of tests identical to test_calculated_Ms_correct, except
+    # that we use each possible process spawning method for
+    # multiprocessing
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_calculated_Ms_spawn(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m, reduce_bound_constraints=False, threads=3, process_start_method='spawn'
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_calculated_Ms_singlethreaded(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, reduce_bound_constraints=False, threads=1)
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipIf(os.name == 'nt', "'forkserver' is not available on Windows")
+    def test_calculated_Ms_forkserver(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m,
+            reduce_bound_constraints=False,
+            threads=3,
+            process_start_method='forkserver',
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    @unittest.skipIf(os.name == 'nt', "'fork' is not available on Windows")
+    def test_calculated_Ms_fork(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m, reduce_bound_constraints=False, threads=3, process_start_method='fork'
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
+
+    # Make sure we don't choke on a LegacySolverWrapper
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_calculated_Ms_legacy_solver_wrapper(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(
+            m,
+            reduce_bound_constraints=False,
+            threads=3,
+            process_start_method='spawn',
+            solver=SolverFactory('gurobi_direct_v2'),
+        )
+
+        self.check_all_untightened_bounds_constraints(m, mbm)
+        self.check_linear_func_constraints(m, mbm)
+
+        self.assertStructuredAlmostEqual(mbm.get_all_M_values(m), self.get_Ms(m))
 
 
 @unittest.skipUnless(gurobi_available, "Gurobi is not available")
