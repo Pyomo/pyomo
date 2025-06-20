@@ -1054,12 +1054,15 @@ class EdgeCases(unittest.TestCase):
     )
     def test_calculate_Ms_infeasible_Disjunct_local_solver(self):
         m = self.make_infeasible_disjunct_model()
+        # When multiple exceptions are raised during a
+        # multiprocessing.Pool.map call, it is indeterminate which
+        # exception will be raised to the caller.
         with self.assertRaisesRegex(
             GDP_Error,
             r"Unsuccessful solve to calculate M value to "
-            r"relax constraint 'disjunction_disjuncts\[1\].constraint\[1\]' "
-            r"on Disjunct 'disjunction_disjuncts\[1\]' when "
-            r"Disjunct 'disjunction_disjuncts\[0\]' is selected.",
+            r"relax constraint 'disjunction_disjuncts\[\d+\].constraint\[\d+\]' "
+            r"on Disjunct 'disjunction_disjuncts\[\d+\]' when "
+            r"Disjunct 'disjunction_disjuncts\[\d+\]' is selected.",
         ):
             TransformationFactory('gdp.mbigm').apply_to(
                 m,

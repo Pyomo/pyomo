@@ -20,6 +20,7 @@ from pyomo.common.modeling import unique_component_name
 
 from pyomo.core import (
     Block,
+    ConcreteModel,
     Constraint,
     maximize,
     minimize,
@@ -43,6 +44,8 @@ from pyomo.gdp.plugins.bigm_mixin import (
 from pyomo.gdp.plugins.gdp_to_mip_transformation import GDP_to_MIP_Transformation
 from pyomo.gdp.util import _to_dict
 from pyomo.opt import SolverFactory, TerminationCondition
+from pyomo.contrib.solver.common.base import SolverBase as NewSolverBase
+from pyomo.contrib.solver.common.base import LegacySolverWrapper
 from pyomo.repn import generate_standard_repn
 
 from weakref import ref as weakref_ref
@@ -52,17 +55,6 @@ import os
 import threading
 from pyomo.common.dependencies import dill, dill_available
 
-# When using 'spawn' or 'forkserver', Python starts in a new environment
-# and executes only this file, so we need to manually ensure necessary
-# plugins are registered (even if the calling process has already
-# registered them).
-import pyomo.solvers.plugins
-import pyomo.opt.plugins
-import pyomo.repn.plugins
-
-pyomo.solvers.plugins.load()
-pyomo.opt.plugins.load()
-pyomo.repn.plugins.load()
 
 logger = logging.getLogger('pyomo.gdp.mbigm')
 
@@ -94,10 +86,15 @@ def Solver(val):
         return SolverFactory(val)
     if not hasattr(val, 'solve'):
         raise ValueError("Expected a string or solver object (with solve() method)")
+    if isinstance(val, NewSolverBase) and not isinstance(val, LegacySolverWrapper):
+        raise ValueError(
+            "Please pass an old-style solver object, using the "
+            "LegacySolverWrapper mechanism if necessary."
+        )
     return val
 
 
-def StartMethod(val):
+def ProcessStartMethod(val):
     if val in {'spawn', 'fork', 'forkserver', None}:
         return val
     else:
@@ -249,7 +246,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             description="Number of worker processes to use when estimating M values",
             doc="""
             If not specified, use up to the number of available cores, minus
-            one (but at least one). If set to zero, revert to single-threaded operation.
+            one. If set to one or less, do not spawn processes, and revert to
+            single-threaded operation.
             """,
         ),
     )
@@ -257,10 +255,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         'process_start_method',
         ConfigValue(
             default=None,
-            domain=StartMethod,
+            domain=ProcessStartMethod,
             description="Start method used for spawning processes during M calculation",
             doc="""
-            Options are 'fork', 'spawn', and 'forkserver'. See the Python
+            Options are 'fork', 'spawn', and 'forkserver', or None. See the Python
             multiprocessing documentation for a full description of each of these. When
             None is passed, we determine a reasonable default. On POSIX, the default is
             'fork', unless we detect that Python has multiple threads at the time the
@@ -268,7 +266,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             Windows, the default and only possible option is 'spawn'. Note that if
             'spawn' or 'forkserver' are selected, we depend on the `dill` module for
             pickling, and model instances must be pickleable using `dill`. This option
-            is ignored if `threads` is set to 0.
+            is ignored if `threads` is set to one or less.
             """,
         ),
     )
@@ -357,11 +355,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         self, instance, preprocessed_targets, arg_Ms, gdp_tree
     ):
         # We wish we could do this one Disjunction at a time, but we
-        # also want to calculate the Ms in parallel. So we do a slightly
-        # convoluted dance of iterating the Disjunctions to get a list
-        # of M calculation jobs, then calculating Ms multithreaded, then
-        # iterating Disjunctions again to actually transform the
-        # constraints.
+        # also want to calculate the Ms in parallel. So we first iterate
+        # the Disjunctions once to get a list of M calculation jobs,
+        # then we calculate the Ms in parallel, then we return to a
+        # single thread and iterate Disjunctions again to actually
+        # transform the constraints.
 
         # To-do list in form (constraint, other_disjunct, unsuccessful_message, is_upper)
         jobs = []
@@ -442,9 +440,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             threads = (
                 self._config.threads
                 if self._config.threads is not None
-                else max(1, len(os.sched_getaffinity(0)) - 1)
+                # It would be better to use len(os.sched_getaffinity(0)),
+                # but it is not available on all platforms.
+                else os.cpu_count() - 1
             )
-            if threads > 0:
+            if threads > 1:
                 method = (
                     self._config.process_start_method
                     if self._config.process_start_method is not None
@@ -455,8 +455,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
                 )
                 logger.info(
-                    f"Running {len(jobs)} jobs on {threads} "
-                    f"worker processes with method {method}."
+                    f"Running {len(jobs)} jobs on {threads} worker "
+                    f"processes with process start method {method}."
                 )
                 if method == 'spawn' or method == 'forkserver':
                     if not dill_available:
@@ -470,7 +470,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         initializer=_setup_spawn,
                         initargs=(
                             dill.dumps(instance),
-                            dill.dumps(self._config.solver),
+                            self._config.solver.name,
+                            self._config.solver.options,
                             self._config.use_primal_bound,
                         ),
                     )
@@ -504,6 +505,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             else:
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
+                _thread_local.config_use_primal_bound = self._config.use_primal_bound
                 results = itertools.starmap(
                     _calc_M,
                     [
@@ -928,12 +930,15 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
 # Things we call in subprocesses. These can't be member functions, or
 # else we'd have to pickle `self`, which is problematic.
-def _setup_spawn(model, solver, use_primal_bound):
+def _setup_spawn(model, solver_name, solver_options, use_primal_bound):
+    # When using 'spawn' or 'forkserver', Python starts in a new
+    # environment and executes only this file, so we need to manually
+    # ensure necessary plugins are registered (even if the main process
+    # has already registered them).
+    import pyomo.environ
+
     _thread_local.model = dill.loads(model)
-    solver_arg = dill.loads(solver)
-    # I'm not sure if this is necessary after it's been pickled, but
-    # let's be on the safe side
-    _thread_local.solver = SolverFactory(solver_arg.name, options=solver_arg.options)
+    _thread_local.solver = SolverFactory(solver_name, options=solver_options)
     _thread_local.config_use_primal_bound = use_primal_bound
 
 
@@ -956,8 +961,14 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
         is_upper,
     )
     results = solver.solve(scratch, tee=False, load_solutions=False, keepfiles=False)
-
-    if results.solver.termination_condition is TerminationCondition.infeasible:
+    termination_condition = results.solver.termination_condition
+    if is_upper:
+        incumbent = results.problem.lower_bound
+        bound = results.problem.upper_bound
+    else:
+        incumbent = results.problem.upper_bound
+        bound = results.problem.lower_bound
+    if termination_condition is TerminationCondition.infeasible:
         # [2/18/24]: TODO: After the solver rewrite is complete, we will not
         # need this check since we can actually determine from the
         # termination condition whether or not the solver proved
@@ -977,7 +988,7 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
             # this so that we check for 'proven_infeasible'
             # and then we can abandon this hack
             raise GDP_Error(unsuccessful_message)
-    elif results.solver.termination_condition is not TerminationCondition.optimal:
+    elif termination_condition is not TerminationCondition.optimal:
         raise GDP_Error(unsuccessful_message)
     else:
         # NOTE: This transformation can be made faster by allowing the
@@ -989,10 +1000,7 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
         # but it's the best a local solver like ipopt can do, so we
         # allow it to be used by setting an option.
         if not _thread_local.config_use_primal_bound:
-            if is_upper:
-                M = results.problem.upper_bound
-            else:
-                M = results.problem.lower_bound
+            M = bound
             if not math.isfinite(M):
                 raise GDP_Error(
                     "Subproblem solved to optimality, but no finite dual bound was "
@@ -1003,10 +1011,7 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
                     "not give valid values for M in general."
                 )
         else:
-            if is_upper:
-                M = results.problem.lower_bound
-            else:
-                M = results.problem.upper_bound
+            M = incumbent
             if not math.isfinite(M):
                 # Solved to optimality, but we did not find an incumbent
                 # objective value. Try again by actually loading the
@@ -1018,20 +1023,19 @@ def _calc_M(constraint_name, other_disjunct_name, unsuccessful_message, is_upper
                         raise ValueError()
                 except Exception:
                     raise GDP_Error(
-                        "`use_primal_bound` is enabled, but could not find a finite"
+                        "`use_primal_bound` is enabled, but could not find a finite "
                         "objective value after optimal solve."
                     )
         return (M, False)
 
 
 def _get_scratch_block(constraint, other_disjunct, is_upper):
-    # Should this be a Block or a ConcreteModel?
-    scratch = Block()
+    scratch = ConcreteModel()
     if is_upper:
         scratch.obj = Objective(expr=constraint.body - constraint.upper, sense=maximize)
     else:
         scratch.obj = Objective(expr=constraint.body - constraint.lower, sense=minimize)
-    # Create a Block component (reference) that actually points to a
+    # Create a Block component (via Reference) that actually points to a
     # DisjunctData, as we want the writer to write it as if it were an
     # ordinary Block rather than getting any special
     # handling. DisjunctData inherits BlockData, so this should be
@@ -1050,5 +1054,4 @@ def _get_scratch_block(constraint, other_disjunct, is_upper):
                 seen.add(id(var))
                 ref = Reference(var)
                 scratch.add_component(unique_component_name(scratch, var.name), ref)
-    scratch.construct()
     return scratch
