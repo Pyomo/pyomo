@@ -43,23 +43,27 @@ from pyomo.common.dependencies import attempt_import
 import numpy as np
 import struct
 
+
 def _gams_importer():
     try:
         import gams.core.gdx as gdx
+
         return gdx
     except ImportError:
         try:
             # fall back to the pre-GAMS-45.0 API
             import gdxcc
+
             return gdxcc
         except:
             # suppress the error from the old API and reraise the current API import error
             pass
         raise
 
-gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer) 
 
-logger = logging.getLogger('pyomo.solvers')
+gdxcc, gdxcc_available = attempt_import("gdxcc", importer=_gams_importer)
+
+logger = logging.getLogger("pyomo.solvers")
 
 
 class _GAMSSolver(object):
@@ -110,7 +114,7 @@ class _GAMSSolver(object):
             istr = eval(istr)
         tokens = shlex.split(istr)
         for token in tokens:
-            index = token.find('=')
+            index = token.find("=")
             if index == -1:
                 raise ValueError(
                     "Solver options must have the form option=value: '%s'" % istr
@@ -148,7 +152,7 @@ class _GAMSSolver(object):
         pass
 
 
-@SolverFactory.register('gams', doc='The GAMS modeling language')
+@SolverFactory.register("gams", doc="The GAMS modeling language")
 class GAMSSolver(_GAMSSolver):
     """
     A generic interface to GAMS solvers.
@@ -161,21 +165,21 @@ class GAMSSolver(_GAMSSolver):
     """
 
     def __new__(cls, *args, **kwds):
-        mode = kwds.pop('solver_io', 'shell')
+        mode = kwds.pop("solver_io", "shell")
         if mode is None:
-            mode = 'shell'
+            mode = "shell"
 
-        if mode == 'direct' or mode == 'python':
-            return SolverFactory('_gams_direct', **kwds)
-        if mode == 'shell' or mode == 'gms':
-            return SolverFactory('_gams_shell', **kwds)
+        if mode == "direct" or mode == "python":
+            return SolverFactory("_gams_direct", **kwds)
+        if mode == "shell" or mode == "gms":
+            return SolverFactory("_gams_shell", **kwds)
         else:
-            logger.error('Unknown IO type: %s' % mode)
+            logger.error("Unknown IO type: %s" % mode)
             return
 
 
 @SolverFactory.register(
-    '_gams_direct', doc='Direct python interface to the GAMS modeling language'
+    "_gams_direct", doc="Direct python interface to the GAMS modeling language"
 )
 class GAMSDirect(_GAMSSolver):
     """
@@ -211,11 +215,11 @@ class GAMSDirect(_GAMSSolver):
     def _get_version(self):
         """Returns a tuple describing the solver executable version."""
         if not self.available(exception_flag=False):
-            return _extract_version('')
+            return _extract_version("")
         from gams import GamsWorkspace
 
         workspace = GamsWorkspace()
-        version = tuple(int(i) for i in workspace._version.split('.')[:4])
+        version = tuple(int(i) for i in workspace._version.split(".")[:4])
         while len(version) < 4:
             version += (0,)
         return version
@@ -274,7 +278,7 @@ class GAMSDirect(_GAMSSolver):
 
         if len(args) != 1:
             raise ValueError(
-                'Exactly one model must be passed to solve method of GAMSSolver.'
+                "Exactly one model must be passed to solve method of GAMSSolver."
             )
         model = args[0]
 
@@ -360,7 +364,7 @@ class GAMSDirect(_GAMSSolver):
             try:
                 if e.rc == 3:
                     # Execution Error
-                    check_expr_evaluation(model, symbolMap, 'direct')
+                    check_expr_evaluation(model, symbolMap, "direct")
             finally:
                 # Always name working directory or delete files,
                 # regardless of any errors.
@@ -412,12 +416,12 @@ class GAMSDirect(_GAMSSolver):
                     comp,
                 ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
             )
-        extract_dual = 'dual' in model_suffixes
-        extract_rc = 'rc' in model_suffixes
+        extract_dual = "dual" in model_suffixes
+        extract_rc = "rc" in model_suffixes
 
         results = SolverResults()
         results.problem.name = os.path.join(
-            workspace.working_directory, t1.name + '.gms'
+            workspace.working_directory, t1.name + ".gms"
         )
         results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
@@ -435,7 +439,7 @@ class GAMSDirect(_GAMSSolver):
         )
         results.problem.number_of_objectives = 1  # required by GAMS writer
         obj = list(model.component_data_objects(Objective, active=True))
-        assert len(obj) == 1, 'Only one objective is allowed.'
+        assert len(obj) == 1, "Only one objective is allowed."
         obj = obj[0]
         objctvval = t1.out_db["OBJVAL"].find_record().value
         results.problem.sense = obj.sense
@@ -553,12 +557,12 @@ class GAMSDirect(_GAMSSolver):
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is IObjective:
-                    soln.objective[sym] = {'Value': objctvval}
+                    soln.objective[sym] = {"Value": objctvval}
                 if obj.ctype is not IVariable:
                     continue
             else:
                 if obj.parent_component().ctype is Objective:
-                    soln.objective[sym] = {'Value': objctvval}
+                    soln.objective[sym] = {"Value": objctvval}
                 if obj.parent_component().ctype is not Var:
                     continue
             rec = t1.out_db[sym].find_record()
@@ -567,7 +571,7 @@ class GAMSDirect(_GAMSSolver):
             if extract_rc and not math.isnan(rec.marginal):
                 # Do not set marginals to nan
                 # model.rc[obj] = rec.marginal
-                soln.variable[sym]['rc'] = rec.marginal
+                soln.variable[sym]["rc"] = rec.marginal
 
         if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
@@ -579,7 +583,7 @@ class GAMSDirect(_GAMSSolver):
                     rec = t1.out_db[sym].find_record()
                     if not math.isnan(rec.marginal):
                         # model.dual[c] = rec.marginal
-                        soln.constraint[sym] = {'dual': rec.marginal}
+                        soln.constraint[sym] = {"dual": rec.marginal}
                     else:
                         # Solver didn't provide marginals,
                         # nothing else to do here
@@ -590,14 +594,14 @@ class GAMSDirect(_GAMSSolver):
                     # Negate marginal for _lo equations
                     marg = 0
                     if c.lower is not None:
-                        rec_lo = t1.out_db[sym + '_lo'].find_record()
+                        rec_lo = t1.out_db[sym + "_lo"].find_record()
                         marg -= rec_lo.marginal
                     if c.upper is not None:
-                        rec_hi = t1.out_db[sym + '_hi'].find_record()
+                        rec_hi = t1.out_db[sym + "_hi"].find_record()
                         marg += rec_hi.marginal
                     if not math.isnan(marg):
                         # model.dual[c] = marg
-                        soln.constraint[sym] = {'dual': marg}
+                        soln.constraint[sym] = {"dual": marg}
                     else:
                         # Solver didn't provide marginals,
                         # nothing else to do here
@@ -624,9 +628,9 @@ class GAMSDirect(_GAMSSolver):
                 results.solution(0).symbol_map = getattr(model, "._symbol_maps")[
                     results._smap_id
                 ]
-                results.solution(0).default_variable_value = (
-                    self._default_variable_value
-                )
+                results.solution(
+                    0
+                ).default_variable_value = self._default_variable_value
                 if load_solutions:
                     model.load_solution(results.solution(0))
             else:
@@ -663,7 +667,7 @@ class GAMSDirect(_GAMSSolver):
 
 
 @SolverFactory.register(
-    '_gams_shell', doc='Shell interface to the GAMS modeling language'
+    "_gams_shell", doc="Shell interface to the GAMS modeling language"
 )
 class GAMSShell(_GAMSSolver):
     """A generic shell interface to GAMS solvers."""
@@ -699,11 +703,11 @@ class GAMSShell(_GAMSSolver):
             return False
         tmpdir = mkdtemp()
         try:
-            test = os.path.join(tmpdir, 'test.gms')
-            with open(test, 'w') as FILE:
+            test = os.path.join(tmpdir, "test.gms")
+            with open(test, "w") as FILE:
                 FILE.write(self._simple_model(n))
             result = subprocess.run(
-                [solver_exec, test, "curdir=" + tmpdir, 'lo=0'],
+                [solver_exec, test, "curdir=" + tmpdir, "lo=0"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -732,7 +736,7 @@ class GAMSShell(_GAMSSolver):
         solver_exec = self.executable()
 
         if solver_exec is None:
-            return _extract_version('')
+            return _extract_version("")
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
@@ -747,11 +751,11 @@ class GAMSShell(_GAMSSolver):
     @staticmethod
     def _parse_special_values(value):
         if value == 1.0e300 or value == 2.0e300:
-            return float('nan')
+            return float("nan")
         if value == 3.0e300:
-            return float('inf')
+            return float("inf")
         if value == 4.0e300:
-            return -float('inf')
+            return -float("inf")
         if value == 5.0e300:
             return sys.float_info.epsilon
         return value
@@ -816,7 +820,7 @@ class GAMSShell(_GAMSSolver):
 
         if len(args) != 1:
             raise ValueError(
-                'Exactly one model must be passed to solve method of GAMSSolver.'
+                "Exactly one model must be passed to solve method of GAMSSolver."
             )
         model = args[0]
 
@@ -873,9 +877,9 @@ class GAMSShell(_GAMSSolver):
 
         put_results = "results"
         io_options["put_results"] = put_results
-        io_options.setdefault("put_results_format", 'gdx' if gdxcc_available else 'dat')
+        io_options.setdefault("put_results_format", "gdx" if gdxcc_available else "dat")
 
-        if io_options['put_results_format'] == 'gdx':
+        if io_options["put_results_format"] == "gdx":
             results_filename = os.path.join(tmpdir, "GAMS_MODEL_p.gdx")
             statresults_filename = os.path.join(tmpdir, "%s_s.gdx" % (put_results,))
         else:
@@ -944,7 +948,7 @@ class GAMSShell(_GAMSSolver):
                 if rc == 3:
                     # Execution Error
                     # Run check_expr_evaluation, which errors if necessary
-                    check_expr_evaluation(model, symbolMap, 'shell')
+                    check_expr_evaluation(model, symbolMap, "shell")
                 # If nothing was raised, or for all other cases, raise this
                 logger.error(
                     "GAMS encountered an error during solve. "
@@ -952,14 +956,14 @@ class GAMSShell(_GAMSSolver):
                 )
                 logger.error(txt)
                 if os.path.exists(lst_filename):
-                    with open(lst_filename, 'r') as FILE:
+                    with open(lst_filename, "r") as FILE:
                         logger.error("GAMS Listing file:\n\n%s" % (FILE.read(),))
                 raise RuntimeError(
                     "GAMS encountered an error during solve. "
                     "Check listing file for details."
                 )
 
-            if io_options['put_results_format'] == 'gdx':
+            if io_options["put_results_format"] == "gdx":
                 model_soln, stat_vars = self._parse_gdx_results(
                     results_filename, statresults_filename
                 )
@@ -1004,8 +1008,8 @@ class GAMSShell(_GAMSSolver):
                     comp,
                 ) in pyomo.core.base.suffix.active_import_suffix_generator(model)
             )
-        extract_dual = 'dual' in model_suffixes
-        extract_rc = 'rc' in model_suffixes
+        extract_dual = "dual" in model_suffixes
+        extract_rc = "rc" in model_suffixes
 
         results = SolverResults()
         results.problem.name = output_filename
@@ -1022,7 +1026,7 @@ class GAMSShell(_GAMSSolver):
         )
         results.problem.number_of_objectives = 1  # required by GAMS writer
         obj = list(model.component_data_objects(Objective, active=True))
-        assert len(obj) == 1, 'Only one objective is allowed.'
+        assert len(obj) == 1, "Only one objective is allowed."
         obj = obj[0]
         objctvval = stat_vars["OBJVAL"]
         results.problem.sense = obj.sense
@@ -1141,25 +1145,25 @@ class GAMSShell(_GAMSSolver):
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is IObjective:
-                    soln.objective[sym] = {'Value': objctvval}
+                    soln.objective[sym] = {"Value": objctvval}
                 if obj.ctype is not IVariable:
                     continue
             else:
                 if obj.parent_component().ctype is Objective:
-                    soln.objective[sym] = {'Value': objctvval}
+                    soln.objective[sym] = {"Value": objctvval}
                 if obj.parent_component().ctype is not Var:
                     continue
             try:
                 rec = model_soln[sym]
             except KeyError:
                 # no solution returned
-                rec = (float('nan'), float('nan'))
+                rec = (float("nan"), float("nan"))
             # obj.value = float(rec[0])
             soln.variable[sym] = {"Value": float(rec[0])}
             if extract_rc and has_rc_info:
                 try:
                     # model.rc[obj] = float(rec[1])
-                    soln.variable[sym]['rc'] = float(rec[1])
+                    soln.variable[sym]["rc"] = float(rec[1])
                 except ValueError:
                     # Solver didn't provide marginals
                     has_rc_info = False
@@ -1175,10 +1179,10 @@ class GAMSShell(_GAMSSolver):
                         rec = model_soln[sym]
                     except KeyError:
                         # no solution returned
-                        rec = (float('nan'), float('nan'))
+                        rec = (float("nan"), float("nan"))
                     try:
                         # model.dual[c] = float(rec[1])
-                        soln.constraint[sym] = {'dual': float(rec[1])}
+                        soln.constraint[sym] = {"dual": float(rec[1])}
                     except ValueError:
                         # Solver didn't provide marginals
                         # nothing else to do here
@@ -1190,29 +1194,29 @@ class GAMSShell(_GAMSSolver):
                     marg = 0
                     if c.lower is not None:
                         try:
-                            rec_lo = model_soln[sym + '_lo']
+                            rec_lo = model_soln[sym + "_lo"]
                         except KeyError:
                             # no solution returned
-                            rec_lo = (float('nan'), float('nan'))
+                            rec_lo = (float("nan"), float("nan"))
                         try:
                             marg -= float(rec_lo[1])
                         except ValueError:
                             # Solver didn't provide marginals
-                            marg = float('nan')
+                            marg = float("nan")
                     if c.upper is not None:
                         try:
-                            rec_hi = model_soln[sym + '_hi']
+                            rec_hi = model_soln[sym + "_hi"]
                         except KeyError:
                             # no solution returned
-                            rec_hi = (float('nan'), float('nan'))
+                            rec_hi = (float("nan"), float("nan"))
                         try:
                             marg += float(rec_hi[1])
                         except ValueError:
                             # Solver didn't provide marginals
-                            marg = float('nan')
+                            marg = float("nan")
                     if not math.isnan(marg):
                         # model.dual[c] = marg
-                        soln.constraint[sym] = {'dual': marg}
+                        soln.constraint[sym] = {"dual": marg}
                     else:
                         # Solver didn't provide marginals
                         # nothing else to do here
@@ -1231,9 +1235,9 @@ class GAMSShell(_GAMSSolver):
                 results.solution(0).symbol_map = getattr(model, "._symbol_maps")[
                     results._smap_id
                 ]
-                results.solution(0).default_variable_value = (
-                    self._default_variable_value
-                )
+                results.solution(
+                    0
+                ).default_variable_value = self._default_variable_value
                 if load_solutions:
                     model.load_solution(results.solution(0))
             else:
@@ -1272,15 +1276,15 @@ class GAMSShell(_GAMSSolver):
         model_soln = dict()
         stat_vars = dict.fromkeys(
             [
-                'MODELSTAT',
-                'SOLVESTAT',
-                'OBJEST',
-                'OBJVAL',
-                'NUMVAR',
-                'NUMEQU',
-                'NUMDVAR',
-                'NUMNZ',
-                'ETSOLVE',
+                "MODELSTAT",
+                "SOLVESTAT",
+                "OBJEST",
+                "OBJVAL",
+                "NUMVAR",
+                "NUMEQU",
+                "NUMDVAR",
+                "NUMNZ",
+                "ETSOLVE",
             ]
         )
 
@@ -1301,7 +1305,9 @@ class GAMSShell(_GAMSSolver):
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
-            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
             gdxcc.gdxSetSpecialValues(pgdx, specVals)
 
             i = 0
@@ -1324,7 +1330,7 @@ class GAMSShell(_GAMSSolver):
                 if not ret[0] or len(ret[2]) == 0:
                     raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
 
-                if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
+                if stat in ("OBJEST", "OBJVAL", "ETSOLVE"):
                     stat_vars[stat] = ret[2][0]
                 else:
                     stat_vars[stat] = int(ret[2][0])
@@ -1344,7 +1350,9 @@ class GAMSShell(_GAMSSolver):
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
-            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
             gdxcc.gdxSetSpecialValues(pgdx, specVals)
 
             i = 0
@@ -1374,7 +1382,7 @@ class GAMSShell(_GAMSSolver):
         return model_soln, stat_vars
 
     def _parse_dat_results(self, results_filename, statresults_filename):
-        with open(statresults_filename, 'r') as statresults_file:
+        with open(statresults_filename, "r") as statresults_file:
             statresults_text = statresults_file.read()
 
         stat_vars = dict()
@@ -1385,9 +1393,9 @@ class GAMSShell(_GAMSSolver):
                 stat_vars[items[0]] = float(items[1])
             except ValueError:
                 # GAMS printed NA, just make it nan
-                stat_vars[items[0]] = float('nan')
+                stat_vars[items[0]] = float("nan")
 
-        with open(results_filename, 'r') as results_file:
+        with open(results_filename, "r") as results_file:
             results_text = results_file.read()
 
         model_soln = dict()
@@ -1421,7 +1429,7 @@ class OutputStream:
     def __enter__(self):
         """Enter context of output stream and open logfile if given."""
         if self.logfile is not None:
-            self.logfile_buffer = open(self.logfile, 'a')
+            self.logfile_buffer = open(self.logfile, "a")
         return self
 
     def __exit__(self, *args, **kwargs):
@@ -1486,7 +1494,7 @@ def check_expr(expr, name, solver_io):
             "Ensure variable values do not violate any domains, "
             "and use the warmstart=True keyword to solve()." % name
         )
-        if solver_io == 'shell':
+        if solver_io == "shell":
             # For shell, there is no previous exception to worry about
             # overwriting, so raise the ValueError.
             # But for direct, the GamsExceptionExecution will be raised.
@@ -1497,7 +1505,7 @@ def file_removal_gams_direct(tmpdir, newdir):
     if newdir:
         shutil.rmtree(tmpdir)
     else:
-        os.remove(os.path.join(tmpdir, '_gams_py_gjo0.gms'))
-        os.remove(os.path.join(tmpdir, '_gams_py_gjo0.lst'))
-        os.remove(os.path.join(tmpdir, '_gams_py_gdb0.gdx'))
+        os.remove(os.path.join(tmpdir, "_gams_py_gjo0.gms"))
+        os.remove(os.path.join(tmpdir, "_gams_py_gjo0.lst"))
+        os.remove(os.path.join(tmpdir, "_gams_py_gdb0.gdx"))
         # .pf file is not made when DebugLevel is Off
