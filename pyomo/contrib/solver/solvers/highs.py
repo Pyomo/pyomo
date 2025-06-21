@@ -586,7 +586,7 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             results.termination_condition = TerminationCondition.iterationLimit
         elif status == getattr(highspy.HighsModelStatus, "kSolutionLimit", NOTSET):
             # kSolutionLimit was introduced in HiGHS v1.5.3 for MIP-related limits
-            results.termination_condition = TerminationCondition.maxIterations
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status == highspy.HighsModelStatus.kUnknown:
             results.termination_condition = TerminationCondition.unknown
         else:
