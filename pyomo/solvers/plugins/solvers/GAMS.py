@@ -41,7 +41,21 @@ from pyomo.opt.results import (
 
 from pyomo.common.dependencies import attempt_import
 
-gdxcc, gdxcc_available = attempt_import('gdxcc')
+def _gams_importer():
+    try:
+        import gams.core.gdx as gdxAdd
+        return gdx
+    except ImportError:
+        try:
+            # fall back to the pre-GAMS-45.0 API
+            import gdxcc
+            return gdxcc
+        except:
+            # suppress the error from the old API and reraise the current API import error
+            pass
+        raise
+
+gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
 
 logger = logging.getLogger('pyomo.solvers')
 
