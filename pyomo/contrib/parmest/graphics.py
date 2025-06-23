@@ -287,7 +287,6 @@ def pairwise_plot(
     if seed is not None:
         np.random.seed(seed)
 
-
     # If theta_values is a tuple containing (mean, cov, n), create a DataFrame of values
     if isinstance(theta_values, tuple):
         assert len(theta_values) == 3
@@ -536,10 +535,9 @@ def fit_mvn_dist(theta_values, seed=None):
         np.random.seed(seed)
 
     dist = stats.multivariate_normal(
-        theta_values.mean(), theta_values.cov(), allow_singular=True,
-        seed=seed
+        theta_values.mean(), theta_values.cov(), allow_singular=True, seed=seed
     )
-    
+
     return dist
 
 

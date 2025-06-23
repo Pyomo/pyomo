@@ -36,8 +36,10 @@ SET_GLOBAL_SEED = True
 
 if SET_GLOBAL_SEED:
     # Set the global seed for reproducibility
-    seed= 524
+    seed = 524
     np.random.seed(seed)  # Set seed for reproducibility
+
+
 @unittest.skipIf(
     not parmest.parmest_available,
     "Cannot test parmest: required dependencies are missing",
@@ -97,7 +99,9 @@ class TestRooneyBiegler(unittest.TestCase):
         objval, thetavals = self.pest.theta_est()
 
         num_bootstraps = 10
-        theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True, seed=seed)
+        theta_est = self.pest.theta_est_bootstrap(
+            num_bootstraps, return_samples=True, seed=seed
+        )
 
         num_samples = theta_est["samples"].apply(len)
         self.assertEqual(len(theta_est.index), 10)
@@ -115,7 +119,9 @@ class TestRooneyBiegler(unittest.TestCase):
 
         graphics.pairwise_plot(theta_est, seed=seed)
         graphics.pairwise_plot(theta_est, thetavals, seed=seed)
-        graphics.pairwise_plot(theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"], seed=seed)
+        graphics.pairwise_plot(
+            theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"], seed=seed
+        )
 
     @unittest.skipIf(
         not graphics.imports_available, "parmest.graphics imports are unavailable"

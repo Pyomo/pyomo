@@ -43,8 +43,7 @@ def main():
     print(bootstrap_theta)
 
     # Confidence region test
-    CR = pest.confidence_region_test(bootstrap_theta, "MVN", [0.5, 0.75, 1.0], 
-                                     seed=524)
+    CR = pest.confidence_region_test(bootstrap_theta, "MVN", [0.5, 0.75, 1.0], seed=524)
     print(CR)
 
 
