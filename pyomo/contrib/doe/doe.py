@@ -45,7 +45,13 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
-from pyomo.contrib.doe.utils import generate_snake_zigzag_pattern
+from pyomo.contrib.doe.utils import (
+    generate_snake_zigzag_pattern,
+)  # , compute_FIM_metrics
+
+# utils_updated.py is the utils.py from my open PR # 3525.
+# When that PR is merged, compute_FIM_metrics will be imported from utils.py and this
+# import will be removed.
 from pyomo.contrib.doe.utils_updated import compute_FIM_metrics
 
 from pyomo.opt import SolverStatus
@@ -1637,23 +1643,25 @@ class DesignOfExperiments:
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
         design_values : dict,
-            dict of lists, of the form {<"var_name">: [<var_values>]}. Default: None.
-            The `design_values` should have the same key(s) as the `experiment_inputs`.
-            If one or more design variables are not to be changed, they do not need to
-            be passed in the `design_values` dictionary, but if they are passed in the
-            dictionary, then they must be a list of floats. For example, if our
-            experiment has 4 design variables (i.e., `experiment_inputs`): model.x1,
-            model.x2, model.x3, and model.x4, their values may be passed as,
-            design_values= {"x1": [1, 2, 3], "x3": [7], "x4": [-10, 20]}. In this case,
-            x2 is not be changed and will be fixed at the default value in the model.
+            dict of lists, of the form {"var_name": [var_values]}. Default: None.
+            The `design_values` should have the key(s) passed as strings that is a
+            subset of the `experiment_inputs`. If one or more design variables are not
+            to be changed, then they should not be passed in the `design_values`
+            dictionary, but if they are passed in the dictionary, then they must be a
+            list of floats. For example, if our experiment has 4 design variables
+            (i.e., `experiment_inputs`): model.x1, model.x2, model.x3, and model.x4,
+            their values may be passed as, design_values= {"x1": [1, 2, 3], "x3": [7],
+            "x4": [-10, 20]}. In this case, x2 will not be changed and will be fixed at
+            the value in the model.
         method : str, optional
             string to specify which method should be used. options are ``kaug`` and
             ``sequential`. Default: "sequential"
         change_one_design_at_a_time : bool, optional
-            If True, will generate a snake-like zigzag pattern of the design values that
-            changes only one of the design variables at a time. If False, will
-            generate a regular nested for loop that can change from one to all the design
-            variables at a time. Default: True
+            If True, will generate a snake-like zigzag combination of the design values
+            thatchanges only one of the design variables at a time. This combination
+            may help with the convergence in some scenarios. If False, will
+            generate a regular nested for loop that can change from one to all the
+            design variables at a time. Default: True
         file_name : str, optional
             if provided, will save the results to a json file. Default: None
 
@@ -1677,8 +1685,8 @@ class DesignOfExperiments:
         Raises
         ------
         ValueError
-            If the design_values' keys is not a subset of the model's experiment_inputs'
-            keys or if the design_values are not provided as a dictionary of lists.
+            If the design_values' keys are not a subset of the model's
+            `experiment_inputs` keys or if the design_values are not provided.
         """
 
         # Start timer
@@ -1703,9 +1711,10 @@ class DesignOfExperiments:
         map_keys = set([k.name for k in model.experiment_inputs.keys()])
         if not design_keys.issubset(map_keys):
             incorrect_given_keys = design_keys - map_keys
+            suggested_keys = map_keys - design_keys
             raise ValueError(
                 f"design_values keys: {incorrect_given_keys} are incorrect."
-                f"The key should be from the following: {map_keys}."
+                f"The keys should be from the following keys: {suggested_keys}."
             )
 
         # Get the design map keys that match the design_values keys
@@ -1823,9 +1832,10 @@ class DesignOfExperiments:
 
         self.factorial_results = factorial_results
 
+        # Save the results to a json file based on the file_name provided
         if file_name is not None:
             with open(file_name + ".json", "w") as f:
-                json.dump(self.factorial_results, f, indent=4)  # Save results to file
+                json.dump(self.factorial_results, f, indent=4)
                 self.logger.info(f"Results saved to {file_name}.json.")
 
         return self.factorial_results

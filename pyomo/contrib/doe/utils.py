@@ -106,16 +106,11 @@ def generate_snake_zigzag_pattern(*lists):
     """
     Generates a multi-dimensional zigzag pattern for an arbitrary number of lists.
     This pattern is useful for generating patterns for sensitivity analysis when we want
-    to change one variable at a time.
-
-    This function uses recursion and acts as a generator. The direction of
-    iteration for each list is determined by the sum of the indices from the
-    preceding lists. If the sum is even, the list is iterated forwards;
-    if it's odd, the list is iterated in reverse.
+    to change one variable at a time. This function uses recursion and acts as a generator.
 
     Parameters
     ----------
-    *lists: A variable number of 1D list arguments.
+    *lists: A variable number of 1D arraylike arguments.
 
     Yields
     ------
