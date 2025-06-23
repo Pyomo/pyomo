@@ -73,9 +73,8 @@ elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
         """
         if logger.manager.disable >= _DEBUG:
             return False
-        _level = logger.getEffectiveLevel()
         # Filter out NOTSET and higher levels
-        return _NOTSET < _level <= _DEBUG
+        return _NOTSET < logger.getEffectiveLevel() <= _DEBUG
 
 elif sys.version_info[:3] < (3, 13, 4):
     # This is inefficient (it indirectly checks effective level twice),
