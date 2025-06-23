@@ -12,81 +12,85 @@
 ### Pyomo master for AMPL Bender's example, available
 ### from http://www.ampl.com/NEW/LOOP2/stoch2.mod
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel(name="Master")
+model = pyo.AbstractModel(name="Master")
 
 ##############################################################################
 
-model.NUMSCEN = Param(within=PositiveIntegers)
+model.NUMSCEN = pyo.Param(within=pyo.PositiveIntegers)
 
-model.SCEN = RangeSet(model.NUMSCEN)
+model.SCEN = pyo.RangeSet(model.NUMSCEN)
 
 # products
-model.PROD = Set()
+model.PROD = pyo.Set()
 
 # number of weeks
-model.T = Param(within=PositiveIntegers)
+model.T = pyo.Param(within=pyo.PositiveIntegers)
 
 # derived set containing all valid week indices and subsets of interest.
-model.WEEKS = RangeSet(model.T)
+model.WEEKS = pyo.RangeSet(model.T)
 
-model.TWOPLUSWEEKS = RangeSet(2, model.T)
+model.TWOPLUSWEEKS = pyo.RangeSet(2, model.T)
 
 # tons per hour produced
-model.rate = Param(model.PROD, within=PositiveReals)
+model.rate = pyo.Param(model.PROD, within=pyo.PositiveReals)
 
 # hours available in week
-model.avail = Param(model.WEEKS, within=NonNegativeReals)
+model.avail = pyo.Param(model.WEEKS, within=pyo.NonNegativeReals)
 
 # limit on tons sold in week
-model.market = Param(model.PROD, model.WEEKS, within=NonNegativeReals)
+model.market = pyo.Param(model.PROD, model.WEEKS, within=pyo.NonNegativeReals)
 
 # cost per ton produced
-model.prodcost = Param(model.PROD, within=NonNegativeReals)
+model.prodcost = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 
 # carrying cost/ton of inventory
-model.invcost = Param(model.PROD, within=NonNegativeReals)
+model.invcost = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 
 # initial inventory
-model.inv0 = Param(model.PROD, within=NonNegativeReals)
+model.inv0 = pyo.Param(model.PROD, within=pyo.NonNegativeReals)
 
 # projected revenue/ton, per scenario.
-model.revenue = Param(model.PROD, model.WEEKS, model.SCEN, within=NonNegativeReals)
+model.revenue = pyo.Param(
+    model.PROD, model.WEEKS, model.SCEN, within=pyo.NonNegativeReals
+)
 
 
 def prob_validator(model, value, s):
     return (value >= 0) and (value <= 1.0)
 
 
-model.prob = Param(model.SCEN, validate=prob_validator)
+model.prob = pyo.Param(model.SCEN, validate=prob_validator)
 
 ##############################################################################
 
-model.Make1 = Var(model.PROD, within=NonNegativeReals)
+model.Make1 = pyo.Var(model.PROD, within=pyo.NonNegativeReals)
 
-model.Inv1 = Var(model.PROD, within=NonNegativeReals)
+model.Inv1 = pyo.Var(model.PROD, within=pyo.NonNegativeReals)
 
 
 def sell_bounds(model, p):
     return (0, model.market[p, 1])
 
 
-model.Sell1 = Var(model.PROD, within=NonNegativeReals, bounds=sell_bounds)
+model.Sell1 = pyo.Var(model.PROD, within=pyo.NonNegativeReals, bounds=sell_bounds)
 
-model.Min_Stage2_Profit = Var(within=NonNegativeReals)
+model.Min_Stage2_Profit = pyo.Var(within=pyo.NonNegativeReals)
 
 ##############################################################################
 
-model.CUTS = Set(within=PositiveIntegers, ordered=True)
+model.CUTS = pyo.Set(within=pyo.PositiveIntegers, ordered=True)
 
-model.time_price = Param(
+model.time_price = pyo.Param(
     model.TWOPLUSWEEKS, model.SCEN, model.CUTS, default=0.0, mutable=True
 )
 
-model.bal2_price = Param(model.PROD, model.SCEN, model.CUTS, default=0.0, mutable=True)
+model.bal2_price = pyo.Param(
+    model.PROD, model.SCEN, model.CUTS, default=0.0, mutable=True
+)
 
-model.sell_lim_price = Param(
+model.sell_lim_price = pyo.Param(
     model.PROD, model.TWOPLUSWEEKS, model.SCEN, model.CUTS, default=0.0, mutable=True
 )
 
@@ -100,17 +104,17 @@ def time1_rule(model):
     )
 
 
-model.Time1 = Constraint(rule=time1_rule)
+model.Time1 = pyo.Constraint(rule=time1_rule)
 
 
 def balance1_rule(model, p):
     return model.Make1[p] + model.inv0[p] - (model.Sell1[p] + model.Inv1[p]) == 0.0
 
 
-model.Balance1 = Constraint(model.PROD, rule=balance1_rule)
+model.Balance1 = pyo.Constraint(model.PROD, rule=balance1_rule)
 
 # cuts are generated on-the-fly, so no rules are necessary.
-model.Cut_Defn = ConstraintList()
+model.Cut_Defn = pyo.ConstraintList()
 
 
 def expected_profit_rule(model):
@@ -128,4 +132,4 @@ def expected_profit_rule(model):
     )
 
 
-model.Expected_Profit = Objective(rule=expected_profit_rule, sense=maximize)
+model.Expected_Profit = pyo.Objective(rule=expected_profit_rule, sense=pyo.maximize)

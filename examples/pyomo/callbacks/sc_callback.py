@@ -10,8 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.core import *
-from sc import *
+from sc import pyomo_callback
 
 
 @pyomo_callback('solve-callback')

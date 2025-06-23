@@ -856,7 +856,6 @@ def declare_deferred_modules_as_importable(globals_dict):
        ...     'scipy', callback=_finalize_scipy,
        ...     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
        >>> declare_deferred_modules_as_importable(globals())
-       WARNING: DEPRECATED: ...
 
     Which enables users to use:
 
@@ -1103,6 +1102,7 @@ with declare_modules_as_importable(globals()):
     networkx, networkx_available = attempt_import('networkx')
     numpy, numpy_available = attempt_import('numpy', callback=_finalize_numpy)
     pandas, pandas_available = attempt_import('pandas')
+    pathlib, pathlib_available = attempt_import('pathlib')
     pint, pint_available = attempt_import(
         'pint',
         # TypeError for pint<=0.24.3 and python>=3.13

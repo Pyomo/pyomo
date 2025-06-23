@@ -35,19 +35,19 @@ Pyomo.DAE introduces three new modeling components to Pyomo:
 
 As will be shown later, differential equations can be declared using
 using these new modeling components along with the standard Pyomo
-:py:class:`Var <pyomo.environ.Var>` and
-:py:class:`Constraint <pyomo.environ.Constraint>` components.
+:py:class:`.Var` and
+:py:class:`.Constraint` components.
 
 ContinuousSet
 *************
 
 This component is used to define continuous bounded domains (for example
 'spatial' or 'time' domains). It is similar to a Pyomo
-:py:class:`Set <pyomo.environ.Set>`  component and can be used to index things
+:py:class:`.Set`  component and can be used to index things
 like variables and constraints. Any number of
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` can be used to index a
 component and components can be indexed by both
-:py:class:`Sets <pyomo.environ.Set>` and
+:py:class:`Sets <.Set>` and
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
 
 In the current implementation, models with
@@ -69,10 +69,10 @@ concrete Pyomo model:
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
-   >>> from pyomo.dae import *
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.dae import ContinuousSet
 
-   >>> model = ConcreteModel()
+   >>> model = pyo.ConcreteModel()
 
    Declaration by providing bounds
    >>> model.t = ContinuousSet(bounds=(0,5))
@@ -96,10 +96,10 @@ abstract Pyomo model using the example data file.
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
-   >>> from pyomo.dae import *
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.dae import ContinuousSet
 
-   >>> model = AbstractModel()
+   >>> model = pyo.AbstractModel()
 
    The ContinuousSet below will be initialized using the points
    in the data file when a model instance is created.
@@ -112,9 +112,9 @@ abstract Pyomo model using the example data file.
 
 .. note::
    Most valid ways to declare and initialize a
-   :py:class:`Set <pyomo.environ.Set>` can be used to
+   :py:class:`.Set` can be used to
    declare and initialize a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`.
-   See the documentation for :py:class:`Set <pyomo.environ.Set>` for additional
+   See the documentation for :py:class:`.Set` for additional
    options.
 
 .. warning::
@@ -129,7 +129,7 @@ abstract Pyomo model using the example data file.
 .. note::
    :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` components are
    always ordered (sorted) therefore the ``first()`` and ``last()``
-   :py:class:`Set <pyomo.environ.Set>` methods can be used to access the lower
+   :py:class:`.Set` methods can be used to access the lower
    and upper boundaries of the
    :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` respectively
 
@@ -146,22 +146,22 @@ Pyomo model. In each case, the variable being differentiated is supplied
 as the only positional argument and the type of derivative is specified
 using the 'wrt' (or the more verbose 'withrespectto') keyword
 argument. Any keyword argument that is valid for a Pyomo
-:py:class:`Var <pyomo.environ.Var>` component may also be specified.
+:py:class:`.Var` component may also be specified.
 
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
-   >>> from pyomo.dae import *
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.dae import ContinuousSet, DerivativeVar
 
-   >>> model = ConcreteModel()
-   >>> model.s = Set(initialize=['a','b'])
+   >>> model = pyo.ConcreteModel()
+   >>> model.s = pyo.Set(initialize=['a','b'])
    >>> model.t = ContinuousSet(bounds=(0,5))
    >>> model.l = ContinuousSet(bounds=(-10,10))
 
-   >>> model.x = Var(model.t)
-   >>> model.y = Var(model.s,model.t)
-   >>> model.z = Var(model.t,model.l)
+   >>> model.x = pyo.Var(model.t)
+   >>> model.y = pyo.Var(model.s,model.t)
+   >>> model.z = pyo.Var(model.t,model.l)
 
    Declare the first derivative of model.x with respect to model.t
    >>> model.dxdt = DerivativeVar(model.x, withrespectto=model.t)
@@ -182,32 +182,32 @@ argument. Any keyword argument that is valid for a Pyomo
    The 'initialize' keyword argument will initialize the value of a
    derivative and is **not** the same as specifying an initial
    condition. Initial or boundary conditions should be specified using a
-   :py:class:`Constraint<pyomo.environ.Constraint>` or
-   :py:class:`ConstraintList<pyomo.environ.ConstraintList>` or
-   by fixing the value of a :py:class:`Var<pyomo.environ.Var>` at a boundary
+   :py:class:`.Constraint` or
+   :py:class:`.ConstraintList` or
+   by fixing the value of a :py:class:`.Var` at a boundary
    point.
 
 Declaring Differential Equations
 --------------------------------
 
 A differential equations is declared as a standard Pyomo
-:py:class:`Constraint<pyomo.environ.Constraint>` and is not required to have
+:py:class:`.Constraint` and is not required to have
 any particular form. The following code snippet shows how one might declare
 an ordinary or partial differential equation.
 
 .. doctest::
 
    Required imports
-   >>> from pyomo.environ import *
-   >>> from pyomo.dae import *
+   >>> import pyomo.environ as pyo
+   >>> from pyomo.dae import ContinuousSet, DerivativeVar, Integral
 
-   >>> model = ConcreteModel()
-   >>> model.s = Set(initialize=['a', 'b'])
+   >>> model = pyo.ConcreteModel()
+   >>> model.s = pyo.Set(initialize=['a', 'b'])
    >>> model.t = ContinuousSet(bounds=(0, 5))
    >>> model.l = ContinuousSet(bounds=(-10, 10))
 
-   >>> model.x = Var(model.s, model.t)
-   >>> model.y = Var(model.t, model.l)
+   >>> model.x = pyo.Var(model.s, model.t)
+   >>> model.y = pyo.Var(model.t, model.l)
    >>> model.dxdt = DerivativeVar(model.x, wrt=model.t)
    >>> model.dydt = DerivativeVar(model.y, wrt=model.t)
    >>> model.dydl2 = DerivativeVar(model.y, wrt=(model.l, model.l))
@@ -215,23 +215,23 @@ an ordinary or partial differential equation.
    An ordinary differential equation
    >>> def _ode_rule(m, s, t):
    ...    if t == 0:
-   ...       return Constraint.Skip
+   ...       return pyo.Constraint.Skip
    ...    return m.dxdt[s, t] == m.x[s, t]**2
-   >>> model.ode = Constraint(model.s, model.t, rule=_ode_rule)
+   >>> model.ode = pyo.Constraint(model.s, model.t, rule=_ode_rule)
 
    A partial differential equation
    >>> def _pde_rule(m, t, l):
    ...    if t == 0 or l == m.l.first() or l == m.l.last():
-   ...       return Constraint.Skip
+   ...       return pyo.Constraint.Skip
    ...    return m.dydt[t, l] == m.dydl2[t, l]
-   >>> model.pde = Constraint(model.t, model.l, rule=_pde_rule)
+   >>> model.pde = pyo.Constraint(model.t, model.l, rule=_pde_rule)
 
-By default, a :py:class:`Constraint<pyomo.environ.Constraint>` declared over a
+By default, a :py:class:`.Constraint` declared over a
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` will be applied at every
 discretization point contained in the set. Often a modeler does not want to
 enforce a differential equation at one or both boundaries of a continuous
 domain. This may be addressed explicitly in the
-:py:class:`Constraint<pyomo.environ.Constraint>` declaration using
+:py:class:`.Constraint` declaration using
 ``Constraint.Skip`` as shown above. Alternatively, the desired constraints can
 be deactivated just before the model is sent to a solver as shown below.
 
@@ -247,11 +247,11 @@ be deactivated just before the model is sent to a solver as shown below.
 
    >>> def _ode_rule(m, s, t):
    ...    return m.dxdt[s, t] == m.x[s, t]**2
-   >>> model.ode = Constraint(model.s, model.t, rule=_ode_rule)
+   >>> model.ode = pyo.Constraint(model.s, model.t, rule=_ode_rule)
 
    >>> def _pde_rule(m, t, l):
    ...    return m.dydt[t, l] == m.dydl2[t, l]
-   >>> model.pde = Constraint(model.t, model.l, rule=_pde_rule)
+   >>> model.pde = pyo.Constraint(model.t, model.l, rule=_pde_rule)
 
    Declare other model components and apply a discretization transformation
    ...
@@ -294,15 +294,15 @@ Declaring Integrals
    :members:
 
 Declaring an :py:class:`Integral<pyomo.dae.Integral>` component is similar to
-declaring an :py:class:`Expression<pyomo.environ.Expression>` component. A
+declaring an :py:class:`.Expression` component. A
 simple example is shown below:
 
 .. doctest::
 
-   >>> model = ConcreteModel()
+   >>> model = pyo.ConcreteModel()
    >>> model.time = ContinuousSet(bounds=(0,10))
-   >>> model.X = Var(model.time)
-   >>> model.scale = Param(initialize=1E-3)
+   >>> model.X = pyo.Var(model.time)
+   >>> model.scale = pyo.Param(initialize=1E-3)
 
    >>> def _intX(m,t):
    ...    return m.X[t]
@@ -310,7 +310,7 @@ simple example is shown below:
 
    >>> def _obj(m):
    ...    return m.scale*m.intX
-   >>> model.obj = Objective(rule=_obj)
+   >>> model.obj = pyo.Objective(rule=_obj)
 
 Notice that the positional arguments supplied to the
 :py:class:`Integral<pyomo.dae.Integral>` declaration must include all indices
@@ -326,7 +326,7 @@ is being evaluated over. This is done using the 'wrt' keyword argument.
    ensure consistency in the ordering and dimension of the indexing sets
 
 After an :py:class:`Integral<pyomo.dae.Integral>` has been declared, it can be
-used just like a Pyomo :py:class:`Expression<pyomo.environ.Expression>`
+used just like a Pyomo :py:class:`.Expression`
 component and can be included in constraints or the objective function as shown
 above.
 
@@ -342,7 +342,7 @@ positional argument. This should become more clear with the following example
 showing a double integral over the
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` components ``model.t1`` and
 ``model.t2``. In addition, the expression is also indexed by the
-:py:class:`Set<pyomo.environ.Set>` ``model.s``. The mathematical representation
+:py:class:`.Set` ``model.s``. The mathematical representation
 and implementation in Pyomo are shown below:
 
 .. math::
@@ -350,12 +350,12 @@ and implementation in Pyomo are shown below:
 
 .. doctest::
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.t1 = ContinuousSet(bounds=(0, 10))
     >>> model.t2 = ContinuousSet(bounds=(-1, 1))
-    >>> model.s = Set(initialize=['A', 'B', 'C'])
+    >>> model.s = pyo.Set(initialize=['A', 'B', 'C'])
 
-    >>> model.X = Var(model.t1, model.t2, model.s)
+    >>> model.X = pyo.Var(model.t1, model.t2, model.s)
 
     >>> def _intX1(m, t1, t2, s):
     ...    return m.X[t1, t2, s]
@@ -368,7 +368,7 @@ and implementation in Pyomo are shown below:
 
     >>> def _obj(m):
     ...    return sum(m.intX2[k] for k in m.s)
-    >>> model.obj = Objective(rule=_obj)
+    >>> model.obj = pyo.Objective(rule=_obj)
 
 Discretization Transformations
 ------------------------------
@@ -416,7 +416,7 @@ discretization equations for this method are shown below:
 
 where :math:`h` is the step size between discretization points or the size of
 each finite element. These equations are generated automatically as
-:py:class:`Constraints<pyomo.environ.Constraint>` when the backward
+:py:class:`Constraints<.Constraint>` when the backward
 difference method is applied to a Pyomo model.
 
 There are several discretization options available to a
@@ -460,25 +460,25 @@ method. The code also shows how to add a constraint to a discretized model.
 .. doctest::
     :hide:
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.time = ContinuousSet(bounds=(0, 10))
-    >>> model.x1 = Var(model.time, bounds=(-10, 10))
+    >>> model.x1 = pyo.Var(model.time, bounds=(-10, 10))
     >>> model.dx1 = DerivativeVar(model.x1)
 
 .. doctest::
     :skipif: not ipopt_available
 
     Discretize model using Backward Difference method
-    >>> discretizer = TransformationFactory('dae.finite_difference')
+    >>> discretizer = pyo.TransformationFactory('dae.finite_difference')
     >>> discretizer.apply_to(model,nfe=20,wrt=model.time,scheme='BACKWARD')
 
     Add another constraint to discretized model
     >>> def _sum_limit(m):
     ...    return sum(m.x1[i] for i in m.time) <= 50
-    >>> model.con_sum_limit = Constraint(rule=_sum_limit)
+    >>> model.con_sum_limit = pyo.Constraint(rule=_sum_limit)
 
     Solve discretized model
-    >>> solver = SolverFactory('ipopt')
+    >>> solver = pyo.SolverFactory('ipopt')
     >>> results = solver.solve(model)
 
 Collocation Transformation
@@ -528,26 +528,26 @@ function to a discretized model.
 .. doctest::
     :hide:
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.time = ContinuousSet(bounds=(0, 10))
-    >>> model.x = Var(model.time, bounds=(-10, 10))
+    >>> model.x = pyo.Var(model.time, bounds=(-10, 10))
     >>> model.dx = DerivativeVar(model.x)
-    >>> model.x_ref = Param(initialize=5)
+    >>> model.x_ref = pyo.Param(initialize=5)
 
 .. doctest::
     :skipif: not ipopt_available
 
     Discretize model using Radau Collocation
-    >>> discretizer = TransformationFactory('dae.collocation')
+    >>> discretizer = pyo.TransformationFactory('dae.collocation')
     >>> discretizer.apply_to(model,nfe=20,ncp=6,scheme='LAGRANGE-RADAU')
 
     Add objective function after model has been discretized
     >>> def obj_rule(m):
     ...    return sum((m.x[i]-m.x_ref)**2 for i in m.time)
-    >>> model.obj = Objective(rule=obj_rule)
+    >>> model.obj = pyo.Objective(rule=obj_rule)
 
     Solve discretized model
-    >>> solver = SolverFactory('ipopt')
+    >>> solver = pyo.SolverFactory('ipopt')
     >>> results = solver.solve(model)
 
 Restricting Optimal Control Profiles
@@ -570,16 +570,16 @@ An example of using this function is shown below:
 .. doctest::
     :hide:
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.time = ContinuousSet(bounds=(0, 10))
-    >>> model.x = Var(model.time, bounds=(-10, 10))
+    >>> model.x = pyo.Var(model.time, bounds=(-10, 10))
     >>> model.dx = DerivativeVar(model.x)
-    >>> model.x_ref = Param(initialize=5)
-    >>> model.u = Var(model.time)
+    >>> model.x_ref = pyo.Param(initialize=5)
+    >>> model.u = pyo.Var(model.time)
 
 .. doctest::
 
-    >>> discretizer = TransformationFactory('dae.collocation')
+    >>> discretizer = pyo.TransformationFactory('dae.collocation')
     >>> discretizer.apply_to(model, nfe=10, ncp=6)
     >>> model = discretizer.reduce_collocation_points(model,
     ...                                               var=model.u,
@@ -614,13 +614,13 @@ numerical method can be applied with different resolutions:
 .. doctest::
     :hide:
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.t1 = ContinuousSet(bounds=(0, 10))
     >>> model.t2 = ContinuousSet(bounds=(-2, 2))
 
 .. doctest::
 
-    >>> discretizer = TransformationFactory('dae.finite_difference')
+    >>> discretizer = pyo.TransformationFactory('dae.finite_difference')
     >>> discretizer.apply_to(model,wrt=model.t1,nfe=10)
     >>> discretizer.apply_to(model,wrt=model.t2,nfe=100)
 
@@ -633,13 +633,13 @@ difference method to another
 .. doctest::
     :hide:
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.t1 = ContinuousSet(bounds=(0, 10))
     >>> model.t2 = ContinuousSet(bounds=(-2, 2))
 
 .. doctest::
 
-    >>> discretizer = TransformationFactory('dae.finite_difference')
+    >>> discretizer = pyo.TransformationFactory('dae.finite_difference')
     >>> discretizer.apply_to(model,wrt=model.t1,scheme='FORWARD')
     >>> discretizer.apply_to(model,wrt=model.t2,scheme='CENTRAL')
 
@@ -649,15 +649,15 @@ discretizations. For example:
 .. doctest::
     :hide:
 
-    >>> model = ConcreteModel()
+    >>> model = pyo.ConcreteModel()
     >>> model.t1 = ContinuousSet(bounds=(0, 10))
     >>> model.t2 = ContinuousSet(bounds=(-2, 2))
 
 .. doctest::
 
-    >>> disc_fe = TransformationFactory('dae.finite_difference')
+    >>> disc_fe = pyo.TransformationFactory('dae.finite_difference')
     >>> disc_fe.apply_to(model,wrt=model.t1,nfe=10)
-    >>> disc_col = TransformationFactory('dae.collocation')
+    >>> disc_col = pyo.TransformationFactory('dae.collocation')
     >>> disc_col.apply_to(model,wrt=model.t2,nfe=10,ncp=5)
 
 If the user would like to apply the same discretization to all
@@ -785,15 +785,15 @@ We begin by formulating the model using pyomo.DAE
 
 .. doctest::
 
-    >>> m = ConcreteModel()
+    >>> m = pyo.ConcreteModel()
 
     >>> m.t = ContinuousSet(bounds=(0.0, 10.0))
 
-    >>> m.b = Param(initialize=0.25)
-    >>> m.c = Param(initialize=5.0)
+    >>> m.b = pyo.Param(initialize=0.25)
+    >>> m.c = pyo.Param(initialize=5.0)
 
-    >>> m.omega = Var(m.t)
-    >>> m.theta = Var(m.t)
+    >>> m.omega = pyo.Var(m.t)
+    >>> m.theta = pyo.Var(m.t)
 
     >>> m.domegadt = DerivativeVar(m.omega, wrt=m.t)
     >>> m.dthetadt = DerivativeVar(m.theta, wrt=m.t)
@@ -803,12 +803,12 @@ We begin by formulating the model using pyomo.DAE
     >>> m.theta[0].fix(3.14 - 0.1)
 
     >>> def _diffeq1(m, t):
-    ...     return m.domegadt[t] == -m.b * m.omega[t] - m.c * sin(m.theta[t])
-    >>> m.diffeq1 = Constraint(m.t, rule=_diffeq1)
+    ...     return m.domegadt[t] == -m.b * m.omega[t] - m.c * pyo.sin(m.theta[t])
+    >>> m.diffeq1 = pyo.Constraint(m.t, rule=_diffeq1)
 
     >>> def _diffeq2(m, t):
     ...     return m.dthetadt[t] == m.omega[t]
-    >>> m.diffeq2 = Constraint(m.t, rule=_diffeq2)
+    >>> m.diffeq2 = pyo.Constraint(m.t, rule=_diffeq2)
 
 Notice that the initial conditions are set by `fixing` the values of
 ``m.omega`` and ``m.theta`` at t=0 instead of being specified as extra
@@ -866,16 +866,16 @@ example.
 
 .. doctest::
 
-    >>> m = ConcreteModel()
+    >>> m = pyo.ConcreteModel()
 
     >>> m.t = ContinuousSet(bounds=(0.0, 20.0))
 
     Time-varying inputs
-    >>> m.b = Var(m.t)
-    >>> m.c = Param(m.t, default=5.0)
+    >>> m.b = pyo.Var(m.t)
+    >>> m.c = pyo.Param(m.t, default=5.0)
 
-    >>> m.omega = Var(m.t)
-    >>> m.theta = Var(m.t)
+    >>> m.omega = pyo.Var(m.t)
+    >>> m.theta = pyo.Var(m.t)
 
     >>> m.domegadt = DerivativeVar(m.omega, wrt=m.t)
     >>> m.dthetadt = DerivativeVar(m.theta, wrt=m.t)
@@ -886,19 +886,19 @@ example.
 
     >>> def _diffeq1(m, t):
     ...    return m.domegadt[t] == -m.b[t] * m.omega[t] - \
-    ...                             m.c[t] * sin(m.theta[t])
-    >>> m.diffeq1 = Constraint(m.t, rule=_diffeq1)
+    ...                             m.c[t] * pyo.sin(m.theta[t])
+    >>> m.diffeq1 = pyo.Constraint(m.t, rule=_diffeq1)
 
     >>> def _diffeq2(m, t):
     ...    return m.dthetadt[t] == m.omega[t]
-    >>> m.diffeq2 = Constraint(m.t, rule=_diffeq2)
+    >>> m.diffeq2 = pyo.Constraint(m.t, rule=_diffeq2)
 
     Specifying the piecewise constant inputs
     >>> b_profile = {0: 0.25, 15: 0.025}
     >>> c_profile = {0: 5.0, 7: 50}
 
     Declaring a Pyomo Suffix to pass the time-varying inputs to the Simulator
-    >>> m.var_input = Suffix(direction=Suffix.LOCAL)
+    >>> m.var_input = pyo.Suffix(direction=pyo.Suffix.LOCAL)
     >>> m.var_input[m.b] = b_profile
     >>> m.var_input[m.c] = c_profile
 
@@ -933,7 +933,7 @@ returned from the simulator. An example using this function is shown below
     ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
     Discretize the model using Orthogonal Collocation
-    >>> discretizer = TransformationFactory('dae.collocation')
+    >>> discretizer = pyo.TransformationFactory('dae.collocation')
     >>> discretizer.apply_to(m, nfe=10, ncp=3)
 
     Initialize the discretized model using the simulator profiles

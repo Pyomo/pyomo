@@ -85,16 +85,16 @@ The image below shows all the routes in this model, along with their associated 
 We begin this model as we always do
 
 \begin{verbatim}
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 \end{verbatim}
 
 Now we must define our sets.  In the transportation problem, we had a set for the warehouses and a set for the stores.  In this example, we're going to be more sophisticated: we're going to just have one set for all the locations.  Additionally, we're going to have one set that holds all of the different routes between these locations.  This construction will help later when creating the constraints and is a more typical model for a network flow problem: we care about the nodes and arcs, so it makes sense to make those the sets.  The code is a little different than what we've done before.
 
 \begin{verbatim}
-model.places = Set()
-model.routes = Set(within=model.places*model.places)
+model.places = pyo.Set()
+model.routes = pyo.Set(within=model.places*model.places)
 \end{verbatim}
 
 While the definition for the set ``places'' should be familiar, how we defined ``routes'' is a bit more foreign.  By saying \begin{verbatim}within=model.places*model.places\end{verbatim} we mean that routes is a subset of places crossed with itself.  Thus, the set of routes will be a set of tuples, and each part of these tuples will come from the set of places.  This is exactly what we want as each route is uniquely defined by its starting and ending place, so if we have a route (A,B) that just means we can ship grain from place A to place B.  Note, though, that this does not mean we can ship from B to A, that's a different tuple, (B,A).
@@ -102,23 +102,23 @@ While the definition for the set ``places'' should be familiar, how we defined `
 The parameters are fairly straightforward after this point.  Each place has an associated supply and demand (either or both of which could be $0$), and each route has a minimum and maximum amount that it can be used.  Also, each route has an associated cost with it.  All of these are parameters over one set so the implementation should be routine at this point.
 
 \begin{verbatim}
-model.supply = Param(model.places)
-model.demand = Param(model.places)
-model.cost = Param(model.routes)
-model.minimum = Param(model.routes)
-model.maximum = Param(model.routes)
+model.supply = pyo.Param(model.places)
+model.demand = pyo.Param(model.places)
+model.cost = pyo.Param(model.routes)
+model.minimum = pyo.Param(model.routes)
+model.maximum = pyo.Param(model.routes)
 \end{verbatim}
 
 Now to define our variables.  We're trying to figure out how much to ship along any route, so creating an amount variable over the set of routes seems logical.  As in the previous examples, we restrict it to non-negative numbers as shipping negative amounts of grain is impossible and illogical.
 
 \begin{verbatim}
-model.amount = Var(model.routes, within=NonNegativeReals)
+model.amount = pyo.Var(model.routes, within=pyo.NonNegativeReals)
 \end{verbatim}
 
 In the transportation problem, we were lucky and (after we added a bit more supply) the total supply was the same as the total demand.  But what if we have more supply than demand?  It would be hard for a user to track down where that extra supply is; they would need to carefully look through each warehouse and store, calculating how much is coming in compared to the location's supply and demand to find where the extra supplies went.  To make it simpler for the user to find the extra amounts, we introduce another variable: excess.  At the end, when we solve the problem, the solution will also include an ``excess'' section that tells us how much grain is left over at each location so we won't lose track of any of our supply, but instead easily and quickly know where it is.  Note that excess is a variable over the locations and shouldn't be negative.  From here, the implementation is similar to the amount variable.
 
 \begin{verbatim}
-model.excess = Var(model.places, within=NonNegativeReals)
+model.excess = pyo.Var(model.places, within=pyo.NonNegativeReals)
 \end{verbatim}
 
 As in the diet problem and the transportation problem, our goal is to minimize cost.  To calculate the total cost, we just take the amount that will travel along each route, multiply it with the cost to travel that route, and sum all of these values together.  To code it we input
@@ -127,7 +127,7 @@ As in the diet problem and the transportation problem, our goal is to minimize c
 def costRule(model):
     return sum(model.cost[n]*model.amount[n] for n in model.routes)
 
-model.costTotal = Objective(rule=costRule)
+model.costTotal = pyo.Objective(rule=costRule)
 \end{verbatim}
 
 \noindent
@@ -140,7 +140,7 @@ def loadRule(i,j, model):
     return (model.minimum[i,j], model.amount[i,j], 
         model.maximum[i,j])
 
-model.loadOnRoad = Constraint(model.routes, rule=loadRule)
+model.loadOnRoad = pyo.Constraint(model.routes, rule=loadRule)
 \end{verbatim}
 
 The second line here indicates that the value of amount must be between the minimum and maximum values (inclusive) allowed on that route.  Also, but putting routes as one of the arguments to the constraint we will cycle through every possible route when doing this rule.  Essentially, this is just the cost rule for each individual route compressed into one constraint.  Considering that this one constraint also contains the minimum and maximum load rules, we see that it is very, very useful.
@@ -169,7 +169,7 @@ def supplyDemandRule(nn, model):
     
     return input == output
 
-model.supplyDemand = Constraint(model.places, rule=supplyDemandRule)
+model.supplyDemand = pyo.Constraint(model.places, rule=supplyDemandRule)
 \end{verbatim}
 
 What we did was just construct a few additional variables; this wasn't required but makes reading and understanding the code much, much simpler.  The variable ``amountIn'' looks at each route to find ones that end in this location, then adds the amount on each of those routes together to determine how much flows to each location.  The ``amountOut'' variable functions similarly for the flow out.  Then we just create an ``input'' and ``output'' and ensure they're equal.  As in some of the previous constraints, we feed the set of places into the constraint as an argument so it will index over that set, and thus this rule functions for all the places in our network.
