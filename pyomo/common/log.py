@@ -208,13 +208,25 @@ class LegacyPyomoFormatter(logging.Formatter):
 class StdoutHandler(logging.StreamHandler):
     """A logging handler that emits to the current value of sys.stdout"""
 
+    def __init__(self):
+        super().__init__()
+        self.stream = None
+
     def flush(self):
-        self.stream = sys.stdout
-        super(StdoutHandler, self).flush()
+        try:
+            orig = self.stream
+            self.stream = sys.stdout
+            super(StdoutHandler, self).flush()
+        finally:
+            self.stream = orig
 
     def emit(self, record):
-        self.stream = sys.stdout
-        super(StdoutHandler, self).emit(record)
+        try:
+            orig = self.stream
+            self.stream = sys.stdout
+            super(StdoutHandler, self).emit(record)
+        finally:
+            self.stream = orig
 
 
 class Preformatted(object):
@@ -248,7 +260,7 @@ class _GlobalLogFilter(object):
 # debugging.  It has been updated to suppress output if any handlers
 # have been defined at the root level.
 pyomo_logger = logging.getLogger('pyomo')
-pyomo_handler = StdoutHandler()
+pyomo_handler = logging.StreamHandler(sys.stdout)
 pyomo_formatter = LegacyPyomoFormatter(
     base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
 )
@@ -445,23 +457,25 @@ class _StreamRedirector(object):
     def __init__(self, handler, fd):
         self.handler = handler
         self.fd = fd
+        self.local_fd = None
         self.orig_stream = None
 
     def __enter__(self):
+        assert self.local_fd is None
         self.orig_stream = self.handler.stream
         # Note: ideally, we would use closefd=True and let Python handle
         # closing the local file descriptor that we are about to create.
         # However, it appears that closefd is ignored on Windows (see
         # #3587), so we will just handle it explicitly ourselves.
+        self.local_fd = os.dup(self.fd)
         self.handler.stream = os.fdopen(
-            os.dup(self.fd), mode="w", closefd=False
+            self.local_fd, mode="a", closefd=False
         ).__enter__()
 
     def __exit__(self, et, ev, tb):
         try:
-            fd = self.handler.stream.fileno()
             self.handler.stream.__exit__(et, ev, tb)
-            os.close(fd)
+            os.close(self.local_fd)
         finally:
             self.handler.stream = self.orig_stream
 
@@ -469,22 +483,24 @@ class _StreamRedirector(object):
 class _LastResortRedirector(object):
     def __init__(self, fd):
         self.fd = fd
+        self.local_fd = None
         self.orig_stream = None
 
     def __enter__(self):
+        assert self.local_fd is None
         self.orig = logging.lastResort
         # Note: ideally, we would use closefd=True and let Python handle
         # closing the local file descriptor that we are about to create.
         # However, it appears that closefd is ignored on Windows (see
         # #3587), so we will just handle it explicitly ourselves.
+        self.local_fd = os.dup(self.fd)
         logging.lastResort = logging.StreamHandler(
-            os.fdopen(os.dup(self.fd), mode="w", closefd=False).__enter__()
+            os.fdopen(self.local_fd, mode="a", closefd=False).__enter__()
         )
 
     def __exit__(self, et, ev, tb):
         try:
-            fd = logging.lastResort.stream.fileno()
             logging.lastResort.stream.close()
-            os.close(fd)
+            os.close(self.local_fd)
         finally:
             logging.lastResort = self.orig
