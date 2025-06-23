@@ -33,6 +33,7 @@ from pyomo.common.log import (
     Preformatted,
     StdoutHandler,
     WrappingFormatter,
+    is_debug_set,
     pyomo_formatter,
 )
 
@@ -54,7 +55,7 @@ class TestLegacyLogHandler(unittest.TestCase):
             self.handler = LogHandler(
                 os.path.dirname(__file__),
                 stream=self.stream,
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                verbosity=lambda: is_debug_set(logger),
             )
         self.assertIn('LogHandler class has been deprecated', log.getvalue())
         logger.addHandler(self.handler)
@@ -144,8 +145,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         # Testing positional base, configurable verbosity
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -194,7 +194,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
                 base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                verbosity=lambda: is_debug_set(logger),
             )
         )
 
@@ -218,8 +218,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
     def test_blank_lines(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -241,8 +240,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         testname = 'test_numbered_level'
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -277,8 +275,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
     def test_preformatted(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -325,8 +322,7 @@ would be line-wrapped
     def test_long_messages(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
@@ -416,8 +412,7 @@ would be line-wrapped
     def test_verbatim(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: logger.isEnabledFor(logging.DEBUG),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 

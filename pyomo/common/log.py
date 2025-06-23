@@ -77,7 +77,7 @@ elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
         # Filter out NOTSET and higher levels
         return _NOTSET < _level <= _DEBUG
 
-else:
+elif sys.version_info[:3] < (3, 13, 4):
     # This is inefficient (it indirectly checks effective level twice),
     # but is included for [as yet unknown] platforms that ONLY implement
     # the API documented in the logging library
@@ -85,6 +85,15 @@ else:
         if not logger.isEnabledFor(_DEBUG):
             return False
         return logger.getEffectiveLevel() > _NOTSET
+
+else:
+    # Python 3.14 (and backported to python 3.13.4) changed the behavior
+    # of isEnabledFor() so that it always returns False when called
+    # while a log record is in flight (learned this from
+    # https://github.com/hynek/structlog/pull/723).  In newer versions
+    # of Python, we will only rely on getEffectiveLevel().
+    def is_debug_set(logger):
+        return _NOTSET < logger.getEffectiveLevel() <= _DEBUG
 
 
 class WrappingFormatter(logging.Formatter):
@@ -262,7 +271,7 @@ class _GlobalLogFilter(object):
 pyomo_logger = logging.getLogger('pyomo')
 pyomo_handler = logging.StreamHandler(sys.stdout)
 pyomo_formatter = LegacyPyomoFormatter(
-    base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
+    base=PYOMO_ROOT_DIR, verbosity=lambda: is_debug_set(pyomo_logger)
 )
 pyomo_handler.setFormatter(pyomo_formatter)
 pyomo_handler.addFilter(_GlobalLogFilter())
