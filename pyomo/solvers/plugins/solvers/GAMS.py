@@ -40,6 +40,8 @@ from pyomo.opt.results import (
 )
 
 from pyomo.common.dependencies import attempt_import
+import numpy as np
+import struct
 
 def _gams_importer():
     try:
@@ -1291,6 +1293,16 @@ class GAMSShell(_GAMSSolver):
             ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+            
+            specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
+            rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
+
+            specVals[gdxcc.GMS_SVIDX_EPS] = np.finfo(np.float64).tiny
+            specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
+            specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
+            specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            gdxcc.gdxSetSpecialValues(pgdx, specVals)
 
             i = 0
             while True:
@@ -1313,7 +1325,7 @@ class GAMSShell(_GAMSSolver):
                     raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
 
                 if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
-                    stat_vars[stat] = self._parse_special_values(ret[2][0])
+                    stat_vars[stat] = ret[2][0]
                 else:
                     stat_vars[stat] = int(ret[2][0])
 
@@ -1325,6 +1337,16 @@ class GAMSShell(_GAMSSolver):
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
+            specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
+            rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
+
+            specVals[gdxcc.GMS_SVIDX_EPS] = np.finfo(np.float64).tiny
+            specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
+            specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
+            specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            gdxcc.gdxSetSpecialValues(pgdx, specVals)
+            
             i = 0
             while True:
                 i += 1
@@ -1335,8 +1357,8 @@ class GAMSShell(_GAMSSolver):
                 ret = gdxcc.gdxDataReadRaw(pgdx)
                 if not ret[0] or len(ret[2]) < 2:
                     raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
-                level = self._parse_special_values(ret[2][0])
-                dual = self._parse_special_values(ret[2][1])
+                level = ret[2][0]
+                dual = ret[2][1]
 
                 ret = gdxcc.gdxSymbolInfo(pgdx, i)
                 if not ret[0]:
@@ -1349,6 +1371,7 @@ class GAMSShell(_GAMSSolver):
             gdxcc.gdxClose(pgdx)
 
         gdxcc.gdxFree(pgdx)
+        gdxcc.gdxLibraryUnload()
         return model_soln, stat_vars
 
     def _parse_dat_results(self, results_filename, statresults_filename):
