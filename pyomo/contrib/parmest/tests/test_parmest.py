@@ -39,6 +39,258 @@ testdir = this_file_dir()
     "Cannot test parmest: required dependencies are missing",
 )
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class TestExceptionRooneyBiegler(unittest.TestCase):
+
+    def setUp(self):
+        self.data = pd.DataFrame(
+            data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
+            columns=["hour", "y"],
+        )
+
+        # create the Rooney-Biegler model
+        def rooney_biegler_model():
+            """
+            Formulates the Pyomo model of the Rooney-Biegler example
+
+            Returns:
+                m: Pyomo model
+            """
+            m = pyo.ConcreteModel()
+
+            m.asymptote = pyo.Var(within=pyo.NonNegativeReals, initialize=10)
+            m.rate_constant = pyo.Var(within=pyo.NonNegativeReals, initialize=0.2)
+
+            m.hour = pyo.Var(within=pyo.PositiveReals, initialize=0.1)
+            m.y = pyo.Var(within=pyo.NonNegativeReals)
+
+            @m.Constraint()
+            def response_rule(m):
+                return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour))
+
+            return m
+
+        # create the Experiment class
+        class RooneyBieglerExperiment(Experiment):
+            def __init__(self, experiment_number, hour, y):
+                self.y = y
+                self.hour = hour
+                self.experiment_number = experiment_number
+                self.model = None
+
+            def get_labeled_model(self):
+                self.create_model()
+                self.finalize_model()
+                self.label_model()
+
+                return self.model
+
+            def create_model(self):
+                m = self.model = rooney_biegler_model()
+
+                return m
+
+            def finalize_model(self):
+                m = self.model
+
+                # fix the input variable
+                m.hour.fix(self.hour)
+
+                return m
+
+            def label_model(self):
+                m = self.model
+
+                # add unknown parameters
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
+                )
+
+                return m
+
+        # extract the input and output variables
+        hour_data = self.data["hour"]
+        y_data = self.data["y"]
+
+        # create the experiments list
+        rooney_biegler_exp_list = []
+        for i in range(self.data.shape[0]):
+            rooney_biegler_exp_list.append(
+                RooneyBieglerExperiment(i, hour_data[i], y_data[i])
+            )
+
+        self.exp_list = rooney_biegler_exp_list
+
+    def test_parmest_exception(self):
+        """
+        Test the exception raised by parmest as a result of not defining
+        the "experiment_outputs" attribute
+        """
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list, obj_function="SSE", tee=True)
+
+        self.assertIn("experiment_outputs", str(context.exception))
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
+class TestExceptionReactorDesign_DAE(unittest.TestCase):
+    # Based on a reactor example in `Chemical Reactor Analysis and Design Fundamentals`,
+    # https://sites.engineering.ucsb.edu/~jbraw/chemreacfun/
+    # https://sites.engineering.ucsb.edu/~jbraw/chemreacfun/fig-html/appendix/fig-A-10.html
+
+    def setUp(self):
+        def ABC_model(data):
+
+            if isinstance(data, pd.DataFrame):
+                meas_t = data.index  # time index
+            else:  # dictionary
+                meas_t = list(data["ca"].keys())  # nested dictionary
+
+            ca0 = 1.0
+            cb0 = 0.0
+            cc0 = 0.0
+
+            m = pyo.ConcreteModel()
+
+            m.k1 = pyo.Var(initialize=0.5, bounds=(1e-4, 10))
+            m.k2 = pyo.Var(initialize=3.0, bounds=(1e-4, 10))
+
+            m.time = dae.ContinuousSet(bounds=(0.0, 5.0), initialize=meas_t)
+
+            # initialization and bounds
+            m.ca = pyo.Var(m.time, initialize=ca0, bounds=(-1e-3, ca0 + 1e-3))
+            m.cb = pyo.Var(m.time, initialize=cb0, bounds=(-1e-3, ca0 + 1e-3))
+            m.cc = pyo.Var(m.time, initialize=cc0, bounds=(-1e-3, ca0 + 1e-3))
+
+            m.dca = dae.DerivativeVar(m.ca, wrt=m.time)
+            m.dcb = dae.DerivativeVar(m.cb, wrt=m.time)
+            m.dcc = dae.DerivativeVar(m.cc, wrt=m.time)
+
+            def _dcarate(m, t):
+                if t == 0:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.dca[t] == -m.k1 * m.ca[t]
+
+            m.dcarate = pyo.Constraint(m.time, rule=_dcarate)
+
+            def _dcbrate(m, t):
+                if t == 0:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.dcb[t] == m.k1 * m.ca[t] - m.k2 * m.cb[t]
+
+            m.dcbrate = pyo.Constraint(m.time, rule=_dcbrate)
+
+            def _dccrate(m, t):
+                if t == 0:
+                    return pyo.Constraint.Skip
+                else:
+                    return m.dcc[t] == m.k2 * m.cb[t]
+
+            m.dccrate = pyo.Constraint(m.time, rule=_dccrate)
+
+            return m
+
+        class ReactorDesignExperimentDAE(Experiment):
+
+            def __init__(self, data):
+
+                self.data = data
+                self.model = None
+
+            def create_model(self):
+                self.model = ABC_model(self.data)
+
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+            def get_labeled_model(self):
+                self.create_model()
+                self.label_model()
+
+                return self.model
+
+        # This example tests data formatted in 3 ways
+        # Each format holds 1 scenario
+        # 1. dataframe with time index
+        # 2. nested dictionary {ca: {t, val pairs}, ... }
+        data = [
+            [0.000, 0.957, -0.031, -0.015],
+            [0.263, 0.557, 0.330, 0.044],
+            [0.526, 0.342, 0.512, 0.156],
+            [0.789, 0.224, 0.499, 0.310],
+            [1.053, 0.123, 0.428, 0.454],
+            [1.316, 0.079, 0.396, 0.556],
+            [1.579, 0.035, 0.303, 0.651],
+            [1.842, 0.029, 0.287, 0.658],
+            [2.105, 0.025, 0.221, 0.750],
+            [2.368, 0.017, 0.148, 0.854],
+            [2.632, -0.002, 0.182, 0.845],
+            [2.895, 0.009, 0.116, 0.893],
+            [3.158, -0.023, 0.079, 0.942],
+            [3.421, 0.006, 0.078, 0.899],
+            [3.684, 0.016, 0.059, 0.942],
+            [3.947, 0.014, 0.036, 0.991],
+            [4.211, -0.009, 0.014, 0.988],
+            [4.474, -0.030, 0.036, 0.941],
+            [4.737, 0.004, 0.036, 0.971],
+            [5.000, -0.024, 0.028, 0.985],
+        ]
+        data = pd.DataFrame(data, columns=["t", "ca", "cb", "cc"])
+        data_df = data.set_index("t")
+        data_dict = {
+            "ca": {k: v for (k, v) in zip(data.t, data.ca)},
+            "cb": {k: v for (k, v) in zip(data.t, data.cb)},
+            "cc": {k: v for (k, v) in zip(data.t, data.cc)},
+        }
+
+        # Create an experiment list
+        self.exp_list_df = [ReactorDesignExperimentDAE(data_df)]
+        self.exp_list_dict = [ReactorDesignExperimentDAE(data_dict)]
+
+    def test_parmest_exception(self):
+        """
+        Test the exception raised by parmest as a result of not defining
+        the "unknown_parameters" attribute
+        """
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list_df, obj_function="SSE")
+
+        self.assertIn("unknown_parameters", str(context.exception))
+
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list_dict, obj_function="SSE")
+
+        self.assertIn("unknown_parameters", str(context.exception))
+
+
+@unittest.skipIf(
+    not parmest.parmest_available,
+    "Cannot test parmest: required dependencies are missing",
+)
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class TestRooneyBiegler(unittest.TestCase):
     def setUp(self):
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
