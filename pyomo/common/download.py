@@ -439,7 +439,8 @@ class FileDownloader(object):
             # Strip high bits & group/other write bits
             info.mode &= 0o755
             return True
-        if sys.version_info[:2] < (3,12):
+
+        if sys.version_info[:2] < (3, 12):
             tar_args = {}
         else:
             # Add a tar filter to suppress deprecation warning in Python 3.12+

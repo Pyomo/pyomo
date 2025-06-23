@@ -193,8 +193,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
     def test_no_message(self):
         self.handler.setFormatter(
             LegacyPyomoFormatter(
-                base=os.path.dirname(__file__),
-                verbosity=lambda: is_debug_set(logger),
+                base=os.path.dirname(__file__), verbosity=lambda: is_debug_set(logger)
             )
         )
 
