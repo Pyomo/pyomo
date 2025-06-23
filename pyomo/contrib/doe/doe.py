@@ -49,10 +49,13 @@ from pyomo.contrib.doe.utils import (
     generate_snake_zigzag_pattern,
 )  # , compute_FIM_metrics
 
-# utils_updated.py is the utils.py from my open PR # 3525.
-# When that PR is merged, compute_FIM_metrics will be imported from utils.py and this
-# import will be removed.
 from pyomo.contrib.doe.utils_updated import compute_FIM_metrics
+
+"""
+utils_updated.py is the utils.py from my open PR # 3525.
+When that PR is merged, compute_FIM_metrics will be imported from utils.py and this
+import will be removed.
+"""
 
 from pyomo.opt import SolverStatus
 

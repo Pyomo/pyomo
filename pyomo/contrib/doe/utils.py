@@ -119,18 +119,6 @@ def generate_snake_zigzag_pattern(*lists):
 
     # The main logic is in a nested recursive helper function.
     def _generate_recursive(depth, index_sum):
-        """
-        Parameters
-        ----------
-        depth : int
-            corresponds to the index of the current list in the `lists` argument.
-            Represents which list we are currently processing.
-
-        index_sum : int
-            It's a running total of the indices chosen from all the previous lists.
-            The direction of the depth-th list depends entirely on whether index_sum
-            even or odd.
-        """
         # Base case: If we've processed all lists, we're at the end of a path.
         if depth == len(lists):
             yield ()
