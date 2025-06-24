@@ -823,7 +823,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             fbbt(bounding_model)
         except InfeasibleConstraintException as fbbt_infeasible_con_exception:
             config.progress_logger.error(
-                f"{fbbt_exception_str}\n" f"{fbbt_infeasible_con_exception}"
+                "Encountered the following exception "
+                f"while computing parameter bounds with FBBT "
+                f"for uncertainty set {self}:\n  "
+                f"{fbbt_infeasible_con_exception!r}"
             )
 
         param_bounds = [
