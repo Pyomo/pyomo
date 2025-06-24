@@ -32,12 +32,10 @@ is_osx = platform.mac_ver()[0] != ""
 ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
-SET_GLOBAL_SEED = True
 
-if SET_GLOBAL_SEED:
-    # Set the global seed for reproducibility
-    seed = 524
-    np.random.seed(seed)  # Set seed for reproducibility
+# Set the global seed for reproducibility
+_RANDOM_SEED_FOR_TESTING = 524
+np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
 
 
 @unittest.skipIf(
@@ -100,7 +98,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         num_bootstraps = 10
         theta_est = self.pest.theta_est_bootstrap(
-            num_bootstraps, return_samples=True, seed=seed
+            num_bootstraps, return_samples=True, seed=_RANDOM_SEED_FOR_TESTING
         )
 
         num_samples = theta_est["samples"].apply(len)
@@ -117,10 +115,14 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertEqual(CR[0.75].sum(), 7)
         self.assertEqual(CR[1.0].sum(), 10)  # all true
 
-        graphics.pairwise_plot(theta_est, seed=seed)
-        graphics.pairwise_plot(theta_est, thetavals, seed=seed)
+        graphics.pairwise_plot(theta_est, seed=_RANDOM_SEED_FOR_TESTING)
+        graphics.pairwise_plot(theta_est, thetavals, seed=_RANDOM_SEED_FOR_TESTING)
         graphics.pairwise_plot(
-            theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"], seed=seed
+            theta_est,
+            thetavals,
+            0.8,
+            ["MVN", "KDE", "Rect"],
+            seed=_RANDOM_SEED_FOR_TESTING,
         )
 
     @unittest.skipIf(
@@ -150,7 +152,7 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertTrue(lNo_theta.shape == (6, 2))
 
         results = self.pest.leaveNout_bootstrap_test(
-            1, None, 3, "Rect", [0.5, 1.0], seed=5436
+            1, None, 3, "Rect", [0.5, 1.0], seed=_RANDOM_SEED_FOR_TESTING
         )
         self.assertEqual(len(results), 6)  # 6 lNo samples
         i = 1
@@ -1150,7 +1152,7 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
         self.assertTrue(lNo_theta.shape == (6, 2))
 
         results = self.pest.leaveNout_bootstrap_test(
-            1, None, 3, "Rect", [0.5, 1.0], seed=5436
+            1, None, 3, "Rect", [0.5, 1.0], seed=_RANDOM_SEED_FOR_TESTING
         )
         self.assertTrue(len(results) == 6)  # 6 lNo samples
         i = 1
