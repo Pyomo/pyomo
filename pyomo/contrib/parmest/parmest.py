@@ -670,10 +670,6 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     if not hasattr(model, "objective"):
         model.objective = pyo.Objective(expr=0, sense=pyo.minimize)
 
-    # Fix design variables to make the problem square
-    for comp in model.experiment_inputs:
-        comp.fix()
-
     solver.solve(model, tee=tee)
 
     # Probe the solved model for dsdp results (sensitivities s.t. parameters)
@@ -1061,6 +1057,8 @@ class Estimator(object):
 
                 calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
                 cov_n = kwargs[UnsupportedArgsLib.cov_n.value]
+                if not isinstance(calc_cov, bool):
+                    raise TypeError("Expected a boolean for 'calc_cov' argument.")
 
                 if not calc_cov:
                     # Do not calculate the reduced hessian
@@ -1081,7 +1079,7 @@ class Estimator(object):
                 else:
                     # parmest makes the fitted parameters stage 1 variables
                     ind_vars = []
-                    for ndname, Var, solval in ef_nonants(ef):
+                    for nd_name, Var, sol_val in ef_nonants(ef):
                         ind_vars.append(Var)
                     # calculate the reduced hessian
                     (solve_result, inv_red_hes) = (
@@ -1114,7 +1112,18 @@ class Estimator(object):
 
             if kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
                 if calc_cov:
-                    # Calculate the covariance matrix
+                    if not isinstance(cov_n, int):
+                        raise TypeError("Expected an integer for 'cov_n' argument.")
+                    num_unknowns = max(
+                        [
+                            len(experiment.get_labeled_model().unknown_parameters)
+                            for experiment in self.exp_list
+                        ]
+                    )
+                    assert cov_n > num_unknowns, (
+                        "The number of datapoints must be greater than the "
+                        "number of parameters to estimate"
+                    )
 
                     # Number of data points considered
                     n = cov_n
@@ -1211,7 +1220,7 @@ class Estimator(object):
         # Number of data points considered
         n = cov_n
 
-        # Extract number of fitted parameters
+        # Extract the number of fitted parameters
         l = len(self.estimated_theta)
 
         # calculate the sum of squared errors at the estimated parameter values
@@ -1703,9 +1712,9 @@ class Estimator(object):
                 "Expected a string for the method, e.g., 'finite_difference'"
             )
 
-        # check if the supplied number of datapoints is an integer
+        # check if the user-supplied number of datapoints is an integer
         if not isinstance(cov_n, int):
-            raise TypeError("Expected an integer for " + '"cov_n".')
+            raise TypeError("Expected an integer for 'cov_n' argument.")
 
         # number of unknown parameters
         num_unknowns = max(
@@ -1714,13 +1723,10 @@ class Estimator(object):
                 for experiment in self.exp_list
             ]
         )
-        assert isinstance(cov_n, int), (
-            "The number of datapoints that are used in the objective function is "
-            "required to calculate the covariance matrix."
+        assert cov_n > num_unknowns, (
+            "The number of datapoints must be greater than the "
+            "number of parameters to estimate."
         )
-        assert (
-            cov_n > num_unknowns
-        ), "The number of datapoints must be greater than the number of parameters to estimate."
 
         return self._cov_at_theta(method=method, solver=solver, cov_n=cov_n, step=step)
 
@@ -1923,6 +1929,7 @@ class Estimator(object):
 
         results = []
         for idx, sample in global_list:
+
             obj, theta = self.theta_est()
 
             bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)

@@ -100,6 +100,7 @@ class NewTestRooneyBiegler(unittest.TestCase):
                 self.create_model()
                 self.finalize_model()
                 self.label_model()
+
                 return self.model
 
             def create_model(self):
@@ -117,10 +118,6 @@ class NewTestRooneyBiegler(unittest.TestCase):
 
             def label_model(self):
                 m = self.model
-
-                # add experiment inputs
-                m.experiment_inputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-                m.experiment_inputs.update([(m.hour, self.hour)])
 
                 # add experiment outputs
                 m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
