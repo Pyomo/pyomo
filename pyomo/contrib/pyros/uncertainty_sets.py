@@ -654,10 +654,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         check_bounded = self.is_bounded(config=config)
 
         if not check_nonempty:
-            raise ValueError(
-                "Failed nonemptiness check. Nominal point is not in the set. "
-                f"Nominal point:\n {config.nominal_uncertain_param_vals}."
-            )
+            raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
 
         if not check_bounded:
             raise ValueError(
