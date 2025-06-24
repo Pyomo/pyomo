@@ -3082,7 +3082,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         time_with_bounds_provided = end - start
 
         # when parameter_bounds is not available
-        custom_set.parameter_bounds = None
+        custom_set.parameter_bounds = []
         start = time.time()
         self.assertTrue(custom_set.is_bounded(config=CONFIG), "Set is not bounded")
         end = time.time()
