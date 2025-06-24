@@ -580,7 +580,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         If any of the optimization models cannot be solved successfully to
         optimality, then False is returned.
 
-        This method is invoked by validate.
+        This method is invoked by ``self.validate()``.
         """
         # use parameter bounds if they are available
         param_bounds_arr = self.parameter_bounds
