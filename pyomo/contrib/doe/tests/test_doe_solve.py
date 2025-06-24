@@ -11,7 +11,6 @@
 import json
 import logging
 import os.path
-import idaes.core.solvers.get_solver
 
 from pyomo.common.dependencies import (
     numpy as np,
