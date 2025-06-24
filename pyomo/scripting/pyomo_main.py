@@ -14,10 +14,14 @@ import copy
 from pyomo.common.deprecation import deprecation_warning
 
 try:
-    import pkg_resources
+    try:
+        from importlib.metadata import entry_points
+    except ImportError:
+        # REMOVE LATER: Backport for Python < 3.10
+        from importlib_metadata import entry_points
 
-    pyomo_commands = pkg_resources.iter_entry_points('pyomo.command')
-except:
+    pyomo_commands = entry_points().get('pyomo.command', [])
+except Exception:
     pyomo_commands = []
 #
 # Load modules associated with Plugins that are defined in
