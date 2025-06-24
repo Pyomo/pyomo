@@ -469,8 +469,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                         initializer=_setup_spawn,
                         initargs=(
                             dill.dumps(instance),
-                            self._config.solver.name,
-                            self._config.solver.options,
+                            dill.dumps(self._config.solver.__class__),
+                            dill.dumps(self._config.solver.options),
                             self._config.use_primal_bound,
                         ),
                     )
@@ -914,7 +914,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
 # Things we call in subprocesses. These can't be member functions, or
 # else we'd have to pickle `self`, which is problematic.
-def _setup_spawn(model, solver_name, solver_options, use_primal_bound):
+def _setup_spawn(model, solver_class, solver_options, use_primal_bound):
     # When using 'spawn' or 'forkserver', Python starts in a new
     # environment and executes only this file, so we need to manually
     # ensure necessary plugins are registered (even if the main process
@@ -922,7 +922,7 @@ def _setup_spawn(model, solver_name, solver_options, use_primal_bound):
     import pyomo.environ
 
     _thread_local.model = dill.loads(model)
-    _thread_local.solver = SolverFactory(solver_name, options=solver_options)
+    _thread_local.solver = dill.loads(solver_class)(options=dill.loads(solver_options))
     _thread_local.config_use_primal_bound = use_primal_bound
 
 
@@ -931,8 +931,8 @@ def _setup_fork():
     # remake the solver instead of using the passed argument. All these
     # processes are copies of the calling thread so the thread-local
     # still works.
-    _thread_local.solver = SolverFactory(
-        _thread_local.solver.name, options=_thread_local.solver.options
+    _thread_local.solver = _thread_local.solver.__class__(
+        options=_thread_local.solver.options
     )
 
 
