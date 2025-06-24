@@ -92,8 +92,6 @@ class TestNumpyExpr(unittest.TestCase):
 
     def test_expression_vector_operations(self):
         m = ConcreteModel()
-        # m.x = Var(range(3))
-        # m.y = Var(range(2))
         m.p = Param(range(3), range(2), initialize=lambda m, i, j: 10 * i + j)
 
         m.e = Expression(range(3))
