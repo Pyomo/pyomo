@@ -444,46 +444,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 else os.cpu_count() - 1
             )
             if threads > 1:
-                method = (
-                    self._config.process_start_method
-                    if self._config.process_start_method is not None
-                    else (
-                        'spawn'
-                        if os.name == 'nt'
-                        else 'forkserver' if len(threading.enumerate()) > 1 else 'fork'
-                    )
-                )
-                logger.info(
-                    f"Running {len(jobs)} jobs on {threads} worker "
-                    f"processes with process start method {method}."
-                )
-                if method == 'spawn' or method == 'forkserver':
-                    if not dill_available:
-                        raise GDP_Error(
-                            "Dill is required when spawning processes using "
-                            "methods 'spawn' or 'forkserver', but it could "
-                            "not be imported."
-                        )
-                    pool = multiprocessing.get_context(method).Pool(
-                        processes=threads,
-                        initializer=_setup_spawn,
-                        initargs=(
-                            dill.dumps(instance),
-                            dill.dumps(self._config.solver.__class__),
-                            dill.dumps(self._config.solver.options),
-                            self._config.use_primal_bound,
-                        ),
-                    )
-                elif method == 'fork':
-                    _thread_local.model = instance
-                    _thread_local.solver = self._config.solver
-                    _thread_local.config_use_primal_bound = (
-                        self._config.use_primal_bound
-                    )
-                    pool = multiprocessing.get_context('fork').Pool(
-                        processes=threads, initializer=_setup_fork, initargs=()
-                    )
-                with pool:
+                with self._setup_pool(threads, instance, len(jobs)) as pool:
                     results = pool.starmap(
                         func=_calc_M,
                         iterable=[
@@ -837,6 +798,46 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
 
         return transformed_constraints
+
+    def _setup_pool(self, threads, instance, num_jobs):
+        method = (
+            self._config.process_start_method
+            if self._config.process_start_method is not None
+            else (
+                'spawn'
+                if os.name == 'nt'
+                else 'forkserver' if len(threading.enumerate()) > 1 else 'fork'
+            )
+        )
+        logger.info(
+            f"Running {num_jobs} jobs on {threads} worker "
+            f"processes with process start method {method}."
+        )
+        if method == 'spawn' or method == 'forkserver':
+            if not dill_available:
+                raise GDP_Error(
+                    "Dill is required when spawning processes using "
+                    "methods 'spawn' or 'forkserver', but it could "
+                    "not be imported."
+                )
+            pool = multiprocessing.get_context(method).Pool(
+                processes=threads,
+                initializer=_setup_spawn,
+                initargs=(
+                    dill.dumps(instance),
+                    dill.dumps(self._config.solver.__class__),
+                    dill.dumps(self._config.solver.options),
+                    self._config.use_primal_bound,
+                ),
+            )
+        elif method == 'fork':
+            _thread_local.model = instance
+            _thread_local.solver = self._config.solver
+            _thread_local.config_use_primal_bound = self._config.use_primal_bound
+            pool = multiprocessing.get_context('fork').Pool(
+                processes=threads, initializer=_setup_fork, initargs=()
+            )
+        return pool
 
     def _add_transformation_block(self, to_block):
         transBlock, new_block = super()._add_transformation_block(to_block)
