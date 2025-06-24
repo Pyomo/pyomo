@@ -617,7 +617,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Returns
         -------
         : bool
-            True if the nominal point is within the set,
+            True if the uncertainty set is nonempty,
             and False otherwise.
         """
         # check if nominal point is in set for quick test
