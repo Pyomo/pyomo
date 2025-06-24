@@ -262,6 +262,37 @@ class TestNumPy(unittest.TestCase):
             )
         )
 
+    def test_numpy_array_copy_errors(self):
+        # Defer testing until here to avoid the unconditional numpy dereference
+        if int(np.__version__.split('.')[0]) < 2:
+            self.skipTest("requires numpy>=2")
+
+        m = ConcreteModel()
+        m.x = Var([0, 1, 2])
+        with self.assertRaisesRegex(
+            ValueError,
+            "Pyomo IndexedComponents do not support conversion to NumPy "
+            "arrays without generating a new array",
+        ):
+            np.asarray(m.x, copy=False)
+
+    def test_numpy_array_dtype_errors(self):
+        m = ConcreteModel()
+        m.x = Var([0, 1, 2])
+        # object is OK
+        a = np.asarray(m.x, object)
+        self.assertEqual(a.shape, (3,))
+        # None is OK
+        a = np.asarray(m.x, None)
+        self.assertEqual(a.shape, (3,))
+        # Anything else is an error
+        with self.assertRaisesRegex(
+            ValueError,
+            "Pyomo IndexedComponents can only be converted to NumPy arrays "
+            r"with dtype=object \(received dtype=.*int32",
+        ):
+            a = np.asarray(m.x, np.int32)
+
     def test_init_param_from_ndarray(self):
         # Test issue #2033
         m = ConcreteModel()

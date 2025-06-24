@@ -33,7 +33,7 @@ class TestAssumedBehavior(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var([1, 2])
         m.x[1].set_value(5)
-        msg = "No value for uninitialized NumericValue"
+        msg = "No value for uninitialized VarData"
         with self.assertRaisesRegex(ValueError, msg):
             pyo.value(1 + m.x[1] * m.x[2])
 
