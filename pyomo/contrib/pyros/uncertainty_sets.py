@@ -621,10 +621,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             and False otherwise.
         """
         # check if nominal point is in set for quick test
-        set_nonempty = False
         if config.nominal_uncertain_param_vals:
-            if self.point_in_set(config.nominal_uncertain_param_vals):
-                set_nonempty = True
+            set_nonempty = self.point_in_set(config.nominal_uncertain_param_vals)
         else:
             # construct feasibility problem and solve otherwise
             set_nonempty = self._solve_feasibility(config.global_solver)
