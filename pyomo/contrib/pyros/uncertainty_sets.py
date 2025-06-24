@@ -221,7 +221,7 @@ def validate_arg_type(
         Name of argument to be displayed in exception message.
     arg_val : object
         Value of argument to be checked.
-    valid_types : type, tuple of types, or iterable of types
+    valid_types : type or iterable of types
         Valid types for the argument value.
     valid_type_desc : str or None, optional
         Description of valid types for the argument value;
