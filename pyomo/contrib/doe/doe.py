@@ -1646,12 +1646,12 @@ class DesignOfExperiments:
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
         design_values : dict,
-            dict of lists, of the form {"var_name": [var_values]}. Default: None.
+            dict of lists or other array-like objects, of the form {"var_name": <var_values>}. Default: None.
             The `design_values` should have the key(s) passed as strings that is a
             subset of the `experiment_inputs`. If one or more design variables are not
             to be changed, then they should not be passed in the `design_values`
             dictionary, but if they are passed in the dictionary, then they must be a
-            list of floats. For example, if our experiment has 4 design variables
+            array-like object of floats. For example, if our experiment has 4 design variables
             (i.e., `experiment_inputs`): model.x1, model.x2, model.x3, and model.x4,
             their values may be passed as, design_values= {"x1": [1, 2, 3], "x3": [7],
             "x4": [-10, 20]}. In this case, x2 will not be changed and will be fixed at
@@ -1705,8 +1705,8 @@ class DesignOfExperiments:
 
         if not design_values:
             raise ValueError(
-                "design_values must be provided as a dictionary of lists "
-                "in the form {<'var_name'>: [<var_values>]}."
+                "design_values must be provided as a dictionary of array-like objects "
+                "in the form {<'var_name'>: <var_values>}."
             )
 
         # Check whether the design_ranges keys are in the experiment_inputs
@@ -1726,6 +1726,7 @@ class DesignOfExperiments:
         ]
         # This ensures that the order of the design_values keys matches the order of the
         # design_map_keys so that design_point can be constructed correctly in the loop.
+        # TODO: define an Enum to add different sensitivity analysis sequences
         des_ranges = [design_values[k.name] for k in design_map_keys]
         if change_one_design_at_a_time:
             factorial_points = generate_snake_zigzag_pattern(*des_ranges)

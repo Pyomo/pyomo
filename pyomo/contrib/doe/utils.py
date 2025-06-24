@@ -102,29 +102,40 @@ def rescale_FIM(FIM, param_vals):
 #     return param_list
 
 
-def generate_snake_zigzag_pattern(*lists):
+def generate_snake_zigzag_pattern(*array_like_args):
     """
-    Generates a multi-dimensional zigzag pattern for an arbitrary number of lists.
+    Generates a multi-dimensional zigzag pattern for an arbitrary number of 1D array-like arguments.
     This pattern is useful for generating patterns for sensitivity analysis when we want
     to change one variable at a time. This function uses recursion and acts as a generator.
 
     Parameters
     ----------
-    *lists: A variable number of 1D arraylike arguments.
+    *array_like_args: A variable number of 1D array-like arguments.
 
     Yields
     ------
     A tuple representing points in the snake-like zigzag pattern.
     """
+    # throw an error if the array_like_args are not array-like or all 1D
+    for i, arg in enumerate(array_like_args):
+        try:
+            arr_np = np.asarray(arg)
+        except Exception:
+            raise ValueError(f"Argument at position {i} is not 1D array-like.")
+
+        if arr_np.ndim != 1:
+            raise ValueError(
+                f"Argument at position {i} is not 1D. Got shape {arr_np.shape}."
+            )
 
     # The main logic is in a nested recursive helper function.
     def _generate_recursive(depth, index_sum):
         # Base case: If we've processed all lists, we're at the end of a path.
-        if depth == len(lists):
+        if depth == len(array_like_args):
             yield ()
             return
 
-        current_list = lists[depth]
+        current_list = array_like_args[depth]
 
         # Determine the iteration direction based on the sum of parent indices.
         # This is the mathematical rule for the zigzag.
