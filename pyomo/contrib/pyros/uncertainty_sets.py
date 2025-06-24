@@ -648,7 +648,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Raises
         ------
         ValueError
-            If nonemptiness check or boundedness check fail.
+            If nonemptiness check or boundedness check fails.
         """
         check_nonempty = self.is_nonempty(config=config)
         check_bounded = self.is_bounded(config=config)
