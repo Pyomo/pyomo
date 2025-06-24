@@ -40,13 +40,8 @@ def main():
 
     # Parameter estimation with multistart to avoid local minima
     obj, theta = pest.theta_est_multistart(
-        num_starts=10,
-        start_method='random',
-        random_seed=42,
-        max_iter=1000,
-        tol=1e-6,
+        num_starts=10, start_method='random', random_seed=42, max_iter=1000, tol=1e-6
     )
-
 
 
 if __name__ == "__main__":
