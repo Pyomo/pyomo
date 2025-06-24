@@ -28,6 +28,7 @@ from pyomo.core.base import (
     Constraint,
     Objective,
 )
+from pyomo.core.base.block import SubclassOf
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -116,7 +117,7 @@ class RelaxIntegerVars(Transformation):
         super().__init__()
 
     def _apply_to(self, model, **kwds):
-        if not model.ctype in (Block, Disjunct):
+        if model.ctype not in SubclassOf(Block):
             raise ValueError(
                 "Transformation called on %s of type %s. 'model' "
                 "must be a ConcreteModel or Block." % (model.name, model.ctype)
