@@ -1132,25 +1132,27 @@ component, use the block del_component() and add_component() methods.
         if isinstance(name_or_object, str):
             if name_or_object in self._decl:
                 obj = self._decl_order[self._decl[name_or_object]][0]
+            else:
+                # Maintaining current behavior, but perhaps this should raise an
+                # exception?
+                return
         else:
             try:
                 obj = name_or_object.parent_component()
-                if obj is not name_or_object:
-                    raise ValueError(
-                        "Argument '%s' to del_component is a ComponentData object. "
-                        "Please use the Python 'del' function to delete members of "
-                        "indexed Pyomo components. The del_component function can "
-                        "only be used to delete IndexedComponents and "
-                        "ScalarComponents." % name_or_object.local_name
-                    )
-                if obj.parent_block() is not self:
-                    obj = None
             except AttributeError:
-                pass
-        if obj is None:
-            # Maintaining current behavior, but perhaps this should raise an
-            # exception?
-            return
+                # Maintaining current behavior, but perhaps this should raise an
+                # exception?
+                return
+            if obj is not name_or_object:
+                raise ValueError(
+                    "Argument '%s' to del_component is a ComponentData object. "
+                    "Please use the Python 'del' function to delete members of "
+                    "indexed Pyomo components. The del_component function can "
+                    "only be used to delete IndexedComponents and "
+                    "ScalarComponents." % name_or_object.local_name
+                )
+            if obj.parent_block() is not self:
+                return
 
         name = obj.local_name
 
