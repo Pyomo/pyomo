@@ -66,7 +66,7 @@ class RelaxIntegerVars(Transformation):
             doc="""
             This argument should be the reverse transformation token
             returned by a previous call to this transformation to transform
-            fixed disjunctive state in the given model.
+            fixed discrete state in the given model.
             If this argument is specified, this call to the transformation
             will reverse what the transformation did in the call that returned
             the token. Note that if there are intermediate changes to the model
