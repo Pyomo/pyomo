@@ -1167,7 +1167,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x2.value, 1, places=4)
         self.assertAlmostEqual(results.incumbent_objective, 2, 4)
 
-        # del m.x1
+        del m.x1
         results = opt.solve(m)
         self.assertAlmostEqual(m.x2.value, 1, places=4)
         self.assertAlmostEqual(results.incumbent_objective, 2, 4)
