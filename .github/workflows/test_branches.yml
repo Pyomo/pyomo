@@ -521,7 +521,9 @@ jobs:
         ls -l $IPOPT_DIR
 
     - name: Install GAMS
-      if: ${{ ! matrix.slim }}
+      # June 24, 2025: Turning off GAMS install until we can get licensing resolved
+      if: false
+      # if: ${{ ! matrix.slim }}
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
