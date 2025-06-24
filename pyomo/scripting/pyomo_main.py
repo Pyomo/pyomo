@@ -14,11 +14,7 @@ import copy
 from pyomo.common.deprecation import deprecation_warning
 
 try:
-    try:
-        from importlib.metadata import entry_points
-    except ImportError:
-        # REMOVE LATER: Backport for Python < 3.10
-        from importlib_metadata import entry_points
+    from importlib.metadata import entry_points
 
     pyomo_commands = entry_points().get('pyomo.command', [])
 except Exception:
