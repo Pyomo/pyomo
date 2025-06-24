@@ -58,6 +58,7 @@ mip_solvers = [
 ]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', GurobiPersistent), ('ipopt', Ipopt)]
+qp_solvers = qcp_solvers + [("highs", Highs)]
 miqcqp_solvers = [('gurobi', GurobiPersistent)]
 nl_solvers = [('ipopt', Ipopt)]
 nl_solvers_set = {i[0] for i in nl_solvers}
@@ -1097,7 +1098,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
 
     @parameterized.expand(input=_load_tests(qcp_solvers))
-    def test_mutable_quadratic_objective(
+    def test_mutable_quadratic_objective_qcp(
         self, name: str, opt_class: Type[SolverBase], use_presolve: bool
     ):
         opt: SolverBase = opt_class()
@@ -1127,6 +1128,44 @@ class TestSolvers(unittest.TestCase):
 
         self.assertAlmostEqual(m.x.value, 0.6962249634573562, 4)
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
+
+    @parameterized.expand(input=_load_tests(qp_solvers))
+    def test_mutable_quadratic_objective_qp(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
+        opt: SolverBase = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+        if any(name.startswith(i) for i in nl_solvers_set):
+            if use_presolve:
+                opt.config.writer_config.linear_presolve = True
+            else:
+                opt.config.writer_config.linear_presolve = False
+        # test issue #3381
+        m = pyo.ConcreteModel()
+
+        m.x1 = pyo.Var(name='x1', domain=pyo.Reals)
+        m.x2 = pyo.Var(name='x2', domain=pyo.Reals)
+
+        m.p = pyo.Param(initialize=1, mutable=True)
+
+        m.obj = pyo.Objective(
+            expr=m.p * m.x1 * m.x1 + m.x2 * m.x2 - m.x1 * m.x2, sense=pyo.minimize
+        )
+
+        m.con1 = pyo.Constraint(expr=m.x1 >= 1)
+        m.con2 = pyo.Constraint(expr=m.x2 >= 1)
+
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 1, places=4)
+        self.assertAlmostEqual(m.x2.value, 1, places=4)
+        self.assertAlmostEqual(results.incumbent_objective, 1, 4)
+
+        m.p.value = 2.0
+        results = opt.solve(m)
+        self.assertAlmostEqual(m.x1.value, 1, places=4)
+        self.assertAlmostEqual(m.x2.value, 1, places=4)
+        self.assertAlmostEqual(results.incumbent_objective, 2, 4)
 
     @parameterized.expand(input=_load_tests(all_solvers))
     def test_fixed_vars(
