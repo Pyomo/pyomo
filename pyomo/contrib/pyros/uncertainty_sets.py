@@ -2838,7 +2838,8 @@ class EllipsoidalSet(UncertaintySet):
            [0, 2, 0, 0],
            [0, 0, 3, 0],
            [0, 0, 0, 4]])
-    >>> conf_ellipsoid.scale
+    >>> conf_ellipsoid.scale  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    <BLANKLINE>
     ...9.4877...
     >>> conf_ellipsoid.gaussian_conf_lvl
     0.95
