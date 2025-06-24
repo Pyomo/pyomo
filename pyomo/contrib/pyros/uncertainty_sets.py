@@ -657,10 +657,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
 
         if not check_bounded:
-            raise ValueError(
-                "Failed boundedness check. Parameter bounds are not finite. "
-                f"Parameter bounds:\n {self.parameter_bounds}."
-            )
+            raise ValueError(f"Boundedness check failed for uncertainty set {self}.")
 
     @abc.abstractmethod
     def set_as_constraint(self, uncertain_params=None, block=None):
