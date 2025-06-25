@@ -40,7 +40,6 @@ from pyomo.opt.results import (
 )
 
 from pyomo.common.dependencies import attempt_import
-import numpy as np
 import struct
 
 def _gams_importer():
@@ -1296,8 +1295,8 @@ class GAMSShell(_GAMSSolver):
             
             specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
             rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
-
-            specVals[gdxcc.GMS_SVIDX_EPS] = np.finfo(np.float64).tiny
+            
+            specVals[gdxcc.GMS_SVIDX_EPS] = sys.float_info.min
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
@@ -1340,7 +1339,7 @@ class GAMSShell(_GAMSSolver):
             specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
             rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
 
-            specVals[gdxcc.GMS_SVIDX_EPS] = np.finfo(np.float64).tiny
+            specVals[gdxcc.GMS_SVIDX_EPS] = sys.float_info.min
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
