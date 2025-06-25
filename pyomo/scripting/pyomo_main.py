@@ -20,7 +20,13 @@ pyomo_commands = []
 def load_entry_points():
     import importlib.metadata
 
-    for ep in importlib.metadata.entry_points().get('pyomo.command', []):
+    try:
+        # Python >= 3.10
+        ep_list = importlib.metadata.entry_points(group='pyomo.command')
+    except:
+        # Python 3.8 - 3.9
+        ep_list = importlib.metadata.entry_points().get('pyomo.command', [])
+    for ep in ep_list:
         try:
             pyomo_commands.append(ep.load())
         except:
