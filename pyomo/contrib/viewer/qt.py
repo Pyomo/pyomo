@@ -48,6 +48,7 @@ for module_str in supported:
         available = module_str
         break
     except Exception as e:
+        qt_package = QtWidgets = QtCore = QtGui = None
         import_errors.append(f"{e}")
 
 if not available:
@@ -103,7 +104,6 @@ if not available:
 else:
     QAbstractItemView = QtWidgets.QAbstractItemView
     QFileDialog = QtWidgets.QFileDialog
-    QMainWindow = QtWidgets.QMainWindow
     QMainWindow = QtWidgets.QMainWindow
     QMdiArea = QtWidgets.QMdiArea
     QApplication = QtWidgets.QApplication
