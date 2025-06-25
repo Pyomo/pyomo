@@ -2111,13 +2111,14 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(rc[m.x], 1)
             self.assertAlmostEqual(rc[m.y], 0)
 
-
     @parameterized.expand(input=_load_tests([("highs", Highs)]))
-    def test_node_limit(self, name: str, opt_class: Type[SolverBase], use_presolve: bool):
+    def test_node_limit(
+        self, name: str, opt_class: Type[SolverBase], use_presolve: bool
+    ):
         "Check if the correct termination status is returned."
         opt: SolverBase = opt_class()
         if not opt.available():
-            raise unittest.SkipTest(f'Solver {opt.name} not available.')
+            raise unittest.SkipTest(f"Solver {opt.name} not available.")
 
         mod = instances.multi_knapsack()
         highs_options = {"mip_max_nodes": 1}

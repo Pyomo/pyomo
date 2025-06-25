@@ -13,11 +13,9 @@ import random
 
 import pyomo.environ as pyo
 
+
 def multi_knapsack(
-    num_items: int = 20,
-    item_ub: int = 10,
-    num_cons: int = 10,
-    max_weight: int = 100
+    num_items: int = 20, item_ub: int = 10, num_cons: int = 10, max_weight: int = 100
 ) -> pyo.ConcreteModel:
     "Creates a random instance of Knapsack with multiple capacity constraints."
     mod = pyo.ConcreteModel()
@@ -36,7 +34,6 @@ def multi_knapsack(
         name="cap",
     )
     mod.obj = pyo.Objective(
-        rule=lambda m: sum(cost[i] * m.x[i] for i in m.I),
-        sense=pyo.maximize,
+        rule=lambda m: sum(cost[i] * m.x[i] for i in m.I), sense=pyo.maximize
     )
     return mod
