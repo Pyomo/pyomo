@@ -102,9 +102,9 @@ def rescale_FIM(FIM, param_vals):
 #     return param_list
 
 
-def generate_snake_zigzag_pattern(*array_like_args):
+def serpentine_traversal_sampling(*array_like_args):
     """
-    Generates a multi-dimensional zigzag pattern for an arbitrary number of 1D array-like arguments.
+    Generates a multi-dimensional pattern for an arbitrary number of 1D array-like arguments.
     This pattern is useful for generating patterns for sensitivity analysis when we want
     to change one variable at a time. This function uses recursion and acts as a generator.
 
