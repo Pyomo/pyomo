@@ -573,9 +573,7 @@ jobs:
         ls -l $IPOPT_DIR
 
     - name: Install GAMS
-      # June 24, 2025: Turning off GAMS install until we can get licensing resolved
-      if: false
-      # if: ${{ ! matrix.slim }}
+      if: ${{ ! matrix.slim }}
       # We install using Powershell because the GAMS installer hangs
       # when launched from bash on Windows
       shell: pwsh
@@ -588,9 +586,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
-        # We are pinning to 29.1.0 because a license is required for
-        # versions after this in order to run in demo mode.
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        # Demo licenses are included for 5mo from the newest release
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/50.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
