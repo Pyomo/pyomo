@@ -28,12 +28,13 @@ relocated_module_attribute(
     'QtApp', 'pyomo.contrib.viewer.pyomo_qtapp.QtApp', version='6.9.3.dev0'
 )
 
+qtconsole_app, qtconsole_available = attempt_import(
+    "qtconsole.qtconsoleapp", defer_import=False
+)
+
 
 def main(*args):
     # Import the Qt infrastructure (if it exists)
-    qtconsole_app, qtconsole_available = attempt_import(
-        "qtconsole.qtconsoleapp", defer_import=False
-    )
     import pyomo.contrib.viewer.qt as myqt
 
     if not myqt.available or not qtconsole_available:
