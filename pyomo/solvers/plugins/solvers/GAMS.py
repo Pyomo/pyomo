@@ -44,7 +44,7 @@ import struct
 
 def _gams_importer():
     try:
-        import gams.core.gdx as gdxAdd
+        import gams.core.gdx as gdx
         return gdx
     except ImportError:
         try:
