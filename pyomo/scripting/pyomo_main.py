@@ -13,33 +13,22 @@ import sys
 import copy
 from pyomo.common.deprecation import deprecation_warning
 
-try:
-    from importlib.metadata import entry_points
 
-    pyomo_commands = entry_points().get('pyomo.command', [])
-except Exception:
-    pyomo_commands = []
-#
-# Load modules associated with Plugins that are defined in
-# EGG files.
-#
-for entrypoint in pyomo_commands:
-    try:
-        plugin_class = entrypoint.load()
-    except Exception:
-        exctype, err, tb = sys.exc_info()  # BUG?
-        import traceback
+pyomo_commands = []
 
-        msg = (
-            "Error loading pyomo.command entry point %s:\nOriginal %s: %s\n"
-            "Traceback:\n%s"
-            % (entrypoint, exctype.__name__, err, ''.join(traceback.format_tb(tb)))
-        )
-        # clear local variables to remove circular references
-        exctype = err = tb = None
-        # TODO: Should this just log an error and re-raise the original
-        # exception?
-        raise ImportError(msg)
+
+def load_entry_points():
+    import importlib.metadata
+
+    for ep in importlib.metadata.entry_points(group='pyomo.command'):
+        try:
+            pyomo_commands.append(ep.load())
+        except:
+            logger.error(
+                f"Importing 'pyomo.command' entry point '{ep.name}' failed:\n"
+                f"{traceback.format_exc(limit=1)}"
+            )
+            raise
 
 
 def main(args=None):
@@ -49,6 +38,11 @@ def main(args=None):
     from pyomo.scripting import pyomo_parser
     import pyomo.environ
 
+    #
+    # Load the pyomo.command entry points
+    #
+    if not pyomo_commands:
+        load_entry_points()
     #
     # Parse the arguments
     #
