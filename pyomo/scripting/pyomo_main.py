@@ -20,7 +20,7 @@ pyomo_commands = []
 def load_entry_points():
     import importlib.metadata
 
-    for ep in importlib.metadata.entry_points(group='pyomo.command'):
+    for ep in importlib.metadata.entry_points().get('pyomo.command', []):
         try:
             pyomo_commands.append(ep.load())
         except:
