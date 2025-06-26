@@ -15,10 +15,10 @@ from pyomo.common.cmake_builder import build_cmake_project
 
 def build_external_functions(user_args=[], parallel=None):
     return build_cmake_project(
-        targets=['src'],
-        package_name='external_functions',
-        description='Useful external function',
-        user_args=['-DBUILD_AMPLASL_IF_NEEDED=ON'] + user_args,
+        targets=["src"],
+        package_name="external_functions",
+        description="Useful external function",
+        user_args=["-DBUILD_AMPLASL_IF_NEEDED=ON"] + user_args,
         parallel=parallel,
     )
 

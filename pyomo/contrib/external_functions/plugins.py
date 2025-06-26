@@ -12,5 +12,6 @@
 from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.contrib.external_functions.build import ExternalFunctionBuilder
 
+
 def load():
-    ExtensionBuilderFactory.register('external_functions')(ExternalFunctionBuilder)
+    ExtensionBuilderFactory.register("external_functions")(ExternalFunctionBuilder)
