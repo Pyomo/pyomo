@@ -365,11 +365,6 @@ class DesignOfExperiments:
                         model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
                             pyo.value(model.fim[(i, j)])
                         )
-                    else:  # REMOVE THIS IF USING LOWER TRIANGLE
-                        pass
-                        # model.obj_cons.egb_fim_block.inputs[(j, i)].set_value(
-                        #    pyo.value(model.fim[(j, i)])
-                        # )
             # Set objective value
             if self.objective_option == ObjectiveLib.trace:
                 # Do safe inverse here?
