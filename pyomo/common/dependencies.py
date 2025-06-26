@@ -443,16 +443,9 @@ def check_min_version(module, min_version):
             module = indicator._module
         else:
             return False
-    if check_min_version._parser is None:
-        check_min_version._parser = packaging_version.parse
-    else:
-        _parser = check_min_version._parser
 
     version = getattr(module, '__version__', '0.0.0')
-    return _parser(min_version) <= _parser(version)
-
-
-check_min_version._parser = None
+    return packaging.version.parse(min_version) <= packaging.version.parse(version)
 
 
 #
@@ -1086,7 +1079,9 @@ with declare_modules_as_importable(globals()):
     random, _ = attempt_import('random')
 
     # Necessary for minimum version checking for other optional dependencies
-    packaging_version, packaging_available = attempt_import('packaging.version')
+    packaging, packaging_available = attempt_import(
+        'packaging', deferred_submodules=['version']
+    )
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
     mpi4py, mpi4py_available = attempt_import(
