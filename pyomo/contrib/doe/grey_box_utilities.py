@@ -133,11 +133,11 @@ class FIMExternalGreyBox(
         return input_names_list
 
     def equality_constraint_names(self):
-        # ToDo: Are there any objectives that will have constraints?
+        # TODO: Are there any objectives that will have constraints?
         return []
 
     def output_names(self):
-        # ToDo: add output name for the variable. This may have to be
+        # TODO: add output name for the variable. This may have to be
         # an input from the user. Or it could depend on the usage of
         # the ObjectiveLib Enum object, which should have an associated
         # name for the objective function at all times.
@@ -160,7 +160,7 @@ class FIMExternalGreyBox(
         np.copyto(self._input_values, input_values)
 
     def evaluate_equality_constraints(self):
-        # ToDo: are there any objectives that will have constraints?
+        # TODO: are there any objectives that will have constraints?
         return None
 
     def evaluate_outputs(self):
@@ -220,7 +220,7 @@ class FIMExternalGreyBox(
             pyomo_block.outputs["ME-opt"] = output_value
 
     def evaluate_jacobian_equality_constraints(self):
-        # ToDo: Do any objectives require constraints?
+        # TODO: Do any objectives require constraints?
 
         # Returns coo_matrix of the correct shape
         return None
@@ -235,7 +235,7 @@ class FIMExternalGreyBox(
             self._n_params, self._n_params
         )
 
-        # ToDo: Add inertia correction for
+        # TODO: Add inertia correction for
         #       negative/small eigenvalues
         eig_vals, eig_vecs = np.linalg.eig(M)
         if min(eig_vals) <= 1e-3:
@@ -323,14 +323,14 @@ class FIMExternalGreyBox(
 
     # Beyond here is for Hessian information
     def set_equality_constraint_multipliers(self, eq_con_multiplier_values):
-        # ToDo: Do any objectives require constraints?
+        # TODO: Do any objectives require constraints?
         # Assert lengths match
         self._eq_con_mult_values = np.asarray(
             eq_con_multiplier_values, dtype=np.float64
         )
 
     def set_output_constraint_multipliers(self, output_con_multiplier_values):
-        # ToDo: Do any objectives require constraints?
+        # TODO: Do any objectives require constraints?
         # Assert length matches
         self._output_con_mult_values = np.asarray(
             output_con_multiplier_values, dtype=np.float64
@@ -342,7 +342,7 @@ class FIMExternalGreyBox(
         return None
 
     def evaluate_hessian_outputs(self, FIM=None):
-        # ToDo: significant bookkeeping if the hessian's require vectorized
+        # TODO: significant bookkeeping if the hessian's require vectorized
         # operations. Just need mapping that works well and we are good.
         current_FIM = self._get_FIM()
 
