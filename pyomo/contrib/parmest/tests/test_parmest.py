@@ -33,9 +33,8 @@ ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
 
-# Set the global seed for reproducibility
+# Set the global seed for random number generation in tests
 _RANDOM_SEED_FOR_TESTING = 524
-np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
 
 
 @unittest.skipIf(
@@ -48,6 +47,8 @@ class TestRooneyBiegler(unittest.TestCase):
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
             RooneyBieglerExperiment,
         )
+
+        np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
 
         # Note, the data used in this test has been corrected to use
         # data.loc[5,'hour'] = 7 (instead of 6)
@@ -347,6 +348,7 @@ class TestModelVariants(unittest.TestCase):
             RooneyBieglerExperiment,
         )
 
+        np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
         self.data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
@@ -721,6 +723,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
             ca_meas = data["ca"]
             cb_meas = data["cb"]
             cc_meas = data["cc"]
+
+            np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
 
             if isinstance(data, pd.DataFrame):
                 meas_t = data.index  # time index
