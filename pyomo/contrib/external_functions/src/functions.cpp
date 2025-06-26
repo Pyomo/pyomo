@@ -14,7 +14,7 @@
 extern real sinc(arglist *al) {
    real x = al->ra[al->at[0]];
    real y = 0;
-   real r = 1e-4;
+   real r = 0.1;
    if(fabs(x) < r){ // use taylor series near 0
       y = 1 
       - x * x / 3.0 / 2.0
@@ -25,13 +25,15 @@ extern real sinc(arglist *al) {
          al->derivs[0] = - x / 3.0
          + pow(x, 3) / 5.0 / 3.0 / 2.0
          - pow(x, 5) / 7.0 / 5.0 / 4.0 / 3.0 / 2.0
-         + pow(x, 7) / 9.0 / 7.0 / 6.0 / 5.0 / 4.0 / 3.0 / 2.0;
+         + pow(x, 7) / 9.0 / 7.0 / 6.0 / 5.0 / 4.0 / 3.0 / 2.0
+         - pow(x, 9) /11.0 / 9.0 / 8.0 / 7.0 / 6.0 / 5.0 / 4.0 / 3.0 / 2.0;
       }
       if (al->hes!=NULL) {
          al->hes[0] = - 1 / 3.0
          + pow(x, 2) / 5.0 / 2.0
          - pow(x, 4) / 7.0 / 4.0 / 3.0 / 2.0
-         + pow(x, 6) / 9.0 / 6.0 / 5.0 / 4.0 / 3.0 / 2.0;
+         + pow(x, 6) / 9.0 / 6.0 / 5.0 / 4.0 / 3.0 / 2.0
+         - pow(x, 8) /11.0 / 8.0 / 7.0 / 6.0 / 5.0 / 4.0 / 3.0 / 2.0;
       }
    }
    else{  // away from 0 use sin(x) / x

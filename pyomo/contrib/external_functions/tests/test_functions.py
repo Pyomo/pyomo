@@ -85,8 +85,8 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertAlmostEqual(f, math.sin(2) / 2)
         self.assertStructuredAlmostEqual(g, [(math.sin(2 + dx) / (2 + dx) - f)/dx], 5)
 
-        dx = 1e-12
-        x = 1e-4
+        dx = 1e-10
+        x = 0.1
 
         f1, g1, h1 = m.tf.evaluate_fgh((x + dx,))
         f2, g2, h2 = m.tf.evaluate_fgh((x - dx,))
@@ -94,8 +94,8 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertStructuredAlmostEqual(g1, g2)
         self.assertStructuredAlmostEqual(h1, h2)
 
-        dx = 1e-12
-        x = 1e-4
+        dx = 1e-10
+        x = 0.1
 
         f1, g1, h1 = m.tf.evaluate_fgh((x + dx,))
         f2, g2, h2 = m.tf.evaluate_fgh((x - dx,))
