@@ -444,15 +444,9 @@ def check_min_version(module, min_version):
         else:
             return False
     if check_min_version._parser is None:
-        try:
-            from packaging import version as _version
+        packaging_version, _ = attempt_import('packaging.version')
 
-            _parser = _version.parse
-        except ImportError:
-            # pkg_resources is an order of magnitude slower to import than
-            # packaging.  Only use it if the preferred (but optional)
-            # packaging library is not present
-            from pkg_resources import parse_version as _parser
+        _parser = packaging_version.parse
         check_min_version._parser = _parser
     else:
         _parser = check_min_version._parser
