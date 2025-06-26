@@ -76,13 +76,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.13.3']  # FIXME: Remove specific 3.13 version once logging tests are fixed
+        python: [3.13]
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.13.3'  # FIXME: Remove specific 3.13 version once logging tests are fixed
+          python: 3.13
           test_docs: 1
           TARGET: linux
           PYENV: pip
