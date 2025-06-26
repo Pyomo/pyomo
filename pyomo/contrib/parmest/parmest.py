@@ -817,7 +817,7 @@ class Estimator(object):
 
         return retval, thetavals, WorstStatus
 
-    def _get_sample_list(self, samplesize, num_samples, replacement=True, seed=None):
+    def _get_sample_list(self, samplesize, num_samples, replacement=True):
         samplelist = list()
 
         scenario_numbers = list(range(len(self.exp_list)))
@@ -834,8 +834,6 @@ class Estimator(object):
                 while (unique_samples <= len(self._return_theta_names())) and (
                     not duplicate
                 ):
-                    # if seed is not None:
-                    # np.random.seed(seed)  # set seed for reproducibility
                     sample = np.random.choice(
                         scenario_numbers, samplesize, replace=replacement
                     )
@@ -1037,9 +1035,7 @@ class Estimator(object):
         if seed is not None:
             np.random.seed(seed)
 
-        global_list = self._get_sample_list(
-            samplesize, lNo_samples, replacement=False, seed=seed
-        )
+        global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
 
         task_mgr = utils.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)

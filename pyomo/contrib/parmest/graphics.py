@@ -273,6 +273,9 @@ def pairwise_plot(
         Add a legend to the plot
     filename: string, optional
         Filename used to save the figure
+    seed: int, optional
+        Random seed used to generate theta values if theta_values is a tuple.
+        If None, the seed is not set.
     """
     assert isinstance(theta_values, (pd.DataFrame, tuple))
     assert isinstance(theta_star, (type(None), dict, pd.Series, pd.DataFrame))
