@@ -228,7 +228,6 @@ class DesignOfExperiments:
         self.tee = tee
         self.grey_box_tee = grey_box_tee
 
-        # ToDo: allow user to supply grey box solver
         if grey_box_solver:
             self.grey_box_solver = grey_box_solver
         else:
@@ -299,7 +298,7 @@ class DesignOfExperiments:
             # model.add_component(doe_block_name, doe_block)
             pass
 
-        # ToDo: potentially work with this for more complicated models
+        # TODO: potentially work with this for more complicated models
         # Create the full DoE model (build scenarios for F.D. scheme)
         if not self._built_scenarios:
             self.create_doe_model(model=model)
@@ -506,8 +505,8 @@ class DesignOfExperiments:
         self.results["Finite Difference Step"] = self.step
         self.results["Nominal Parameter Scaling"] = self.scale_nominal_param_value
 
-        # ToDo: Add more useful fields to the results object?
-        # ToDo: Add MetaData from the user to the results object? Or leave to the user?
+        # TODO: Add more useful fields to the results object?
+        # TODO: Add MetaData from the user to the results object? Or leave to the user?
 
         # If the user specifies to save the file, do it here as a json
         if results_file is not None:
@@ -733,7 +732,7 @@ class DesignOfExperiments:
             # Increment the count
             i += 1
 
-        # ToDo: As more complex measurement error schemes
+        # TODO: As more complex measurement error schemes
         #       are put in place, this needs to change
         # Add independent (non-correlated) measurement
         # error for FIM calculation
@@ -834,7 +833,7 @@ class DesignOfExperiments:
             cov_y[count, count] = 1 / v
             count += 1
 
-        # ToDo: need to add a covariance matrix for measurements (sigma inverse)
+        # TODO: need to add a covariance matrix for measurements (sigma inverse)
         # i.e., cov_y = self.cov_y or model.cov_y
         # Still deciding where this would be best.
 
@@ -1438,7 +1437,7 @@ class DesignOfExperiments:
         if model is None:
             model = model = self.model
 
-        # ToDo: Make this naming convention robust
+        # TODO: Make this naming convention robust
         model.obj_cons = pyo.Block()
 
         # Create FIM External Grey Box object
@@ -1707,8 +1706,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1882,7 +1881,7 @@ class DesignOfExperiments:
         des_names = full_design_variable_names
 
         # Inputs must exist for the function to do anything
-        # ToDo: Put in a default value function?????
+        # TODO: Put in a default value function?????
         if sensitivity_design_variables is None:
             raise ValueError("``sensitivity_design_variables`` must be included.")
 
@@ -1908,7 +1907,7 @@ class DesignOfExperiments:
                 "in the results object keys."
             )
 
-        # ToDo: Make it possible to plot pair-wise sensitivities for all variables
+        # TODO: Make it possible to plot pair-wise sensitivities for all variables
         #       e.g. a curve like low-dimensional posterior distributions
         if len(sensitivity_design_variables) > 2:
             raise NotImplementedError(
@@ -1976,7 +1975,7 @@ class DesignOfExperiments:
                 log_scale=log_scale,
                 figure_file_name=figure_file_name,
             )
-        # ToDo: Add the multidimensional plotting
+        # TODO: Add the multidimensional plotting
         else:
             pass
 
@@ -2479,7 +2478,7 @@ class DesignOfExperiments:
 
         return y_hat_vals
 
-    # ToDo: For more complicated error structures, this should become
+    # TODO: For more complicated error structures, this should become
     #       get cov_y, or so, and this method will be deprecated
     # Gets the measurement error values from an existing model
     def get_measurement_error_values(self, model=None):
