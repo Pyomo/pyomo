@@ -477,7 +477,7 @@ class _StreamRedirector(object):
         # #3587), so we will just handle it explicitly ourselves.
         self.local_fd = os.dup(self.fd)
         self.handler.stream = os.fdopen(
-            self.local_fd, mode="a", closefd=False
+            self.local_fd, mode="w", closefd=False
         ).__enter__()
 
     def __exit__(self, et, ev, tb):
@@ -503,7 +503,7 @@ class _LastResortRedirector(object):
         # #3587), so we will just handle it explicitly ourselves.
         self.local_fd = os.dup(self.fd)
         logging.lastResort = logging.StreamHandler(
-            os.fdopen(self.local_fd, mode="a", closefd=False).__enter__()
+            os.fdopen(self.local_fd, mode="w", closefd=False).__enter__()
         )
 
     def __exit__(self, et, ev, tb):
