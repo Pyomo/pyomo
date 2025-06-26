@@ -977,6 +977,12 @@ def _finalize_pympler(module, available):
         import pympler.muppy
 
 
+def _finalize_packaging(module, available):
+    if available:
+        # Import key subpackages that we will want to assume are present
+        import packaging.version
+
+
 def _finalize_matplotlib(module, available):
     if not available:
         return
@@ -1080,7 +1086,7 @@ with declare_modules_as_importable(globals()):
 
     # Necessary for minimum version checking for other optional dependencies
     packaging, packaging_available = attempt_import(
-        'packaging', deferred_submodules=['version']
+        'packaging', deferred_submodules=['version'], callback=_finalize_packaging
     )
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
