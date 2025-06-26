@@ -93,7 +93,7 @@ class LinearTemplateRepn(LinearRepn):
         """
         super().append(other)
         _type, other = other
-        if getattr(other, 'linear_sum', None):
+        if other.__class__ is self.__class__ and other.linear_sum:
             if self.multiplier_flag(other.multiplier) != 1:
                 mult = other.multiplier
                 for term in other.linear_sum:
