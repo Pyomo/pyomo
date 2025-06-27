@@ -482,7 +482,7 @@ class Estimator(object):
         seed=None,
         n_restarts=None,
         multistart_sampling_method=None,
-        user_provided=None,
+        user_provided_df=None,
     ):
         """
         Generate initial theta values for multistart optimization using selected sampling method.
@@ -512,13 +512,7 @@ class Estimator(object):
                 "The lower and upper bounds for the theta values must be defined."
             )
 
-        # Check the length of theta_names and initial_theta, and make sure bounds are defined
-        if len(theta_names) != len(initial_theta):
-            raise ValueError(
-                "The length of theta_names and initial_theta must be the same."
-            )
-
-        if multistart_sampling_method == "uniform":
+        if multistart_sampling_method == "uniform_random":
             # Generate random theta values using uniform distribution, with set seed for reproducibility
             np.random.seed(seed)
             # Generate random theta values for each restart (n_restarts x len(theta_names))
@@ -541,58 +535,58 @@ class Estimator(object):
             # The first value of the Sobol sequence is 0, so we skip it
             samples = sampler.random(n=n_restarts + 1)[1:]
 
-        elif multistart_sampling_method == "user_provided":
+        elif multistart_sampling_method == "user_provided_values":
             # Add user provided dataframe option
-            if user_provided is not None:
+            if user_provided_df is not None:
 
-                if isinstance(user_provided, np.ndarray):
+                if isinstance(user_provided_df, np.ndarray):
                     # Check if the user provided numpy array has the same number of rows as the number of restarts
-                    if user_provided.shape[0] != n_restarts:
+                    if user_provided_df.shape[0] != n_restarts:
                         raise ValueError(
                             "The user provided numpy array must have the same number of rows as the number of restarts."
                         )
                     # Check if the user provided numpy array has the same number of columns as the number of theta names
-                    if user_provided.shape[1] != len(theta_names):
+                    if user_provided_df.shape[1] != len(theta_names):
                         raise ValueError(
                             "The user provided numpy array must have the same number of columns as the number of theta names."
                         )
                         # Check if the user provided numpy array has the same theta names as the model
                         # if not, raise an error
-                        # if not all(theta in theta_names for theta in user_provided.columns):
+                        # if not all(theta in theta_names for theta in user_provided_df.columns):
                         raise ValueError(
                             "The user provided numpy array must have the same theta names as the model."
                         )
                     # If all checks pass, return the user provided numpy array
-                    theta_vals_multistart = user_provided
-                elif isinstance(user_provided, pd.DataFrame):
+                    theta_vals_multistart = user_provided_df
+                elif isinstance(user_provided_df, pd.DataFrame):
                     # Check if the user provided dataframe has the same number of rows as the number of restarts
-                    if user_provided.shape[0] != n_restarts:
+                    if user_provided_df.shape[0] != n_restarts:
                         raise ValueError(
                             "The user provided dataframe must have the same number of rows as the number of restarts."
                         )
                     # Check if the user provided dataframe has the same number of columns as the number of theta names
-                    if user_provided.shape[1] != len(theta_names):
+                    if user_provided_df.shape[1] != len(theta_names):
                         raise ValueError(
                             "The user provided dataframe must have the same number of columns as the number of theta names."
                         )
                         # Check if the user provided dataframe has the same theta names as the model
                         # if not, raise an error
-                        # if not all(theta in theta_names for theta in user_provided.columns):
+                        # if not all(theta in theta_names for theta in user_provided_df.columns):
                         raise ValueError(
                             "The user provided dataframe must have the same theta names as the model."
                         )
                 # If all checks pass, return the user provided dataframe
-                theta_vals_multistart = user_provided.iloc[
+                theta_vals_multistart = user_provided_df.iloc[
                     0 : len(initial_theta)
                 ].values
             else:
                 raise ValueError(
-                    "The user must provide a numpy array or pandas dataframe from a previous attempt to use the 'user_provided' method."
+                    "The user must provide a numpy array or pandas dataframe from a previous attempt to use the 'user_provided_values' method."
                 )
 
         else:
             raise ValueError(
-                "Invalid sampling method. Choose 'uniform', 'latin_hypercube', 'sobol'  or 'user_provided'."
+                "Invalid sampling method. Choose 'uniform_random', 'latin_hypercube', 'sobol_sampling'  or 'user_provided_values'."
             )
 
         if (
@@ -606,10 +600,10 @@ class Estimator(object):
 
         # Create a DataFrame where each row is an initial theta vector for a restart,
         # columns are theta_names, and values are the initial theta values for each restart
-        if multistart_sampling_method == "user_provided":
-            # If user_provided is a DataFrame, use its columns and values directly
-            if isinstance(user_provided, pd.DataFrame):
-                df_multistart = user_provided.copy()
+        if multistart_sampling_method == "user_provided_values":
+            # If user_provided_values is a DataFrame, use its columns and values directly
+            if isinstance(user_provided_df, pd.DataFrame):
+                df_multistart = user_provided_df.copy()
                 df_multistart.columns = theta_names
             else:
                 df_multistart = pd.DataFrame(theta_vals_multistart, columns=theta_names)
@@ -1112,7 +1106,7 @@ class Estimator(object):
         self,
         n_restarts=20,
         buffer=10,
-        multistart_sampling_method="uniform",
+        multistart_sampling_method="uniform_random",
         user_provided=None,
         seed=None,
         save_results=False,
@@ -1129,8 +1123,8 @@ class Estimator(object):
         n_restarts: int, optional
             Number of restarts for multistart. Default is 1.
         multistart_sampling_method: string, optional
-            Method used to sample theta values. Options are "uniform", "latin_hypercube", "sobol", or "user_provided".
-            Default is "uniform".
+            Method used to sample theta values. Options are "uniform_random", "latin_hypercube", "sobol", or "user_provided".
+            Default is "uniform_random".
         buffer: int, optional
             Number of iterations to save results dynamically. Default is 10.
         user_provided: pd.DataFrame or np.ndarray, optional
@@ -1207,6 +1201,12 @@ class Estimator(object):
                 # # Create a fresh model for each restart
                 # parmest_model = self._create_parmest_model(experiment_number=0)
                 theta_vals_current = theta_vals.iloc[i, :].to_dict()
+                # If theta_vals is provided, use it to set the current theta values
+                # # Convert values to a list
+                # theta_vals_current = list(theta_vals.iloc[i, :])
+
+                # # Update the model with the current theta values
+                # update_model_from_suffix(parmest_model, 'experiment_inputs', theta_vals_current)
 
                 # # Set current theta values in the model
                 # for name, value in theta_vals_current.items():
