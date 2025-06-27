@@ -49,18 +49,9 @@ from pyomo.contrib.doe.utils import (
     check_FIM,
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
+    snake_traversal_grid_sampling,
 )
-from pyomo.contrib.doe.utils import (
-    generate_snake_zigzag_pattern,
-)  # , compute_FIM_metrics
 
-from pyomo.contrib.doe.utils_updated import compute_FIM_metrics
-
-"""
-utils_updated.py is the utils.py from my open PR # 3525.
-When that PR is merged, compute_FIM_metrics will be imported from utils.py and this
-import will be removed.
-"""
 
 from pyomo.opt import SolverStatus
 
@@ -1722,7 +1713,7 @@ class DesignOfExperiments:
         # TODO: define an Enum to add different sensitivity analysis sequences
         des_ranges = [design_values[k.name] for k in design_map_keys]
         if change_one_design_at_a_time:
-            factorial_points = generate_snake_zigzag_pattern(*des_ranges)
+            factorial_points = snake_traversal_grid_sampling(*des_ranges)
         else:
             factorial_points = product(*des_ranges)
 

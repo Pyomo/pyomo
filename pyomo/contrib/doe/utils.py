@@ -267,7 +267,7 @@ def get_FIM_metrics(FIM):
     }
 
 
-def serpentine_traversal_sampling(*array_like_args):
+def snake_traversal_grid_sampling(*array_like_args):
     """
     Generates a multi-dimensional pattern for an arbitrary number of 1D array-like arguments.
     This pattern is useful for generating patterns for sensitivity analysis when we want
@@ -275,11 +275,12 @@ def serpentine_traversal_sampling(*array_like_args):
 
     Parameters
     ----------
-    *array_like_args: A variable number of 1D array-like arguments.
+    *array_like_args: A variable number of 1D array-like objects as arguments.
 
     Yields
     ------
-    A tuple representing points in the snake-like zigzag pattern.
+    A tuple representing points in the snake pattern.
+    Naming source of the pattern: https://dev.to/thesanjeevsharma/dsa-101-matrix-30lf
     """
     # throw an error if the array_like_args are not array-like or all 1D
     for i, arg in enumerate(array_like_args):

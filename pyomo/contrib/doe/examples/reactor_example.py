@@ -14,8 +14,6 @@ from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
 from pyomo.contrib.doe import DesignOfExperiments
 
 import pyomo.environ as pyo
-import pyomo.environ as pyo
-import idaes.core.solvers.get_solver
 
 import json
 

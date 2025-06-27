@@ -15,6 +15,7 @@ from pyomo.contrib.doe.utils import (
     check_FIM,
     compute_FIM_metrics,
     get_FIM_metrics,
+    snake_traversal_grid_sampling,
     _SMALL_TOLERANCE_DEFINITENESS,
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
@@ -141,82 +142,61 @@ class TestUtilsFIM(unittest.TestCase):
         self.assertEqual(fim_metrics["log10(E-Optimality)"], E_opt_expected)
         self.assertEqual(fim_metrics["log10(Modified E-Optimality)"], ME_opt_expected)
 
-
-if __name__ == "__main__":
-    unittest.main()
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-from pyomo.common.dependencies import numpy as np, numpy_available
-
-import pyomo.common.unittest as unittest
-from pyomo.contrib.doe.utils import serpentine_traversal_sampling
-
-
-@unittest.skipIf(not numpy_available, "Numpy is not available")
-class TestUtilsFIM(unittest.TestCase):
-    def test_serpentine_traversal_sampling_errors(self):
+    def test_snake_traversal_grid_sampling_errors(self):
         # Test the error handling with lists
         list_2d_bad = [[1, 2, 3], [4, 5, 6]]
         with self.assertRaises(ValueError) as cm:
-            list(serpentine_traversal_sampling(list_2d_bad))
+            list(snake_traversal_grid_sampling(list_2d_bad))
         self.assertEqual(
             str(cm.exception),
             "Argument at position 0 is not 1D. Got shape (2, 3).",
         )
 
-        list_2d_wrong_shape = [[1, 2, 3], [4, 5, 6, 7]]
+        list_2d_wrong_shape_bad = [[1, 2, 3], [4, 5, 6, 7]]
         with self.assertRaises(ValueError) as cm:
-            list(serpentine_traversal_sampling(list_2d_wrong_shape))
+            list(snake_traversal_grid_sampling(list_2d_wrong_shape_bad))
         self.assertEqual(
             str(cm.exception),
             "Argument at position 0 is not 1D array-like.",
         )
 
         # Test the error handling with tuples
-        tuple_2d = ((1, 2, 3), (4, 5, 6))
+        tuple_2d_bad = ((1, 2, 3), (4, 5, 6))
         with self.assertRaises(ValueError) as cm:
-            list(serpentine_traversal_sampling(tuple_2d))
+            list(snake_traversal_grid_sampling(tuple_2d_bad))
         self.assertEqual(
             str(cm.exception),
             "Argument at position 0 is not 1D. Got shape (2, 3).",
         )
 
-        tuple_2d_wrong_shape = ((1, 2, 3), (4, 5, 6, 7))
+        tuple_2d_wrong_shape_bad = ((1, 2, 3), (4, 5, 6, 7))
         with self.assertRaises(ValueError) as cm:
-            list(serpentine_traversal_sampling(tuple_2d_wrong_shape))
+            list(snake_traversal_grid_sampling(tuple_2d_wrong_shape_bad))
         self.assertEqual(
             str(cm.exception),
             "Argument at position 0 is not 1D array-like.",
         )
 
         # Test the error handling with numpy arrays
-        array_2d = np.array([[1, 2, 3], [4, 5, 6]])
+        array_2d_bad = np.array([[1, 2, 3], [4, 5, 6]])
         with self.assertRaises(ValueError) as cm:
-            list(serpentine_traversal_sampling(array_2d))
+            list(snake_traversal_grid_sampling(array_2d_bad))
         self.assertEqual(
             str(cm.exception),
             "Argument at position 0 is not 1D. Got shape (2, 3).",
         )
 
-    def test_serpentine_traversal_sampling_values(self):
+    def test_snake_traversal_grid_sampling_values(self):
         # Test with lists
         # Test with a single list
         list1 = [1, 2, 3]
-        result_list1 = list(serpentine_traversal_sampling(list1))
+        result_list1 = list(snake_traversal_grid_sampling(list1))
         expected_list1 = [(1,), (2,), (3,)]
         self.assertEqual(result_list1, expected_list1)
 
         # Test with two lists
         list2 = [4, 5, 6]
-        result_list2 = list(serpentine_traversal_sampling(list1, list2))
+        result_list2 = list(snake_traversal_grid_sampling(list1, list2))
         expected_list2 = [
             (1, 4),
             (1, 5),
@@ -232,7 +212,7 @@ class TestUtilsFIM(unittest.TestCase):
 
         # Test with three lists
         list3 = [7, 8]
-        result_list3 = list(serpentine_traversal_sampling(list1, list2, list3))
+        result_list3 = list(snake_traversal_grid_sampling(list1, list2, list3))
         expected_list3 = [
             (1, 4, 7),
             (1, 4, 8),
@@ -257,11 +237,11 @@ class TestUtilsFIM(unittest.TestCase):
 
         # Test with tuples
         tuple1 = (1, 2, 3)
-        result_tuple1 = list(serpentine_traversal_sampling(tuple1))
+        result_tuple1 = list(snake_traversal_grid_sampling(tuple1))
         tuple2 = (4, 5, 6)
-        result_tuple2 = list(serpentine_traversal_sampling(tuple1, tuple2))
+        result_tuple2 = list(snake_traversal_grid_sampling(tuple1, tuple2))
         tuple3 = (7, 8)
-        result_tuple3 = list(serpentine_traversal_sampling(tuple1, tuple2, tuple3))
+        result_tuple3 = list(snake_traversal_grid_sampling(tuple1, tuple2, tuple3))
         self.assertEqual(result_tuple1, expected_list1)
         self.assertEqual(result_tuple2, expected_list2)
         self.assertEqual(result_tuple3, expected_list3)
@@ -270,15 +250,15 @@ class TestUtilsFIM(unittest.TestCase):
         array1 = np.array([1, 2, 3])
         array2 = np.array([4, 5, 6])
         array3 = np.array([7, 8])
-        result_array1 = list(serpentine_traversal_sampling(array1))
-        result_array2 = list(serpentine_traversal_sampling(array1, array2))
-        result_array3 = list(serpentine_traversal_sampling(array1, array2, array3))
+        result_array1 = list(snake_traversal_grid_sampling(array1))
+        result_array2 = list(snake_traversal_grid_sampling(array1, array2))
+        result_array3 = list(snake_traversal_grid_sampling(array1, array2, array3))
         self.assertEqual(result_array1, expected_list1)
         self.assertEqual(result_array2, expected_list2)
         self.assertEqual(result_array3, expected_list3)
 
         # Test with mixed types(List, Tuple, numpy array)
-        result_mixed = list(serpentine_traversal_sampling(list1, tuple2, array3))
+        result_mixed = list(snake_traversal_grid_sampling(list1, tuple2, array3))
         self.assertEqual(result_mixed, expected_list3)
 
 
