@@ -101,6 +101,7 @@ def rescale_FIM(FIM, param_vals):
 #
 #     return param_list
 
+
 # Adding utility to update parameter values in a model based on the suffix
 def update_model_from_suffix(model, suffix_name, values):
     """
@@ -120,8 +121,10 @@ def update_model_from_suffix(model, suffix_name, values):
     """
     # Allowed suffix names
     allowed = {
-        'experiment_outputs', 'experiment_inputs',
-        'unknown_parameters', 'measurement_error'
+        'experiment_outputs',
+        'experiment_inputs',
+        'unknown_parameters',
+        'measurement_error',
     }
     # Validate input is an allowed suffix name
     if suffix_name not in allowed:
