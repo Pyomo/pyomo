@@ -3695,7 +3695,7 @@ class TestPyROSSubproblemWriter(unittest.TestCase):
     """
 
     @unittest.skipUnless(baron_available, "BARON not available.")
-    def test_master_problem_failure(self):
+    def test_pyros_write_master_problem(self):
         m = build_leyffer()
 
         with TempfileManager.new_context() as TMP:
@@ -3730,7 +3730,7 @@ class TestPyROSSubproblemWriter(unittest.TestCase):
         )
 
     @unittest.skipUnless(baron_available, "BARON not available.")
-    def test_separation_problem_failure(self):
+    def test_pyros_write_separation_problem(self):
         m = build_leyffer()
         subproblem_format_options = {
             "bar": {},
