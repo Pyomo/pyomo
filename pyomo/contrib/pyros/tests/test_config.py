@@ -32,7 +32,7 @@ from pyomo.contrib.pyros.config import (
     SolverResolvable,
 )
 from pyomo.contrib.pyros.util import ObjectiveType
-from pyomo.opt import SolverFactory, SolverResults
+from pyomo.opt import SolverFactory, SolverResults, WriterFactory
 
 
 class TestInputDataStandardizer(unittest.TestCase):
@@ -695,6 +695,34 @@ class TestPyROSConfig(unittest.TestCase):
         exc_str = f".*{invalid_focus!r} is not a valid ObjectiveType"
         with self.assertRaisesRegex(ValueError, exc_str):
             config.objective_focus = invalid_focus
+
+    def test_config_subproblem_formats(self):
+        config = self.CONFIG()
+
+        # test default
+        self.assertEqual(
+            config.subproblem_format_options,
+            {"bar": {"symbolic_solver_labels": True}},
+            msg=(
+                "Default value for PyROS config option "
+                "subproblem_format_options' not as expected."
+            ),
+        )
+
+        config.subproblem_format_options = {}
+        self.assertEqual(config.subproblem_format_options, {})
+
+        nondefault_test_val = {"fmt1": {"symbolic_solver_labels": False}, "fmt2": {}}
+        config.subproblem_format_options = nondefault_test_val
+        self.assertEqual(config.subproblem_format_options, nondefault_test_val)
+
+        # anything castable to dict should also be acceptable
+        config.subproblem_format_options = list(nondefault_test_val.items())
+        self.assertEqual(config.subproblem_format_options, nondefault_test_val)
+
+        exc_str = "cannot convert dictionary update sequence.*"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            config.subproblem_format_options = [1, 2, 3]
 
 
 class TestPositiveIntOrMinusOne(unittest.TestCase):

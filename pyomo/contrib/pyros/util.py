@@ -21,6 +21,7 @@ import functools
 import itertools as it
 import logging
 import math
+import os
 import timeit
 
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -3182,6 +3183,31 @@ def load_final_solution(model_data, master_soln, original_user_var_partitioning)
     )
     for orig_var, master_blk_var in zip(original_model_vars, master_soln_vars):
         orig_var.set_value(master_blk_var.value, skip_validation=True)
+
+
+def write_subproblem(model, fname, config):
+    """
+    Write/export a subproblem to one or more files.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Subproblem to be written/exported.
+    fname : str
+        Base name of the file(s) to be written.
+        Should not include any prefix directories.
+    config : ConfigDict
+        PyROS solver options.
+        A file will be written for each format provided in
+        ``config.subproblem_format_options``,
+        and in the directory ``config.subproblem_file_directory``.
+    """
+    for fmt, io_options in config.subproblem_format_options.items():
+        full_filename = os.path.join(config.subproblem_file_directory, f"{fname}.{fmt}")
+        model.write(filename=full_filename, format=fmt)
+        config.progress_logger.warning(
+            f"For debugging, subproblem has been written to the file {full_filename!r}."
+        )
 
 
 def call_solver(model, solver, config, timing_obj, timer_name, err_msg):
