@@ -816,7 +816,7 @@ class TestSimpleCon(unittest.TestCase):
         model.c = Constraint(expr=ans)
 
         with self.assertRaisesRegex(
-            ValueError, "No value for uninitialized NumericValue object x"
+            ValueError, "No value for uninitialized ScalarVar object x"
         ):
             value(model.c)
         model.x = 2
@@ -1375,26 +1375,43 @@ class Test2DArrayCon(unittest.TestCase):
 class MiscConTests(unittest.TestCase):
     def test_infeasible(self):
         m = ConcreteModel()
-        with self.assertRaisesRegex(ValueError, "Constraint 'c' is always infeasible"):
-            m.c = Constraint(expr=Constraint.Infeasible)
-        self.assertEqual(m.c._data, {})
-
-        with self.assertRaisesRegex(ValueError, "Constraint 'c' is always infeasible"):
-            m.c = Constraint.Infeasible
-        self.assertEqual(m.c._data, {})
-        self.assertIsNone(m.c.expr)
+        m.c = Constraint(expr=Constraint.Infeasible)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.ub, 0)
 
         m.c = (0, 1, 2)
         self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, 0)
+        self.assertEqual(m.c.body, 1)
         self.assertEqual(m.c.ub, 2)
 
-        with self.assertRaisesRegex(ValueError, "Constraint 'c' is always infeasible"):
-            m.c = Constraint.Infeasible
-        self.assertEqual(m.c._data, {})
-        self.assertIsNone(m.c.expr)
+        m.c = Constraint.Infeasible
+        self.assertIn(None, m.c._data)
         self.assertEqual(m.c.lb, None)
-        self.assertEqual(m.c.ub, None)
+        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.ub, 0)
+
+    def test_feasible(self):
+        m = ConcreteModel()
+        m.c = Constraint(expr=Constraint.Feasible)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.body, 0)
+        self.assertEqual(m.c.ub, 0)
+
+        m.c = (0, 1, 2)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, 0)
+        self.assertEqual(m.c.body, 1)
+        self.assertEqual(m.c.ub, 2)
+
+        m.c = Constraint.Feasible
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.body, 0)
+        self.assertEqual(m.c.ub, 0)
 
     def test_slack_methods(self):
         model = ConcreteModel()
@@ -1859,11 +1876,11 @@ class MiscConTests(unittest.TestCase):
         self.assertIs(m.c.lower, m.l)
         self.assertIs(m.c.upper, m.u)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object l'
+            ValueError, 'No value for uninitialized ScalarExpression object l'
         ):
             m.c.lb
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object u'
+            ValueError, 'No value for uninitialized ScalarExpression object u'
         ):
             m.c.ub
 
