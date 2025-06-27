@@ -3712,12 +3712,11 @@ class TestPyROSSubproblemWriter(unittest.TestCase):
                 keepfiles=True,
                 subproblem_file_directory=tmpdir,
                 subproblem_format_options={
-                    "bar": {}, "gams": {"symbolic_solver_labels": True}
+                    "bar": {},
+                    "gams": {"symbolic_solver_labels": True},
                 },
             )
-            expected_subproblem_file = os.path.join(
-                tmpdir, "box_unknown_master_0"
-            )
+            expected_subproblem_file = os.path.join(tmpdir, "box_unknown_master_0")
             format_files_exist_dict = {
                 "bar": os.path.exists(f"{expected_subproblem_file}.bar"),
                 "gams": os.path.exists(f"{expected_subproblem_file}.gams"),
@@ -3727,23 +3726,22 @@ class TestPyROSSubproblemWriter(unittest.TestCase):
         self.assertTrue(format_files_exist_dict["gams"])
         self.assertEqual(res.iterations, 1)
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.subsolver_error,
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
         )
 
     @unittest.skipUnless(baron_available, "BARON not available.")
     def test_separation_problem_failure(self):
         m = build_leyffer()
         subproblem_format_options = {
-            "bar": {}, "gams": {"symbolic_solver_labels": True}
+            "bar": {},
+            "gams": {"symbolic_solver_labels": True},
         }
 
         with TempfileManager.new_context() as TMP:
             tmpdir = TMP.create_tempdir()
             expected_subproblem_filenames = [
                 os.path.join(
-                    tmpdir,
-                    f"box_unknown_separation_0_obj_separation_obj_0.{fmt}",
+                    tmpdir, f"box_unknown_separation_0_obj_separation_obj_0.{fmt}"
                 )
                 for fmt in subproblem_format_options.keys()
             ]
@@ -3769,13 +3767,11 @@ class TestPyROSSubproblemWriter(unittest.TestCase):
 
         for fname, file_created in subproblem_files_created.items():
             self.assertTrue(
-                file_created,
-                msg=f"Subproblem was not written to file {fname}.",
+                file_created, msg=f"Subproblem was not written to file {fname}."
             )
         self.assertEqual(res.iterations, 1)
         self.assertEqual(
-            res.pyros_termination_condition,
-            pyrosTerminationCondition.subsolver_error,
+            res.pyros_termination_condition, pyrosTerminationCondition.subsolver_error
         )
 
 
