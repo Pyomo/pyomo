@@ -32,7 +32,7 @@ from pyomo.contrib.pyros.config import (
     SolverResolvable,
 )
 from pyomo.contrib.pyros.util import ObjectiveType
-from pyomo.opt import SolverFactory, SolverResults, WriterFactory
+from pyomo.opt import SolverFactory, SolverResults
 
 
 class TestInputDataStandardizer(unittest.TestCase):
