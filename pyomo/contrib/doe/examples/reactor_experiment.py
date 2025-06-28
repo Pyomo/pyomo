@@ -156,6 +156,7 @@ class ReactorExperiment(Experiment):
         for t in m.t:
             if t in control_points:
                 cv = control_points[t]
+                m.T[t].fix()
             m.T[t].setlb(self.data["T_bounds"][0])
             m.T[t].setub(self.data["T_bounds"][1])
             m.T[t] = cv
