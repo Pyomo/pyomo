@@ -193,27 +193,23 @@ def get_sep_objective_values(separation_data, ss_ineq_cons):
     con_to_obj_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     violations = ComponentMap()
 
-    user_var_partitioning = separation_data.separation_model.user_var_partitioning
-    first_stage_variables = user_var_partitioning.first_stage_variables
-    second_stage_variables = user_var_partitioning.second_stage_variables
-
     for ss_ineq_con in ss_ineq_cons:
         obj = con_to_obj_map[ss_ineq_con]
         try:
             violations[ss_ineq_con] = value(obj.expr)
-        except ValueError:
-            for v in first_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            for v in second_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            raise ArithmeticError(
-                f"Evaluation of second-stage inequality constraint {ss_ineq_con.name} "
-                f"(separation objective {obj.name}) "
-                "led to a math domain error. "
-                "Does the constraint expression "
-                "contain log(x) or 1/x functions "
+        except (ValueError, ArithmeticError):
+            vars_in_expr_str = ",\n  ".join(
+                f"{var.name}={var.value}" for var in identify_variables(obj.expr)
+            )
+            config.progress_logger.error(
+                "PyROS encountered exception evaluating "
+                "expression of second-stage inequality constraint with name "
+                f"{ss_ineq_con.name!r} (separation objective {obj.name!r}) "
+                f"at variable values:\n  {vars_in_expr_str}\n"
+                "Does the expression contain log(x) or 1/x functions "
                 "or others with tricky domains?"
             )
+            raise
 
     return violations
 
