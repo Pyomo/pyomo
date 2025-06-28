@@ -12,7 +12,7 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.environ import ConcreteModel, Var, Constraint
+from pyomo.environ import ConcreteModel, Var, Constraint, Param, Expression
 
 
 @unittest.skipUnless(numpy_available, "tests require numpy")
@@ -37,7 +37,7 @@ class TestNumpyExpr(unittest.TestCase):
         self.assertExpressionsEqual(np.array([5, 6]) * m.x, [5 * m.x, 6 * m.x])
         self.assertExpressionsEqual(np.array([8, m.x]) * m.x, [8 * m.x, m.x * m.x])
 
-    def test_vector_operations(self):
+    def test_variable_vector_operations(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var([0, 1, 2])
@@ -89,6 +89,21 @@ class TestNumpyExpr(unittest.TestCase):
             self.assertExpressionsEqual(
                 m.x * m.y * a, [5 * m.y[0] * m.x, 5 * m.y[1] * m.x, 5 * m.y[2] * m.x]
             )
+
+    def test_expression_vector_operations(self):
+        m = ConcreteModel()
+        m.p = Param(range(3), range(2), initialize=lambda m, i, j: 10 * i + j)
+
+        m.e = Expression(range(3))
+        m.f = Expression(range(2))
+
+        expr = np.transpose(m.e) @ m.p @ m.f
+        print(expr)
+        self.assertExpressionsEqual(
+            expr,
+            (m.e[0] * 0 + m.e[1] * 10 + m.e[2] * 20) * m.f[0]
+            + (m.e[0] * 1 + m.e[1] * 11 + m.e[2] * 21) * m.f[1],
+        )
 
 
 if __name__ == "__main__":
