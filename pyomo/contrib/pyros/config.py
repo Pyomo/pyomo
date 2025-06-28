@@ -859,6 +859,8 @@ def pyros_config():
         "subproblem_format_options",
         ConfigValue(
             default={"bar": {"symbolic_solver_labels": True}},
+            # note: we leave all validation of the dict entries
+            #       to ``BlockData.write()``
             domain=dict,
             description=(
                 """
