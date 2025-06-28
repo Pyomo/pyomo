@@ -226,6 +226,10 @@ class DesignOfExperiments:
         # (i.e., no model rebuilding for large models with sequential)
         self._built_scenarios = False
 
+        # Minimum step size for finite difference perturbations
+        # This is important if a parameter has a value of 0
+        self.min_step_size = 1e-6
+
     # Perform doe
     def run_doe(self, model=None, results_file=None):
         """
@@ -611,7 +615,7 @@ class DesignOfExperiments:
         # Loop over parameter values and grab correct columns for finite difference calculation
 
         for k, v in model.unknown_parameters.items():
-            curr_step = v * self.step
+            curr_step = max(v * self.step, self.min_step_size)
 
             if self.fd_formula == FiniteDifferenceStep.central:
                 col_1 = 2 * i
@@ -900,6 +904,8 @@ class DesignOfExperiments:
             param = m.parameter_scenarios[max(s1, s2)]
             param_loc = pyo.ComponentUID(param).find_component_on(m.scenario_blocks[0])
             param_val = m.scenario_blocks[0].unknown_parameters[param_loc]
+            
+            # How does this change if we enforce the minimum step size?
             param_diff = param_val * fd_step_mult * self.step
 
             if self.scale_nominal_param_value:
