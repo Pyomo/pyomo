@@ -3204,7 +3204,7 @@ def write_subproblem(model, fname, config):
     """
     for fmt, io_options in config.subproblem_format_options.items():
         full_filename = os.path.join(config.subproblem_file_directory, f"{fname}.{fmt}")
-        model.write(filename=full_filename, format=fmt)
+        model.write(filename=full_filename, format=fmt, io_options=io_options)
         config.progress_logger.warning(
             f"For debugging, subproblem has been written to the file {full_filename!r}."
         )
