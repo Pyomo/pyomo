@@ -122,7 +122,12 @@ class kestrelAMPL(object):
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except (socket.error, xmlrpclib.ProtocolError, http.client.BadStatusLine):
+        except (
+            socket.error,
+            xmlrpclib.ProtocolError,
+            http.client.BadStatusLine,
+            NotImplementedError,
+        ):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail: %s" % (e,))
