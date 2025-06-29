@@ -3399,7 +3399,7 @@ class IntersectionSet(UncertaintySet):
     ... )
     >>> # to construct intersection, pass sets as keyword arguments
     >>> intersection = IntersectionSet(set1=square, set2=circle)
-    >>> intersection.all_sets
+    >>> intersection.all_sets  # doctest: +ELLIPSIS
     UncertaintySetList([...])
 
     """
