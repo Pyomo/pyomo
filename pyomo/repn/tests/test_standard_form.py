@@ -18,6 +18,9 @@ from pyomo.common.dependencies import numpy as np, scipy_available, numpy_availa
 from pyomo.common.log import LoggingIntercept
 from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
 
+import pyomo.core.base.constraint as constraint
+import pyomo.core.base.objective as objective
+
 for sol in ['glpk', 'cbc', 'gurobi', 'cplex', 'xpress']:
     linear_solver = pyo.SolverFactory(sol)
     if linear_solver.available(exception_flag=False):
@@ -30,6 +33,21 @@ else:
     scipy_available & numpy_available, "standard_form requires scipy and numpy"
 )
 class TestLinearStandardFormCompiler(unittest.TestCase):
+    def push_templatization(self, mode):
+        self.templatize_stack.append(
+            (constraint.TEMPLATIZE_CONSTRAINTS, objective.TEMPLATIZE_OBJECTIVES)
+        )
+        constraint.TEMPLATIZE_CONSTRAINTS = mode
+        objective.TEMPLATIZE_OBJECTIVES = mode
+
+    def pop_templatization(self):
+        constraint.TEMPLATIZE_CONSTRAINTS, objective.TEMPLATIZE_OBJECTIVES = (
+            self.templatize_stack.pop()
+        )
+
+    def setUp(self):
+        self.templatize_stack = []
+
     def test_linear_model(self):
         m = pyo.ConcreteModel()
         m.x = pyo.Var()
@@ -129,9 +147,13 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
             else:
                 return ax[i] <= repn.b[i]
 
-        test_model = pyo.ConcreteModel()
-        test_model.o = pyo.Objective(expr=repn.c[[1], :].todense()[0] @ x)
-        test_model.c = pyo.Constraint(range(len(repn.b)), rule=c_rule)
+        try:
+            self.push_templatization(False)
+            test_model = pyo.ConcreteModel()
+            test_model.o = pyo.Objective(expr=repn.c[[1], :].todense()[0] @ x)
+            test_model.c = pyo.Constraint(range(len(repn.b)), rule=c_rule)
+        finally:
+            self.pop_templatization()
         linear_solver.solve(test_model, tee=True)
 
         # Propagate any solution back to the original variables
@@ -309,3 +331,12 @@ class TestLinearStandardFormCompiler(unittest.TestCase):
         ref = np.array([[1, -1, 0, 5, -5, 0, 0, 0, 0], [-1, 1, 0, 0, 0, -15, 0, 0, 0]])
         self.assertTrue(np.all(repn.c == ref))
         self._verify_solution(soln, repn, True)
+
+
+class TestTemplatedLinearStandardFormCompiler(TestLinearStandardFormCompiler):
+    def setUp(self):
+        super().setUp()
+        self.push_templatization(True)
+
+    def tearDown(self):
+        self.pop_templatization()

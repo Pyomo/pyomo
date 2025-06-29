@@ -1904,7 +1904,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         assertExpressionsEqual(
             self,
             lb_expr,
-            1.0 <= sum_indicators - outer_disjunct.binary_indicator_var + 1.0,
+            1.0 <= sum_indicators - outer_disjunct.binary_indicator_var + 1,
         )
         ub = cons[1]
         ct.check_obj_in_active_tree(self, ub)

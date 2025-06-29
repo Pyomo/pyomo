@@ -16,7 +16,7 @@ from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
 
 from pyomo.opt import WriterFactory
-from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
+from pyomo.repn.parameterized import ParameterizedLinearRepnVisitor
 from pyomo.repn.plugins.standard_form import (
     LinearStandardFormInfo,
     LinearStandardFormCompiler,

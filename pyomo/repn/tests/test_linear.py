@@ -1037,8 +1037,8 @@ class TestLinear(unittest.TestCase):
         LE6 = MonomialTermExpression((6, m.x))
         NL = (
             2 * (7 * m.x**2)
-            + 4 * m.x**2 * (7 * m.x**2 + 6 * m.x + 5)
-            + (LE3) * (7 * m.x**2 + LE6)
+            + 5 * (4 * m.x**2)
+            + (4 * m.x**2 + LE3) * (7 * m.x**2 + LE6)
         )
 
         self.assertEqual(cfg.subexpr, {})
@@ -1674,7 +1674,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.multiplier, 1)
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
-        self.assertIsNone(repn.nonlinear)
+        assertExpressionsEqual(self, repn.nonlinear, 0 * log(m.x[3]))
 
         m.p = Param(mutable=True, within=Any, initialize=None)
         e = m.p * m.x[0] + m.p * m.x[1] * m.x[2] + m.p * log(m.x[3])
