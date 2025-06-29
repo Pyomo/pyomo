@@ -411,7 +411,7 @@ class TestBoxSet(unittest.TestCase):
         Test `is_bounded` and `is_nonempty` for a valid box set.
         """
         box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
-        bounded_and_nonempty_check(self, box_set),
+        bounded_and_nonempty_check(self, box_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -759,7 +759,7 @@ class TestBudgetSet(unittest.TestCase):
         budget_mat = [[1.0, 0.0, 1.0], [0.0, 1.0, 0.0]]
         budget_rhs_vec = [1.0, 3.0]
         budget_set = BudgetSet(budget_mat, budget_rhs_vec)
-        bounded_and_nonempty_check(self, budget_set),
+        bounded_and_nonempty_check(self, budget_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -1184,7 +1184,7 @@ class TestFactorModelSet(unittest.TestCase):
         psi_mat = [[1, 0], [0, 1], [1, 1]]
         beta = 0.5
         factor_set = FactorModelSet(origin, number_of_factors, psi_mat, beta)
-        bounded_and_nonempty_check(self, factor_set),
+        bounded_and_nonempty_check(self, factor_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -1605,7 +1605,7 @@ class TestIntersectionSet(unittest.TestCase):
         bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
         aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
         intersection_set = IntersectionSet(box_set=bset, axis_aligned_set=aset)
-        bounded_and_nonempty_check(self, intersection_set),
+        bounded_and_nonempty_check(self, intersection_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -1862,7 +1862,7 @@ class TestCardinalitySet(unittest.TestCase):
         cardinality_set = CardinalitySet(
             origin=[0, 0], positive_deviation=[1, 1], gamma=2
         )
-        bounded_and_nonempty_check(self, cardinality_set),
+        bounded_and_nonempty_check(self, cardinality_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -2041,7 +2041,7 @@ class TestDiscreteScenarioSet(unittest.TestCase):
         Test `is_bounded` and `is_nonempty` for a valid discrete scenario set.
         """
         discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
-        bounded_and_nonempty_check(self, discrete_set),
+        bounded_and_nonempty_check(self, discrete_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -2267,7 +2267,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
         center = [0.0, 0.0]
         half_lengths = [1.0, 3.0]
         a_ellipsoid_set = AxisAlignedEllipsoidalSet(center, half_lengths)
-        bounded_and_nonempty_check(self, a_ellipsoid_set),
+        bounded_and_nonempty_check(self, a_ellipsoid_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -2680,7 +2680,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         shape_matrix = [[1.0, 0.0], [0.0, 2.0]]
         scale = 1
         ellipsoid_set = EllipsoidalSet(center, shape_matrix, scale)
-        bounded_and_nonempty_check(self, ellipsoid_set),
+        bounded_and_nonempty_check(self, ellipsoid_set)
 
     def test_is_coordinate_fixed(self):
         """
@@ -2952,7 +2952,7 @@ class TestPolyhedralSet(unittest.TestCase):
             lhs_coefficients_mat=[[1.0, 0.0], [-1.0, 1.0], [-1.0, -1.0]],
             rhs_vec=[2.0, -1.0, -1.0],
         )
-        bounded_and_nonempty_check(self, polyhedral_set),
+        bounded_and_nonempty_check(self, polyhedral_set)
 
     def test_is_coordinate_fixed(self):
         """
