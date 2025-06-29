@@ -1605,6 +1605,7 @@ class TestIntersectionSet(unittest.TestCase):
         intersection_set = IntersectionSet(box_set=bset, axis_aligned_set=aset)
         bounded_and_nonempty_check(self, intersection_set)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
@@ -2952,6 +2953,7 @@ class TestPolyhedralSet(unittest.TestCase):
         )
         bounded_and_nonempty_check(self, polyhedral_set)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
@@ -3130,6 +3132,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             custom_set.is_nonempty(config=CONFIG)
 
+    @unittest.skipUnless(baron_available, "BARON is not available")
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
