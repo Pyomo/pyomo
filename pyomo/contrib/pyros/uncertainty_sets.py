@@ -575,15 +575,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This check is carried out by checking if all parameter bounds
         are finite.
 
-        If no parameter bounds are available, the following processes are run
-        to perform the check:
-        (i) feasibility-based bounds tightening is used to obtain parameter
-        bounds, and if not all bound are found,
-        (ii) solving a sequence of maximization and minimization problems
-        (in which the objective for each problem is the value of a
-        single uncertain parameter).
-        If any of the optimization models cannot be solved successfully to
-        optimality, then False is returned.
+        If no parameter bounds are available, the following processes
+        are run to perform the check:
+        (i) feasibility-based bounds tightening is used to obtain
+        parameter bounds, and if not all bound are found,
+        (ii) solving a sequence of maximization and minimization
+        problems (in which the objective for each problem is the value
+        of a single uncertain parameter).
+        If any of the optimization models cannot be solved successfully
+        to optimality, then False is returned.
 
         This method is invoked by ``self.validate()``.
         """
@@ -643,7 +643,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def validate(self, config):
         """
-        Validate the uncertainty set with a nonemptiness and boundedness check.
+        Validate the uncertainty set with a nonemptiness
+        and boundedness check.
 
         Parameters
         ----------
@@ -2113,7 +2114,8 @@ class BudgetSet(UncertaintySet):
         ValueError
             If any uncertainty set attributes are not valid.
             (e.g., numeric values are infinite,
-            ``self.budget_membership_mat`` has full column or row of zeros,
+            ``self.budget_membership_mat`` contains a
+            full column or row of zeros,
             or ``self.budget_rhs_vec`` has negative values).
         """
         lhs_coeffs_arr = self.budget_membership_mat
