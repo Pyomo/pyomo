@@ -25,12 +25,10 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 
-from pyomo.common.collections import Bunch
 from pyomo.environ import SolverFactory
 from pyomo.core.base import ConcreteModel, Param, Var
 from pyomo.core.expr import RangedExpression
 from pyomo.core.expr.compare import assertExpressionsEqual
-from pyomo.environ import SolverFactory
 
 from pyomo.contrib.pyros.uncertainty_sets import (
     AxisAlignedEllipsoidalSet,
