@@ -2037,7 +2037,8 @@ class TestDiscreteScenarioSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid discrete scenario set.
+        Test `is_bounded` and `is_nonempty` for a valid
+        discrete scenario set.
         """
         discrete_set = DiscreteScenarioSet([[1, 2], [3, 4]])
         bounded_and_nonempty_check(self, discrete_set)
@@ -2261,7 +2262,8 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_bounded_and_nonempty(self):
         """
-        Test `is_bounded` and `is_nonempty` for a valid axis aligned ellipsoidal set.
+        Test `is_bounded` and `is_nonempty` for a valid
+        axis aligned ellipsoidal set.
         """
         center = [0.0, 0.0]
         half_lengths = [1.0, 3.0]
