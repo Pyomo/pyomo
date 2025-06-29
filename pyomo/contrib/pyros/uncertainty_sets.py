@@ -813,11 +813,17 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         ----------
         config : ConfigDict
             PyROS solver configuration.
+
+        Returns
+        -------
+        param_bounds : list of tuple
+            List, of length `N`, containing
+            (lower bound, upper bound) pairs
+            for the uncertain parameters.
         """
         bounding_model = self._create_bounding_model()
 
         # calculate bounds with FBBT
-        fbbt_exception_str = f"Error computing parameter bounds with FBBT for {self}"
         try:
             fbbt(bounding_model)
         except InfeasibleConstraintException as fbbt_infeasible_con_exception:
