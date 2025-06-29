@@ -720,7 +720,11 @@ class TestPyROSConfig(unittest.TestCase):
         config.subproblem_format_options = list(nondefault_test_val.items())
         self.assertEqual(config.subproblem_format_options, nondefault_test_val)
 
-        exc_str = "cannot convert dictionary update sequence.*"
+        exc_str = (
+            # contents of the error message are version dependent
+            "(cannot convert dictionary update sequence"
+            "|'int' object is not iterable)"
+        )
         with self.assertRaisesRegex(ValueError, exc_str):
             config.subproblem_format_options = [1, 2, 3]
 
