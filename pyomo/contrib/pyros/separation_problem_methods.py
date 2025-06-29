@@ -387,21 +387,43 @@ def group_ss_ineq_constraints_by_priority(separation_data):
         Keys are sorted in descending order
         (i.e. highest priority first).
     """
+    separation_data.config.progress_logger.debug(
+        "Grouping second-stage inequality constraints by separation priority..."
+    )
+
     ss_ineq_cons = separation_data.separation_model.second_stage.inequality_cons
     separation_priority_groups = dict()
     for name, ss_ineq_con in ss_ineq_cons.items():
-        # by default, priority set to 0
         priority = separation_data.separation_priority_order[name]
         cons_with_same_priority = separation_priority_groups.setdefault(priority, [])
         cons_with_same_priority.append(ss_ineq_con)
 
     # sort separation priority groups
-    return {
+    numeric_priority_grp_items = [
+        (priority, cons) for priority, cons in separation_priority_groups.items()
+    ]
+    sorted_priority_groups = {
         priority: ss_ineq_cons
-        for priority, ss_ineq_cons in sorted(
-            separation_priority_groups.items(), reverse=True
-        )
+        for priority, ss_ineq_cons in sorted(numeric_priority_grp_items, reverse=True)
     }
+
+    num_priority_groups = len(sorted_priority_groups)
+    separation_data.config.progress_logger.debug(
+        f"Found {num_priority_groups} separation "
+        f"priority group{'s' if num_priority_groups != 1 else ''}."
+    )
+    separation_data.config.progress_logger.debug(
+        "Separation priority grouping statistics:"
+    )
+    separation_data.config.progress_logger.debug(
+        f"  {'Priority':20s}{'# Ineq Cons':15s}"
+    )
+    for priority, cons in sorted_priority_groups.items():
+        separation_data.config.progress_logger.debug(
+            f"  {priority:<20d}{len(cons):<15d}"
+        )
+
+    return sorted_priority_groups
 
 
 def get_worst_discrete_separation_solution(
@@ -567,7 +589,7 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
         master_data=master_data,
         ss_ineq_cons=all_ss_ineq_constraints,
     )
-    sorted_priority_groups = group_ss_ineq_constraints_by_priority(separation_data)
+    sorted_priority_groups = separation_data.separation_priority_groups
     uncertainty_set_is_discrete = (
         config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS
     )
@@ -629,11 +651,12 @@ def perform_separation_loop(separation_data, master_data, solve_globally):
 
     all_solve_call_results = ComponentMap()
     priority_groups_enum = enumerate(sorted_priority_groups.items())
+    solve_adverb = "Globally" if solve_globally else "Locally"
     for group_idx, (priority, ss_ineq_constraints) in priority_groups_enum:
         priority_group_solve_call_results = ComponentMap()
+
         for idx, ss_ineq_con in enumerate(ss_ineq_constraints):
             # log progress of separation loop
-            solve_adverb = "Globally" if solve_globally else "Locally"
             config.progress_logger.debug(
                 f"{solve_adverb} separating second-stage inequality constraint "
                 f"{get_con_name_repr(separation_data.separation_model, ss_ineq_con)} "
@@ -1293,6 +1316,8 @@ class SeparationProblemData:
             ]
         else:
             self.idxs_of_master_scenarios = None
+
+        self.separation_priority_groups = group_ss_ineq_constraints_by_priority(self)
 
     def solve_separation(self, master_data):
         """
