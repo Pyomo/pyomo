@@ -1320,7 +1320,8 @@ class BoxSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness or bounds checks fail.
+            (e.g., numeric values are infinite,
+            or ``self.parameter_bounds`` has LB > UB.)
         """
         bounds_arr = np.array(self.parameter_bounds)
 
@@ -1592,7 +1593,9 @@ class CardinalitySet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness, positive deviation, or gamma checks fail.
+            (e.g., numeric values are infinite,
+            ``self.positive_deviation`` has negative values,
+            or ``self.gamma`` is out of range).
         """
         orig_val = self.origin
         pos_dev = self.positive_deviation
@@ -1814,8 +1817,9 @@ class PolyhedralSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness, full column rank of LHS matrix, bounded,
-            or nonempty checks fail.
+            (e.g., numeric values are infinite,
+            or ``self.coefficients_mat`` has column of zeros).
+            If bounded and nonempty checks fail.
         """
         lhs_coeffs_arr = self.coefficients_mat
         rhs_vec_arr = self.rhs_vec
@@ -2108,8 +2112,9 @@ class BudgetSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness, full 0 column or row of LHS matrix,
-            or positive RHS vector checks fail.
+            (e.g., numeric values are infinite,
+            ``self.budget_membership_mat`` has full column or row of zeros,
+            or ``self.budget_rhs_vec`` has negative values).
         """
         lhs_coeffs_arr = self.budget_membership_mat
         rhs_vec_arr = self.budget_rhs_vec
@@ -2521,8 +2526,9 @@ class FactorModelSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness, full column rank of Psi matrix, or
-            beta between 0 and 1 checks fail.
+            (e.g., numeric values are infinite,
+            ``self.psi_mat`` is not full column rank,
+            or ``self.beta`` is not between 0 and 1).
         """
         orig_val = self.origin
         psi_mat_arr = self.psi_mat
@@ -2744,7 +2750,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness or positive half-length checks fail.
+            (e.g., numeric values are infinite,
+            or ``self.half_lengths`` are negative).
         """
         ctr = self.center
         half_lengths = self.half_lengths
@@ -3132,8 +3139,9 @@ class EllipsoidalSet(UncertaintySet):
         ------
         ValueError
             If any uncertainty set attributes are not valid.
-            If finiteness, positive semi-definite, or
-            positive scale checks fail.
+            (e.g., numeric values are infinite,
+            ``self.shape_matrix`` is not positive semidefinite,
+            or ``self.scale`` is negative).
         """
         ctr = self.center
         shape_mat_arr = self.shape_matrix
