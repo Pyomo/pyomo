@@ -515,8 +515,13 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Bounds for the value of each uncertain parameter constrained
         by the set (i.e. bounds for each set dimension).
 
-        This method should return an empty list if it can't be calculated
-        or a list of length = self.dim if it can.
+        Returns
+        -------
+        : list of tuple
+            If the bounds can be calculated, then the list is of
+            length `N`, and each entry is a pair of numeric
+            (lower, upper) bounds for the corresponding
+            (Cartesian) coordinate. Otherwise, the list is empty.
         """
         raise NotImplementedError
 
