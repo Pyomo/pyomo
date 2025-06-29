@@ -1845,9 +1845,7 @@ class PolyhedralSet(UncertaintySet):
         )
 
         # check no column is all zeros. otherwise, set is unbounded
-        cols_with_all_zeros = np.nonzero(
-            [np.all(col == 0) for col in lhs_coeffs_arr.T]
-        )[0]
+        cols_with_all_zeros = np.nonzero(np.all(lhs_coeffs_arr == 0, axis=0))[0]
         if cols_with_all_zeros.size > 0:
             col_str = ", ".join(str(val) for val in cols_with_all_zeros)
             raise ValueError(
@@ -3577,3 +3575,11 @@ class IntersectionSet(UncertaintySet):
 
         # check boundedness and nonemptiness of intersected set
         super().validate(config)
+
+
+# TODO: General
+# 1. redundant trailing commas in test_uncertainty set
+# 2. Skip BARON test in test_uncertainty
+# 3. Wrap all docstrings to ~72 chars
+# 4. Update validate() method docstrings to be more specific
+# 5. wrap sentences in test_uncertainty errors and docstrings
