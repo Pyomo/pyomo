@@ -75,7 +75,7 @@ This function is defined as:
         \sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
     \end{cases}
 
-This function is $C^4$ smooth.  The region :math:`-0.1 < x < 0.1` is replaced by an 11th order polynomial approximates that :math:`\text{sgn}(x)x^2`.  The approximate function has a well behaved derivatives at :math:`x=0`.  If you need to use this function with very small numbers and high accuracy is important, you can scale the argument up (e.g. :math:`\text{sgnsqr_c4}(sx)/s^2`).
+This function is $C^4$ smooth.  The region :math:`-0.1 < x < 0.1` is replaced by an 11th order polynomial approximates that :math:`\text{sgn}(x)x^2`.  The approximate function has a well behaved derivatives at :math:`x=0`.  If you need to use this function with very small numbers and high accuracy is important, you can scale the argument up (e.g. :math:`\text{sgnsqr\_c4}(sx)/s^2`).
 
 These figures show the sgnsqr(x) function compared to the smooth approximation sgnsqr_c4(x).
 

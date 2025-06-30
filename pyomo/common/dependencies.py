@@ -443,25 +443,9 @@ def check_min_version(module, min_version):
             module = indicator._module
         else:
             return False
-    if check_min_version._parser is None:
-        try:
-            from packaging import version as _version
-
-            _parser = _version.parse
-        except ImportError:
-            # pkg_resources is an order of magnitude slower to import than
-            # packaging.  Only use it if the preferred (but optional)
-            # packaging library is not present
-            from pkg_resources import parse_version as _parser
-        check_min_version._parser = _parser
-    else:
-        _parser = check_min_version._parser
 
     version = getattr(module, '__version__', '0.0.0')
-    return _parser(min_version) <= _parser(version)
-
-
-check_min_version._parser = None
+    return packaging.version.parse(min_version) <= packaging.version.parse(version)
 
 
 #
@@ -993,6 +977,12 @@ def _finalize_pympler(module, available):
         import pympler.muppy
 
 
+def _finalize_packaging(module, available):
+    if available:
+        # Import key subpackages that we will want to assume are present
+        import packaging.version
+
+
 def _finalize_matplotlib(module, available):
     if not available:
         return
@@ -1094,6 +1084,10 @@ with declare_modules_as_importable(globals()):
     )
     random, _ = attempt_import('random')
 
+    # Necessary for minimum version checking for other optional dependencies
+    packaging, packaging_available = attempt_import(
+        'packaging', deferred_submodules=['version'], callback=_finalize_packaging
+    )
     # Commonly-used optional dependencies
     dill, dill_available = attempt_import('dill')
     mpi4py, mpi4py_available = attempt_import(
