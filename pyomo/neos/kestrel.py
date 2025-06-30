@@ -84,7 +84,16 @@ class kestrelAMPL:
         self.setup_connection()
 
     def __del__(self):
-        # close the underlying socket if possible (suppresses unittest warnings)
+        # This is a hack to force the socket to close.  When running
+        # tests under unittest, unittest will report any underlying
+        # socket resources that have not been closed as warnings.  This
+        # will cause the socket to be closed when the kestrelAMPL object
+        # falls out of scope and will suppress the warnings from
+        # unittest.
+        #
+        # Note that this is only to suppress warnings, as __del__ is not
+        # guaranteed to be called (especially for any objects that still
+        # exist when the Python process terminates)
         if getattr(self, 'neos', None) is not None:
             try:
                 if hasattr(self, 'transport') and hasattr(self.transport, 'close'):

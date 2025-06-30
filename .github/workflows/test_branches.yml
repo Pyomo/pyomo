@@ -94,7 +94,7 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          python: 3.13
+          python: 3.11
           test_docs: 1
           TARGET: win
           PYENV: conda

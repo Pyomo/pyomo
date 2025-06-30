@@ -27,7 +27,7 @@ def _mock_kestrel(solvers, err=None):
     """
     import pyomo.neos.kestrel as _k
 
-    class _Stub:
+    class _MockedNEOS:
         def __init__(self, *a, **kw):
             self._solvers = solvers
             self.connect_error = err
@@ -35,7 +35,7 @@ def _mock_kestrel(solvers, err=None):
         def solvers(self):
             return self._solvers
 
-    return unittest.mock.patch.object(_k, "kestrelAMPL", _Stub)
+    return unittest.mock.patch.object(_k, "kestrelAMPL", _MockedNEOS)
 
 
 class Test(unittest.TestCase):
