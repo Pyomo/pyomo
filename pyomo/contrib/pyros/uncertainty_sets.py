@@ -3575,11 +3575,3 @@ class IntersectionSet(UncertaintySet):
 
         # check boundedness and nonemptiness of intersected set
         super().validate(config)
-
-
-# TODO: General
-# 1. redundant trailing commas in test_uncertainty set
-# 2. Skip BARON test in test_uncertainty
-# 3. Wrap all docstrings to ~72 chars
-# 4. Update validate() method docstrings to be more specific
-# 5. wrap sentences in test_uncertainty errors and docstrings
