@@ -50,6 +50,7 @@ from pyomo.contrib.doe.utils import (
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
     snake_traversal_grid_sampling,
+    update_model_from_suffix,
 )
 
 
@@ -1615,7 +1616,8 @@ class DesignOfExperiments:
     def compute_FIM_factorial(
         self,
         model=None,
-        design_values: dict = None,
+        abs_change: list = None,
+        rel_change: list = None,
         method="sequential",
         change_one_design_at_a_time=True,
         file_name: str = None,
@@ -1629,6 +1631,14 @@ class DesignOfExperiments:
         ----------
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
+        # TODO: Update doc string for absolute and relative change
+        abs_change : list, optional
+            Absolute change in the design variable values. Default: None.
+            If provided, will use this value to generate the design values.
+            If not provided, will use the `design_values` parameter.
+        rel_change : list, optional
+            Relative change in the design variable values. Default: None.
+            If provided, will use this value to generate the design values.
         design_values : dict,
             dict of lists or other array-like objects, of the form {"var_name": <var_values>}. Default: None.
             The `design_values` should have the key(s) passed as strings that is a
@@ -1687,35 +1697,47 @@ class DesignOfExperiments:
         ).clone()
         model = self.factorial_model
 
-        if not design_values:
-            raise ValueError(
-                "design_values must be provided as a dictionary of array-like objects "
-                "in the form {<'var_name'>: <var_values>}."
-            )
-
-        # Check whether the design_ranges keys are in the experiment_inputs
-        design_keys = set(design_values.keys())
-        map_keys = set([k.name for k in model.experiment_inputs.keys()])
-        if not design_keys.issubset(map_keys):
-            incorrect_given_keys = design_keys - map_keys
-            suggested_keys = map_keys - design_keys
-            raise ValueError(
-                f"design_values keys: {incorrect_given_keys} are incorrect."
-                f"The keys should be from the following keys: {suggested_keys}."
-            )
-
         # Get the design map keys that match the design_values keys
-        design_map_keys = [
-            k for k in model.experiment_inputs.keys() if k.name in design_values.keys()
-        ]
+        # design_map_keys = [
+        #     k for k in model.experiment_inputs.keys() if k.name in design_values.keys()
+        # ]
         # This ensures that the order of the design_values keys matches the order of the
         # design_map_keys so that design_point can be constructed correctly in the loop.
         # TODO: define an Enum to add different sensitivity analysis sequences
-        des_ranges = [design_values[k.name] for k in design_map_keys]
+        # des_ranges = [design_values[k.name] for k in design_map_keys]
+
+        design_keys = [k for k in model.experiment_inputs.keys()]
+
+        design_values = []
+        for i, comp in enumerate(design_keys):
+            lb = comp.lb
+            ub = comp.ub
+            if lb is None or ub is None:
+                raise ValueError(f"{comp.name} does not have a lower or upper bound.")
+
+            if abs_change[i] is None and rel_change[i] is None:
+                n_des = 5  # Default number of points in the design value
+                des_val = np.linspace(lb, ub, n_des)
+
+            elif abs_change[i] is not None and rel_change[i] is not None:
+                des_val = []
+                del_val = comp.lb * rel_change[i] + abs_change[i]
+                if del_val == 0:
+                    raise ValueError(
+                        f"Design variable {comp.name} has no change in value - check "
+                        "abs_change and rel_change values."
+                    )
+                val = lb
+                while val <= ub:
+                    des_val.append(val)
+                    val += del_val
+
+            design_values.append(des_val)
+
         if change_one_design_at_a_time:
-            factorial_points = snake_traversal_grid_sampling(*des_ranges)
+            factorial_points = snake_traversal_grid_sampling(*design_values)
         else:
-            factorial_points = product(*des_ranges)
+            factorial_points = product(*design_values)
 
         factorial_points_list = list(factorial_points)
 
@@ -1747,7 +1769,7 @@ class DesignOfExperiments:
         for design_point in factorial_points_list:
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
-                design_map_keys[i].fix(design_point[i])
+                design_keys[i].fix(design_point[i])
 
             # Timing and logging objects
             self.logger.info(f"=======Iteration Number: {curr_point} =======")
@@ -1817,6 +1839,23 @@ class DesignOfExperiments:
                 "FIM_all": FIM_all.tolist(),  # Save all FIMs
             }
         )
+        if self.tee:
+            exclude_keys = {
+                "total_points",
+                "success_counts",
+                "failure_counts",
+                "FIM_all",
+            }
+            dict_for_df = {
+                k: v for k, v in factorial_results.items() if k not in exclude_keys
+            }
+            res_df = pd.DataFrame(dict_for_df)
+            print("\n\n=========Factorial results DataFrame===========")
+            print(res_df)
+            print("\n\n")
+            print("Total points:", total_points)
+            print("Success counts:", success_count)
+            print("Failure counts:", failure_count)
 
         self.factorial_results = factorial_results
 
