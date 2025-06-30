@@ -470,6 +470,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                             ) in jobs
                         ],
                     )
+                    pool.close()
+                    pool.join()
             else:
                 _thread_local.model = instance
                 _thread_local.solver = self._config.solver
