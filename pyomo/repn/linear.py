@@ -922,7 +922,7 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             self._filter_zeros(ans)
             return ans
         elif not mult_flag:
-            # the mulltiplier has cleared out the entire expression.
+            # the multiplier has cleared out the entire expression.
             # Warn if this is suppressing a NaN (unusual, and
             # non-standard, but we will wait to remove this behavior
             # for the time being)
