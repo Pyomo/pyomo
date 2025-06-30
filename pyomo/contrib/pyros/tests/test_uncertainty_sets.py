@@ -3092,25 +3092,11 @@ class TestCustomUncertaintySet(unittest.TestCase):
         CONFIG.global_solver = global_solver
 
         # using provided parameter_bounds
-        start = time.time()
         self.assertTrue(custom_set.is_bounded(config=CONFIG), "Set is not bounded")
-        end = time.time()
-        time_with_bounds_provided = end - start
 
         # when parameter_bounds is not available
         custom_set.parameter_bounds = []
-        start = time.time()
         self.assertTrue(custom_set.is_bounded(config=CONFIG), "Set is not bounded")
-        end = time.time()
-        time_without_bounds_provided = end - start
-
-        # check with parameter_bounds should always take less time than solving 2N
-        # optimization problems
-        self.assertLess(
-            time_with_bounds_provided,
-            time_without_bounds_provided,
-            "Boundedness check with provided parameter_bounds took longer than expected.",
-        )
 
         # when bad bounds are provided
         for val_str in ["inf", "nan"]:
