@@ -487,12 +487,6 @@ class Estimator(object):
         """
         Generate initial theta values for multistart optimization using selected sampling method.
         """
-        if n_restarts == 1:
-            # If only one restart, return an empty list
-            return print(
-                "No multistart optimization needed. Please use normal theta_est()"
-            )
-
         # Get the theta names and initial theta values
         theta_names = self._return_theta_names()
         initial_theta = [parmest_model.find_component(name)() for name in theta_names]
@@ -539,26 +533,7 @@ class Estimator(object):
             # Add user provided dataframe option
             if user_provided_df is not None:
 
-                if isinstance(user_provided_df, np.ndarray):
-                    # Check if the user provided numpy array has the same number of rows as the number of restarts
-                    if user_provided_df.shape[0] != n_restarts:
-                        raise ValueError(
-                            "The user provided numpy array must have the same number of rows as the number of restarts."
-                        )
-                    # Check if the user provided numpy array has the same number of columns as the number of theta names
-                    if user_provided_df.shape[1] != len(theta_names):
-                        raise ValueError(
-                            "The user provided numpy array must have the same number of columns as the number of theta names."
-                        )
-                        # Check if the user provided numpy array has the same theta names as the model
-                        # if not, raise an error
-                        # if not all(theta in theta_names for theta in user_provided_df.columns):
-                        raise ValueError(
-                            "The user provided numpy array must have the same theta names as the model."
-                        )
-                    # If all checks pass, return the user provided numpy array
-                    theta_vals_multistart = user_provided_df
-                elif isinstance(user_provided_df, pd.DataFrame):
+                if isinstance(user_provided_df, pd.DataFrame):
                     # Check if the user provided dataframe has the same number of rows as the number of restarts
                     if user_provided_df.shape[0] != n_restarts:
                         raise ValueError(
@@ -581,7 +556,7 @@ class Estimator(object):
                 ].values
             else:
                 raise ValueError(
-                    "The user must provide a numpy array or pandas dataframe from a previous attempt to use the 'user_provided_values' method."
+                    "The user must provide a pandas dataframe to use the 'user_provided_values' method."
                 )
 
         else:
@@ -594,6 +569,7 @@ class Estimator(object):
             or multistart_sampling_method == "latin_hypercube"
         ):
             # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
+            # The samples are in the range [0, 1], so we scale them to the range of the lower and upper bounds
             theta_vals_multistart = np.array(
                 [lower_bound + (upper_bound - lower_bound) * theta for theta in samples]
             )
@@ -1126,7 +1102,7 @@ class Estimator(object):
             Method used to sample theta values. Options are "uniform_random", "latin_hypercube", "sobol", or "user_provided".
             Default is "uniform_random".
         buffer: int, optional
-            Number of iterations to save results dynamically. Default is 10.
+            Number of iterations to save results dynamically if save_results=True. Default is 10.
         user_provided: pd.DataFrame or np.ndarray, optional
             User provided array or dataframe of theta values for multistart optimization.
         seed: int, optional
@@ -1158,18 +1134,32 @@ class Estimator(object):
                 "Multistart is not supported in the deprecated parmest interface"
             )
 
-        assert isinstance(n_restarts, int)
-        assert isinstance(multistart_sampling_method, str)
-        assert isinstance(solver, str)
-        assert isinstance(return_values, list)
+        # Validate input types
+        if not isinstance(n_restarts, int):
+            raise TypeError("n_restarts must be an integer")
+        if not isinstance(multistart_sampling_method, str):
+            raise TypeError("multistart_sampling_method must be a string")
+        if not isinstance(solver, str):
+            raise TypeError("solver must be a string")
+        if not isinstance(return_values, list):
+            raise TypeError("return_values must be a list")
+
+        if n_restarts <= 1:
+            # If n_restarts is 1 or less, no multistart optimization is needed
+            logger.warning(
+                "No multistart optimization needed. Please use normal theta_est()."
+            )
+            return self.theta_est(
+                solver=solver, return_values=return_values, calc_cov=False, cov_n=None
+            )
 
         if n_restarts > 1 and multistart_sampling_method is not None:
 
             # Find the initialized values of theta from the labeled parmest model
             # and the theta names from the estimator object
 
-            # print statement to indicate multistart optimization is starting
-            print(
+            # logger statement to indicate multistart optimization is starting
+            logger.info(
                 f"Starting multistart optimization with {n_restarts} restarts using {multistart_sampling_method} sampling method."
             )
 
@@ -1264,7 +1254,7 @@ class Estimator(object):
                     best_objectiveval = objectiveval
                     best_theta = converged_theta.values
 
-                print(
+                logger.info(
                     f"Restart {i+1}/{n_restarts}: Objective Value = {final_objectiveval}, Theta = {converged_theta}"
                 )
 
@@ -1294,19 +1284,19 @@ class Estimator(object):
                 )
 
                 # Diagnostic: print the table after each restart
-                # print(results_df)
+                logger.debug(results_df)
 
                 # Add buffer to save the dataframe dynamically, if save_results is True
                 if save_results and (i + 1) % buffer == 0:
                     mode = 'w' if i + 1 == buffer else 'a'
                     header = i + 1 == buffer
                     results_df.to_csv(file_name, mode=mode, header=header, index=False)
-                    print(f"Intermediate results saved after {i + 1} iterations.")
+                    logger.info(f"Intermediate results saved after {i + 1} iterations.")
 
             # Final save after all iterations
             if save_results:
                 results_df.to_csv(file_name, mode='a', header=False, index=False)
-                print("Final results saved.")
+                logger.info("Final results saved.")
 
             return results_df, best_theta, best_objectiveval
 
