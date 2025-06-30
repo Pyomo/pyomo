@@ -275,7 +275,7 @@ class TestToBaronVisitor(unittest.TestCase):
 
 
 # class TestBaron_writer(unittest.TestCase):
-class XTestBaron_writer(object):
+class XTestBaron_writer:
     """These tests verified that the BARON writer complained loudly for
     variables that were not on the model, not on an active block, or not
     on a Block ctype.  As we are relaxing that requirement throughout

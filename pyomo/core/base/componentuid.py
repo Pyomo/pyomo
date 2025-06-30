@@ -27,7 +27,7 @@ from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import Reference
 
 
-class _NotSpecified(object):
+class _NotSpecified:
     pass
 
 
@@ -49,7 +49,7 @@ def _context_err(_type):
     )
 
 
-class ComponentUID(object):
+class ComponentUID:
     """
     A Component unique identifier
 

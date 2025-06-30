@@ -48,7 +48,7 @@ from pyomo.core.expr.visitor import (
 logger = logging.getLogger(__name__)
 
 
-class _NotSpecified(object):
+class _NotSpecified:
     pass
 
 
@@ -363,7 +363,7 @@ class CallExpression(NumericExpression):
         return self._apply_operation(args)
 
 
-class _TemplateSumExpression_argList(object):
+class _TemplateSumExpression_argList:
     """A virtual list to represent the expanded SumExpression args
 
     This class implements a "virtual args list" for
@@ -726,7 +726,7 @@ def resolve_template(expr):
 resolve_template.visitor = None
 
 
-class _wildcard_info(object):
+class _wildcard_info:
     __slots__ = ('iter', 'source', 'value', 'original_value', 'objects')
 
     def __init__(self, src, obj):
@@ -913,7 +913,7 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
     return visitor.walk_expression(expr)
 
 
-class _GetItemIndexer(object):
+class _GetItemIndexer:
     # Note that this class makes the assumption that only one template
     # ever appears in an expression for a single index
 
@@ -1003,7 +1003,7 @@ def substitute_template_with_value(expr):
         return resolve_template(expr)
 
 
-class _set_iterator_template_generator(object):
+class _set_iterator_template_generator:
     """Replacement iterator that returns IndexTemplates
 
     In order to generate template expressions, we hijack the normal Set
@@ -1047,7 +1047,7 @@ class _set_iterator_template_generator(object):
     next = __next__
 
 
-class _template_iter_context(object):
+class _template_iter_context:
     """Manage the iteration context when generating templatized rules
 
     This class manages the context tracking when generating templatized
@@ -1086,8 +1086,8 @@ class _template_iter_context(object):
         return TemplateSumExpression((expr,), self.npop_cache(final_cache - init_cache))
 
 
-class _template_iter_manager(object):
-    class _iter_wrapper(object):
+class _template_iter_manager:
+    class _iter_wrapper:
         __slots__ = ('_class', '_iter', '_old_iter')
 
         def __init__(self, cls, context):
@@ -1104,7 +1104,7 @@ class _template_iter_manager(object):
         def release(self):
             self._class.__iter__ = self._old_iter
 
-    class _pause_template_iter_manager(object):
+    class _pause_template_iter_manager:
         __slots__ = ('iter_manager',)
 
         def __init__(self, iter_manager):

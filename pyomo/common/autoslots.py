@@ -276,7 +276,7 @@ class AutoSlots(type):
         else:
             return val
 
-    class Mixin(object):
+    class Mixin:
         """Mixin class to configure a class hierarchy to use AutoSlots
 
         Inheriting from this class will set up the automatic generation

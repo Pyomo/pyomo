@@ -26,7 +26,7 @@ class TestPlugins(unittest.TestCase):
             WriterFactory.get_class('lp'), WriterFactory.get_class(f'lp_v{ver}')
         )
 
-        class TMP(object):
+        class TMP:
             pass
 
         WriterFactory.register('test_writer')(TMP)

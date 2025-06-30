@@ -43,15 +43,15 @@ _infeasible_termination_conditions = set(
 )
 
 
-class NORMAL(object):
+class NORMAL:
     pass
 
 
-class INFEASIBLE(object):
+class INFEASIBLE:
     pass
 
 
-class NONOPTIMAL(object):
+class NONOPTIMAL:
     pass
 
 

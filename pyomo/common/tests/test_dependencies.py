@@ -265,7 +265,7 @@ class TestDependencies(unittest.TestCase):
         sys.modules.pop('pyomo.common.tests.mod', None)
         ans = []
 
-        class ImpFinder(object):
+        class ImpFinder:
             # This is an "imp" module-style finder (deprecated in Python
             # 3.4 and removed in Python 3.12, but Google Collab still
             # defines finders like this)

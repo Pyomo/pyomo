@@ -409,7 +409,7 @@ class AbstractSuffix(Suffix):
     pass
 
 
-class SuffixFinder(object):
+class SuffixFinder:
     def __init__(self, name, default=None, context=None):
         """This provides an efficient utility for finding suffix values on a
         (hierarchical) Pyomo model.

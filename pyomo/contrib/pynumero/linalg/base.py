@@ -27,7 +27,7 @@ class LinearSolverStatus(enum.Enum):
     max_iter = 5
 
 
-class LinearSolverResults(object):
+class LinearSolverResults:
     def __init__(self, status: Optional[LinearSolverStatus] = None):
         self.status = status
 

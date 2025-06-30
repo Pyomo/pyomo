@@ -83,7 +83,7 @@ class HighsResults(Results):
         self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
-class _MutableVarBounds(object):
+class _MutableVarBounds:
     def __init__(self, lower_expr, upper_expr, pyomo_var_id, var_map, highs):
         self.pyomo_var_id = pyomo_var_id
         self.lower_expr = lower_expr
@@ -98,7 +98,7 @@ class _MutableVarBounds(object):
         self.highs.changeColBounds(col_ndx, lb, ub)
 
 
-class _MutableLinearCoefficient(object):
+class _MutableLinearCoefficient:
     def __init__(self, pyomo_con, pyomo_var_id, con_map, var_map, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -113,7 +113,7 @@ class _MutableLinearCoefficient(object):
         self.highs.changeCoeff(row_ndx, col_ndx, value(self.expr))
 
 
-class _MutableObjectiveCoefficient(object):
+class _MutableObjectiveCoefficient:
     def __init__(self, pyomo_var_id, var_map, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -125,7 +125,7 @@ class _MutableObjectiveCoefficient(object):
         self.highs.changeColCost(col_ndx, value(self.expr))
 
 
-class _MutableObjectiveOffset(object):
+class _MutableObjectiveOffset:
     def __init__(self, expr, highs):
         self.expr = expr
         self.highs = highs
@@ -134,7 +134,7 @@ class _MutableObjectiveOffset(object):
         self.highs.changeObjectiveOffset(value(self.expr))
 
 
-class _MutableConstraintBounds(object):
+class _MutableConstraintBounds:
     def __init__(self, lower_expr, upper_expr, pyomo_con, con_map, highs):
         self.lower_expr = lower_expr
         self.upper_expr = upper_expr

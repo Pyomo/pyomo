@@ -40,7 +40,7 @@ from pyomo.core.kernel.conic import (
 )
 
 
-class _conic_tester_base(object):
+class _conic_tester_base:
     _object_factory = None
 
     def setUp(self):

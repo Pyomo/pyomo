@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-class _robust_sort_keyfcn(object):
+class _robust_sort_keyfcn:
     """Class for robustly generating sortable keys for arbitrary data.
 
     Generates keys (for use with Python `sorted()` that are

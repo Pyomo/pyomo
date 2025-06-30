@@ -113,7 +113,7 @@ ipopt_available = _ipopt.available(exception_flag=False)
 
 
 # @SolverFactory.register("time_delay_solver")
-class TimeDelaySolver(object):
+class TimeDelaySolver:
     """
     Solver which puts program to sleep for a specified
     duration after having been invoked a specified number
@@ -4227,7 +4227,7 @@ class TestResolveAndValidatePyROSInputs(unittest.TestCase):
 
 
 # @SolverFactory.register("subsolver_error__solver")
-class SubsolverErrorSolver(object):
+class SubsolverErrorSolver:
     """
     Solver that returns a bad termination condition
     to purposefully create an SP subsolver error.

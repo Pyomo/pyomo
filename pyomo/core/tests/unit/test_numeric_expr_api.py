@@ -58,7 +58,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.environ import ConcreteModel, Param, Var, ExternalFunction
 
 
-class MockExternalFunction(object):
+class MockExternalFunction:
     def evaluate(self, args):
         (x,) = args
         return (math.log(x) / math.log(2)) ** 2

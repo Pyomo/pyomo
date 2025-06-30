@@ -1579,7 +1579,7 @@ def compute_bounds_on_expr(expr, ignore_fixed=False):
     return lb, ub
 
 
-class BoundsManager(object):
+class BoundsManager:
     def __init__(self, comp):
         self._vars = ComponentSet()
         self._saved_bounds = list()

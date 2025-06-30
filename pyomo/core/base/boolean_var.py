@@ -35,7 +35,7 @@ logger = logging.getLogger('pyomo.core')
 _logical_var_types = {bool, type(None)}
 
 
-class _DeprecatedImplicitAssociatedBinaryVariable(object):
+class _DeprecatedImplicitAssociatedBinaryVariable:
     __slots__ = ('_boolvar',)
 
     def __init__(self, boolvar):

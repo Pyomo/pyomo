@@ -22,7 +22,7 @@ from pyomo.common.sorting import sorted_robust, _robust_sort_keyfcn
 # The following are custom types used for testing sorted_robust.  They
 # are declared at the module scope to ensure consistent generation of
 # the class __name__.
-class LikeFloat(object):
+class LikeFloat:
     def __init__(self, n):
         self.n = n
 
@@ -33,7 +33,7 @@ class LikeFloat(object):
         return self.n > other
 
 
-class Comparable(object):
+class Comparable:
     def __init__(self, n):
         self.n = str(n)
 
@@ -44,7 +44,7 @@ class Comparable(object):
         return self.n > other
 
 
-class ToStr(object):
+class ToStr:
     def __init__(self, n):
         self.n = str(n)
 
@@ -52,7 +52,7 @@ class ToStr(object):
         return self.n
 
 
-class NoStr(object):
+class NoStr:
     def __init__(self, n):
         self.n = str(n)
 

@@ -50,11 +50,11 @@ _log = logging.getLogger(__name__)
 
 # This lets the file be imported when the Qt UI is not available (or
 # when building docs), but you won't be able to use it
-class _ModelBrowserUI(object):
+class _ModelBrowserUI:
     pass
 
 
-class _ModelBrowser(object):
+class _ModelBrowser:
     pass
 
 
@@ -179,7 +179,7 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         self.datmodel.update_model()
 
 
-class ComponentDataItem(object):
+class ComponentDataItem:
     """
     This is a container for a Pyomo component to be displayed in a model tree
     view.

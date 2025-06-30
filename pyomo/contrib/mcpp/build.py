@@ -102,7 +102,7 @@ def build_mcpp():
         shutil.rmtree(tmpdir)
 
 
-class MCPPBuilder(object):
+class MCPPBuilder:
     def __call__(self, parallel):
         return build_mcpp()
 

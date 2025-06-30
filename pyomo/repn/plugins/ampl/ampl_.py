@@ -201,7 +201,7 @@ def _get_bound(exp):
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
 
-class StopWatch(object):
+class StopWatch:
     def __init__(self):
         self.start = time.time()
 
@@ -212,7 +212,7 @@ class StopWatch(object):
         self.start = time.time()
 
 
-class _Counter(object):
+class _Counter:
     def __init__(self, start):
         self._id = start
 
@@ -222,8 +222,8 @@ class _Counter(object):
         return tmp
 
 
-class ModelSOS(object):
-    class AmplSuffix(object):
+class ModelSOS:
+    class AmplSuffix:
         def __init__(self, name):
             self.name = name
             self.ids = []
@@ -310,7 +310,7 @@ class ModelSOS(object):
             self.ref.add(ID, weight)
 
 
-class RepnWrapper(object):
+class RepnWrapper:
     __slots__ = ('repn', 'linear_vars', 'nonlinear_vars')
 
     def __init__(self, repn, linear, nonlinear):

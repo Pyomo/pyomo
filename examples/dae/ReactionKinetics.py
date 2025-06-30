@@ -28,7 +28,7 @@ colloc = pyo.TransformationFactory('dae.collocation')
 solver = pyo.SolverFactory('ipopt')
 
 
-class Reaction(object):
+class Reaction:
     """A simple class to hold the stoichiometry of a single reaction
 
     Reaction data is stored in two dictionaries:
@@ -84,7 +84,7 @@ class Reaction(object):
         return coef, species.strip()
 
 
-class ReactionNetwork(object):
+class ReactionNetwork:
     """A simple object to hold sets of reactions."""
 
     def __init__(self):

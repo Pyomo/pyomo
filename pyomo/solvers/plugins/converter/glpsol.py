@@ -20,7 +20,7 @@ from pyomo.opt.base.convert import ProblemConverterFactory
 
 
 @ProblemConverterFactory.register('glpsol')
-class GlpsolMIPConverter(object):
+class GlpsolMIPConverter:
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
         #

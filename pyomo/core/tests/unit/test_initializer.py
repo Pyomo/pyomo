@@ -228,7 +228,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 335)
 
     def test_method(self):
-        class Init(object):
+        class Init:
             def a_init(self, m):
                 return 0
 
@@ -288,7 +288,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 40)
 
     def test_classmethod(self):
-        class Init(object):
+        class Init:
             @classmethod
             def a_init(cls, m):
                 return 0
@@ -350,7 +350,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 40)
 
     def test_staticmethod(self):
-        class Init(object):
+        class Init:
             @staticmethod
             def a_init(m):
                 return 0
@@ -446,7 +446,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(list(a(None, (1, 4))), [4, 2])
 
     def test_generator_method(self):
-        class Init(object):
+        class Init:
             def a_init(self, m):
                 yield 0
                 yield 3
@@ -506,7 +506,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(list(a(None, 1)), [0, 3])
 
     def test_functor(self):
-        class InitScalar(object):
+        class InitScalar:
             def __init__(self, val):
                 self.val = val
 
@@ -519,7 +519,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(a(None, None), 10)
 
-        class InitIndexed(object):
+        class InitIndexed:
             def __init__(self, val):
                 self.val = val
 
@@ -900,7 +900,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertIs(type(a), ParameterizedIndexedCallInitializer)
         self.assertEqual(a('m', 1, 5), ('m', 5, 1))
 
-        class Functor(object):
+        class Functor:
             def __init__(self, i):
                 self.i = i
 

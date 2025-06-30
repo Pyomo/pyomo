@@ -1070,7 +1070,7 @@ class TestReplacementWithNPV(unittest.TestCase):
         assertExpressionsEqual(self, e3, abs(m.x))
 
 
-class BaseStreamBasedVisitorTests(object):
+class BaseStreamBasedVisitorTests:
     def setUp(self):
         self.m = m = ConcreteModel()
         m.x = Var()

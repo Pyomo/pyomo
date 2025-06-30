@@ -23,7 +23,7 @@ def build_cspline_external(user_args=[], parallel=None):
     )
 
 
-class ASLCsplineExternalBuilder(object):
+class ASLCsplineExternalBuilder:
     def __call__(self, parallel):
         return build_cspline_external(parallel=parallel)
 

@@ -75,7 +75,7 @@ def _create_strict_inequality_map(vars_):
     }
 
 
-class TextNLDebugTemplate(object):
+class TextNLDebugTemplate:
     unary = {
         'log': 'o43\t#log\n',
         'log10': 'o42\t#log10\n',
@@ -181,7 +181,7 @@ class TextNLTemplate(TextNLDebugTemplate):
     _create_strict_inequality_map(vars())
 
 
-class NLFragment(object):
+class NLFragment:
     """This is a mock "component" for the nl portion of a named Expression.
 
     It is used internally in the writer when requesting symbolic solver
@@ -201,7 +201,7 @@ class NLFragment(object):
         return 'nl(' + self._node.name + ')'
 
 
-class AMPLRepn(object):
+class AMPLRepn:
     """The "compiled" representation of an expression in AMPL NL format.
 
     This stores a compiled form of an expression in the AMPL "NL"

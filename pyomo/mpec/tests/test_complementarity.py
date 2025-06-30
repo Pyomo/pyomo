@@ -42,7 +42,7 @@ from pyomo.repn.tests.nl_diff import load_and_compare_nl_baseline
 currdir = this_file_dir()
 
 
-class CCTests(object):
+class CCTests:
     @classmethod
     def setUpClass(cls):
         import pyomo.environ

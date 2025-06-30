@@ -43,7 +43,7 @@ def register_model(cls):
     return cls
 
 
-class _BaseTestModel(object):
+class _BaseTestModel:
     """
     This is a base class for test models
     """

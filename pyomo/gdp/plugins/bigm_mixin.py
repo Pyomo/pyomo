@@ -90,7 +90,7 @@ def _warn_for_unused_bigM_args(bigM, used_args, logger):
             logger.warning(warning_msg)
 
 
-class _BigM_MixIn(object):
+class _BigM_MixIn:
     def _get_bigM_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
         # check for constraints in the moment, but if that fails, we've

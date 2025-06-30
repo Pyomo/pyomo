@@ -13,7 +13,7 @@ from pyomo.common.collections import Bunch
 from pyomo.dataportal.process_data import _process_data
 
 
-class TableData(object):
+class TableData:
     """
     A class used to read/write data from/to a table in an external
     data source.

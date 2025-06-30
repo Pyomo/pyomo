@@ -45,7 +45,7 @@ def expand_model_components(m, base_components, index_sets):
                 yield val[j]
 
 
-class BadExperiment(object):
+class BadExperiment:
     def __init__(self):
         self.model = None
 

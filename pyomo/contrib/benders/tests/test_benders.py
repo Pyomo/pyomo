@@ -29,7 +29,7 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_farmer(self):
-        class Farmer(object):
+        class Farmer:
             def __init__(self):
                 self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
                 self.total_acreage = 500
@@ -252,7 +252,7 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not mip_available, 'MIP solver is not available.')
     def test_four_scen_farmer(self):
-        class FourScenFarmer(object):
+        class FourScenFarmer:
             def __init__(self):
                 self.crops = ['WHEAT', 'CORN', 'SUGAR_BEETS']
                 self.total_acreage = 500

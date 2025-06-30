@@ -196,7 +196,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
             )
 
 
-class StreamIndenter(object):
+class StreamIndenter:
     """
     Mock-up of a file-like object that wraps another file-like object
     and indents all data using the specified string before passing it to

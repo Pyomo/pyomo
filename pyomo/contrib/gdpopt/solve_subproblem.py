@@ -240,7 +240,7 @@ def detect_unfixed_discrete_vars(model):
     return var_set
 
 
-class preprocess_subproblem(object):
+class preprocess_subproblem:
     def __init__(self, util_block, config):
         self.util_block = util_block
         self.config = config

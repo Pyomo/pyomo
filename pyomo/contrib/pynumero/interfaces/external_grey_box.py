@@ -89,7 +89,7 @@ Note:
 """
 
 
-class ExternalGreyBoxModel(object):
+class ExternalGreyBoxModel:
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt. See the module documentation above,

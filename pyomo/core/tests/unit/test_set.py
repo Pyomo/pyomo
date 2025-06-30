@@ -955,7 +955,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         )
         self.assertEqual(RangeSet(0, 5, 1), m.I)
 
-        class _AlmostNumeric(object):
+        class _AlmostNumeric:
             def __init__(self, val):
                 self.val = val
 
@@ -1228,7 +1228,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1410,7 +1410,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1453,7 +1453,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 
@@ -1496,7 +1496,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # But NOT non-iterable objects: we assume that everything that
         # does not implement isfinite() is a discrete set.
-        class _NonIterable(object):
+        class _NonIterable:
             def __init__(self):
                 self.data = set({1, 3, 5})
 

@@ -16,7 +16,7 @@ from pyomo.core import value
 from pyomo.opt import TerminationCondition as tc
 
 
-class _OAAlgorithmMixIn(object):
+class _OAAlgorithmMixIn:
     def _fix_discrete_soln_solve_subproblem_and_add_cuts(
         self, discrete_prob_util_block, subprob_util_block, config
     ):
