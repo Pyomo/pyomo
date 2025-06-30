@@ -190,7 +190,7 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.create_doe_model()
 
     def test_reactor_check_bad_prior_not_symmetric(self):
-        from pyomo.contrib.doe.doe import _SMALL_TOLERANCE_SYMMETRY
+        from pyomo.contrib.doe.utils import _SMALL_TOLERANCE_SYMMETRY
 
         fd_method = "central"
         obj_used = "trace"

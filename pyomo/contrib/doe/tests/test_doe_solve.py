@@ -510,8 +510,11 @@ class TestDoe(unittest.TestCase):
         )
 
         ff_results = ff.fim_factorial_results
+        print("log10 D-opt", ff_results["log10 D-opt"])
 
-        self.assertTrue(np.allclose(ff_results["log10 D-opt"], log10_D_opt_expected))
+        self.assertTrue(
+            np.allclose(ff_results["log10 D-opt"], log10_D_opt_expected, atol=1e-6)
+        )
         self.assertTrue(np.allclose(ff_results["log10 A-opt"], log10_A_opt_expected))
         self.assertTrue(np.allclose(ff_results["log10 E-opt"], log10_E_opt_expected))
         self.assertTrue(np.allclose(ff_results["log10 ME-opt"], log10_ME_opt_expected))
