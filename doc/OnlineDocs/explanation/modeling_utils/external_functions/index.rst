@@ -42,6 +42,15 @@ This function is defined as:
 
 In this implementation, the region :math:`-0.1 < x < 0.1` is replaced by a Taylor series with enough terms that the function should be at least :math:`C^2` smooth.  The difference between the function and the Tayor series is near the limits of machine precision, about :math:`1 \times 10^{-16}` for the function value,  :math:`1 \times 10^{-16}` for the first derivative, and :math:`1 \times 10^{-14}` for the second derivative.
 
+These figures show the sinc(x) function, the Taylor series and where the Taylor series is used.
+
+.. image:: figs/sinc_f.png
+
+.. image:: figs/sinc_fx.png
+
+.. image:: figs/sinc_fxx.png
+
+
 sgnsqr(x)
 ~~~~~~~~~
 
