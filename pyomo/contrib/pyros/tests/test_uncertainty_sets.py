@@ -411,6 +411,20 @@ class TestBoxSet(unittest.TestCase):
         box_set = BoxSet(bounds=[[1.0, 2.0], [3.0, 4.0]])
         bounded_and_nonempty_check(self, box_set)
 
+    def test_fbbt_error(self):
+        """
+        Test that `_fbbt_parameter_bounds` error message with bad bounds.
+        """
+        CONFIG = pyros_config()
+
+        # construct box set with invalid bounds
+        box_set = BoxSet(bounds=[[2, 1]])
+        exc_str = ("Encountered the following exception while "
+                   "computing parameter bounds with FBBT")
+        with self.assertLogs(CONFIG.progress_logger, level='ERROR') as cm:
+            box_set._fbbt_parameter_bounds(config=CONFIG)
+        self.assertIn(exc_str, cm.output[0])
+
     def test_is_coordinate_fixed(self):
         """
         Test method for checking whether there are coordinates
