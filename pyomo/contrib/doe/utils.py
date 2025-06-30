@@ -91,37 +91,38 @@ def rescale_FIM(FIM, param_vals):
     scaled_FIM = np.multiply(FIM, scaling_mat)
     return scaled_FIM
 
-    # TODO: Add swapping parameters for variables helper function
-    # def get_parameters_from_suffix(suffix, fix_vars=False):
-    #     """
-    #     Finds the Params within the suffix provided. It will also check to see
-    #     if there are Vars in the suffix provided. ``fix_vars`` will indicate
-    #     if we should fix all the Vars in the set or not.
-    #
-    #     Parameters
-    #     ----------
-    #     suffix: pyomo Suffix object, contains the components to be checked
-    #             as keys
-    #     fix_vars: boolean, whether or not to fix the Vars, default = False
-    #
-    #     Returns
-    #     -------
-    #     param_list: list of Param
-    #     """
-    #     param_list = []
-    #
-    #     # FIX THE MODEL TREE ISSUE WHERE I GET base_model.<param> INSTEAD OF <param>
-    #     # Check keys if they are Param or Var. Fix the vars if ``fix_vars`` is True
-    #     for k, v in suffix.items():
-    #         if isinstance(k, ParamData):
-    #             param_list.append(k.name)
-    #         elif isinstance(k, VarData):
-    #             if fix_vars:
-    #                 k.fix()
-    #         else:
-    #             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
-    #
-    #     return param_list
+
+# TODO: Add swapping parameters for variables helper function
+# def get_parameters_from_suffix(suffix, fix_vars=False):
+#     """
+#     Finds the Params within the suffix provided. It will also check to see
+#     if there are Vars in the suffix provided. ``fix_vars`` will indicate
+#     if we should fix all the Vars in the set or not.
+#
+#     Parameters
+#     ----------
+#     suffix: pyomo Suffix object, contains the components to be checked
+#             as keys
+#     fix_vars: boolean, whether or not to fix the Vars, default = False
+#
+#     Returns
+#     -------
+#     param_list: list of Param
+#     """
+#     param_list = []
+#
+#     # FIX THE MODEL TREE ISSUE WHERE I GET base_model.<param> INSTEAD OF <param>
+#     # Check keys if they are Param or Var. Fix the vars if ``fix_vars`` is True
+#     for k, v in suffix.items():
+#         if isinstance(k, ParamData):
+#             param_list.append(k.name)
+#         elif isinstance(k, VarData):
+#             if fix_vars:
+#                 k.fix()
+#         else:
+#             pass  # ToDo: Write error for suffix keys that aren't ParamData or VarData
+#
+#     return param_list
 
 
 def check_FIM(FIM):
