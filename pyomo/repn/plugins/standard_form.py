@@ -457,7 +457,7 @@ class _LinearStandardFormCompiler_impl(object):
                 # slack variable, but that seems rather silly.
                 continue
 
-            if not N:
+            if not N and offset.__class__ in native_types:
                 # This is a constant constraint
                 # TODO: add a (configurable) feasibility tolerance
                 if (lb is None or lb <= offset) and (ub is None or ub >= offset):
