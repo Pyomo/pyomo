@@ -125,6 +125,7 @@ class kestrelAMPL:
             NotImplementedError,
             Exception,
         ) as e:
+            self.connect_error = e
             self.neos = None
             logger.info("Fail: %s" % (e,))
             logger.warning("NEOS is temporarily unavailable:\n\t(%s)" % (e,))
