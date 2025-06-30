@@ -78,6 +78,7 @@ _thread_local = threading.local()
 _thread_local.solver = None
 _thread_local.model = None
 _thread_local.config_use_primal_bound = None
+_thread_local.in_progress = False
 
 
 def Solver(val):
@@ -293,6 +294,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         self.handlers[Suffix] = self._warn_for_active_suffix
 
     def _apply_to(self, instance, **kwds):
+        # check for the rather implausible error case that
+        # solver.solve() is a metasolver that indirectly calls this
+        # transformation again
+        if _thread_local.in_progress:
+            raise GDP_Error("gdp.mbigm transformation cannot be called recursively")
         self.used_args = ComponentMap()
         with PauseGC():
             try:
@@ -306,8 +312,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 _thread_local.model = None
                 _thread_local.solver = None
                 _thread_local.config_use_primal_bound = None
+                _thread_local.in_progress = False
 
     def _apply_to_impl(self, instance, **kwds):
+        _thread_local.in_progress = True
         self._process_arguments(instance, **kwds)
         if self._config.assume_fixed_vars_permanent:
             self._bound_visitor.use_fixed_var_values_as_bounds = True
