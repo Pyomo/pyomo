@@ -419,8 +419,10 @@ class TestBoxSet(unittest.TestCase):
 
         # construct box set with invalid bounds
         box_set = BoxSet(bounds=[[2, 1]])
-        exc_str = ("Encountered the following exception while "
-                   "computing parameter bounds with FBBT")
+        exc_str = (
+            "Encountered the following exception while "
+            "computing parameter bounds with FBBT"
+        )
         with self.assertLogs(CONFIG.progress_logger, level='ERROR') as cm:
             box_set._fbbt_parameter_bounds(config=CONFIG)
         self.assertIn(exc_str, cm.output[0])
