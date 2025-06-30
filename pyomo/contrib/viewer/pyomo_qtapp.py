@@ -20,11 +20,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import qtconsole.qtconsoleapp
 import pyomo.contrib.viewer.qt as myqt
+from pyomo.contrib.viewer.pyomo_viewer import qtconsole_app, qtconsole_available
 
 
-class QtApp(qtconsole.qtconsoleapp.JupyterQtConsoleApp):
+class QtApp(qtconsole_app.JupyterQtConsoleApp if qtconsole_available else object):
     _kernel_cmd_show_ui = """try:
     ui.show()
 except NameError:
