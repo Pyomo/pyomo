@@ -299,4 +299,4 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
     def _to_vector(self, data, N, vector_type):
         # override this to not attempt conversion to float since that will fail
         # on the Pyomo expressions
-        return np.array([v for v in data])
+        return np.array(list(data))
