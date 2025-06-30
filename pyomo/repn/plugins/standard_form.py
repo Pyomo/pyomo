@@ -597,6 +597,10 @@ class _LinearStandardFormCompiler_impl(object):
         return info
 
     def _create_csc(self, data, index, index_ptr, nnz, n_cols):
+        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
+        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
+        index_ptr = np.array(index_ptr, dtype=np.int32)
+
         if not nnz:
             # The empty CSC has no (or few) rows and a large number of
             # columns and no nonzeros: it is faster / easier to create
@@ -608,9 +612,6 @@ class _LinearStandardFormCompiler_impl(object):
                 (data, index, index_ptr), [len(index_ptr) - 1, n_cols]
             ).tocsc()
 
-        data = self._to_vector(itertools.chain.from_iterable(data), np.float64, nnz)
-        index = self._to_vector(itertools.chain.from_iterable(index), np.int32, nnz)
-        index_ptr = np.array(index_ptr, dtype=np.int32)
         A = self._csr_matrix((data, index, index_ptr), [len(index_ptr) - 1, n_cols])
         A = A.tocsc()
         A.sum_duplicates()
