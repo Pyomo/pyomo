@@ -206,7 +206,7 @@ def compute_FIM_metrics(FIM):
     if abs(E_vals.imag[E_ind]) > _SMALL_TOLERANCE_IMG:
         logger.warning(
             "Eigenvalue has imaginary component greater than "
-            + f"{_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
+            + f"{_SMALL_TOLERANCE_IMG}, contact the developers if this issue persists."
         )
 
     # If the real value is less than or equal to zero, set the E_opt value to nan
