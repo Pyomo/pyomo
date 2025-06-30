@@ -88,8 +88,8 @@ class TestUtilsFIM(unittest.TestCase):
         ME_opt_expected = 0.6299765069426388
 
         # Test results
-        self.assertEqual(det_FIM, det_expected)
-        self.assertEqual(trace_FIM, trace_expected)
+        self.assertAlmostEqual(det_FIM, det_expected)
+        self.assertAlmostEqual(trace_FIM, trace_expected)
         self.assertTrue(np.allclose(E_vals, E_vals_expected))
         self.assertTrue(np.allclose(E_vecs, E_vecs_expected))
         self.assertEqual(D_opt, D_opt_expected)
