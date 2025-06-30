@@ -656,13 +656,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         ValueError
             If nonemptiness check or boundedness check fails.
         """
-        check_nonempty = self.is_nonempty(config=config)
-        check_bounded = self.is_bounded(config=config)
-
-        if not check_nonempty:
+        if not self.is_nonempty(config=config):
             raise ValueError(f"Nonemptiness check failed for uncertainty set {self}.")
 
-        if not check_bounded:
+        if not self.is_bounded(config=config):
             raise ValueError(f"Boundedness check failed for uncertainty set {self}.")
 
     @abc.abstractmethod
