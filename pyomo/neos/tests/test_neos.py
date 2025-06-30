@@ -21,7 +21,6 @@ import os
 import json
 import os.path
 import tempfile
-from socket import timeout
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
