@@ -444,6 +444,20 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     )
         # (Now exiting the DisjunctionDatas loop)
         if jobs:
+            jobs_by_name = [
+                (
+                    constraint.getname(fully_qualified=True),
+                    other_disjunct.getname(fully_qualified=True),
+                    unsuccessful_solve_msg,
+                    is_upper,
+                )
+                for (
+                    constraint,
+                    other_disjunct,
+                    unsuccessful_solve_msg,
+                    is_upper,
+                ) in jobs
+            ]
             threads = (
                 self._config.threads
                 if self._config.threads is not None
@@ -453,23 +467,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             )
             if threads > 1:
                 with self._setup_pool(threads, instance, len(jobs)) as pool:
-                    results = pool.starmap(
-                        func=_calc_M,
-                        iterable=[
-                            (
-                                constraint.getname(fully_qualified=True),
-                                other_disjunct.getname(fully_qualified=True),
-                                unsuccessful_solve_msg,
-                                is_upper,
-                            )
-                            for (
-                                constraint,
-                                other_disjunct,
-                                unsuccessful_solve_msg,
-                                is_upper,
-                            ) in jobs
-                        ],
-                    )
+                    results = pool.starmap(func=_calc_M, iterable=jobs_by_name)
                     pool.close()
                     pool.join()
             else:
@@ -477,23 +475,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 _thread_local.solver = self._config.solver
                 _thread_local.config_use_primal_bound = self._config.use_primal_bound
                 logger.info(f"Running {len(jobs)} jobs single-threaded.")
-                results = itertools.starmap(
-                    _calc_M,
-                    [
-                        (
-                            constraint.getname(fully_qualified=True),
-                            other_disjunct.getname(fully_qualified=True),
-                            unsuccessful_solve_msg,
-                            is_upper,
-                        )
-                        for (
-                            constraint,
-                            other_disjunct,
-                            unsuccessful_solve_msg,
-                            is_upper,
-                        ) in jobs
-                    ],
-                )
+                results = itertools.starmap(_calc_M, jobs_by_name)
             deactivated = set()
             for (constraint, other_disjunct, _, is_upper), (
                 M,
