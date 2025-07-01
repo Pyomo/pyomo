@@ -70,6 +70,11 @@ class FiniteDifferenceStep(Enum):
     backward = "backward"
 
 
+class SensitivityInitialization(Enum):
+    snake_traversal = "snake_traversal"
+    nested_for_loop = "nested_for_loop"
+
+
 class DesignOfExperiments:
     def __init__(
         self,
@@ -1618,8 +1623,9 @@ class DesignOfExperiments:
         model=None,
         abs_change: list = None,
         rel_change: list = None,
+        n_designs: int = 5,
         method="sequential",
-        change_one_design_at_a_time=True,
+        initialization_scheme=SensitivityInitialization.snake_traversal,
         file_name: str = None,
     ):
         """Will run a simulation-based factorial exploration of the experimental input
@@ -1635,21 +1641,11 @@ class DesignOfExperiments:
         abs_change : list, optional
             Absolute change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
-            If not provided, will use the `design_values` parameter.
+            If not provided, will use the n_designs to generate the design values.
+            If `abs_change` is provided, `rel_change` must also be provided.
         rel_change : list, optional
             Relative change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
-        design_values : dict,
-            dict of lists or other array-like objects, of the form {"var_name": <var_values>}. Default: None.
-            The `design_values` should have the key(s) passed as strings that is a
-            subset of the `experiment_inputs`. If one or more design variables are not
-            to be changed, then they should not be passed in the `design_values`
-            dictionary, but if they are passed in the dictionary, then they must be a
-            array-like object of floats. For example, if our experiment has 4 design variables
-            (i.e., `experiment_inputs`): model.x1, model.x2, model.x3, and model.x4,
-            their values may be passed as, design_values= {"x1": [1, 2, 3], "x3": [7],
-            "x4": [-10, 20]}. In this case, x2 will not be changed and will be fixed at
-            the value in the model.
         method : str, optional
             string to specify which method should be used. options are ``kaug`` and
             ``sequential`. Default: "sequential"
@@ -1697,29 +1693,44 @@ class DesignOfExperiments:
         ).clone()
         model = self.factorial_model
 
-        # Get the design map keys that match the design_values keys
-        # design_map_keys = [
-        #     k for k in model.experiment_inputs.keys() if k.name in design_values.keys()
-        # ]
-        # This ensures that the order of the design_values keys matches the order of the
-        # design_map_keys so that design_point can be constructed correctly in the loop.
-        # TODO: define an Enum to add different sensitivity analysis sequences
-        # des_ranges = [design_values[k.name] for k in design_map_keys]
-
         design_keys = [k for k in model.experiment_inputs.keys()]
 
+        # check if abs_change and rel_change are provided and have the same length as
+        # design_keys
+        if abs_change:
+            if len(abs_change) != len(design_keys):
+                raise ValueError(
+                    "`abs_change` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+        if rel_change:
+            if len(rel_change) != len(design_keys):
+                raise ValueError(
+                    "`rel_change` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+
+        # if either abs_change or rel_change is not provided, set it to list of
+        # zeros
+        if abs_change or rel_change:
+            if not abs_change:
+                abs_change = [0] * len(design_keys)
+            elif not rel_change:
+                rel_change = [0] * len(design_keys)
+
         design_values = []
+        # loop over design keys and generate design values
         for i, comp in enumerate(design_keys):
             lb = comp.lb
             ub = comp.ub
+            # Check if the component has finite lower and upper bounds
             if lb is None or ub is None:
                 raise ValueError(f"{comp.name} does not have a lower or upper bound.")
 
-            if abs_change[i] is None and rel_change[i] is None:
-                n_des = 5  # Default number of points in the design value
-                des_val = np.linspace(lb, ub, n_des)
+            if abs_change is None and rel_change is None:
+                des_val = np.linspace(lb, ub, n_designs)
 
-            elif abs_change[i] is not None and rel_change[i] is not None:
+            elif abs_change or rel_change:
                 des_val = []
                 del_val = comp.lb * rel_change[i] + abs_change[i]
                 if del_val == 0:
@@ -1732,12 +1743,25 @@ class DesignOfExperiments:
                     des_val.append(val)
                     val += del_val
 
+            else:
+                raise ValueError(
+                    "Unexpected error in generating design values. Please check the "
+                    "input parameters."
+                )
+
             design_values.append(des_val)
 
-        if change_one_design_at_a_time:
+        # generate the factorial points based on the initialization scheme
+        if initialization_scheme == SensitivityInitialization.snake_traversal:
             factorial_points = snake_traversal_grid_sampling(*design_values)
-        else:
+        elif initialization_scheme == SensitivityInitialization.nested_for_loop:
             factorial_points = product(*design_values)
+        else:
+            self.logger.warning(
+                "initialization_scheme not recognized. Using `snake_traversal` as "
+                "default."
+            )
+            factorial_points = snake_traversal_grid_sampling(*design_values)
 
         factorial_points_list = list(factorial_points)
 
@@ -1760,7 +1784,7 @@ class DesignOfExperiments:
         failure_count = 0
         total_points = len(factorial_points_list)
 
-        # save all the FIMs for each point in the factorial design
+        # save the FIM for each point in the factorial design
         self.n_parameters = len(model.unknown_parameters)
         FIM_all = np.zeros((total_points, self.n_parameters, self.n_parameters))
 
@@ -1770,6 +1794,10 @@ class DesignOfExperiments:
             # Fix design variables at fixed experimental design point
             for i in range(len(design_point)):
                 design_keys[i].fix(design_point[i])
+
+            # TODO: check the following lines of code instead of the for loop above
+            # update_model_from_suffix(
+            #     model, 'experiment_inputs', design_point)
 
             # Timing and logging objects
             self.logger.info(f"=======Iteration Number: {curr_point} =======")
@@ -1850,12 +1878,12 @@ class DesignOfExperiments:
                 k: v for k, v in factorial_results.items() if k not in exclude_keys
             }
             res_df = pd.DataFrame(dict_for_df)
-            print("\n\n=========Factorial results DataFrame===========")
-            print(res_df)
-            print("\n\n")
+            print("\n\n=========Factorial results===========")
             print("Total points:", total_points)
             print("Success counts:", success_count)
             print("Failure counts:", failure_count)
+            print("\n\n")
+            print(res_df)
 
         self.factorial_results = factorial_results
 
