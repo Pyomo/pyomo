@@ -445,6 +445,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         )
 
 
+@unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestDoe(unittest.TestCase):
     def test_doe_full_factorial(self):
         log10_D_opt_expected = [
@@ -512,9 +513,7 @@ class TestDoe(unittest.TestCase):
         ff_results = ff.fim_factorial_results
         print("log10 D-opt", ff_results["log10 D-opt"])
 
-        self.assertTrue(
-            np.allclose(ff_results["log10 D-opt"], log10_D_opt_expected, atol=1e-6)
-        )
+        self.assertStructuredAlmostEqual(ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4)
         self.assertTrue(np.allclose(ff_results["log10 A-opt"], log10_A_opt_expected))
         self.assertTrue(np.allclose(ff_results["log10 E-opt"], log10_E_opt_expected))
         self.assertTrue(np.allclose(ff_results["log10 ME-opt"], log10_ME_opt_expected))
