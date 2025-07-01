@@ -108,18 +108,18 @@ def enumerate_binary_solutions(
             else:  # pragma: no cover
                 non_binary_variables.append(var.name)
         if len(non_binary_variables) > 0:
-            logger.warn(
+            logger.warning(
                 (
                     "Warning: The following non-binary variables were included"
                     "in the variable list and will be ignored:"
                 )
             )
-            logger.warn(", ".join(non_binary_variables))
+            logger.warning(", ".join(non_binary_variables))
 
     orig_objective = aos_utils.get_active_objective(model)
 
     if len(binary_variables) == 0:
-        logger.warn("No binary variables found!")
+        logger.warning("No binary variables found!")
 
     #
     # Setup solver
