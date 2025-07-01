@@ -5,18 +5,36 @@ import json
 import munch
 
 from .aos_utils import MyMunch, _to_dict
-from .solution import Solution
+from .solution import Solution, PyomoSolution
 
 nan = float("nan")
+
+
+def _as_solution(*args, **kwargs):
+    if len(args) == 1 and len(kwargs) == 0:
+        assert type(args[0]) is Solution, "Expected a single solution"
+        return args[0]
+    return Solution(*args, **kwargs)
+
+
+def _as_pyomo_solution(*args, **kwargs):
+    if len(args) == 1 and len(kwargs) == 0:
+        assert type(args[0]) is Solution, "Expected a single solution"
+        return args[0]
+    return PyomoSolution(*args, **kwargs)
 
 
 class SolutionPoolBase:
 
     _id_counter = 0
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, as_solution=None):
         self.metadata = MyMunch(context_name=name)
         self._solutions = {}
+        if as_solution is None:
+            self._as_solution = _as_solution
+        else:
+            self._as_solution = as_solution
 
     @property
     def solutions(self):
@@ -37,17 +55,11 @@ class SolutionPoolBase:
     def __getitem__(self, soln_id):
         return self._solutions[soln_id]
 
-    def _as_solution(self, *args, **kwargs):
-        if len(args) == 1 and len(kwargs) == 0:
-            assert type(args[0]) is Solution, "Expected a single solution"
-            return args[0]
-        return Solution(*args, **kwargs)
-
 
 class SolutionPool_KeepAll(SolutionPoolBase):
 
-    def __init__(self, name=None):
-        super().__init__(name)
+    def __init__(self, name=None, as_solution=None):
+        super().__init__(name, as_solution)
 
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
@@ -71,8 +83,8 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
 class SolutionPool_KeepLatest(SolutionPoolBase):
 
-    def __init__(self, name=None, *, max_pool_size=1):
-        super().__init__(name)
+    def __init__(self, name=None, as_solution=None, *, max_pool_size=1):
+        super().__init__(name, as_solution)
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
 
@@ -103,8 +115,8 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
 class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
-    def __init__(self, name=None, *, max_pool_size=1):
-        super().__init__(name)
+    def __init__(self, name=None, as_solution=None, *, max_pool_size=1):
+        super().__init__(name, as_solution)
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
         self.unique_solutions = set()
@@ -152,6 +164,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
     def __init__(
         self,
         name=None,
+        as_solution=None,
         *,
         max_pool_size=None,
         objective=None,
@@ -162,14 +175,13 @@ class SolutionPool_KeepBest(SolutionPoolBase):
     ):
         super().__init__(name)
         self.max_pool_size = max_pool_size
-        self.objective = objective
+        self.objective = 0 if objective is None else objective
         self.abs_tolerance = abs_tolerance
         self.rel_tolerance = rel_tolerance
         self.keep_min = keep_min
         self.best_value = best_value
         self.heap = []
         self.unique_solutions = set()
-        self.objective = None
 
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
@@ -310,20 +322,20 @@ class PoolManager:
             name = self._name
         return self._pool[name][soln_id]
 
-    def add_pool(self, name, *, policy="keep_best", **kwds):
+    def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
         if name not in self._pool:
             # Delete the 'None' pool if it isn't being used
             if name is not None and None in self._pool and len(self._pool[None]) == 0:
                 del self._pool[None]
 
             if policy == "keep_all":
-                self._pool[name] = SolutionPool_KeepAll(name=name)
+                self._pool[name] = SolutionPool_KeepAll(name=name, as_solution=as_solution)
             elif policy == "keep_best":
-                self._pool[name] = SolutionPool_KeepBest(name=name, **kwds)
+                self._pool[name] = SolutionPool_KeepBest(name=name, as_solution=as_solution, **kwds)
             elif policy == "keep_latest":
-                self._pool[name] = SolutionPool_KeepLatest(name=name, **kwds)
+                self._pool[name] = SolutionPool_KeepLatest(name=name, as_solution=as_solution, **kwds)
             elif policy == "keep_latest_unique":
-                self._pool[name] = SolutionPool_KeepLatestUnique(name=name, **kwds)
+                self._pool[name] = SolutionPool_KeepLatestUnique(name=name, as_solution=as_solution, **kwds)
             else:
                 raise ValueError(f"Unknown pool policy: {policy}")
         self._name = name
@@ -354,3 +366,12 @@ class PoolManager:
             except ValueError as e:
                 raise ValueError(f"Invalid JSON in file '{json_filename}': {e}")
             self._pool = data.solutions
+
+
+class PyomoPoolManager(PoolManager):
+
+    def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
+        if as_solution is None:
+            as_solution = _as_pyomo_solution
+        return PoolManager.add_pool(self, name, policy=policy, as_solution=as_solution, **kwds)
+

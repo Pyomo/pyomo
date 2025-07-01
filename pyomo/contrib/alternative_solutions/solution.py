@@ -4,6 +4,8 @@ import dataclasses
 import json
 import munch
 
+import pyomo.environ as pyo
+
 from .aos_utils import MyMunch, _to_dict
 
 nan = float("nan")
@@ -33,6 +35,7 @@ class Objective:
     _: dataclasses.KW_ONLY
     value: float = nan
     name: str = None
+    index: int = None
     suffix: MyMunch = dataclasses.field(default_factory=MyMunch)
 
     def to_dict(self):
@@ -41,7 +44,7 @@ class Objective:
 
 class Solution:
 
-    def __init__(self, *, variables=None, objectives=None, **kwds):
+    def __init__(self, *, variables=None, objective=None, objectives=None, **kwds):
         self.id = None
 
         self._variables = []
@@ -49,20 +52,26 @@ class Solution:
         self.str_to_variable = {}
         if variables is not None:
             self._variables = variables
+            index = 0
             for v in variables:
-                if v.index is not None:
-                    self.int_to_variable[v.index] = v
+                self.int_to_variable[index] = v
                 if v.name is not None:
                     self.str_to_variable[v.name] = v
+                index += 1
 
         self._objectives = []
+        self.int_to_objective = {}
         self.str_to_objective = {}
+        if objective is not None:
+            objectives = [objective]
         if objectives is not None:
             self._objectives = objectives
-        elif "objective" in kwds:
-            self._objectives = [kwds.pop("objective")]
-        for o in self._objectives:
-            self.str_to_objective[o.name] = o
+            index = 0
+            for o in objectives:
+                self.int_to_objective[index] = o
+                if o.name is not None:
+                    self.str_to_objective[o.name] = o
+                index += 1
 
         if "suffix" in kwds:
             self.suffix = MyMunch(kwds.pop("suffix"))
@@ -90,7 +99,7 @@ class Solution:
         else:
             return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
 
-    def objective(self, index=None):
+    def objective(self, index=0):
         if type(index) is int:
             return self.int_to_objective[index]
         else:
@@ -106,3 +115,33 @@ class Solution:
             objectives=[o.to_dict() for o in self.objectives()],
             suffix=self.suffix.to_dict(),
         )
+
+
+def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
+    #
+    # Q: Do we want to use an index relative to the list of variables specified here?  Or use the Pyomo variable ID?
+    # Q: Should this object cache the Pyomo variable object?  Or CUID?
+    #
+    # TODO: Capture suffix info here.
+    #
+    vlist = []
+    if variables is not None:
+        index = 0
+        for var in variables:
+            vlist.append(Variable(value=pyo.value(var), fixed=var.is_fixed(), name=str(var), index=index, discrete=not var.is_continuous()))
+            index += 1
+
+    #
+    # TODO: Capture suffix info here.
+    #
+    if objective is not None:
+        objectives = [objective]
+    olist = []
+    if objectives is not None:
+        index = 0
+        for obj in objectives:
+            olist.append(Objective(value=pyo.value(obj), name=str(obj), index=index))
+            index += 1
+
+    return Solution(variables=vlist, objectives=olist, **kwds)
+

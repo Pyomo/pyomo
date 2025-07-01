@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
-from pyomo.contrib.alternative_solutions import Solution
+from pyomo.contrib.alternative_solutions import PyomoPoolManager
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
 
 
@@ -31,6 +31,7 @@ def enumerate_binary_solutions(
     solver_options={},
     tee=False,
     seed=None,
+    poolmanager=None,
 ):
     """
     Finds alternative optimal solutions for a binary problem using no-good
@@ -71,12 +72,13 @@ def enumerate_binary_solutions(
         Boolean indicating that the solver output should be displayed.
     seed : int
         Optional integer seed for the numpy random number generator
+    poolmanager : None
+        Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    solutions
-        A list of Solution objects.
-        [Solution]
+    poolmanager
+        A PyomoPoolManager object
 
     """
     logger.info("STARTING NO-GOOD CUT ANALYSIS")
@@ -89,6 +91,10 @@ def enumerate_binary_solutions(
 
     if seed is not None:
         aos_utils._set_numpy_rng(seed)
+
+    if poolmanager is None:
+        poolmanager = PyomoPoolManager()
+        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
 
     all_variables = aos_utils.get_model_variables(model, include_fixed=True)
     if variables == None:
@@ -152,7 +158,6 @@ def enumerate_binary_solutions(
         else:
             opt.update_config.check_for_new_objective = False
             opt.update_config.update_objective = False
-
     #
     # Initial solve of the model
     #
@@ -172,12 +177,12 @@ def enumerate_binary_solutions(
     model.solutions.load_from(results)
     orig_objective_value = pyo.value(orig_objective)
     logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
-    solutions = [Solution(model, all_variables, objective=orig_objective)]
+    poolmanager.add(variables=all_variables, objective=orig_objective)
     #
     # Return just this solution if there are no binary variables
     #
     if len(binary_variables) == 0:
-        return solutions
+        return poolmanager
 
     aos_block = aos_utils._add_aos_block(model, name="_balas")
     logger.info("Added block {} to the model.".format(aos_block))
@@ -231,7 +236,7 @@ def enumerate_binary_solutions(
             logger.info(
                 "Iteration {}: objective = {}".format(solution_number, orig_obj_value)
             )
-            solutions.append(Solution(model, all_variables, objective=orig_objective))
+            poolmanager.add(variables=all_variables, objective=orig_objective)
             solution_number += 1
         elif (
             condition == pyo.TerminationCondition.infeasibleOrUnbounded
@@ -257,4 +262,4 @@ def enumerate_binary_solutions(
 
     logger.info("COMPLETED NO-GOOD CUT ANALYSIS")
 
-    return solutions
+    return poolmanager
