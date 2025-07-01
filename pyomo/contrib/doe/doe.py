@@ -1621,11 +1621,13 @@ class DesignOfExperiments:
     def compute_FIM_factorial(
         self,
         model=None,
+        design_vals: list = None,
         abs_change: list = None,
         rel_change: list = None,
         n_designs: int = 5,
         method="sequential",
-        initialization_scheme=SensitivityInitialization.snake_traversal,
+        df_settings=(True, None, None, 500),
+        initialization_scheme="snake_traversal",
         file_name: str = None,
     ):
         """Will run a simulation-based factorial exploration of the experimental input
@@ -1637,24 +1639,41 @@ class DesignOfExperiments:
         ----------
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
-        # TODO: Update doc string for absolute and relative change
+        design_vals : list, optional
+            A list of design values to use for the full factorial exploration.
+            Default: None
         abs_change : list, optional
             Absolute change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
-            If not provided, will use the n_designs to generate the design values.
-            If `abs_change` is provided, `rel_change` must also be provided.
+            If `abs_change` is provided, but `rel_change` is not provided, `rel_change`
+            will be set to zero.
+            Formula to calculate the design values:
+                change_in_value = lower_bound * rel_change + abs_change`
+                design_value += design_value + change_in_value
         rel_change : list, optional
             Relative change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
+            If `rel_change` is provided, but `abs_change` is not provided, `abs_change`
+            will be set to zero.
+        n_designs : int, optional
+            Number of designs to generate for each design variable. Default: 5.
+            If `abs_change` and/or `rel_change` are provided, this value will be ignored.
         method : str, optional
             string to specify which method should be used. options are ``kaug`` and
             ``sequential`. Default: "sequential"
-        change_one_design_at_a_time : bool, optional
-            If True, will generate a snake-like zigzag combination of the design values
-            thatchanges only one of the design variables at a time. This combination
-            may help with the convergence in some scenarios. If False, will
-            generate a regular nested for loop that can change from one to all the
-            design variables at a time. Default: True
+        df_settings : tuple, optional
+            A tuple containing the settings for set_option() method of the pandas
+            DataFrame. Default: (True, None, None, 500)
+            - first element: whether to return a pandas DataFrame (True/False)
+            - second element: number of max_columns for the DataFrame. Default: None,
+                i.e., no limit on the number of columns.
+            - third element: number of max_rows for the DataFrame. Default: None,
+                i.e., no limit on the number of rows.
+            - fourth element: display width for the DataFrame. Default: 500.
+        initialization_scheme : str, optional
+            Which scheme to use for initializing the design variables.
+            Options are ``"snake_traversal"`` and ``"nested_for_loop"``.
+            Default: "snake_traversal"
         file_name : str, optional
             if provided, will save the results to a json file. Default: None
 
@@ -1668,18 +1687,15 @@ class DesignOfExperiments:
             - "log10(A-opt)": list of A-optimality values
             - "log10(E-opt)": list of E-optimality values
             - "log10(ME-opt)": list of ME-optimality values
+            - "eigval_min": list of minimum eigenvalues
+            - "eigval_max": list of maximum eigenvalues
+            - "det_FIM": list of determinants of the FIM
+            - "trace_FIM": list of traces of the FIM
             - "solve_time": list of solve times
             - "total_points": total number of points in the factorial design
             - "success_count": number of successful runs
             - "failure_count": number of failed runs
             - "FIM_all": list of all FIMs computed for each point in the factorial
-              design.
-
-        Raises
-        ------
-        ValueError
-            If the design_values' keys are not a subset of the model's
-            `experiment_inputs` keys or if the design_values are not provided.
         """
 
         # Start timer
@@ -1695,73 +1711,91 @@ class DesignOfExperiments:
 
         design_keys = [k for k in model.experiment_inputs.keys()]
 
-        # check if abs_change and rel_change are provided and have the same length as
-        # design_keys
-        if abs_change:
-            if len(abs_change) != len(design_keys):
+        # check if design_values, abs_change and rel_change are provided and have the
+        # same length as design_keys
+        # Design values are of higher priority than abs_change and rel_change.
+        if design_vals is not None:
+            if len(design_vals) != len(design_keys):
                 raise ValueError(
-                    "`abs_change` must have the same length of "
+                    "`design_values` must have the same length of "
                     f"`{len(design_keys)}` as `design_keys`."
                 )
-        if rel_change:
-            if len(rel_change) != len(design_keys):
-                raise ValueError(
-                    "`rel_change` must have the same length of "
-                    f"`{len(design_keys)}` as `design_keys`."
-                )
+            design_values = design_vals
 
-        # if either abs_change or rel_change is not provided, set it to list of
-        # zeros
-        if abs_change or rel_change:
-            if not abs_change:
-                abs_change = [0] * len(design_keys)
-            elif not rel_change:
-                rel_change = [0] * len(design_keys)
-
-        design_values = []
-        # loop over design keys and generate design values
-        for i, comp in enumerate(design_keys):
-            lb = comp.lb
-            ub = comp.ub
-            # Check if the component has finite lower and upper bounds
-            if lb is None or ub is None:
-                raise ValueError(f"{comp.name} does not have a lower or upper bound.")
-
-            if abs_change is None and rel_change is None:
-                des_val = np.linspace(lb, ub, n_designs)
-
-            elif abs_change or rel_change:
-                des_val = []
-                del_val = comp.lb * rel_change[i] + abs_change[i]
-                if del_val == 0:
+        else:
+            if abs_change:
+                if len(abs_change) != len(design_keys):
                     raise ValueError(
-                        f"Design variable {comp.name} has no change in value - check "
-                        "abs_change and rel_change values."
+                        "`abs_change` must have the same length of "
+                        f"`{len(design_keys)}` as `design_keys`."
                     )
-                val = lb
-                while val <= ub:
-                    des_val.append(val)
-                    val += del_val
 
-            else:
-                raise ValueError(
-                    "Unexpected error in generating design values. Please check the "
-                    "input parameters."
-                )
+            if rel_change:
+                if len(rel_change) != len(design_keys):
+                    raise ValueError(
+                        "`rel_change` must have the same length of "
+                        f"`{len(design_keys)}` as `design_keys`."
+                    )
 
-            design_values.append(des_val)
+            # if either abs_change or rel_change is not provided, set it to list of
+            # zeros
+            if abs_change or rel_change:
+                if not abs_change:
+                    abs_change = [0] * len(design_keys)
+                elif not rel_change:
+                    rel_change = [0] * len(design_keys)
+
+            design_values = []
+            # loop over design keys and generate design values
+            for i, comp in enumerate(design_keys):
+                lb = comp.lb
+                ub = comp.ub
+                # Check if the component has finite lower and upper bounds
+                if lb is None or ub is None:
+                    raise ValueError(
+                        f"{comp.name} does not have a lower or upper bound."
+                    )
+
+                if abs_change is None and rel_change is None:
+                    des_val = np.linspace(lb, ub, n_designs)
+
+                elif abs_change or rel_change:
+                    des_val = []
+                    del_val = comp.lb * rel_change[i] + abs_change[i]
+                    if del_val == 0:
+                        raise ValueError(
+                            f"Design variable {comp.name} has no change in value - check "
+                            "abs_change and rel_change values."
+                        )
+                    val = lb
+                    while val <= ub:
+                        des_val.append(val)
+                        val += del_val
+
+                else:
+                    raise ValueError(
+                        "Unexpected error in generating design values. Please check the "
+                        "input parameters."
+                    )
+
+                design_values.append(des_val)
 
         # generate the factorial points based on the initialization scheme
-        if initialization_scheme == SensitivityInitialization.snake_traversal:
-            factorial_points = snake_traversal_grid_sampling(*design_values)
-        elif initialization_scheme == SensitivityInitialization.nested_for_loop:
-            factorial_points = product(*design_values)
-        else:
+        try:
+            scheme_enum = SensitivityInitialization(initialization_scheme)
+        except ValueError:
             self.logger.warning(
-                "initialization_scheme not recognized. Using `snake_traversal` as "
-                "default."
+                f"Initialization scheme '{initialization_scheme}' is not recognized. "
+                "Using `snake_traversal` as default."
             )
+            scheme_enum = SensitivityInitialization.snake_traversal
+
+        if scheme_enum == SensitivityInitialization.snake_traversal:
             factorial_points = snake_traversal_grid_sampling(*design_values)
+        elif scheme_enum == SensitivityInitialization.nested_for_loop:
+            factorial_points = product(*design_values)
+
+        # TODO: Add more initialization schemes
 
         factorial_points_list = list(factorial_points)
 
@@ -1791,13 +1825,14 @@ class DesignOfExperiments:
         time_set = []
         curr_point = 1  # Initial current point
         for design_point in factorial_points_list:
+            # kept the following code to check later whether it is faster.
+            # In a simple model, this code took 15.9s to compute 125 points in JN
+            # for the same condition, `update_model_from_suffix` took 16.5s in JN
             # Fix design variables at fixed experimental design point
-            for i in range(len(design_point)):
-                design_keys[i].fix(design_point[i])
+            # for i in range(len(design_point)):
+            #     design_keys[i].fix(design_point[i])
 
-            # TODO: check the following lines of code instead of the for loop above
-            # update_model_from_suffix(
-            #     model, 'experiment_inputs', design_point)
+            update_model_from_suffix(model, "experiment_inputs", design_point)
 
             # Timing and logging objects
             self.logger.info(f"=======Iteration Number: {curr_point} =======")
@@ -1862,30 +1897,39 @@ class DesignOfExperiments:
         factorial_results.update(
             {
                 "total_points": total_points,
-                "success_counts": success_count,
-                "failure_counts": failure_count,
+                "success_count": success_count,
+                "failure_count": failure_count,
                 "FIM_all": FIM_all.tolist(),  # Save all FIMs
             }
         )
-        if self.tee:
-            exclude_keys = {
-                "total_points",
-                "success_counts",
-                "failure_counts",
-                "FIM_all",
-            }
-            dict_for_df = {
-                k: v for k, v in factorial_results.items() if k not in exclude_keys
-            }
-            res_df = pd.DataFrame(dict_for_df)
-            print("\n\n=========Factorial results===========")
-            print("Total points:", total_points)
-            print("Success counts:", success_count)
-            print("Failure counts:", failure_count)
-            print("\n\n")
-            print(res_df)
-
         self.factorial_results = factorial_results
+
+        # Set pandas DataFrame options
+        if df_settings[0]:
+            with pd.option_context(
+                "display.max_columns",
+                df_settings[1],
+                "display.max_rows",
+                df_settings[2],
+                "display.width",
+                df_settings[3],
+            ):
+                exclude_keys = {
+                    "total_points",
+                    "success_counts",
+                    "failure_counts",
+                    "FIM_all",
+                }
+                dict_for_df = {
+                    k: v for k, v in factorial_results.items() if k not in exclude_keys
+                }
+                res_df = pd.DataFrame(dict_for_df)
+                print("\n\n=========Factorial results===========")
+                print("Total points:", total_points)
+                print("Success counts:", success_count)
+                print("Failure counts:", failure_count)
+                print("\n")
+                print(res_df)
 
         # Save the results to a json file based on the file_name provided
         if file_name is not None:
