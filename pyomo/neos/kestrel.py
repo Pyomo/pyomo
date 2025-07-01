@@ -35,7 +35,7 @@ logger = logging.getLogger('pyomo.neos')
 _email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
 
-class NEOS:
+class NEOS(object):
     # NEOS currently only supports HTTPS access
     scheme = 'https'
     host = 'neos-server.org'
@@ -79,7 +79,7 @@ def ProxiedTransport():
     return ProxiedTransport_PY3()
 
 
-class kestrelAMPL:
+class kestrelAMPL(object):
     def __init__(self):
         self.setup_connection()
 
