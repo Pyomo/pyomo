@@ -638,7 +638,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             set_nonempty = self.point_in_set(config.nominal_uncertain_param_vals)
         else:
             # construct feasibility problem and solve otherwise
-            set_nonempty = self._solve_feasibility(config.global_solver)
+            self._solve_feasibility(config.global_solver)
+            set_nonempty = True
 
         # log result
         if not set_nonempty:
@@ -858,12 +859,6 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             Optimizer capable of solving bounding problems to
             global optimality.
 
-        Returns
-        -------
-        : bool
-            True if the feasibility problem solves successfully,
-            and raises an exception otherwise
-
         Raises
         ------
         ValueError
@@ -893,8 +888,6 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 "Could not successfully solve feasibility problem. "
                 f"Solver status summary:\n {res.solver}."
             )
-
-        return True
 
     def _add_bounds_on_uncertain_parameters(
         self, uncertain_param_vars, global_solver=None

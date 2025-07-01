@@ -3075,7 +3075,7 @@ class TestCustomUncertaintySet(unittest.TestCase):
         # feasibility problem passes
         baron = SolverFactory("baron")
         custom_set = CustomUncertaintySet(dim=2)
-        self.assertTrue(custom_set._solve_feasibility(baron))
+        custom_set._solve_feasibility(baron)
 
         # feasibility problem fails
         custom_set.parameter_bounds = [[1, 2], [3, 4]]
