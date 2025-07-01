@@ -1,158 +1,108 @@
-#  ___________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2025
-#  National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
-#  rights in this software.
-#  This software is distributed under the 3-clause BSD License.
-#  ___________________________________________________________________________
-
+import heapq
+import collections
+import dataclasses
 import json
-import pyomo.environ as pyo
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.contrib.alternative_solutions import aos_utils
+import munch
+
+from .aos_utils import MyMunch, _to_dict
+
+nan = float("nan")
+
+
+def _custom_dict_factory(data):
+    return {k: _to_dict(v) for k, v in data}
+
+
+@dataclasses.dataclass
+class Variable:
+    _: dataclasses.KW_ONLY
+    value: float = nan
+    fixed: bool = False
+    name: str = None
+    repn = None
+    index: int = None
+    discrete: bool = False
+    suffix: MyMunch = dataclasses.field(default_factory=MyMunch)
+
+    def to_dict(self):
+        return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
+
+
+@dataclasses.dataclass
+class Objective:
+    _: dataclasses.KW_ONLY
+    value: float = nan
+    name: str = None
+    suffix: MyMunch = dataclasses.field(default_factory=MyMunch)
+
+    def to_dict(self):
+        return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
 
 
 class Solution:
-    """
-    A class to store solutions from a Pyomo model.
 
-    Attributes
-    ----------
-    variables : ComponentMap
-        A map between Pyomo variables and their values for a solution.
-    fixed_vars : ComponentSet
-        The set of Pyomo variables that are fixed in a solution.
-    objective : ComponentMap
-        A map between Pyomo objectives and their values for a solution.
+    def __init__(self, *, variables=None, objectives=None, **kwds):
+        self.id = None
 
-    Methods
-    -------
-    pprint():
-        Prints a solution.
-    get_variable_name_values(self, ignore_fixed_vars=False):
-        Get a dictionary of variable name-variable value pairs.
-    get_fixed_variable_names(self):
-        Get a list of fixed-variable names.
-    get_objective_name_values(self):
-        Get a dictionary of objective name-objective value pairs.
-    """
+        self._variables = []
+        self.int_to_variable = {}
+        self.str_to_variable = {}
+        if variables is not None:
+            self._variables = variables
+            for v in variables:
+                if v.index is not None:
+                    self.int_to_variable[v.index] = v
+                if v.name is not None:
+                    self.str_to_variable[v.name] = v
 
-    def __init__(self, model, variable_list, include_fixed=True, objective=None):
-        """
-        Constructs a Pyomo Solution object.
+        self._objectives = []
+        self.str_to_objective = {}
+        if objectives is not None:
+            self._objectives = objectives
+        elif "objective" in kwds:
+            self._objectives = [kwds.pop("objective")]
+        for o in self._objectives:
+            self.str_to_objective[o.name] = o
 
-        Parameters
-        ----------
-            model : ConcreteModel
-                A concrete Pyomo model.
-            variable_list: A collection of Pyomo _GenereralVarData variables
-                The variables for which the solution will be stored.
-            include_fixed : boolean
-                Boolean indicating that fixed variables should be added to the
-                solution.
-            objective: None or Objective
-                The objective functions for which the value will be saved. None
-                indicates that the active objective should be used, but a
-                different objective can be stored as well.
-        """
+        if "suffix" in kwds:
+            self.suffix = MyMunch(kwds.pop("suffix"))
+        else:
+            self.suffix = MyMunch(**kwds)
 
-        self.variables = ComponentMap()
-        self.fixed_vars = ComponentSet()
-        for var in variable_list:
-            is_fixed = var.is_fixed()
-            if is_fixed:
-                self.fixed_vars.add(var)
-            if include_fixed or not is_fixed:
-                self.variables[var] = pyo.value(var)
+    def variable(self, index):
+        if type(index) is int:
+            return self.int_to_variable[index]
+        else:
+            return self.str_to_variable[index]
 
-        if objective is None:
-            objective = aos_utils.get_active_objective(model)
-        self.objective = (objective, pyo.value(objective))
+    def variables(self):
+        return self._variables
 
-    @property
-    def objective_value(self):
-        """
-        Returns
-        -------
-            The value of the objective.
-        """
-        return self.objective[1]
-
-    def pprint(self, round_discrete=True, sort_keys=True, indent=4):
-        """
-        Print the solution variables and objective values.
-
-        Parameters
-        ----------
-            rounded_discrete : boolean
-                If True, then round discrete variable values before printing.
-        """
-        print(
-            self.to_string(
-                round_discrete=round_discrete, sort_keys=sort_keys, indent=indent
+    def tuple_repn(self):
+        if len(self.int_to_variable) == len(self._variables):
+            return tuple(
+                tuple([k, var.value]) for k, var in self.int_to_variable.items()
             )
-        )  # pragma: no cover
+        elif len(self.str_to_variable) == len(self._variables):
+            return tuple(
+                tuple([k, var.value]) for k, var in self.str_to_variable.items()
+            )
+        else:
+            return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
 
-    def to_string(self, round_discrete=True, sort_keys=True, indent=4):
-        return json.dumps(
-            self.to_dict(round_discrete=round_discrete),
-            sort_keys=sort_keys,
-            indent=indent,
+    def objective(self, index=None):
+        if type(index) is int:
+            return self.int_to_objective[index]
+        else:
+            return self.str_to_objective[index]
+
+    def objectives(self):
+        return self._objectives
+
+    def to_dict(self):
+        return dict(
+            id=self.id,
+            variables=[v.to_dict() for v in self.variables()],
+            objectives=[o.to_dict() for o in self.objectives()],
+            suffix=self.suffix.to_dict(),
         )
-
-    def to_dict(self, round_discrete=True):
-        ans = {}
-        ans["objective"] = str(self.objective[0])
-        ans["objective_value"] = self.objective[1]
-        soln = {}
-        for variable, value in self.variables.items():
-            val = self._round_variable_value(variable, value, round_discrete)
-            soln[variable.name] = val
-        ans["solution"] = soln
-        ans["fixed_variables"] = [str(v) for v in self.fixed_vars]
-        return ans
-
-    def __str__(self):
-        return self.to_string()
-
-    __repn__ = __str__
-
-    def get_variable_name_values(self, include_fixed=True, round_discrete=True):
-        """
-        Get a dictionary of variable name-variable value pairs.
-
-        Parameters
-        ----------
-            include_fixed : boolean
-                If True, then include fixed variables in the dictionary.
-            round_discrete : boolean
-                If True, then round discrete variable values in the dictionary.
-
-        Returns
-        -------
-            Dictionary mapping variable names to variable values.
-        """
-        return {
-            var.name: self._round_variable_value(var, val, round_discrete)
-            for var, val in self.variables.items()
-            if include_fixed or not var in self.fixed_vars
-        }
-
-    def get_fixed_variable_names(self):
-        """
-        Get a list of fixed-variable names.
-
-        Returns
-        -------
-            A list of the variable names that are fixed.
-        """
-        return [var.name for var in self.fixed_vars]
-
-    def _round_variable_value(self, variable, value, round_discrete=True):
-        """
-        Returns a rounded value unless the variable is discrete or rounded_discrete is False.
-        """
-        return value if not round_discrete or variable.is_continuous() else round(value)
