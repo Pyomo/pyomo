@@ -168,8 +168,12 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         self.treeView.setModel(datmodel)
         self.treeView.setColumnWidth(0, 400)
         # Selection behavior: select a whole row, can select multiple rows.
-        self.treeView.setSelectionBehavior(myqt.QAbstractItemView.SelectRows)
-        self.treeView.setSelectionMode(myqt.QAbstractItemView.ExtendedSelection)
+        self.treeView.setSelectionBehavior(
+            myqt.QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.treeView.setSelectionMode(
+            myqt.QAbstractItemView.SelectionMode.ExtendedSelection
+        )
 
     def refresh(self):
         added = self.datmodel._update_tree()
@@ -595,9 +599,9 @@ class ComponentDataModel(myqt.QAbstractItemModel):
             if isinstance(
                 index.internalPointer().data, (Block, Block._ComponentDataClass)
             ):
-                return myqt.QColor(myqt.QtCore.Qt.black)
+                return myqt.QColor(myqt.QtCore.Qt.GlobalColor.black)
             else:
-                return myqt.QColor(myqt.QtCore.Qt.blue)
+                return myqt.QColor(myqt.QtCore.Qt.GlobalColor.blue)
         else:
             return
 

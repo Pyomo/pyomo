@@ -26,18 +26,26 @@ try PyQt5 if that doesn't work. If no compatible Qt Python interface is found,
 use some dummy classes to allow some testing.
 """
 __author__ = "John Eslick"
-
+import sys
 import enum
 import importlib
 
+from pyomo.common.collections import Bunch
 from pyomo.common.flags import building_documentation
 
 # Supported Qt wrappers in preferred order
-supported = ["PySide6", "PyQt5"]
+supported = ["PySide6", "PyQt6", "PyQt5"]
 # Import errors encountered, delay logging for testing reasons
 import_errors = []
 # Set this to the Qt wrapper module is available
 available = False
+
+# You can only have one Qt interface loaded at a time.  If something
+# like IPython has already loaded an interface, then we will use that
+# one.
+_loaded = list(filter(sys.modules.__contains__, supported))
+if _loaded:
+    supported = _loaded
 
 for module_str in supported:
     try:
@@ -48,6 +56,7 @@ for module_str in supported:
         available = module_str
         break
     except Exception as e:
+        qt_package = QtWidgets = QtCore = QtGui = None
         import_errors.append(f"{e}")
 
 if not available:
@@ -104,7 +113,6 @@ else:
     QAbstractItemView = QtWidgets.QAbstractItemView
     QFileDialog = QtWidgets.QFileDialog
     QMainWindow = QtWidgets.QMainWindow
-    QMainWindow = QtWidgets.QMainWindow
     QMdiArea = QtWidgets.QMdiArea
     QApplication = QtWidgets.QApplication
     QTableWidgetItem = QtWidgets.QTableWidgetItem
@@ -119,17 +127,31 @@ else:
     QColor = QtGui.QColor
     QAbstractItemModel = QtCore.QAbstractItemModel
     QAbstractTableModel = QtCore.QAbstractTableModel
-    QMetaType = QtCore.QMetaType
     Qt = QtCore.Qt
+    QMetaType = Bunch()
     if available == "PySide6":
         from PySide6.QtGui import QAction
         from PySide6.QtCore import Signal
         from PySide6 import QtUiTools as uic
+
+        QMetaType.Int = QtCore.QMetaType.Type.Int.value
+        QMetaType.Double = QtCore.QMetaType.Type.Double.value
+    elif available == "PyQt6":
+        from PyQt6.QtGui import QAction
+        from PyQt6.QtCore import pyqtSignal as Signal
+        from PyQt6 import uic
+
+        QMetaType.Int = QtCore.QMetaType.Type.Int.value
+        QMetaType.Double = QtCore.QMetaType.Type.Double.value
     elif available == "PyQt5":
         from PyQt5.QtWidgets import QAction
         from PyQt5.QtCore import pyqtSignal as Signal
         from PyQt5 import uic
 
+        QMetaType.Int = QtCore.QMetaType.Type.Int
+        QMetaType.Double = QtCore.QMetaType.Type.Double
+    else:
+        raise RuntimeError(f"Unknown Qt engine: {available}")
     # Note that QAbstractTableModel and QAbstractItemModel have
     # signatures that are not parsable by Sphinx, so we will hide them
     # if we are building the API documentation.
