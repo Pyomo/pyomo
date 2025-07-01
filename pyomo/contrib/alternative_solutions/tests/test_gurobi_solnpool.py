@@ -22,7 +22,7 @@ gurobipy_available = Gurobi().available()
 
 
 @unittest.skipIf(not gurobipy_available, "Gurobi MIP solver not available")
-class TestSolnPoolUnit(unittest.TestCase):
+class TestGurobiSolnPoolUnit(unittest.TestCase):
     """
     Cases to cover:
 
