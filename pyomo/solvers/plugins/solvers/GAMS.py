@@ -42,19 +42,23 @@ from pyomo.opt.results import (
 from pyomo.common.dependencies import attempt_import
 import struct
 
+
 def _gams_importer():
     try:
         import gams.core.gdx as gdx
+
         return gdx
     except ImportError:
         try:
             # fall back to the pre-GAMS-45.0 API
             import gdxcc
+
             return gdxcc
         except:
             # suppress the error from the old API and reraise the current API import error
             pass
         raise
+
 
 gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
 
@@ -1292,15 +1296,17 @@ class GAMSShell(_GAMSSolver):
             ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
-            
+
             specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
             rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
-            
+
             specVals[gdxcc.GMS_SVIDX_EPS] = sys.float_info.min
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
-            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
             gdxcc.gdxSetSpecialValues(pgdx, specVals)
 
             i = 0
@@ -1343,9 +1349,11 @@ class GAMSShell(_GAMSSolver):
             specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
             specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
             specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
-            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(">d", bytes.fromhex("fffffffffffffffe"))[0]
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
             gdxcc.gdxSetSpecialValues(pgdx, specVals)
-            
+
             i = 0
             while True:
                 i += 1
