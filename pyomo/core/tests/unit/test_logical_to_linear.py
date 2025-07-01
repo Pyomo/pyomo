@@ -14,12 +14,14 @@ from pyomo.common.errors import MouseTrap, DeveloperError
 from pyomo.common.log import LoggingIntercept
 import logging
 
+from pyomo.core.expr import InequalityExpression
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import (
     update_boolean_vars_from_binary,
 )
 from pyomo.environ import (
     ConcreteModel,
+    BooleanConstant,
     BooleanVar,
     LogicalConstraint,
     TransformationFactory,
@@ -147,12 +149,27 @@ class TestAtomicTransformations(unittest.TestCase):
 
     def test_constant_True(self):
         m = ConcreteModel()
-        with self.assertRaisesRegex(
-            ValueError, "LogicalConstraint 'p' is always True."
-        ):
-            m.p = LogicalConstraint(expr=True)
-            TransformationFactory('core.logical_to_linear').apply_to(m)
-        self.assertIsNone(m.component('logic_to_linear'))
+        m.p = LogicalConstraint(expr=True)
+        self.assertExpressionsStructurallyEqual(m.p.expr, BooleanConstant(True))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        self.assertIsNotNone(m.component('logic_to_linear'))
+        self.assertEqual(0, len(m.logic_to_linear.augmented_vars_asbinary))
+        self.assertEqual(0, len(m.logic_to_linear.transformed_constraints))
+        self.assertEqual(0, len(m.logic_to_linear.augmented_vars))
+
+    def test_constant_False(self):
+        m = ConcreteModel()
+        m.p = LogicalConstraint(expr=False)
+        self.assertExpressionsStructurallyEqual(m.p.expr, BooleanConstant(False))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        self.assertIsNotNone(m.component('logic_to_linear'))
+        self.assertEqual(0, len(m.logic_to_linear.augmented_vars_asbinary))
+        self.assertEqual(1, len(m.logic_to_linear.transformed_constraints))
+        self.assertExpressionsStructurallyEqual(
+            m.logic_to_linear.transformed_constraints[1].expr,
+            InequalityExpression((1, 0), False),
+        )
+        self.assertEqual(0, len(m.logic_to_linear.augmented_vars))
 
     def test_nothing_to_do(self):
         m = ConcreteModel()
