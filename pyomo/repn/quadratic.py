@@ -60,7 +60,7 @@ class QuadraticRepn(object):
             f"{self.__class__.__name__}(mult={val2str(self.multiplier)}, "
             f"const={val2str(self.constant)}, "
             f"linear={linear}, quadratic={quadratic}, "
-            f"nonlinear={self.nonlinear})"
+            f"nonlinear={val2str(self.nonlinear)})"
         )
 
     def __repr__(self):
