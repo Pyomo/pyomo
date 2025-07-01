@@ -77,7 +77,7 @@ def _merge_dict(dest_dict, src_dict, mult, flag):
     elif not flag:
         # mult is 0.  There is nothing to do, unless the src_dict has an InvalidNumber
         for vid, coef in src_dict.items():
-            if coef != coef:
+            if coef.__class__ is InvalidNumber:
                 if vid in dest_dict:
                     dest_dict[vid] += mult * coef
                 else:
@@ -206,10 +206,10 @@ class LinearRepn(object):
             # add/change about self.  However, there is a chance
             # that other contains an InvalidNumber, so we should go
             # looking for it...
-            if other.constant != other.constant:
+            if other.constant.__class__ is InvalidNumber:
                 self.constant += mult * other.constant
             for vid, coef in other.linear.items():
-                if coef != coef:
+                if coef.__class__ is InvalidNumber:
                     if vid in self.linear:
                         self.linear[vid] += mult * coef
                     else:
@@ -265,7 +265,7 @@ def _handle_negation_ANY(visitor, node, arg):
 
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
     ans = arg1[1] * arg2[1]
-    if ans != ans:
+    if ans.__class__ is InvalidNumber:
         constant_flag = visitor.Result.constant_flag
         if not constant_flag(arg1[1]) or not constant_flag(arg2[1]):
             a = val2str(arg1[1])
@@ -322,10 +322,14 @@ def _handle_product_nonlinear(visitor, node, arg1, arg2):
     _merge_dict(ans.linear, x1.linear, x2.constant, x2_const_flag)
     _merge_dict(ans.linear, x2.linear, x1.constant, x1_const_flag)
     NL = 0
-    if x2.nonlinear is not None and (x1_const_flag or x2.nonlinear != x2.nonlinear):
+    if x2.nonlinear is not None and (
+        x1_const_flag or x2.nonlinear.__class__ is InvalidNumber
+    ):
         # [AC]
         NL += x1.constant * x2.nonlinear
-    if x1.nonlinear is not None and (x2_const_flag or x2.nonlinear != x2.nonlinear):
+    if x1.nonlinear is not None and (
+        x2_const_flag or x2.nonlinear.__class__ is InvalidNumber
+    ):
         # [CA]
         NL += x2.constant * x1.nonlinear
     # [BB] + [BC] + [CB] + [CC]
@@ -468,7 +472,7 @@ def _handle_expr_if_const(visitor, node, arg1, arg2, arg3):
     _type, _test = arg1
     assert _type is _CONSTANT
     if _test:
-        if _test != _test or _test.__class__ is InvalidNumber:
+        if _test.__class__ is InvalidNumber:
             # nan
             return _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3)
         return arg2
@@ -693,7 +697,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
         if not arg1:
             if arg2.fixed:
                 arg2 = visitor.check_constant(arg2.value, arg2)
-                if arg2 != arg2:
+                if arg2.__class__ is InvalidNumber:
                     deprecation_warning(
                         f"Encountered {arg1}*{val2str(arg2)} in expression "
                         "tree.  Mapping the NaN result to 0 for compatibility "
@@ -728,7 +732,7 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 if not arg1:
                     if arg2.fixed:
                         arg2 = visitor.check_constant(arg2.value, arg2)
-                        if arg2 != arg2:
+                        if arg2.__class__ is InvalidNumber:
                             deprecation_warning(
                                 f"Encountered {arg1}*{val2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
@@ -926,7 +930,9 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
             # Warn if this is suppressing a NaN (unusual, and
             # non-standard, but we will wait to remove this behavior
             # for the time being)
-            if ans.constant != ans.constant or any(c != c for c in ans.linear.values()):
+            if ans.constant.__class__ is InvalidNumber or any(
+                c.__class__ is InvalidNumber for c in ans.linear.values()
+            ):
                 deprecation_warning(
                     f"Encountered {ans.multiplier}*nan in expression tree.  "
                     "Mapping the NaN result to 0 for compatibility "

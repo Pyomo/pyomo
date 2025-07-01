@@ -20,7 +20,7 @@ from pyomo.core.expr.numeric_expr import (
 import pyomo.repn.linear as linear
 import pyomo.repn.util as util
 from pyomo.repn.linear import _merge_dict, to_expression
-from pyomo.repn.util import sum_like_expression_types, val2str
+from pyomo.repn.util import sum_like_expression_types, val2str, InvalidNumber
 
 _CONSTANT = linear.ExprType.CONSTANT
 _FIXED = linear.ExprType.FIXED
@@ -181,17 +181,17 @@ class QuadraticRepn(object):
             # add/change about self.  However, there is a chance
             # that other contains an InvalidNumber, so we should go
             # looking for it...
-            if other.constant != other.constant:
+            if other.constant.__class__ is InvalidNumber:
                 self.constant += mult * other.constant
             for vid, coef in other.linear.items():
-                if coef != coef:
+                if coef.__class__ is InvalidNumber:
                     if vid in self.linear:
                         self.linear[vid] += mult * coef
                     else:
                         self.linear[vid] = mult * coef
             if other.quadratic:
                 for vid, coef in other.quadratic.items():
-                    if coef != coef:
+                    if coef.__class__ is InvalidNumber:
                         if not self.quadratic:
                             self.quadratic = {}
                         if vid in self.quadratic:
@@ -265,7 +265,7 @@ def _handle_product_linear_linear(visitor, node, arg1, arg2):
         arg1.linear = {
             vid: coef * arg2.constant
             for key, coef in arg1.linear.items()
-            if coef != coef
+            if coef.__class__ is InvalidNumber
         }
     else:
         c = arg2.constant
