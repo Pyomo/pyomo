@@ -747,18 +747,6 @@ class GAMSShell(_GAMSSolver):
             )
             return _extract_version(results.stdout)
 
-    @staticmethod
-    def _parse_special_values(value):
-        if value == 1.0e300 or value == 2.0e300:
-            return float('nan')
-        if value == 3.0e300:
-            return float('inf')
-        if value == 4.0e300:
-            return -float('inf')
-        if value == 5.0e300:
-            return sys.float_info.epsilon
-        return value
-
     def _rewrite_path_win8p3(self, path):
         """
         Return the 8.3 short path on Windows; unchanged elsewhere.
