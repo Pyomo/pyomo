@@ -148,16 +148,14 @@ class TestUtilsFIM(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             list(snake_traversal_grid_sampling(list_2d_bad))
         self.assertEqual(
-            str(cm.exception),
-            "Argument at position 0 is not 1D. Got shape (2, 3).",
+            str(cm.exception), "Argument at position 0 is not 1D. Got shape (2, 3)."
         )
 
         list_2d_wrong_shape_bad = [[1, 2, 3], [4, 5, 6, 7]]
         with self.assertRaises(ValueError) as cm:
             list(snake_traversal_grid_sampling(list_2d_wrong_shape_bad))
         self.assertEqual(
-            str(cm.exception),
-            "Argument at position 0 is not 1D array-like.",
+            str(cm.exception), "Argument at position 0 is not 1D array-like."
         )
 
         # Test the error handling with tuples
@@ -165,16 +163,14 @@ class TestUtilsFIM(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             list(snake_traversal_grid_sampling(tuple_2d_bad))
         self.assertEqual(
-            str(cm.exception),
-            "Argument at position 0 is not 1D. Got shape (2, 3).",
+            str(cm.exception), "Argument at position 0 is not 1D. Got shape (2, 3)."
         )
 
         tuple_2d_wrong_shape_bad = ((1, 2, 3), (4, 5, 6, 7))
         with self.assertRaises(ValueError) as cm:
             list(snake_traversal_grid_sampling(tuple_2d_wrong_shape_bad))
         self.assertEqual(
-            str(cm.exception),
-            "Argument at position 0 is not 1D array-like.",
+            str(cm.exception), "Argument at position 0 is not 1D array-like."
         )
 
         # Test the error handling with numpy arrays
@@ -182,8 +178,7 @@ class TestUtilsFIM(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             list(snake_traversal_grid_sampling(array_2d_bad))
         self.assertEqual(
-            str(cm.exception),
-            "Argument at position 0 is not 1D. Got shape (2, 3).",
+            str(cm.exception), "Argument at position 0 is not 1D. Got shape (2, 3)."
         )
 
     def test_snake_traversal_grid_sampling_values(self):

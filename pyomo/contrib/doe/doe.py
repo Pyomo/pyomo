@@ -1640,7 +1640,9 @@ class DesignOfExperiments:
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
         design_vals : list, optional
-            A list of design values to use for the full factorial exploration.
+            A list of design values to use for the full factorial exploration. If
+            provided, will use this value to generate the design values and ignore
+            `abs_change`, `rel_change`, and `n_designs`. Default: None
             Default: None
         abs_change : list, optional
             Absolute change in the design variable values. Default: None.
@@ -1759,13 +1761,16 @@ class DesignOfExperiments:
                 if abs_change is None and rel_change is None:
                     des_val = np.linspace(lb, ub, n_designs)
 
+                # if abs_change and/or rel_change is provided, generate design values
+                # using the formula:
+                # change_in_value = lower_bound * rel_change + abs_change
                 elif abs_change or rel_change:
                     des_val = []
                     del_val = comp.lb * rel_change[i] + abs_change[i]
                     if del_val == 0:
                         raise ValueError(
-                            f"Design variable {comp.name} has no change in value - check "
-                            "abs_change and rel_change values."
+                            f"Design variable {comp.name} has no change in value - "
+                            "check abs_change and rel_change values."
                         )
                     val = lb
                     while val <= ub:
@@ -1774,8 +1779,8 @@ class DesignOfExperiments:
 
                 else:
                     raise ValueError(
-                        "Unexpected error in generating design values. Please check the "
-                        "input parameters."
+                        "Unexpected error in generating design values. Please check the"
+                        " input parameters."
                     )
 
                 design_values.append(des_val)
@@ -1786,7 +1791,7 @@ class DesignOfExperiments:
         except ValueError:
             self.logger.warning(
                 f"Initialization scheme '{initialization_scheme}' is not recognized. "
-                "Using `snake_traversal` as default."
+                "Using `snake_traversal` as the default initialization scheme."
             )
             scheme_enum = SensitivityInitialization.snake_traversal
 
@@ -1825,9 +1830,10 @@ class DesignOfExperiments:
         time_set = []
         curr_point = 1  # Initial current point
         for design_point in factorial_points_list:
-            # kept the following code to check later whether it is faster.
-            # In a simple model, this code took 15.9s to compute 125 points in JN
-            # for the same condition, `update_model_from_suffix` took 16.5s in JN
+            # kept (commented out) the following code to check later whether it will
+            # be considerably faster for complex models.
+            # In a simple model, this code took 15.9s to compute 125 points in JN.
+            # For the same condition, `update_model_from_suffix` took 16.5s in JN
             # Fix design variables at fixed experimental design point
             # for i in range(len(design_point)):
             #     design_keys[i].fix(design_point[i])
@@ -1916,8 +1922,8 @@ class DesignOfExperiments:
             ):
                 exclude_keys = {
                     "total_points",
-                    "success_counts",
-                    "failure_counts",
+                    "success_count",
+                    "failure_count",
                     "FIM_all",
                 }
                 dict_for_df = {
@@ -1926,8 +1932,8 @@ class DesignOfExperiments:
                 res_df = pd.DataFrame(dict_for_df)
                 print("\n\n=========Factorial results===========")
                 print("Total points:", total_points)
-                print("Success counts:", success_count)
-                print("Failure counts:", failure_count)
+                print("Success count:", success_count)
+                print("Failure count:", failure_count)
                 print("\n")
                 print(res_df)
 
