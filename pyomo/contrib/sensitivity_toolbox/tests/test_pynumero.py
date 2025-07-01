@@ -27,6 +27,7 @@ if not AmplInterface.available():
 
 
 class TestSeriesData(unittest.TestCase):
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_dsdp_dfdp_pyomo(self):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=200)
@@ -54,6 +55,7 @@ class TestSeriesData(unittest.TestCase):
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p1]], 605.0)
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p2]], 85.0)
 
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_dsdp_dfdp_pyomo_nlp(self):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=200)
@@ -84,6 +86,7 @@ class TestSeriesData(unittest.TestCase):
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p1]], 605.0)
         np.testing.assert_almost_equal(dfdp[0, cmap[m.p2]], 85.0)
 
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_dydp_pyomo(self):
         m = pyo.ConcreteModel()
         m.x1 = pyo.Var(initialize=200)
