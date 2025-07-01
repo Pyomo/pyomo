@@ -18,7 +18,6 @@ from pyomo.contrib.alternative_solutions import (
     aos_utils,
     shifted_lp,
     solution,
-    solnpool,
 )
 from pyomo.contrib import appsi
 
