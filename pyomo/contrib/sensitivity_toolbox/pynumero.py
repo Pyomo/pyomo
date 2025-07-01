@@ -10,10 +10,11 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import numpy as np
-from pyomo.common.dependencies import scipy
+from pyomo.common.dependencies import scipy, attempt_import
 
 import pyomo.environ as pyo
-import pyomo.contrib.pynumero.interfaces.pyomo_nlp as nlp
+# Use attempt_import here due to unguarded NumPy import in these files
+nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 from pyomo.common.collections import ComponentSet, ComponentMap
 
 

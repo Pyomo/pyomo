@@ -12,10 +12,11 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import scipy_available, attempt_import
 
 import pyomo.environ as pyo
-import pyomo.contrib.pynumero.interfaces.pyomo_nlp as nlp
+# Use attempt_import here due to unguarded NumPy import in these files
+nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 import pyomo.contrib.sensitivity_toolbox.pynumero as pnsens
 from pyomo.contrib.pynumero.asl import AmplInterface
 
