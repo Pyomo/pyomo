@@ -449,65 +449,72 @@ class TestReactorExampleSolving(unittest.TestCase):
 class TestDoe(unittest.TestCase):
     def test_doe_full_factorial(self):
         log10_D_opt_expected = [
-            np.float64(-13.321347741255337),
-            np.float64(3.8035612211158707),
-            np.float64(-7.724323094449262),
-            np.float64(9.395321258173526),
+            5.13779235906949,
+            3.803561220071879,
+            10.72955239374208,
+            9.395321257128753,
         ]
 
         log10_A_opt_expected = [
-            np.float64(3.5646581425454578),
-            np.float64(2.922649226588521),
-            np.float64(4.962598150652743),
-            np.float64(4.3205892352904876),
+            3.613318615148665,
+            2.9226492261769903,
+            5.011258623820752,
+            4.3205892348789465,
         ]
 
         log10_E_opt_expected = [
-            np.float64(-10.076931572437823),
-            np.float64(-0.6660428224151175),
-            np.float64(-8.67332037872937),
-            np.float64(0.731897189777441),
+            -0.691340497359806,
+            -0.6660428196788375,
+            0.7065995112972224,
+            0.7318971925134482,
         ]
+
         log10_ME_opt_expected = [
-            np.float64(13.51143310646149),
-            np.float64(3.570243133023128),
-            np.float64(13.505430874322686),
-            np.float64(3.5702431295446915),
+            4.244741560081367,
+            3.570243129860632,
+            4.2447415600959495,
+            3.570243126382307,
         ]
 
         eigval_min_expected = [
-            np.float64(8.376612538754303e-11),
-            np.float64(0.21575316611777548),
-            np.float64(2.1216787236688646e-09),
-            np.float64(5.393829196668378),
+            0.20354456134476745,
+            0.21575316747713205,
+            5.088614033443323,
+            5.3938292306489055,
         ]
 
         eigval_max_expected = [
-            np.float64(2714.297914184112),
-            np.float64(802.0479084262055),
-            np.float64(67857.4478581609),
-            np.float64(20051.197712596462),
+            3576.0292523636044,
+            802.0479076389139,
+            89400.7313090997,
+            20051.197692913658,
         ]
 
         det_FIM_expected = [
-            np.float64(4.7714706717649e-14),
-            np.float64(6361.524749138681),
-            np.float64(1.886587295622232e-08),
-            np.float64(2484970618.69026),
+            137338.51875728267,
+            6361.5247338463405,
+            53647858887.64154,
+            2484970612.7122226,
         ]
 
         trace_FIM_expected = [
-            np.float64(3669.9330583293095),
-            np.float64(836.8530948725596),
-            np.float64(91748.32633892389),
-            np.float64(20921.327373255765),
+            4105.0515492416025,
+            836.8530940795711,
+            102626.28873105175,
+            20921.32735343054,
         ]
         ff = run_reactor_doe(
             n_points_for_design=2,
-            compute_FIM_full_factorial=True,
+            compute_FIM_full_factorial=False,
             plot_factorial_results=False,
             save_plots=False,
             run_optimal_doe=False,
+        )
+        ff.compute_FIM_full_factorial(
+            design_ranges={
+                "CA[0]": [1, 5, 2],
+                "T[0]": [400, 700, 2],
+            }
         )
 
         ff_results = ff.fim_factorial_results
@@ -516,13 +523,27 @@ class TestDoe(unittest.TestCase):
         self.assertStructuredAlmostEqual(
             ff_results["log10 D-opt"], log10_D_opt_expected, abstol=1e-4
         )
-        self.assertTrue(np.allclose(ff_results["log10 A-opt"], log10_A_opt_expected))
-        self.assertTrue(np.allclose(ff_results["log10 E-opt"], log10_E_opt_expected))
-        self.assertTrue(np.allclose(ff_results["log10 ME-opt"], log10_ME_opt_expected))
-        self.assertTrue(np.allclose(ff_results["eigval_min"], eigval_min_expected))
-        self.assertTrue(np.allclose(ff_results["eigval_max"], eigval_max_expected))
-        self.assertTrue(np.allclose(ff_results["det_FIM"], det_FIM_expected))
-        self.assertTrue(np.allclose(ff_results["trace_FIM"], trace_FIM_expected))
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 A-opt"], log10_A_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 E-opt"], log10_E_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["log10 ME-opt"], log10_ME_opt_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["eigval_min"], eigval_min_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["eigval_max"], eigval_max_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["det_FIM"], det_FIM_expected, abstol=1e-4
+        )
+        self.assertStructuredAlmostEqual(
+            ff_results["trace_FIM"], trace_FIM_expected, abstol=1e-4
+        )
 
 
 if __name__ == "__main__":
