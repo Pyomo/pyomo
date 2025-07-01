@@ -590,16 +590,24 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         # use parameter bounds if they are available
         param_bounds_arr = self.parameter_bounds
         if param_bounds_arr:
-            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+            all_bounds_finite = (
+                np.all(np.isfinite(param_bounds_arr))
+                )
         else:
-            # initialize uncertain parameter variables
-            param_bounds_arr = np.array(self._fbbt_parameter_bounds(config))
-            if not all(map(lambda x: all(x), param_bounds_arr)):
-                # solve bounding problems if FBBT cannot find bounds
+            # use FBBT
+            param_bounds_arr = np.array(
+                self._fbbt_parameter_bounds(config),
+                dtype="float",
+            )
+            all_bounds_finite = np.isfinite(param_bounds_arr).all()
+
+            if not all_bounds_finite:
+                # solve bounding problems
                 param_bounds_arr = np.array(
                     self._compute_parameter_bounds(solver=config.global_solver)
                 )
-            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
+                all_bounds_finite = np.isfinite(param_bounds_arr).all()
+
 
         # log result
         if not all_bounds_finite:
