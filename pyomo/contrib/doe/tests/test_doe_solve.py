@@ -511,10 +511,7 @@ class TestDoe(unittest.TestCase):
             run_optimal_doe=False,
         )
         ff.compute_FIM_full_factorial(
-            design_ranges={
-                "CA[0]": [1, 5, 2],
-                "T[0]": [400, 700, 2],
-            }
+            design_ranges={"CA[0]": [1, 5, 2], "T[0]": [400, 700, 2]}
         )
 
         ff_results = ff.fim_factorial_results
