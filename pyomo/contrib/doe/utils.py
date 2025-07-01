@@ -103,44 +103,34 @@ def rescale_FIM(FIM, param_vals):
 
 
 # Adding utility to update parameter values in a model based on the suffix
-def update_model_from_suffix(model, suffix_name, values):
+def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
     """
-    Iterate over the components (variables or parameters) referenced by the
-    given suffix in the model, and assign each a new value from the provided iterable.
+    Overwrite each variable/parameter referenced by ``suffix_obj`` with the
+    corresponding value in ``values``.
 
     Parameters
     ----------
-    model : pyomo.environ.ConcreteModel
-        The Pyomo model containing the suffix and components to update.
-    suffix_name : str
-        The name of the Suffix attribute on the model whose items will be updated.
-        Must be one of: 'experiment_outputs', 'experiment_inputs', 'unknown_parameters', or 'measurement_error'.
+    suffix_obj : pyomo.core.base.suffix.Suffix
+        The suffix whose *keys* are the components you want to update.
+        Call like ``update_from_suffix(model.unknown_parameters, vals)``.
     values : iterable of numbers
-        The new values to assign to each component referenced by the suffix. The length of this
-        iterable must match the number of items in the suffix.
+        New numerical values for the components referenced by the suffix.
+        Must be the same length as ``suffix_obj``.
     """
-    # Allowed suffix names
-    allowed = {
-        'experiment_outputs',
-        'experiment_inputs',
-        'unknown_parameters',
-        'measurement_error',
-    }
-    # Validate input is an allowed suffix name
-    if suffix_name not in allowed:
-        raise ValueError(f"suffix_name must be one of {sorted(allowed)}")
-    # Check if the model has the specified suffix
-    suffix_obj = getattr(model, suffix_name, None)
-    if suffix_obj is None:
-        raise AttributeError(f"Model has no attribute '{suffix_name}'")
-    # Check if the suffix is a Suffix object
+    # Check that the length of values matches the suffix length
     items = list(suffix_obj.items())
     if len(items) != len(values):
         raise ValueError("values length does not match suffix length")
-    # Set the new values for the suffix items
+
+    # Iterate through the items in the suffix and update their values
+    # Note: items are tuples of (component, suffix_value)
     for (comp, _), new_val in zip(items, values):
-        # Update the variable/parameter itself if it is VarData or ParamData
+
+        # update the component value
+        # Check if the component is a VarData or ParamData
         if isinstance(comp, (VarData, ParamData)):
             comp.set_value(new_val)
         else:
-            raise TypeError(f"Unsupported component type: {type(comp)}")
+            raise TypeError(
+                f"Unsupported component type {type(comp)}; expected VarData or ParamData."
+            )
