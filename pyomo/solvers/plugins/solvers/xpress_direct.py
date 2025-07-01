@@ -239,6 +239,10 @@ class XpressDirect(DirectSolver):
         # version of xpress is supported (and stored as a class attribute)
         del self._version
 
+        # xpress will apply the warmstart itself instead of
+        # DirectOrPersistentSolver._presolve
+        self._apply_warmstart = False
+
     def available(self, exception_flag=True):
         """True if the solver is available."""
 
@@ -260,6 +264,13 @@ class XpressDirect(DirectSolver):
             return False
         finally:
             xpress.free()
+
+    def _presolve(self, *args, **kwds):
+        # we'll apply the warmstart in _solve_model so the
+        # message "User solution (_) stored" is wrote to the
+        # correct place, i.e., the console or the log or both
+        self._apply_warmstart = kwds.pop("warmstart", False)
+        return super()._presolve(*args, **kwds)
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -623,6 +634,9 @@ class XpressDirect(DirectSolver):
         return have_soln
 
     def _solve_model(self):
+        if self._apply_warmstart:
+            self._warm_start()
+
         xprob = self._solver_model
 
         is_mip = (xprob.attributes.mipents > 0) or (xprob.attributes.sets > 0)

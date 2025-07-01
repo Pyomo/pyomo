@@ -130,7 +130,7 @@ def getProjectInfo(project):
         diffs = os.popen('git diff-index --name-only HEAD').read()
         diffs = diffs.strip().split()
         branch = os.popen('git symbolic-ref -q --short HEAD').read().strip()
-        version = _module.__version__
+        version = getattr(_module, "__version__", "unknown")
     finally:
         os.chdir(cwd)
     return {'branch': branch, 'sha': sha, 'diffs': diffs, 'version': version}
