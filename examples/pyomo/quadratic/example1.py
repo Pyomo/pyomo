@@ -14,15 +14,15 @@
 # constraints could (but shouldn't in a perfect world) cause issues for
 # certain solvers.
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
-model = AbstractModel()
+model = pyo.AbstractModel()
 
-model.x = Var(bounds=(-10, 10), within=Reals)
+model.x = pyo.Var(bounds=(-10, 10), within=pyo.Reals)
 
 
 def objective_rule(model):
     return model.x * model.x
 
 
-model.objective = Objective(rule=objective_rule, sense=minimize)
+model.objective = pyo.Objective(rule=objective_rule, sense=pyo.minimize)

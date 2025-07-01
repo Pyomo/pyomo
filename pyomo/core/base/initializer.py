@@ -12,6 +12,7 @@
 import collections
 import functools
 import inspect
+import itertools
 
 from collections.abc import Sequence
 from collections.abc import Mapping
@@ -315,18 +316,19 @@ class DataFrameInitializer(InitializerBase):
         elif len(dataframe.columns) == 1:
             self._column = dataframe.columns[0]
         else:
-            raise ValueError(
-                "Cannot construct DataFrameInitializer for DataFrame with "
-                "multiple columns without also specifying the data column"
-            )
+            self._column = None
 
     def __call__(self, parent, idx):
+        if self._column is None:
+            return self._df.at[idx]
         return self._df.at[idx, self._column]
 
     def contains_indices(self):
         return True
 
     def indices(self):
+        if self._column is None:
+            return itertools.product(self._df.index, self._df)
         return self._df.index
 
 

@@ -24,6 +24,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import (
     NumericValue,
     value,
@@ -197,8 +198,9 @@ class VarData(ComponentData, NumericValue):
     def value(self, val):
         self.set_value(val)
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this variable."""
+        exception = _type_check_exception_arg(self, exception)
         return self._value
 
     @property

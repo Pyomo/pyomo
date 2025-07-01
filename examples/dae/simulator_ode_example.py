@@ -18,21 +18,21 @@
 # theta' = omega
 # omega' = -b*omega - c*sin(theta)
 
-from pyomo.environ import *
-from pyomo.dae import *
+import pyomo.environ as pyo
+from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.simulator import Simulator
 
 
 def create_model():
-    m = ConcreteModel()
+    m = pyo.ConcreteModel()
 
     m.t = ContinuousSet(bounds=(0.0, 10.0))
 
-    m.b = Param(initialize=0.25)
-    m.c = Param(initialize=5.0)
+    m.b = pyo.Param(initialize=0.25)
+    m.c = pyo.Param(initialize=5.0)
 
-    m.omega = Var(m.t)
-    m.theta = Var(m.t)
+    m.omega = pyo.Var(m.t)
+    m.theta = pyo.Var(m.t)
 
     m.domegadt = DerivativeVar(m.omega, wrt=m.t)
     m.dthetadt = DerivativeVar(m.theta, wrt=m.t)
@@ -42,14 +42,14 @@ def create_model():
     m.theta[0] = 3.14 - 0.1
 
     def _diffeq1(m, t):
-        return m.domegadt[t] == -m.b * m.omega[t] - m.c * sin(m.theta[t])
+        return m.domegadt[t] == -m.b * m.omega[t] - m.c * pyo.sin(m.theta[t])
 
-    m.diffeq1 = Constraint(m.t, rule=_diffeq1)
+    m.diffeq1 = pyo.Constraint(m.t, rule=_diffeq1)
 
     def _diffeq2(m, t):
         return m.dthetadt[t] == m.omega[t]
 
-    m.diffeq2 = Constraint(m.t, rule=_diffeq2)
+    m.diffeq2 = pyo.Constraint(m.t, rule=_diffeq2)
 
     return m
 
@@ -65,7 +65,7 @@ def simulate_model(m):
         tsim, profiles = sim.simulate(numpoints=100, integrator='vode')
 
     # Discretize model using Orthogonal Collocation
-    discretizer = TransformationFactory('dae.collocation')
+    discretizer = pyo.TransformationFactory('dae.collocation')
     discretizer.apply_to(m, nfe=8, ncp=5)
 
     # Initialize the discretized model using the simulator profiles
@@ -78,8 +78,8 @@ def plot_result(m, sim, tsim, profiles):
     import matplotlib.pyplot as plt
 
     time = list(m.t)
-    omega = [value(m.omega[t]) for t in m.t]
-    theta = [value(m.theta[t]) for t in m.t]
+    omega = [pyo.value(m.omega[t]) for t in m.t]
+    theta = [pyo.value(m.theta[t]) for t in m.t]
 
     varorder = sim.get_variable_order()
 

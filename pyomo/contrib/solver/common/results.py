@@ -21,6 +21,7 @@ from pyomo.common.config import (
     In,
     NonNegativeFloat,
     ADVANCED_OPTION,
+    DEVELOPER_OPTION,
 )
 from pyomo.opt.results.solution import SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import (
@@ -118,56 +119,11 @@ class SolutionStatus(enum.Enum):
     "A solution for which all of the constraints in the model are satisfied."
 
     optimal = 30
-    """A feasible solution where the objective function reaches its
-    specified sense (e.g., maximum, minimum)
-    """
+    "A feasible solution satisfying the solver's optimality criteria."
 
 
 class Results(ConfigDict):
-    """Base class for all solver results
-
-    Attributes
-    ----------
-    solution_loader: .SolutionLoaderBase
-        Object for loading the solution back into the model.
-    termination_condition: TerminationCondition
-        The reason the solver exited. This is a member of the
-        TerminationCondition enum.
-    solution_status: SolutionStatus
-        The result of the solve call. This is a member of the SolutionStatus
-        enum.
-    incumbent_objective: float
-        If a feasible solution was found, this is the objective value of
-        the best solution found. If no feasible solution was found, this is
-        None.
-    objective_bound: float
-        The best objective bound found. For minimization problems, this is
-        the lower bound. For maximization problems, this is the upper bound.
-        For solvers that do not provide an objective bound, this should be -inf
-        (minimization) or inf (maximization)
-    solver_name: str
-        The name of the solver in use.
-    solver_version: tuple
-        A tuple representing the version of the solver in use.
-    iteration_count: int
-        The total number of iterations.
-    timing_info: ConfigDict
-        A ConfigDict containing three pieces of information:
-
-          - ``start_timestamp``: UTC timestamp of when run was initiated
-          - ``wall_time``: elapsed wall clock time for entire process
-          - ``timer``: a HierarchicalTimer object containing timing data
-            about the solve
-
-        Specific solvers may add other relevant timing information, as appropriate.
-    extra_info: ConfigDict
-        A ConfigDict to store extra information such as solver messages.
-    solver_configuration: ConfigDict
-        A copy of the SolverConfig ConfigDict, for later inspection/reproducibility.
-    solver_log: str
-        (ADVANCED OPTION) Any solver log messages.
-
-    """
+    """Base class for all solver results"""
 
     def __init__(
         self,
@@ -188,7 +144,8 @@ class Results(ConfigDict):
         self.solution_loader = self.declare(
             'solution_loader',
             ConfigValue(
-                description="Object for loading the solution back into the model."
+                description="Object for loading the solution back into the model.",
+                visibility=DEVELOPER_OPTION,
             ),
         )
         self.termination_condition: TerminationCondition = self.declare(
@@ -269,8 +226,8 @@ class Results(ConfigDict):
         self.extra_info: ConfigDict = self.declare(
             'extra_info', ConfigDict(implicit=True)
         )
-        self.solver_configuration: ConfigDict = self.declare(
-            'solver_configuration',
+        self.solver_config: ConfigDict = self.declare(
+            'solver_config',
             ConfigValue(
                 description="A copy of the config object used in the solve call.",
                 visibility=ADVANCED_OPTION,
@@ -328,17 +285,43 @@ legacy_solver_status_map = {
 }
 
 
-legacy_solution_status_map = {
-    SolutionStatus.noSolution: LegacySolutionStatus.unknown,
-    SolutionStatus.noSolution: LegacySolutionStatus.stoppedByLimit,
-    SolutionStatus.noSolution: LegacySolutionStatus.error,
-    SolutionStatus.noSolution: LegacySolutionStatus.other,
-    SolutionStatus.noSolution: LegacySolutionStatus.unsure,
-    SolutionStatus.noSolution: LegacySolutionStatus.unbounded,
-    SolutionStatus.optimal: LegacySolutionStatus.locallyOptimal,
-    SolutionStatus.optimal: LegacySolutionStatus.globallyOptimal,
-    SolutionStatus.optimal: LegacySolutionStatus.optimal,
-    SolutionStatus.infeasible: LegacySolutionStatus.infeasible,
-    SolutionStatus.feasible: LegacySolutionStatus.feasible,
-    SolutionStatus.feasible: LegacySolutionStatus.bestSoFar,
-}
+# The logic for the new solution status to legacy solution status
+# cannot be contained in a dictionary because it is a many -> one
+# relationship.
+def legacy_solution_status_map(results):
+    """
+    Map the new TerminationCondition/SolutionStatus values into LegacySolutionStatus
+    objects. Because we condensed results objects, some of the previous statuses
+    are no longer clearly achievable.
+    """
+    if results.termination_condition in set(
+        [
+            TerminationCondition.maxTimeLimit,
+            TerminationCondition.iterationLimit,
+            TerminationCondition.objectiveLimit,
+            TerminationCondition.minStepLength,
+        ]
+    ):
+        return LegacySolutionStatus.stoppedByLimit
+    if results.termination_condition in set(
+        [TerminationCondition.provenInfeasible, TerminationCondition.locallyInfeasible]
+    ):
+        return LegacySolutionStatus.infeasible
+    if results.termination_condition in set(
+        [
+            TerminationCondition.error,
+            TerminationCondition.licensingProblems,
+            TerminationCondition.interrupted,
+        ]
+    ):
+        return LegacySolutionStatus.error
+    if results.termination_condition == TerminationCondition.unbounded:
+        return LegacySolutionStatus.unbounded
+    if (
+        results.termination_condition
+        == TerminationCondition.convergenceCriteriaSatisfied
+    ):
+        if results.solution_status == SolutionStatus.feasible:
+            return LegacySolutionStatus.feasible
+        return LegacySolutionStatus.optimal
+    return LegacySolutionStatus.unknown

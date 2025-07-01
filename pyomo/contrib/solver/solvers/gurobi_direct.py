@@ -15,43 +15,44 @@ import math
 import operator
 import os
 
-from pyomo.common.config import ConfigValue
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.config import ConfigValue
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.enums import ObjectiveSense
-from pyomo.common.errors import MouseTrap
+from pyomo.common.errors import MouseTrap, ApplicationError
 from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.tee import capture_output, TeeStream
 from pyomo.common.timing import HierarchicalTimer
-
-from pyomo.contrib.solver.base import SolverBase
-from pyomo.contrib.solver.config import BranchAndBoundConfig
-from pyomo.contrib.solver.results import Results, SolutionStatus, TerminationCondition
-from pyomo.contrib.solver.solution import SolutionLoaderBase
-
 from pyomo.core.staleflag import StaleFlagManager
-
 from pyomo.repn.plugins.standard_form import LinearStandardFormCompiler
+
+from pyomo.contrib.solver.common.base import SolverBase, Availability
+from pyomo.contrib.solver.common.config import BranchAndBoundConfig
+from pyomo.contrib.solver.common.util import (
+    NoFeasibleSolutionError,
+    NoOptimalSolutionError,
+    NoDualsError,
+    NoReducedCostsError,
+    NoSolutionError,
+    IncompatibleModelError,
+)
+from pyomo.contrib.solver.common.results import (
+    Results,
+    SolutionStatus,
+    TerminationCondition,
+)
+from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
+
 
 gurobipy, gurobipy_available = attempt_import('gurobipy')
 
 
-class GurobiConfig(BranchAndBoundConfig):
-    def __init__(
-        self,
-        description=None,
-        doc=None,
-        implicit=False,
-        implicit_domain=None,
-        visibility=0,
-    ):
-        super(GurobiConfig, self).__init__(
-            description=description,
-            doc=doc,
-            implicit=implicit,
-            implicit_domain=implicit_domain,
-            visibility=visibility,
-        )
+class GurobiConfigMixin:
+    """
+    Mixin class for Gurobi-specific configurations
+    """
+
+    def __init__(self):
         self.use_mipstart: bool = self.declare(
             'use_mipstart',
             ConfigValue(
@@ -63,6 +64,26 @@ class GurobiConfig(BranchAndBoundConfig):
         )
 
 
+class GurobiConfig(BranchAndBoundConfig, GurobiConfigMixin):
+    def __init__(
+        self,
+        description=None,
+        doc=None,
+        implicit=False,
+        implicit_domain=None,
+        visibility=0,
+    ):
+        BranchAndBoundConfig.__init__(
+            self,
+            description=description,
+            doc=doc,
+            implicit=implicit,
+            implicit_domain=implicit_domain,
+            visibility=visibility,
+        )
+        GurobiConfigMixin.__init__(self)
+
+
 class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def __init__(self, grb_model, grb_cons, grb_vars, pyo_cons, pyo_vars, pyo_obj):
         self._grb_model = grb_model
@@ -71,7 +92,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         self._pyo_cons = pyo_cons
         self._pyo_vars = pyo_vars
         self._pyo_obj = pyo_obj
-        GurobiDirect._num_instances += 1
+        GurobiDirect._register_env_client()
 
     def __del__(self):
         if python_is_shutting_down():
@@ -89,17 +110,12 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         # Release the gurobi license if this is the last reference to
         # the environment (either through a results object or solver
         # interface)
-        GurobiDirect._num_instances -= 1
-        if GurobiDirect._num_instances == 0:
-            GurobiDirect.release_license()
+        GurobiDirect._release_env_client()
 
     def load_vars(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
         if self._grb_model.SolCount == 0:
-            raise RuntimeError(
-                'Solver does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
+            raise NoSolutionError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
         if vars_to_load:
@@ -112,10 +128,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
     def get_primals(self, vars_to_load=None, solution_number=0):
         assert solution_number == 0
         if self._grb_model.SolCount == 0:
-            raise RuntimeError(
-                'Solver does not currently have a valid solution. Please '
-                'check the termination condition.'
-            )
+            raise NoSolutionError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.x.tolist())
         if vars_to_load:
@@ -125,10 +138,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
     def get_duals(self, cons_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
-            raise RuntimeError(
-                'Solver does not currently have valid duals. Please '
-                'check the termination condition.'
-            )
+            raise NoDualsError()
 
         def dedup(_iter):
             last = None
@@ -148,10 +158,7 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._grb_model.Status != gurobipy.GRB.OPTIMAL:
-            raise RuntimeError(
-                'Solver does not currently have valid reduced costs. Please '
-                'check the termination condition.'
-            )
+            raise NoReducedCostsError()
 
         iterator = zip(self._pyo_vars, self._grb_vars.getAttr('Rc').tolist())
         if vars_to_load:
@@ -160,66 +167,82 @@ class GurobiDirectSolutionLoader(SolutionLoaderBase):
         return ComponentMap(iterator)
 
 
-class GurobiDirect(SolverBase):
-    CONFIG = GurobiConfig()
+class GurobiSolverMixin:
+    """
+    gurobi_direct and gurobi_persistent check availability and set versions
+    in the same way. This moves the logic to a central location to reduce
+    duplicate code.
+    """
 
+    _num_gurobipy_env_clients = 0
+    _gurobipy_env = None
     _available = None
-    _num_instances = 0
-    _tc_map = None
-
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        GurobiDirect._num_instances += 1
+    _gurobipy_available = gurobipy_available
 
     def available(self):
-        if not gurobipy_available:  # this triggers the deferred import
-            return self.Availability.NotFound
-        elif self._available == self.Availability.BadVersion:
-            return self.Availability.BadVersion
-        else:
-            return self._check_license()
+        if self._available is None:
+            # this triggers the deferred import, and for the persistent
+            # interface, may update the _available flag
+            #
+            # Note that we set the _available flag on the *most derived
+            # class* and not on the instance, or on the base class.  That
+            # allows different derived interfaces to have different
+            # availability (e.g., persistent has a minimum version
+            # requirement that the direct interface doesn't)
+            if not self._gurobipy_available:
+                if self._available is None:
+                    self.__class__._available = Availability.NotFound
+            else:
+                self.__class__._available = self._check_license()
+        return self._available
+
+    @staticmethod
+    def release_license():
+        if GurobiSolverMixin._gurobipy_env is None:
+            return
+        if GurobiSolverMixin._num_gurobipy_env_clients:
+            logger.warning(
+                "Call to GurobiSolverMixin.release_license() with %s remaining "
+                "environment clients." % (GurobiSolverMixin._num_gurobipy_env_clients,)
+            )
+        GurobiSolverMixin._gurobipy_env.close()
+        GurobiSolverMixin._gurobipy_env = None
+
+    @staticmethod
+    def env():
+        if GurobiSolverMixin._gurobipy_env is None:
+            with capture_output(capture_fd=True):
+                GurobiSolverMixin._gurobipy_env = gurobipy.Env()
+        return GurobiSolverMixin._gurobipy_env
+
+    @staticmethod
+    def _register_env_client():
+        GurobiSolverMixin._num_gurobipy_env_clients += 1
+
+    @staticmethod
+    def _release_env_client():
+        GurobiSolverMixin._num_gurobipy_env_clients -= 1
+        if GurobiSolverMixin._num_gurobipy_env_clients <= 0:
+            # Note that _num_gurobipy_env_clients should never be <0,
+            # but if it is, release_license will issue a warning (that
+            # we want to know about)
+            GurobiSolverMixin.release_license()
 
     def _check_license(self):
-        avail = False
         try:
-            # Gurobipy writes out license file information when creating
-            # the environment
-            with capture_output(capture_fd=True):
-                m = gurobipy.Model()
-            avail = True
+            model = gurobipy.Model(env=self.env())
         except gurobipy.GurobiError:
-            avail = False
+            return Availability.BadLicense
 
-        if avail:
-            if self._available is None:
-                self._available = GurobiDirect._check_full_license(m)
-            return self._available
-        else:
-            return self.Availability.BadLicense
-
-    @classmethod
-    def _check_full_license(cls, model=None):
-        if model is None:
-            model = gurobipy.Model()
         model.setParam('OutputFlag', 0)
         try:
             model.addVars(range(2001))
             model.optimize()
-            return cls.Availability.FullLicense
+            return Availability.FullLicense
         except gurobipy.GurobiError:
-            return cls.Availability.LimitedLicense
-
-    def __del__(self):
-        if not python_is_shutting_down():
-            GurobiDirect._num_instances -= 1
-            if GurobiDirect._num_instances == 0:
-                self.release_license()
-
-    @staticmethod
-    def release_license():
-        if gurobipy_available:
-            with capture_output(capture_fd=True):
-                gurobipy.disposeDefaultEnv()
+            return Availability.LimitedLicense
+        finally:
+            model.dispose()
 
     def version(self):
         version = (
@@ -229,9 +252,33 @@ class GurobiDirect(SolverBase):
         )
         return version
 
+
+class GurobiDirect(GurobiSolverMixin, SolverBase):
+    """
+    Interface to Gurobi using gurobipy
+    """
+
+    CONFIG = GurobiConfig()
+
+    _tc_map = None
+
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
+        self._register_env_client()
+
+    def __del__(self):
+        if not python_is_shutting_down():
+            self._release_env_client()
+
     def solve(self, model, **kwds) -> Results:
         start_timestamp = datetime.datetime.now(datetime.timezone.utc)
         config = self.config(value=kwds, preserve_implicit=True)
+        if not self.available():
+            c = self.__class__
+            raise ApplicationError(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).'
+            )
         if config.timer is None:
             config.timer = HierarchicalTimer()
         timer = config.timer
@@ -245,7 +292,7 @@ class GurobiDirect(SolverBase):
         timer.stop('compile_model')
 
         if len(repn.objectives) > 1:
-            raise ValueError(
+            raise IncompatibleModelError(
                 f"The {self.__class__.__name__} solver only supports models "
                 f"with zero or one objectives (received {len(repn.objectives)})."
             )
@@ -274,12 +321,12 @@ class GurobiDirect(SolverBase):
         ostreams = [io.StringIO()] + config.tee
         res = Results()
 
+        orig_cwd = os.getcwd()
         try:
-            orig_cwd = os.getcwd()
             if config.working_dir:
                 os.chdir(config.working_dir)
             with capture_output(TeeStream(*ostreams), capture_fd=False):
-                gurobi_model = gurobipy.Model()
+                gurobi_model = gurobipy.Model(env=self.env())
 
                 timer.start('transfer_model')
                 x = gurobi_model.addMVar(
@@ -331,7 +378,7 @@ class GurobiDirect(SolverBase):
             ),
         )
 
-        res.solver_configuration = config
+        res.solver_config = config
         res.solver_name = 'Gurobi'
         res.solver_version = self.version()
         res.solver_log = ostreams[0].getvalue()
@@ -367,11 +414,7 @@ class GurobiDirect(SolverBase):
             != TerminationCondition.convergenceCriteriaSatisfied
             and config.raise_exception_on_nonoptimal_result
         ):
-            raise RuntimeError(
-                'Solver did not find the optimal solution. Set '
-                'opt.config.raise_exception_on_nonoptimal_result=False '
-                'to bypass this error.'
-            )
+            raise NoOptimalSolutionError()
 
         if loader._pyo_obj:
             try:
@@ -399,12 +442,7 @@ class GurobiDirect(SolverBase):
             if grb_model.SolCount > 0:
                 results.solution_loader.load_vars()
             else:
-                raise RuntimeError(
-                    'A feasible solution was not found, so no solution can be loaded.'
-                    'Please set opt.config.load_solutions=False and check '
-                    'results.solution_status and '
-                    'results.incumbent_objective before loading a solution.'
-                )
+                raise NoFeasibleSolutionError()
         timer.stop('load solution')
 
         return results

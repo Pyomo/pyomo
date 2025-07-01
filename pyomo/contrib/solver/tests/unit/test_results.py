@@ -12,19 +12,18 @@
 from io import StringIO
 from typing import Sequence, Dict, Optional, Mapping, MutableMapping
 
-
-from pyomo.common import unittest
+import pyomo.environ as pyo
 from pyomo.common.config import ConfigDict
 from pyomo.core.base.constraint import ConstraintData
 from pyomo.core.base.var import VarData
 from pyomo.common.collections import ComponentMap
-from pyomo.contrib.solver import results
-from pyomo.contrib.solver import solution
-import pyomo.environ as pyo
+from pyomo.contrib.solver.common import results
+from pyomo.contrib.solver.common import solution_loader
 from pyomo.core.base.var import Var
+from pyomo.common import unittest
 
 
-class SolutionLoaderExample(solution.SolutionLoaderBase):
+class SolutionLoaderExample(solution_loader.SolutionLoaderBase):
     """
     This is an example instantiation of a SolutionLoader that is used for
     testing generated results.
@@ -167,7 +166,7 @@ class TestResults(unittest.TestCase):
             'termination_condition',
             'timing_info',
             'solver_log',
-            'solver_configuration',
+            'solver_config',
         }
         actual_declared = res._declared
         self.assertEqual(expected_declared, actual_declared)
@@ -193,8 +192,7 @@ class TestResults(unittest.TestCase):
         res = results.Results()
         stream = StringIO()
         res.display(ostream=stream)
-        expected_print = """solution_loader: None
-termination_condition: TerminationCondition.unknown
+        expected_print = """termination_condition: TerminationCondition.unknown
 solution_status: SolutionStatus.noSolution
 incumbent_objective: None
 objective_bound: None
