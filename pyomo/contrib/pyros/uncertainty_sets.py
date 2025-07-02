@@ -822,6 +822,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     def _fbbt_parameter_bounds(self, config):
         """
         Obtain parameter bounds of the uncertainty set using FBBT.
+        The bounds returned by FBBT may be inexact.
 
         Parameters
         ----------
