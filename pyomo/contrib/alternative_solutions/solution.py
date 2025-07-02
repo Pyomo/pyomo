@@ -51,33 +51,25 @@ class Solution:
         self.id = None
 
         self._variables = []
-        self.index_to_variable = {}
         self.name_to_variable = {}
         self.fixed_variable_names = set()
         if variables is not None:
             self._variables = variables
-            index = 0
             for v in variables:
-                self.index_to_variable[index] = v
                 if v.name is not None:
                     if v.fixed:
                         self.fixed_variable_names.add(v.name)
                     self.name_to_variable[v.name] = v
-                index += 1
 
         self._objectives = []
-        self.index_to_objective = {}
         self.name_to_objective = {}
         if objective is not None:
             objectives = [objective]
         if objectives is not None:
             self._objectives = objectives
-            index = 0
             for o in objectives:
-                self.index_to_objective[index] = o
                 if o.name is not None:
                     self.name_to_objective[o.name] = o
-                index += 1
 
         if "suffix" in kwds:
             self.suffix = MyMunch(kwds.pop("suffix"))
@@ -86,33 +78,29 @@ class Solution:
 
     def variable(self, index):
         if type(index) is int:
-            return self.index_to_variable[index]
+            return self._variables[index]
         else:
             return self.name_to_variable[index]
 
     def variables(self):
         return self._variables
 
-    def tuple_repn(self):
-        if len(self.index_to_variable) == len(self._variables):
-            return tuple(
-                tuple([k, var.value]) for k, var in self.index_to_variable.items()
-            )
-        elif len(self.name_to_variable) == len(self._variables):
-            return tuple(
-                tuple([k, var.value]) for k, var in self.name_to_variable.items()
-            )
-        else:
-            return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
-
     def objective(self, index=0):
         if type(index) is int:
-            return self.index_to_objective[index]
+            return self._objectives[index]
         else:
             return self.name_to_objective[index]
 
     def objectives(self):
         return self._objectives
+
+    def tuple_repn(self):
+        if len(self.name_to_variable) == len(self._variables):
+            return tuple(
+                tuple([k, var.value]) for k, var in self.name_to_variable.items()
+            )
+        else:
+            return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
 
     def to_dict(self, round_discrete=True):
         return dict(
