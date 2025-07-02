@@ -603,7 +603,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 index = np.isnan(param_bounds_arr)
                 # solve bounding problems for bounds that have not been found
                 opt_bounds_arr = np.array(
-                    self._compute_parameter_bounds(solver=config.global_solver, index=index),
+                    self._compute_exact_parameter_bounds(solver=config.global_solver, index=index),
                     dtype="float",
                 )
                 # combine with previously found bounds
@@ -746,7 +746,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         return is_in_set
 
-    def _compute_parameter_bounds(self, solver, index=None):
+    def _compute_exact_parameter_bounds(self, solver, index=None):
         """
         Compute lower and upper coordinate value bounds
         for every dimension of `self` by solving a bounding model.
@@ -925,7 +925,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         parameter_bounds = self.parameter_bounds
         if not parameter_bounds:
-            parameter_bounds = self._compute_parameter_bounds(global_solver)
+            parameter_bounds = self._compute_exact_parameter_bounds(global_solver)
 
         for (lb, ub), param_var in zip(parameter_bounds, uncertain_param_vars):
             param_var.setlb(lb)
@@ -986,7 +986,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         param_bounds = self.parameter_bounds
         if not (param_bounds and self._PARAMETER_BOUNDS_EXACT):
             # we need the exact bounding box
-            param_bounds = self._compute_parameter_bounds(
+            param_bounds = self._compute_exact_parameter_bounds(
                 solver=config.global_solver, index=index
             )
         else:
