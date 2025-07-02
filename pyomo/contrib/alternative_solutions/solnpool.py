@@ -61,10 +61,9 @@ class SolutionPoolBase:
         return len(self._solutions)
 
     def __getitem__(self, soln_id):
-        print(list(self._solutions.keys()))
         return self._solutions[soln_id]
 
-    def next_solution_counter(self):
+    def _next_solution_counter(self):
         tmp = self.counter.solution_counter
         self.counter.solution_counter += 1
         return tmp
@@ -78,7 +77,7 @@ class SolutionPool_KeepAll(SolutionPoolBase):
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
         #
-        soln.id = self.next_solution_counter()
+        soln.id = self._next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -104,7 +103,7 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
         #
-        soln.id = self.next_solution_counter()
+        soln.id = self._next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -138,12 +137,12 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         #
         # Return None if the solution has already been added to the pool
         #
-        tuple_repn = soln.tuple_repn()
+        tuple_repn = soln._tuple_repn()
         if tuple_repn in self.unique_solutions:
             return None
         self.unique_solutions.add(tuple_repn)
         #
-        soln.id = self.next_solution_counter()
+        soln.id = self._next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -202,7 +201,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         #
         # Return None if the solution has already been added to the pool
         #
-        tuple_repn = soln.tuple_repn()
+        tuple_repn = soln._tuple_repn()
         if tuple_repn in self.unique_solutions:
             return None
         self.unique_solutions.add(tuple_repn)
@@ -231,7 +230,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                 keep = True
 
         if keep:
-            soln.id = self.next_solution_counter()
+            soln.id = self._next_solution_counter()
             assert (
                 soln.id not in self._solutions
             ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -239,14 +238,12 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             self._solutions[soln.id] = soln
             #
             item = HeapItem(value=-value if self.keep_min else value, id=soln.id)
-            # print(f"ADD {item.id} {item.value}")
             if self.max_pool_size is None or len(self.heap) < self.max_pool_size:
                 # There is room in the pool, so we just add it
                 heapq.heappush(self.heap, item)
             else:
                 # We add the item to the pool and pop the worst item in the pool
                 item = heapq.heappushpop(self.heap, item)
-                # print(f"DELETE {item.id} {item.value}")
                 del self._solutions[item.id]
 
             if new_best_value:
@@ -270,7 +267,6 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                     ):
                         tmp.append(item)
                     else:
-                        # print(f"DELETE? {item.id} {item.value}")
                         del self._solutions[item.id]
                 heapq.heapify(tmp)
                 self.heap = tmp
@@ -304,18 +300,10 @@ class PoolManager:
         self.add_pool(self._name)
         self._solution_counter = 0
 
-    @property
-    def solution_counter(self):
-        return self._solution_counter
-
-    @solution_counter.setter
-    def solution_counter(self, value):
-        self._solution_counter = value
-
-    @property
-    def pool(self):
-        assert self._name in self._pool, f"Unknown pool '{self._name}'"
-        return self._pool[self._name]
+    #
+    # The following methods give the PoolManager the same API as a pool.
+    # These methods pass-though and operate on the active pool.
+    #
 
     @property
     def metadata(self):
@@ -336,10 +324,24 @@ class PoolManager:
     def __len__(self):
         return len(self.pool)
 
-    def __getitem__(self, soln_id, name=None):
-        if name is None:
-            name = self._name
-        return self._pool[name][soln_id]
+    def __getitem__(self, soln_id):
+        return self._pool[self._name][soln_id]
+
+    def add(self, *args, **kwargs):
+        return self.pool.add(*args, **kwargs)
+
+    def to_dict(self):
+        return {k: v.to_dict() for k, v in self._pool.items()}
+
+    #
+    # The following methods support the management of multiple
+    # pools within a PoolManager.
+    #
+
+    @property
+    def pool(self):
+        assert self._name in self._pool, f"Unknown pool '{self._name}'"
+        return self._pool[self._name]
 
     def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
         if name not in self._pool:
@@ -377,16 +379,10 @@ class PoolManager:
         self._name = name
         return self.metadata
 
-    def set_pool(self, name):
+    def activate(self, name):
         assert name in self._pool, f"Unknown pool '{name}'"
         self._name = name
         return self.metadata
-
-    def add(self, *args, **kwargs):
-        return self.pool.add(*args, **kwargs)
-
-    def to_dict(self):
-        return {k: v.to_dict() for k, v in self._pool.items()}
 
     def write(self, json_filename, indent=None, sort_keys=True):
         with open(json_filename, "w") as OUTPUT:
@@ -402,6 +398,20 @@ class PoolManager:
             except ValueError as e:
                 raise ValueError(f"Invalid JSON in file '{json_filename}': {e}")
             self._pool = data.solutions
+
+    #
+    # The following methods treat the PoolManager as a PoolCounter.
+    # This allows the PoolManager to be used to provide a global solution count
+    # for all pools that it manages.
+    #
+
+    @property
+    def solution_counter(self):
+        return self._solution_counter
+
+    @solution_counter.setter
+    def solution_counter(self, value):
+        self._solution_counter = value
 
 
 class PyomoPoolManager(PoolManager):

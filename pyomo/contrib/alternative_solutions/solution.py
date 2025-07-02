@@ -91,20 +91,10 @@ class Solution:
     def objectives(self):
         return self._objectives
 
-    def tuple_repn(self):
-        if len(self.name_to_variable) == len(self._variables):
-            return tuple(
-                tuple([k, var.value]) for k, var in self.name_to_variable.items()
-            )
-        else:
-            return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
-
     def to_dict(self):
         return dict(
             id=self.id,
-            variables=[
-                v.to_dict() for v in self.variables()
-            ],
+            variables=[v.to_dict() for v in self.variables()],
             objectives=[o.to_dict() for o in self.objectives()],
             suffix=self.suffix.to_dict(),
         )
@@ -121,6 +111,19 @@ class Solution:
 
     __repn__ = __str__
 
+    def _tuple_repn(self):
+        """
+        Generate a tuple that represents the variables in the model.
+
+        We use string names if possible, because they more explicit than the integer index values.
+        """
+        if len(self.name_to_variable) == len(self._variables):
+            return tuple(
+                tuple([k, var.value]) for k, var in self.name_to_variable.items()
+            )
+        else:
+            return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
+
 
 def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
     #
@@ -135,7 +138,9 @@ def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
         for var in variables:
             vlist.append(
                 Variable(
-                    value=pyo.value(var) if var.is_continuous() else round(pyo.value(var)),
+                    value=(
+                        pyo.value(var) if var.is_continuous() else round(pyo.value(var))
+                    ),
                     fixed=var.is_fixed(),
                     name=str(var),
                     index=index,
