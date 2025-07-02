@@ -753,11 +753,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         ----------
         solver : Pyomo solver type
             Optimizer to invoke on the bounding problems.
-        index : list of int, optional
-            Positional indices of the coordinates for which
-            to compute bounds. If None is passed,
-            then the argument is set to ``list(range(self.dim))``,
-            so that the bounds for all coordinates are computed.
+        index : list of 2-tuple of bool, optional
+            A list of tuples for each index of the coordinates for
+            which to compute bounds. A lower or upper bound is
+            computed for any value that is True, while False
+            indicates that the bound should be skipped.
+            If None is passed, then the argument is set to
+            ``[(True, True)]*self.dim``, so that the bounds
+            for all coordinates are computed.
 
         Returns
         -------
@@ -773,14 +776,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             coordinate.
         """
         if index is None:
-            index = list(range(self.dim))
+            index = [(True, True)]*self.dim
 
+        # create bounding model and get all objectives
         bounding_model = self._create_bounding_model()
-        objs_to_optimize = (
-            (idx, obj)
-            for idx, obj in bounding_model.param_var_objectives.items()
-            if idx in index
-        )
+        objs_to_optimize = bounding_model.param_var_objectives.items()
+
         param_bounds = []
         for idx, obj in objs_to_optimize:
             # activate objective for corresponding dimension
@@ -789,7 +790,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
             # solve for lower bound, then upper bound
             # solve should be successful
-            for sense in (minimize, maximize):
+            for i, sense in enumerate((minimize, maximize)):
+                # check if the LB or UB should be solved
+                if not index[idx][i]:
+                    bounds.append(None)
+                    continue
                 obj.sense = sense
                 res = solver.solve(bounding_model, load_solutions=False)
                 if check_optimal_termination(res):
