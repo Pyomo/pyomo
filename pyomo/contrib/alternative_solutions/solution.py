@@ -26,11 +26,8 @@ class Variable:
     discrete: bool = False
     suffix: MyMunch = dataclasses.field(default_factory=MyMunch)
 
-    def to_dict(self, round_discrete=False):
-        ans = dataclasses.asdict(self, dict_factory=_custom_dict_factory)
-        if round_discrete and ans["discrete"]:
-            ans["value"] = round(ans["value"])
-        return ans
+    def to_dict(self):
+        return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
 
 
 @dataclasses.dataclass
@@ -102,19 +99,19 @@ class Solution:
         else:
             return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
 
-    def to_dict(self, round_discrete=True):
+    def to_dict(self):
         return dict(
             id=self.id,
             variables=[
-                v.to_dict(round_discrete=round_discrete) for v in self.variables()
+                v.to_dict() for v in self.variables()
             ],
             objectives=[o.to_dict() for o in self.objectives()],
             suffix=self.suffix.to_dict(),
         )
 
-    def to_string(self, round_discrete=True, sort_keys=True, indent=4):
+    def to_string(self, sort_keys=True, indent=4):
         return json.dumps(
-            self.to_dict(round_discrete=round_discrete),
+            self.to_dict(),
             sort_keys=sort_keys,
             indent=indent,
         )
@@ -138,7 +135,7 @@ def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
         for var in variables:
             vlist.append(
                 Variable(
-                    value=pyo.value(var),
+                    value=pyo.value(var) if var.is_continuous() else round(pyo.value(var)),
                     fixed=var.is_fixed(),
                     name=str(var),
                     index=index,

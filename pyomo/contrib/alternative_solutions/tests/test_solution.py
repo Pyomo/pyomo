@@ -141,7 +141,7 @@ class TestSolutionUnit(unittest.TestCase):
         }
     ]
 }"""
-        assert solution.to_string(round_discrete=True) == sol_str
+        assert solution.to_string() == sol_str
 
         sol_val = solution.name_to_variable
         self.assertEqual(set(sol_val.keys()), {"x", "y", "z", "f"})
