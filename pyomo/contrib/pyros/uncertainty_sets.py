@@ -602,10 +602,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             all_bounds_finite = np.isfinite(param_bounds_arr).all()
 
             if not all_bounds_finite:
-                # solve bounding problems
-                param_bounds_arr = np.array(
-                    self._compute_parameter_bounds(solver=config.global_solver)
+                # get bounds that need to be solved
+                index = np.isnan(param_bounds_arr)
+                # solve bounding problems for bounds that have not been found
+                opt_bounds_arr = np.array(
+                    self._compute_parameter_bounds(solver=config.global_solver, index=index),
+                    dtype="float",
                 )
+                # combine with previously found bounds
+                param_bounds_arr[index] = opt_bounds_arr[index]
                 all_bounds_finite = np.isfinite(param_bounds_arr).all()
 
 
