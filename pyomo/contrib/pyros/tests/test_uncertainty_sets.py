@@ -321,7 +321,9 @@ class TestBoxSet(unittest.TestCase):
         Test parameter bounds computations give expected results.
         """
         box_set = BoxSet([[1, 2], [3, 4]])
-        computed_bounds = box_set._compute_exact_parameter_bounds(SolverFactory("baron"))
+        computed_bounds = box_set._compute_exact_parameter_bounds(
+            SolverFactory("baron")
+        )
         np.testing.assert_allclose(computed_bounds, [[1, 2], [3, 4]])
         np.testing.assert_allclose(computed_bounds, box_set.parameter_bounds)
 
@@ -3065,7 +3067,9 @@ class TestCustomUncertaintySet(unittest.TestCase):
         baron = SolverFactory("baron")
         custom_set = CustomUncertaintySet(dim=2)
         self.assertEqual(custom_set.parameter_bounds, [(-1, 1)] * 2)
-        self.assertEqual(custom_set._compute_exact_parameter_bounds(baron), [(-1, 1)] * 2)
+        self.assertEqual(
+            custom_set._compute_exact_parameter_bounds(baron), [(-1, 1)] * 2
+        )
 
     @unittest.skipUnless(baron_available, "BARON is not available")
     def test_solve_feasibility(self):

@@ -587,14 +587,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         # use parameter bounds if they are available
         param_bounds_arr = self.parameter_bounds
         if param_bounds_arr:
-            all_bounds_finite = (
-                np.all(np.isfinite(param_bounds_arr))
-                )
+            all_bounds_finite = np.all(np.isfinite(param_bounds_arr))
         else:
             # use FBBT
             param_bounds_arr = np.array(
-                self._fbbt_parameter_bounds(config),
-                dtype="float",
+                self._fbbt_parameter_bounds(config), dtype="float"
             )
             all_bounds_finite = np.isfinite(param_bounds_arr).all()
 
@@ -603,13 +600,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
                 index = np.isnan(param_bounds_arr)
                 # solve bounding problems for bounds that have not been found
                 opt_bounds_arr = np.array(
-                    self._compute_exact_parameter_bounds(solver=config.global_solver, index=index),
+                    self._compute_exact_parameter_bounds(
+                        solver=config.global_solver, index=index
+                    ),
                     dtype="float",
                 )
                 # combine with previously found bounds
                 param_bounds_arr[index] = opt_bounds_arr[index]
                 all_bounds_finite = np.isfinite(param_bounds_arr).all()
-
 
         # log result
         if not all_bounds_finite:
@@ -778,7 +776,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             coordinate.
         """
         if index is None:
-            index = [(True, True)]*self.dim
+            index = [(True, True)] * self.dim
 
         # create bounding model and get all objectives
         bounding_model = self._create_bounding_model()
@@ -1477,7 +1475,9 @@ class CardinalitySet(UncertaintySet):
 
     @gamma.setter
     def gamma(self, val):
-        validate_arg_type("gamma", val, native_numeric_types, "a valid numeric type", False)
+        validate_arg_type(
+            "gamma", val, native_numeric_types, "a valid numeric type", False
+        )
 
         self._gamma = val
 
@@ -2557,7 +2557,9 @@ class FactorModelSet(UncertaintySet):
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
-        validate_arg_type("beta", beta, native_numeric_types, "a valid numeric type", False)
+        validate_arg_type(
+            "beta", beta, native_numeric_types, "a valid numeric type", False
+        )
 
         # check psi is full column rank
         psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
@@ -3017,7 +3019,9 @@ class EllipsoidalSet(UncertaintySet):
 
     @scale.setter
     def scale(self, val):
-        validate_arg_type("scale", val, native_numeric_types, "a valid numeric type", False)
+        validate_arg_type(
+            "scale", val, native_numeric_types, "a valid numeric type", False
+        )
 
         self._scale = val
         self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
@@ -3035,7 +3039,11 @@ class EllipsoidalSet(UncertaintySet):
     @gaussian_conf_lvl.setter
     def gaussian_conf_lvl(self, val):
         validate_arg_type(
-            "gaussian_conf_lvl", val, native_numeric_types, "a valid numeric type", False
+            "gaussian_conf_lvl",
+            val,
+            native_numeric_types,
+            "a valid numeric type",
+            False,
         )
 
         scale_val = sp.stats.chi2.isf(q=1 - val, df=self.dim)
