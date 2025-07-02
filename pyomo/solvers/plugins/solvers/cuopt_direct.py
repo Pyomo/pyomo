@@ -48,6 +48,9 @@ class CUOPTDirect(DirectSolver):
         kwds['type'] = 'cuoptdirect'
         super(CUOPTDirect, self).__init__(**kwds)
         self._python_api_exists = True
+        # Note: Undefined capabilities default to None
+        self._capabilities.linear = True
+        self._capabilities.integer = True
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
