@@ -52,9 +52,6 @@ from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.common.errors import InfeasibleConstraintException
 
 
-valid_num_types = native_numeric_types
-
-
 def standardize_uncertain_param_vars(obj, dim):
     """
     Standardize an object castable to a list of VarData objects
@@ -270,9 +267,9 @@ def validate_arg_type(
     # check for finiteness, if desired
     if check_numeric_type_finite:
         if isinstance(valid_types, type):
-            numeric_types_required = valid_types in valid_num_types
+            numeric_types_required = valid_types in native_numeric_types
         else:
-            numeric_types_required = set(valid_types).issubset(valid_num_types)
+            numeric_types_required = set(valid_types).issubset(native_numeric_types)
         if numeric_types_required and (math.isinf(arg_val) or math.isnan(arg_val)):
             if is_entry_of_arg:
                 raise ValueError(
@@ -727,7 +724,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -1254,7 +1251,7 @@ class BoxSet(UncertaintySet):
             arr=val,
             arr_name="bounds",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=[None, 2],
         )
@@ -1340,7 +1337,7 @@ class BoxSet(UncertaintySet):
             arr=bounds_arr,
             arr_name="bounds",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=[None, 2],
         )
@@ -1414,7 +1411,7 @@ class CardinalitySet(UncertaintySet):
             arr=val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
 
@@ -1444,7 +1441,7 @@ class CardinalitySet(UncertaintySet):
             arr=val,
             arr_name="positive_deviation",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
 
@@ -1479,7 +1476,7 @@ class CardinalitySet(UncertaintySet):
 
     @gamma.setter
     def gamma(self, val):
-        validate_arg_type("gamma", val, valid_num_types, "a valid numeric type", False)
+        validate_arg_type("gamma", val, native_numeric_types, "a valid numeric type", False)
 
         self._gamma = val
 
@@ -1556,7 +1553,7 @@ class CardinalitySet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -1616,18 +1613,18 @@ class CardinalitySet(UncertaintySet):
             arr=orig_val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
         validate_array(
             arr=pos_dev,
             arr_name="positive_deviation",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
         validate_arg_type(
-            "gamma", gamma, valid_num_types, "a valid numeric type", False
+            "gamma", gamma, native_numeric_types, "a valid numeric type", False
         )
 
         # check deviation is positive
@@ -1713,7 +1710,7 @@ class PolyhedralSet(UncertaintySet):
             arr=val,
             arr_name="coefficients_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1754,7 +1751,7 @@ class PolyhedralSet(UncertaintySet):
             arr=val,
             arr_name="rhs_vec",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1839,7 +1836,7 @@ class PolyhedralSet(UncertaintySet):
             arr=lhs_coeffs_arr,
             arr_name="coefficients_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1847,7 +1844,7 @@ class PolyhedralSet(UncertaintySet):
             arr=rhs_vec_arr,
             arr_name="rhs_vec",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -1977,7 +1974,7 @@ class BudgetSet(UncertaintySet):
             arr=val,
             arr_name="budget_membership_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2020,7 +2017,7 @@ class BudgetSet(UncertaintySet):
             arr=val,
             arr_name="budget_rhs_vec",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2053,7 +2050,7 @@ class BudgetSet(UncertaintySet):
             arr=val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2134,7 +2131,7 @@ class BudgetSet(UncertaintySet):
             arr=lhs_coeffs_arr,
             arr_name="budget_membership_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2142,7 +2139,7 @@ class BudgetSet(UncertaintySet):
             arr=rhs_vec_arr,
             arr_name="budget_rhs_vec",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2150,7 +2147,7 @@ class BudgetSet(UncertaintySet):
             arr=orig_val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2277,7 +2274,7 @@ class FactorModelSet(UncertaintySet):
             arr=val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
 
@@ -2340,7 +2337,7 @@ class FactorModelSet(UncertaintySet):
             arr=val,
             arr_name="psi_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2488,7 +2485,7 @@ class FactorModelSet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -2548,18 +2545,18 @@ class FactorModelSet(UncertaintySet):
             arr=orig_val,
             arr_name="origin",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
         )
         validate_array(
             arr=psi_mat_arr,
             arr_name="psi_mat",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
-        validate_arg_type("beta", beta, valid_num_types, "a valid numeric type", False)
+        validate_arg_type("beta", beta, native_numeric_types, "a valid numeric type", False)
 
         # check psi is full column rank
         psi_mat_rank = np.linalg.matrix_rank(psi_mat_arr)
@@ -2634,7 +2631,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="center",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2665,7 +2662,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="half_lengths",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2770,7 +2767,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             arr=ctr,
             arr_name="center",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2778,7 +2775,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             arr=half_lengths,
             arr_name="half_lengths",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2909,7 +2906,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="center",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -2989,7 +2986,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=val,
             arr_name="shape_matrix",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -3019,7 +3016,7 @@ class EllipsoidalSet(UncertaintySet):
 
     @scale.setter
     def scale(self, val):
-        validate_arg_type("scale", val, valid_num_types, "a valid numeric type", False)
+        validate_arg_type("scale", val, native_numeric_types, "a valid numeric type", False)
 
         self._scale = val
         self._gaussian_conf_lvl = sp.stats.chi2.cdf(x=val, df=self.dim)
@@ -3037,7 +3034,7 @@ class EllipsoidalSet(UncertaintySet):
     @gaussian_conf_lvl.setter
     def gaussian_conf_lvl(self, val):
         validate_arg_type(
-            "gaussian_conf_lvl", val, valid_num_types, "a valid numeric type", False
+            "gaussian_conf_lvl", val, native_numeric_types, "a valid numeric type", False
         )
 
         scale_val = sp.stats.chi2.isf(q=1 - val, df=self.dim)
@@ -3096,7 +3093,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -3161,7 +3158,7 @@ class EllipsoidalSet(UncertaintySet):
             arr=ctr,
             arr_name="center",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -3169,12 +3166,12 @@ class EllipsoidalSet(UncertaintySet):
             arr=shape_mat_arr,
             arr_name="shape_matrix",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
         validate_arg_type(
-            "scale", scale, valid_num_types, "a valid numeric type", False
+            "scale", scale, native_numeric_types, "a valid numeric type", False
         )
 
         # check shape matrix is positive semidefinite
@@ -3243,7 +3240,7 @@ class DiscreteScenarioSet(UncertaintySet):
             arr=val,
             arr_name="scenarios",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
@@ -3345,7 +3342,7 @@ class DiscreteScenarioSet(UncertaintySet):
             arr=point,
             arr_name="point",
             dim=1,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="numeric type",
             required_shape=[self.dim],
             required_shape_qual="to match the set dimension",
@@ -3374,7 +3371,7 @@ class DiscreteScenarioSet(UncertaintySet):
             arr=scenario_arr,
             arr_name="scenarios",
             dim=2,
-            valid_types=valid_num_types,
+            valid_types=native_numeric_types,
             valid_type_desc="a valid numeric type",
             required_shape=None,
         )
