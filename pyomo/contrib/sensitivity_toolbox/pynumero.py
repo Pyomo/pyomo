@@ -20,16 +20,16 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 
 
 def _coo_reorder_cols(mat, remap):
-    """Change the order of columns is a COO matrix. The main use of this is
+    """Change the order of columns in a COO matrix. The main use of this is
     to reorder variables in the Jacobian matrix. This changes the matrix in
-    place. This work in place.
+    place.
 
     Parameters
     ----------
     mat: scipy.sparse.coo_matrix
         Reorder the columns of this matrix
     remap: dict
-        dictionary where keys are old column and value is new column, if a columns
+        dictionary where keys are old column and value is new column, if a column
         doesn't move, it doesn't need to be included.
 
     Returns
@@ -53,9 +53,8 @@ def get_dsdp_dfdp(model, theta):
     Parameters
     ----------
     model: pyomo.environ.Block | pyomo.contrib.pynumero.interfaces.PyomoNLP
-        Model to calculate sensitivity on, if you think you make want to
-        retain the cached objects in the pynumero interface, you can create
-        a PyomoNLP first and pass it to this function.
+        Model to calculate sensitivity on. To retain the cached objects in 
+        the pynumero interface, create a PyomoNLP first and pass it to this function.
     theta: list
         A list of parameters as pyomo.environ.VarData, the number of parameters
         should be equal to the degrees of freedom.
