@@ -1699,11 +1699,7 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.linear, {id(m.x[0]): InvalidNumber(None)})
         self.assertEqual(repn.nonlinear, InvalidNumber(None))
 
-        e = (
-            m.p * m.x[0]
-            + m.p * m.x[1]
-            + m.p * log(m.x[3])
-        )
+        e = m.p * m.x[0] + m.p * m.x[1] + m.p * log(m.x[3])
         f = 1 + m.x[0] + 0 * e
 
         cfg = VisitorConfig()
@@ -1760,7 +1756,7 @@ class TestLinear(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(range(4))
 
-        e = 2 * m.x[1] + m.x[0] + 4* m.x[3] + 3*m.x[2]
+        e = 2 * m.x[1] + m.x[0] + 4 * m.x[3] + 3 * m.x[2]
 
         cfg = VisitorConfig()
         repn = LinearRepnVisitor(**cfg).walk_expression(e)
@@ -1781,11 +1777,6 @@ class TestLinear(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear), 4)
         self.assertEqual(
-            repn.linear,
-            {id(m.x[0]): 1,
-             id(m.x[1]): 2,
-             id(m.x[2]): 3,
-             id(m.x[3]): 4,
-             },
+            repn.linear, {id(m.x[0]): 1, id(m.x[1]): 2, id(m.x[2]): 3, id(m.x[3]): 4}
         )
         self.assertEqual(repn.nonlinear, None)
