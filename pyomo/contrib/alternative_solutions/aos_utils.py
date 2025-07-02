@@ -320,4 +320,3 @@ def _to_dict(x):
         return {k: _to_dict(v) for k, v in x.items()}
     else:
         return x.to_dict()
-

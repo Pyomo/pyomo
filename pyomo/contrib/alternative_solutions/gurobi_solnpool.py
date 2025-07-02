@@ -18,7 +18,7 @@ from pyomo.common.errors import ApplicationError
 
 from pyomo.contrib import appsi
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
-from pyomo.contrib.alternative_solutions import Solution
+from pyomo.contrib.alternative_solutions import PyomoPoolManager
 
 
 def gurobi_generate_solutions(
@@ -29,6 +29,7 @@ def gurobi_generate_solutions(
     abs_opt_gap=None,
     solver_options={},
     tee=False,
+    poolmanager=None,
 ):
     """
     Finds alternative optimal solutions for discrete variables using Gurobi's
@@ -56,12 +57,17 @@ def gurobi_generate_solutions(
         Solver option-value pairs to be passed to the Gurobi solver.
     tee : boolean
         Boolean indicating that the solver output should be displayed.
+    poolmanager : None
+        Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    solutions
-        A list of Solution objects.  [Solution]
+    poolmanager
+        A PyomoPoolManager object
     """
+    if poolmanager is None:
+        poolmanager = PyomoPoolManager()
+        poolmanager.add_pool("gurobi_generate_solutions", policy="keep_all")
     #
     # Setup gurobi
     #
@@ -93,6 +99,7 @@ def gurobi_generate_solutions(
     #
     solution_count = opt.get_model_attr("SolCount")
     variables = aos_utils.get_model_variables(model, include_fixed=True)
+    objective = aos_utils.get_active_objective(model)
     solutions = []
     for i in range(solution_count):
         #
@@ -100,9 +107,8 @@ def gurobi_generate_solutions(
         #
         results.solution_loader.load_vars(solution_number=i)
         #
-        # Pull the solution from the model into a Solution object,
-        # and append to our list of solutions
+        # Pull the solution from the model, and cache it in a solution pool.
         #
-        solutions.append(Solution(model, variables))
+        poolmanager.add(variable=variables, objective=objective)
 
-    return solutions
+    return poolmanager

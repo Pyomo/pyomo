@@ -13,7 +13,7 @@ import pyomo.opt
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
-from pyomo.contrib.alternative_solutions import Solution
+from pyomo.contrib.alternative_solutions import PyomoSolution
 
 mip_solver = "gurobi"
 mip_available = pyomo.opt.check_available_solvers(mip_solver)
@@ -49,44 +49,103 @@ class TestSolutionUnit(unittest.TestCase):
         model = self.get_model()
         opt = pyo.SolverFactory(mip_solver)
         opt.solve(model)
-        all_vars = au.get_model_variables(model, include_fixed=True)
+        all_vars = au.get_model_variables(model, include_fixed=False)
+        obj = au.get_active_objective(model)
 
-        solution = Solution(model, all_vars, include_fixed=False)
+        solution = PyomoSolution(variables=all_vars, objective=obj)
         sol_str = """{
-    "fixed_variables": [
-        "f"
+    "id": null,
+    "objectives": [
+        {
+            "index": 0,
+            "name": "obj",
+            "suffix": {},
+            "value": 6.5
+        }
     ],
-    "objective": "obj",
-    "objective_value": 6.5,
-    "solution": {
-        "x": 1.5,
-        "y": 1,
-        "z": 3
-    }
+    "suffix": {},
+    "variables": [
+        {
+            "discrete": false,
+            "fixed": false,
+            "index": 0,
+            "name": "x",
+            "suffix": {},
+            "value": 1.5
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 1,
+            "name": "y",
+            "suffix": {},
+            "value": 1
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 2,
+            "name": "z",
+            "suffix": {},
+            "value": 3
+        }
+    ]
 }"""
         assert str(solution) == sol_str
 
-        solution = Solution(model, all_vars)
+        all_vars = au.get_model_variables(model, include_fixed=True)
+        solution = PyomoSolution(variables=all_vars, objective=obj)
         sol_str = """{
-    "fixed_variables": [
-        "f"
+    "id": null,
+    "objectives": [
+        {
+            "index": 0,
+            "name": "obj",
+            "suffix": {},
+            "value": 6.5
+        }
     ],
-    "objective": "obj",
-    "objective_value": 6.5,
-    "solution": {
-        "f": 1,
-        "x": 1.5,
-        "y": 1,
-        "z": 3
-    }
+    "suffix": {},
+    "variables": [
+        {
+            "discrete": false,
+            "fixed": false,
+            "index": 0,
+            "name": "x",
+            "suffix": {},
+            "value": 1.5
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 1,
+            "name": "y",
+            "suffix": {},
+            "value": 1
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 2,
+            "name": "z",
+            "suffix": {},
+            "value": 3
+        },
+        {
+            "discrete": false,
+            "fixed": true,
+            "index": 3,
+            "name": "f",
+            "suffix": {},
+            "value": 1
+        }
+    ]
 }"""
         assert solution.to_string(round_discrete=True) == sol_str
 
-        sol_val = solution.get_variable_name_values(
-            include_fixed=True, round_discrete=True
-        )
+        sol_val = solution.name_to_variable
         self.assertEqual(set(sol_val.keys()), {"x", "y", "z", "f"})
-        self.assertEqual(set(solution.get_fixed_variable_names()), {"f"})
+        self.assertEqual(set(solution.fixed_variable_names), {"f"})
 
 
 if __name__ == "__main__":

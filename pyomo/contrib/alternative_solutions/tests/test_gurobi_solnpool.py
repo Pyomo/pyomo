@@ -43,7 +43,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_triangle_ip()
         results = gurobi_generate_solutions(m, num_solutions=100)
-        objectives = [round(result.objective[1], 2) for result in results]
+        objectives = [round(soln.objective().value, 2) for soln in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
@@ -58,7 +58,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         m = tc.get_triangle_ip()
         results = gurobi_generate_solutions(m, num_solutions=8)
         assert len(results) == 8
-        objectives = [round(result.objective[1], 2) for result in results]
+        objectives = [round(soln.objective().value, 2) for soln in results]
         actual_solns_by_obj = [6, 2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
@@ -72,7 +72,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_indexed_pentagonal_pyramid_mip()
         results = gurobi_generate_solutions(m, num_solutions=100)
-        objectives = [round(result.objective[1], 2) for result in results]
+        objectives = [round(soln.objective().value, 2) for soln in results]
         actual_solns_by_obj = m.num_ranked_solns
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
@@ -87,7 +87,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_pentagonal_pyramid_mip()
         results = gurobi_generate_solutions(m, num_solutions=100, rel_opt_gap=0.2)
-        objectives = [round(result.objective[1], 2) for result in results]
+        objectives = [round(soln.objective().value, 2) for soln in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
@@ -104,7 +104,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         results = gurobi_generate_solutions(
             m, num_solutions=100, solver_options={"PoolGap": 0.2}
         )
-        objectives = [round(result.objective[1], 2) for result in results]
+        objectives = [round(soln.objective().value, 2) for soln in results]
         actual_solns_by_obj = m.num_ranked_solns[0:2]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)
@@ -119,7 +119,7 @@ class TestGurobiSolnPoolUnit(unittest.TestCase):
         """
         m = tc.get_pentagonal_pyramid_mip()
         results = gurobi_generate_solutions(m, num_solutions=100, abs_opt_gap=1.99)
-        objectives = [round(result.objective[1], 2) for result in results]
+        objectives = [round(soln.objective().value, 2) for soln in results]
         actual_solns_by_obj = m.num_ranked_solns[0:3]
         unique_solns_by_obj = [val for val in Counter(objectives).values()]
         np.testing.assert_array_almost_equal(unique_solns_by_obj, actual_solns_by_obj)

@@ -3,6 +3,7 @@ import collections
 import dataclasses
 import json
 import munch
+import weakref
 
 from .aos_utils import MyMunch, _to_dict
 from .solution import Solution, PyomoSolution
@@ -24,17 +25,24 @@ def _as_pyomo_solution(*args, **kwargs):
     return PyomoSolution(*args, **kwargs)
 
 
+class PoolCounter:
+
+    solution_counter = 0
+
+
 class SolutionPoolBase:
 
-    _id_counter = 0
-
-    def __init__(self, name=None, as_solution=None):
+    def __init__(self, name, as_solution, counter):
         self.metadata = MyMunch(context_name=name)
         self._solutions = {}
         if as_solution is None:
             self._as_solution = _as_solution
         else:
             self._as_solution = as_solution
+        if counter is None:
+            self.counter = PoolCounter()
+        else:
+            self.counter = counter
 
     @property
     def solutions(self):
@@ -53,19 +61,24 @@ class SolutionPoolBase:
         return len(self._solutions)
 
     def __getitem__(self, soln_id):
+        print(list(self._solutions.keys()))
         return self._solutions[soln_id]
+
+    def next_solution_counter(self):
+        tmp = self.counter.solution_counter
+        self.counter.solution_counter += 1
+        return tmp
 
 
 class SolutionPool_KeepAll(SolutionPoolBase):
 
-    def __init__(self, name=None, as_solution=None):
-        super().__init__(name, as_solution)
+    def __init__(self, name=None, as_solution=None, counter=None):
+        super().__init__(name, as_solution, counter)
 
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
         #
-        soln.id = SolutionPoolBase._id_counter
-        SolutionPoolBase._id_counter += 1
+        soln.id = self.next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -83,16 +96,15 @@ class SolutionPool_KeepAll(SolutionPoolBase):
 
 class SolutionPool_KeepLatest(SolutionPoolBase):
 
-    def __init__(self, name=None, as_solution=None, *, max_pool_size=1):
-        super().__init__(name, as_solution)
+    def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
+        super().__init__(name, as_solution, counter)
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
 
     def add(self, *args, **kwargs):
         soln = self._as_solution(*args, **kwargs)
         #
-        soln.id = SolutionPoolBase._id_counter
-        SolutionPoolBase._id_counter += 1
+        soln.id = self.next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -115,8 +127,8 @@ class SolutionPool_KeepLatest(SolutionPoolBase):
 
 class SolutionPool_KeepLatestUnique(SolutionPoolBase):
 
-    def __init__(self, name=None, as_solution=None, *, max_pool_size=1):
-        super().__init__(name, as_solution)
+    def __init__(self, name=None, as_solution=None, counter=None, *, max_pool_size=1):
+        super().__init__(name, as_solution, counter)
         self.max_pool_size = max_pool_size
         self.int_deque = collections.deque()
         self.unique_solutions = set()
@@ -131,8 +143,7 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
             return None
         self.unique_solutions.add(tuple_repn)
         #
-        soln.id = SolutionPoolBase._id_counter
-        SolutionPoolBase._id_counter += 1
+        soln.id = self.next_solution_counter()
         assert (
             soln.id not in self._solutions
         ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -149,7 +160,9 @@ class SolutionPool_KeepLatestUnique(SolutionPoolBase):
         return dict(
             metadata=_to_dict(self.metadata),
             solutions=_to_dict(self._solutions),
-            pool_config=dict(policy="keep_latest_unique", max_pool_size=self.max_pool_size),
+            pool_config=dict(
+                policy="keep_latest_unique", max_pool_size=self.max_pool_size
+            ),
         )
 
 
@@ -165,6 +178,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         self,
         name=None,
         as_solution=None,
+        counter=None,
         *,
         max_pool_size=None,
         objective=None,
@@ -173,7 +187,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
         keep_min=True,
         best_value=nan,
     ):
-        super().__init__(name)
+        super().__init__(name, as_solution, counter)
         self.max_pool_size = max_pool_size
         self.objective = 0 if objective is None else objective
         self.abs_tolerance = abs_tolerance
@@ -217,8 +231,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                 keep = True
 
         if keep:
-            soln.id = SolutionPoolBase._id_counter
-            SolutionPoolBase._id_counter += 1
+            soln.id = self.next_solution_counter()
             assert (
                 soln.id not in self._solutions
             ), f"Solution id {soln.id} already in solution pool context '{self._context_name}'"
@@ -226,14 +239,14 @@ class SolutionPool_KeepBest(SolutionPoolBase):
             self._solutions[soln.id] = soln
             #
             item = HeapItem(value=-value if self.keep_min else value, id=soln.id)
-            #print(f"ADD {item.id} {item.value}")
+            # print(f"ADD {item.id} {item.value}")
             if self.max_pool_size is None or len(self.heap) < self.max_pool_size:
                 # There is room in the pool, so we just add it
                 heapq.heappush(self.heap, item)
             else:
                 # We add the item to the pool and pop the worst item in the pool
                 item = heapq.heappushpop(self.heap, item)
-                #print(f"DELETE {item.id} {item.value}")
+                # print(f"DELETE {item.id} {item.value}")
                 del self._solutions[item.id]
 
             if new_best_value:
@@ -257,7 +270,7 @@ class SolutionPool_KeepBest(SolutionPoolBase):
                     ):
                         tmp.append(item)
                     else:
-                        #print(f"DELETE? {item.id} {item.value}")
+                        # print(f"DELETE? {item.id} {item.value}")
                         del self._solutions[item.id]
                 heapq.heapify(tmp)
                 self.heap = tmp
@@ -289,9 +302,15 @@ class PoolManager:
         self._name = None
         self._pool = {}
         self.add_pool(self._name)
+        self._solution_counter = 0
 
-    def reset_solution_counter(self):
-        SolutionPoolBase._id_counter = 0
+    @property
+    def solution_counter(self):
+        return self._solution_counter
+
+    @solution_counter.setter
+    def solution_counter(self, value):
+        self._solution_counter = value
 
     @property
     def pool(self):
@@ -329,13 +348,30 @@ class PoolManager:
                 del self._pool[None]
 
             if policy == "keep_all":
-                self._pool[name] = SolutionPool_KeepAll(name=name, as_solution=as_solution)
+                self._pool[name] = SolutionPool_KeepAll(
+                    name=name, as_solution=as_solution, counter=weakref.proxy(self)
+                )
             elif policy == "keep_best":
-                self._pool[name] = SolutionPool_KeepBest(name=name, as_solution=as_solution, **kwds)
+                self._pool[name] = SolutionPool_KeepBest(
+                    name=name,
+                    as_solution=as_solution,
+                    counter=weakref.proxy(self),
+                    **kwds,
+                )
             elif policy == "keep_latest":
-                self._pool[name] = SolutionPool_KeepLatest(name=name, as_solution=as_solution, **kwds)
+                self._pool[name] = SolutionPool_KeepLatest(
+                    name=name,
+                    as_solution=as_solution,
+                    counter=weakref.proxy(self),
+                    **kwds,
+                )
             elif policy == "keep_latest_unique":
-                self._pool[name] = SolutionPool_KeepLatestUnique(name=name, as_solution=as_solution, **kwds)
+                self._pool[name] = SolutionPool_KeepLatestUnique(
+                    name=name,
+                    as_solution=as_solution,
+                    counter=weakref.proxy(self),
+                    **kwds,
+                )
             else:
                 raise ValueError(f"Unknown pool policy: {policy}")
         self._name = name
@@ -373,5 +409,6 @@ class PyomoPoolManager(PoolManager):
     def add_pool(self, name, *, policy="keep_best", as_solution=None, **kwds):
         if as_solution is None:
             as_solution = _as_pyomo_solution
-        return PoolManager.add_pool(self, name, policy=policy, as_solution=as_solution, **kwds)
-
+        return PoolManager.add_pool(
+            self, name, policy=policy, as_solution=as_solution, **kwds
+        )

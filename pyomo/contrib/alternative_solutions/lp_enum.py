@@ -14,11 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
-from pyomo.contrib.alternative_solutions import (
-    aos_utils,
-    shifted_lp,
-    solution,
-)
+from pyomo.contrib.alternative_solutions import aos_utils, shifted_lp, PyomoPoolManager
 from pyomo.contrib import appsi
 
 
@@ -34,6 +30,7 @@ def enumerate_linear_solutions(
     solver_options={},
     tee=False,
     seed=None,
+    poolmanager=None,
 ):
     """
     Finds alternative optimal solutions a (mixed-integer) linear program.
@@ -76,12 +73,13 @@ def enumerate_linear_solutions(
         Boolean indicating that the solver output should be displayed.
     seed : int
         Optional integer seed for the numpy random number generator
+    poolmanager : None
+        Optional pool manager that will be used to collect solution
 
     Returns
     -------
-    solutions
-        A list of Solution objects.
-        [Solution]
+    poolmanager
+        A PyomoPoolManager object
     """
     logger.info("STARTING LP ENUMERATION ANALYSIS")
 
@@ -96,6 +94,10 @@ def enumerate_linear_solutions(
     # in one implies diversity in the other. Diversity in the cb.basic_slack
     # variables doesn't really matter since we only really care about diversity
     # in the original problem and not in the slack space (I think)
+
+    if poolmanager is None:
+        poolmanager = PyomoPoolManager()
+        poolmanager.add_pool("enumerate_binary_solutions", policy="keep_all")
 
     all_variables = aos_utils.get_model_variables(model)
     # else:
@@ -234,9 +236,8 @@ def enumerate_linear_solutions(
 
             for var, index in cb.var_map.items():
                 var.set_value(var.lb + cb.var_lower[index].value)
-            sol = solution.Solution(model, all_variables, objective=orig_objective)
-            solutions.append(sol)
-            orig_objective_value = sol.objective[1]
+            poolmanager.add(variables=all_variables, objective=orig_objective)
+            orig_objective_value = pyo.value(orig_objective)
 
             if logger.isEnabledFor(logging.INFO):
                 logger.info("Solved, objective = {}".format(orig_objective_value))
@@ -326,4 +327,4 @@ def enumerate_linear_solutions(
 
     logger.info("COMPLETED LP ENUMERATION ANALYSIS")
 
-    return solutions
+    return poolmanager

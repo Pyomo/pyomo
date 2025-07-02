@@ -26,8 +26,11 @@ class Variable:
     discrete: bool = False
     suffix: MyMunch = dataclasses.field(default_factory=MyMunch)
 
-    def to_dict(self):
-        return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
+    def to_dict(self, round_discrete=False):
+        ans = dataclasses.asdict(self, dict_factory=_custom_dict_factory)
+        if round_discrete and ans["discrete"]:
+            ans["value"] = round(ans["value"])
+        return ans
 
 
 @dataclasses.dataclass
@@ -48,29 +51,32 @@ class Solution:
         self.id = None
 
         self._variables = []
-        self.int_to_variable = {}
-        self.str_to_variable = {}
+        self.index_to_variable = {}
+        self.name_to_variable = {}
+        self.fixed_variable_names = set()
         if variables is not None:
             self._variables = variables
             index = 0
             for v in variables:
-                self.int_to_variable[index] = v
+                self.index_to_variable[index] = v
                 if v.name is not None:
-                    self.str_to_variable[v.name] = v
+                    if v.fixed:
+                        self.fixed_variable_names.add(v.name)
+                    self.name_to_variable[v.name] = v
                 index += 1
 
         self._objectives = []
-        self.int_to_objective = {}
-        self.str_to_objective = {}
+        self.index_to_objective = {}
+        self.name_to_objective = {}
         if objective is not None:
             objectives = [objective]
         if objectives is not None:
             self._objectives = objectives
             index = 0
             for o in objectives:
-                self.int_to_objective[index] = o
+                self.index_to_objective[index] = o
                 if o.name is not None:
-                    self.str_to_objective[o.name] = o
+                    self.name_to_objective[o.name] = o
                 index += 1
 
         if "suffix" in kwds:
@@ -80,41 +86,55 @@ class Solution:
 
     def variable(self, index):
         if type(index) is int:
-            return self.int_to_variable[index]
+            return self.index_to_variable[index]
         else:
-            return self.str_to_variable[index]
+            return self.name_to_variable[index]
 
     def variables(self):
         return self._variables
 
     def tuple_repn(self):
-        if len(self.int_to_variable) == len(self._variables):
+        if len(self.index_to_variable) == len(self._variables):
             return tuple(
-                tuple([k, var.value]) for k, var in self.int_to_variable.items()
+                tuple([k, var.value]) for k, var in self.index_to_variable.items()
             )
-        elif len(self.str_to_variable) == len(self._variables):
+        elif len(self.name_to_variable) == len(self._variables):
             return tuple(
-                tuple([k, var.value]) for k, var in self.str_to_variable.items()
+                tuple([k, var.value]) for k, var in self.name_to_variable.items()
             )
         else:
             return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
 
     def objective(self, index=0):
         if type(index) is int:
-            return self.int_to_objective[index]
+            return self.index_to_objective[index]
         else:
-            return self.str_to_objective[index]
+            return self.name_to_objective[index]
 
     def objectives(self):
         return self._objectives
 
-    def to_dict(self):
+    def to_dict(self, round_discrete=True):
         return dict(
             id=self.id,
-            variables=[v.to_dict() for v in self.variables()],
+            variables=[
+                v.to_dict(round_discrete=round_discrete) for v in self.variables()
+            ],
             objectives=[o.to_dict() for o in self.objectives()],
             suffix=self.suffix.to_dict(),
         )
+
+    def to_string(self, round_discrete=True, sort_keys=True, indent=4):
+        return json.dumps(
+            self.to_dict(round_discrete=round_discrete),
+            sort_keys=sort_keys,
+            indent=indent,
+        )
+
+    def __str__(self):
+        return self.to_string()
+
+    __repn__ = __str__
 
 
 def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
@@ -128,7 +148,15 @@ def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
     if variables is not None:
         index = 0
         for var in variables:
-            vlist.append(Variable(value=pyo.value(var), fixed=var.is_fixed(), name=str(var), index=index, discrete=not var.is_continuous()))
+            vlist.append(
+                Variable(
+                    value=pyo.value(var),
+                    fixed=var.is_fixed(),
+                    name=str(var),
+                    index=index,
+                    discrete=not var.is_continuous(),
+                )
+            )
             index += 1
 
     #
@@ -144,4 +172,3 @@ def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):
             index += 1
 
     return Solution(variables=vlist, objectives=olist, **kwds)
-

@@ -12,6 +12,7 @@
 from pyomo.common.dependencies import numpy_available
 from pyomo.common import unittest
 
+import pyomo.common.errors
 import pyomo.contrib.alternative_solutions.tests.test_cases as tc
 from pyomo.contrib.alternative_solutions import lp_enum
 from pyomo.contrib.alternative_solutions import lp_enum_solnpool
@@ -20,7 +21,7 @@ from pyomo.opt import check_available_solvers
 import pyomo.environ as pyo
 
 # lp_enum_solnpool uses both 'gurobi' and 'appsi_gurobi'
-gurobi_available = len(check_available_solvers('gurobi', 'appsi_gurobi')) == 2
+gurobi_available = len(check_available_solvers("gurobi", "appsi_gurobi")) == 2
 
 #
 # TODO: Setup detailed tests here
