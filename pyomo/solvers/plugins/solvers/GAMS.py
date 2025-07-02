@@ -18,6 +18,7 @@ from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
+from pyomo.common.dependencies import pathlib
 from pyomo.common.collections import Bunch
 from pyomo.common.tee import TeeStream
 
@@ -39,8 +40,27 @@ from pyomo.opt.results import (
 )
 
 from pyomo.common.dependencies import attempt_import
+import struct
 
-gdxcc, gdxcc_available = attempt_import('gdxcc')
+
+def _gams_importer():
+    try:
+        import gams.core.gdx as gdx
+
+        return gdx
+    except ImportError:
+        try:
+            # fall back to the pre-GAMS-45.0 API
+            import gdxcc
+
+            return gdxcc
+        except:
+            # suppress the error from the old API and reraise the current API import error
+            pass
+        raise
+
+
+gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -300,7 +320,7 @@ class GAMSDirect(_GAMSSolver):
                 filename=output_file,
                 format=ProblemFormat.gams,
                 _called_by_solver=True,
-                **io_options
+                **io_options,
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
@@ -727,17 +747,31 @@ class GAMSShell(_GAMSSolver):
             )
             return _extract_version(results.stdout)
 
-    @staticmethod
-    def _parse_special_values(value):
-        if value == 1.0e300 or value == 2.0e300:
-            return float('nan')
-        if value == 3.0e300:
-            return float('inf')
-        if value == 4.0e300:
-            return -float('inf')
-        if value == 5.0e300:
-            return sys.float_info.epsilon
-        return value
+    def _rewrite_path_win8p3(self, path):
+        """
+        Return the 8.3 short path on Windows; unchanged elsewhere.
+
+        This change is in response to Pyomo/pyomo#3579 which reported
+        that GAMS (direct) fails on Windows if there is a space in
+        the path. This utility converts paths to their 8.3 short-path version
+        (which never have spaces).
+        """
+        if not sys.platform.startswith("win"):
+            return str(path)
+
+        import ctypes, ctypes.wintypes as wt
+
+        GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+        GetShortPathNameW.argtypes = [wt.LPCWSTR, wt.LPWSTR, wt.DWORD]
+
+        # the file must exist, or Windows will not create a short name
+        pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(path).touch(exist_ok=True)
+
+        buf = ctypes.create_unicode_buffer(260)
+        if GetShortPathNameW(str(path), buf, 260):
+            return buf.value
+        return str(path)
 
     def solve(self, *args, **kwds):
         """
@@ -845,7 +879,7 @@ class GAMSShell(_GAMSSolver):
                 filename=output_filename,
                 format=ProblemFormat.gams,
                 _called_by_solver=True,
-                **io_options
+                **io_options,
             )
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
@@ -881,7 +915,7 @@ class GAMSShell(_GAMSSolver):
         elif tee and logfile:
             command.append("lo=4")
         if logfile:
-            command.append("lf=" + str(logfile))
+            command.append(f"lf={self._rewrite_path_win8p3(logfile)}")
 
         try:
             ostreams = [StringIO()]
@@ -1251,6 +1285,18 @@ class GAMSShell(_GAMSSolver):
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
+            specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
+            rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
+
+            specVals[gdxcc.GMS_SVIDX_EPS] = sys.float_info.min
+            specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
+            specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
+            specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
+            gdxcc.gdxSetSpecialValues(pgdx, specVals)
+
             i = 0
             while True:
                 i += 1
@@ -1272,7 +1318,7 @@ class GAMSShell(_GAMSSolver):
                     raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
 
                 if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
-                    stat_vars[stat] = self._parse_special_values(ret[2][0])
+                    stat_vars[stat] = ret[2][0]
                 else:
                     stat_vars[stat] = int(ret[2][0])
 
@@ -1284,6 +1330,18 @@ class GAMSShell(_GAMSSolver):
             if not ret[0]:
                 raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
 
+            specVals = gdxcc.doubleArray(gdxcc.GMS_SVIDX_MAX)
+            rc = gdxcc.gdxGetSpecialValues(pgdx, specVals)
+
+            specVals[gdxcc.GMS_SVIDX_EPS] = sys.float_info.min
+            specVals[gdxcc.GMS_SVIDX_UNDEF] = float("nan")
+            specVals[gdxcc.GMS_SVIDX_PINF] = float("inf")
+            specVals[gdxcc.GMS_SVIDX_MINF] = float("-inf")
+            specVals[gdxcc.GMS_SVIDX_NA] = struct.unpack(
+                ">d", bytes.fromhex("fffffffffffffffe")
+            )[0]
+            gdxcc.gdxSetSpecialValues(pgdx, specVals)
+
             i = 0
             while True:
                 i += 1
@@ -1294,8 +1352,8 @@ class GAMSShell(_GAMSSolver):
                 ret = gdxcc.gdxDataReadRaw(pgdx)
                 if not ret[0] or len(ret[2]) < 2:
                     raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
-                level = self._parse_special_values(ret[2][0])
-                dual = self._parse_special_values(ret[2][1])
+                level = ret[2][0]
+                dual = ret[2][1]
 
                 ret = gdxcc.gdxSymbolInfo(pgdx, i)
                 if not ret[0]:
@@ -1308,6 +1366,7 @@ class GAMSShell(_GAMSSolver):
             gdxcc.gdxClose(pgdx)
 
         gdxcc.gdxFree(pgdx)
+        gdxcc.gdxLibraryUnload()
         return model_soln, stat_vars
 
     def _parse_dat_results(self, results_filename, statresults_filename):

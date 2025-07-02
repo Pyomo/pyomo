@@ -643,7 +643,7 @@ class Model(ScalarBlock):
         namespaces=None,
         profile_memory=0,
         report_timing=False,
-        **kwds
+        **kwds,
     ):
         """
         Create a concrete instance of an abstract model, possibly using data
