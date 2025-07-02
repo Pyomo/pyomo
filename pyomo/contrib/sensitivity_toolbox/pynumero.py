@@ -53,7 +53,7 @@ def get_dsdp_dfdp(model, theta):
     Parameters
     ----------
     model: pyomo.environ.Block | pyomo.contrib.pynumero.interfaces.PyomoNLP
-        Model to calculate sensitivity on. To retain the cached objects in 
+        Model to calculate sensitivity on. To retain the cached objects in
         the pynumero interface, create a PyomoNLP first and pass it to this function.
     theta: list
         A list of parameters as pyomo.environ.VarData, the number of parameters
