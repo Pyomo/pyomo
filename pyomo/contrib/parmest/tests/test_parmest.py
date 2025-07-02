@@ -33,6 +33,9 @@ ipopt_available = SolverFactory("ipopt").available()
 pynumero_ASL_available = AmplInterface.available()
 testdir = this_file_dir()
 
+# Set the global seed for random number generation in tests
+_RANDOM_SEED_FOR_TESTING = 524
+
 
 @unittest.skipIf(
     not parmest.parmest_available,
@@ -44,6 +47,8 @@ class TestRooneyBiegler(unittest.TestCase):
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
             RooneyBieglerExperiment,
         )
+
+        np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
 
         # Note, the data used in this test has been corrected to use
         # data.loc[5,'hour'] = 7 (instead of 6)
@@ -75,6 +80,39 @@ class TestRooneyBiegler(unittest.TestCase):
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
 
+    def test_parmest_exception(self):
+        """
+        Test the exception raised by parmest when the "experiment_outputs"
+        attribute is not defined in the model
+        """
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+            RooneyBieglerExperiment,
+        )
+
+        # create an instance of the RooneyBieglerExperiment class
+        # without the "experiment_outputs" attribute
+        class RooneyBieglerExperimentException(RooneyBieglerExperiment):
+            def label_model(self):
+                m = self.model
+
+                # add the unknown parameters
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+                )
+
+        # create an experiment list
+        exp_list = []
+        for i in range(self.data.shape[0]):
+            exp_list.append(RooneyBieglerExperimentException(self.data.loc[i, :]))
+
+        # check the exception raised by parmest due to not defining
+        # the "experiment_outputs"
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(exp_list, obj_function="SSE", tee=True)
+
+        self.assertIn("experiment_outputs", str(context.exception))
+
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
 
@@ -93,7 +131,9 @@ class TestRooneyBiegler(unittest.TestCase):
         objval, thetavals = self.pest.theta_est()
 
         num_bootstraps = 10
-        theta_est = self.pest.theta_est_bootstrap(num_bootstraps, return_samples=True)
+        theta_est = self.pest.theta_est_bootstrap(
+            num_bootstraps, return_samples=True, seed=_RANDOM_SEED_FOR_TESTING
+        )
 
         num_samples = theta_est["samples"].apply(len)
         self.assertEqual(len(theta_est.index), 10)
@@ -109,9 +149,15 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertEqual(CR[0.75].sum(), 7)
         self.assertEqual(CR[1.0].sum(), 10)  # all true
 
-        graphics.pairwise_plot(theta_est)
-        graphics.pairwise_plot(theta_est, thetavals)
-        graphics.pairwise_plot(theta_est, thetavals, 0.8, ["MVN", "KDE", "Rect"])
+        graphics.pairwise_plot(theta_est, seed=_RANDOM_SEED_FOR_TESTING)
+        graphics.pairwise_plot(theta_est, thetavals, seed=_RANDOM_SEED_FOR_TESTING)
+        graphics.pairwise_plot(
+            theta_est,
+            thetavals,
+            0.8,
+            ["MVN", "KDE", "Rect"],
+            seed=_RANDOM_SEED_FOR_TESTING,
+        )
 
     @unittest.skipIf(
         not graphics.imports_available, "parmest.graphics imports are unavailable"
@@ -140,7 +186,7 @@ class TestRooneyBiegler(unittest.TestCase):
         self.assertTrue(lNo_theta.shape == (6, 2))
 
         results = self.pest.leaveNout_bootstrap_test(
-            1, None, 3, "Rect", [0.5, 1.0], seed=5436
+            1, None, 3, "Rect", [0.5, 1.0], seed=_RANDOM_SEED_FOR_TESTING
         )
         self.assertEqual(len(results), 6)  # 6 lNo samples
         i = 1
@@ -335,6 +381,7 @@ class TestModelVariants(unittest.TestCase):
             RooneyBieglerExperiment,
         )
 
+        np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
         self.data = pd.DataFrame(
             data=[[1, 8.3], [2, 10.3], [3, 19.0], [4, 16.0], [5, 15.6], [7, 19.8]],
             columns=["hour", "y"],
@@ -710,6 +757,8 @@ class TestReactorDesign_DAE(unittest.TestCase):
             cb_meas = data["cb"]
             cc_meas = data["cc"]
 
+            np.random.seed(_RANDOM_SEED_FOR_TESTING)  # Set seed for reproducibility
+
             if isinstance(data, pd.DataFrame):
                 meas_t = data.index  # time index
             else:  # dictionary
@@ -800,6 +849,22 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
                 m = self.model
 
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
@@ -868,6 +933,51 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
         self.m_dict = ABC_model(data_dict)
+
+        # create an instance of the ReactorDesignExperimentDAE class
+        # without the "unknown_parameters" attribute
+        class ReactorDesignExperimentException(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+        # create an experiment list without the "unknown_parameters" attribute
+        exp_list_df_no_params = [ReactorDesignExperimentException(data_df)]
+        exp_list_dict_no_params = [ReactorDesignExperimentException(data_dict)]
+
+        self.exp_list_df_no_params = exp_list_df_no_params
+        self.exp_list_dict_no_params = exp_list_dict_no_params
+
+    def test_parmest_exception(self):
+        """
+        Test the exception raised by parmest when the "unknown_parameters"
+        attribute is not defined in the model
+        """
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list_df_no_params, obj_function="SSE")
+
+        self.assertIn("unknown_parameters", str(context.exception))
+
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list_dict_no_params, obj_function="SSE")
+
+        self.assertIn("unknown_parameters", str(context.exception))
 
     def test_dataformats(self):
         obj1, theta1 = self.pest_df.theta_est()
@@ -1140,7 +1250,7 @@ class TestRooneyBieglerDeprecated(unittest.TestCase):
         self.assertTrue(lNo_theta.shape == (6, 2))
 
         results = self.pest.leaveNout_bootstrap_test(
-            1, None, 3, "Rect", [0.5, 1.0], seed=5436
+            1, None, 3, "Rect", [0.5, 1.0], seed=_RANDOM_SEED_FOR_TESTING
         )
         self.assertTrue(len(results) == 6)  # 6 lNo samples
         i = 1
