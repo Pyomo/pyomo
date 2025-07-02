@@ -202,7 +202,7 @@ def get_sep_objective_values(separation_data, ss_ineq_cons):
                 f"{var.name}={var.value}" for var in identify_variables(obj.expr)
             )
             config.progress_logger.error(
-                "PyROS encountered exception evaluating "
+                "PyROS encountered an exception evaluating "
                 "expression of second-stage inequality constraint with name "
                 f"{ss_ineq_con.name!r} (separation objective {obj.name!r}) "
                 f"at variable values:\n  {vars_in_expr_str}\n"
