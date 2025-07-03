@@ -445,6 +445,7 @@ class TestReactorExampleSolving(unittest.TestCase):
         )
 
 
+@unittest.skipIf(not ipopt_available, "The 'ipopt' solver is not available")
 @unittest.skipIf(not numpy_available, "Numpy is not available")
 class TestDoe(unittest.TestCase):
     def test_doe_full_factorial(self):
