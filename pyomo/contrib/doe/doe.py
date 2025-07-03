@@ -1463,7 +1463,7 @@ class DesignOfExperiments:
         fim_factorial_results: dict
             A dictionary of the results with the following keys and their corresponding
             values as a list:
-            
+
             - keys of model's experiment_inputs
             - "log10 D-opt": list of log10(D-optimality)
             - "log10 A-opt": list of log10(A-optimality)
