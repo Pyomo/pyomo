@@ -18,6 +18,7 @@ import pyomo.environ as pyo
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.contrib.appsi.solvers.highs import Highs
+from pyomo.contrib.appsi.base import TerminationCondition
 
 from pyomo.contrib.solver.tests.solvers import instances
 
