@@ -37,7 +37,7 @@ currdir = this_file_dir()
 deleteFiles = True
 
 
-class MockArg(object):
+class MockArg:
     def __init__(self):
         pass
 

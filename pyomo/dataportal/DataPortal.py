@@ -16,7 +16,7 @@ from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 logger = logging.getLogger('pyomo.core')
 
 
-class DataPortal(object):
+class DataPortal:
     """
     An object that manages loading and storing data from external
     data sources.  This object interfaces to plugins that manipulate

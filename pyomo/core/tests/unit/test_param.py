@@ -74,7 +74,7 @@ from io import StringIO
 NoValue = Param.NoValue
 
 
-class ParamTester(object):
+class ParamTester:
     def setUp(self, **kwds):
         #
         # Sparse single-index Param, no default

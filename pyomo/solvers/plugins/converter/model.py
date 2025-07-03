@@ -20,7 +20,7 @@ from pyomo.core.kernel.block import IBlock
 
 
 @ProblemConverterFactory.register('pyomo')
-class PyomoMIPConverter(object):
+class PyomoMIPConverter:
     pico_converter = PicoMIPConverter()
 
     def can_convert(self, from_type, to_type):

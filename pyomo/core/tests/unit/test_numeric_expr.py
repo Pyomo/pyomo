@@ -118,7 +118,7 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
 
 
-class decompose_linear_term_wrapper(object):
+class decompose_linear_term_wrapper:
     def __init__(self, pairs):
         self.pairs = pairs
 

@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 
-class SymbolMap(object):
+class SymbolMap:
     """
     A class for tracking assigned labels for modeling components.
 

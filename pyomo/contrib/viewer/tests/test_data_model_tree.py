@@ -51,7 +51,7 @@ if available:
     import pyomo.contrib.viewer.ui as ui
 else:
 
-    class UIData(object):
+    class UIData:
         model = None
 
         def __init__(*args, **kwargs):

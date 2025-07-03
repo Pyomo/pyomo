@@ -17,11 +17,11 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import TransformationTimer
 
 
-class TransformationInfo(object):
+class TransformationInfo:
     pass
 
 
-class TransformationData(object):
+class TransformationData:
     """
     This is a container class that supports named data objects.
     """
@@ -35,7 +35,7 @@ class TransformationData(object):
         return self._data[name]
 
 
-class Transformation(object):
+class Transformation:
     """
     Base class for all model transformations.
     """
@@ -109,7 +109,7 @@ class Transformation(object):
         return instance
 
 
-class ReverseTransformationToken(object):
+class ReverseTransformationToken:
     """
     Class returned by reversible transformations' apply_to methods that
     can be passed back to the transformation in order to revert its changes

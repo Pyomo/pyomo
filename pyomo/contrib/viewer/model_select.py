@@ -39,11 +39,11 @@ _log = logging.getLogger(__name__)
 
 # This lets the file be imported when the Qt UI is not available (or
 # when building docs), but you won't be able to use it
-class _ModelSelectUI(object):
+class _ModelSelectUI:
     pass
 
 
-class _ModelSelect(object):
+class _ModelSelect:
     pass
 
 

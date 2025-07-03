@@ -394,7 +394,7 @@ class ExpressionBase(PyomoObject):
         )
 
 
-class NPV_Mixin(object):
+class NPV_Mixin:
     __slots__ = ()
 
     def is_potentially_variable(self):
@@ -426,7 +426,7 @@ class NPV_Mixin(object):
         return cls[0]
 
 
-class ExpressionArgs_Mixin(object):
+class ExpressionArgs_Mixin:
     __slots__ = ('_args_',)
 
     def __init__(self, args):

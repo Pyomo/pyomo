@@ -375,7 +375,7 @@ class TestXpressPersistent(unittest.TestCase):
         )
 
     def test_available(self):
-        class mock_xpress(object):
+        class mock_xpress:
             def __init__(self, importable, initable):
                 self._initable = initable
                 xpd.xpress_available = importable

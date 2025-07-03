@@ -15,7 +15,7 @@ from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
 
-class GroupDownloader(object):
+class GroupDownloader:
     def __init__(self):
         self.downloader = FileDownloader()
 

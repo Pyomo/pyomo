@@ -17,7 +17,7 @@
 #  ___________________________________________________________________________
 
 
-class Factory(object):
+class Factory:
     """
     A class that is used to define a factory for objects.
 
