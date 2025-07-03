@@ -19,6 +19,25 @@ from pyomo.scripting.driver_help import help_solvers, help_transformations
 from pyomo.scripting.pyomo_main import main
 
 
+def _mock_kestrel(solvers, err=None):
+    """
+    Context-manager that replaces pyomo.neos.kestrel.kestrelAMPL with a
+    stub whose ``solvers()`` method returns `solvers` and whose
+    ``connect_error`` attribute is `err`.
+    """
+    import pyomo.neos.kestrel as _k
+
+    class _MockedNEOS:
+        def __init__(self, *a, **kw):
+            self._solvers = solvers
+            self.connect_error = err
+
+        def solvers(self):
+            return self._solvers
+
+    return unittest.mock.patch.object(_k, "kestrelAMPL", _MockedNEOS)
+
+
 class Test(unittest.TestCase):
     def test_pyomo_main_deprecation(self):
         with LoggingIntercept() as LOG:
@@ -66,6 +85,39 @@ class Test(unittest.TestCase):
                     re.search(r"\n    %s " % solver, OUT),
                     "'    %s' not found in help --solvers" % solver,
                 )
+
+    def test_help_solvers_neos_available(self):
+        with _mock_kestrel(['ipoptAMPL', 'knitroAMPL']), capture_output() as OUT:
+            help_solvers()
+        txt = OUT.getvalue()
+        self.assertIn("NEOS Solver Interfaces", txt)
+        self.assertIn("ipopt", txt.lower())
+        self.assertIn("knitro", txt.lower())
+        self.assertIn("solver interfaces are available", txt)
+
+    def test_help_solvers_neos_unavailable(self):
+        """NEOS failure should show a message as to why"""
+        import socket, xmlrpc.client
+
+        cases = [
+            (NotImplementedError("no ssl"), "SSL support"),
+            (socket.timeout(), "timed out"),
+            (socket.gaierror(-2, "not known"), "resolved"),
+            (
+                xmlrpc.client.ProtocolError(
+                    "https://neos-server.org", 503, "Service Unavailable", {}
+                ),
+                "HTTP 503",
+            ),
+        ]
+
+        for err, output in cases:
+            with self.subTest(err=err), _mock_kestrel([], err), capture_output() as OUT:
+                help_solvers()
+            txt = OUT.getvalue()
+            self.assertIn("NEOS Solver Interfaces", txt)
+            self.assertIn("currently unavailable", txt)
+            self.assertIn(output, txt)
 
     def test_help_transformations(self):
         with capture_output() as OUT:

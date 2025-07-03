@@ -322,7 +322,7 @@ def help_solvers():
         import pyomo.neos.kestrel
 
         kestrel = pyomo.neos.kestrel.kestrelAMPL()
-        # print "HERE", solver_list
+
         solver_list = list(
             set(
                 [
@@ -332,14 +332,17 @@ def help_solvers():
                 ]
             )
         )
-        # print "HERE", solver_list
+
+        print("")
+        print("NEOS Solver Interfaces")
+        print("----------------------")
         if len(solver_list) > 0:
-            print("")
-            print("NEOS Solver Interfaces")
-            print("----------------------")
             print(
                 wrapper.fill(
-                    "The neos solver manager supports solver interfaces that can be executed remotely on the NEOS optimization server.  The following solver interfaces are available with your current system configuration:"
+                    "The neos solver manager supports solver interfaces that can "
+                    "be executed remotely on the NEOS optimization server.  The "
+                    "following solver interfaces are available with your current "
+                    "system configuration:"
                 )
             )
             print("")
@@ -355,12 +358,30 @@ def help_solvers():
                 )
             print("")
         else:
-            print("")
-            print("NEOS Solver Interfaces")
-            print("----------------------")
+
+            def _specific_neos_error(err):
+                import socket, xmlrpc.client
+
+                if isinstance(err, NotImplementedError):
+                    return (
+                        "your Python was compiled without SSL support; "
+                        "HTTPS connections (required by NEOS) cannot be made."
+                    )
+                if isinstance(err, socket.timeout):
+                    return "connection to neos-server.org timed out."
+                if isinstance(err, socket.gaierror):
+                    return "neos-server.org could not be resolved (DNS failure)."
+                if isinstance(err, xmlrpc.client.ProtocolError):
+                    return f"server responded with HTTP {err.errcode}."
+                return str(err)
+
+            reason = _specific_neos_error(getattr(kestrel, "connect_error", None))
+
             print(
                 wrapper.fill(
-                    "The neos solver manager supports solver interfaces that can be executed remotely on the NEOS optimization server.  This server is not available with your current system configuration."
+                    "The neos solver manager executes solvers on the remote "
+                    "NEOS optimization server, but that server is currently "
+                    f"unavailable on this system.  Reason: {reason}"
                 )
             )
             print("")
