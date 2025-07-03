@@ -20,7 +20,29 @@ import json
 
 # Example for sensitivity analysis on the reactor experiment
 # After sensitivity analysis is done, we perform optimal DoE
-def run_reactor_doe():
+def run_reactor_doe(
+    n_points_for_design=9,
+    compute_FIM_full_factorial=True,
+    plot_factorial_results=True,
+    save_plots=True,
+    run_optimal_doe=True,
+):
+    """
+    This function demonstrates how to perform sensitivity analysis on the reactor
+
+    Parameters
+    ----------
+    n_points_for_design : int, optional
+        number of points to use for the design ranges, by default 9
+    compute_FIM_full_factorial : bool, optional
+        whether to compute the full factorial design, by default True
+    plot_factorial_results : bool, optional
+        whether to plot the results of the full factorial design, by default True
+    save_plots : bool, optional
+        whether to save draw_factorial_figure plots, by default True
+    run_optimal_doe : bool, optional
+        whether to run the optimal DoE, by default True
+    """
     # Read in file
     DATA_DIR = pathlib.Path(__file__).parent
     file_path = DATA_DIR / "result.json"
@@ -66,63 +88,76 @@ def run_reactor_doe():
         _Cholesky_option=True,
         _only_compute_fim_lower=True,
     )
+    if compute_FIM_full_factorial:
+        # Make design ranges to compute the full factorial design
+        design_ranges = {
+            "CA[0]": [1, 5, n_points_for_design],
+            "T[0]": [300, 700, n_points_for_design],
+        }
 
-    # Make design ranges to compute the full factorial design
-    design_ranges = {"CA[0]": [1, 5, 9], "T[0]": [300, 700, 9]}
+        # Compute the full factorial design with the sequential FIM calculation
+        doe_obj.compute_FIM_full_factorial(
+            design_ranges=design_ranges, method="sequential"
+        )
+    if plot_factorial_results:
+        if save_plots:
+            figure_file_name = "example_reactor_compute_FIM"
+        else:
+            figure_file_name = None
 
-    # Compute the full factorial design with the sequential FIM calculation
-    doe_obj.compute_FIM_full_factorial(design_ranges=design_ranges, method="sequential")
-
-    # Plot the results
-    doe_obj.draw_factorial_figure(
-        sensitivity_design_variables=["CA[0]", "T[0]"],
-        fixed_design_variables={
-            "T[0.125]": 300,
-            "T[0.25]": 300,
-            "T[0.375]": 300,
-            "T[0.5]": 300,
-            "T[0.625]": 300,
-            "T[0.75]": 300,
-            "T[0.875]": 300,
-            "T[1]": 300,
-        },
-        title_text="Reactor Example",
-        xlabel_text="Concentration of A (M)",
-        ylabel_text="Initial Temperature (K)",
-        figure_file_name="example_reactor_compute_FIM",
-        log_scale=False,
-    )
+        # Plot the results
+        doe_obj.draw_factorial_figure(
+            sensitivity_design_variables=["CA[0]", "T[0]"],
+            fixed_design_variables={
+                "T[0.125]": 300,
+                "T[0.25]": 300,
+                "T[0.375]": 300,
+                "T[0.5]": 300,
+                "T[0.625]": 300,
+                "T[0.75]": 300,
+                "T[0.875]": 300,
+                "T[1]": 300,
+            },
+            title_text="Reactor Example",
+            xlabel_text="Concentration of A (M)",
+            ylabel_text="Initial Temperature (K)",
+            figure_file_name=figure_file_name,
+            log_scale=False,
+        )
 
     ###########################
     # End sensitivity analysis
 
     # Begin optimal DoE
     ####################
-    doe_obj.run_doe()
+    if run_optimal_doe:
+        doe_obj.run_doe()
 
-    # Print out a results summary
-    print("Optimal experiment values: ")
-    print(
-        "\tInitial concentration: {:.2f}".format(
-            doe_obj.results["Experiment Design"][0]
+        # Print out a results summary
+        print("Optimal experiment values: ")
+        print(
+            "\tInitial concentration: {:.2f}".format(
+                doe_obj.results["Experiment Design"][0]
+            )
         )
-    )
-    print(
-        ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
-            *doe_obj.results["Experiment Design"][1:]
+        print(
+            ("\tTemperature values: [" + "{:.2f}, " * 8 + "{:.2f}]").format(
+                *doe_obj.results["Experiment Design"][1:]
+            )
         )
-    )
-    print("FIM at optimal design:\n {}".format(np.array(doe_obj.results["FIM"])))
-    print(
-        "Objective value at optimal design: {:.2f}".format(
-            pyo.value(doe_obj.model.objective)
+        print("FIM at optimal design:\n {}".format(np.array(doe_obj.results["FIM"])))
+        print(
+            "Objective value at optimal design: {:.2f}".format(
+                pyo.value(doe_obj.model.objective)
+            )
         )
-    )
 
-    print(doe_obj.results["Experiment Design Names"])
+        print(doe_obj.results["Experiment Design Names"])
 
-    ###################
-    # End optimal DoE
+        ###################
+        # End optimal DoE
+
+    return doe_obj
 
 
 if __name__ == "__main__":

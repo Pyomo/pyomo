@@ -45,21 +45,16 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
+from pyomo.contrib.doe.utils import (
+    check_FIM,
+    compute_FIM_metrics,
+    _SMALL_TOLERANCE_DEFINITENESS,
+    snake_traversal_grid_sampling,
+    update_model_from_suffix,
+)
+
 
 from pyomo.opt import SolverStatus
-
-# This small and positive tolerance is used when checking
-# if the prior is negative definite or approximately
-# indefinite. It is defined as a tolerance here to ensure
-# consistency between the code below and the tests. The
-# user should not need to adjust it.
-_SMALL_TOLERANCE_DEFINITENESS = 1e-6
-
-# This small and positive tolerance is used to check
-# the FIM is approximately symmetric. It is defined as
-# a tolerance here to ensure consistency between the code
-# below and the tests. The user should not need to adjust it.
-_SMALL_TOLERANCE_SYMMETRY = 1e-6
 
 
 class ObjectiveLib(Enum):
@@ -73,6 +68,11 @@ class FiniteDifferenceStep(Enum):
     forward = "forward"
     central = "central"
     backward = "backward"
+
+
+class SensitivityInitialization(Enum):
+    snake_traversal = "snake_traversal"
+    nested_for_loop = "nested_for_loop"
 
 
 class DesignOfExperiments:
@@ -1383,24 +1383,8 @@ class DesignOfExperiments:
                 )
             )
 
-        # Compute the eigenvalues of the FIM
-        evals = np.linalg.eigvals(FIM)
-
-        # Check if the FIM is positive definite
-        if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
-            raise ValueError(
-                "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
-                    _SMALL_TOLERANCE_DEFINITENESS
-                )
-            )
-
-        # Check if the FIM is symmetric
-        if not np.allclose(FIM, FIM.T, atol=_SMALL_TOLERANCE_SYMMETRY):
-            raise ValueError(
-                "FIM provided is not symmetric using absolute tolerance {}".format(
-                    _SMALL_TOLERANCE_SYMMETRY
-                )
-            )
+        # Check FIM is positive definite and symmetric
+        check_FIM(FIM)
 
         self.logger.info(
             "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
@@ -1455,7 +1439,7 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
@@ -1474,12 +1458,36 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        model: model to perform the full factorial exploration on
-        design_ranges: dict of lists, of the form {<var_name>: [start, stop, numsteps]}
-        method: string to specify which method should be used
-                options are ``kaug`` and ``sequential``
+        model: DoE model, optional
+            model to perform the full factorial exploration on
+        design_ranges: dict
+            dictionary of lists, of the form {<var_name>: [start, stop, numsteps]}
+        method: str, optional
+            to specify which method should be used.
+            Options are ``kaug`` and ``sequential``
 
+        Returns
+        -------
+        fim_factorial_results: dict
+            a dictionary of the results with the following keys and their corresponding
+            values as a list.
+            - keys of model's experiment_inputs
+            - "log10 D-opt": list of log10(D-optimality)
+            - "log10 A-opt": list of log10(A-optimality)
+            - "log10 E-opt": list of log10(E-optimality)
+            - "log10 ME-opt": list of log10(ME-optimality)
+            - "eigval_min": list of minimum eigenvalues
+            - "eigval_max": list of maximum eigenvalues
+            - "det_FIM": list of determinants
+            - "trace_FIM": list of traces
+            - "solve_time": list of solve times
+
+        Raises
+        ------
+        ValueError
+            If the design_ranges' keys do not match the model's experiment_inputs' keys.
         """
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -1514,8 +1522,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1523,6 +1531,10 @@ class DesignOfExperiments:
                 "log10 A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1584,24 +1596,9 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
-                self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
-                )
-
-            # If the real value is less than or equal to zero, set the E_opt value to nan
-            if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
-            else:
-                E_opt = np.log10(E_vals.real[E_ind])
-
-            ME_opt = np.log10(np.linalg.cond(FIM))
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                compute_FIM_metrics(FIM)
+            )
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -1611,11 +1608,342 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["eigval_min"].append(E_vals.min())
+            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results
 
         return self.fim_factorial_results
+
+    def compute_FIM_factorial(
+        self,
+        model=None,
+        design_vals: list = None,
+        abs_change: list = None,
+        rel_change: list = None,
+        n_designs: int = 5,
+        method="sequential",
+        df_settings=(True, None, None, 500),
+        initialization_scheme="snake_traversal",
+        file_name: str = None,
+    ):
+        """Will run a simulation-based factorial exploration of the experimental input
+        space (i.e., a ``grid search`` or ``parameter sweep``) to understand how the
+        FIM metrics change as a function of the experimental design space. This method
+        can be used for both full factorial and fractional factorial designs.
+
+        Parameters
+        ----------
+        model : DoE model, optional
+            The model to perform the full factorial exploration on. Default: None
+        design_vals : list, optional
+            A list of design values to use for the full factorial exploration. If
+            provided, will use this value to generate the design values and ignore
+            `abs_change`, `rel_change`, and `n_designs`. Default: None
+            Default: None
+        abs_change : list, optional
+            Absolute change in the design variable values. Default: None.
+            If provided, will use this value to generate the design values.
+            If `abs_change` is provided, but `rel_change` is not provided, `rel_change`
+            will be set to zero.
+            Formula to calculate the design values:
+                change_in_value = lower_bound * rel_change + abs_change`
+                design_value += design_value + change_in_value
+        rel_change : list, optional
+            Relative change in the design variable values. Default: None.
+            If provided, will use this value to generate the design values.
+            If `rel_change` is provided, but `abs_change` is not provided, `abs_change`
+            will be set to zero.
+        n_designs : int, optional
+            Number of designs to generate for each design variable. Default: 5.
+            If `abs_change` and/or `rel_change` are provided, this value will be ignored.
+        method : str, optional
+            string to specify which method should be used. options are ``kaug`` and
+            ``sequential`. Default: "sequential"
+        df_settings : tuple, optional
+            A tuple containing the settings for set_option() method of the pandas
+            DataFrame. Default: (True, None, None, 500)
+            - first element: whether to return a pandas DataFrame (True/False)
+            - second element: number of max_columns for the DataFrame. Default: None,
+                i.e., no limit on the number of columns.
+            - third element: number of max_rows for the DataFrame. Default: None,
+                i.e., no limit on the number of rows.
+            - fourth element: display width for the DataFrame. Default: 500.
+        initialization_scheme : str, optional
+            Which scheme to use for initializing the design variables.
+            Options are ``"snake_traversal"`` and ``"nested_for_loop"``.
+            Default: "snake_traversal"
+        file_name : str, optional
+            if provided, will save the results to a json file. Default: None
+
+        Returns
+        -------
+        factorial_results: dict
+            A dictionary containing the results of the factorial design with the
+            following keys:
+            - keys of model's experiment_inputs
+            - "log10(D-opt)": list of D-optimality values
+            - "log10(A-opt)": list of A-optimality values
+            - "log10(E-opt)": list of E-optimality values
+            - "log10(ME-opt)": list of ME-optimality values
+            - "eigval_min": list of minimum eigenvalues
+            - "eigval_max": list of maximum eigenvalues
+            - "det_FIM": list of determinants of the FIM
+            - "trace_FIM": list of traces of the FIM
+            - "solve_time": list of solve times
+            - "total_points": total number of points in the factorial design
+            - "success_count": number of successful runs
+            - "failure_count": number of failed runs
+            - "FIM_all": list of all FIMs computed for each point in the factorial
+        """
+
+        # Start timer
+        sp_timer = TicTocTimer()
+        sp_timer.tic(msg=None)
+        self.logger.info("Beginning Factorial Design.")
+
+        # Make new model for factorial design
+        self.factorial_model = self.experiment.get_labeled_model(
+            **self.get_labeled_model_args
+        ).clone()
+        model = self.factorial_model
+
+        design_keys = [k for k in model.experiment_inputs.keys()]
+
+        # check if design_values, abs_change and rel_change are provided and have the
+        # same length as design_keys
+        # Design values are of higher priority than abs_change and rel_change.
+        if design_vals is not None:
+            if len(design_vals) != len(design_keys):
+                raise ValueError(
+                    "`design_values` must have the same length of "
+                    f"`{len(design_keys)}` as `design_keys`."
+                )
+            design_values = design_vals
+
+        else:
+            if abs_change:
+                if len(abs_change) != len(design_keys):
+                    raise ValueError(
+                        "`abs_change` must have the same length of "
+                        f"`{len(design_keys)}` as `design_keys`."
+                    )
+
+            if rel_change:
+                if len(rel_change) != len(design_keys):
+                    raise ValueError(
+                        "`rel_change` must have the same length of "
+                        f"`{len(design_keys)}` as `design_keys`."
+                    )
+
+            # if either abs_change or rel_change is not provided, set it to list of
+            # zeros
+            if abs_change or rel_change:
+                if not abs_change:
+                    abs_change = [0] * len(design_keys)
+                elif not rel_change:
+                    rel_change = [0] * len(design_keys)
+
+            design_values = []
+            # loop over design keys and generate design values
+            for i, comp in enumerate(design_keys):
+                lb = comp.lb
+                ub = comp.ub
+                # Check if the component has finite lower and upper bounds
+                if lb is None or ub is None:
+                    raise ValueError(
+                        f"{comp.name} does not have a lower or upper bound."
+                    )
+
+                if abs_change is None and rel_change is None:
+                    des_val = np.linspace(lb, ub, n_designs)
+
+                # if abs_change and/or rel_change is provided, generate design values
+                # using the formula:
+                # change_in_value = lower_bound * rel_change + abs_change
+                elif abs_change or rel_change:
+                    des_val = []
+                    del_val = comp.lb * rel_change[i] + abs_change[i]
+                    if del_val == 0:
+                        raise ValueError(
+                            f"Design variable {comp.name} has no change in value - "
+                            "check abs_change and rel_change values."
+                        )
+                    val = lb
+                    while val <= ub:
+                        des_val.append(val)
+                        val += del_val
+
+                else:
+                    raise ValueError(
+                        "Unexpected error in generating design values. Please check the"
+                        " input parameters."
+                    )
+
+                design_values.append(des_val)
+
+        # generate the factorial points based on the initialization scheme
+        try:
+            scheme_enum = SensitivityInitialization(initialization_scheme)
+        except ValueError:
+            self.logger.warning(
+                f"Initialization scheme '{initialization_scheme}' is not recognized. "
+                "Using `snake_traversal` as the default initialization scheme."
+            )
+            scheme_enum = SensitivityInitialization.snake_traversal
+
+        if scheme_enum == SensitivityInitialization.snake_traversal:
+            factorial_points = snake_traversal_grid_sampling(*design_values)
+        elif scheme_enum == SensitivityInitialization.nested_for_loop:
+            factorial_points = product(*design_values)
+
+        # TODO: Add more initialization schemes
+
+        factorial_points_list = list(factorial_points)
+
+        factorial_results = {k.name: [] for k in model.experiment_inputs.keys()}
+        factorial_results.update(
+            {
+                "log10(D-opt)": [],
+                "log10(A-opt)": [],
+                "log10(E-opt)": [],
+                "log10(ME-opt)": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
+                "solve_time": [],
+            }
+        )
+
+        success_count = 0
+        failure_count = 0
+        total_points = len(factorial_points_list)
+
+        # save the FIM for each point in the factorial design
+        self.n_parameters = len(model.unknown_parameters)
+        FIM_all = np.zeros((total_points, self.n_parameters, self.n_parameters))
+
+        time_set = []
+        curr_point = 1  # Initial current point
+        for design_point in factorial_points_list:
+            # kept (commented out) the following code to check later whether it will
+            # be considerably faster for complex models.
+            # In a simple model, this code took 15.9s to compute 125 points in JN.
+            # For the same condition, `update_model_from_suffix` took 16.5s in JN
+            # Fix design variables at fixed experimental design point
+            # for i in range(len(design_point)):
+            #     design_keys[i].fix(design_point[i])
+
+            update_model_from_suffix(model, "experiment_inputs", design_point)
+
+            # Timing and logging objects
+            self.logger.info(f"=======Iteration Number: {curr_point} =======")
+            iter_timer = TicTocTimer()
+            iter_timer.tic(msg=None)
+
+            try:
+                curr_point = success_count + failure_count + 1
+                self.logger.info(f"This is run {curr_point} out of {total_points}.")
+                self.compute_FIM(model=model, method=method)
+                success_count += 1
+                # iteration time
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+                # More logging
+                self.logger.info(
+                    f"The code has run for {round(sum(time_set), 2)} seconds."
+                )
+                self.logger.info(
+                    "Estimated remaining time:  %s seconds",
+                    round(
+                        sum(time_set) / (curr_point) * (total_points - curr_point + 1),
+                        2,
+                    ),
+                )
+            except:
+                self.logger.warning(
+                    ":::::::::::Warning: Cannot converge this run.::::::::::::"
+                )
+                failure_count += 1
+                self.logger.warning("failed count:", failure_count)
+
+                self._computed_FIM = np.zeros(self.prior_FIM.shape)
+
+                iter_t = iter_timer.toc(msg=None)
+                time_set.append(iter_t)
+
+            FIM = self._computed_FIM
+
+            # Save FIM for the current design point
+            FIM_all[curr_point - 1, :, :] = FIM
+
+            # Compute and record metrics on FIM
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                compute_FIM_metrics(FIM)
+            )
+
+            for k in model.experiment_inputs.keys():
+                factorial_results[k.name].append(pyo.value(k))
+
+            factorial_results["log10(D-opt)"].append(D_opt)
+            factorial_results["log10(A-opt)"].append(A_opt)
+            factorial_results["log10(E-opt)"].append(E_opt)
+            factorial_results["log10(ME-opt)"].append(ME_opt)
+            factorial_results["eigval_min"].append(np.min(E_vals))
+            factorial_results["eigval_max"].append(np.max(E_vals))
+            factorial_results["det_FIM"].append(det_FIM)
+            factorial_results["trace_FIM"].append(trace_FIM)
+            factorial_results["solve_time"].append(time_set[-1])
+
+        factorial_results.update(
+            {
+                "total_points": total_points,
+                "success_count": success_count,
+                "failure_count": failure_count,
+                "FIM_all": FIM_all.tolist(),  # Save all FIMs
+            }
+        )
+        self.factorial_results = factorial_results
+
+        # Set pandas DataFrame options
+        if df_settings[0]:
+            with pd.option_context(
+                "display.max_columns",
+                df_settings[1],
+                "display.max_rows",
+                df_settings[2],
+                "display.width",
+                df_settings[3],
+            ):
+                exclude_keys = {
+                    "total_points",
+                    "success_count",
+                    "failure_count",
+                    "FIM_all",
+                }
+                dict_for_df = {
+                    k: v for k, v in factorial_results.items() if k not in exclude_keys
+                }
+                res_df = pd.DataFrame(dict_for_df)
+                print("\n\n=========Factorial results===========")
+                print("Total points:", total_points)
+                print("Success count:", success_count)
+                print("Failure count:", failure_count)
+                print("\n")
+                print(res_df)
+
+        # Save the results to a json file based on the file_name provided
+        if file_name is not None:
+            with open(file_name + ".json", "w") as f:
+                json.dump(self.factorial_results, f, indent=4)
+                self.logger.info(f"Results saved to {file_name}.json.")
+
+        return self.factorial_results
 
     # TODO: Overhaul plotting functions to not use strings
     # TODO: Make the plotting functionalities work for >2 design features
