@@ -16,7 +16,7 @@ from pyomo.common.numeric_types import native_numeric_types
 from pyomo.core import Var
 
 from pyomo.opt import WriterFactory
-from pyomo.repn.parameterized_linear import ParameterizedLinearRepnVisitor
+from pyomo.repn.parameterized import ParameterizedLinearRepnVisitor
 from pyomo.repn.plugins.standard_form import (
     LinearStandardFormInfo,
     LinearStandardFormCompiler,
@@ -299,4 +299,4 @@ class _ParameterizedLinearStandardFormCompiler_impl(_LinearStandardFormCompiler_
     def _to_vector(self, data, N, vector_type):
         # override this to not attempt conversion to float since that will fail
         # on the Pyomo expressions
-        return np.array([v for v in data])
+        return np.array(list(data))

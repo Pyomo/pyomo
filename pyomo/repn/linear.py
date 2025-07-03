@@ -9,10 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
 import sys
 from operator import itemgetter
-from itertools import filterfalse
 
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.numeric_types import (
@@ -57,26 +55,33 @@ from pyomo.repn.util import (
     initialize_exit_node_dispatcher,
     nan,
     sum_like_expression_types,
+    val2str,
 )
 
-logger = logging.getLogger(__name__)
-
 _CONSTANT = ExprType.CONSTANT
+_FIXED = ExprType.FIXED
+_VARIABLE = ExprType.VARIABLE
 _LINEAR = ExprType.LINEAR
 _GENERAL = ExprType.GENERAL
 
 
-def _inv2str(val):
-    return f"{val._str() if hasattr(val, '_str') else val}"
-
-
-def _merge_dict(dest_dict, mult, src_dict):
-    if mult == 1:
+def _merge_dict(dest_dict, src_dict, mult, flag):
+    if not src_dict:
+        return
+    if flag == 1:
         for vid, coef in src_dict.items():
             if vid in dest_dict:
                 dest_dict[vid] += coef
             else:
                 dest_dict[vid] = coef
+    elif not flag:
+        # mult is 0.  There is nothing to do, unless the src_dict has an InvalidNumber
+        for vid, coef in src_dict.items():
+            if coef.__class__ is InvalidNumber:
+                if vid in dest_dict:
+                    dest_dict[vid] += mult * coef
+                else:
+                    dest_dict[vid] = mult * coef
     else:
         for vid, coef in src_dict.items():
             if vid in dest_dict:
@@ -95,13 +100,28 @@ class LinearRepn(object):
         self.nonlinear = None
 
     def __str__(self):
+        linear = (
+            "{"
+            + ", ".join(f"{val2str(k)}: {val2str(v)}" for k, v in self.linear.items())
+            + "}"
+        )
         return (
-            f"LinearRepn(mult={self.multiplier}, const={self.constant}, "
-            f"linear={self.linear}, nonlinear={self.nonlinear})"
+            f"{self.__class__.__name__}(mult={val2str(self.multiplier)}, "
+            f"const={val2str(self.constant)}, "
+            f"linear={linear}, "
+            f"nonlinear={self.nonlinear})"
         )
 
     def __repr__(self):
         return str(self)
+
+    @staticmethod
+    def constant_flag(val):
+        return val
+
+    @staticmethod
+    def multiplier_flag(val):
+        return val
 
     def walker_exitNode(self):
         if self.nonlinear is not None:
@@ -122,24 +142,24 @@ class LinearRepn(object):
     def to_expression(self, visitor):
         if self.nonlinear is not None:
             # We want to start with the nonlinear term (and use
-            # assignment) in case the term is a non-numeric node (like a
-            # relational expression)
+            # assignment to ans instead of addition) in case the term is
+            # a non-numeric node (like a relational expression)
             ans = self.nonlinear
         else:
             ans = 0
-        if self.linear:
-            var_map = visitor.var_map
-            with mutable_expression() as e:
+        with mutable_expression() as e:
+            if self.linear:
+                var_map = visitor.var_map
                 for vid, coef in self.linear.items():
-                    if coef:
+                    if self.multiplier_flag(coef):
                         e += coef * var_map[vid]
-            if e.nargs() > 1:
-                ans += e
-            elif e.nargs() == 1:
-                ans += e.arg(0)
-        if self.constant:
-            ans += self.constant
-        if self.multiplier != 1:
+            if self.constant_flag(self.constant):
+                e += self.constant
+        if e.nargs() > 1:
+            ans += e
+        elif e.nargs() == 1:
+            ans += e.arg(0)
+        if self.multiplier_flag(self.multiplier) != 1:
             ans *= self.multiplier
         return ans
 
@@ -161,32 +181,60 @@ class LinearRepn(object):
         # change). Omitting the assertion for efficiency.
         # assert self.multiplier == 1
         _type, other = other
-        if _type is _CONSTANT:
+        if _type <= _FIXED:
             self.constant += other
             return
 
-        mult = other.multiplier
-        if not mult:
-            # 0 * other, so there is nothing to add/change about
-            # self.  We can just exit now.
+        other_mult_flag = self.multiplier_flag(other.multiplier)
+        if other_mult_flag == 1:
+            self.constant += other.constant
+            if other.linear:
+                for vid, coef in other.linear.items():
+                    if vid in self.linear:
+                        self.linear[vid] += coef
+                    else:
+                        self.linear[vid] = coef
+            if other.nonlinear is not None:
+                if self.nonlinear is None:
+                    self.nonlinear = other.nonlinear
+                else:
+                    self.nonlinear += other.nonlinear
             return
-        if other.constant:
-            self.constant += mult * other.constant
-        if other.linear:
-            _merge_dict(self.linear, mult, other.linear)
+        mult = other.multiplier
+        if not other_mult_flag:
+            # 0 * other, so you would think that there is nothing to
+            # add/change about self.  However, there is a chance
+            # that other contains an InvalidNumber, so we should go
+            # looking for it...
+            if other.constant.__class__ is InvalidNumber:
+                self.constant += mult * other.constant
+            for vid, coef in other.linear.items():
+                if coef.__class__ is InvalidNumber:
+                    if vid in self.linear:
+                        self.linear[vid] += mult * coef
+                    else:
+                        self.linear[vid] = mult * coef
+        else:
+            #
+            # mult != 0 or 1
+            #
+            if self.constant_flag(other.constant):
+                self.constant += mult * other.constant
+            if other.linear:
+                for vid, coef in other.linear.items():
+                    if vid in self.linear:
+                        self.linear[vid] += mult * coef
+                    else:
+                        self.linear[vid] = mult * coef
         if other.nonlinear is not None:
-            if mult != 1:
-                nl = mult * other.nonlinear
-            else:
-                nl = other.nonlinear
             if self.nonlinear is None:
-                self.nonlinear = nl
+                self.nonlinear = mult * other.nonlinear
             else:
-                self.nonlinear += nl
+                self.nonlinear += mult * other.nonlinear
 
 
 def to_expression(visitor, arg):
-    if arg[0] is _CONSTANT:
+    if arg[0] <= _VARIABLE:
         return arg[1]
     else:
         return arg[1].to_expression(visitor)
@@ -201,6 +249,10 @@ def _handle_negation_constant(visitor, node, arg):
     return (_CONSTANT, -1 * arg[1])
 
 
+def _handle_negation_fixed(visitor, node, arg):
+    return (_FIXED, -1 * arg[1])
+
+
 def _handle_negation_ANY(visitor, node, arg):
     arg[1].multiplier *= -1
     return arg
@@ -213,10 +265,11 @@ def _handle_negation_ANY(visitor, node, arg):
 
 def _handle_product_constant_constant(visitor, node, arg1, arg2):
     ans = arg1[1] * arg2[1]
-    if ans != ans:
-        if not arg1[1] or not arg2[1]:
-            a = _inv2str(arg1[1])
-            b = _inv2str(arg2[1])
+    if ans.__class__ is InvalidNumber:
+        constant_flag = visitor.Result.constant_flag
+        if not constant_flag(arg1[1]) or not constant_flag(arg2[1]):
+            a = val2str(arg1[1])
+            b = val2str(arg2[1])
             deprecation_warning(
                 f"Encountered {a}*{b} in expression tree.  "
                 "Mapping the NaN result to 0 for compatibility "
@@ -226,6 +279,11 @@ def _handle_product_constant_constant(visitor, node, arg1, arg2):
             )
             return _CONSTANT, 0
     return _CONSTANT, ans
+
+
+def _handle_product_fixed_fixed(visitor, node, arg1, arg2):
+    # This is valid for fixed * constant, and fixed * fixed
+    return _FIXED, arg1[1] * arg2[1]
 
 
 def _handle_product_constant_ANY(visitor, node, arg1, arg2):
@@ -239,40 +297,48 @@ def _handle_product_ANY_constant(visitor, node, arg1, arg2):
 
 
 def _handle_product_nonlinear(visitor, node, arg1, arg2):
+    # Note: the expectation is that this method is not called often: the
+    # Linear visitor is generally expected to be called on linear
+    # expressions.  As such, we will not overly concern ourselves with
+    # performance here.
     ans = visitor.Result()
     if not visitor.expand_nonlinear_products:
         ans.nonlinear = to_expression(visitor, arg1) * to_expression(visitor, arg2)
         return _GENERAL, ans
-
-    # We are multiplying (A + Bx + C(x)) * (A + Bx + C(x))
+    #
+    # We are multiplying (and expanding) m(A + Bx + C(x)) * m(A + Bx + C(x))
     _, x1 = arg1
     _, x2 = arg2
+    # [mm]
     ans.multiplier = x1.multiplier * x2.multiplier
+    # reset the multipliers so that to_expression doesn't re-apply them below
     x1.multiplier = x2.multiplier = 1
     # x1.const * x2.const [AA]
-    ans.constant = x1.constant * x2.constant
+    x1_const_flag = ans.constant_flag(x1.constant)
+    x2_const_flag = ans.constant_flag(x2.constant)
+    if x1_const_flag and x2_const_flag:
+        ans.constant = x1.constant * x2.constant
     # x1.linear * x2.const [BA] + x1.const * x2.linear [AB]
-    if x2.constant:
-        c = x2.constant
-        if c == 1:
-            ans.linear = dict(x1.linear)
-        else:
-            ans.linear = {vid: c * coef for vid, coef in x1.linear.items()}
-    if x1.constant:
-        _merge_dict(ans.linear, x1.constant, x2.linear)
-    ans.nonlinear = 0
-    if x1.constant and x2.nonlinear is not None:
+    _merge_dict(ans.linear, x1.linear, x2.constant, x2_const_flag)
+    _merge_dict(ans.linear, x2.linear, x1.constant, x1_const_flag)
+    NL = 0
+    if x2.nonlinear is not None and (
+        x1_const_flag or x2.nonlinear.__class__ is InvalidNumber
+    ):
         # [AC]
-        ans.nonlinear += x1.constant * x2.nonlinear
-    if x1.nonlinear is not None:
-        # [CA] + [CB] + [CC]
-        ans.nonlinear += x1.nonlinear * to_expression(visitor, arg2)
-    if x1.linear:
-        # [BB] + [BC]
-        x1.constant = 0
-        x1.nonlinear = None
-        x2.constant = 0
-        ans.nonlinear += to_expression(visitor, arg1) * to_expression(visitor, arg2)
+        NL += x1.constant * x2.nonlinear
+    if x1.nonlinear is not None and (
+        x2_const_flag or x2.nonlinear.__class__ is InvalidNumber
+    ):
+        # [CA]
+        NL += x2.constant * x1.nonlinear
+    # [BB] + [BC] + [CB] + [CC]
+    x1.constant = 0
+    x2.constant = 0
+    NL += to_expression(visitor, arg1) * to_expression(visitor, arg2)
+    if NL.__class__ in sum_like_expression_types and NL.nargs() == 1:
+        NL = NL.arg(0)
+    ans.nonlinear = NL
     return _GENERAL, ans
 
 
@@ -285,8 +351,29 @@ def _handle_division_constant_constant(visitor, node, arg1, arg2):
     return _CONSTANT, apply_node_operation(node, (arg1[1], arg2[1]))
 
 
+def _handle_division_fixed_fixed(visitor, node, arg1, arg2):
+    return _FIXED, arg1[1] / arg2[1]
+
+
 def _handle_division_ANY_constant(visitor, node, arg1, arg2):
-    arg1[1].multiplier = apply_node_operation(node, (arg1[1].multiplier, arg2[1]))
+    repn = arg1[1]
+    # We can only apply the division operation (and reduce the
+    # multiplier to a native value) if both the multiplier is a native
+    # value AND the divisor is a constant.  We know the latter is true
+    # here, but must check the former.  There is also a special case if
+    # the divisor is 0: then we can reduce the multiplier to an
+    # InvalidNumber (using apply_node_operation) regardless of what the
+    # dividend is.  Again, note that arg2 is a constant, so we can check
+    # it for 0 with bool()
+    if repn.multiplier.__class__ in native_numeric_types or not arg2[1]:
+        repn.multiplier = apply_node_operation(node, (repn.multiplier, arg2[1]))
+    else:
+        repn.multiplier /= arg2[1]
+    return arg1
+
+
+def _handle_division_ANY_fixed(visitor, node, arg1, arg2):
+    arg1[1].multiplier /= arg2[1]
     return arg1
 
 
@@ -308,6 +395,10 @@ def _handle_pow_constant_constant(visitor, node, arg1, arg2):
     return _CONSTANT, ans
 
 
+def _handle_pow_fixed_fixed(visitor, node, arg1, arg2):
+    return _FIXED, arg1[1] ** arg2[1]
+
+
 def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
     _, exp = arg2
     if exp == 1:
@@ -320,10 +411,9 @@ def _handle_pow_ANY_constant(visitor, node, arg1, arg2):
                 visitor, None, ans, (_type, _arg.duplicate())
             )
         return ans
-    elif exp == 0:
+    elif not exp:
         return _CONSTANT, 1
-    else:
-        return _handle_pow_nonlinear(visitor, node, arg1, arg2)
+    return _handle_pow_nonlinear(visitor, node, arg1, arg2)
 
 
 def _handle_pow_nonlinear(visitor, node, arg1, arg2):
@@ -343,6 +433,10 @@ def _handle_unary_constant(visitor, node, arg):
     if ans.__class__ in native_complex_types:
         ans = complex_number_error(ans, visitor, node)
     return _CONSTANT, ans
+
+
+def _handle_unary_fixed(visitor, node, arg):
+    return _FIXED, node.create_node_with_local_data((arg[1],))
 
 
 def _handle_unary_nonlinear(visitor, node, arg):
@@ -378,7 +472,7 @@ def _handle_expr_if_const(visitor, node, arg1, arg2, arg3):
     _type, _test = arg1
     assert _type is _CONSTANT
     if _test:
-        if _test != _test or _test.__class__ is InvalidNumber:
+        if _test.__class__ is InvalidNumber:
             # nan
             return _handle_expr_if_nonlinear(visitor, node, arg1, arg2, arg3)
         return arg2
@@ -481,36 +575,54 @@ def define_exit_node_handlers(_exit_node_handlers=None):
     _exit_node_handlers[NegationExpression] = {
         None: _handle_negation_ANY,
         (_CONSTANT,): _handle_negation_constant,
+        (_FIXED,): _handle_negation_fixed,
     }
     _exit_node_handlers[ProductExpression] = {
         None: _handle_product_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_product_constant_constant,
+        (_CONSTANT, _FIXED): _handle_product_fixed_fixed,
         (_CONSTANT, _LINEAR): _handle_product_constant_ANY,
         (_CONSTANT, _GENERAL): _handle_product_constant_ANY,
+        (_FIXED, _CONSTANT): _handle_product_fixed_fixed,
+        (_FIXED, _FIXED): _handle_product_fixed_fixed,
+        (_FIXED, _LINEAR): _handle_product_constant_ANY,
+        (_FIXED, _GENERAL): _handle_product_constant_ANY,
         (_LINEAR, _CONSTANT): _handle_product_ANY_constant,
+        (_LINEAR, _FIXED): _handle_product_ANY_constant,
         (_GENERAL, _CONSTANT): _handle_product_ANY_constant,
+        (_GENERAL, _FIXED): _handle_product_ANY_constant,
     }
     _exit_node_handlers[MonomialTermExpression] = _exit_node_handlers[ProductExpression]
     _exit_node_handlers[DivisionExpression] = {
         None: _handle_division_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_division_constant_constant,
+        (_CONSTANT, _FIXED): _handle_division_fixed_fixed,
+        (_FIXED, _CONSTANT): _handle_division_fixed_fixed,
+        (_FIXED, _FIXED): _handle_division_fixed_fixed,
         (_LINEAR, _CONSTANT): _handle_division_ANY_constant,
+        (_LINEAR, _FIXED): _handle_division_ANY_fixed,
         (_GENERAL, _CONSTANT): _handle_division_ANY_constant,
+        (_GENERAL, _FIXED): _handle_division_ANY_fixed,
     }
     _exit_node_handlers[PowExpression] = {
         None: _handle_pow_nonlinear,
         (_CONSTANT, _CONSTANT): _handle_pow_constant_constant,
+        (_CONSTANT, _FIXED): _handle_pow_fixed_fixed,
+        (_FIXED, _CONSTANT): _handle_pow_fixed_fixed,
+        (_FIXED, _FIXED): _handle_pow_fixed_fixed,
         (_LINEAR, _CONSTANT): _handle_pow_ANY_constant,
         (_GENERAL, _CONSTANT): _handle_pow_ANY_constant,
     }
     _exit_node_handlers[UnaryFunctionExpression] = {
         None: _handle_unary_nonlinear,
         (_CONSTANT,): _handle_unary_constant,
+        (_FIXED,): _handle_unary_fixed,
     }
     _exit_node_handlers[AbsExpression] = _exit_node_handlers[UnaryFunctionExpression]
     _exit_node_handlers[Expression] = {
         None: _handle_named_ANY,
         (_CONSTANT,): _handle_named_constant,
+        (_FIXED,): _handle_named_constant,
     }
     _exit_node_handlers[Expr_ifExpression] = {None: _handle_expr_if_nonlinear}
     for j in (_CONSTANT, _LINEAR, _GENERAL):
@@ -580,13 +692,14 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                 )
             visitor.var_recorder.add(arg2)
 
-        # Trap multiplication by 0 and nan.
+        # Trap multiplication by 0 and nan.  Note that arg1 was reduced
+        # to a numeric value at the beginning of this method.
         if not arg1:
             if arg2.fixed:
                 arg2 = visitor.check_constant(arg2.value, arg2)
-                if arg2 != arg2:
+                if arg2.__class__ is InvalidNumber:
                     deprecation_warning(
-                        f"Encountered {arg1}*{_inv2str(arg2)} in expression "
+                        f"Encountered {arg1}*{val2str(arg2)} in expression "
                         "tree.  Mapping the NaN result to 0 for compatibility "
                         "with the lp_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -613,13 +726,15 @@ class LinearBeforeChildDispatcher(BeforeChildDispatcher):
                     except (ValueError, ArithmeticError):
                         return True, None
 
-                # Trap multiplication by 0 and nan.
+                # Trap multiplication by 0 and nan.  Note that arg1 was
+                # reduced to a numeric value at the beginning of this
+                # method.
                 if not arg1:
                     if arg2.fixed:
                         arg2 = visitor.check_constant(arg2.value, arg2)
-                        if arg2 != arg2:
+                        if arg2.__class__ is InvalidNumber:
                             deprecation_warning(
-                                f"Encountered {arg1}*{_inv2str(arg2)} in expression "
+                                f"Encountered {arg1}*{val2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the lp_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",
@@ -745,6 +860,16 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
                 # attempt to convert the value to a float before
                 # proceeding.
                 #
+                # Note that as of NumPy 1.25, blindly casting a
+                # 1-element ndarray to a float will generate a
+                # deprecation warning.  We will explicitly test for
+                # that, but want to do the test without triggering the
+                # numpy import
+                for cls in ans.__class__.__mro__:
+                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                        if len(ans) == 1:
+                            ans = ans[0]
+                        break
                 # TODO: we should check bool and warn/error (while bool is
                 # convertible to float in Python, they have very
                 # different semantic meanings in Pyomo).
@@ -789,48 +914,60 @@ class LinearRepnVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         ans = result[1]
-        if ans.__class__ is self.Result:
-            mult = ans.multiplier
-            if mult == 1:
-                # mult is identity: only thing to do is filter out zero coefficients
-                zeros = list(filterfalse(itemgetter(1), ans.linear.items()))
-                for vid, coef in zeros:
-                    del ans.linear[vid]
-            elif not mult:
-                # the mulltiplier has cleared out the entire expression.
-                # Warn if this is suppressing a NaN (unusual, and
-                # non-standard, but we will wait to remove this behavior
-                # for the time being)
-                if ans.constant != ans.constant or any(
-                    c != c for c in ans.linear.values()
-                ):
-                    deprecation_warning(
-                        f"Encountered {mult}*nan in expression tree.  "
-                        "Mapping the NaN result to 0 for compatibility "
-                        "with the lp_v1 writer.  In the future, this NaN "
-                        "will be preserved/emitted to comply with IEEE-754.",
-                        version='6.6.0',
-                    )
-                return self.Result()
-            else:
-                # mult not in {0, 1}: factor it into the constant,
-                # linear coefficients, and nonlinear term
-                linear = ans.linear
-                zeros = []
-                for vid, coef in linear.items():
-                    if coef:
-                        linear[vid] = coef * mult
-                    else:
-                        zeros.append(vid)
-                for vid in zeros:
-                    del linear[vid]
-                if ans.nonlinear is not None:
-                    ans.nonlinear *= mult
-                if ans.constant:
-                    ans.constant *= mult
-                ans.multiplier = 1
+        if ans.__class__ is not self.Result:
+            ans = self.Result()
+            assert result[0] <= _FIXED
+            ans.constant = result[1]
             return ans
-        ans = self.Result()
-        assert result[0] is _CONSTANT
-        ans.constant = result[1]
+
+        mult_flag = ans.multiplier_flag(ans.multiplier)
+        if mult_flag == 1:
+            # mult is identity: only thing to do is filter out zero coefficients
+            self._filter_zeros(ans)
+            return ans
+        elif not mult_flag:
+            # the multiplier has cleared out the entire expression.
+            # Warn if this is suppressing a NaN (unusual, and
+            # non-standard, but we will wait to remove this behavior
+            # for the time being)
+            if ans.constant.__class__ is InvalidNumber or any(
+                c.__class__ is InvalidNumber for c in ans.linear.values()
+            ):
+                deprecation_warning(
+                    f"Encountered {ans.multiplier}*nan in expression tree.  "
+                    "Mapping the NaN result to 0 for compatibility "
+                    "with the lp_v1 writer.  In the future, this NaN "
+                    "will be preserved/emitted to comply with IEEE-754.",
+                    version='6.6.0',
+                )
+            return self.Result()
+
+        # mult not in {0, 1}: factor it into the constant,
+        # linear coefficients, and nonlinear term
+        self._factor_multiplier_into_ans(ans, ans.multiplier)
         return ans
+
+    def _filter_zeros(self, ans):
+        _flag = ans.constant_flag
+        # Note: creating the intermediate list is important, as we are
+        # modifying the dict in place.
+        for vid in [vid for vid, c in ans.linear.items() if not _flag(c)]:
+            del ans.linear[vid]
+
+    def _factor_multiplier_into_ans(self, ans, mult):
+        _flag = ans.constant_flag
+        linear = ans.linear
+        zeros = []
+        for vid, coef in linear.items():
+            prod = mult * coef
+            if _flag(prod):
+                linear[vid] = prod
+            else:
+                zeros.append(vid)
+        for vid in zeros:
+            del linear[vid]
+        if ans.nonlinear is not None:
+            ans.nonlinear *= mult
+        if _flag(ans.constant):
+            ans.constant *= mult
+        ans.multiplier = 1

@@ -46,7 +46,7 @@ from pyomo.core.expr.numvalue import is_fixed, value
 import pyomo.core.expr as EXPR
 import pyomo.core.kernel as kernel
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger(__name__)
 
 valid_expr_ctypes_minlp = {Var, Param, Expression, Objective}
 valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
@@ -119,6 +119,21 @@ class FileDeterminism(enums.IntEnum):
         return super()._missing_(value)
 
 
+def val2str(val):
+    """Converts an object to str with special handling for InvalidNumber
+
+    This will convert the ``val`` to a string.  If ``val`` is an
+    InvalidNumber, the conversion to string will bypass the exception
+    raised by :py:meth:`InvalidNumber.__str__`.
+
+    """
+    if hasattr(val, '_str'):
+        return val._str()
+    if hasattr(val, 'to_string'):
+        return val.to_string()
+    return repr(val)
+
+
 class InvalidNumber(PyomoObject):
     def __init__(self, value, cause=""):
         self.value = value
@@ -152,11 +167,14 @@ class InvalidNumber(PyomoObject):
         args, causes = InvalidNumber.parse_args(*args)
         try:
             return InvalidNumber(op(*args), causes)
-        except (TypeError, ArithmeticError):
+        except TypeError:
             # TypeError will be raised when operating on incompatible
-            # types (e.g., int + None); ArithmeticError can be raised by
-            # invalid operations (like divide by zero)
+            # types (e.g., int + None);
             return InvalidNumber(self.value, causes)
+        except (ArithmeticError, ValueError):
+            # ArithmeticError and ValueError can be raised by invalid
+            # operations (like divide by zero or log of a negative number)
+            return InvalidNumber(float('nan'), causes)
 
     def __eq__(self, other):
         ans = self._cmp(operator.eq, other)
@@ -809,12 +827,32 @@ class OrderedVarRecorder(object):
 
 
 class TemplateVarRecorder(object):
-    def __init__(self, var_map, var_order, sorter):
+    def __init__(self, var_map, sorter):
         self.var_map = var_map
-        self._var_order = var_order
+        self._var_order = None
         self.sorter = sorter
         self.env = {None: 0}
         self.symbolmap = EXPR.SymbolMap(NumericLabeler('x'))
+        if var_map:
+            # If the user provided an initial var_map, we want to honor
+            # that ordering.  This means we need to both initialize the
+            # env dict with all the Vars referenced, PLUS fill in any
+            # additional vars that we would have indexed/recorded in
+            # add()
+            next_i = len(var_map)
+            for i, v in enumerate(list(var_map.values())):
+                var_comp = v.parent_component()
+                name = self.symbolmap.getSymbol(var_comp)
+                ve = self.env.get(name, None)
+                if ve is None:
+                    ve = self.env[name] = {}
+                    for idx, vdata in var_comp.items():
+                        vid = id(vdata)
+                        if vid not in var_map:
+                            var_map[vid] = v
+                            ve[idx] = next_i
+                            next_i += 1
+                ve[v.index()] = i
 
     @property
     def var_order(self):
@@ -840,18 +878,18 @@ class TemplateVarRecorder(object):
         # order in which we would see the variables)
         vm = self.var_map
         ve = self.env[name] = {}
-        vo = self._var_order
         try:
             _iter = var_comp.items(self.sorter)
         except AttributeError:
             # Note that this only works for the AML, as kernel does not
             # provide a parent_component()
-            _iter = (var,)
-        if vo is None:
+            _iter = (None, var)
+        if self._var_order is None:
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vm[id(v)] = v
                 ve[idx] = i
         else:
+            vo = self._var_order
             for i, (idx, v) in enumerate(_iter, start=len(vm)):
                 vid = id(v)
                 vm[vid] = v

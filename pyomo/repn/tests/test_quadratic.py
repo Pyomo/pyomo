@@ -86,8 +86,8 @@ class TestQuadratic(unittest.TestCase):
         visitor.expand_nonlinear_products = True
         repn = visitor.walk_expression(e)
 
-        QE4 = SumExpression([4 * m.x**2])
-        QE7 = SumExpression([7 * m.x**2])
+        QE4 = 4 * m.x**2
+        QE7 = 7 * m.x**2
         LE3 = MonomialTermExpression((3, m.x))
         LE6 = MonomialTermExpression((6, m.x))
         NL = +QE4 * (QE7 + LE6) + (LE3) * (QE7)
@@ -178,7 +178,7 @@ class TestQuadratic(unittest.TestCase):
         visitor.expand_nonlinear_products = False
         repn = visitor.walk_expression(e)
 
-        NL = m.x * (log(m.x) + (m.x + m.y) + 2)
+        NL = m.x * (log(m.x) + (m.x + m.y + 2))
 
         self.assertEqual(cfg.subexpr, {})
         self.assertEqual(cfg.var_map, {id(m.x): m.x, id(m.y): m.y})
@@ -380,7 +380,7 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(repn.linear, {})
         self.assertEqual(repn.quadratic, None)
-        self.assertEqual(repn.nonlinear, None)
+        assertExpressionsEqual(self, repn.nonlinear, 0 * log(m.x[3]))
 
         m.p = Param(mutable=True, within=Any, initialize=None)
         e = m.p * m.x[0] + m.p * m.x[1] * m.x[2] + m.p * log(m.x[3])
@@ -406,5 +406,80 @@ class TestQuadratic(unittest.TestCase):
         self.assertEqual(
             cfg.order_quadratic(repn.quadratic),
             {(id(m.x[1]), id(m.x[2])): InvalidNumber(None)},
+        )
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+        e = (
+            m.p * m.x[0]
+            + m.p * m.x[1]
+            + m.p * m.x[1] * m.x[2]
+            + m.p * m.x[2] ** 2
+            + m.p * log(m.x[3])
+        )
+        f = 1 + m.x[0] + m.x[2] ** 2 + 0 * e
+
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(**cfg).walk_expression(f)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(
+            repn.linear,
+            {id(m.x[0]): InvalidNumber(None), id(m.x[1]): InvalidNumber(None)},
+        )
+        self.assertEqual(len(repn.quadratic), 2)
+        self.assertEqual(
+            cfg.order_quadratic(repn.quadratic),
+            {
+                (id(m.x[1]), id(m.x[2])): InvalidNumber(None),
+                (id(m.x[2]), id(m.x[2])): InvalidNumber(None),
+            },
+        )
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+        f = 1 + m.p + 0 * e
+
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(**cfg).walk_expression(f)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(
+            repn.linear,
+            {id(m.x[0]): InvalidNumber(None), id(m.x[1]): InvalidNumber(None)},
+        )
+        self.assertEqual(len(repn.quadratic), 2)
+        self.assertEqual(
+            cfg.order_quadratic(repn.quadratic),
+            {
+                (id(m.x[1]), id(m.x[2])): InvalidNumber(None),
+                (id(m.x[2]), id(m.x[2])): InvalidNumber(None),
+            },
         )
         self.assertEqual(repn.nonlinear, InvalidNumber(None))
