@@ -45,21 +45,13 @@ from pyomo.common.timing import TicTocTimer
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
+from pyomo.contrib.doe.utils import (
+    check_FIM,
+    compute_FIM_metrics,
+    _SMALL_TOLERANCE_DEFINITENESS,
+)
 
 from pyomo.opt import SolverStatus
-
-# This small and positive tolerance is used when checking
-# if the prior is negative definite or approximately
-# indefinite. It is defined as a tolerance here to ensure
-# consistency between the code below and the tests. The
-# user should not need to adjust it.
-_SMALL_TOLERANCE_DEFINITENESS = 1e-6
-
-# This small and positive tolerance is used to check
-# the FIM is approximately symmetric. It is defined as
-# a tolerance here to ensure consistency between the code
-# below and the tests. The user should not need to adjust it.
-_SMALL_TOLERANCE_SYMMETRY = 1e-6
 
 
 class ObjectiveLib(Enum):
@@ -1383,24 +1375,8 @@ class DesignOfExperiments:
                 )
             )
 
-        # Compute the eigenvalues of the FIM
-        evals = np.linalg.eigvals(FIM)
-
-        # Check if the FIM is positive definite
-        if np.min(evals) < -_SMALL_TOLERANCE_DEFINITENESS:
-            raise ValueError(
-                "FIM provided is not positive definite. It has one or more negative eigenvalue(s) less than -{:.1e}".format(
-                    _SMALL_TOLERANCE_DEFINITENESS
-                )
-            )
-
-        # Check if the FIM is symmetric
-        if not np.allclose(FIM, FIM.T, atol=_SMALL_TOLERANCE_SYMMETRY):
-            raise ValueError(
-                "FIM provided is not symmetric using absolute tolerance {}".format(
-                    _SMALL_TOLERANCE_SYMMETRY
-                )
-            )
+        # Check FIM is positive definite and symmetric
+        check_FIM(FIM)
 
         self.logger.info(
             "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."
@@ -1455,7 +1431,7 @@ class DesignOfExperiments:
 
         self.logger.info("FIM prior has been updated.")
 
-    # ToDo: Add an update function for the parameter values? --> closed loop parameter estimation?
+    # TODO: Add an update function for the parameter values? --> closed loop parameter estimation?
     # Or leave this to the user?????
     def update_unknown_parameter_values(self, model=None, param_vals=None):
         raise NotImplementedError(
@@ -1474,12 +1450,37 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        model: model to perform the full factorial exploration on
-        design_ranges: dict of lists, of the form {<var_name>: [start, stop, numsteps]}
-        method: string to specify which method should be used
-                options are ``kaug`` and ``sequential``
+        model: DoE model, optional
+            model to perform the full factorial exploration on
+        design_ranges: dict
+            dictionary of lists, of the form {<var_name>: [start, stop, numsteps]}
+        method: str, optional
+            to specify which method should be used.
+            Options are ``kaug`` and ``sequential``
 
+        Returns
+        -------
+        fim_factorial_results: dict
+            A dictionary of the results with the following keys and their corresponding
+            values as a list:
+
+            - keys of model's experiment_inputs
+            - "log10 D-opt": list of log10(D-optimality)
+            - "log10 A-opt": list of log10(A-optimality)
+            - "log10 E-opt": list of log10(E-optimality)
+            - "log10 ME-opt": list of log10(ME-optimality)
+            - "eigval_min": list of minimum eigenvalues
+            - "eigval_max": list of maximum eigenvalues
+            - "det_FIM": list of determinants
+            - "trace_FIM": list of traces
+            - "solve_time": list of solve times
+
+        Raises
+        ------
+        ValueError
+            If the design_ranges' keys do not match the model's experiment_inputs' keys.
         """
+
         # Start timer
         sp_timer = TicTocTimer()
         sp_timer.tic(msg=None)
@@ -1514,8 +1515,8 @@ class DesignOfExperiments:
                 "Design ranges keys must be a subset of experimental design names."
             )
 
-        # ToDo: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
-        # ToDo: Also, make this a result object, or more user friendly.
+        # TODO: Add more objective types? i.e., modified-E; G-opt; V-opt; etc?
+        # TODO: Also, make this a result object, or more user friendly.
         fim_factorial_results = {k.name: [] for k, v in model.experiment_inputs.items()}
         fim_factorial_results.update(
             {
@@ -1523,6 +1524,10 @@ class DesignOfExperiments:
                 "log10 A-opt": [],
                 "log10 E-opt": [],
                 "log10 ME-opt": [],
+                "eigval_min": [],
+                "eigval_max": [],
+                "det_FIM": [],
+                "trace_FIM": [],
                 "solve_time": [],
             }
         )
@@ -1584,24 +1589,9 @@ class DesignOfExperiments:
 
             FIM = self._computed_FIM
 
-            # Compute and record metrics on FIM
-            D_opt = np.log10(np.linalg.det(FIM))
-            A_opt = np.log10(np.trace(FIM))
-            E_vals, E_vecs = np.linalg.eig(FIM)  # Grab eigenvalues
-            E_ind = np.argmin(E_vals.real)  # Grab index of minima to check imaginary
-            # Warn the user if there is a ``large`` imaginary component (should not be)
-            if abs(E_vals.imag[E_ind]) > 1e-8:
-                self.logger.warning(
-                    "Eigenvalue has imaginary component greater than 1e-6, contact developers if this issue persists."
-                )
-
-            # If the real value is less than or equal to zero, set the E_opt value to nan
-            if E_vals.real[E_ind] <= 0:
-                E_opt = np.nan
-            else:
-                E_opt = np.log10(E_vals.real[E_ind])
-
-            ME_opt = np.log10(np.linalg.cond(FIM))
+            det_FIM, trace_FIM, E_vals, E_vecs, D_opt, A_opt, E_opt, ME_opt = (
+                compute_FIM_metrics(FIM)
+            )
 
             # Append the values for each of the experiment inputs
             for k, v in model.experiment_inputs.items():
@@ -1611,6 +1601,10 @@ class DesignOfExperiments:
             fim_factorial_results["log10 A-opt"].append(A_opt)
             fim_factorial_results["log10 E-opt"].append(E_opt)
             fim_factorial_results["log10 ME-opt"].append(ME_opt)
+            fim_factorial_results["eigval_min"].append(E_vals.min())
+            fim_factorial_results["eigval_max"].append(E_vals.max())
+            fim_factorial_results["det_FIM"].append(det_FIM)
+            fim_factorial_results["trace_FIM"].append(trace_FIM)
             fim_factorial_results["solve_time"].append(time_set[-1])
 
         self.fim_factorial_results = fim_factorial_results
