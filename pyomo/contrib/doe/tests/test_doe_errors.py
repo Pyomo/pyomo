@@ -26,6 +26,8 @@ from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     FullReactorExperiment,
 )
 
+from pyomo.contrib.doe.utils import update_model_from_suffix
+import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
@@ -745,6 +747,32 @@ class TestReactorExampleErrors(unittest.TestCase):
             ),
         ):
             doe_obj.compute_FIM(method="Bad Method")
+
+    def test_update_model_from_suffix_length_mismatch(self):
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        m = experiment.get_labeled_model()
+        # Only ONE new value for TWO suffix items ➜ should raise
+        with self.assertRaisesRegex(
+            ValueError, "values length does not match suffix length"
+        ):
+            update_model_from_suffix(m.unknown_parameters, [42])
+
+    def test_update_model_from_suffix_unsupported_component(self):
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        m = experiment.get_labeled_model()
+
+        # Create a suffix with a ConstraintData component
+        m.x = pyo.Var(initialize=0.0)
+        m.c = pyo.Constraint(expr=m.x == 0)  # not Var/Param!
+
+        m.bad_suffix = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.bad_suffix[m.c] = 0  # tag a Constraint
+
+        with self.assertRaisesRegex(
+            TypeError, r"Unsupported component type .*Constraint.*"
+        ):
+            update_model_from_suffix(m.bad_suffix, [1.0])
 
 
 if __name__ == "__main__":
