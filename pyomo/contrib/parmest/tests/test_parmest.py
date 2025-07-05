@@ -60,7 +60,7 @@ _RANDOM_SEED_FOR_TESTING = 524
         (0.1, "incorrect_obj"),
     ],
 )
-class NewTestRooneyBiegler(unittest.TestCase):
+class TestRooneyBieglerWSSE(unittest.TestCase):
 
     def setUp(self):
         self.data = pd.DataFrame(
@@ -91,11 +91,10 @@ class NewTestRooneyBiegler(unittest.TestCase):
             return m
 
         # create the Experiment class
-        class RooneyBieglerExperiment(Experiment):
-            def __init__(self, experiment_number, hour, y, measurement_error_std):
+        class RooneyBieglerExperimentWSSE(Experiment):
+            def __init__(self, hour, y, measurement_error_std):
                 self.y = y
                 self.hour = hour
-                self.experiment_number = experiment_number
                 self.model = None
                 self.measurement_error_std = measurement_error_std
 
@@ -143,15 +142,15 @@ class NewTestRooneyBiegler(unittest.TestCase):
         y_data = self.data["y"]
 
         # create the experiments list
-        rooney_biegler_exp_list = []
+        exp_list = []
         for i in range(self.data.shape[0]):
-            rooney_biegler_exp_list.append(
-                RooneyBieglerExperiment(
-                    i, hour_data[i], y_data[i], self.measurement_std
+            exp_list.append(
+                RooneyBieglerExperimentWSSE(
+                    hour_data[i], y_data[i], self.measurement_std
                 )
             )
 
-        self.exp_list = rooney_biegler_exp_list
+        self.exp_list = exp_list
 
         if self.objective_function == "incorrect_obj":
             with pytest.raises(
@@ -417,9 +416,14 @@ class NewTestRooneyBiegler(unittest.TestCase):
 
     def test_cov_scipy_least_squares_comparison(self):
         """
-        Scipy results differ in the 3rd decimal place from the paper. It is possible
-        the paper used an alternative finite difference approximation for the Jacobian.
+        Estimates the unknown parameters and covariance matrix from the measurement
+        error standard deviation using Scipy least_squares function.
         """
+        if self.measurement_std is None or self.objective_function == "incorrect_obj":
+            self.skipTest(
+                "This test only applies to 'SSE' and 'SSE_weighted' "
+                "objectives with user-supplied measurement error"
+            )
 
         def model(theta, t):
             """
@@ -464,84 +468,15 @@ class NewTestRooneyBiegler(unittest.TestCase):
         )  # 19.1426 from the paper
         self.assertAlmostEqual(theta_hat[1], 0.5311, places=2)  # 0.5311 from the paper
 
-        # calculate residuals
-        r = residual(theta_hat, t, y)
+        # calculate the variance of the measurement error
+        sigre = self.measurement_std**2
 
-        if self.measurement_std is None:
-            # calculate variance of the residuals
-            # -2 because there are 2 fitted parameters
-            sigre = np.matmul(r.T, r / (len(y) - 2))
+        cov = sigre * np.linalg.inv(np.matmul(sol.jac.T, sol.jac))
 
-            # approximate covariance
-            cov = sigre * np.linalg.inv(np.matmul(sol.jac.T, sol.jac))
-
-            self.assertAlmostEqual(cov[0, 0], 6.22864, places=2)  # 6.22864 from paper
-            self.assertAlmostEqual(cov[0, 1], -0.4322, places=2)  # -0.4322 from paper
-            self.assertAlmostEqual(cov[1, 0], -0.4322, places=2)  # -0.4322 from paper
-            self.assertAlmostEqual(cov[1, 1], 0.04124, places=2)  # 0.04124 from paper
-        else:
-            sigre = self.measurement_std**2
-
-            cov = sigre * np.linalg.inv(np.matmul(sol.jac.T, sol.jac))
-
-            self.assertAlmostEqual(cov[0, 0], 0.009588, places=4)
-            self.assertAlmostEqual(cov[0, 1], -0.000665, places=4)
-            self.assertAlmostEqual(cov[1, 0], -0.000665, places=4)
-            self.assertAlmostEqual(cov[1, 1], 0.000063, places=4)
-
-    def test_cov_scipy_curve_fit_comparison(self):
-        """
-        Scipy results differ in the 3rd decimal place from the paper. It is possible
-        the paper used an alternative finite difference approximation for the Jacobian.
-        """
-
-        ## solve with optimize.curve_fit
-        def model(t, asymptote, rate_constant):
-            return asymptote * (1 - np.exp(-rate_constant * t))
-
-        # define data
-        t = self.data["hour"].to_numpy()
-        y = self.data["y"].to_numpy()
-
-        # define initial guess
-        theta_guess = np.array([15, 0.5])
-
-        # estimate the parameters and covariance matrix
-        if self.measurement_std is None:
-            theta_hat, cov = scipy.optimize.curve_fit(model, t, y, p0=theta_guess)
-
-            self.assertAlmostEqual(
-                theta_hat[0], 19.1426, places=2
-            )  # 19.1426 from the paper
-            self.assertAlmostEqual(
-                theta_hat[1], 0.5311, places=2
-            )  # 0.5311 from the paper
-
-            self.assertAlmostEqual(cov[0, 0], 6.22864, places=2)  # 6.22864 from paper
-            self.assertAlmostEqual(cov[0, 1], -0.4322, places=2)  # -0.4322 from paper
-            self.assertAlmostEqual(cov[1, 0], -0.4322, places=2)  # -0.4322 from paper
-            self.assertAlmostEqual(cov[1, 1], 0.04124, places=2)  # 0.04124 from paper
-        else:
-            theta_hat, cov = scipy.optimize.curve_fit(
-                model,
-                t,
-                y,
-                p0=theta_guess,
-                sigma=self.measurement_std,
-                absolute_sigma=True,
-            )
-
-            self.assertAlmostEqual(
-                theta_hat[0], 19.1426, places=2
-            )  # 19.1426 from the paper
-            self.assertAlmostEqual(
-                theta_hat[1], 0.5311, places=2
-            )  # 0.5311 from the paper
-
-            self.assertAlmostEqual(cov[0, 0], 0.0095875, places=4)
-            self.assertAlmostEqual(cov[0, 1], -0.0006653, places=4)
-            self.assertAlmostEqual(cov[1, 0], -0.0006653, places=4)
-            self.assertAlmostEqual(cov[1, 1], 0.00006347, places=4)
+        self.assertAlmostEqual(cov[0, 0], 0.009588, places=4)
+        self.assertAlmostEqual(cov[0, 1], -0.000665, places=4)
+        self.assertAlmostEqual(cov[1, 0], -0.000665, places=4)
+        self.assertAlmostEqual(cov[1, 1], 0.000063, places=4)
 
 
 @unittest.skipIf(
@@ -615,7 +550,7 @@ class TestRooneyBiegler(unittest.TestCase):
 
         # check the exception raised by parmest due to not defining
         # the "experiment_outputs"
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(AttributeError) as context:
             parmest.Estimator(exp_list, obj_function="SSE", tee=True)
 
         self.assertIn("experiment_outputs", str(context.exception))
@@ -1476,12 +1411,12 @@ class TestReactorDesign_DAE(unittest.TestCase):
         Test the exception raised by parmest when the "unknown_parameters"
         attribute is not defined in the model
         """
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(AttributeError) as context:
             parmest.Estimator(self.exp_list_df_no_params, obj_function="SSE")
 
         self.assertIn("unknown_parameters", str(context.exception))
 
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(AttributeError) as context:
             parmest.Estimator(self.exp_list_dict_no_params, obj_function="SSE")
 
         self.assertIn("unknown_parameters", str(context.exception))

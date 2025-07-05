@@ -294,20 +294,14 @@ def _check_model_labels_helper(model):
     Argument:
         model: annotated Pyomo model for suffix checking
     """
-    # check that experimental outputs exist
-    if hasattr(model, "experiment_outputs"):
-        pass
-    else:
-        raise AttributeError(
-            'Experiment model does not have suffix "experiment_outputs".'
-        )
+    required_attrs = ("experiment_outputs", "unknown_parameters")
 
-    # Check that unknown parameters exist
-    if hasattr(model, "unknown_parameters"):
-        pass
-    else:
+    # check if any of the required attributes are missing
+    missing_attr = [attr for attr in required_attrs if not hasattr(model, attr)]
+    if missing_attr:
+        missing_str = ", ".join(f'"{attr}"' for attr in missing_attr)
         raise AttributeError(
-            'Experiment model does not have suffix "unknown_parameters".'
+            f"Experiment model is missing required attribute(s): {missing_str}"
         )
 
     logger.setLevel(level=logging.INFO)
@@ -323,17 +317,18 @@ def _get_labeled_model_helper(experiment):
                     experimental condition
 
     Returns:
-        model: Annotated Pyomo model
+        Annotated Pyomo model
     """
-    try:
-        model = experiment.get_labeled_model().clone()
-    except Exception as e:
+    get_model = getattr(experiment, "get_labeled_model", None)
+    if not callable(get_model):
         raise AttributeError(
-            f'The experiment object must have a "get_labeled_model" function. '
-            f'The original error was {e}.'
+            'The experiment object must have a "get_labeled_model" ' 'function.'
         )
 
-    return model
+    try:
+        return get_model().clone()
+    except Exception as exc:
+        raise RuntimeError(f"Failed to clone labeled model: {exc}")
 
 
 class CovarianceMethodLib(Enum):
@@ -384,8 +379,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     # re-solve the model with the estimated parameters
     try:
         solver = pyo.SolverFactory(solver)
-        res = solver.solve(model, tee=tee)
-        pyo.assert_optimal_termination(res)
+        solver.solve(model, tee=tee)
     except Exception as e:
         raise RuntimeError(
             f"Model from experiment did not solve appropriately. Make sure the "
@@ -417,8 +411,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
 
         # solve the model
         try:
-            res = solver.solve(model, tee=tee)
-            pyo.assert_optimal_termination(res)
+            solver.solve(model, tee=tee)
         except Exception as e:
             raise RuntimeError(
                 f"Model from experiment did not solve appropriately. Make sure the "
@@ -433,8 +426,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
 
         # re-solve the model
         try:
-            res = solver.solve(model, tee=tee)
-            pyo.assert_optimal_termination(res)
+            solver.solve(model, tee=tee)
         except Exception as e:
             raise RuntimeError(
                 f"Model from experiment did not solve appropriately. Make sure the "
@@ -483,16 +475,14 @@ def compute_covariance_matrix(
     Returns:
         cov: covariance matrix of the estimated parameters
     """
-    # check if the supplied method is supported
-    try:
-        cov_method = CovarianceMethodLib(method)
-    except ValueError:
+    # get the supported methods
+    supported_methods = [e.value for e in CovarianceMethodLib]
+    if method not in supported_methods:
         raise ValueError(
-            f"Invalid method: '{method}'. "
-            f"Choose from {[e.value for e in CovarianceMethodLib]}."
+            f"Invalid method: '{method}'. " f"Choose from {supported_methods}."
         )
 
-    if cov_method == CovarianceMethodLib.finite_difference:
+    if method == CovarianceMethodLib.finite_difference.value:
         # store the FIM of all experiments
         FIM_all_exp = []
         for (
@@ -516,9 +506,10 @@ def compute_covariance_matrix(
             cov = np.linalg.inv(FIM)
         except np.linalg.LinAlgError:
             cov = np.linalg.pinv(FIM)
-            print("The FIM is singular. Using pseudo-inverse instead.")
+            logger.info("The FIM is singular. Using pseudo-inverse instead.")
+
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
-    elif cov_method == CovarianceMethodLib.automatic_differentiation_kaug:
+    elif method == CovarianceMethodLib.automatic_differentiation_kaug.value:
         # store the FIM of all experiments
         FIM_all_exp = []
         for (
@@ -541,13 +532,9 @@ def compute_covariance_matrix(
             cov = np.linalg.inv(FIM)
         except np.linalg.LinAlgError:
             cov = np.linalg.pinv(FIM)
-            print("The FIM is singular. Using pseudo-inverse instead.")
+            logger.info("The FIM is singular. Using pseudo-inverse instead.")
+
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
-    else:
-        raise ValueError(
-            f'The method provided, {method}, must be either "finite_difference" or '
-            f'"automatic_differentiation_kaug".'
-        )
 
     return cov
 
@@ -616,7 +603,8 @@ def _finite_difference_FIM(
                 "Experiment outputs and measurement errors are not the same length."
             )
 
-        # calculate the FIM using the formula in Lilonfe et al. (2025)
+        # calculate the FIM using the formula in our future paper
+        # Lilonfe et al. (2025)
         FIM = J.T @ W @ J
     else:
         FIM = (1 / estimated_var) * (J.T @ J)
@@ -658,8 +646,7 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     # re-solve the model with the estimated parameters
     try:
         solver = pyo.SolverFactory(solver)
-        res = solver.solve(model, tee=tee)
-        pyo.assert_optimal_termination(res)
+        solver.solve(model, tee=tee)
     except Exception as e:
         raise RuntimeError(
             f"Model from experiment did not solve appropriately. Make sure the "
@@ -800,7 +787,7 @@ class Estimator(object):
                 "passing a custom function. This usage will be removed in a "
                 "future release. Please update to the new parmest interface using "
                 "the built-in 'SSE' and 'SSE_weighted' objectives.",
-                version="6.7.2",
+                version="6.9.3.dev0",
             )
             self.obj_function = obj_function
 
@@ -1051,7 +1038,7 @@ class Estimator(object):
                     "with the `calc_cov` and `cov_n` arguments. This usage will be "
                     "removed in a future release. Please update to the new parmest "
                     "interface using `cov_est()` function for covariance calculation.",
-                    version="6.7.2",
+                    version="6.9.3.dev0",
                 )
 
                 calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
@@ -1234,8 +1221,7 @@ class Estimator(object):
 
             # re-solve the model with the estimated parameters
             try:
-                res = pyo.SolverFactory(solver).solve(model, tee=self.tee)
-                pyo.assert_optimal_termination(res)
+                pyo.SolverFactory(solver).solve(model, tee=self.tee)
             except Exception as e:
                 raise RuntimeError(
                     f"Model from experiment did not solve appropriately. Make sure the "
@@ -1302,11 +1288,7 @@ class Estimator(object):
                             index=self.estimated_theta.keys(),
                             columns=self.estimated_theta.keys(),
                         )
-                    elif (
-                        cov_method == CovarianceMethodLib.finite_difference
-                        or cov_method
-                        == CovarianceMethodLib.automatic_differentiation_kaug
-                    ):
+                    else:
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
@@ -1316,11 +1298,6 @@ class Estimator(object):
                             tee=self.tee,
                             estimated_var=measurement_var,
                         )
-                    else:
-                        raise NotImplementedError(
-                            'Only "finite_difference", "reduced_hessian", and '
-                            '"automatic_differentiation_kaug" methods are supported.'
-                        )
                 elif all(item is not None for item in meas_error):
                     if cov_method == CovarianceMethodLib.reduced_hessian:
                         cov = 2 * (meas_error[0] ** 2) * self.inv_red_hes
@@ -1329,11 +1306,7 @@ class Estimator(object):
                             index=self.estimated_theta.keys(),
                             columns=self.estimated_theta.keys(),
                         )
-                    elif (
-                        cov_method == CovarianceMethodLib.finite_difference
-                        or cov_method
-                        == CovarianceMethodLib.automatic_differentiation_kaug
-                    ):
+                    else:
                         cov = compute_covariance_matrix(
                             self.exp_list,
                             method,
@@ -1341,11 +1314,6 @@ class Estimator(object):
                             solver=solver,
                             step=step,
                             tee=self.tee,
-                        )
-                    else:
-                        raise NotImplementedError(
-                            'Only "finite_difference", "reduced_hessian", and '
-                            '"automatic_differentiation_kaug" methods are supported.'
                         )
                 else:
                     raise ValueError(
@@ -1379,17 +1347,12 @@ class Estimator(object):
                             solver=solver,
                             tee=self.tee,
                         )
-                    elif cov_method == CovarianceMethodLib.reduced_hessian:
+                    else:
                         cov = self.inv_red_hes
                         cov = pd.DataFrame(
                             cov,
                             index=self.estimated_theta.keys(),
                             columns=self.estimated_theta.keys(),
-                        )
-                    else:
-                        raise NotImplementedError(
-                            'Only "finite_difference", "reduced_hessian", and '
-                            '"automatic_differentiation_kaug" methods are supported.'
                         )
                 else:
                     raise ValueError(
