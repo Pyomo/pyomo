@@ -1082,7 +1082,7 @@ class Estimator(object):
         n_restarts=20,
         buffer=10,
         multistart_sampling_method="uniform_random",
-        user_provided=None,
+        user_provided_df=None,
         seed=None,
         save_results=False,
         theta_vals=None,
@@ -1102,7 +1102,7 @@ class Estimator(object):
             Default is "uniform_random".
         buffer: int, optional
             Number of iterations to save results dynamically if save_results=True. Default is 10.
-        user_provided: pd.DataFrame or np.ndarray, optional
+        user_provided_df: pd.DataFrame, optional
             User provided array or dataframe of theta values for multistart optimization.
         seed: int, optional
             Random seed for reproducibility.
@@ -1171,7 +1171,7 @@ class Estimator(object):
                 seed=seed,
                 n_restarts=n_restarts,
                 multistart_sampling_method=multistart_sampling_method,
-                user_provided=user_provided,
+                user_provided_df=user_provided_df,
             )
             results_df = pd.DataFrame(results_df)
             # Extract theta_vals from the dataframe
