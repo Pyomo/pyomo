@@ -20,9 +20,9 @@ is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
 @unittest.skipUnless(flib, 'Could not find the "external" library')
+@unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
 class TestAMPLExternalFunction(unittest.TestCase):
 
-    @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
     def test_eval_sqnsqr_function_fgh(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="sgnsqr")
@@ -36,8 +36,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertAlmostEqual(f, -4)
         self.assertStructuredAlmostEqual(g, [4])
         self.assertStructuredAlmostEqual(h, [-2])
-
-    @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
+    
     def test_eval_sqnsqr_c4_function_fgh(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="sgnsqr_c4")
@@ -70,7 +69,6 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertStructuredAlmostEqual(g1, g2)
         self.assertStructuredAlmostEqual(h1, h2)
 
-    @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
     def test_eval_sinc_function_fgh(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="sinc")
