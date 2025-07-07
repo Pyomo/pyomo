@@ -85,3 +85,28 @@ These figures show the sgnsqr(x) function compared to the smooth approximation s
 
 .. image:: figs/sgnsqr_fxx.png
 
+
+sgnsqrt_c4(x)
+~~~~~~~~~~~~
+
+This function is a signed square root approximation defined as:
+
+.. math::
+
+    \text{sgnsqr}(x) = \begin{cases}
+        \text{sgn}(x)|x|^{0.5} & \text{if } |x| \ge 0.1 \\
+        \sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
+    \end{cases}
+
+This function is $C^4$ smooth.  The region :math:`-0.1 < x < 0.1` is replaced by an 11th order polynomial approximates that :math:`\text{sgn}(x)x^2`.  The approximate function has a well behaved derivatives at :math:`x=0`.  If you need to use this function with very small numbers and high accuracy is important, you can scale the argument up (e.g. :math:`\text{sgnsqr\_c4}(sx)/s^2`).
+
+These figures show the signed square root function compared to the smooth approximation sgnsqr_c4(x).
+
+.. image:: figs/sgnsqrt_err.png
+
+.. image:: figs/sgnsqrt_f.png
+
+.. image:: figs/sgnsqrt_fx.png
+
+.. image:: figs/sgnsqrt_fxx.png
+

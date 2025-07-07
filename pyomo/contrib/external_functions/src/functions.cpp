@@ -114,6 +114,57 @@ extern real sgnsqr_c4(arglist *al) {
    return y;
 }
 
+
+extern real sgnsqrt_c4(arglist *al) {
+   real x = al->ra[al->at[0]];
+   const real c[] = {
+      0.0,
+      5.1186281462197964,
+      -5.115907697472721e-13,
+      -409.490251697574,
+      -2.4253192047278085e-12,
+      34124.18764146428,
+      3.827043323720301e-09,
+      -1574962.506529117,
+      -2.7353306479626024e-07,
+      30109577.330703676,
+      6.383782391594595e-06,
+   };
+   const real r = 0.1;
+   real y = 0;
+   unsigned char i = 0;
+
+   if(fabs(x) < r){
+      for(i=0; i<11; ++i){
+         y += c[i] * pow(x, i);
+      }
+      if (al->derivs!=NULL) {
+         al->derivs[0] = 0;
+         for(i=1; i<11; ++i){
+            al->derivs[0] += c[i] * i * pow(x, i - 1);
+         }
+      }
+      if (al->hes!=NULL) {
+         al->hes[0] = 0;
+         for(i=2; i<11; ++i){
+            al->hes[0] += c[i] * i * (i - 1) * pow(x, i - 2);
+         }
+      }
+   }
+   else{
+      y = copysign(sqrt(fabs(x)), x);
+      if (al->derivs!=NULL) {
+         al->derivs[0] =  1.0 / 2.0 / sqrt(fabs(x));
+      }
+      if (al->hes!=NULL) {
+         al->hes[0] = -copysign(1.0/4.0*pow(fabs(x), -1.5), x);
+      }
+   }
+
+   return y;
+}
+
+
 // Register external functions defined in this library with the ASL
 void funcadd(AmplExports *ae){
    // Arguments for addfunc (this is not fully detailed; see funcadd.h)
@@ -142,6 +193,13 @@ void funcadd(AmplExports *ae){
    addfunc(
       "sgnsqr_c4", 
       (rfunc)sgnsqr_c4,
+      FUNCADD_REAL_VALUED, 
+      1, 
+      NULL
+   );
+   addfunc(
+      "sgnsqrt_c4", 
+      (rfunc)sgnsqrt_c4,
       FUNCADD_REAL_VALUED, 
       1, 
       NULL
