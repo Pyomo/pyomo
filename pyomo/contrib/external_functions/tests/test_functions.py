@@ -36,7 +36,7 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertAlmostEqual(f, -4)
         self.assertStructuredAlmostEqual(g, [4])
         self.assertStructuredAlmostEqual(h, [-2])
-    
+
     def test_eval_sqnsqr_c4_function_fgh(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="sgnsqr_c4")
@@ -94,6 +94,38 @@ class TestAMPLExternalFunction(unittest.TestCase):
 
         dx = 1e-10
         x = 0.1
+
+        f1, g1, h1 = m.tf.evaluate_fgh((x + dx,))
+        f2, g2, h2 = m.tf.evaluate_fgh((x - dx,))
+        self.assertAlmostEqual(f1, f2)
+        self.assertStructuredAlmostEqual(g1, g2)
+        self.assertStructuredAlmostEqual(h1, h2)
+
+    def test_eval_sqnsqrt_c4_function_fgh(self):
+        m = pyo.ConcreteModel()
+        m.tf = pyo.ExternalFunction(library=flib, function="sgnsqrt_c4")
+
+        f, g, h = m.tf.evaluate_fgh((4,))
+        self.assertEqual(f, 2)
+        self.assertEqual(g, [0.5 * 4 ** (-0.5)])
+        self.assertEqual(h, [-0.25 * 4 ** (-3 / 2)])
+
+        f, g, h = m.tf.evaluate_fgh((-4,))
+        self.assertAlmostEqual(f, -2)
+        self.assertStructuredAlmostEqual(g, [0.5 * 4 ** (-0.5)])
+        self.assertStructuredAlmostEqual(h, [0.25 * 4 ** (-3 / 2)])
+
+        dx = 1e-9
+        x = 0.1
+
+        f1, g1, h1 = m.tf.evaluate_fgh((x + dx,))
+        f2, g2, h2 = m.tf.evaluate_fgh((x - dx,))
+        self.assertAlmostEqual(f1, f2)
+        self.assertStructuredAlmostEqual(g1, g2)
+        self.assertStructuredAlmostEqual(h1, h2)
+
+        dx = 1e-9
+        x = -0.1
 
         f1, g1, h1 = m.tf.evaluate_fgh((x + dx,))
         f2, g2, h2 = m.tf.evaluate_fgh((x - dx,))
