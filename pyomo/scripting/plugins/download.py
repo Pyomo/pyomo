@@ -16,7 +16,7 @@ from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
 MAX_RETRIES = 3
-RETRY_SLEEP_SECONDS = 1
+RETRY_SLEEP_SECONDS = 5
 
 
 class GroupDownloader(object):
