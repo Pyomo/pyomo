@@ -155,8 +155,8 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
         if self.objective_function == "incorrect_obj":
             with pytest.raises(
                 ValueError,
-                match="Invalid objective function: 'incorrect_obj'\. "
-                "Choose from \['SSE', 'SSE_weighted'\]\.",
+                match=r"Invalid objective function: 'incorrect_obj'\. "
+                r"Choose from \['SSE', 'SSE_weighted'\]\.",
             ):
                 self.pest = parmest.Estimator(
                     self.exp_list, obj_function=self.objective_function, tee=True
