@@ -161,7 +161,7 @@ def enable_expression_optimizations(zero=None, one=None):
             _zero_one_optimizations.discard(key)
 
 
-class mutable_expression(object):
+class mutable_expression:
     """Context manager for mutable sums.
 
     This context manager is used to compute a sum while treating the

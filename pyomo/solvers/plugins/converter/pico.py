@@ -19,7 +19,7 @@ from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import ProblemFormat, ConverterError
 
 
-class PicoMIPConverter(object):
+class PicoMIPConverter:
     def can_convert(self, from_type, to_type):
         """Returns true if this object supports the specified conversion"""
         #

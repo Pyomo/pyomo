@@ -384,7 +384,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
 
 # The following should eventually be promoted so that all
 # IndexedComponents can use it
-class _Initializer(object):
+class _Initializer:
     """A simple function to process an argument to a Component constructor.
 
     This checks the incoming initializer type and maps it to a static

@@ -65,7 +65,7 @@ gdxcc, gdxcc_available = attempt_import('gdxcc', importer=_gams_importer)
 logger = logging.getLogger('pyomo.solvers')
 
 
-class _GAMSSolver(object):
+class _GAMSSolver:
     """Aggregate of common methods for GAMS interfaces"""
 
     def __init__(self, **kwds):

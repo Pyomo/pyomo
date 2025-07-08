@@ -38,7 +38,7 @@ logger = logging.getLogger('pyomo.common.download')
 DownloadFactory = pyomo.common.Factory('library downloaders')
 
 
-class FileDownloader(object):
+class FileDownloader:
     _os_version = None
 
     def __init__(self, insecure=False, cacert=None):

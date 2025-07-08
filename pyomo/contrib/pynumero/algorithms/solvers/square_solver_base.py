@@ -15,7 +15,7 @@ from pyomo.common.config import ConfigBlock
 from pyomo.util.subsystems import create_subsystem_block
 
 
-class SquareNlpSolverBase(object):
+class SquareNlpSolverBase:
     """A base class for NLP solvers that act on a square system
     of equality constraints.
 

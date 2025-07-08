@@ -282,7 +282,7 @@ def detect_communities(
     )
 
 
-class CommunityMap(object):
+class CommunityMap:
     """
     This class is used to create CommunityMap objects which are returned by the detect_communities function. Instances
     of this class allow dict-like usage and store relevant information about the given community map, such as the

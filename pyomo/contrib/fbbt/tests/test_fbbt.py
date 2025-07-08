@@ -33,7 +33,7 @@ class DummyExpr(ProductExpression):
     pass
 
 
-class FbbtTestBase(object):
+class FbbtTestBase:
     """
     These tests are set up weird, but it is for a good reason.
     The FBBT code is duplicated in pyomo.contrib.appsi for

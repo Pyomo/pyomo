@@ -305,7 +305,7 @@ class Test_noclone(unittest.TestCase):
         del b.p
 
 
-class _Test_expression_base(object):
+class _Test_expression_base:
     _ctype_factory = None
 
     def test_pprint(self):

@@ -176,7 +176,7 @@ def build_ginac_interface(parallel=None, args=None):
     dist.run_command('build_ext')
 
 
-class GiNaCInterfaceBuilder(object):
+class GiNaCInterfaceBuilder:
     def __call__(self, parallel):
         return build_ginac_interface(parallel)
 

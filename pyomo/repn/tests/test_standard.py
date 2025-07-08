@@ -4418,7 +4418,7 @@ class Test(unittest.TestCase):
         self.assertEqual(str(rep.to_expression()), "(1 + <vtype>)*<vtype>")
 
     def test_error1(self):
-        class Foo(object):
+        class Foo:
             pass
 
         e = Foo()

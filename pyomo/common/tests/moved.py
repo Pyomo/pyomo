@@ -13,5 +13,5 @@
 # This is a simple module used as part of testing moved_module()
 
 
-class Bar(object):
+class Bar:
     data = 42

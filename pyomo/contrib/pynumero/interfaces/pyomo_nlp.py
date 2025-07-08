@@ -1185,7 +1185,7 @@ class PyomoGreyBoxNLP(NLP):
                 )
 
 
-class _ExternalGreyBoxModelHelper(object):
+class _ExternalGreyBoxModelHelper:
     def __init__(self, ex_grey_box_block, vardata_to_idx, con_offset):
         """This helper takes an ExternalGreyBoxModel and provides the residual,
         Jacobian, and Hessian computation mapped to the correct variable space.

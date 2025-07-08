@@ -132,7 +132,7 @@ def _configure_sympy(sympy, available):
 sympy, sympy_available = attempt_import('sympy', callback=_configure_sympy)
 
 
-class PyomoSympyBimap(object):
+class PyomoSympyBimap:
     def __init__(self):
         self.pyomo2sympy = ComponentMap()
         self.sympy2pyomo = {}

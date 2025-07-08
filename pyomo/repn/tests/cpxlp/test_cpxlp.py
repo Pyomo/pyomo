@@ -27,7 +27,7 @@ from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Block, Comp
 thisdir = this_file_dir()
 
 
-class _CPXLPOrdering_Suite(object):
+class _CPXLPOrdering_Suite:
     @classmethod
     def setUpClass(cls):
         cls.context = TempfileManager.new_context()

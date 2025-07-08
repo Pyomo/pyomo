@@ -28,7 +28,7 @@ import pyomo.opt
 old_tempdir = TempfileManager.tempdir
 
 
-class MockArg(object):
+class MockArg:
     def __init__(self):
         pass
 

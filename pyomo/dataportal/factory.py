@@ -16,7 +16,7 @@ from pyomo.common.plugin_base import PluginError
 logger = logging.getLogger('pyomo.core')
 
 
-class UnknownDataManager(object):
+class UnknownDataManager:
     def __init__(self, *args, **kwds):
         #
         # The 'type' is the class type of the solver instance

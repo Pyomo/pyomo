@@ -132,7 +132,7 @@ class CPLEX(OptSolver):
         return opt
 
 
-class ORDFileSchema(object):
+class ORDFileSchema:
     HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
     FOOTER = "ENDATA\n"
 

@@ -43,7 +43,7 @@ def get_slice_for_set(s):
         return None
 
 
-class _NotAnIndex(object):
+class _NotAnIndex:
     """
     `None` is a valid index, so we use a dummy class to
     denote a slot that needs to get filled with indices

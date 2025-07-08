@@ -88,7 +88,7 @@ class PyomoConfig(Bunch):
             d[item[-1]] = PyomoConfig._option[item]
 
 
-class ModelSolution(object):
+class ModelSolution:
     def __init__(self):
         self._metadata = {}
         self._metadata['status'] = None
@@ -147,7 +147,7 @@ class ModelSolution(object):
                 tmp[id(obj)] = (obj, entry)
 
 
-class ModelSolutions(object):
+class ModelSolutions:
     def __init__(self, instance):
         self._instance = weakref_ref(instance)
         self.clear()

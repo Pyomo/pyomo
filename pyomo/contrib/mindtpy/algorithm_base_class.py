@@ -83,7 +83,7 @@ egb, egb_available = attempt_import(
 )
 
 
-class _MindtPyAlgorithm(object):
+class _MindtPyAlgorithm:
     def __init__(self, **kwds):
         """
         This is a common init method for all the MindtPy algorithms, so that we

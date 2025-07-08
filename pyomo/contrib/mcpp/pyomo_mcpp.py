@@ -384,7 +384,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         return node_result
 
 
-class McCormick(object):
+class McCormick:
     """
     This class takes the constructed expression from MCPP_Visitor and
     allows for MC methods to be performed on pyomo expressions.

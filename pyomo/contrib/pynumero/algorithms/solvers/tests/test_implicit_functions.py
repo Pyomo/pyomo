@@ -42,7 +42,7 @@ if not AmplInterface.available():
     )
 
 
-class ImplicitFunction1(object):
+class ImplicitFunction1:
     def __init__(self):
         self._model = self._make_model()
 
@@ -137,7 +137,7 @@ class ImplicitFunctionWithExtraVariables(ImplicitFunction1):
         return m
 
 
-class ImplicitFunctionInputsDontAppear(object):
+class ImplicitFunctionInputsDontAppear:
     """This is an implicit function designed to test the edge case
     where inputs do not appear in the system defining the implicit
     function (i.e. the function is constant).

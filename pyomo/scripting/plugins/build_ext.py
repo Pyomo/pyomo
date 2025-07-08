@@ -16,7 +16,7 @@ from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
 
-class ExtensionBuilder(object):
+class ExtensionBuilder:
     def create_parser(self, parser):
         return parser
 

@@ -1341,7 +1341,7 @@ class TestMisc(unittest.TestCase):
             objs.rotate(-1)
 
 
-class _Test_block_base(object):
+class _Test_block_base:
     _children = None
     _child_key = None
     _components_no_descend = None

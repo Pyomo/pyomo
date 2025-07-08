@@ -30,7 +30,7 @@ logger = logging.getLogger('pyomo.contrib.multistart')
 
 @SolverFactory.register('multistart', doc='MultiStart solver for NLPs')
 @document_kwargs_from_configdict('CONFIG')
-class MultiStart(object):
+class MultiStart:
     """Solver wrapper that initializes at multiple starting points.
 
     # TODO: also return appropriate duals
