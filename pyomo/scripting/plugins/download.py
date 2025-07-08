@@ -89,7 +89,7 @@ class GroupDownloader(object):
                         if attempt < MAX_RETRIES:
                             logger.info(
                                 f"Retrying download of '{target}' "
-                                f"({attempt + 1}/{MAX_RETRIES})…"
+                                f"(attempt {attempt + 1} of {MAX_RETRIES})"
                             )
                             time.sleep(RETRY_SLEEP_SECONDS)
 
