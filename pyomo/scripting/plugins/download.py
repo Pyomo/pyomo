@@ -11,10 +11,12 @@
 
 import logging
 import sys
+import time
 from pyomo.common.download import FileDownloader, DownloadFactory
 from pyomo.scripting.pyomo_parser import add_subparser
 
 MAX_RETRIES = 3
+RETRY_SLEEP_SECONDS = 1
 
 
 class GroupDownloader(object):
@@ -89,6 +91,7 @@ class GroupDownloader(object):
                                 f"Retrying download of '{target}' "
                                 f"({attempt + 1}/{MAX_RETRIES})…"
                             )
+                            time.sleep(RETRY_SLEEP_SECONDS)
 
             results.append(result_fmt % (result, target))
 
