@@ -855,6 +855,26 @@ def pyros_config():
             ),
         ),
     )
+    CONFIG.declare(
+        "subproblem_format_options",
+        ConfigValue(
+            default={"bar": {"symbolic_solver_labels": True}},
+            # note: we leave all validation of the dict entries
+            #       to ``BlockData.write()``
+            domain=dict,
+            description=(
+                """
+                File format options for writing/exporting subproblems
+                that were not solved to an acceptable level
+                if ``keepfiles=True`` is specified.
+                Each entry of the dict should map a Pyomo WriterFactory
+                format (e.g., 'bar' for BARON, 'gams' for GAMS)
+                to a value for the argument ``io_options``
+                to the method ``BlockData.write()``.
+                """
+            ),
+        ),
+    )
 
     # ================================================
     # === Advanced Options
