@@ -80,6 +80,39 @@ class TestRooneyBiegler(unittest.TestCase):
             exp_list, obj_function=SSE, solver_options=solver_options, tee=True
         )
 
+    def test_parmest_exception(self):
+        """
+        Test the exception raised by parmest when the "experiment_outputs"
+        attribute is not defined in the model
+        """
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import (
+            RooneyBieglerExperiment,
+        )
+
+        # create an instance of the RooneyBieglerExperiment class
+        # without the "experiment_outputs" attribute
+        class RooneyBieglerExperimentException(RooneyBieglerExperiment):
+            def label_model(self):
+                m = self.model
+
+                # add the unknown parameters
+                m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.unknown_parameters.update(
+                    (k, pyo.ComponentUID(k)) for k in [m.asymptote, m.rate_constant]
+                )
+
+        # create an experiment list
+        exp_list = []
+        for i in range(self.data.shape[0]):
+            exp_list.append(RooneyBieglerExperimentException(self.data.loc[i, :]))
+
+        # check the exception raised by parmest due to not defining
+        # the "experiment_outputs"
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(exp_list, obj_function="SSE", tee=True)
+
+        self.assertIn("experiment_outputs", str(context.exception))
+
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
 
@@ -816,6 +849,22 @@ class TestReactorDesign_DAE(unittest.TestCase):
 
                 m = self.model
 
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
                 m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
                 m.unknown_parameters.update(
                     (k, pyo.ComponentUID(k)) for k in [m.k1, m.k2]
@@ -884,6 +933,51 @@ class TestReactorDesign_DAE(unittest.TestCase):
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
         self.m_dict = ABC_model(data_dict)
+
+        # create an instance of the ReactorDesignExperimentDAE class
+        # without the "unknown_parameters" attribute
+        class ReactorDesignExperimentException(ReactorDesignExperimentDAE):
+            def label_model(self):
+
+                m = self.model
+
+                if isinstance(self.data, pd.DataFrame):
+                    meas_time_points = self.data.index
+                else:
+                    meas_time_points = list(self.data["ca"].keys())
+
+                m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+                m.experiment_outputs.update(
+                    (m.ca[t], self.data["ca"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cb[t], self.data["cb"][t]) for t in meas_time_points
+                )
+                m.experiment_outputs.update(
+                    (m.cc[t], self.data["cc"][t]) for t in meas_time_points
+                )
+
+        # create an experiment list without the "unknown_parameters" attribute
+        exp_list_df_no_params = [ReactorDesignExperimentException(data_df)]
+        exp_list_dict_no_params = [ReactorDesignExperimentException(data_dict)]
+
+        self.exp_list_df_no_params = exp_list_df_no_params
+        self.exp_list_dict_no_params = exp_list_dict_no_params
+
+    def test_parmest_exception(self):
+        """
+        Test the exception raised by parmest when the "unknown_parameters"
+        attribute is not defined in the model
+        """
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list_df_no_params, obj_function="SSE")
+
+        self.assertIn("unknown_parameters", str(context.exception))
+
+        with self.assertRaises(RuntimeError) as context:
+            parmest.Estimator(self.exp_list_dict_no_params, obj_function="SSE")
+
+        self.assertIn("unknown_parameters", str(context.exception))
 
     def test_dataformats(self):
         obj1, theta1 = self.pest_df.theta_est()

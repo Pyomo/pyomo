@@ -89,14 +89,14 @@ class TestUtilsFIM(unittest.TestCase):
         ME_opt_expected = 0.6299765069426388
 
         # Test results
-        self.assertEqual(det_FIM, det_expected)
-        self.assertEqual(trace_FIM, trace_expected)
+        self.assertAlmostEqual(det_FIM, det_expected)
+        self.assertAlmostEqual(trace_FIM, trace_expected)
         self.assertTrue(np.allclose(E_vals, E_vals_expected))
         self.assertTrue(np.allclose(E_vecs, E_vecs_expected))
-        self.assertEqual(D_opt, D_opt_expected)
-        self.assertEqual(A_opt, A_opt_expected)
-        self.assertEqual(E_opt, E_opt_expected)
-        self.assertEqual(ME_opt, ME_opt_expected)
+        self.assertAlmostEqual(D_opt, D_opt_expected)
+        self.assertAlmostEqual(A_opt, A_opt_expected)
+        self.assertAlmostEqual(E_opt, E_opt_expected)
+        self.assertAlmostEqual(ME_opt, ME_opt_expected)
 
     def test_FIM_eigenvalue_warning(self):
         # Create a matrix with an imaginary component large enough
@@ -106,7 +106,8 @@ class TestUtilsFIM(unittest.TestCase):
             compute_FIM_metrics(FIM)
             expected_warning = (
                 "Eigenvalue has imaginary component greater than "
-                + f"{_SMALL_TOLERANCE_IMG}, contact developers if this issue persists."
+                + f"{_SMALL_TOLERANCE_IMG}, contact the developers if this issue "
+                + "persists."
             )
             self.assertIn(expected_warning, cm.output[0])
 
@@ -133,14 +134,16 @@ class TestUtilsFIM(unittest.TestCase):
         ME_opt_expected = 0.6299765069426388
 
         # Test results
-        self.assertEqual(fim_metrics["Determinant of FIM"], det_expected)
-        self.assertEqual(fim_metrics["Trace of FIM"], trace_expected)
+        self.assertAlmostEqual(fim_metrics["Determinant of FIM"], det_expected)
+        self.assertAlmostEqual(fim_metrics["Trace of FIM"], trace_expected)
         self.assertTrue(np.allclose(fim_metrics["Eigenvalues"], E_vals_expected))
         self.assertTrue(np.allclose(fim_metrics["Eigenvectors"], E_vecs_expected))
-        self.assertEqual(fim_metrics["log10(D-Optimality)"], D_opt_expected)
-        self.assertEqual(fim_metrics["log10(A-Optimality)"], A_opt_expected)
-        self.assertEqual(fim_metrics["log10(E-Optimality)"], E_opt_expected)
-        self.assertEqual(fim_metrics["log10(Modified E-Optimality)"], ME_opt_expected)
+        self.assertAlmostEqual(fim_metrics["log10(D-Optimality)"], D_opt_expected)
+        self.assertAlmostEqual(fim_metrics["log10(A-Optimality)"], A_opt_expected)
+        self.assertAlmostEqual(fim_metrics["log10(E-Optimality)"], E_opt_expected)
+        self.assertAlmostEqual(
+            fim_metrics["log10(Modified E-Optimality)"], ME_opt_expected
+        )
 
     def test_snake_traversal_grid_sampling_errors(self):
         # Test the error handling with lists
