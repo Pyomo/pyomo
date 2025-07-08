@@ -1010,28 +1010,21 @@ class Estimator(object):
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
             if not kwargs:
+                # Do not calculate the reduced hessian
+
+                solver = SolverFactory('ipopt')
+                if self.solver_options is not None:
+                    for key in self.solver_options:
+                        solver.options[key] = self.solver_options[key]
+
+                solve_result = solver.solve(self.ef_instance, tee=self.tee)
+
                 # The import error will be raised when we attempt to use
                 # inv_reduced_hessian_barrier below.
                 #
                 # elif not asl_available:
                 #    raise ImportError("parmest requires ASL to calculate the "
                 #                      "covariance matrix with solver 'ipopt'")
-
-                # parmest makes the fitted parameters stage 1 variables
-                ind_vars = []
-                for nd_name, Var, sol_val in ef_nonants(ef):
-                    ind_vars.append(Var)
-                # calculate the reduced hessian
-                (solve_result, inv_red_hes) = (
-                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                        self.ef_instance,
-                        independent_variables=ind_vars,
-                        solver_options=self.solver_options,
-                        tee=self.tee,
-                    )
-                )
-
-                self.inv_red_hes = inv_red_hes
             elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
                 deprecation_warning(
                     "You're using a deprecated call to the `theta_est()` function "
@@ -1203,6 +1196,24 @@ class Estimator(object):
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
         """
+        # compute the inverse reduced hessian to be used
+        # in the "reduced_hessian" method
+        # parmest makes the fitted parameters stage 1 variables
+        ind_vars = []
+        for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
+            ind_vars.append(Var)
+        # calculate the reduced hessian
+        (solve_result, inv_red_hes) = (
+            inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                self.ef_instance,
+                independent_variables=ind_vars,
+                solver_options=self.solver_options,
+                tee=self.tee,
+            )
+        )
+
+        self.inv_red_hes = inv_red_hes
+
         # Number of data points considered
         n = cov_n
 
