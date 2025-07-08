@@ -68,6 +68,7 @@ from pyomo.dae import ContinuousSet
 # Add imports for HierchicalTimer
 import time
 from pyomo.common.timing import TicTocTimer
+from enum import Enum
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.deprecation import deprecation_warning
@@ -250,9 +251,15 @@ def SSE(model):
     return expr
 
 
-'''Adding pseudocode for draft implementation of the estimator class, 
-incorporating multistart. 
-'''
+class MultistartSamplingMethodLib(Enum):
+    """
+    Enum class for multistart sampling methods.
+    """
+
+    uniform_random = "uniform_random"
+    latin_hypercube = "latin_hypercube"
+    sobol_sampling = "sobol_sampling"
+    user_provided_values = "user_provided_values"
 
 
 class Estimator(object):
@@ -486,19 +493,20 @@ class Estimator(object):
         """
         Generate initial theta values for multistart optimization using selected sampling method.
         """
-        # Get the theta names and initial theta values
-        theta_names = self._return_theta_names()
-        initial_theta = [parmest_model.find_component(name)() for name in theta_names]
+        # Locate the unknown parameters in the model from the suffix
+        suffix_params = parmest_model.unknown_parameters
 
-        # Get the lower and upper bounds for the theta values
-        lower_bound = np.array(
-            [parmest_model.find_component(name).lb for name in theta_names]
-        )
-        upper_bound = np.array(
-            [parmest_model.find_component(name).ub for name in theta_names]
-        )
+        # Get the VarData objects from the suffix
+        theta_vars = list(suffix_params.keys())
+
+        # Extract names, starting values, and bounds for the theta variables
+        theta_names = [v.name for v in theta_vars]
+        initial_theta = np.array([v.value for v in theta_vars])
+        lower_bound = np.array([v.lb for v in theta_vars])
+        upper_bound = np.array([v.ub for v in theta_vars])
+
         # Check if the lower and upper bounds are defined
-        if any(bound is None for bound in lower_bound) and any(
+        if any(bound is None for bound in lower_bound) or any(
             bound is None for bound in upper_bound
         ):
             raise ValueError(
@@ -522,7 +530,7 @@ class Estimator(object):
             samples = sampler.random(n=n_restarts)
             # Resulting samples should be size (n_restarts, len(theta_names))
 
-        elif multistart_sampling_method == "sobol":
+        elif multistart_sampling_method == "sobol_sampling":
             sampler = scipy.stats.qmc.Sobol(d=len(theta_names), seed=seed)
             # Generate theta values using Sobol sampling
             # The first value of the Sobol sequence is 0, so we skip it
@@ -545,7 +553,7 @@ class Estimator(object):
                         )
                         # Check if the user provided dataframe has the same theta names as the model
                         # if not, raise an error
-                        # if not all(theta in theta_names for theta in user_provided_df.columns):
+                    if not all(theta in theta_names for theta in user_provided_df.columns):
                         raise ValueError(
                             "The user provided dataframe must have the same theta names as the model."
                         )
@@ -564,7 +572,7 @@ class Estimator(object):
             )
 
         if (
-            multistart_sampling_method == "sobol"
+            multistart_sampling_method == "sobol_sampling"
             or multistart_sampling_method == "latin_hypercube"
         ):
             # Scale the samples to the range of the lower and upper bounds for each theta in theta_names
@@ -613,6 +621,7 @@ class Estimator(object):
         return_values=[],
         bootlist=None,
         calc_cov=False,
+        multistart=False,
         cov_n=None,
     ):
         """
@@ -774,6 +783,8 @@ class Estimator(object):
 
             if calc_cov:
                 return objval, thetavals, cov
+            if multistart:
+                return objval, thetavals, solve_result
             else:
                 return objval, thetavals
 
@@ -1098,7 +1109,7 @@ class Estimator(object):
         n_restarts: int, optional
             Number of restarts for multistart. Default is 1.
         multistart_sampling_method: string, optional
-            Method used to sample theta values. Options are "uniform_random", "latin_hypercube", "sobol", or "user_provided".
+            Method used to sample theta values. Options are "uniform_random", "latin_hypercube", "sobol_sampling", or "user_provided_values".
             Default is "uniform_random".
         buffer: int, optional
             Number of iterations to save results dynamically if save_results=True. Default is 10.
@@ -1213,16 +1224,16 @@ class Estimator(object):
                     bootlist=None,
                     solver=solver,
                     return_values=return_values,
+                    multistart=True,
                 )
 
                 # Unpack results
-                objectiveval, converged_theta = qopt_result
+                objectiveval, converged_theta, solver_info = qopt_result
 
-                # Since _Q_opt does not return the solver result object, we cannot check
-                # solver termination condition directly here. Instead, we can assume
-                # that if converged_theta contains NaN, the solve failed.
-                if converged_theta.isnull().any():
-                    solver_termination = "not successful"
+                # Added an extra option to Q_opt to return the full solver result if multistart=True
+                solver_termination = solver_info.solver.termination_condition
+                if solver_termination != pyo.TerminationCondition.optimal:
+                    # If the solver did not converge, set the converged theta to NaN
                     solve_time = np.nan
                     final_objectiveval = np.nan
                     init_objectiveval = np.nan
@@ -1232,15 +1243,6 @@ class Estimator(object):
                     # Use the _Q_at_theta method to evaluate the objective at these theta values
                     init_objectiveval, _, _ = self._Q_at_theta(theta_vals_current)
                     final_objectiveval = objectiveval
-                    solver_termination = "successful"
-
-                    # plan to add solve time if available, @Reviewers, recommendations on how from current pyomo examples would
-                    # be appreciated
-                    solve_time = (
-                        converged_theta.solve_time
-                        if hasattr(converged_theta, 'solve_time')
-                        else np.nan
-                    )
 
                 # # Check if the objective value is better than the best objective value
                 # # Set a very high initial best objective value
@@ -1264,7 +1266,7 @@ class Estimator(object):
                 # Fill converged theta values
                 for j, name in enumerate(theta_names):
                     results_df.at[i, f'converged_{name}'] = (
-                        converged_theta[j]
+                        converged_theta.iloc[j]
                         if not np.isnan(converged_theta_vals[i, j])
                         else np.nan
                     )
