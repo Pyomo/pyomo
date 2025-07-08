@@ -83,7 +83,6 @@ class TestSeriesData(unittest.TestCase):
         np.testing.assert_almost_equal(dsdp[rmap[m.p1], cmap[m.p1]], 1.0)
         np.testing.assert_almost_equal(dsdp[rmap[m.p2], cmap[m.p1]], 0.0)
 
-
         # if x1 = 2 * p1 and x2 = p2 then
         #   df/dp1 = 6 p1**2 + p2 = 45.0
         #   df/dp2 = 3 p2 + p1 = 85.0
