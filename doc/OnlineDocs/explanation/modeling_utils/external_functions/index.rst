@@ -102,11 +102,11 @@ This function is $C^4$ smooth.  The region :math:`-0.1 < x < 0.1` is replaced by
 
 These figures show the signed square root function compared to the smooth approximation sgnsqr_c4(x).
 
-.. image:: figs/sgnsqrt_err.png
+.. image:: figs/sgnsqrt_c4_err.png
 
-.. image:: figs/sgnsqrt_f.png
+.. image:: figs/sgnsqrt_c4_f.png
 
-.. image:: figs/sgnsqrt_fx.png
+.. image:: figs/sgnsqrt_c4_fx.png
 
-.. image:: figs/sgnsqrt_fxx.png
+.. image:: figs/sgnsqrt_c4_fxx.png
 
