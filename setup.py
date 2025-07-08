@@ -244,6 +244,7 @@ setup_kwargs = dict(
             'networkx; python_version>="3.9"',
             'numpy',
             'openpyxl',  # dataportals
+            'packaging',  # for checking other dependency versions
             #'pathos',   # requested for #963, but PR currently closed
             'pint',  # units
             'plotly',  # incidence_analysis

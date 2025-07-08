@@ -134,8 +134,7 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
             v.name in param_names for v in identify_mutable_parameters(expr)
         ):
             new_expr = replace_expressions(expr=expr, substitution_map=substitution_map)
-            model.del_component(expr)
-            model.add_component(expr.name, pyo.Expression(rule=new_expr))
+            expr.expr = new_expr
 
     # Convert Params to Vars in Constraint expressions
     num_constraints = len(list(model.component_objects(pyo.Constraint, active=True)))
