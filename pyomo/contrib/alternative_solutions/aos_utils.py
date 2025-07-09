@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import munch
+from pyomo.common.collections import Bunch as Munch
 import logging
 from contextlib import contextmanager
 
@@ -305,9 +305,9 @@ def get_model_variables(
     return variable_set
 
 
-class MyMunch(munch.Munch):
+class MyMunch(Munch):
 
-    to_dict = munch.Munch.toDict
+    to_dict = Munch.toDict
 
 
 def _to_dict(x):
@@ -316,7 +316,7 @@ def _to_dict(x):
         return x
     elif xtype in [tuple, set, frozenset]:
         return list(x)
-    elif xtype in [dict, munch.Munch, MyMunch]:
+    elif xtype in [dict, Munch, MyMunch]:
         return {k: _to_dict(v) for k, v in x.items()}
     else:
         return x.to_dict()
