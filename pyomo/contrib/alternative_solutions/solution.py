@@ -14,9 +14,9 @@ def _custom_dict_factory(data):
     return {k: _to_dict(v) for k, v in data}
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class Variable:
-    _: dataclasses.KW_ONLY
+    #_: dataclasses.KW_ONLY
     value: float = nan
     fixed: bool = False
     name: str = None
@@ -29,9 +29,9 @@ class Variable:
         return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class Objective:
-    _: dataclasses.KW_ONLY
+    #_: dataclasses.KW_ONLY
     value: float = nan
     name: str = None
     index: int = None
