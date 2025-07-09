@@ -16,6 +16,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
+import types
 import shlex
 from collections.abc import Mapping
 
@@ -36,31 +37,38 @@ class Bunch(dict):
     def __init__(self, *args, **kw):
         self._name_ = self.__class__.__name__
         for arg in args:
-            if not isinstance(arg, str):
-                raise TypeError("Bunch() positional arguments must be strings")
-            for item in shlex.split(arg):
-                item = item.split('=', 1)
-                if len(item) != 2:
-                    raise ValueError(
-                        "Bunch() positional arguments must be space separated "
-                        f"strings of form 'key=value', got '{item[0]}'"
-                    )
+            if isinstance(arg, types.GeneratorType):
+                for k, v in arg:
+                    self[k] = v
+            elif isinstance(arg, str):
+                for item in shlex.split(arg):
+                    item = item.split('=', 1)
+                    if len(item) != 2:
+                        raise ValueError(
+                            "Bunch() positional arguments must be space separated "
+                            f"strings of form 'key=value', got '{item[0]}'"
+                        )
 
-                # Historically, this used 'exec'.  That is unsafe in
-                # this context (because anyone can pass arguments to a
-                # Bunch).  While not strictly backwards compatible,
-                # Pyomo was not using this for anything past parsing
-                # None/float/int values.  We will explicitly parse those
-                # values
-                try:
-                    val = float(item[1])
-                    if int(val) == val:
-                        val = int(val)
-                    item[1] = val
-                except:
-                    if item[1].strip() == 'None':
-                        item[1] = None
-                self[item[0]] = item[1]
+                    # Historically, this used 'exec'.  That is unsafe in
+                    # this context (because anyone can pass arguments to a
+                    # Bunch).  While not strictly backwards compatible,
+                    # Pyomo was not using this for anything past parsing
+                    # None/float/int values.  We will explicitly parse those
+                    # values
+                    try:
+                        val = float(item[1])
+                        if int(val) == val:
+                            val = int(val)
+                        item[1] = val
+                    except:
+                        if item[1].strip() == 'None':
+                            item[1] = None
+                    self[item[0]] = item[1]
+            else:
+                raise TypeError(
+                    "Bunch() positional arguments must either by generators returning tuples defining a dictionary, or "
+                    "space separated strings of form 'key=value'"
+                )
         for k, v in kw.items():
             self[k] = v
 
@@ -162,3 +170,6 @@ class Bunch(dict):
             attrs.append("".join(text))
         attrs.sort()
         return "\n".join(attrs)
+
+    def toDict(self):
+        return self
