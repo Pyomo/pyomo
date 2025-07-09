@@ -395,18 +395,22 @@ class TestGurobiMINLPWalker(CommonTest):
         # expr is actually an auxiliary variable. We should
         # get a constraint:
         # expr == abs(x1)
-
+        x1 = visitor.var_map[id(m.x1)]
+        
         self.assertIsInstance(expr, gurobipy.Var)
         grb_model = visitor.grb_model
+        # We don't call update in walk expression for performance reasons, but
+        # we need to update here in order to be able to test expr.
+        grb_model.update()
         self.assertEqual(grb_model.numVars, 2)
         self.assertEqual(grb_model.numGenConstrs, 1)
         self.assertEqual(grb_model.numConstrs, 0)
         self.assertEqual(grb_model.numQConstrs, 0)
 
-        # we're going to have to write the resulting model to an lp file to test that we
-        # have what we expect
-
-        # TODO
+        cons = grb_model.getGenConstrs()[0]
+        aux, v = grb_model.getGenConstrAbs(cons)
+        self.assertIs(aux, expr)
+        self.assertIs(v, x1)
 
     def test_write_absolute_value_of_expression(self):
         m = self.get_model()
@@ -419,17 +423,39 @@ class TestGurobiMINLPWalker(CommonTest):
         # aux1 == x1 + 2 * x2
         # expr == abs(aux1)
 
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
+
         # we're going to have to write the resulting model to an lp file to test that we
         # have what we expect
         self.assertIsInstance(expr, gurobipy.Var)
         grb_model = visitor.grb_model
+        # We don't call update in walk expression for performance reasons, but
+        # we need to update here in order to be able to test expr.
+        grb_model.update()
         self.assertEqual(grb_model.numVars, 4)
         self.assertEqual(grb_model.numGenConstrs, 1)
         self.assertEqual(grb_model.numConstrs, 1)
         self.assertEqual(grb_model.numQConstrs, 0)
 
-        # TODO
+        cons = grb_model.getGenConstrs()[0]
+        aux2, aux1 = grb_model.getGenConstrAbs(cons)
+        self.assertIs(aux2, expr)
 
+        cons = grb_model.getConstrs()[0]
+        # this guy is linear equality
+        self.assertEqual(cons.RHS, 0)
+        self.assertEqual(cons.Sense, '=')
+        linexpr = grb_model.getRow(cons)
+        self.assertEqual(linexpr.getConstant(), 0)
+        self.assertEqual(linexpr.size(), 3)
+        self.assertEqual(linexpr.getCoeff(0), -1)
+        self.assertIs(linexpr.getVar(0), x1)
+        self.assertEqual(linexpr.getCoeff(1), -2)
+        self.assertIs(linexpr.getVar(1), x2)
+        self.assertEqual(linexpr.getCoeff(2), 1)
+        self.assertIs(linexpr.getVar(2), aux1)
+        
     def test_write_expression_with_mutable_param(self):
         m = self.get_model()
         m.p = Param(initialize=4, mutable=True)
