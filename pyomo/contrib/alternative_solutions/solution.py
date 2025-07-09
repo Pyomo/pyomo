@@ -16,7 +16,6 @@ def _custom_dict_factory(data):
 
 @dataclasses.dataclass(kw_only=True)
 class Variable:
-    #_: dataclasses.KW_ONLY
     value: float = nan
     fixed: bool = False
     name: str = None
@@ -31,7 +30,6 @@ class Variable:
 
 @dataclasses.dataclass(kw_only=True)
 class Objective:
-    #_: dataclasses.KW_ONLY
     value: float = nan
     name: str = None
     index: int = None
