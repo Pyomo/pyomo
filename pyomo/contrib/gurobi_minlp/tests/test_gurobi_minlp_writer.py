@@ -28,7 +28,6 @@ from pyomo.environ import (
     Objective,
     Param,
     Reals,
-    SolverFactory,
     value,
     Var,
 )
@@ -37,6 +36,7 @@ from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
     GurobiMINLPSolver,
     GurobiMINLPVisitor,
 )
+from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
 
 ## DEBUG

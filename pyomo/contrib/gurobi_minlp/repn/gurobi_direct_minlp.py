@@ -30,6 +30,7 @@ from pyomo.common.timing import HierarchicalTimer
 
 # ESJ TODO: We should move this somewhere sensible
 from pyomo.contrib.cp.repn.docplex_writer import collect_valid_components
+from pyomo.contrib.solver.common.factory import SolverFactory
 from pyomo.contrib.solver.common.solution_loader import SolutionLoaderBase
 from pyomo.contrib.solver.solvers.gurobi_direct import GurobiDirect
 
@@ -70,7 +71,7 @@ from pyomo.core.expr.numeric_expr import (
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, _EvaluationVisitor
 from pyomo.core.staleflag import StaleFlagManager
 
-from pyomo.opt import SolverFactory, WriterFactory
+from pyomo.opt import WriterFactory
 from pyomo.repn.quadratic import QuadraticRepnVisitor
 from pyomo.repn.util import (
     apply_node_operation,
