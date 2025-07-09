@@ -3,6 +3,7 @@ import heapq
 import collections
 import dataclasses
 import json
+import functools
 
 import pyomo.environ as pyo
 
@@ -46,6 +47,7 @@ class Objective:
         return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
 
 
+@functools.total_ordering
 class Solution:
 
     def __init__(self, *, variables=None, objective=None, objectives=None, **kwds):
@@ -123,6 +125,16 @@ class Solution:
             )
         else:
             return tuple(tuple([k, var.value]) for k, var in enumerate(self._variables))
+
+    def __eq__(self, soln):
+        if not isinstance(soln, Solution):
+            return NotImplemented
+        return self._tuple_repn() == soln._tuple_repn()
+
+    def __lt__(self, soln):
+        if not isinstance(soln, Solution):
+            return NotImplemented
+        return self._tuple_repn() <= soln._tuple_repn()
 
 
 def PyomoSolution(*, variables=None, objective=None, objectives=None, **kwds):

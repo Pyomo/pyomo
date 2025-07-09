@@ -14,6 +14,7 @@ import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
 from pyomo.contrib.alternative_solutions import PyomoSolution
+from pyomo.contrib.alternative_solutions import enumerate_binary_solutions
 
 mip_solver = "gurobi"
 mip_available = pyomo.opt.check_available_solvers(mip_solver)
@@ -146,6 +147,30 @@ class TestSolutionUnit(unittest.TestCase):
         sol_val = solution.name_to_variable
         self.assertEqual(set(sol_val.keys()), {"x", "y", "z", "f"})
         self.assertEqual(set(solution.fixed_variable_names), {"f"})
+
+    @unittest.skipUnless(mip_available, "MIP solver not available")
+    def test_soln_order(self):
+        """ """
+        values = [10, 9, 2, 1, 1]
+        weights = [10, 9, 2, 1, 1]
+
+        K = len(values)
+        capacity = 12
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(K), within=pyo.Binary)
+        m.o = pyo.Objective(
+            expr=sum(values[i] * m.x[i] for i in range(K)), sense=pyo.maximize
+        )
+        m.c = pyo.Constraint(
+            expr=sum(weights[i] * m.x[i] for i in range(K)) <= capacity
+        )
+
+        solns = enumerate_binary_solutions(
+            m, num_solutions=10, solver="glpk", abs_opt_gap=0.5
+        )
+        assert len(solns) == 4
+        assert [soln.id for soln in sorted(solns)] == [3, 2, 1, 0]
 
 
 if __name__ == "__main__":
