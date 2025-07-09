@@ -14,10 +14,12 @@ nan = float("nan")
 def _custom_dict_factory(data):
     return {k: _to_dict(v) for k, v in data}
 
+
 if sys.version_info >= (3, 10):
     dataclass_kwargs = dict(kw_only=True)
 else:
     dataclass_kwargs = dict()
+
 
 @dataclasses.dataclass(**dataclass_kwargs)
 class Variable:
