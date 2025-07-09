@@ -100,11 +100,7 @@ class Solution:
         )
 
     def to_string(self, sort_keys=True, indent=4):
-        return json.dumps(
-            self.to_dict(),
-            sort_keys=sort_keys,
-            indent=indent,
-        )
+        return json.dumps(self.to_dict(), sort_keys=sort_keys, indent=indent)
 
     def __str__(self):
         return self.to_string()
