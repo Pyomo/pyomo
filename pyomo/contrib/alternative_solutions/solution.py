@@ -1,3 +1,4 @@
+import sys
 import heapq
 import collections
 import dataclasses
@@ -13,8 +14,12 @@ nan = float("nan")
 def _custom_dict_factory(data):
     return {k: _to_dict(v) for k, v in data}
 
+if sys.version_info >= (3, 10):
+    dataclass_kwargs = dict(kw_only=True)
+else:
+    dataclass_kwargs = dict()
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass(**dataclass_kwargs)
 class Variable:
     value: float = nan
     fixed: bool = False
@@ -28,7 +33,7 @@ class Variable:
         return dataclasses.asdict(self, dict_factory=_custom_dict_factory)
 
 
-@dataclasses.dataclass(kw_only=True)
+@dataclasses.dataclass(**dataclass_kwargs)
 class Objective:
     value: float = nan
     name: str = None
