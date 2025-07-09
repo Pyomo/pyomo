@@ -46,7 +46,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 import pyomo.environ as pyo
 from pyomo.contrib.doe.utils import (
-    check_FIM,
+    check_matrix,
     compute_FIM_metrics,
     _SMALL_TOLERANCE_DEFINITENESS,
     snake_traversal_grid_sampling,
@@ -629,6 +629,9 @@ class DesignOfExperiments:
             if self.scale_nominal_param_value:
                 scale_factor *= v
 
+            # TODO: scale by response values (i.e., measurement values)
+            # if self.scale_response_values:
+            #     scale_factor /= measurement_vals_np[:, col_1].mean()
             # Calculate the column of the sensitivity matrix
             self.seq_jac[:, i] = (
                 measurement_vals_np[:, col_1] - measurement_vals_np[:, col_2]
@@ -1384,7 +1387,7 @@ class DesignOfExperiments:
             )
 
         # Check FIM is positive definite and symmetric
-        check_FIM(FIM)
+        check_matrix(FIM)
 
         self.logger.info(
             "FIM provided matches expected dimensions from model and is approximately positive (semi) definite."

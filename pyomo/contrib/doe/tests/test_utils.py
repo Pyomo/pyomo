@@ -8,14 +8,20 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import (
+    numpy as np,
+    numpy_available,
+    pandas as pd,
+    pandas_available,
+)
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.utils import (
-    check_FIM,
+    check_matrix,
     compute_FIM_metrics,
     get_FIM_metrics,
     snake_traversal_grid_sampling,
+    compute_correlation_matrix as compcorr,
     _SMALL_TOLERANCE_DEFINITENESS,
     _SMALL_TOLERANCE_SYMMETRY,
     _SMALL_TOLERANCE_IMG,
@@ -23,45 +29,49 @@ from pyomo.contrib.doe.utils import (
 
 
 @unittest.skipIf(not numpy_available, "Numpy is not available")
+@unittest.skipIf(not pandas_available, "Pandas is not available")
 class TestUtilsFIM(unittest.TestCase):
-    """Test the check_FIM() from utils.py."""
+    """Test the check_matrix() from utils.py."""
 
-    def test_check_FIM_valid(self):
+    # TODO: add tests when `check_pos_def = False` is used in check_matrix()
+    def test_check_matrix_valid(self):
         """Test case where the FIM is valid (square, positive definite, symmetric)."""
         FIM = np.array([[4, 1], [1, 3]])
         try:
-            check_FIM(FIM)
+            check_matrix(FIM)
         except ValueError as e:
             self.fail(f"Unexpected error: {e}")
 
-    def test_check_FIM_non_square(self):
+    def test_check_matrix_non_square(self):
         """Test case where the FIM is not square."""
         FIM = np.array([[4, 1], [1, 3], [2, 1]])
-        with self.assertRaisesRegex(ValueError, "FIM must be a square matrix"):
-            check_FIM(FIM)
+        with self.assertRaisesRegex(
+            ValueError, "argument mat must be a 2D square matrix"
+        ):
+            check_matrix(FIM)
 
-    def test_check_FIM_non_positive_definite(self):
+    def test_check_matrix_non_positive_definite(self):
         """Test case where the FIM is not positive definite."""
         FIM = np.array([[1, 0], [0, -2]])
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not positive definite. It has one or more negative "
+            "Matrix provided is not positive definite. It has one or more negative "
             + r"eigenvalue\(s\) less than -{:.1e}".format(
                 _SMALL_TOLERANCE_DEFINITENESS
             ),
         ):
-            check_FIM(FIM)
+            check_matrix(FIM)
 
-    def test_check_FIM_non_symmetric(self):
+    def test_check_matrix_non_symmetric(self):
         """Test case where the FIM is not symmetric."""
         FIM = np.array([[4, 1], [0, 3]])
         with self.assertRaisesRegex(
             ValueError,
-            "FIM provided is not symmetric using absolute tolerance {}".format(
+            "Matrix provided is not symmetric using absolute tolerance {}".format(
                 _SMALL_TOLERANCE_SYMMETRY
             ),
         ):
-            check_FIM(FIM)
+            check_matrix(FIM)
 
     """Test the compute_FIM_metrics() from utils.py."""
 
@@ -258,6 +268,28 @@ class TestUtilsFIM(unittest.TestCase):
         # Test with mixed types(List, Tuple, numpy array)
         result_mixed = list(snake_traversal_grid_sampling(list1, tuple2, array3))
         self.assertEqual(result_mixed, expected_list3)
+
+    # TODO: Add more tests as needed
+    def test_compute_correlation_matrix(self):
+        # Create a sample covariance matrix
+        covariance_matrix = np.array([[4, 2], [2, 3]])
+        var_name = ["X1", "X2"]
+
+        # Compute the correlation matrix
+        correlation_matrix = compcorr(covariance_matrix, var_name)
+
+        # Expected correlation matrix
+        expected_correlation_matrix = pd.DataFrame(
+            [[1.0, 0.577], [0.577, 1.0]], index=var_name, columns=var_name
+        )
+
+        # Check if the computed correlation matrix matches the expected one
+        pd.testing.assert_frame_equal(
+            correlation_matrix,
+            expected_correlation_matrix,
+            check_exact=False,
+            atol=1e-6,
+        )
 
 
 if __name__ == "__main__":
