@@ -16,11 +16,12 @@ import pyomo.contrib.alternative_solutions.aos_utils as au
 from pyomo.contrib.alternative_solutions import PyomoSolution
 from pyomo.contrib.alternative_solutions import enumerate_binary_solutions
 
-mip_solver = "gurobi"
-mip_available = pyomo.opt.check_available_solvers(mip_solver)
+solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi"))
+pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 
-class TestSolutionUnit(unittest.TestCase):
+@unittest.pytest.mark.default
+class TestSolutionUnit:
 
     def get_model(self):
         """
@@ -41,8 +42,7 @@ class TestSolutionUnit(unittest.TestCase):
         m.con_z = pyo.Constraint(expr=m.z <= 3)
         return m
 
-    @unittest.skipUnless(mip_available, "MIP solver not available")
-    def test_solution(self):
+    def test_solution(self, mip_solver):
         """
         Create a Solution Object, call its functions, and ensure the correct
         data is returned.
@@ -145,11 +145,10 @@ class TestSolutionUnit(unittest.TestCase):
         assert solution.to_string() == sol_str
 
         sol_val = solution.name_to_variable
-        self.assertEqual(set(sol_val.keys()), {"x", "y", "z", "f"})
-        self.assertEqual(set(solution.fixed_variable_names), {"f"})
+        assert set(sol_val.keys()) == {"x", "y", "z", "f"}
+        assert set(solution.fixed_variable_names) == {"f"}
 
-    @unittest.skipUnless(mip_available, "MIP solver not available")
-    def test_soln_order(self):
+    def test_soln_order(self, mip_solver):
         """ """
         values = [10, 9, 2, 1, 1]
         weights = [10, 9, 2, 1, 1]
@@ -167,10 +166,39 @@ class TestSolutionUnit(unittest.TestCase):
         )
 
         solns = enumerate_binary_solutions(
-            m, num_solutions=10, solver="glpk", abs_opt_gap=0.5
+            m, num_solutions=10, solver=mip_solver, abs_opt_gap=0.5
         )
         assert len(solns) == 4
-        assert [soln.id for soln in sorted(solns)] == [3, 2, 1, 0]
+        assert [[v.value for v in soln.variables()] for soln in sorted(solns)] == [
+            [
+                0,
+                1,
+                1,
+                0,
+                1,
+            ],
+            [
+                0,
+                1,
+                1,
+                1,
+                0,
+            ],
+            [
+                1,
+                0,
+                0,
+                1,
+                1,
+            ],
+            [
+                1,
+                0,
+                1,
+                0,
+                0,
+            ],
+        ]
 
 
 if __name__ == "__main__":
