@@ -161,11 +161,14 @@ def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
 
 def check_matrix(mat, check_pos_def=True):
     """
-    Checks that the Matrix is square, positive definite, and symmetric.
+    Checks that the matrix is square, positive definite, and symmetric.
 
     Parameters
     ----------
     mat: 2D numpy array representing the matrix
+    check_pos_def: bool, optional
+        If True, checks if the matrix is positive definite.
+        Default: True.
 
     Returns
     -------
@@ -399,11 +402,10 @@ def compute_correlation_matrix(
     correlation_matrix = covariance_matrix / std_dev_matrix
 
     # Set the index to the variable names if provided,
-    if var_name is not None:
-        corr_df = pd.DataFrame(correlation_matrix, index=var_name, columns=var_name)
-    else:
-        corr_df = correlation_matrix
-
-    return (
-        corr_df.round(significant_digits) if significant_digits else correlation_matrix
+    corr_df = (
+        pd.DataFrame(correlation_matrix, index=var_name, columns=var_name)
+        if var_name
+        else correlation_matrix
     )
+
+    return corr_df.round(significant_digits) if significant_digits else corr_df
