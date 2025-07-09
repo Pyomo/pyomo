@@ -81,7 +81,7 @@ class CUOPTDirect(DirectSolver):
         self._solver_model.set_constraint_upper_bounds(np.array(c_ub))
 
     def _add_var(self, variables):
-        # Map vriable to index and get var bounds
+        # Map variable to index and get var bounds
         var_type_dict = {"Integers": 'I', "Reals": 'C', "Binary": 'I'} # NonNegativeReals ?
         self.var_name_dict = {}
         v_lb, v_ub, v_type = [], [], []
