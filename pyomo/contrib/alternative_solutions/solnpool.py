@@ -2,7 +2,6 @@ import heapq
 import collections
 import dataclasses
 import json
-import munch
 import weakref
 
 from .aos_utils import MyMunch, _to_dict
