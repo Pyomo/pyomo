@@ -64,6 +64,10 @@ class TestGurobiMINLPWalker(CommonTest):
         visitor = self.get_visitor()
         expr = visitor.walk_expression(e)
 
+        # We don't call update in walk expression for performance reasons, but
+        # we need to update here in order to be able to test expr.
+        visitor.grb_model.update()
+
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
         x3 = visitor.var_map[id(m.x3)]
@@ -112,6 +116,10 @@ class TestGurobiMINLPWalker(CommonTest):
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
         visitor = self.get_visitor()
         expr = visitor.walk_expression(e)
+
+        # We don't call update in walk expression for performance reasons, but
+        # we need to update here in order to be able to test expr.
+        visitor.grb_model.update()
 
         x2 = visitor.var_map[id(m.x2)]
         x3 = visitor.var_map[id(m.x3)]
