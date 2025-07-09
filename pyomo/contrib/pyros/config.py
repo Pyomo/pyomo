@@ -13,6 +13,7 @@ from pyomo.common.config import (
     InEnum,
     Path,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import ApplicationError, PyomoException
 from pyomo.core.base import Var, VarData
 from pyomo.core.base.param import Param, ParamData
@@ -56,6 +57,38 @@ def positive_int_or_minus_one(obj):
 
 
 positive_int_or_minus_one.domain_name = "positive int or -1"
+
+
+def _deprecated_separation_priority_order(obj):
+    """
+    Domain validator for argument `separation_priority_order`.
+
+    As this argument has been deprecated, a deprecation warning
+    is issued through a WARNING-level logger message if
+    the argument is cast to a nonempty dict.
+
+    Parameters
+    ----------
+    obj : object
+        Argument value.
+
+    Returns
+    -------
+    separation_priority_order : dict
+        Argument value, cast to a dict.
+    """
+    separation_priority_order = dict(obj)
+    if separation_priority_order:
+        deprecation_warning(
+            "The argument 'separation_priority_order' is deprecated. "
+            "Consider specifying separation priorities by declaring, on your "
+            "model, Suffix components with local name `pyros_separation_priority`.",
+            version="6.9.3dev0",
+        )
+    return separation_priority_order
+
+
+_deprecated_separation_priority_order.domain_name = dict.__name__
 
 
 def uncertain_param_validator(uncertain_obj):
@@ -720,17 +753,34 @@ def pyros_config():
         "separation_priority_order",
         ConfigValue(
             default={},
-            domain=dict,
+            domain=_deprecated_separation_priority_order,
             doc=(
                 """
-                Mapping from model inequality constraint names
-                to positive integers specifying the priorities
-                of their corresponding separation subproblems.
-                A higher integer value indicates a higher priority.
-                Constraints not referenced in the `dict` assume
-                a priority of 0.
-                Separation subproblems are solved in order of decreasing
-                priority.
+                (DEPRECATED)
+                A dict-like object, each entry of which
+                maps the full name of a model ``Var`` or ``Constraint``
+                component to a value specifying the separation priority
+                for all constraints derived from the component.
+                A separation priority can be a numeric value or None.
+                A higher numeric value indicates a higher priority.
+                For all constraints, the default priority is 0.
+                (Inequality and equality) constraints with a
+                priority of None are excluded from
+                the separation problems and enforced subject to only
+                the nominal uncertain parameter realization in the master
+                problems.
+                Separation problems corresponding to inequality
+                constraints with numeric priorities are grouped by
+                priority. In every iteration, the groups are traversed
+                in descending order of priority,
+                until, within a group, constraint violations
+                are detected.
+
+                *Deprecated since Pyomo 6.9.3dev0*: The argument
+                `separation_priority_order` is deprecated.
+                Specify separation priorities by declaring, on your
+                model, `Suffix` components with local name
+                'pyros_separation_priority'.
                 """
             ),
         ),

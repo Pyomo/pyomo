@@ -4,10 +4,23 @@ PyROS CHANGELOG
 
 
 -------------------------------------------------------------------------------
+PyROS 1.3.8    28 Apr 2025
+-------------------------------------------------------------------------------
+- Add Suffix-based interface for prioritizing separation problems
+- Allow user to, through the separation priority ordering interface,
+  specify constraints that should be imposed subject to
+  the nominal realization only (and, therefore, not separated)
+- Deprecate the optional argument `separation_priority_order`.
+
+
+-------------------------------------------------------------------------------
 PyROS 1.3.7    06 Mar 2025
 -------------------------------------------------------------------------------
 - Modify reformulation of state-variable independent second-stage
   equality constraints for problems with discrete uncertainty sets
+- Lift the iteration-wise DR efficiency for problems with DR variable-dependent
+  first-stage equality constraints
+  (such as those derived from coefficient matching)
 
 
 -------------------------------------------------------------------------------

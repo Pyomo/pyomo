@@ -305,6 +305,7 @@ class TestConstructSeparationProblem(unittest.TestCase):
 class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
     def test_group_ss_ineq_constraints_by_priority(self):
         model_data = build_simple_model_data()
+        model_data.config.progress_logger = logging.getLogger(__name__)
         separation_model = construct_separation_problem(model_data)
 
         # build mock separation data-like object
@@ -312,6 +313,7 @@ class TestGroupSecondStageIneqConsByPriority(unittest.TestCase):
         separation_data = Bunch(
             separation_model=separation_model,
             separation_priority_order=model_data.separation_priority_order,
+            config=model_data.config,
         )
 
         priority_groups = group_ss_ineq_constraints_by_priority(separation_data)

@@ -42,7 +42,7 @@ Interface to MA27
    >>> status = solver.do_numeric_factorization(A)
    >>> x, status = solver.do_back_solve(rhs)
    >>> np.max(np.abs(A*x - rhs)) <= 1e-15
-   True
+   np.True_
 
 
 Interface to MUMPS

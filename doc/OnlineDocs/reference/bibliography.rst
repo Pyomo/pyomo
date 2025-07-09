@@ -29,6 +29,10 @@ These publications describe various Pyomo capabilitites or subpackages:
    Vol. 67. Springer. 2021.  DOI `10.1007/978-3-030-68928-5
    <https://doi.org/10.1007/978-3-030-68928-5>`_
 
+..
+   NOTE: When adding a new edition of the Pyomo Book, search the codebase
+   both for citation references "[PyomoBookIII]" and references "pyomobookiii"
+
 .. [PyomoDAE-paper] Bethany Nicholson, John D. Siirola, Jean-Paul Watson,
    Victor M. Zavala, and Lorenz T. Biegler. "pyomo.dae: a modeling and
    automatic discretization framework for optimization with differential
@@ -126,7 +130,7 @@ Bibliography
 
 .. [RB01] W. C. Rooney and L. T. Biegler. "Design for model parameter
    uncertainty using nonlinear confidence regions", *AIChE Journal*,
-   47(8). 2001.
+   47(8). 2001.  DOI `10.1002/aic.690470811 <https://doi.org/10.1002/aic.690470811>`_
 
 .. [RG94] R. Raman and I. E. Grossmann. "Modelling and computational
    techniques for logic based integer programming", *Computers and
