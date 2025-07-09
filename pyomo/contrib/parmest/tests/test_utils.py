@@ -9,12 +9,35 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.dependencies import pandas as pd, pandas_available
+from pyomo.common.dependencies import (
+    pandas as pd,
+    pandas_available,
+    numpy as np,
+    numpy_available,
+)
+
+import os.path
+import json
 
 import pyomo.environ as pyo
+
+from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
+
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.opt import SolverFactory
+
+from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
+from pyomo.contrib.doe.examples.reactor_example import (
+    ReactorExperiment as FullReactorExperiment,
+)
+
+currdir = this_file_dir()
+file_path = os.path.join(currdir, "..", "..", "doe", "examples", "result.json")
+
+with open(file_path) as f:
+    data_ex = json.load(f)
+data_ex["control_points"] = {float(k): v for k, v in data_ex["control_points"].items()}
 
 ipopt_available = SolverFactory("ipopt").available()
 
@@ -59,6 +82,116 @@ class TestUtils(unittest.TestCase):
             c_old = instance.find_component(v)
             self.assertEqual(pyo.value(c), pyo.value(c_old))
             self.assertTrue(c in m_vars.unknown_parameters)
+
+    def test_update_model_from_suffix_unknown_parameters(self):
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        test_model = experiment.get_labeled_model()
+
+        suffix_obj = test_model.unknown_parameters  # a Suffix
+        var_list = list(suffix_obj.keys())  # components only
+        orig_var_vals = np.array([pyo.value(v) for v in var_list])  # numeric var values
+        orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+        new_vals = orig_var_vals + 10
+
+        # Update the model from the suffix
+        update_model_from_suffix(suffix_obj, new_vals)
+
+        # ── Check results ────────────────────────────────────────────────────
+        new_var_vals = np.array([pyo.value(v) for v in var_list])
+        new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+
+        # (1) Variables have been overwritten with `new_vals`
+        self.assertTrue(np.allclose(new_var_vals, new_vals))
+
+        # (2) Suffix tags are unchanged
+        self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
+
+    def test_update_model_from_suffix_experiment_inputs(self):
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        test_model = experiment.get_labeled_model()
+
+        suffix_obj = test_model.experiment_inputs  # a Suffix
+        var_list = list(suffix_obj.keys())  # components
+        orig_var_vals = np.array([pyo.value(v) for v in var_list])
+        orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+        new_vals = orig_var_vals + 0.5
+        # Update the model from the suffix
+        update_model_from_suffix(suffix_obj, new_vals)
+        # ── Check results ────────────────────────────────────────────────────
+        new_var_vals = np.array([pyo.value(v) for v in var_list])
+        new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+        # (1) Variables have been overwritten with `new_vals`
+        self.assertTrue(np.allclose(new_var_vals, new_vals))
+        # (2) Suffix tags are unchanged
+        self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
+
+    # # Debugging
+    # def test_update_model_from_suffix_experiment_outputs(self):
+    #     experiment = FullReactorExperiment(data_ex, 10, 3)
+    #     test_model = experiment.get_labeled_model()
+
+    #     suffix_obj      = test_model.experiment_outputs  # a Suffix
+    #     var_list        = list(suffix_obj.keys())        # components
+    #     orig_var_vals   = np.array([pyo.value(v) for v in var_list])
+    #     orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+    #     new_vals        = orig_var_vals + 0.5
+    #     # Update the model from the suffix
+    #     update_model_from_suffix(suffix_obj, new_vals)
+    #     # ── Check results ────────────────────────────────────────────────────
+    #     new_var_vals   = np.array([pyo.value(v) for v in var_list
+    #     ])
+    #     new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+    #     # (1) Variables have been overwritten with `new_vals`
+    #     self.assertTrue(np.allclose(new_var_vals, new_vals))
+    #     # (2) Suffix tags are unchanged
+    #     self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
+
+    # # Debugging
+    # def test_update_model_from_suffix_measurement_error(self):
+    #     experiment = FullReactorExperiment(data_ex, 10, 3)
+    #     test_model = experiment.get_labeled_model()
+
+    #     suffix_obj      = test_model.measurement_error  # a Suffix
+    #     var_list        = list(suffix_obj.keys())        # components
+    #     orig_var_vals   = np.array([pyo.value(v) for v in var_list])
+    #     orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+    #     new_vals        = orig_var_vals + 0.5
+    #     # Update the model from the suffix
+    #     update_model_from_suffix(suffix_obj, new_vals)
+    #     # ── Check results ────────────────────────────────────────────────────
+    #     new_var_vals   = np.array([pyo.value(v) for v in var_list
+    #     ])
+    #     new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+    #     # (1) Variables have been overwritten with `new_vals`
+    #     self.assertTrue(np.allclose(new_var_vals, new_vals))
+    #     # (2) Suffix tags are unchanged
+    #     self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
+
+    def test_update_model_from_suffix_length_mismatch(self):
+
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        m = experiment.get_labeled_model()
+        # Only ONE new value for TWO suffix items ➜ should raise
+        with self.assertRaisesRegex(
+            ValueError, "values length does not match suffix length"
+        ):
+            update_model_from_suffix(m.unknown_parameters, [42])
+
+    def test_update_model_from_suffix_unsupported_component(self):
+        experiment = FullReactorExperiment(data_ex, 10, 3)
+        m = experiment.get_labeled_model()
+
+        # Create a suffix with a ConstraintData component
+        m.x = pyo.Var(initialize=0.0)
+        m.c = pyo.Constraint(expr=m.x == 0)  # not Var/Param!
+
+        m.bad_suffix = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.bad_suffix[m.c] = 0  # tag a Constraint
+
+        with self.assertRaisesRegex(
+            TypeError, r"Unsupported component type .*Constraint.*"
+        ):
+            update_model_from_suffix(m.bad_suffix, [1.0])
 
 
 if __name__ == "__main__":

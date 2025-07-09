@@ -29,9 +29,6 @@ import pyomo.environ as pyo
 
 from pyomo.common.dependencies import numpy as np, numpy_available
 
-from pyomo.core.base.param import ParamData
-from pyomo.core.base.var import VarData
-
 
 # Rescale FIM (a scaling function to help rescale FIM from parameter values)
 def rescale_FIM(FIM, param_vals):
@@ -102,35 +99,3 @@ def rescale_FIM(FIM, param_vals):
 #     return param_list
 
 
-# Adding utility to update parameter values in a model based on the suffix
-def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
-    """
-    Overwrite each variable/parameter referenced by ``suffix_obj`` with the
-    corresponding value in ``values``.
-
-    Parameters
-    ----------
-    suffix_obj : pyomo.core.base.suffix.Suffix
-        The suffix whose *keys* are the components you want to update.
-        Call like ``update_from_suffix(model.unknown_parameters, vals)``.
-    values : iterable of numbers
-        New numerical values for the components referenced by the suffix.
-        Must be the same length as ``suffix_obj``.
-    """
-    # Check that the length of values matches the suffix length
-    items = list(suffix_obj.items())
-    if len(items) != len(values):
-        raise ValueError("values length does not match suffix length")
-
-    # Iterate through the items in the suffix and update their values
-    # Note: items are tuples of (component, suffix_value)
-    for (comp, _), new_val in zip(items, values):
-
-        # update the component value
-        # Check if the component is a VarData or ParamData
-        if isinstance(comp, (VarData, ParamData)):
-            comp.set_value(new_val)
-        else:
-            raise TypeError(
-                f"Unsupported component type {type(comp)}; expected VarData or ParamData."
-            )
