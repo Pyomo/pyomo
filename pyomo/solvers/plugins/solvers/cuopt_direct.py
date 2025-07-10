@@ -36,16 +36,17 @@ from pyomo.core.base.suffix import Suffix
 import numpy as np
 import time
 
-logger = logging.getLogger('pyomo.solvers')
+logger = logging.getLogger("pyomo.solvers")
 
 cuopt, cuopt_available = attempt_import(
-    'cuopt',
-    )
+    "cuopt",
+)
 
-@SolverFactory.register('cuopt_direct', doc='Direct python interface to CUOPT')
+
+@SolverFactory.register("cuopt_direct", doc="Direct python interface to CUOPT")
 class CUOPTDirect(DirectSolver):
     def __init__(self, **kwds):
-        kwds['type'] = 'cuoptdirect'
+        kwds["type"] = "cuoptdirect"
         super(CUOPTDirect, self).__init__(**kwds)
         self._python_api_exists = True
         # Note: Undefined capabilities default to None
@@ -69,20 +70,28 @@ class CUOPTDirect(DirectSolver):
         for i, con in enumerate(constraints):
             repn = generate_standard_repn(con.body, quadratic=False)
             matrix_data.extend(repn.linear_coefs)
-            matrix_indices.extend([self.var_name_dict[str(i)] for i in repn.linear_vars])
+            matrix_indices.extend(
+                [self.var_name_dict[str(i)] for i in repn.linear_vars]
+            )
             """for v, c in zip(con.body.linear_vars, con.body.linear_coefs):
                 matrix_data.append(value(c))
                 matrix_indices.append(self.var_name_dict[str(v)])"""
             matrix_indptr.append(len(matrix_data))
             c_lb.append(value(con.lower) if con.lower is not None else -np.inf)
             c_ub.append(value(con.upper) if con.upper is not None else np.inf)
-        self._solver_model.set_csr_constraint_matrix(np.array(matrix_data), np.array(matrix_indices), np.array(matrix_indptr))
+        self._solver_model.set_csr_constraint_matrix(
+            np.array(matrix_data), np.array(matrix_indices), np.array(matrix_indptr)
+        )
         self._solver_model.set_constraint_lower_bounds(np.array(c_lb))
         self._solver_model.set_constraint_upper_bounds(np.array(c_ub))
 
     def _add_var(self, variables):
         # Map vriable to index and get var bounds
-        var_type_dict = {"Integers": 'I', "Reals": 'C', "Binary": 'I'} # NonNegativeReals ?
+        var_type_dict = {
+            "Integers": "I",
+            "Reals": "C",
+            "Binary": "I",
+        }  # NonNegativeReals ?
         self.var_name_dict = {}
         v_lb, v_ub, v_type = [], [], []
 
@@ -130,13 +139,17 @@ class CUOPTDirect(DirectSolver):
         self._add_block(model)
 
     def _add_block(self, block):
-        self._add_var(block.component_data_objects(
-            ctype=Var, descend_into=True, active=True, sort=True)
+        self._add_var(
+            block.component_data_objects(
+                ctype=Var, descend_into=True, active=True, sort=True
+            )
         )
 
         for sub_block in block.block_data_objects(descend_into=True, active=True):
-            self._add_constraint(sub_block.component_data_objects(
-                ctype=Constraint, descend_into=False, active=True, sort=True)
+            self._add_constraint(
+                sub_block.component_data_objects(
+                    ctype=Constraint, descend_into=False, active=True, sort=True
+                )
             )
             obj_counter = 0
             for obj in sub_block.component_data_objects(
@@ -203,9 +216,7 @@ class CUOPTDirect(DirectSolver):
             soln.status = SolutionStatus.stoppedByLimit
         elif status in [7]:
             self.results.solver.status = SolverStatus.ok
-            self.results.solver.termination_condition = (
-                TerminationCondition.other
-            )
+            self.results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.other
         else:
             self.results.solver.status = SolverStatus.error
@@ -240,7 +251,7 @@ class CUOPTDirect(DirectSolver):
         return False
 
     def _load_rc(self, vars_to_load=None):
-        if not hasattr(self._pyomo_model, 'rc'):
+        if not hasattr(self._pyomo_model, "rc"):
             self._pyomo_model.rc = Suffix(direction=Suffix.IMPORT)
         rc = self._pyomo_model.rc
         var_map = self._pyomo_var_to_ndx_map
