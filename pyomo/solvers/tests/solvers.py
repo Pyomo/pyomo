@@ -429,7 +429,7 @@ def test_solver_cases(*args):
             ]
         )
 
-        _test_solver_cases['cuopt', 'python'] = initialize(
+        _test_solver_cases['cuopt_direct', 'python'] = initialize(
             name='cuopt_direct',
             io='python',
             capabilities=_cuopt_capabilities,
