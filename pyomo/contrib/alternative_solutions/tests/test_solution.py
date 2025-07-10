@@ -170,34 +170,10 @@ class TestSolutionUnit:
         )
         assert len(solns) == 4
         assert [[v.value for v in soln.variables()] for soln in sorted(solns)] == [
-            [
-                0,
-                1,
-                1,
-                0,
-                1,
-            ],
-            [
-                0,
-                1,
-                1,
-                1,
-                0,
-            ],
-            [
-                1,
-                0,
-                0,
-                1,
-                1,
-            ],
-            [
-                1,
-                0,
-                1,
-                0,
-                0,
-            ],
+            [0, 1, 1, 0, 1],
+            [0, 1, 1, 1, 0],
+            [1, 0, 0, 1, 1],
+            [1, 0, 1, 0, 0],
         ]
 
 
