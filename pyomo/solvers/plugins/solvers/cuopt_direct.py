@@ -92,6 +92,7 @@ class CUOPTDirect(DirectSolver):
             "Reals": "C",
             "Binary": "I",
         }  # NonNegativeReals ?
+
         self.var_name_dict = {}
         v_lb, v_ub, v_type = [], [], []
 
