@@ -50,5 +50,9 @@ The following example returns model values from a Pyomo Expression.
    ...     return expr
 
    >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=None)
+INFO: Model has expected labels.
+WARNING: DEPRECATED: You're using a deprecated input to the `obj_function` argument by passing a custom function.
+This usage will be removed in a future release. Please update to the new parmest interface using the built-in 'SSE'
+and 'SSE_weighted' objectives. (deprecated in 6.9.3.dev0)
    >>> obj, theta, var_values = pest.theta_est(return_values=['response_function'])
    >>> #print(var_values)

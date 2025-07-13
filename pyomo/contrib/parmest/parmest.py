@@ -1662,18 +1662,22 @@ class Estimator(object):
         """
         Covariance matrix calculation using all scenarios in the data
 
-        Argument:
-            method: string ``method`` object specified by the user
-                    options - 'finite_difference', 'reduced_hessian',
-                    and 'automatic_differentiation_kaug'
-            solver: string ``solver`` object specified by the user, e.g., 'ipopt'
-            cov_n: integer, number of datapoints specified by the user which is used
-                   in the objective function
-            step: float used for relative perturbation of the parameters, e.g.,
-                  step=0.02 is a 2% perturbation
+        Parameters
+        ----------
+        method: string, optional
+            Options - 'finite_difference', 'reduced_hessian',
+            and 'automatic_differentiation_kaug'
+        solver: string, optional
+            E.g., 'ipopt'
+        cov_n: integer, required
+            Number of datapoints used in the covariance calculation
+        step: float, optional
+            The value used for relative perturbation of the parameters, e.g.,
+            step=0.02 is a 2% perturbation
 
-        Returns:
-            cov: pd.DataFrame, covariance matrix of the estimated parameters
+        Returns
+        -------
+        cov: pd.DataFrame, covariance matrix of the estimated parameters
         """
         # check if the solver input is a string
         if not isinstance(solver, str):
@@ -1687,7 +1691,7 @@ class Estimator(object):
 
         # check if the user-supplied number of datapoints is an integer
         if not isinstance(cov_n, int):
-            raise TypeError("Expected an integer for 'cov_n' argument.")
+            raise TypeError("Expected an integer for the 'cov_n' argument.")
 
         # number of unknown parameters
         num_unknowns = max(
