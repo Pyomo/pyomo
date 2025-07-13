@@ -84,10 +84,6 @@ Section.
 
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(exp_list, obj_function=SSE)
-INFO: Model has expected labels.
-WARNING: DEPRECATED: You're using a deprecated input to the `obj_function` argument by passing a custom function.
-This usage will be removed in a future release. Please update to the new parmest interface using the built-in 'SSE'
-and 'SSE_weighted' objectives. (deprecated in 6.9.3.dev0)
 
 Optionally, solver options can be supplied, e.g.,
 
@@ -96,10 +92,6 @@ Optionally, solver options can be supplied, e.g.,
 
     >>> solver_options = {"max_iter": 6000}
     >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=solver_options)
-INFO: Model has expected labels.
-WARNING: DEPRECATED: You're using a deprecated input to the `obj_function` argument by passing a custom function.
-This usage will be removed in a future release. Please update to the new parmest interface using the built-in 'SSE'
-and 'SSE_weighted' objectives. (deprecated in 6.9.3.dev0)
 
 
 List of experiment objects
