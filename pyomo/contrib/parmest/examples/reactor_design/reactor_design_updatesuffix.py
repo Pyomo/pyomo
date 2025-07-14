@@ -8,59 +8,53 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.common.dependencies import numpy as np, pathlib
 
-from pyomo.contrib.doe.examples.reactor_experiment import ReactorExperiment
-from pyomo.contrib.doe import DesignOfExperiments
-from pyomo.contrib.doe import utils
-
-from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
+from pyomo.common.dependencies import numpy as np, pandas as pd
+from os.path import join, abspath, dirname
+import pyomo.contrib.parmest.parmest as parmest
+from pyomo.contrib.parmest.examples.reactor_design.reactor_design import (
+    ReactorDesignExperiment,
+)
 
 import pyomo.environ as pyo
-
-import json
+from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 
 
 # Example to run a DoE on the reactor
 def run_reactor_update_suffix_items():
     # Read in file
-    DATA_DIR = pathlib.Path(__file__).parent
-    file_path = DATA_DIR / "result.json"
+    # Read in data
+    file_dirname = dirname(abspath(str(__file__)))
+    file_name = abspath(join(file_dirname, "reactor_data.csv"))
+    data = pd.read_csv(file_name)
 
-    with open(file_path) as f:
-        data_ex = json.load(f)
-
-    # Put temperature control time points into correct format for reactor experiment
-    data_ex["control_points"] = {
-        float(k): v for k, v in data_ex["control_points"].items()
-    }
-
-    # Create a ReactorExperiment object; data and discretization information are part
-    # of the constructor of this object
-    experiment = ReactorExperiment(data=data_ex, nfe=10, ncp=3)
+    experiment = ReactorDesignExperiment(data, 0)
 
     # Call the experiment's model using get_labeled_model
     reactor_model = experiment.get_labeled_model()
 
-    # Show the model
-    reactor_model.pprint()
     # Update the model to change the values of the desired component
     # Here we will update the unknown parameters of the reactor model
-    example_suffix = "measurement_error"
-    suffix_obj = reactor_model.measurement_error
-    me_vars = list(suffix_obj.keys())  # components
-    orig_vals = np.array([suffix_obj[v] for v in me_vars])
+    example_suffix = "unknown_parameters"
+    suffix_obj = reactor_model.unknown_parameters
+    var_list = list(suffix_obj.keys())  # components
+    orig_var_vals = np.array([pyo.value(v) for v in var_list])
 
     # Original values
-    print("Original σ values:", orig_vals)
+    print(f"Original values of {example_suffix}: \n")
+    for v in suffix_obj:
+        v.display()  # prints “v : <value>”
+
     # Update the suffix with new values
-    new_vals = orig_vals + 1
+    new_vals = orig_var_vals + 0.5
     # Here we are updating the values of the unknown parameters
     # You must know the length of the list and order of the suffix items to update them correctly
     update_model_from_suffix(suffix_obj, new_vals)
 
     # Updated values
-    print("Updated σ values :", [suffix_obj[v] for v in me_vars])
+    print(f"\nUpdated values of {example_suffix}: \n")
+    for v in suffix_obj:
+        v.display()  # prints “v : <value>”
 
 
 if __name__ == "__main__":

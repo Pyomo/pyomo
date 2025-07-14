@@ -223,14 +223,25 @@ def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
     if len(items) != len(values):
         raise ValueError("values length does not match suffix length")
 
+    # Robust way to get the component’s own name
+    suffix_name = getattr(suffix_obj, "local_name", suffix_obj.name)
+
+    # Add a check for measurement error suffix
+    is_me_err = suffix_name == "measurement_error"
+
     # Iterate through the items in the suffix and update their values
     # Note: items are tuples of (component, suffix_value)
     for (comp, _), new_val in zip(items, values):
 
         # update the component value
+        # Measurement error is only stored in the suffix, not in the model, so it needs to be set directly
+        if is_me_err:
+            suffix_obj[comp] = float(new_val)
         # Check if the component is a VarData or ParamData
-        if isinstance(comp, (VarData, ParamData)):
+        elif isinstance(comp, (VarData, ParamData)):
             comp.set_value(new_val)
+
+        # If the component is not a VarData or ParamData, raise an error
         else:
             raise TypeError(
                 f"Unsupported component type {type(comp)}; expected VarData or ParamData."

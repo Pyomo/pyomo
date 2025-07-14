@@ -31,7 +31,6 @@ from pyomo.contrib.parmest.utils.model_utils import update_model_from_suffix
 from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
 )
-import idaes
 
 currdir = this_file_dir()
 file_path = os.path.join(currdir, "..", "..", "doe", "examples", "result.json")
@@ -163,18 +162,14 @@ class TestUtils(unittest.TestCase):
 
         suffix_obj = test_model.measurement_error  # a Suffix
         var_list = list(suffix_obj.keys())  # components
-        orig_var_vals = np.array([pyo.value(v) for v in var_list])
-        orig_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+        orig_var_vals = np.array([suffix_obj[v] for v in var_list])
         new_vals = orig_var_vals + 0.5
         # Update the model from the suffix
         update_model_from_suffix(suffix_obj, new_vals)
         # ── Check results ────────────────────────────────────────────────────
-        new_var_vals = np.array([pyo.value(v) for v in var_list])
-        new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+        new_var_vals = np.array([suffix_obj[v] for v in var_list])
         # (1) Variables have been overwritten with `new_vals`
         self.assertTrue(np.allclose(new_var_vals, new_vals))
-        # (2) Suffix tags are unchanged
-        self.assertTrue(np.array_equal(new_suffix_val, orig_suffix_val))
 
     def test_update_model_from_suffix_length_mismatch(self):
 
