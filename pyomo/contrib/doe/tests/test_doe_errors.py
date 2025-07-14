@@ -749,7 +749,5 @@ class TestReactorExampleErrors(unittest.TestCase):
             doe_obj.compute_FIM(method="Bad Method")
 
 
-
-
 if __name__ == "__main__":
     unittest.main()
