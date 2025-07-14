@@ -266,4 +266,3 @@ def get_FIM_metrics(FIM):
         "log10(E-Optimality)": E_opt,
         "log10(Modified E-Optimality)": ME_opt,
     }
-
