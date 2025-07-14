@@ -25,7 +25,6 @@ from pyomo.contrib.doe.examples.reactor_example import (
     ReactorExperiment as FullReactorExperiment,
 )
 
-from pyomo.contrib.doe.utils import update_model_from_suffix
 import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory

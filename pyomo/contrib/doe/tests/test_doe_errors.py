@@ -26,8 +26,6 @@ from pyomo.contrib.doe.tests.experiment_class_example_flags import (
     FullReactorExperiment,
 )
 
-from pyomo.contrib.doe.utils import update_model_from_suffix
-import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 
 ipopt_available = SolverFactory("ipopt").available()
