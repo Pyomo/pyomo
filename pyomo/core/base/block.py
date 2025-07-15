@@ -2470,7 +2470,7 @@ def declare_custom_block(name, new_ctype=None, rule=None):
     >>> type(s)
     <class 'IndexedFooBlock'>
 
-    It is frequenty desirable for the custom class to have a default
+    It is frequently desirable for the custom class to have a default
     ``rule`` for constructing and populating new instances.  The default
     rule can be provided either as an explicit function or a string.  If
     a string, the rule is obtained by attribute lookup on the derived
