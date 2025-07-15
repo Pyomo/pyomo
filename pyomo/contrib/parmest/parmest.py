@@ -499,7 +499,7 @@ class Estimator(object):
 
                 # Prior FIM is required for L2 regularization
                 # If prior_FIM and theta_ref are provided, use them
-                if self.prior_FIM and self.theta_ref is not None:
+                if self.theta_ref.any() is not None:
                     # Regularize the objective function
                     second_stage_rule = SSE_with_L2_regularization(
                         model=self.model_initialized,
