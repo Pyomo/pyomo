@@ -328,6 +328,7 @@ class Estimator(object):
         obj_function=None,
         prior_FIM=None,
         theta_ref=None,
+        regularization_weight=None,
         tee=False,
         diagnostic_mode=False,
         solver_options=None,
@@ -354,11 +355,14 @@ class Estimator(object):
 
         # populate keyword argument options
         self.obj_function = obj_function
-        self.prior_FIM = prior_FIM
-        self.theta_ref = theta_ref
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
+
+        # Added keyword arguments for L2 regularization
+        self.prior_FIM = prior_FIM
+        self.theta_ref = theta_ref
+        self.regularization_weight = regularization_weight
 
         # TODO: delete this when the deprecated interface is removed
         self.pest_deprecated = None
