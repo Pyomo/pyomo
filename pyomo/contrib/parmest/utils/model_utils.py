@@ -207,7 +207,9 @@ def convert_params_to_vars(model, param_names=None, fix_vars=False):
 def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
     """
     Overwrite each variable/parameter referenced by ``suffix_obj`` with the
-    corresponding value in ``values``.
+    corresponding value in ``values``. The provided values are expected to
+    be in the same order as the components in the suffix from when it was
+    created.
 
     Parameters
     ----------
@@ -234,7 +236,8 @@ def update_model_from_suffix(suffix_obj: pyo.Suffix, values):
     for (comp, _), new_val in zip(items, values):
 
         # update the component value
-        # Measurement error is only stored in the suffix, not in the model, so it needs to be set directly
+        # Measurement error is only stored in the suffix,
+        # not in the model, so it needs to be set directly
         if is_me_err:
             suffix_obj[comp] = float(new_val)
         # Check if the component is a VarData or ParamData
