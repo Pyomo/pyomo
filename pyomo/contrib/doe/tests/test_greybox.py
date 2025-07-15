@@ -342,9 +342,8 @@ if numpy_available and scipy_available and ipopt_available and cyipopt_available
         # Use the grey box objective
         doe_object.use_grey_box = True
 
-        # Change linear solvers to mumps
-        # doe_object.solver.options["linear_solver"] = "mumps"
-        # doe_object.grey_box_solver.config.options["linear_solver"] = "mumps"
+        # Run for 1 iteration to see if
+        # cyipopt was called.
         doe_object.grey_box_solver.config.options["max_iter"] = 1
 
         doe_object.run_doe()
