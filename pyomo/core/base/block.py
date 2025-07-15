@@ -2100,7 +2100,6 @@ class Block(ActiveIndexedComponent):
         # initializer
         self._dense = kwargs.pop('dense', True)
         kwargs.setdefault('ctype', Block)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _options is not None:
             deprecation_warning(
                 "The Block 'options=' keyword is deprecated.  "
@@ -2112,6 +2111,7 @@ class Block(ActiveIndexedComponent):
             self._rule = Initializer(functools.partial(_rule, **_options))
         else:
             self._rule = Initializer(_rule)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
