@@ -542,7 +542,7 @@ class DefaultInitializer(InitializerBase):
 
 
 class ParameterizedInitializer(InitializerBase):
-    """Base class for all Initializer objects"""
+    """Wapper to provide additional positional arguments to Initializer objects"""
 
     __slots__ = ('_base_initializer',)
 

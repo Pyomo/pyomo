@@ -2431,23 +2431,42 @@ class _custom_block_rule_redirect(object):
 def declare_custom_block(name, new_ctype=None, rule=None):
     """Decorator to declare components for a custom block data class
 
+    This decorator simplifies the definition of custom derived Block
+    classes.  With this decorator, developers must only implement the
+    derived "Data" class.  The decorator automatically creates the
+    derived containers using the provided name, and adds them to the
+    current module:
+
     >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
-    ...    # custom block data class
-    ...    # CustomBlock returns an empty block if `build` method is not implemented
-    ...    def build(self, *args, option_1, option_2):
-    ...        # args contains the index (for indexed blocks)
-    ...        # option_1, option_2, ... are additional arguments
-    ...        self.x = Var()
-    ...        self.cost = Param(initialize=option_1)
+    ...    pass
 
-    Usage:
-    >>> m = ConcreteModel()
-    >>> m.blk = FooBlock([1, 2], options={"option_1": 1, "option_2": 2})
+    >>> s = FooBlock()
+    >>> type(s)
+    <class 'ScalarFooBlock'>
 
-    Specify `rule` argument to ignore the default rule argument.
-    >>> m = ConcreteModel()
-    >>> m.blk = FooBlock([1, 2], rule=my_custom_block_rule)
+    >>> s = FooBlock([1,2])
+    >>> type(s)
+    <class 'IndexedFooBlock'>
+
+    It is frequenty desirable for the custom class to have a default
+    ``rule`` for constructing and populating new instances.  The default
+    rule can be provided either as an explicit function or a string.  If
+    a string, the rule is obtained by attribute lookup on the derived
+    Data class:
+
+    >>> @declare_custom_block(name="BarBlock", rule="build")
+    ... class BarBlockData(BlockData):
+    ...    def build(self, *args):
+    ...        self.x = Var(initialize=5)
+
+    >>> m = pyo.ConcreteModel()
+    >>> m.b = BarBlock([1,2])
+    >>> print(m.b[1].x.value)
+    5
+    >>> print(m.b[2].x.value)
+    5
+
     """
 
     def block_data_decorator(block_data):
