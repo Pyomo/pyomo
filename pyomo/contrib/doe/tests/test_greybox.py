@@ -329,7 +329,7 @@ def make_greybox_and_doe_objects_rooney_biegler(objective_option):
 
 # Test whether or not cyipopt
 # is appropriately calling the
-# lienar solvers.
+# linear solvers.
 bad_message = "Invalid option encountered."
 cyipopt_call_working = True
 if numpy_available and scipy_available and ipopt_available and cyipopt_available:
