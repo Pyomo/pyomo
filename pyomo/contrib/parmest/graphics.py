@@ -218,6 +218,7 @@ def pairwise_plot(
     add_obj_contour=True,
     add_legend=True,
     filename=None,
+    seed=None,
 ):
     """
     Plot pairwise relationship for theta values, and optionally alpha-level
@@ -272,6 +273,9 @@ def pairwise_plot(
         Add a legend to the plot
     filename: string, optional
         Filename used to save the figure
+    seed: int, optional
+        Random seed used to generate theta values if theta_values is a tuple.
+        If None, the seed is not set.
     """
     assert isinstance(theta_values, (pd.DataFrame, tuple))
     assert isinstance(theta_star, (type(None), dict, pd.Series, pd.DataFrame))
@@ -283,6 +287,9 @@ def pairwise_plot(
     assert isinstance(add_obj_contour, bool)
     assert isinstance(filename, (type(None), str))
 
+    if seed is not None:
+        np.random.seed(seed)
+
     # If theta_values is a tuple containing (mean, cov, n), create a DataFrame of values
     if isinstance(theta_values, tuple):
         assert len(theta_values) == 3
@@ -292,7 +299,7 @@ def pairwise_plot(
         if isinstance(mean, dict):
             mean = pd.Series(mean)
         theta_names = mean.index
-        mvn_dist = stats.multivariate_normal(mean, cov)
+        mvn_dist = stats.multivariate_normal(mean, cov, seed=seed)
         theta_values = pd.DataFrame(
             mvn_dist.rvs(n, random_state=1), columns=theta_names
         )
@@ -402,7 +409,7 @@ def pairwise_plot(
                 )
 
             elif dist == "MVN":
-                mvn_dist = fit_mvn_dist(thetas)
+                mvn_dist = fit_mvn_dist(thetas, seed=seed)
                 Z = mvn_dist.pdf(thetas)
                 score = stats.scoreatpercentile(Z, (1 - alpha) * 100)
                 g.map_offdiag(
@@ -419,7 +426,7 @@ def pairwise_plot(
                 )
 
             elif dist == "KDE":
-                kde_dist = fit_kde_dist(thetas)
+                kde_dist = fit_kde_dist(thetas, seed=seed)
                 Z = kde_dist.pdf(thetas.transpose())
                 score = stats.scoreatpercentile(Z, (1 - alpha) * 100)
                 g.map_offdiag(
@@ -512,7 +519,7 @@ def fit_rect_dist(theta_values, alpha):
     return lower_bound, upper_bound
 
 
-def fit_mvn_dist(theta_values):
+def fit_mvn_dist(theta_values, seed=None):
     """
     Fit a multivariate normal distribution to theta values
 
@@ -527,13 +534,17 @@ def fit_mvn_dist(theta_values):
     """
     assert isinstance(theta_values, pd.DataFrame)
 
+    if seed is not None:
+        np.random.seed(seed)
+
     dist = stats.multivariate_normal(
-        theta_values.mean(), theta_values.cov(), allow_singular=True
+        theta_values.mean(), theta_values.cov(), allow_singular=True, seed=seed
     )
+
     return dist
 
 
-def fit_kde_dist(theta_values):
+def fit_kde_dist(theta_values, seed=None):
     """
     Fit a Gaussian kernel-density distribution to theta values
 
@@ -547,6 +558,8 @@ def fit_kde_dist(theta_values):
     scipy.stats.gaussian_kde distribution
     """
     assert isinstance(theta_values, pd.DataFrame)
+    if seed is not None:
+        np.random.seed(seed)
 
     dist = stats.gaussian_kde(theta_values.transpose().values)
 

@@ -66,7 +66,7 @@ public:
    // get the initial values for x
    void get_init_x(double *invec, int n);
 
-   // get the initia values for the multipliers lambda
+   // get the initial values for the multipliers lambda
    void get_init_multipliers(double *invec, int n);
 
    // evaluate the objective function
