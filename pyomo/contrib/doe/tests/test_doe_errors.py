@@ -19,6 +19,7 @@ from pyomo.common.dependencies import (
     scipy_available,
 )
 
+from pyomo.common.errors import DeveloperError
 from pyomo.common.fileutils import this_file_dir
 import pyomo.common.unittest as unittest
 
@@ -700,9 +701,14 @@ class TestReactorExampleErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            AttributeError,
-            "Finite difference option not recognized. Please "
-            "contact the developers as you should not see this error.",
+            DeveloperError,
+            "Internal Pyomo implementation error:\n"
+            "        "
+            "'Finite difference option not recognized. Please contact the\n"
+            "        "
+            "developers as you should not see this error.'\n"
+            "    "
+            "Please report this to the Pyomo Developers.",
         ):
             doe_obj.fd_formula = "bad things"
             doe_obj._generate_scenario_blocks()
@@ -722,9 +728,14 @@ class TestReactorExampleErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            AttributeError,
-            "Finite difference option not recognized. Please "
-            "contact the developers as you should not see this error.",
+            DeveloperError,
+            "Internal Pyomo implementation error:\n"
+            "        "
+            "'Finite difference option not recognized. Please contact the\n"
+            "        "
+            "developers as you should not see this error.'\n"
+            "    "
+            "Please report this to the Pyomo Developers.",
         ):
             doe_obj.fd_formula = "bad things"
             doe_obj.compute_FIM(method="sequential")
@@ -743,9 +754,14 @@ class TestReactorExampleErrors(unittest.TestCase):
         doe_obj = DesignOfExperiments(**DoE_args)
 
         with self.assertRaisesRegex(
-            AttributeError,
-            "Objective option not recognized. Please "
-            "contact the developers as you should not see this error.",
+            DeveloperError,
+            "Internal Pyomo implementation error:\n"
+            "        "
+            "'Objective option not recognized. Please contact the developers as\n"
+            "        "
+            "you should not see this error.'\n"
+            "    "
+            "Please report this to the Pyomo Developers.",
         ):
             doe_obj.objective_option = "bad things"
             doe_obj.create_objective_function()

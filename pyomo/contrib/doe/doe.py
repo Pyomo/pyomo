@@ -40,7 +40,8 @@ from pyomo.common.dependencies import (
     matplotlib as plt,
     scipy_available,
 )
-from pyomo.common.modeling import unique_component_name
+
+from pyomo.common.errors import DeveloperError
 from pyomo.common.timing import TicTocTimer
 
 from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
@@ -628,7 +629,7 @@ class DesignOfExperiments:
             )
             model.scenarios = range(len(model.unknown_parameters) + 1)
         else:
-            raise AttributeError(
+            raise DeveloperError(
                 "Finite difference option not recognized. Please "
                 "contact the developers as you should not see this error."
             )
@@ -927,7 +928,7 @@ class DesignOfExperiments:
                 return dict_jac_initialize[(i, j)]
             # Otherwise initialize to 0.1 (which is an arbitrary non-zero value)
             else:
-                raise AttributeError(
+                raise DeveloperError(
                     "Jacobian being initialized when the jac_initial attribute "
                     "is None. Please contact the developers as you should not "
                     "see this error."
@@ -1170,7 +1171,7 @@ class DesignOfExperiments:
             )
             model.scenarios = range(len(model.base_model.unknown_parameters) + 1)
         else:
-            raise AttributeError(
+            raise DeveloperError(
                 "Finite difference option not recognized. Please contact "
                 "the developers as you should not see this error."
             )
@@ -1290,7 +1291,7 @@ class DesignOfExperiments:
             ObjectiveLib.trace,
             ObjectiveLib.zero,
         ]:
-            raise AttributeError(
+            raise DeveloperError(
                 "Objective option not recognized. Please contact the "
                 "developers as you should not see this error."
             )
