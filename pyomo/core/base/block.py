@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 import copy
+import functools
 import logging
 import sys
 import weakref
@@ -2108,17 +2109,7 @@ class Block(ActiveIndexedComponent):
                 "the function arguments",
                 version='5.7.2',
             )
-            if self.is_indexed():
-
-                def rule_wrapper(model, *_idx):
-                    return _rule(model, *_idx, **_options)
-
-            else:
-
-                def rule_wrapper(model):
-                    return _rule(model, **_options)
-
-            self._rule = Initializer(rule_wrapper)
+            self._rule = Initializer(functools.partial(_rule, **_options))
         else:
             self._rule = Initializer(_rule)
         if _concrete:
