@@ -2390,38 +2390,13 @@ class ScalarCustomBlockMixin(object):
                 break
 
 
-def _default_rule(model_options):
-    """
-    Default rule for custom blocks
-
-    Parameters
-    ----------
-    model_options : dict
-        Dictionary of options needed to construct the block model
-    """
-
-    def _rule(blk, *args):
-        try:
-            # Attempt to build the model
-            blk.build(*args, **model_options)
-
-        except AttributeError:
-            # build method is not implemented in the BlockData class
-            # Returning an empty Pyomo Block
-            pass
-
-    return _rule
-
-
 class CustomBlock(Block):
     """The base class used by instances of custom block components"""
 
     def __init__(self, *args, **kwargs):
-        model_options = kwargs.pop("options", {})
-        kwargs.setdefault("rule", _default_rule(model_options))
-
         if self._default_ctype is not None:
             kwargs.setdefault('ctype', self._default_ctype)
+        kwargs.setdefault("rule", getattr(self, '_default_rule', None))
         Block.__init__(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
@@ -2442,7 +2417,18 @@ class CustomBlock(Block):
             return super().__new__(cls._indexed_custom_block, *args, **kwargs)
 
 
-def declare_custom_block(name, new_ctype=None):
+class _custom_block_rule_redirect(object):
+    """Functor to redirect the default rule to a BlockData method"""
+
+    def __init__(self, cls, name):
+        self.cls = cls
+        self.name = name
+
+    def __call__(self, block, *args, **kwargs):
+        return getattr(self.cls, self.name)(block, *args, **kwargs)
+
+
+def declare_custom_block(name, new_ctype=None, rule=None):
     """Decorator to declare components for a custom block data class
 
     >>> @declare_custom_block(name="FooBlock")
@@ -2485,8 +2471,15 @@ def declare_custom_block(name, new_ctype=None):
                 "_ComponentDataClass": block_data,
                 # By default this new block does not declare a new ctype
                 "_default_ctype": None,
+                # Define the default rule (may be None)
+                "_default_rule": rule,
             },
         )
+
+        # If the default rule is a string, then replace it with a
+        # function that will look up the attribute on the data class.
+        if type(rule) is str:
+            comp._default_rule = _custom_block_rule_redirect(block_data, rule)
 
         if new_ctype is not None:
             if new_ctype is True:
