@@ -117,17 +117,19 @@ class ApplicationError(Exception):
     An exception used when an external application generates an error.
     """
 
-    pass
-
 
 class PyomoException(Exception):
     """
     Exception class for other Pyomo exceptions to inherit from,
     allowing Pyomo exceptions to be caught in a general way
     (e.g., in other applications that use Pyomo).
+    Subclasses can define a class-level `default_message` attribute.
     """
 
-    pass
+    def __init__(self, *args):
+        if not args and getattr(self, 'default_message', None):
+            args = (self.default_message,)
+        return super().__init__(*args)
 
 
 class DeferredImportError(ImportError):
@@ -136,8 +138,6 @@ class DeferredImportError(ImportError):
     import failed.
 
     """
-
-    pass
 
 
 class DeveloperError(PyomoException, NotImplementedError):
@@ -163,8 +163,6 @@ class InfeasibleConstraintException(PyomoException):
     the course of range reduction).
     """
 
-    pass
-
 
 class IterationLimitError(PyomoException, RuntimeError):
     """A subclass of :py:class:`RuntimeError`, raised by an iterative method
@@ -182,15 +180,11 @@ class IntervalException(PyomoException, ValueError):
     Exception class used for errors in interval arithmetic.
     """
 
-    pass
-
 
 class InvalidValueError(PyomoException, ValueError):
     """
     Exception class used for value errors in compiled model representations
     """
-
-    pass
 
 
 class MouseTrap(PyomoException, NotImplementedError):
@@ -218,16 +212,12 @@ class MouseTrap(PyomoException, NotImplementedError):
 class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
 
-    pass
-
 
 class TempfileContextError(PyomoException, IndexError):
     """A Pyomo-specific IndexError raised when attempting to use the
     TempfileManager when it does not have a currently active context.
 
     """
-
-    pass
 
 
 class TemplateExpressionError(ValueError):

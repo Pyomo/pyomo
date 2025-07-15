@@ -963,10 +963,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.6.
-          Pyomo version: 6.9.2
-          Commit hash: 41cd797e0
-          Invoked at UTC 2025-03-13T16:20:31.105320+00:00
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.8.
+          Pyomo version: 6.9.3dev0
+          Commit hash: unknown
+          Invoked at UTC 2025-05-05T00:00:00.000000+00:00
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -1025,11 +1025,10 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   0.693        
-   1     3.5838e+07  1.2289e-09   1.5876e-12   5       3.7762e+04   1.514        
-   2     3.6129e+07  2.7244e-01   3.6878e-01   3       1.1093e+02   2.486        
-   3     3.6269e+07  3.7352e-01   4.3227e-01   1       2.7711e+01   3.667        
-   4     3.6285e+07  7.6526e-01   2.8426e-11   0       4.3364e-05g  6.291        
+   0     3.5838e+07  -            -            5       1.8832e+04   0.759
+   1     3.5838e+07  2.9329e-09   5.0030e-10   5       2.1295e+04   1.573
+   2     3.6285e+07  7.6526e-01   2.0398e-01   2       2.2457e+02   2.272
+   3     3.6285e+07  7.7212e-13   1.2525e-10   0       7.2940e-08g  5.280
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
@@ -1037,22 +1036,22 @@ Observe that the log contains the following information:
    
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     6.291     6.291  100.0
+   main                           1     5.281     5.281  100.0
         ------------------------------------------------------
-        dr_polishing              4     0.334     0.083    5.3
-        global_separation        27     0.954     0.035   15.2
-        local_separation        135     3.046     0.023   48.4
-        master                    5     1.027     0.205   16.3
-        master_feasibility        4     0.133     0.033    2.1
-        preprocessing             1     0.013     0.013    0.2
-        other                   n/a     0.785       n/a   12.5
+        dr_polishing              3     0.155     0.052    2.9
+        global_separation        27     1.280     0.047   24.2
+        local_separation        108     2.200     0.020   41.7
+        master                    4     0.727     0.182   13.8
+        master_feasibility        3     0.103     0.034    1.9
+        preprocessing             1     0.021     0.021    0.4
+        other                   n/a     0.794       n/a   15.0
         ======================================================
    ===========================================================
    
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 5
-    Solve time (wall s)   : 6.291
+    Iterations            : 4
+    Solve time (wall s)   : 5.281
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------
@@ -1131,6 +1130,58 @@ The constituent columns are defined in the
    * - Wall time (s)
      - Total time elapsed by the solver, in seconds, up to the end of the
        current iteration.
+
+
+Separation Priority Ordering 
+----------------------------
+The PyROS solver supports custom prioritization of
+the separation subproblems (and, thus, the constraints)
+that are automatically derived from
+a given model for robust optimization.
+Users may specify separation priorities through:
+
+- (Recommended) :class:`~pyomo.core.base.suffix.Suffix` components
+  with local name ``pyros_separation_priority``,
+  declared on the model or any of its sub-blocks.
+  Each entry of every such
+  :class:`~pyomo.core.base.suffix.Suffix`
+  should map a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.constraint.Constraint`
+  component to a value that specifies the separation
+  priority of all constraints derived from that component
+- The optional argument ``separation_priority_order``
+  to the PyROS :py:meth:`~pyomo.contrib.pyros.pyros.PyROS.solve`
+  method. The argument should be castable to a :py:obj:`dict`,
+  of which each entry maps the full name of a
+  :class:`~pyomo.core.base.var.Var`
+  or :class:`~pyomo.core.base.constraint.Constraint`
+  component to a value that specifies the
+  separation priority of all constraints
+  derived from that component
+
+Specification via :class:`~pyomo.core.base.suffix.Suffix` components
+takes precedence over specification via the solver argument
+``separation_priority_order``.
+Moreover, the precedence ordering among
+:class:`~pyomo.core.base.suffix.Suffix`
+components is handled by the Pyomo
+:class:`~pyomo.core.base.suffix.SuffixFinder` utility.
+
+A separation priority can be either
+a (real) number (i.e., of type :py:class:`int`, :py:class:`float`, etc.)
+or :py:obj:`None`.
+A higher number indicates a higher priority.
+The default priority for all constraints is 0.
+Therefore a constraint can be prioritized [or deprioritized]
+over the default by mapping the constraint to a positive [or negative] number.
+In practice, critical or dominant constraints are often
+prioritized over algorithmic or implied constraints.
+
+Constraints that have been assigned a priority of :py:obj:`None`
+are enforced subject to only the nominal uncertain parameter realization
+provided by the user. Therefore, these constraints are not imposed robustly
+and, in particular, are excluded from the separation problems.
 
 
 Feedback and Reporting Issues

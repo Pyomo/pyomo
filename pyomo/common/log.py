@@ -73,11 +73,10 @@ elif hasattr(getattr(logging.getLogger(), 'manager', None), 'disable'):
         """
         if logger.manager.disable >= _DEBUG:
             return False
-        _level = logger.getEffectiveLevel()
         # Filter out NOTSET and higher levels
-        return _NOTSET < _level <= _DEBUG
+        return _NOTSET < logger.getEffectiveLevel() <= _DEBUG
 
-else:
+elif sys.version_info[:3] < (3, 13, 4):
     # This is inefficient (it indirectly checks effective level twice),
     # but is included for [as yet unknown] platforms that ONLY implement
     # the API documented in the logging library
@@ -85,6 +84,15 @@ else:
         if not logger.isEnabledFor(_DEBUG):
             return False
         return logger.getEffectiveLevel() > _NOTSET
+
+else:
+    # Python 3.14 (and backported to python 3.13.4) changed the behavior
+    # of isEnabledFor() so that it always returns False when called
+    # while a log record is in flight (learned this from
+    # https://github.com/hynek/structlog/pull/723).  In newer versions
+    # of Python, we will only rely on getEffectiveLevel().
+    def is_debug_set(logger):
+        return _NOTSET < logger.getEffectiveLevel() <= _DEBUG
 
 
 class WrappingFormatter(logging.Formatter):
@@ -262,7 +270,7 @@ class _GlobalLogFilter(object):
 pyomo_logger = logging.getLogger('pyomo')
 pyomo_handler = logging.StreamHandler(sys.stdout)
 pyomo_formatter = LegacyPyomoFormatter(
-    base=PYOMO_ROOT_DIR, verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG)
+    base=PYOMO_ROOT_DIR, verbosity=lambda: is_debug_set(pyomo_logger)
 )
 pyomo_handler.setFormatter(pyomo_formatter)
 pyomo_handler.addFilter(_GlobalLogFilter())
@@ -469,7 +477,7 @@ class _StreamRedirector(object):
         # #3587), so we will just handle it explicitly ourselves.
         self.local_fd = os.dup(self.fd)
         self.handler.stream = os.fdopen(
-            self.local_fd, mode="a", closefd=False
+            self.local_fd, mode="w", closefd=False
         ).__enter__()
 
     def __exit__(self, et, ev, tb):
@@ -495,7 +503,7 @@ class _LastResortRedirector(object):
         # #3587), so we will just handle it explicitly ourselves.
         self.local_fd = os.dup(self.fd)
         logging.lastResort = logging.StreamHandler(
-            os.fdopen(self.local_fd, mode="a", closefd=False).__enter__()
+            os.fdopen(self.local_fd, mode="w", closefd=False).__enter__()
         )
 
     def __exit__(self, et, ev, tb):

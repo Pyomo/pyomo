@@ -23,12 +23,9 @@ BOUNDS
 QUADOBJ
      a a 2
      a b 1
-     b a 1
      a c 1
-     c a 1
      b b 2
      b c 1
-     c b 1
      c c 2
 QCMATRIX    c_u_con_
      a a 1

@@ -88,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [ 3.9, '3.10', 3.11, 3.12, '3.13.3' ]  # FIXME: Remove specific 3.13 version once logging tests are fixed
+        python: [ 3.9, '3.10', 3.11, 3.12, 3.13 ]
         other: [""]
         category: [""]
 
@@ -586,9 +586,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=${env:DYLD_LIBRARY_PATH}:$GAMS_DIR" `
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $INSTALLER = "${env:DOWNLOAD_DIR}/gams_install.exe"
-        # We are pinning to 29.1.0 because a license is required for
-        # versions after this in order to run in demo mode.
-        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0"
+        # Demo licenses are included for 5mo from the newest release
+        $URL = "https://d37drm4t2jghv5.cloudfront.net/distributions/50.1.0"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
             $URL = "$URL/windows/windows_x64_64.exe"
         } elseif ( "${{matrix.TARGET}}" -eq "osx" ) {
