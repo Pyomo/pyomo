@@ -15,6 +15,7 @@
 from io import StringIO
 import logging
 import os
+import pickle
 import sys
 import types
 import json
@@ -77,6 +78,16 @@ class DerivedBlock(ScalarBlock):
 
 
 DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
+
+
+@declare_custom_block("FooBlock", rule="build")
+class FooBlockData(BlockData):
+    def build(self, *args, capex, opex):
+        self.x = Var(list(args))
+        self.y = Var()
+
+        self.capex = capex
+        self.opex = opex
 
 
 class TestGenerators(unittest.TestCase):
@@ -3059,16 +3070,17 @@ class TestBlock(unittest.TestCase):
 
     def test_custom_block_default_rule(self):
         """Tests the decorator with `build` method, but without options"""
-        @declare_custom_block("FooBlock")
-        class FooBlockData(BlockData):
+
+        @declare_custom_block("LocalFooBlock", rule="build")
+        class LocalFooBlockData(BlockData):
             def build(self, *args):
                 self.x = Var(list(args))
                 self.y = Var()
 
         m = ConcreteModel()
-        m.blk_without_index = FooBlock()
-        m.blk_1 = FooBlock([1, 2, 3])
-        m.blk_2 = FooBlock([4, 5], [6, 7])
+        m.blk_without_index = LocalFooBlock()
+        m.blk_1 = LocalFooBlock([1, 2, 3])
+        m.blk_2 = LocalFooBlock([4, 5], [6, 7])
 
         self.assertIn("x", m.blk_without_index.component_map())
         self.assertIn("y", m.blk_without_index.component_map())
@@ -3083,20 +3095,12 @@ class TestBlock(unittest.TestCase):
 
     def test_custom_block_default_rule_options(self):
         """Tests the decorator with `build` method and model options"""
-        @declare_custom_block("FooBlock")
-        class FooBlockData(BlockData):
-            def build(self, *args, capex, opex):
-                self.x = Var(list(args))
-                self.y = Var()
-
-                self.capex = capex
-                self.opex = opex
 
         options = {"capex": 42, "opex": 24}
         m = ConcreteModel()
-        m.blk_without_index = FooBlock(options=options)
-        m.blk_1 = FooBlock([1, 2, 3], options=options)
-        m.blk_2 = FooBlock([4, 5], [6, 7], options=options)
+        m.blk_without_index = FooBlock(capex=42, opex=24)
+        m.blk_1 = FooBlock([1, 2, 3], **options)
+        m.blk_2 = FooBlock([4, 5], [6, 7], **options)
 
         self.assertEqual(m.blk_without_index.capex, 42)
         self.assertEqual(m.blk_without_index.opex, 24)
@@ -3104,12 +3108,24 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(m.blk_1[3].capex, 42)
         self.assertEqual(m.blk_2[4, 7].opex, 24)
 
-        with self.assertRaises(TypeError):
+        new_m = pickle.loads(pickle.dumps(m))
+        self.assertIs(new_m.blk_without_index.__class__, m.blk_without_index.__class__)
+        self.assertIs(new_m.blk_1.__class__, m.blk_1.__class__)
+        self.assertIs(new_m.blk_2.__class__, m.blk_2.__class__)
+
+        self.assertIsNot(new_m.blk_without_index, m.blk_without_index)
+        self.assertIsNot(new_m.blk_1, m.blk_1)
+        self.assertIsNot(new_m.blk_2, m.blk_2)
+
+        with self.assertRaisesRegex(
+            TypeError, "missing 2 required keyword-only arguments"
+        ):
             # missing 2 required keyword arguments
             m.blk_3 = FooBlock()
 
     def test_custom_block_user_rule(self):
         """Tests if the default rule can be overwritten"""
+
         @declare_custom_block("FooBlock")
         class FooBlockData(BlockData):
             def build(self, *args):
