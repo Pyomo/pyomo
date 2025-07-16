@@ -29,15 +29,30 @@ and postpones creation of its members:
 
 The :class:`Set` class takes optional arguments such as:
 
-- ``dimen`` = Dimension of the members of the set
-- ``doc`` = String describing the set
-- ``filter`` = A Boolean function used during construction to indicate if a
-  potential new member should be assigned to the set
-- ``initialize`` = An iterable containing the initial members of the Set, or
-  function that returns an iterable of the initial members the set.
-- ``ordered`` = A Boolean indicator that the set is ordered; the default is ``True``
-- ``validate`` = A Boolean function that validates new member data
-- ``within`` = Set used for validation; it is a super-set of the set being declared.
+``dimen``
+    Dimension of the members of the set; ``None`` for "jagged" sets
+    (where members do not have a uniform length).
+
+``doc``
+    String describing the set
+
+``filter``
+    A Boolean function used during construction to indicate if a
+    potential new member should be assigned to the set
+
+``initialize``
+    An iterable containing the initial members of the Set, or
+    function that returns an iterable of the initial members the set.
+
+``ordered``
+    A Boolean indicator that the set is ordered; the default is ``True``
+    (Set is ordered by insertion order)
+
+``validate``
+    A Boolean function that validates new member data
+
+``within``
+    Set used for validation; it is a super-set of the set being declared.
 
 In general, Pyomo attempts to infer the "dimensionality" of Set
 components (that is, the number of apparent indices) when they are
@@ -451,9 +466,10 @@ for this model, a toy data file (in AMPL "``.dat``" format) would be:
 
    >>> inst = model.create_instance('src/scripting/Isinglecomm.dat')
 
-This can also be done much more efficiently using initialization functions
-that accept only a model block and return a ``dict`` with all the information
-needed for the indexed set:
+A similar result can be accomplished more efficiently (becaue we only
+iterate over the Arcs twice) using initialization functions that accept
+only a model block and return a ``dict`` with all the information needed
+for the indexed set:
 
 .. doctest::
    :hide:
@@ -480,8 +496,31 @@ needed for the indexed set:
         return d
     model.NodesOut = pyo.Set(model.Nodes, initialize=NodesOut_init)
 
-This can also be done efficiently, and perhaps more clearly, using a
-:class:`BuildAction` (for more information, see :ref:`BuildAction`):
+Alternatively, this can also be done even more efficiently, and perhaps
+more clearly, outside the context of Set initialization.  For concrete
+models, scripts can explicitly add elements to the Sets after
+declaration:
+
+.. doctest::
+   :hide:
+
+   >>> model = inst
+   >>> del model.NodesIn
+   >>> del model.NodesOut
+
+.. testcode::
+
+   model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes)
+   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
+
+   # loop over the arcs and record the end points
+   for i, j in model.Arcs:
+       model.NodesIn[j].add(i)
+       model.NodesOut[i].add(j)
+
+For abstract models, that action must be deferred to instance
+construction time using a :class:`BuildAction` (for more information,
+see :ref:`BuildAction`):
 
 .. doctest::
    :hide:
