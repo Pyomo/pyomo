@@ -2311,7 +2311,7 @@ class Set(IndexedComponent):
             # that we would then want to process with Initializer().  If
             # the rule actually returned a constant, then this is just a
             # little overhead.
-            if self._init_values._init.constant():
+            if self._init_values is not None and self._init_values._init.constant():
                 self._init_values = TuplizeValuesInitializer(
                     Initializer(
                         self._init_values._init(self.parent_block(), None),
