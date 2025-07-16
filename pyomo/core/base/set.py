@@ -2332,8 +2332,7 @@ class Set(IndexedComponent):
                     # scalar sets (including set operators) to be
                     # initialized (and potentially empty) after construct().
                     self._getitem_when_not_present(None)
-
-            if self._init_values.contains_indices():
+            elif self._init_values.contains_indices():
                 # The index is coming in externally; we need to validate it
                 for index in self._init_values.indices():
                     IndexedComponent.__getitem__(self, index)
