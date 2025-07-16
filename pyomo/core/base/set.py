@@ -2287,6 +2287,19 @@ class Set(IndexedComponent):
             for _set in self._anonymous_sets:
                 _set.construct()
 
+        if self.is_indexed():
+            # A constant rule could return a dict-like thing or matrix
+            # that we would then want to process with Initializer().  If
+            # the rule actually returned a constant, then this is just a
+            # little overhead.
+            if self._init_values._init.constant():
+                self._init_values = TuplizeValuesInitializer(
+                    Initializer(
+                        self._init_values._init(self.parent_block(), None),
+                        treat_sequences_as_mappings=False,
+                    )
+                )
+
         if data is not None:
             # Data supplied to construct() should override data provided
             # to the constructor
@@ -2300,31 +2313,15 @@ class Set(IndexedComponent):
                     # scalar sets (including set operators) to be
                     # initialized (and potentially empty) after construct().
                     self._getitem_when_not_present(None)
-            else:
-                # If this is an IndexedSet but the initializer is a function
-                # that does not accept indices, call the function and initialize
-                # from the object it provides (e.g., a dict with all members of
-                # the indexed set). This is similar to
-                # IndexedComponent._construct_from_rule_using_setitem.
-                if (
-                    self.is_indexed()
-                    and type(self._init_values._init) is ScalarCallInitializer
-                ):
-                    self._init_values = TuplizeValuesInitializer(
-                        Initializer(
-                            self._init_values._init(self.parent_block(), None),
-                            treat_sequences_as_mappings=False,
-                        )
-                    )
 
-                if self._init_values.contains_indices():
-                    # The index is coming in externally; we need to validate it
-                    for index in self._init_values.indices():
-                        IndexedComponent.__getitem__(self, index)
-                else:
-                    # Bypass the index validation and create the member directly
-                    for index in self.index_set():
-                        self._getitem_when_not_present(index)
+            if self._init_values.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in self._init_values.indices():
+                    IndexedComponent.__getitem__(self, index)
+            else:
+                # Bypass the index validation and create the member directly
+                for index in self.index_set():
+                    self._getitem_when_not_present(index)
         finally:
             # Restore the original initializer (if overridden by data argument)
             if data is not None:
