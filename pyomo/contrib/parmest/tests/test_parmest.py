@@ -156,7 +156,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
             with pytest.raises(
                 ValueError,
                 match=r"Invalid objective function: 'incorrect_obj'\. "
-                r"Choose from \['SSE', 'SSE_weighted'\]\.",
+                r"Choose from: \['SSE', 'SSE_weighted'\]\.",
             ):
                 self.pest = parmest.Estimator(
                     self.exp_list, obj_function=self.objective_function, tee=True
@@ -358,7 +358,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
                 else:
                     with pytest.raises(
                         ValueError,
-                        match=r"Invalid method: 'unsupported_method'\. Choose from "
+                        match=r"Invalid method: 'unsupported_method'\. Choose from: "
                         r"\['finite_difference', "
                         r"'automatic_differentiation_kaug', "
                         r"'reduced_hessian'\]\.",
@@ -407,7 +407,7 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
                 else:
                     with pytest.raises(
                         ValueError,
-                        match=r"Invalid method: 'unsupported_method'\. Choose from "
+                        match=r"Invalid method: 'unsupported_method'\. Choose from: "
                         r"\['finite_difference', "
                         r"'automatic_differentiation_kaug', "
                         r"'reduced_hessian'\]\.",
