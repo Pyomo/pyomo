@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -170,6 +170,10 @@ def _strip_template_comments(vars_, base_):
             vars_[k] = '\n'.join(v_lines)
 
 
+def _inv2str(val):
+    return f"{val._str() if hasattr(val, '_str') else val}"
+
+
 # The "standard" text mode template is the debugging template with the
 # comments removed
 class TextNLTemplate(TextNLDebugTemplate):
@@ -223,11 +227,14 @@ class AMPLRepn(object):
 
         The general nonlinear portion of the compiled expression as a
         tuple of two parts:
-          - the nl template string: this is the NL string with
-            placeholders (`%s`) for all the variables that appear in
-            the expression.
-          - an iterable if the `VarData` IDs that correspond to the
-            placeholders in the nl template string
+
+           - the nl template string: this is the NL string with
+             placeholders (``%s``) for all the variables that appear in
+             the expression.
+
+           - an iterable if the :class:`VarData` IDs that correspond to the
+             placeholders in the nl template string
+
         This is `None` if there is no general nonlinear part of the
         expression.  Note that this can be a list of tuple fragments
         within AMPLRepnVisitor, but that list is concatenated to a
@@ -539,7 +546,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {mult}*{str(arg2[1])} in expression tree.  "
+                        f"Encountered {mult}*{_inv2str(arg2[1])} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -568,7 +575,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                 _prod = mult * arg2[1]
                 if _prod:
                     deprecation_warning(
-                        f"Encountered {str(mult)}*{arg2[1]} in expression tree.  "
+                        f"Encountered {_inv2str(mult)}*{arg2[1]} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -976,7 +983,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                 arg2 = visitor.fixed_vars[_id]
                 if arg2 != arg2:
                     deprecation_warning(
-                        f"Encountered {arg1}*{arg2} in expression tree.  "
+                        f"Encountered {arg1}*{_inv2str(arg2)} in expression tree.  "
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
@@ -1016,7 +1023,7 @@ class AMPLBeforeChildDispatcher(BeforeChildDispatcher):
                         arg2 = visitor.check_constant(arg2.value, arg2)
                         if arg2 != arg2:
                             deprecation_warning(
-                                f"Encountered {arg1}*{str(arg2.value)} in expression "
+                                f"Encountered {arg1}*{_inv2str(arg2)} in expression "
                                 "tree.  Mapping the NaN result to 0 for compatibility "
                                 "with the nl_v1 writer.  In the future, this NaN "
                                 "will be preserved/emitted to comply with IEEE-754.",
@@ -1130,6 +1137,16 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 # attempt to convert the value to a float before
                 # proceeding.
                 #
+                # Note that as of NumPy 1.25, blindly casting a
+                # 1-element ndarray to a float will generate a
+                # deprecation warning.  We will explicitly test for
+                # that, but want to do the test without triggering the
+                # numpy import
+                for cls in ans.__class__.__mro__:
+                    if cls.__name__ == 'ndarray' and cls.__module__ == 'numpy':
+                        if len(ans) == 1:
+                            ans = ans[0]
+                        break
                 # TODO: we should check bool and warn/error (while bool is
                 # convertible to float in Python, they have very
                 # different semantic meanings in Pyomo).

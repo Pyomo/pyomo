@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.tee import capture_output
 from pyomo.repn.tests.lp_diff import lp_diff
 
-_baseline = """\\* Source Pyomo model name=unknown *\\
+_baseline = r"""\* Source Pyomo model name=unknown *\
 
 min
 x2:

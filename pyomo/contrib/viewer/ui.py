@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -39,28 +39,39 @@ except ImportError:
 import pyomo.contrib.viewer.report as rpt
 import pyomo.environ as pyo
 import pyomo.contrib.viewer.qt as myqt
+
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.flags import building_documentation
 from pyomo.contrib.viewer.model_browser import ModelBrowser
 from pyomo.contrib.viewer.residual_table import ResidualTable
 from pyomo.contrib.viewer.model_select import ModelSelect
 from pyomo.contrib.viewer.ui_data import UIData
-from pyomo.common.fileutils import this_file_dir
 
 _log = logging.getLogger(__name__)
 
-_mypath = this_file_dir()
-try:
-    _MainWindowUI, _MainWindow = myqt.uic.loadUiType(os.path.join(_mypath, "main.ui"))
-except:
-    _log.exception("Failed to load UI files.")
 
-    # This lets the file still be imported, but you won't be able to use it
-    # Allowing this to be imported will let some basic tests pass without PyQt
-    class _MainWindowUI(object):
-        pass
+# This lets the file be imported when the Qt UI is not available (or
+# when building docs), but you won't be able to use it.  Allowing this
+# will let some basic tests run (and pass) without PyQt
+class _MainWindowUI(object):
+    pass
 
-    class _MainWindow(object):
-        pass
 
+class _MainWindow(object):
+    pass
+
+
+# Note that the classes loaded here have signatures that are not
+# parsable by Sphinx, so we won't attempt to import them if we are
+# building the API documentation.
+if not building_documentation():
+    _mypath = this_file_dir()
+    try:
+        _MainWindowUI, _MainWindow = myqt.uic.loadUiType(
+            os.path.join(_mypath, "main.ui")
+        )
+    except:
+        _log.exception("Failed to load UI files.")
 
 for _err in myqt.import_errors:
     _log.error(_err)
@@ -153,13 +164,13 @@ class MainWindow(_MainWindow, _MainWindowUI):
         self.actionTabs.triggered.connect(self.toggle_tabs)
         self._dialog = None  # dialog displayed so can access it easier for tests
         self._dialog_test_button = None  # button clicked on dialog in test mode
-        self.mdiArea.setViewMode(myqt.QMdiArea.TabbedView)
+        self.mdiArea.setViewMode(myqt.QMdiArea.ViewMode.TabbedView)
 
     def toggle_tabs(self):
-        if self.mdiArea.viewMode() == myqt.QMdiArea.SubWindowView:
-            self.mdiArea.setViewMode(myqt.QMdiArea.TabbedView)
-        elif self.mdiArea.viewMode() == myqt.QMdiArea.TabbedView:
-            self.mdiArea.setViewMode(myqt.QMdiArea.SubWindowView)
+        if self.mdiArea.viewMode() == myqt.QMdiArea.ViewMode.SubWindowView:
+            self.mdiArea.setViewMode(myqt.QMdiArea.ViewMode.TabbedView)
+        elif self.mdiArea.viewMode() == myqt.QMdiArea.ViewMode.TabbedView:
+            self.mdiArea.setViewMode(myqt.QMdiArea.ViewMode.SubWindowView)
         else:
             # There are no other modes unless there is a change in Qt so pass
             pass
@@ -266,7 +277,7 @@ class MainWindow(_MainWindow, _MainWindowUI):
                 cons, active_eq, free_vars, dof, doftext
             )
         )
-        msg.setStandardButtons(myqt.QMessageBox.Ok)
+        msg.setStandardButtons(myqt.QMessageBox.StandardButton.Ok)
         msg.setModal(False)
         msg.show()
 
@@ -315,18 +326,20 @@ class MainWindow(_MainWindow, _MainWindowUI):
             return
         msg = myqt.QMessageBox()
         self._dialog = msg
-        msg.setIcon(myqt.QMessageBox.Question)
+        msg.setIcon(myqt.QMessageBox.Icon.Question)
         msg.setText(
             "Are you sure you want to close this window?"
             " You can reopen it with ui.show()."
         )
         msg.setWindowTitle("Close?")
-        msg.setStandardButtons(myqt.QMessageBox.Yes | myqt.QMessageBox.No)
+        msg.setStandardButtons(
+            myqt.QMessageBox.StandardButton.Yes | myqt.QMessageBox.StandardButton.No
+        )
         if self.testing:  # don't even show dialog just pretend button clicked
             result = self._dialog_test_button
         else:
-            result = msg.exec_()
-        if result == myqt.QMessageBox.Yes:
+            result = msg.exec()
+        if result == myqt.QMessageBox.StandardButton.Yes:
             event.accept()
         else:
             event.ignore()

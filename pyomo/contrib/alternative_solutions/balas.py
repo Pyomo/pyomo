@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.alternative_solutions import Solution
 import pyomo.contrib.alternative_solutions.aos_utils as aos_utils
@@ -35,6 +35,9 @@ def enumerate_binary_solutions(
     """
     Finds alternative optimal solutions for a binary problem using no-good
     cuts.
+
+    This function implements a no-good cuts technique inheriting from
+    Balas's work on Canonical Cuts [BJ72]_.
 
     Parameters
     ----------
@@ -74,6 +77,7 @@ def enumerate_binary_solutions(
     solutions
         A list of Solution objects.
         [Solution]
+
     """
     logger.info("STARTING NO-GOOD CUT ANALYSIS")
 
@@ -120,7 +124,7 @@ def enumerate_binary_solutions(
     #
     # Setup solver
     #
-    opt = pe.SolverFactory(solver)
+    opt = pyo.SolverFactory(solver)
     opt.available()
     for parameter, value in solver_options.items():
         opt.options[parameter] = value
@@ -155,7 +159,7 @@ def enumerate_binary_solutions(
     logger.info("Performing initial solve of model.")
     results = opt.solve(model, tee=tee, load_solutions=False)
     status = results.solver.status
-    if not pe.check_optimal_termination(results):
+    if not pyo.check_optimal_termination(results):
         condition = results.solver.termination_condition
         raise Exception(
             (
@@ -166,7 +170,7 @@ def enumerate_binary_solutions(
         )
 
     model.solutions.load_from(results)
-    orig_objective_value = pe.value(orig_objective)
+    orig_objective_value = pyo.value(orig_objective)
     logger.info("Found optimal solution, value = {}.".format(orig_objective_value))
     solutions = [Solution(model, all_variables, objective=orig_objective)]
     #
@@ -177,7 +181,7 @@ def enumerate_binary_solutions(
 
     aos_block = aos_utils._add_aos_block(model, name="_balas")
     logger.info("Added block {} to the model.".format(aos_block))
-    aos_block.no_good_cuts = pe.ConstraintList()
+    aos_block.no_good_cuts = pyo.ConstraintList()
     aos_utils._add_objective_constraint(
         aos_block, orig_objective, orig_objective_value, rel_opt_gap, abs_opt_gap
     )
@@ -203,7 +207,9 @@ def enumerate_binary_solutions(
                 if use_appsi and opt.update_config.check_for_new_objective:
                     opt.update_config.check_for_new_objective = False
             else:
-                aos_block.hamming_objective = pe.Objective(expr=expr, sense=pe.maximize)
+                aos_block.hamming_objective = pyo.Objective(
+                    expr=expr, sense=pyo.maximize
+                )
 
         elif search_mode == "random":
             if hasattr(aos_block, "random_objective"):
@@ -214,22 +220,22 @@ def enumerate_binary_solutions(
             for var in binary_variables:
                 expr += vector[idx] * var
                 idx += 1
-            aos_block.random_objective = pe.Objective(expr=expr, sense=pe.maximize)
+            aos_block.random_objective = pyo.Objective(expr=expr, sense=pyo.maximize)
 
         results = opt.solve(model, tee=tee, load_solutions=False)
         status = results.solver.status
         condition = results.solver.termination_condition
-        if pe.check_optimal_termination(results):
+        if pyo.check_optimal_termination(results):
             model.solutions.load_from(results)
-            orig_obj_value = pe.value(orig_objective)
+            orig_obj_value = pyo.value(orig_objective)
             logger.info(
                 "Iteration {}: objective = {}".format(solution_number, orig_obj_value)
             )
             solutions.append(Solution(model, all_variables, objective=orig_objective))
             solution_number += 1
         elif (
-            condition == pe.TerminationCondition.infeasibleOrUnbounded
-            or condition == pe.TerminationCondition.infeasible
+            condition == pyo.TerminationCondition.infeasibleOrUnbounded
+            or condition == pyo.TerminationCondition.infeasible
         ):
             logger.info(
                 "Iteration {}: Infeasible, no additional binary solutions.".format(

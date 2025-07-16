@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -340,13 +340,17 @@ class TestAddVar(unittest.TestCase):
         model.X = Var(within=Binary)
 
         var_interface = opt._solver_model.variables
-        with unittest.mock.patch.object(
-            var_interface, "add", wraps=var_interface.add
-        ) as wrapped_add_call, unittest.mock.patch.object(
-            var_interface, "set_lower_bounds", wraps=var_interface.set_lower_bounds
-        ) as wrapped_lb_call, unittest.mock.patch.object(
-            var_interface, "set_upper_bounds", wraps=var_interface.set_upper_bounds
-        ) as wrapped_ub_call:
+        with (
+            unittest.mock.patch.object(
+                var_interface, "add", wraps=var_interface.add
+            ) as wrapped_add_call,
+            unittest.mock.patch.object(
+                var_interface, "set_lower_bounds", wraps=var_interface.set_lower_bounds
+            ) as wrapped_lb_call,
+            unittest.mock.patch.object(
+                var_interface, "set_upper_bounds", wraps=var_interface.set_upper_bounds
+            ) as wrapped_ub_call,
+        ):
             opt._add_var(model.X)
 
             self.assertEqual(wrapped_add_call.call_count, 1)

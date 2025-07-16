@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -111,8 +111,9 @@ information.
 import logging
 import sys
 
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import pint as pint_module, pint_available
 from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import (
     NumericValue,
     nonpyomo_leaf_types,
@@ -123,14 +124,6 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.visitor import ExpressionValueVisitor
 import pyomo.core.expr as EXPR
-
-pint_module, pint_available = attempt_import(
-    'pint',
-    error_message=(
-        'The "pint" package failed to import. '
-        'This package is necessary to use Pyomo units.'
-    ),
-)
 
 logger = logging.getLogger(__name__)
 
@@ -392,7 +385,7 @@ class _PyomoUnit(NumericValue):
         else:
             return _str
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Unit is treated as a constant value, and this method always returns 1.0
 
         Returns
@@ -400,6 +393,7 @@ class _PyomoUnit(NumericValue):
         : float
            Returns 1.0
         """
+        _type_check_exception_arg(self, exception)
         return 1.0
 
     @property

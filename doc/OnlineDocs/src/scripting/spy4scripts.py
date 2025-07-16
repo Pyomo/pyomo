@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -56,7 +56,7 @@ instance.y.value = 2
 instance.y.fixed = True
 # @Equivalent_form_of_instance.x.fix(2)
 
-model = ConcreteModel()
+model = pyo.ConcreteModel()
 model.obj1 = pyo.Objective(expr=0)
 model.obj2 = pyo.Objective(expr=0)
 

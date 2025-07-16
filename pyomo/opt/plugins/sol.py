@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -23,7 +23,7 @@ from pyomo.opt import SolverResults, SolutionStatus, SolverStatus, TerminationCo
 @results.ReaderFactory.register(str(ResultsFormat.sol))
 class ResultsReader_sol(results.AbstractResultsReader):
     """
-    Class that reads in a *.sol results file and generates a
+    Class that reads in a ``*.sol`` results file and generates a
     SolverResults object.
     """
 
@@ -34,7 +34,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
 
     def __call__(self, filename, res=None, soln=None, suffixes=[]):
         """
-        Parse a *.sol file
+        Parse a ``*.sol`` file
         """
         try:
             with open(filename, "r") as f:

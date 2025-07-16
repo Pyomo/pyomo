@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -43,6 +43,12 @@ def _index_repr(x):
     return __index_repr(x, _pickle)
 
 
+def _context_err(_type):
+    raise ValueError(
+        f"Context is not allowed when initializing a ComponentUID from {_type}."
+    )
+
+
 class ComponentUID(object):
     """
     A Component unique identifier
@@ -78,15 +84,15 @@ class ComponentUID(object):
         # the string representation.
         if isinstance(component, str):
             if context is not None:
-                raise ValueError(
-                    "Context is not allowed when initializing a "
-                    "ComponentUID object from a string type"
-                )
+                _context_err(str)
             try:
                 self._cids = tuple(self._parse_cuid_v2(component))
             except (OSError, IOError):
                 self._cids = tuple(self._parse_cuid_v1(component))
-
+        elif type(component) is ComponentUID:
+            if context is not None:
+                _context_err(ComponentUID)
+            self._cids = component._cids
         elif type(component) is IndexedComponent_slice:
             self._cids = tuple(
                 self._generate_cuid_from_slice(component, context=context)

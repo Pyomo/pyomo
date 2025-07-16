@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -42,7 +42,7 @@ logger = logging.getLogger('pyomo.solvers')
 
 
 def _validate_file_name(cplex, filename, description):
-    """Validate filenames against the set of allowable chaacters in CPLEX.
+    """Validate filenames against the set of allowable characters in CPLEX.
 
     Returns the filename, possibly enclosed in double-quotes, or raises
     a ValueError is unallowable characters are found.

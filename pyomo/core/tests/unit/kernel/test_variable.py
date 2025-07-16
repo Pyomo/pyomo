@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -283,7 +283,7 @@ class Test_variable(unittest.TestCase):
         self.assertIs(v.lower, lb)
         self.assertIs(v.upper, ub)
         with self.assertRaisesRegex(
-            ValueError, 'No value for uninitialized NumericValue object None'
+            ValueError, 'No value for uninitialized parameter object None'
         ):
             v.bounds
 

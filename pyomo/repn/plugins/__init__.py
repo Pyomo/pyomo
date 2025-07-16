@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,15 +11,17 @@
 
 
 def load():
-    import pyomo.repn.plugins.cpxlp
-    import pyomo.repn.plugins.ampl
-    import pyomo.repn.plugins.baron_writer
-    import pyomo.repn.plugins.mps
-    import pyomo.repn.plugins.gams_writer
-    import pyomo.repn.plugins.lp_writer
-    import pyomo.repn.plugins.nl_writer
-    import pyomo.repn.plugins.standard_form
-
+    from pyomo.repn.plugins import (
+        cpxlp,
+        ampl,
+        baron_writer,
+        mps,
+        gams_writer,
+        lp_writer,
+        nl_writer,
+        standard_form,
+        parameterized_standard_form,
+    )
     from pyomo.opt import WriterFactory
 
     # Register the "default" versions of writers that have more than one

@@ -413,7 +413,7 @@ provides an example of how this can be done, including a directory
 for plugins and package tests.  For example, this package can be
 imported as a subpackage of ``pyomo.contrib``::
 
-    from pyomo.environ import *
+    import pyomo.environ as pyo
     from pyomo.contrib.example import a
 
     # Print the value of 'a' defined by this package

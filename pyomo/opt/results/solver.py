@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -139,22 +139,33 @@ class TerminationCondition(str, enum.Enum):
 def check_optimal_termination(results):
     """
     This function returns True if the termination condition for the solver
-    is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
+    is 'optimal'. This is backwards and forwards compatible.
 
     Parameters
     ----------
-    results : Pyomo results object returned from solver.solve
+    results : Pyomo Results object returned from solver.solve
 
     Returns
     -------
     `bool`
     """
-    if results.solver.status == SolverStatus.ok and (
-        results.solver.termination_condition == TerminationCondition.optimal
-        or results.solver.termination_condition == TerminationCondition.locallyOptimal
-        or results.solver.termination_condition == TerminationCondition.globallyOptimal
-    ):
-        return True
+    from pyomo.contrib.solver.common.results import (
+        SolutionStatus as FutureSolutionStatus,
+    )
+
+    if hasattr(results, 'solution_status'):
+        if results.solution_status == FutureSolutionStatus.optimal:
+            return True
+    else:
+        if results.solver.status == SolverStatus.ok and (
+            results.solver.termination_condition
+            in (
+                TerminationCondition.optimal,
+                TerminationCondition.locallyOptimal,
+                TerminationCondition.globallyOptimal,
+            )
+        ):
+            return True
     return False
 
 
@@ -162,19 +173,26 @@ def assert_optimal_termination(results):
     """
     This function checks if the termination condition for the solver
     is 'optimal', 'locallyOptimal', or 'globallyOptimal', and the status is 'ok'
-    and it raises a RuntimeError exception if this is not true.
+    and it raises a RuntimeError exception if this is not true. This is backwards
+    and forwards compatible.
 
     Parameters
     ----------
-    results : Pyomo results object returned from solver.solve
+    results : Pyomo Results object returned from solver.solve
     """
     if not check_optimal_termination(results):
-        msg = (
-            'Solver failed to return an optimal solution. '
-            'Solver status: {}, Termination condition: {}'.format(
-                results.solver.status, results.solver.termination_condition
+        if hasattr(results, 'solution_status'):
+            msg = (
+                'Solver failed to return an optimal solution. '
+                f'Solution status: {results.solution_status}, '
+                f'Termination condition: {results.termination_condition}'
             )
-        )
+        else:
+            msg = (
+                'Solver failed to return an optimal solution. '
+                f'Solution status: {results.solver.status}, '
+                f'Termination condition: {results.solver.termination_condition}'
+            )
         raise RuntimeError(msg)
 
 

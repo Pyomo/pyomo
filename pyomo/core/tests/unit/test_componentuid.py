@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -81,11 +81,7 @@ class TestComponentUID(unittest.TestCase):
             ValueError, r"Context 'b\[1,'2'\]' does not apply to component 's'"
         ):
             ComponentUID(self.m.s, context=self.m.b[1, '2'])
-        with self.assertRaisesRegex(
-            ValueError,
-            "Context is not allowed when initializing a ComponentUID "
-            "object from a string type",
-        ):
+        with self.assertRaisesRegex(ValueError, "Context is not allowed"):
             ComponentUID("b[1,2].c.a[2]", context=self.m.b[1, '2'])
 
     def test_parseFromString(self):
@@ -1247,6 +1243,26 @@ class TestComponentUID(unittest.TestCase):
             r"with argument \('foo',\)" % (IndexedComponent_slice.del_attribute,),
         ):
             cuid = ComponentUID(_slice)
+
+    def test_cuid_from_cuid(self):
+        def assert_equal(cuid1, cuid2):
+            self.assertEqual(cuid1, cuid2)
+            self.assertFalse(cuid1 is cuid2)
+
+        cuid_str = ComponentUID("b.var[1]")
+        cuid_str_2 = ComponentUID(cuid_str)
+        assert_equal(cuid_str, cuid_str_2)
+
+        cuid_comp = ComponentUID(self.m.b[1, 1].c)
+        cuid_comp_2 = ComponentUID(cuid_comp)
+        assert_equal(cuid_str, cuid_str_2)
+
+        cuid_slice = ComponentUID(self.m.b[1, :].c)
+        cuid_slice_2 = ComponentUID(cuid_slice)
+        assert_equal(cuid_slice, cuid_slice_2)
+
+        with self.assertRaisesRegex(ValueError, "Context is not allowed"):
+            ComponentUID(cuid_comp, context=self.m.b[1, 1])
 
 
 if __name__ == "__main__":

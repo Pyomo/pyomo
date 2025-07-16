@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -61,6 +61,8 @@ class ComponentSet(AutoSlots.Mixin, collections_MutableSet):
 
     __slots__ = ("_data",)
     __autoslot_mappers__ = {'_data': _rehash_keys}
+    # Expose a "public" interface to the global _hasher dict
+    hasher = _hasher
 
     def __init__(self, iterable=None):
         # maps id_hash(obj) -> obj

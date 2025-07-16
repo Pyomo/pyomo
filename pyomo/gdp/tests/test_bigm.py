@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -2695,6 +2695,18 @@ class EstimatingMwithFixedVars(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, promise.x, 1)
         ct.check_linear_coef(self, repn, promise.d.indicator_var, 7)
+
+
+class TrivialDisjuncts(unittest.TestCase):
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_trivial_disjuncts_linear(self):
+        ct.check_trivial_constraints(self, ct.linear_solvers[0], transformation='bigm')
+
+    @unittest.skipIf(not ct.nonlinear_solvers, "No linear solver available")
+    def test_trivial_disjuncts_nonlinear(self):
+        ct.check_trivial_constraints(
+            self, ct.nonlinear_solvers[0], transformation='bigm'
+        )
 
 
 class NetworkDisjuncts(unittest.TestCase, CommonTests):

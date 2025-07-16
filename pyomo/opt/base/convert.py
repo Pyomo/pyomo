@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -27,7 +27,7 @@ def convert_problem(
     target_problem_type,
     valid_problem_types,
     has_capability=lambda x: False,
-    **kwds
+    **kwds,
 ):
     """
     Convert a problem, defined by the 'args' tuple, into another

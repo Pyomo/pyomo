@@ -51,7 +51,7 @@ Options:
   --model-options=MODEL_OPTIONS
                         Options passed into a create_model() function to
                         construct the model
-  --disable-gc          Disable the garbage collecter
+  --disable-gc          Disable the garbage collector
   --solver-manager=SMANAGER_TYPE
                         Specify the technique that is used to manage solver
                         executions.

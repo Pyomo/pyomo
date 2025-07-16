@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,9 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """
-Semibatch model, based on Nicholson et al. (2018). pyomo.dae: A modeling and 
+Semibatch model, based on Nicholson et al. (2018). pyomo.dae: A modeling and
 automatic discretization framework for optimization with di
-erential and 
+erential and
 algebraic equations. Mathematical Programming Computation, 10(2), 187-223.
 """
 import json
@@ -283,6 +283,20 @@ class SemiBatchExperiment(Experiment):
     def label_model(self):
 
         m = self.model
+
+        m.experiment_outputs = Suffix(direction=Suffix.LOCAL)
+        m.experiment_outputs.update(
+            (m.Ca[t], self.data["Ca_meas"][f"{t}"]) for t in m.measT
+        )
+        m.experiment_outputs.update(
+            (m.Cb[t], self.data["Cb_meas"][f"{t}"]) for t in m.measT
+        )
+        m.experiment_outputs.update(
+            (m.Cc[t], self.data["Cc_meas"][f"{t}"]) for t in m.measT
+        )
+        m.experiment_outputs.update(
+            (m.Tr[t], self.data["Tr_meas"][f"{t}"]) for t in m.measT
+        )
 
         m.unknown_parameters = Suffix(direction=Suffix.LOCAL)
         m.unknown_parameters.update(

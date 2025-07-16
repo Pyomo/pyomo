@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,8 +10,7 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.core import *
-from sc import *
+from sc import pyomo_callback
 
 
 @pyomo_callback('solve-callback')

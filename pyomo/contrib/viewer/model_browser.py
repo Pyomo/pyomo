@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -28,11 +28,9 @@ __author__ = "John Eslick"
 import os
 import logging
 
-_log = logging.getLogger(__name__)
-
-import pyomo.contrib.viewer.qt as myqt
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.flags import building_documentation
 from pyomo.contrib.viewer.report import value_no_exception, get_residual
-
 from pyomo.core.base.param import ParamData
 from pyomo.environ import (
     Block,
@@ -44,19 +42,34 @@ from pyomo.environ import (
     value,
     units,
 )
-from pyomo.common.fileutils import this_file_dir
 
-mypath = this_file_dir()
-try:
-    _ModelBrowserUI, _ModelBrowser = myqt.uic.loadUiType(
-        os.path.join(mypath, "model_browser.ui")
-    )
-except:
-    # This lets the file still be imported, but you won't be able to use it
-    class _ModelBrowserUI(object):
-        pass
+import pyomo.contrib.viewer.qt as myqt
 
-    class _ModelBrowser(object):
+_log = logging.getLogger(__name__)
+
+
+# This lets the file be imported when the Qt UI is not available (or
+# when building docs), but you won't be able to use it
+class _ModelBrowserUI(object):
+    pass
+
+
+class _ModelBrowser(object):
+    pass
+
+
+# Note that the classes loaded here have signatures that are not
+# parsable by Sphinx, so we won't attempt to import them if we are
+# building the API documentation.
+if not building_documentation():
+    import sys
+
+    mypath = this_file_dir()
+    try:
+        _ModelBrowserUI, _ModelBrowser = myqt.uic.loadUiType(
+            os.path.join(mypath, "model_browser.ui")
+        )
+    except:
         pass
 
 
@@ -155,8 +168,12 @@ class ModelBrowser(_ModelBrowser, _ModelBrowserUI):
         self.treeView.setModel(datmodel)
         self.treeView.setColumnWidth(0, 400)
         # Selection behavior: select a whole row, can select multiple rows.
-        self.treeView.setSelectionBehavior(myqt.QAbstractItemView.SelectRows)
-        self.treeView.setSelectionMode(myqt.QAbstractItemView.ExtendedSelection)
+        self.treeView.setSelectionBehavior(
+            myqt.QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.treeView.setSelectionMode(
+            myqt.QAbstractItemView.SelectionMode.ExtendedSelection
+        )
 
     def refresh(self):
         added = self.datmodel._update_tree()
@@ -582,9 +599,9 @@ class ComponentDataModel(myqt.QAbstractItemModel):
             if isinstance(
                 index.internalPointer().data, (Block, Block._ComponentDataClass)
             ):
-                return myqt.QColor(myqt.QtCore.Qt.black)
+                return myqt.QColor(myqt.QtCore.Qt.GlobalColor.black)
             else:
-                return myqt.QColor(myqt.QtCore.Qt.blue)
+                return myqt.QColor(myqt.QtCore.Qt.GlobalColor.blue)
         else:
             return
 

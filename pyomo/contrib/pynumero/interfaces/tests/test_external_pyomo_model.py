@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,6 +13,7 @@ import itertools
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
+from pyomo.common.dependencies import networkx_available as nx_available
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
     numpy_available,
@@ -513,6 +514,7 @@ class TestGetHessianOfConstraint(unittest.TestCase):
         np.testing.assert_allclose(hess.data, data, rtol=1e-8)
 
 
+@unittest.skipUnless(nx_available, "SCCImplicitFunctionSolver requires networkx")
 class TestExternalPyomoModel(unittest.TestCase):
     def test_evaluate_SimpleModel1(self):
         model = SimpleModel1()
@@ -838,6 +840,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             np.testing.assert_allclose(hess_lag, expected_hess_lag, rtol=1e-8)
 
 
+@unittest.skipUnless(nx_available, "SCCImplicitFunctionSolver requires networkx")
 class TestUpdatedHessianCalculationMethods(unittest.TestCase):
     """
     These tests exercise the methods for fast Hessian-of-Lagrangian
@@ -1021,6 +1024,7 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(nx_available, "SCCImplicitFunctionSolver requires networkx")
 class TestScaling(unittest.TestCase):
     def con_3_body(self, x, y, u, v):
         return 1e5 * x**2 + 1e4 * y**2 + 1e1 * u**2 + 1e0 * v**2

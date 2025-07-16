@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -117,14 +117,14 @@ class _BaseTestModel(object):
                         symbolic_solver_labels=symbolic_labels,
                         warmstart=True,
                         load_solutions=load_solutions,
-                        **io_options
+                        **io_options,
                     )
                 else:
                     results = opt.solve(
                         self.model,
                         symbolic_solver_labels=symbolic_labels,
                         load_solutions=load_solutions,
-                        **io_options
+                        **io_options,
                     )
 
             return opt, results

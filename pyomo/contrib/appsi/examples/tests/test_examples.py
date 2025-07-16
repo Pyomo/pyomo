@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,7 +11,6 @@
 
 from pyomo.contrib.appsi.examples import getting_started
 import pyomo.common.unittest as unittest
-import pyomo.environ as pe
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib import appsi
 

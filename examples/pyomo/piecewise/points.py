@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,15 +12,15 @@
 # An example of how to use the Piecewise component when
 # starting from a discrete set of (x,y) points.
 
-from pyomo.core import *
+import pyomo.environ as pyo
 
 x = [0.0, 1.5, 3.0, 5.0]
 y = [1.1, -1.1, 2.0, 1.1]
 
-model = ConcreteModel()
-model.x = Var(bounds=(min(x), max(x)))
-model.y = Var()
+model = pyo.ConcreteModel()
+model.x = pyo.Var(bounds=(min(x), max(x)))
+model.y = pyo.Var()
 
-model.fx = Piecewise(model.y, model.x, pw_pts=x, pw_constr_type='EQ', f_rule=y)
+model.fx = pyo.Piecewise(model.y, model.x, pw_pts=x, pw_constr_type='EQ', f_rule=y)
 
-model.o = Objective(expr=model.y)
+model.o = pyo.Objective(expr=model.y)

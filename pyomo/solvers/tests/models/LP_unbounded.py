@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -46,19 +46,17 @@ class LP_unbounded(_BaseTestModel):
         model.y.value = None
 
     def post_solve_test_validation(self, tester, results):
+        outcomes = [
+            TerminationCondition.unbounded,
+            TerminationCondition.infeasibleOrUnbounded,
+        ]
+        if '_gams_' in str(tester):
+            # GAMS maps CPLEX's InfeasibleOrUnbounded to Infeasible
+            outcomes.append(TerminationCondition.infeasible)
         if tester is None:
-            assert results['Solver'][0]['termination condition'] in (
-                TerminationCondition.unbounded,
-                TerminationCondition.infeasibleOrUnbounded,
-            )
+            assert results['Solver'][0]['termination condition'] in outcomes
         else:
-            tester.assertIn(
-                results['Solver'][0]['termination condition'],
-                (
-                    TerminationCondition.unbounded,
-                    TerminationCondition.infeasibleOrUnbounded,
-                ),
-            )
+            tester.assertIn(results['Solver'][0]['termination condition'], outcomes)
 
 
 @register_model

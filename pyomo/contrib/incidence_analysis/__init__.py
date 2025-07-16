@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -18,3 +18,21 @@ from .scc_solver import (
 )
 from .incidence import get_incident_variables
 from .config import IncidenceMethod
+
+#
+# declare deprecation paths for removed modules
+#
+from pyomo.common.deprecation import moved_module
+
+moved_module(
+    "pyomo.contrib.incidence_analysis.util",
+    "pyomo.contrib.incidence_analysis.scc_solver",
+    version='6.5.0',
+    msg=(
+        "The 'pyomo.contrib.incidence_analysis.util' module has been moved to "
+        "'pyomo.contrib.incidence_analysis.scc_solver'. However, we recommend "
+        "importing this functionality (e.g. solve_strongly_connected_components) "
+        "directly from 'pyomo.contrib.incidence_analysis'."
+    ),
+)
+del moved_module

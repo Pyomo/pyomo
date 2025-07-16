@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -185,7 +185,7 @@ class _MindtPyAlgorithm(object):
             '               Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)                \n'
             '-----------------------------------------------------------------------------------------------\n'
             'For more information, please visit \n'
-            'https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html'
+            'https://pyomo.readthedocs.io/en/stable/explanation/solvers/mindtpy.html'
         )
         self.config.logger.info(
             'If you use this software, please cite the following:\n'
@@ -2795,8 +2795,9 @@ class _MindtPyAlgorithm(object):
             )
 
         self.create_utility_block(self.working_model, 'MindtPy_utils')
-        with time_code(self.timing, 'total', is_main_timer=True), lower_logger_level_to(
-            config.logger, new_logging_level
+        with (
+            time_code(self.timing, 'total', is_main_timer=True),
+            lower_logger_level_to(config.logger, new_logging_level),
         ):
             self._log_solver_intro_message()
             self.initialize_subsolvers()

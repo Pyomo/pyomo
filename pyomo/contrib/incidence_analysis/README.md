@@ -7,7 +7,7 @@ These tools can be used to detect whether and (approximately) why the Jacobian
 of equality constraints is structurally or numerically singular, which
 commonly happens as the result of a modeling error.
 See the
-[documentation](https://pyomo.readthedocs.io/en/stable/contributed_packages/incidence/index.html)
+[documentation](https://pyomo.readthedocs.io/en/stable/explanation/analysis/incidence/index.html)
 for more information and examples.
 
 ## Dependencies

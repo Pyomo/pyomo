@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,8 +11,4 @@
 
 
 def load():
-    import pyomo.scripting.plugins.convert
-    import pyomo.scripting.plugins.solve
-    import pyomo.scripting.plugins.download
-    import pyomo.scripting.plugins.build_ext
-    import pyomo.scripting.plugins.extras
+    from pyomo.scripting.plugins import convert, solve, download, build_ext, extras

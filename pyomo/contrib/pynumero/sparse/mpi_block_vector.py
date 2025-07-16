@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,7 +11,12 @@
 
 from pyomo.common.dependencies import mpi4py
 from pyomo.contrib.pynumero.sparse import BlockVector
-from .base_block import BaseBlockVector
+from .base_block import (
+    BaseBlockVector,
+    vec_unary_ufuncs,
+    vec_binary_ufuncs,
+    vec_associative_reductions,
+)
 from .block_vector import NotFullyDefinedBlockVectorError
 from .block_vector import assert_block_structure as block_vector_assert_block_structure
 import numpy as np
@@ -24,7 +29,7 @@ def assert_block_structure(vec):
         raise NotFullyDefinedBlockVectorError(msg)
 
 
-class MPIBlockVector(np.ndarray, BaseBlockVector):
+class MPIBlockVector(BaseBlockVector, np.ndarray):
     """
     Parallel structured vector interface. This interface can be used to
     perform parallel operations on vectors composed by vectors. The main
@@ -136,74 +141,6 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         """Runs ufuncs speciallizations to MPIBlockVector"""
-        # functions that take one vector
-        unary_funcs = [
-            np.log10,
-            np.sin,
-            np.cos,
-            np.exp,
-            np.ceil,
-            np.floor,
-            np.tan,
-            np.arctan,
-            np.arcsin,
-            np.arccos,
-            np.sinh,
-            np.cosh,
-            np.abs,
-            np.tanh,
-            np.arccosh,
-            np.arcsinh,
-            np.arctanh,
-            np.fabs,
-            np.sqrt,
-            np.log,
-            np.log2,
-            np.absolute,
-            np.isfinite,
-            np.isinf,
-            np.isnan,
-            np.log1p,
-            np.logical_not,
-            np.expm1,
-            np.exp2,
-            np.sign,
-            np.rint,
-            np.square,
-            np.positive,
-            np.negative,
-            np.rad2deg,
-            np.deg2rad,
-            np.conjugate,
-            np.reciprocal,
-            np.signbit,
-        ]
-        # functions that take two vectors
-        binary_funcs = [
-            np.add,
-            np.multiply,
-            np.divide,
-            np.subtract,
-            np.greater,
-            np.greater_equal,
-            np.less,
-            np.less_equal,
-            np.not_equal,
-            np.maximum,
-            np.minimum,
-            np.fmax,
-            np.fmin,
-            np.equal,
-            np.logical_and,
-            np.logical_or,
-            np.logical_xor,
-            np.logaddexp,
-            np.logaddexp2,
-            np.remainder,
-            np.heaviside,
-            np.hypot,
-        ]
-
         outputs = kwargs.pop('out', None)
         if outputs is not None:
             raise NotImplementedError(
@@ -211,10 +148,10 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
                 + ' cannot be used with MPIBlockVector if the out keyword argument is given.'
             )
 
-        if ufunc in unary_funcs:
+        if ufunc in vec_unary_ufuncs:
             results = self._unary_operation(ufunc, method, *inputs, **kwargs)
             return results
-        elif ufunc in binary_funcs:
+        elif ufunc in vec_binary_ufuncs:
             results = self._binary_operation(ufunc, method, *inputs, **kwargs)
             return results
         else:
@@ -368,14 +305,14 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
     @property
     def owned_blocks(self):
         """
-        Returns list with inidices of blocks owned by this processor.
+        Returns list with indices of blocks owned by this processor.
         """
         return self._owned_blocks
 
     @property
     def shared_blocks(self):
         """
-        Returns list with inidices of blocks shared by all processors
+        Returns list with indices of blocks shared by all processors
         """
         return np.array([i for i in range(self.nblocks) if self._rank_owner[i] < 0])
 
@@ -1440,6 +1377,9 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def tolist(self):
+        """
+        Disable `np.ndarray.tolist` as it is not supported.
+        """
         raise RuntimeError('Operation not supported by MPIBlockVector')
 
     def flatten(self, order='C'):
@@ -1447,81 +1387,3 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
 
     def ravel(self, order='C'):
         raise RuntimeError('Operation not supported by MPIBlockVector')
-
-    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.argpartition(self, kth, axis=axis, kind=kind, order=order)
-
-    def argsort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.argsort(self, axis=axis, kind=kind, order=order)
-
-    def byteswap(self, inplace=False):
-        BaseBlockVector.byteswap(self, inplace=inplace)
-
-    def choose(self, choices, out=None, mode='raise'):
-        BaseBlockVector.choose(self, choices, out=out, mode=mode)
-
-    def diagonal(self, offset=0, axis1=0, axis2=1):
-        BaseBlockVector.diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
-
-    def dump(self, file):
-        BaseBlockVector.dump(self, file)
-
-    def dumps(self):
-        BaseBlockVector.dumps(self)
-
-    def getfield(self, dtype, offset=0):
-        BaseBlockVector.getfield(self, dtype, offset=offset)
-
-    def item(self, *args):
-        BaseBlockVector.item(self, *args)
-
-    def itemset(self, *args):
-        BaseBlockVector.itemset(self, *args)
-
-    def newbyteorder(self, new_order='S'):
-        BaseBlockVector.newbyteorder(self, new_order=new_order)
-
-    def put(self, indices, values, mode='raise'):
-        BaseBlockVector.put(self, indices, values, mode=mode)
-
-    def partition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.partition(self, kth, axis=axis, kind=kind, order=order)
-
-    def repeat(self, repeats, axis=None):
-        BaseBlockVector.repeat(self, repeats, axis=axis)
-
-    def reshape(self, shape, order='C'):
-        BaseBlockVector.reshape(self, shape, order=order)
-
-    def resize(self, new_shape, refcheck=True):
-        BaseBlockVector.resize(self, new_shape, refcheck=refcheck)
-
-    def searchsorted(self, v, side='left', sorter=None):
-        BaseBlockVector.searchsorted(self, v, side=side, sorter=sorter)
-
-    def setfield(self, val, dtype, offset=0):
-        BaseBlockVector.setfield(self, val, dtype, offset=offset)
-
-    def setflags(self, write=None, align=None, uic=None):
-        BaseBlockVector.setflags(self, write=write, align=align, uic=uic)
-
-    def sort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.sort(self, axis=axis, kind=kind, order=order)
-
-    def squeeze(self, axis=None):
-        BaseBlockVector.squeeze(self, axis=axis)
-
-    def swapaxes(self, axis1, axis2):
-        BaseBlockVector.swapaxes(self, axis1, axis2)
-
-    def tobytes(self, order='C'):
-        BaseBlockVector.tobytes(self, order=order)
-
-    def argmax(self, axis=None, out=None):
-        BaseBlockVector.argmax(self, axis=axis, out=out)
-
-    def argmin(self, axis=None, out=None):
-        BaseBlockVector.argmax(self, axis=axis, out=out)
-
-    def take(self, indices, axis=None, out=None, mode='raise'):
-        BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)

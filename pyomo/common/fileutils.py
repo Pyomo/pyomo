@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -713,7 +713,7 @@ class PathManager(object):
 
     The ``Executable`` singleton uses :py:class:`ExecutableData`, an
     extended form of the :py:class:`PathData` class, which provides the
-    ``executable`` property as an alais for :py:meth:`path()` and
+    ``executable`` property as an alias for :py:meth:`path()` and
     :py:meth:`set_path()`:
 
     .. doctest::

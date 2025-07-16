@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,9 +13,9 @@
 import re
 
 
-"""
-This script is run using the Gurobi/system python. Do not assume any third party packages
-are available!
+"""This script is run using the Gurobi/system python. Do not assume any
+third party packages are available!
+
 """
 from gurobipy import gurobi, read, GRB
 import sys
@@ -40,7 +40,7 @@ def _is_numeric(x):
     return True
 
 
-def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes):
+def gurobi_run(model_file, warmstart_file, mipgap, options, suffixes):
     # figure out what suffixes we need to extract.
     extract_duals = False
     extract_slacks = False
@@ -77,7 +77,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
 
     if model is None:
         print(
-            "***The GUROBI solver plugin failed to load the input LP file=" + soln_file
+            "***The GUROBI solver plugin failed to load the input LP file=" + model_file
         )
         return
 
@@ -107,6 +107,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
             # because the latter does not preserve the
             # Gurobi stack trace
             if not _is_numeric(value):
+                model.close()
                 raise
             model.setParam(key, float(value))
 
@@ -239,13 +240,9 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
                 # minimize
                 obj_value = float('inf')
 
-    # write the solution file
-    solnfile = open(soln_file, "w+")
-
-    # write the information required by results.problem
-    solnfile.write("section:problem\n")
-    name = model.getAttr(GRB.Attr.ModelName)
-    solnfile.write("name: " + name + '\n')
+    result = {}
+    problem = result['problem'] = {}
+    problem['name'] = model.getAttr(GRB.Attr.ModelName)
 
     # TODO: find out about bounds and fix this with error checking
     # this line fails for some reason so set the value to unknown
@@ -258,97 +255,103 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
             bound = None
 
     if sense < 0:
-        solnfile.write("sense:maximize\n")
+        problem["sense"] = "maximize"
         if bound is None:
-            solnfile.write("upper_bound: %f\n" % float('inf'))
-        else:
-            solnfile.write("upper_bound: %s\n" % str(bound))
+            bound = float('inf')
+        problem["upper_bound"] = bound
     else:
-        solnfile.write("sense:minimize\n")
+        problem["sense"] = "minimize"
         if bound is None:
-            solnfile.write("lower_bound: %f\n" % float('-inf'))
-        else:
-            solnfile.write("lower_bound: %s\n" % str(bound))
+            bound = float('-inf')
+        problem["lower_bound"] = bound
 
     # TODO: Get the number of objective functions from GUROBI
     n_objs = 1
-    solnfile.write("number_of_objectives: %d\n" % n_objs)
+    problem["number_of_objectives"] = n_objs
 
     cons = model.getConstrs()
     qcons = []
     if GUROBI_VERSION[0] >= 5:
         qcons = model.getQConstrs()
-    solnfile.write(
-        "number_of_constraints: %d\n" % (len(cons) + len(qcons) + model.NumSOS,)
-    )
+    problem["number_of_constraints"] = len(cons) + len(qcons) + model.NumSOS
 
     vars = model.getVars()
-    solnfile.write("number_of_variables: %d\n" % len(vars))
+    problem["number_of_variables"] = len(vars)
 
     n_binvars = model.getAttr(GRB.Attr.NumBinVars)
-    solnfile.write("number_of_binary_variables: %d\n" % n_binvars)
+    problem["number_of_binary_variables"] = n_binvars
 
     n_intvars = model.getAttr(GRB.Attr.NumIntVars)
-    solnfile.write("number_of_integer_variables: %d\n" % n_intvars)
-
-    solnfile.write("number_of_continuous_variables: %d\n" % (len(vars) - n_intvars,))
-
-    solnfile.write("number_of_nonzeros: %d\n" % model.getAttr(GRB.Attr.NumNZs))
+    problem["number_of_integer_variables"] = n_intvars
+    problem["number_of_continuous_variables"] = len(vars) - n_intvars
+    problem["number_of_nonzeros"] = model.getAttr(GRB.Attr.NumNZs)
 
     # write out the information required by results.solver
-    solnfile.write("section:solver\n")
+    solver = result['solver'] = {}
 
-    solnfile.write('status: %s\n' % status)
-    solnfile.write('return_code: %s\n' % return_code)
-    solnfile.write('message: %s\n' % message)
-    solnfile.write('wall_time: %s\n' % str(wall_time))
-    solnfile.write('termination_condition: %s\n' % term_cond)
-    solnfile.write('termination_message: %s\n' % message)
+    solver['status'] = status
+    solver['return_code'] = return_code
+    solver['message'] = message
+    solver['wall_time'] = wall_time
+    solver['termination_condition'] = term_cond
+    solver['termination_message'] = message
 
     is_discrete = False
     if model.getAttr(GRB.Attr.IsMIP):
         is_discrete = True
 
     if (term_cond == 'optimal') or (model.getAttr(GRB.Attr.SolCount) >= 1):
-        solnfile.write('section:solution\n')
-        solnfile.write('status: %s\n' % (solution_status))
-        solnfile.write('message: %s\n' % message)
-        solnfile.write('objective: %s\n' % str(obj_value))
-        solnfile.write('gap: 0.0\n')
+        solution = result['solution'] = {}
+        solution['status'] = solution_status
+        solution['message'] = message
+        solution['objective'] = obj_value
+        solution['gap'] = 0.0
 
         vals = model.getAttr("X", vars)
         names = model.getAttr("VarName", vars)
-        for val, name in zip(vals, names):
-            solnfile.write('var: %s : %s\n' % (str(name), str(val)))
+        solution['var'] = {name: val for name, val in zip(names, vals)}
 
-        if (is_discrete is False) and (extract_reduced_costs is True):
+        if extract_reduced_costs and not is_discrete:
             vals = model.getAttr("Rc", vars)
-            for val, name in zip(vals, names):
-                solnfile.write('varrc: %s : %s\n' % (str(name), str(val)))
+            solution['varrc'] = {name: val for name, val in zip(names, vals)}
 
         if extract_duals or extract_slacks:
             con_names = model.getAttr("ConstrName", cons)
             if GUROBI_VERSION[0] >= 5:
                 qcon_names = model.getAttr("QCName", qcons)
 
-        if (is_discrete is False) and (extract_duals is True):
+        if extract_duals and not is_discrete:
+            # Pi attributes in Gurobi are the constraint duals
             vals = model.getAttr("Pi", cons)
-            for val, name in zip(vals, con_names):
-                # Pi attributes in Gurobi are the constraint duals
-                solnfile.write("constraintdual: %s : %s\n" % (str(name), str(val)))
+            solution['constraintdual'] = {
+                name: val for name, val in zip(con_names, vals)
+            }
             if GUROBI_VERSION[0] >= 5:
+                # QCPI attributes in Gurobi are the constraint duals
                 vals = model.getAttr("QCPi", qcons)
-                for val, name in zip(vals, qcon_names):
-                    # QCPI attributes in Gurobi are the constraint duals
-                    solnfile.write("constraintdual: %s : %s\n" % (str(name), str(val)))
+                solution['constraintdual'].update(zip(qcon_names, vals))
 
-        if extract_slacks is True:
+        if extract_slacks:
             vals = model.getAttr("Slack", cons)
-            for val, name in zip(vals, con_names):
-                solnfile.write("constraintslack: %s : %s\n" % (str(name), str(val)))
+            solution['constraintslack'] = {
+                name: val for name, val in zip(con_names, vals)
+            }
             if GUROBI_VERSION[0] >= 5:
                 vals = model.getAttr("QCSlack", qcons)
-                for val, name in zip(vals, qcon_names):
-                    solnfile.write("constraintslack: %s : %s\n" % (str(name), str(val)))
+                solution['constraintslack'].update(zip(qcon_names, vals))
 
-    solnfile.close()
+    model.close()
+    model = None
+    return result
+
+
+def write_result(result, soln_file):
+    with open(soln_file, "w+") as FILE:
+        for section, data in result.items():
+            FILE.write(f'section:{section}\n')
+            for key, val in data.items():
+                if val.__class__ is dict:
+                    for name, v in val.items():
+                        FILE.write(f'{key}:{name}:{v}\n')
+                else:
+                    FILE.write(f'{key}:{val}\n')

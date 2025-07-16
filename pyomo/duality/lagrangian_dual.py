@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -30,18 +30,19 @@ from pyomo.core.plugins.transform.util import partial, process_canonical_repn
 
 @TransformationFactory.register("core.lagrangian_dual", doc="Create the LP dual model.")
 class DualTransformation(IsomorphicTransformation):
-    """
-    Creates a standard form Pyomo model that is equivalent to another model
+    """Creates a standard form Pyomo model that is equivalent to another
+    model
 
     Options
-        dual_constraint_suffix      Defaults to _constraint
-        dual_variable_prefix        Defaults to p_
-        slack_names                 Defaults to auxiliary_slack
-        excess_names                Defaults to auxiliary_excess
-        lb_names                    Defaults to _lower_bound
-        ub_names                    Defaults to _upper_bound
-        pos_suffix                  Defaults to _plus
-        neg_suffix                  Defaults to _minus
+        dual_constraint_suffix      Defaults to ``_constraint``
+        dual_variable_prefix        Defaults to ``p_``
+        slack_names                 Defaults to ``auxiliary_slack``
+        excess_names                Defaults to ``auxiliary_excess``
+        lb_names                    Defaults to ``_lower_bound``
+        ub_names                    Defaults to ``_upper_bound``
+        pos_suffix                  Defaults to ``_plus``
+        neg_suffix                  Defaults to ``_minus``
+
     """
 
     @deprecated(

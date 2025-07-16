@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -59,24 +59,65 @@ from pyomo.core.expr import (
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-import pyomo.core.kernel.base
-import pyomo.core.kernel.homogeneous_container
-import pyomo.core.kernel.heterogeneous_container
-import pyomo.core.kernel.variable
-import pyomo.core.kernel.constraint
-import pyomo.core.kernel.matrix_constraint
-import pyomo.core.kernel.parameter
-import pyomo.core.kernel.expression
-import pyomo.core.kernel.objective
-import pyomo.core.kernel.sos
-import pyomo.core.kernel.suffix
-import pyomo.core.kernel.block
-import pyomo.core.kernel.piecewise_library
-import pyomo.core.kernel.set_types
+from pyomo.core.kernel import (
+    base,
+    homogeneous_container,
+    heterogeneous_container,
+    variable,
+    constraint,
+    matrix_constraint,
+    parameter,
+    expression,
+    objective,
+    sos,
+    suffix,
+    block,
+    piecewise_library,
+    set_types,
+)
 
-# TODO: These are included for backwards compatibility.  Accessing them
-# will result in a deprecation warning
-from pyomo.common.dependencies import attempt_import
 
-component_map = attempt_import('pyomo.core.kernel.component_map')[0]
-component_set = attempt_import('pyomo.core.kernel.component_set')[0]
+#
+# declare deprecation paths for removed modules and attributes
+#
+from pyomo.common.deprecation import relocated_module_attribute, moved_module
+
+relocated_module_attribute(
+    'component_map',
+    'pyomo.common.collections.component_map',
+    msg='The pyomo.core.kernel.component_map module is deprecated.  '
+    'Import ComponentMap from pyomo.common.collections.',
+    version='5.7.1',
+    f_globals=globals(),
+)
+relocated_module_attribute(
+    'component_set',
+    'pyomo.common.collections.component_set',
+    msg='The pyomo.core.kernel.component_map module is deprecated.  '
+    'Import ComponentMap from pyomo.common.collections.',
+    version='5.7.1',
+    f_globals=globals(),
+)
+
+moved_module(
+    "pyomo.core.kernel.component_map",
+    "pyomo._archive.component_map",
+    msg='The pyomo.core.kernel.component_map module is deprecated.  '
+    'Import ComponentMap from pyomo.common.collections.',
+    version='5.7.1',
+)
+moved_module(
+    "pyomo.core.kernel.component_set",
+    "pyomo._archive.component_set",
+    msg='The pyomo.core.kernel.component_set module is deprecated.  '
+    'Import ComponentSet from pyomo.common.collections.',
+    version='5.7.1',
+)
+moved_module(
+    "pyomo.core.kernel.register_numpy_types",
+    "pyomo._archive.register_numpy_types",
+    msg="pyomo.core.kernel.register_numpy_types is deprecated.  NumPy type "
+    "registration is handled automatically by pyomo.common.dependencies.numpy",
+    version='6.1',
+)
+del relocated_module_attribute, moved_module

@@ -1,7 +1,7 @@
 /**___________________________________________________________________________
  *
  * Pyomo: Python Optimization Modeling Objects
- * Copyright (c) 2008-2024
+ * Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
  * Under the terms of Contract DE-NA0003525 with National Technology and
  * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -66,7 +66,7 @@ public:
    // get the initial values for x
    void get_init_x(double *invec, int n);
 
-   // get the initia values for the multipliers lambda
+   // get the initial values for the multipliers lambda
    void get_init_multipliers(double *invec, int n);
 
    // evaluate the objective function

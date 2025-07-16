@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -23,6 +23,9 @@ def main():
     file_dirname = dirname(abspath(str(__file__)))
     file_name = abspath(join(file_dirname, "reactor_data.csv"))
     data = pd.read_csv(file_name)
+
+    seed = 524  # Set seed for reproducibility
+    np.random.seed(seed)  # Set seed for reproducibility
 
     # Create more data for the example
     N = 50
@@ -50,10 +53,10 @@ def main():
     ### Parameter estimation with 'leave-N-out'
     # Example use case: For each combination of data where one data point is left
     # out, estimate theta
-    lNo_theta = pest.theta_est_leaveNout(1)
+    lNo_theta = pest.theta_est_leaveNout(1, seed=524)
     print(lNo_theta.head())
 
-    parmest.graphics.pairwise_plot(lNo_theta, theta)
+    parmest.graphics.pairwise_plot(lNo_theta, theta, seed=524)
 
     ### Leave one out/boostrap analysis
     # Example use case: leave 25 data points out, run 20 bootstrap samples with the
@@ -81,6 +84,8 @@ def main():
             alpha,
             ["MVN"],
             title="Alpha: " + str(alpha) + ", " + str(theta_est_N.loc[0, alpha]),
+            seed=524 + i,  # setting the seed for testing repeatability,
+            # for typical use cases, this should not be set
         )
 
     # Extract the percent of points that are within the alpha region

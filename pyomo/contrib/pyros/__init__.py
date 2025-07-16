@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.pyros.pyros import PyROS
-from pyomo.contrib.pyros.pyros import ObjectiveType, pyrosTerminationCondition
+from pyomo.contrib.pyros.util import ObjectiveType, pyrosTerminationCondition
 from pyomo.contrib.pyros.uncertainty_sets import (
     UncertaintySet,
     EllipsoidalSet,

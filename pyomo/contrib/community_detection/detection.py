@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -616,9 +616,7 @@ class CommunityMap(object):
         subtitle_font_size = 11
         plt.title(subtitle_naming_dict[type_of_graph], fontsize=subtitle_font_size)
 
-        if filename is None:
-            plt.show()
-        else:
+        if filename is not None:
             plt.savefig(filename)
             plt.close()
 

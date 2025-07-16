@@ -1,31 +1,194 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""
-The pyomo.contrib.pynumero.sparse.block_vector module includes methods that extend
-linear algebra operations in numpy for case of structured problems
-where linear algebra operations present an inherent block structure.
-This interface consider vectors of the form:
+"""Implementation of a general "block vector"
 
-v = [v_1, v_2, v_3, ... , v_n]
 
-where v_i are numpy arrays of dimension 1
+The `pyomo.contrib.pynumero.sparse.block_vector` module includes methods
+that extend linear algebra operations in numpy for case of structured
+problems where linear algebra operations present an inherent block
+structure.  This interface consider vectors of the form:
+
+.. math::
+
+   v = [v_1, v_2, v_3, ... , v_n]
+
+where `v_i` are numpy arrays of dimension 1
 
 .. rubric:: Contents
+
+Methods specific to :py:class:`BlockVector`:
+
+   * :py:meth:`~BlockVector.set_block`
+   * :py:meth:`~BlockVector.get_block`
+   * :py:meth:`~BlockVector.block_sizes`
+   * :py:meth:`~BlockVector.get_block_size`
+   * :py:meth:`~BlockVector.is_block_defined`
+   * :py:meth:`~BlockVector.copyfrom`
+   * :py:meth:`~BlockVector.copyto`
+   * :py:meth:`~BlockVector.copy_structure`
+   * :py:meth:`~BlockVector.set_blocks`
+   * :py:meth:`~BlockVector.pprint`
+
+Attributes specific to :py:class:`BlockVector`:
+
+   * :py:attr:`~BlockVector.nblocks`
+   * :py:attr:`~BlockVector.bshape`
+   * :py:attr:`~BlockVector.has_none`
+
+
+NumPy compatible methods:
+
+   * :py:meth:`~numpy.ndarray.dot`
+   * :py:meth:`~numpy.ndarray.sum`
+   * :py:meth:`~numpy.ndarray.all`
+   * :py:meth:`~numpy.ndarray.any`
+   * :py:meth:`~numpy.ndarray.max`
+   * :py:meth:`~numpy.ndarray.astype`
+   * :py:meth:`~numpy.ndarray.clip`
+   * :py:meth:`~numpy.ndarray.compress`
+   * :py:meth:`~numpy.ndarray.conj`
+   * :py:meth:`~numpy.ndarray.conjugate`
+   * :py:meth:`~numpy.ndarray.nonzero`
+   * :py:meth:`~numpy.ndarray.ptp` (NumPy 1.x only)
+   * :py:meth:`~numpy.ndarray.round`
+   * :py:meth:`~numpy.ndarray.std`
+   * :py:meth:`~numpy.ndarray.var`
+   * :py:meth:`~numpy.ndarray.tofile`
+   * :py:meth:`~numpy.ndarray.min`
+   * :py:meth:`~numpy.ndarray.mean`
+   * :py:meth:`~numpy.ndarray.prod`
+   * :py:meth:`~numpy.ndarray.fill`
+   * :py:meth:`~numpy.ndarray.tolist`
+   * :py:meth:`~numpy.ndarray.flatten`
+   * :py:meth:`~numpy.ndarray.ravel`
+   * :py:meth:`~numpy.ndarray.argmax`
+   * :py:meth:`~numpy.ndarray.argmin`
+   * :py:meth:`~numpy.ndarray.cumprod`
+   * :py:meth:`~numpy.ndarray.cumsum`
+   * :py:meth:`~numpy.ndarray.copy`
+
+For example,
+
+.. code-block:: python
+
+   >>> import numpy as np
+   >>> from pyomo.contrib.pynumero.sparse import BlockVector
+   >>> v = BlockVector(2)
+   >>> v.set_block(0, np.random.normal(size=100))
+   >>> v.set_block(1, np.random.normal(size=30))
+   >>> avg = v.mean()
+
+NumPy compatible functions:
+
+   * :py:func:`~numpy.log10`
+   * :py:func:`~numpy.sin`
+   * :py:func:`~numpy.cos`
+   * :py:func:`~numpy.exp`
+   * :py:func:`~numpy.ceil`
+   * :py:func:`~numpy.floor`
+   * :py:func:`~numpy.tan`
+   * :py:func:`~numpy.arctan`
+   * :py:func:`~numpy.arcsin`
+   * :py:func:`~numpy.arccos`
+   * :py:func:`~numpy.sinh`
+   * :py:func:`~numpy.cosh`
+   * :py:func:`~numpy.abs`
+   * :py:func:`~numpy.tanh`
+   * :py:func:`~numpy.arccosh`
+   * :py:func:`~numpy.arcsinh`
+   * :py:func:`~numpy.arctanh`
+   * :py:func:`~numpy.fabs`
+   * :py:func:`~numpy.sqrt`
+   * :py:func:`~numpy.log`
+   * :py:func:`~numpy.log2`
+   * :py:func:`~numpy.absolute`
+   * :py:func:`~numpy.isfinite`
+   * :py:func:`~numpy.isinf`
+   * :py:func:`~numpy.isnan`
+   * :py:func:`~numpy.log1p`
+   * :py:func:`~numpy.logical_not`
+   * :py:func:`~numpy.expm1`
+   * :py:func:`~numpy.exp2`
+   * :py:func:`~numpy.sign`
+   * :py:func:`~numpy.rint`
+   * :py:func:`~numpy.square`
+   * :py:func:`~numpy.positive`
+   * :py:func:`~numpy.negative`
+   * :py:func:`~numpy.rad2deg`
+   * :py:func:`~numpy.deg2rad`
+   * :py:func:`~numpy.conjugate`
+   * :py:func:`~numpy.reciprocal`
+   * :py:func:`~numpy.signbit`
+   * :py:func:`~numpy.add`
+   * :py:func:`~numpy.multiply`
+   * :py:func:`~numpy.divide`
+   * :py:func:`~numpy.subtract`
+   * :py:func:`~numpy.greater`
+   * :py:func:`~numpy.greater_equal`
+   * :py:func:`~numpy.less`
+   * :py:func:`~numpy.less_equal`
+   * :py:func:`~numpy.not_equal`
+   * :py:func:`~numpy.maximum`
+   * :py:func:`~numpy.minimum`
+   * :py:func:`~numpy.fmax`
+   * :py:func:`~numpy.fmin`
+   * :py:func:`~numpy.equal`
+   * :py:func:`~numpy.logical_and`
+   * :py:func:`~numpy.logical_or`
+   * :py:func:`~numpy.logical_xor`
+   * :py:func:`~numpy.logaddexp`
+   * :py:func:`~numpy.logaddexp2`
+   * :py:func:`~numpy.remainder`
+   * :py:func:`~numpy.heaviside`
+   * :py:func:`~numpy.hypot`
+
+For example,
+
+.. code-block:: python
+
+   >>> import numpy as np
+   >>> from pyomo.contrib.pynumero.sparse import BlockVector
+   >>> v = BlockVector(2)
+   >>> v.set_block(0, np.random.normal(size=100))
+   >>> v.set_block(1, np.random.normal(size=30))
+   >>> inf_norm = np.max(np.abs(v))
+
+.. autosummary::
+
+   BlockVector
+   BlockVector.set_block
+   BlockVector.get_block
+   BlockVector.block_sizes
+   BlockVector.get_block_size
+   BlockVector.is_block_defined
+   BlockVector.copyfrom
+   BlockVector.copyto
+   BlockVector.copy_structure
+   BlockVector.set_blocks
+   BlockVector.pprint
+   BlockVector.nblocks
+   BlockVector.bshape
+   BlockVector.has_none
 
 """
 
 import operator
 
 from ..dependencies import numpy as np
-from .base_block import BaseBlockVector
+from .base_block import (
+    BaseBlockVector,
+    vec_unary_ufuncs,
+    vec_binary_ufuncs,
+    vec_associative_reductions,
+)
 
 
 class NotFullyDefinedBlockVectorError(Exception):
@@ -38,7 +201,7 @@ def assert_block_structure(vec):
         raise NotFullyDefinedBlockVectorError(msg)
 
 
-class BlockVector(np.ndarray, BaseBlockVector):
+class BlockVector(BaseBlockVector, np.ndarray):
     """
     Structured vector interface. This interface can be used to
     perform operations on vectors composed by vectors. For example,
@@ -107,115 +270,49 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return super(BlockVector, self).__array_wrap__(self, out_arr, context)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        """Runs ufuncs speciallizations to BlockVector"""
-        # functions that take one vector
-        unary_funcs = [
-            np.log10,
-            np.sin,
-            np.cos,
-            np.exp,
-            np.ceil,
-            np.floor,
-            np.tan,
-            np.arctan,
-            np.arcsin,
-            np.arccos,
-            np.sinh,
-            np.cosh,
-            np.abs,
-            np.tanh,
-            np.arccosh,
-            np.arcsinh,
-            np.arctanh,
-            np.fabs,
-            np.sqrt,
-            np.log,
-            np.log2,
-            np.absolute,
-            np.isfinite,
-            np.isinf,
-            np.isnan,
-            np.log1p,
-            np.logical_not,
-            np.expm1,
-            np.exp2,
-            np.sign,
-            np.rint,
-            np.square,
-            np.positive,
-            np.negative,
-            np.rad2deg,
-            np.deg2rad,
-            np.conjugate,
-            np.reciprocal,
-            np.signbit,
+        """Runs ufuncs specializations to BlockVector"""
+        if kwargs.get('out', None) is not None:
+            return NotImplemented
+        if method == 'reduce' and ufunc in vec_associative_reductions:
+            (arg,) = inputs
+            return self._reduction_operation(ufunc, method, arg, kwargs)
+        if method == '__call__':
+            if ufunc in vec_unary_ufuncs:
+                (arg,) = inputs
+                return self._unary_operation(ufunc, method, arg, kwargs)
+            if ufunc in vec_binary_ufuncs:
+                return self._binary_operation(ufunc, method, inputs, kwargs)
+        return NotImplemented
+
+    def _reduction_operation(self, ufunc, method, x, kwargs):
+        results = [
+            self._unary_operation(ufunc, method, x.get_block(i), kwargs)
+            for i in range(x.nblocks)
         ]
-
-        # functions that take two vectors
-        binary_funcs = [
-            np.add,
-            np.multiply,
-            np.divide,
-            np.subtract,
-            np.greater,
-            np.greater_equal,
-            np.less,
-            np.less_equal,
-            np.not_equal,
-            np.maximum,
-            np.minimum,
-            np.fmax,
-            np.fmin,
-            np.equal,
-            np.logical_and,
-            np.logical_or,
-            np.logical_xor,
-            np.logaddexp,
-            np.logaddexp2,
-            np.remainder,
-            np.heaviside,
-            np.hypot,
-        ]
-
-        args = [input_ for i, input_ in enumerate(inputs)]
-        outputs = kwargs.pop('out', None)
-        if outputs is not None:
-            raise NotImplementedError(
-                str(ufunc)
-                + ' cannot be used with BlockVector if the out keyword argument is given.'
-            )
-
-        if ufunc in unary_funcs:
-            results = self._unary_operation(ufunc, method, *args, **kwargs)
-            return results
-        elif ufunc in binary_funcs:
-            results = self._binary_operation(ufunc, method, *args, **kwargs)
-            return results
+        if len(results) == 1:
+            return results[0]
         else:
-            raise NotImplementedError(str(ufunc) + "not supported for BlockVector")
+            return super().__array_ufunc__(ufunc, method, np.array(results), **kwargs)
 
-    def _unary_operation(self, ufunc, method, *args, **kwargs):
+    def _unary_operation(self, ufunc, method, x, kwargs):
         """Run recursion to perform unary_funcs on BlockVector"""
         # ToDo: deal with out
-        x = args[0]
         if isinstance(x, BlockVector):
             v = BlockVector(x.nblocks)
             for i in range(x.nblocks):
-                _args = [x.get_block(i)] + [args[j] for j in range(1, len(args))]
-                v.set_block(i, self._unary_operation(ufunc, method, *_args, **kwargs))
+                v.set_block(
+                    i, self._unary_operation(ufunc, method, x.get_block(i), kwargs)
+                )
             return v
         elif type(x) == np.ndarray:
-            return super(BlockVector, self).__array_ufunc__(
-                ufunc, method, *args, **kwargs
-            )
+            return super().__array_ufunc__(ufunc, method, x, **kwargs)
         else:
-            raise NotImplementedError()
+            return NotImplemented
 
-    def _binary_operation(self, ufunc, method, *args, **kwargs):
+    def _binary_operation(self, ufunc, method, args, kwargs):
         """Run recursion to perform binary_funcs on BlockVector"""
         # ToDo: deal with out
-        x1 = args[0]
-        x2 = args[1]
+        x1, x2 = args
         if isinstance(x1, BlockVector) and isinstance(x2, BlockVector):
             assert_block_structure(x1)
             assert_block_structure(x2)
@@ -228,14 +325,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             res = BlockVector(x1.nblocks)
 
             for i in range(x1.nblocks):
-                _args = (
-                    [x1.get_block(i)]
-                    + [x2.get_block(i)]
-                    + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1.get_block(i), x2.get_block(i))
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
             return res
         elif type(x1) == np.ndarray and isinstance(x2, BlockVector):
             assert_block_structure(x2)
@@ -246,14 +337,8 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for i in range(x2.nblocks):
                 nelements = x2._brow_lengths[i]
-                _args = (
-                    [x1[accum : accum + nelements]]
-                    + [x2.get_block(i)]
-                    + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1[accum : accum + nelements], x2.get_block(i))
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
                 accum += nelements
             return res
         elif type(x2) == np.ndarray and isinstance(x1, BlockVector):
@@ -265,37 +350,23 @@ class BlockVector(np.ndarray, BaseBlockVector):
             accum = 0
             for i in range(x1.nblocks):
                 nelements = x1._brow_lengths[i]
-                _args = (
-                    [x1.get_block(i)]
-                    + [x2[accum : accum + nelements]]
-                    + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1.get_block(i), x2[accum : accum + nelements])
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
                 accum += nelements
             return res
         elif np.isscalar(x1) and isinstance(x2, BlockVector):
             assert_block_structure(x2)
             res = BlockVector(x2.nblocks)
             for i in range(x2.nblocks):
-                _args = (
-                    [x1] + [x2.get_block(i)] + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1, x2.get_block(i))
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
             return res
         elif np.isscalar(x2) and isinstance(x1, BlockVector):
             assert_block_structure(x1)
             res = BlockVector(x1.nblocks)
             for i in range(x1.nblocks):
-                _args = (
-                    [x1.get_block(i)] + [x2] + [args[j] for j in range(2, len(args))]
-                )
-                res.set_block(
-                    i, self._binary_operation(ufunc, method, *_args, **kwargs)
-                )
+                _args = (x1.get_block(i), x2)
+                res.set_block(i, self._binary_operation(ufunc, method, _args, kwargs))
             return res
         elif (type(x1) == np.ndarray or np.isscalar(x1)) and (
             type(x2) == np.ndarray or np.isscalar(x2)
@@ -308,7 +379,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
                 raise RuntimeError('Operation not supported by BlockVector')
             if x2.__class__.__name__ == 'MPIBlockVector':
                 raise RuntimeError('Operation not supported by BlockVector')
-            raise NotImplementedError()
+            return NotImplemented
 
     @property
     def nblocks(self):
@@ -584,13 +655,15 @@ class BlockVector(np.ndarray, BaseBlockVector):
             result.set_block(idx, self.get_block(idx).nonzero()[0])
         return (result,)
 
-    def ptp(self, axis=None, out=None, keepdims=False):
-        """
-        Peak to peak (maximum - minimum) value along a given axis.
-        """
-        assert_block_structure(self)
-        assert out is None, 'Out keyword not supported'
-        return self.max() - self.min()
+    if np.__version__[0] < '2':
+
+        def ptp(self, axis=None, out=None, keepdims=False):
+            """
+            Peak to peak (maximum - minimum) value along a given axis.
+            """
+            assert_block_structure(self)
+            assert out is None, 'Out keyword not supported'
+            return self.max() - self.min()
 
     def round(self, decimals=0, out=None):
         """
@@ -725,7 +798,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def argmax(self, axis=None, out=None):
         """
-        Returns the index of the larges element.
+        Returns the index of the largest element.
         """
         assert_block_structure(self)
         return self.flatten().argmax(axis=axis, out=out)
@@ -1453,6 +1526,9 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return True
 
     def __getitem__(self, item):
+        # numpy: __getitem__[()] is identity
+        if item.__class__ is tuple and not item:
+            return self
         if not self._has_equal_structure(item):
             raise ValueError(
                 'BlockVector.__getitem__ only accepts slices in the form of BlockVectors of the same structure'
@@ -1592,86 +1668,3 @@ class BlockVector(np.ndarray, BaseBlockVector):
             mpi_bv.set_block(bid, self.get_block(bid))
 
         return mpi_bv
-
-    # the following methods are not supported by blockvector
-
-    def argpartition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.argpartition(self, kth, axis=axis, kind=kind, order=order)
-
-    def argsort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.argsort(self, axis=axis, kind=kind, order=order)
-
-    def byteswap(self, inplace=False):
-        BaseBlockVector.byteswap(self, inplace=inplace)
-
-    def choose(self, choices, out=None, mode='raise'):
-        BaseBlockVector.choose(self, choices, out=out, mode=mode)
-
-    def diagonal(self, offset=0, axis1=0, axis2=1):
-        BaseBlockVector.diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
-
-    def dump(self, file):
-        BaseBlockVector.dump(self, file)
-
-    def dumps(self):
-        BaseBlockVector.dumps(self)
-
-    def getfield(self, dtype, offset=0):
-        BaseBlockVector.getfield(self, dtype, offset=offset)
-
-    def item(self, *args):
-        BaseBlockVector.item(self, *args)
-
-    def itemset(self, *args):
-        BaseBlockVector.itemset(self, *args)
-
-    def newbyteorder(self, new_order='S'):
-        BaseBlockVector.newbyteorder(self, new_order=new_order)
-
-    def put(self, indices, values, mode='raise'):
-        BaseBlockVector.put(self, indices, values, mode=mode)
-
-    def partition(self, kth, axis=-1, kind='introselect', order=None):
-        BaseBlockVector.partition(self, kth, axis=axis, kind=kind, order=order)
-
-    def repeat(self, repeats, axis=None):
-        BaseBlockVector.repeat(self, repeats, axis=axis)
-
-    def reshape(self, shape, order='C'):
-        BaseBlockVector.reshape(self, shape, order=order)
-
-    def resize(self, new_shape, refcheck=True):
-        BaseBlockVector.resize(self, new_shape, refcheck=refcheck)
-
-    def searchsorted(self, v, side='left', sorter=None):
-        BaseBlockVector.searchsorted(self, v, side=side, sorter=sorter)
-
-    def setfield(self, val, dtype, offset=0):
-        BaseBlockVector.setfield(self, val, dtype, offset=offset)
-
-    def setflags(self, write=None, align=None, uic=None):
-        BaseBlockVector.setflags(self, write=write, align=align, uic=uic)
-
-    def sort(self, axis=-1, kind='quicksort', order=None):
-        BaseBlockVector.sort(self, axis=axis, kind=kind, order=order)
-
-    def squeeze(self, axis=None):
-        BaseBlockVector.squeeze(self, axis=axis)
-
-    def swapaxes(self, axis1, axis2):
-        BaseBlockVector.swapaxes(self, axis1, axis2)
-
-    def tobytes(self, order='C'):
-        BaseBlockVector.tobytes(self, order=order)
-
-    def take(self, indices, axis=None, out=None, mode='raise'):
-        BaseBlockVector.take(self, indices, axis=axis, out=out, mode=mode)
-
-    def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
-        raise NotImplementedError('trace not implemented for BlockVector')
-
-    def transpose(*axes):
-        BaseBlockVector.transpose(*axes)
-
-    def tostring(order='C'):
-        BaseBlockVector.tostring(order=order)

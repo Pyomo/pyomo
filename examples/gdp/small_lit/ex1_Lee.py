@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,7 +13,7 @@
 Taken from Example 1 of the paper "New Algorithms for Nonlinear Generalized Disjunctive Programming" by Lee and Grossmann
 
 This GDP problem has one disjunction containing three terms, and exactly one of them must be true. The literature can be found here:
-http://egon.cheme.cmu.edu/Papers/LeeNewAlgo.pdf
+https://egon.cheme.cmu.edu/Papers/LeeNewAlgo.pdf
 
 """
 

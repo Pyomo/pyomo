@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 import pyomo.common.unittest as unittest
 
+from pyomo.common.dependencies import mpi4py, mpi4py_available
 from pyomo.contrib.pynumero.dependencies import (
     numpy_available,
     scipy_available,
@@ -22,19 +23,21 @@ if numpy_available and scipy_available:
 else:
     SKIPTESTS.append("Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests")
 
-try:
-    from mpi4py import MPI
-
-    comm = MPI.COMM_WORLD
+if mpi4py_available:
+    comm = mpi4py.MPI.COMM_WORLD
     if comm.Get_size() < 3:
         SKIPTESTS.append(
             "Pynumero needs at least 3 processes to run BlockVector MPI tests"
         )
-except ImportError:
+else:
     SKIPTESTS.append("Pynumero needs mpi4py to run BlockVector MPI tests")
 
 if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse import BlockVector
+    from pyomo.contrib.pynumero.sparse.base_block import (
+        vec_unary_ufuncs,
+        vec_binary_ufuncs,
+    )
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 
@@ -1403,48 +1406,13 @@ class TestMPIBlockVector(unittest.TestCase):
         bv.set_block(0, a)
         bv.set_block(1, b)
 
-        unary_funcs = [
-            np.log10,
-            np.sin,
-            np.cos,
-            np.exp,
-            np.ceil,
-            np.floor,
-            np.tan,
-            np.arctan,
-            np.arcsin,
-            np.arccos,
-            np.sinh,
-            np.cosh,
-            np.abs,
-            np.tanh,
-            np.arcsinh,
-            np.arctanh,
-            np.fabs,
-            np.sqrt,
-            np.log,
-            np.log2,
-            np.absolute,
-            np.isfinite,
-            np.isinf,
-            np.isnan,
-            np.log1p,
-            np.logical_not,
-            np.exp2,
-            np.expm1,
-            np.sign,
-            np.rint,
-            np.square,
-            np.positive,
-            np.negative,
-            np.rad2deg,
-            np.deg2rad,
-            np.conjugate,
-            np.reciprocal,
-        ]
+        _int_ufuncs = {np.invert, np.arccosh}
 
         bv2 = BlockVector(2)
-        for fun in unary_funcs:
+        for fun in vec_unary_ufuncs:
+            if fun in _int_ufuncs:
+                continue
+
             bv2.set_block(0, fun(bv.get_block(0)))
             bv2.set_block(1, fun(bv.get_block(1)))
             res = fun(v)
@@ -1454,7 +1422,7 @@ class TestMPIBlockVector(unittest.TestCase):
                 self.assertTrue(np.allclose(res.get_block(i), bv2.get_block(i)))
 
         with self.assertRaises(Exception) as context:
-            np.cbrt(v)
+            np.modf(v)
 
         with self.assertRaises(Exception) as context:
             np.cumsum(v)
@@ -1504,29 +1472,21 @@ class TestMPIBlockVector(unittest.TestCase):
         bv2.set_block(0, np.ones(3) * 3.0)
         bv2.set_block(1, np.ones(2) * 2.8)
 
-        binary_ufuncs = [
-            np.add,
-            np.multiply,
-            np.divide,
-            np.subtract,
-            np.greater,
-            np.greater_equal,
-            np.less,
-            np.less_equal,
-            np.not_equal,
-            np.maximum,
-            np.minimum,
-            np.fmax,
-            np.fmin,
-            np.equal,
-            np.logaddexp,
-            np.logaddexp2,
-            np.remainder,
-            np.heaviside,
-            np.hypot,
-        ]
+        _int_ufuncs = {
+            np.gcd,
+            np.lcm,
+            np.ldexp,
+            np.left_shift,
+            np.right_shift,
+            np.bitwise_and,
+            np.bitwise_or,
+            np.bitwise_xor,
+        }
 
-        for fun in binary_ufuncs:
+        for fun in vec_binary_ufuncs:
+            if fun in _int_ufuncs:
+                continue
+
             serial_res = fun(bv, bv2)
             res = fun(v, v2)
 

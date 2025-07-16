@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,6 +19,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr import GetItemExpression
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -90,21 +91,10 @@ class BooleanVarData(ComponentData, BooleanValue):
 
     Attributes
     ----------
-    domain: SetData
-        The domain of this variable.
-
     fixed: bool
         If True, then this variable is treated as a fixed constant in
         the model.
 
-    stale: bool
-        A Boolean indicating whether the value of this variable is
-        Consistent with the most recent solve.  `True` indicates that
-        this variable's value was set prior to the most recent solve and
-        was not updated by the results returned by the solve.
-
-    value: bool
-        The value of this variable.
     """
 
     __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
@@ -166,13 +156,14 @@ class BooleanVarData(ComponentData, BooleanValue):
     def clear(self):
         self.value = None
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """Compute the value of this variable."""
+        exception = _type_check_exception_arg(self, exception)
         return self.value
 
     @property
     def value(self):
-        """Return (or set) the value for this variable."""
+        """bool : the current value for this variable."""
         return self._value
 
     @value.setter
@@ -181,11 +172,17 @@ class BooleanVarData(ComponentData, BooleanValue):
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """BooleanSet : the domain for this variable."""
         return BooleanSet
 
     @property
     def stale(self):
+        """
+        bool : A Boolean indicating whether the value of this variable is
+        Consistent with the most recent solve.  `True` indicates that
+        this variable's value was set prior to the most recent solve and
+        was not updated by the results returned by the solve.
+        """
         return StaleFlagManager.is_stale(self._stale)
 
     @stale.setter
@@ -484,7 +481,7 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """bool : the current value of this variable."""
         if self._constructed:
             return BooleanVarData.value.fget(self)
         raise ValueError(
@@ -495,7 +492,6 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
 
     @value.setter
     def value(self, val):
-        """Set the value for this variable."""
         if self._constructed:
             return BooleanVarData.value.fset(self, val)
         raise ValueError(
@@ -506,6 +502,7 @@ class ScalarBooleanVar(BooleanVarData, BooleanVar):
 
     @property
     def domain(self):
+        """BooleanSet : the domain for this variable."""
         return BooleanVarData.domain.fget(self)
 
     def fix(self, value=NOTSET, skip_validation=False):
@@ -568,6 +565,7 @@ class IndexedBooleanVar(BooleanVar):
 
     @property
     def domain(self):
+        """BooleanSet : the domain for this variable."""
         return BooleanSet
 
     # Because Emma wants crazy things... (Where crazy things are the ability to

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -90,9 +90,11 @@ t_ASTERISK = r"\*"
 # Notes on PLY tokenization
 #   - token functions (beginning with "t_") are prioritized in the order
 #     that they are declared in this module
+#   - use @lex.TOKEN instead of docstrings to avoid errors from the
+#     Sphinx autosummary
 #
+@lex.TOKEN(r'[\n]+')
 def t_newline(t):
-    r'[\n]+'
     t.lexer.lineno += len(t.value)
     t.lexer.linepos.extend(t.lexpos + i for i, _ in enumerate(t.value))
 
@@ -114,14 +116,14 @@ def t_COMMENT(t):
     t.lexer.linepos.extend(lastpos for i in range(nlines))
 
 
+@lex.TOKEN(r':=')
 def t_COLONEQ(t):
-    r':='
     t.lexer.begin('data')
     return t
 
 
+@lex.TOKEN(r';')
 def t_SEMICOLON(t):
-    r';'
     t.lexer.begin('INITIAL')
     return t
 
@@ -139,27 +141,27 @@ def t_NUM_VAL(t):
     return t
 
 
+@lex.TOKEN(r'[a-zA-Z_][a-zA-Z0-9_\.\-]*\[')
 def t_WORDWITHLBRACKET(t):
-    r'[a-zA-Z_][a-zA-Z0-9_\.\-]*\['
     return t
 
 
+@lex.TOKEN(r'[a-zA-Z_][a-zA-Z_0-9\.+\-]*')
 def t_WORD(t):
-    r'[a-zA-Z_][a-zA-Z_0-9\.+\-]*'
     if t.value in reserved:
         t.type = reserved[t.value]  # Check for reserved words
     return t
 
 
+@lex.TOKEN(r'[a-zA-Z0-9_\.+\-\\\/]+')
 def t_STRING(t):
-    r'[a-zA-Z0-9_\.+\-\\\/]+'
     # Note: RE guarantees the string has no embedded quotation characters
     t.value = '"' + t.value + '"'
     return t
 
 
+@lex.TOKEN(r'[a-zA-Z0-9_\.+\-]*\[[a-zA-Z0-9_\.+\-\*,\s]+\]')
 def t_data_BRACKETEDSTRING(t):
-    r'[a-zA-Z0-9_\.+\-]*\[[a-zA-Z0-9_\.+\-\*,\s]+\]'
     # NO SPACES
     # a[1,_df,'foo bar']
     # [1,*,'foo bar']

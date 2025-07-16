@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -37,11 +37,8 @@ def get_indexed_cuid(var, sets=None, dereference=None, context=None):
         ComponentUID corresponding to the provided ``var`` and sets
 
     """
-    # TODO: Does this function have a good name?
     # Should this function be generalized beyond a single indexing set?
-    if isinstance(var, ComponentUID):
-        return var
-    elif isinstance(var, (str, IndexedComponent_slice)):
+    if isinstance(var, (str, IndexedComponent_slice, ComponentUID)):
         # TODO: Raise error if string and context is None
         return ComponentUID(var, context=context)
     # At this point we are assuming var is a Pyomo Var or VarData object.

@@ -1,6 +1,185 @@
 Pyomo CHANGELOG
 ===============
 
+-------------------------------------------------------------------------------
+Pyomo 6.9.2   (16 Apr 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Update Copyright to 2025 (#3515)
+  - `capture_output`: do not output to captured file descriptors (#3537, #3560)
+  - `calc_variable_from_constraint`: guard against expression overflow (#3541)
+  - Standardize the usage of pyomo.environ imports (#3545)
+  - Update ASL CMake builders (#3548)
+  - Support passing LoggerAdapter objects to LogStream (#3547)
+- Core
+  - Support multi-column DataFrames in Initializer (#3552)
+  - Multiple dispatch for relational expression generation (#3483)
+  - Type check `exception` args in component `__call__` implementations (#3538)
+- Documentation
+  - Move RTD ads to the sidebar (#3536)
+  - Standardize Example Imports (#3543)
+  - LD-SDA Documentation (#3539)
+  - Fix broken URLs in documentation (#3529, #3544)
+  - Update future solver interface documentation (#3526)
+  - Document `BlockData.clone` (#3542)
+- Solver Interfaces
+  - Fix bug in `XpressPersistent.update_var` (#3566)
+  - Avoid duplicate `AMPLFUNC` entries in `ipopt_v2` (#3554)
+  - Update deprecation warnings in `contrib.solver` (#3553, #3555)
+  - Support for upcoming knitro python package (#3478)
+  - Future solver interface reorganization and updates (#3476)
+  - Update HiGHS interface to allow keyboard interrupts (#3509, #3511)
+  - Fix/extend MOSEK option handling (#3488)
+- Testing
+  - Defer `pathlib` import, remove test output file (#3563)
+  - Add IDAES Solvers to Mac; Update to Ubuntu 22.04 (#3556)
+  - Clean up numeric_expr dispatcher test driver (#3551)
+  - Testing and coverage fixes (#3549)
+  - Resolve intermittent test failure (increase sleep time) (#3517)
+  - Be more careful when/how we timeout conda install (#3514)
+- Contributed Packages
+  - cspline_external: Add a function for cubic spline interpolation (#3216)
+  - DoE: Correct initialization when using lower diagonal of FIM (#3532)
+  - FBBT: Resolve bug registering native type handlers (#3567)
+  - parmest/DoE: Ordering and param bug fixes (#3512)
+  - PyNumero: Add support for greybox models (#3364)
+  - PyROS: Modify Decision Rule Order Efficiency (#3562)
+  - PyROS: Revise second-stage equality reformulation under discrete
+    (scenario-based) uncertainty (#3533)
+  - PyROS: Add Uncertain Parameter Reduction (#3503)
+
+-------------------------------------------------------------------------------
+Pyomo 6.9.1   (5 Mar 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Remove URL and replace with full citation (#3490)
+  - Rename project "pyomo" in setup.py [PEP 625] (#3430)
+  - Resolve errors in `TeeStream` and `capture_output` (#3497)
+- Documentation
+  - Update autosummary for Sphinx 8.2.1 (#3492)
+  - Resolve errors building documentation PDF (#3495)
+- Testing
+  - conda: disable '--update-deps' to work around buggy libffi(?) (#3499)
+  - Update for March 2024 typos release (#3500)
+  - Add timeout when installing optional packages (solvers) in conda (#3501)
+  - Updates to CodeCov configuration (#3491)
+- Contributed Packages
+  - APPSI: Add warmstart for appsi_highs (issue #3450) (#3494)
+
+-------------------------------------------------------------------------------
+Pyomo 6.9.0   (21 Feb 2025)
+-------------------------------------------------------------------------------
+
+- General
+  - Big Wheel of Misfortune - A Practice in Reviewing Old Issues (#3460, #3473)
+  - Resolve buffering issues in `TeeStream` and `capture_output` (#3449)
+  - Update GHA badges on README.md (#3457)
+  - Fix incompatibility with `imp` and `DeferredImportCallbackFinder` (#3444)
+  - Remove Python 3.8 Support (#3438)
+- Core
+  - Resolve error parenthesizing pow mantissa (#3472)
+  - Resolve OSX error accessing closed filehandle (#3467)
+  - Allow construction of CUID from another CUID (#3464)
+  - Clean up `identify_variables` / `identify_mutable_parameters`;
+    deprecate `SimpleExpressionVisitor` (#3436)
+- Solver Interfaces
+  - Solver refactor: BUGFIX, f-string in contrib/solver (#3481)
+  - Update Gurobi NL interface for Gurobi 12.x (#3470)
+  - Defer starting the SAS session until needed (#3448)
+  - Solver refactor: Validator for `tee` in `contrib.solver.config` (#3482)
+- Testing
+  - Pin Sphinx to not 8.2.0 (#3479)
+  - Typos corrections (#3437, #3474)
+  - Address intermittent TeeStream test failure (#3465)
+  - 2025 Testing update: Black 25.1.0, testing Qt without X11 (#3463)
+  - Testing: exclude Xpress 9.5.1 on Windows/GHA/Python3.{0,1} (#3455)
+  - CY25 CI Infrastructure and typo fixes (#3453)
+  - Verify we are testing all NEOS solvers (#3433)
+- Contributed Packages
+  - GDPOpt: Add Logic-Based Discrete-Steepest Descent Algorithm (#3331)
+  - PyROS: Fix/Tweak Documentation and Solver Output Logging (#3475)
+  - PyROS: Fix Treatment of Fixed Model Variables and Initialization of
+           Auxiliary Uncertain Parameters (#3461)
+  - PyROS: Improve handling of separation problem sub-solver errors (#3441)
+  - PyROS: Extend valid types for solver argument `uncertain_params` (#3439)
+  - PyROS: Add Gaussian confidence level attribute to `EllipsoidalSet` (#3434)
+
+-------------------------------------------------------------------------------
+Pyomo 6.8.2   (18 Nov 2024)
+-------------------------------------------------------------------------------
+
+- Core
+  - Resolve errors in mapping ScalarVar to numpy ndarray (#3423)
+- Documentation
+  - Update Documentation URLs (#3425)
+- Solver Interfaces
+  - Resolve error in xpress_direct interface retrieving reduced costs (#3422)
+- Testing
+  - Remove (unused) legacy test drivers (#3427)
+
+-------------------------------------------------------------------------------
+Pyomo 6.8.1   (15 Nov 2024)
+-------------------------------------------------------------------------------
+
+"Annie"
+
+SIGNIFICANT CHANGE NOTICE
+
+- This will be the last release to support Python 3.8
+- This is the first release to be tested against Python 3.13
+- Complete reorganization of our online documentation (#3382, #3378)
+
+CHANGELOG
+
+- General
+  - Add a 'Do not delete' Disclaimer to Issues/PR Templates (#3361)
+  - Add URL Status Badge to README (#3373)
+  - Resolve change in `InvalidNumber` handling in writers (#3390)
+  - Update `common.timing` to make tests more deterministic (#3397)
+  - Defer processing `ConfigValue`/`ConfigList` default until first use (#3394)
+  - Improved support for moved/renamed/deprecated modules (#3385)
+  - Fix `ConfigValue` initialization in multithreaded environments (#3405)
+  - `ConfigDict`: prevent recursion on partially-constructed objects (#3409)
+  - Fix bug in `AutoSlots` deepcopy (#3412, #3413)
+  - Update `mpi4py_available` to work around `conda-forge/openmpi` (#3416)
+- Core
+  - Resolve bugs in `create_node_with_local_data` (#3376)
+  - Resolve issue in filter/validate deprecation path (#3368)
+  - Support `Param.pprint()` for non-finite Params (#3387)
+  - Add (parameterized) linear programming dual transformation (#3402)
+- Documentation
+  - Autogenerate API documentation (#3378)
+  - Add Alternative Solutions documentation (#3370)
+  - Reorganize online documentation (#3382)
+  - Fix broken doc URLs (#3398)
+  - Improved autoenum documentation (#3389)
+  - Reduce the number of formats built on readthedocs to avoid timeout (#3404)
+- Solver Interfaces
+  - Remove deprecated `gurobipy` `addConstr` call (#3350)
+  - Update Xpress interfaces to support 9.5 (#3392)
+  - Add support for templatized models in `gurobi_direct_v2` (#3362)
+  - Update test for GAMS mapping 'infeasible or unbounded' to infeasible (#3396)
+  - `XpressDirect.available()`: check there is a valid license (#3400)
+  - Move away from dependence on gurobi.sh (#3384)
+  - Fix error when xpress is imported before `xpress_direct` (#3410)
+- Testing
+  - Move URL Checker to Weekly Job (#3360)
+  - Correct newly discovered typos (#3365, #3399)
+  - Remove Octeract from NEOS solvers list (and other testing fixes) (#3374)
+  - Guard tests against broken Gurobi licenses (#3383)
+  - Remove pin to Gurobi 10.0.3 (#3393)
+  - Add Python 3.13 to Testing Infrastructure (#3401, #3419)
+  - Resolve `timeout()` failures on Windows/py3.13 (#3415)
+- GDP
+  - Fix performance degradation in hull transformation (#3366)
+- Contributed Packages
+  - DoE: Fix bug from using hardcoded value (#3358)
+  - iis: Catch catastrophic solver failure when building MIS (#3403)
+  - PyNumero: Reverse `BlockVector`/`MPIBlockVector` base class order (#3380)
+  - PyNumero: Resolve incompatibilities with NumPy2 (#3408)
+  - PyROS: Overhaul preprocessor subroutine and subproblem objects (#3341)
 
 -------------------------------------------------------------------------------
 Pyomo 6.8.0   (20 Aug 2024)

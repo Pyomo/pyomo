@@ -1,3 +1,4 @@
 #! /bin/bash
 
-for file in `ls ../../library_reference/kernel/examples/*.py | sort`; do python $file; done;
+dir=`dirname $0`
+for file in `ls ${dir}/examples/*.py | sort`; do python $file; done;

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,8 +10,10 @@
 #  ___________________________________________________________________________
 """Various conic constraint implementations."""
 
+from pyomo.common.modeling import NOTSET
 from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.expr import value, exp
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.variable import IVariable, variable, variable_tuple
 from pyomo.core.kernel.constraint import (
@@ -133,7 +135,8 @@ class _ConicBase(IConstraint):
     # to avoid building the body expression, if possible
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
+        exception = _type_check_exception_arg(self, exception)
         try:
             # we wrap the result with value(...) as the
             # alpha term used by some of the constraints
@@ -149,6 +152,8 @@ class _ConicBase(IConstraint):
 
 class quadratic(_ConicBase):
     """A quadratic conic constraint of the form:
+
+    .. math::
 
         x[0]^2 + ... + x[n-1]^2 <= r^2,
 
@@ -240,6 +245,8 @@ class quadratic(_ConicBase):
 
 class rotated_quadratic(_ConicBase):
     """A rotated quadratic conic constraint of the form:
+
+    .. math::
 
         x[0]^2 + ... + x[n-1]^2 <= 2*r1*r2,
 
@@ -351,6 +358,8 @@ class rotated_quadratic(_ConicBase):
 class primal_exponential(_ConicBase):
     """A primal exponential conic constraint of the form:
 
+    .. math::
+
         x1*exp(x2/x1) <= r,
 
     which is recognized as convex for x1,r >= 0.
@@ -460,6 +469,9 @@ class primal_exponential(_ConicBase):
 
 class primal_power(_ConicBase):
     """A primal power conic constraint of the form:
+
+    .. math::
+
        sqrt(x[0]^2 + ... + x[n-1]^2) <= (r1^alpha)*(r2^(1-alpha))
 
     which is recognized as convex for r1,r2 >= 0
@@ -587,6 +599,9 @@ class primal_power(_ConicBase):
 
 class primal_geomean(_ConicBase):
     """A primal geometric mean conic constraint of the form:
+
+    .. math::
+
         (r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]|
 
     Parameters
@@ -647,6 +662,8 @@ class primal_geomean(_ConicBase):
 
 class dual_exponential(_ConicBase):
     """A dual exponential conic constraint of the form:
+
+    .. math::
 
         -x2*exp((x1/x2)-1) <= r
 
@@ -757,6 +774,8 @@ class dual_exponential(_ConicBase):
 
 class dual_power(_ConicBase):
     """A dual power conic constraint of the form:
+
+    .. math::
 
         sqrt(x[0]^2 + ... + x[n-1]^2)
         <=
@@ -889,6 +908,9 @@ class dual_power(_ConicBase):
 
 class dual_geomean(_ConicBase):
     """A dual geometric mean conic constraint of the form:
+
+    .. math::
+
         (n-1)*(r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]|
 
     Parameters
@@ -948,22 +970,29 @@ class dual_geomean(_ConicBase):
 
 
 class svec_psdcone(_ConicBase):
-    """A domain consisting of vectorizations of the lower-triangular
+    r"""A domain consisting of vectorizations of the lower-triangular
     part of a positive semidefinite matrx, with the non-diagonal
     elements additionally rescaled. In other words, if a vector 'x'
-    of length n = d*(d+1)/2 belongs to this cone, then the matrix:
+    of length :math:`n = d(d+1)/2` belongs to this cone, then the matrix:
 
-    sMat(x) = [[        x[1],    x[2]/sqrt(2),  ...,         x[d]/sqrt(2)],
-               [x[2]/sqrt(2),          x[d+1],  ...,      x[2d-1]/sqrt(2)],
-                                        ...
-               [x[d]/sqrt(2), x[2d-1]/sqrt(2),  ..., x[d*(d+1)/2]/sqrt(2)]]
+    .. math::
+       :nowrap:
+
+       \[\begin{array}{rcclcl}
+       sMat(x) = [\;\;
+          {[} &      x[1],   &  x[2]/\sqrt{2}, &...,&      x[d]/\sqrt{2} & ], \\
+          {[} &x[2]/\sqrt{2},&         x[d+1], &...,&   x[2d-1]/\sqrt{2} & ], \\
+              &              &    \vdots       &    &                    &    \\
+          {[} &x[d]/\sqrt{2},&x[2d-1]/\sqrt{2},&...,&x[d(d+1)/2]/\sqrt{2}& ]
+       \;\;]
+       \end{array}\]
 
     will be restricted to be a positive-semidefinite matrix.
 
     Parameters
     ----------
     x : :class:`variable`
-        An iterable of variables with length d*(d+1)/2.
+        An iterable of variables with length :math:`d(d+1)/2`.
 
     """
 

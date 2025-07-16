@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -17,12 +17,15 @@ from weakref import ref as weakref_ref
 class PiecewiseLinearExpression(NumericExpression):
     """
     A numeric expression node representing a specific instantiation of a
-    PiecewiseLinearFunction.
+    :obj:`~.piecewise_linear_function.PiecewiseLinearFunction`.
 
-    Args:
-        args (list or tuple): Children of this node
-        pw_linear_function (PiecewiseLinearFunction): piece-wise linear function
-            of which this node is an instance.
+    Parameters
+    ----------
+    args : list or tuple
+        Children of this node
+
+    pw_linear_function : ~piecewise_linear_function.PiecewiseLinearFunction
+        Piece-wise linear function of which this node is an instance.
     """
 
     __slots__ = ('_pw_linear_function',)

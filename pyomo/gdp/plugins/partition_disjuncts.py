@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,10 +10,8 @@
 #  ___________________________________________________________________________
 
 """
-Between Steps (P-Split) reformulation for GDPs from:
+Between Steps (P-Split) reformulation for GDPs from [KMT21]_.
 
-J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
-Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
 
 
@@ -102,17 +100,20 @@ def _generate_additively_separable_repn(nonlinear_part):
 
 
 def arbitrary_partition(disjunction, P):
-    """
-    Returns a valid partition into P sets of the variables that appear in
+    """Returns a valid partition into P sets of the variables that appear in
     algebraic additively separable constraints in the Disjuncts in
     'disjunction'. Note that this method may return an invalid partition
     if the constraints are not additively separable!
 
     Arguments:
     ----------
-    disjunction : A Disjunction object for which the variable partition will be
-                 created.
-    P : An int, the number of partitions
+    disjunction : DisjunctionData
+        A Disjunction object for which the variable partition will be
+        created.
+
+    P : int
+        the number of partitions
+
     """
     # collect variables
     v_set = ComponentSet()
@@ -129,20 +130,26 @@ def arbitrary_partition(disjunction, P):
 
 
 def compute_optimal_bounds(expr, global_constraints, opt):
-    """
-    Returns a tuple (LB, UB) where LB and UB are the results of minimizing
+    """Returns a tuple (LB, UB) where LB and UB are the results of minimizing
     and maximizing expr over the variable bounds and the constraints on the
     global_constraints block. Note that if expr is nonlinear, even if one of
     the min and max problems is convex, the other won't be!
 
     Arguments:
     ----------
-    expr : The subexpression whose bounds we will return
-    global_constraints : A Block which contains the global Constraints and Vars
-                         of the original model
-    opt : A configured SolverFactory to use to minimize and maximize expr over
-          the set defined by global_constraints. Note that if expr is nonlinear,
-          opt will need to be capable of optimizing nonconvex problems.
+    expr : ExpressionBase
+        The subexpression whose bounds we will return
+
+    global_constraints : BlockData
+        A Block which contains the global Constraints and Vars of the
+        original model
+
+    opt : SolverBase
+         A configured Solver object to use to minimize and maximize expr
+         over the set defined by global_constraints. Note that if expr
+         is nonlinear, opt will need to be capable of optimizing
+         nonconvex problems.
+
     """
     if opt is None:
         raise GDP_Error(
@@ -209,7 +216,7 @@ class PartitionDisjuncts_Transformation(Transformation):
     """
     Transform disjunctive model to equivalent disjunctive model (with
     potentially tighter hull relaxation) by taking the "P-split" formulation
-    from Kronqvist et al. 2021 [1]. In each Disjunct, convex and additively
+    from Kronqvist et al. 2021 [KMT21]_. In each Disjunct, convex and additively
     separable constraints are split into separate constraints by introducing
     auxiliary variables that upperbound the subexpressions created by the split.
     Increasing the number of partitions can result in tighter hull relaxations,
@@ -228,8 +235,7 @@ class PartitionDisjuncts_Transformation(Transformation):
 
     References
     ----------
-        [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate
-            Relaxations between big-M and Convex Hull Reformulations," 2021.
+    See [KMT21]_.
 
     """
 
@@ -355,8 +361,10 @@ class PartitionDisjuncts_Transformation(Transformation):
         the auxiliary variables created by the transformation. 
 
         Some pre-implemented options include
-            * compute_fbbt_bounds (the default), and
-            * compute_optimal_bounds
+
+           * compute_fbbt_bounds (the default), and
+           * compute_optimal_bounds
+
         or you can write your own callback which accepts an Expression object,
         a model containing the variables and global constraints of the original
         instance, and a configured solver and returns a tuple (LB, UB) where

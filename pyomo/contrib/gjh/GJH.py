@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -41,9 +41,9 @@ def readgjh(fname=None):
     H : list
         Current objective Hessian.
     variableList : list
-        Variables as defined by *.col file.
+        Variables as defined by `*.col` file.
     constraintList : list
-        Constraints as defined by *.row file.
+        Constraints as defined by `*.row` file.
 
     """
     if fname is None:

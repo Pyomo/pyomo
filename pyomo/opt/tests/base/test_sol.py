@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -52,9 +52,10 @@ class Test(unittest.TestCase):
             soln = reader(join(currdir, "test4_sol.sol"), suffixes=["dual"])
             _test = TempfileManager.create_tempfile('factory.txt')
             soln.write(filename=_test, format='json')
-            with open(_test, 'r') as out, open(
-                join(currdir, "test4_sol.jsn"), 'r'
-            ) as txt:
+            with (
+                open(_test, 'r') as out,
+                open(join(currdir, "test4_sol.jsn"), 'r') as txt,
+            ):
                 self.assertStructuredAlmostEqual(
                     json.load(txt), json.load(out), allow_second_superset=True
                 )

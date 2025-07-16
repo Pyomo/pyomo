@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,30 +15,35 @@ classes that provide different representations for the NLP.
 The first interface (NLP) presents the NLP in the following form
 (where all equality and inequality constraints are combined)
 
-minimize             f(x)
-subject to    g_L <= g(x) <= g_U
-              x_L <=  x   <= x_U
+.. math::
 
-where x \in R^{n_x} are the primal variables,
-      x_L \in R^{n_x} are the lower bounds of the primal variables,
-      x_U \in R^{n_x} are the upper bounds of the primal variables,
-      g: R^{n_x} \rightarrow R^{n_c} are constraints (combined 
-         equality and inequality)
+    \min\ & f(x) \\
+    s.t.\ & g_L <= g(x) <= g_U \\
+          & x_L <=  x   <= x_U
+
+where:
+- :math:`x \in R^{n_x}` are the primal variables,
+- :math:`x_L \in R^{n_x}` are the lower bounds of the primal variables,
+- :math:`x_U \in R^{n_x}` are the upper bounds of the primal variables,
+- :math:`g: R^{n_x} \rightarrow R^{n_c}` are constraints (equality and inequality)
       
 The second interface (ExtendedNLP) extends the definition above and
 presents the NLP in the following form where the equality and
 inequality constraints are separated.
 
-minimize             f(x)
-subject to           h(x) = 0
-              q_L <= q(x) <= q_U
-              x_L <=  x   <= x_U
+.. math::
 
-where x \in R^{n_x} are the primal variables,
-      x_L \in R^{n_x} are the lower bounds of the primal variables,
-      x_U \in R^{n_x} are the upper bounds of the primal variables,
-      h: R^{n_x} \rightarrow R^{n_eq} are the equality constraints
-      q: R^{n_x} \rightarrow R^{n_ineq} are the inequality constraints
+    \min\ & f(x)  \\
+    s.t.\ & h(x) = 0  \\
+          & q_L <= q(x) <= q_U  \\
+          & x_L <=  x   <= x_U
+
+where:
+- :math:`x \in R^{n_x}` are the primal variables,
+- :math:`x_L \in R^{n_x}` are the lower bounds of the primal variables,
+- :math:`x_U \in R^{n_x}` are the upper bounds of the primal variables,
+- :math:`h: R^{n_x} \rightarrow R^{n_eq}` are the equality constraints
+- :math:`q: R^{n_x} \rightarrow R^{n_ineq}` are the inequality constraints
 
 Note: In the case of the ExtendedNLP, it is generally assumed that
 both the NLP and the ExtendedNLP interfaces are supported and

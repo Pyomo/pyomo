@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,7 +15,6 @@ from pyomo.version import version_info, __version__
 # Load solver functionality
 #
 import pyomo.environ
-import pyomo.opt
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
 #
@@ -90,7 +89,6 @@ from pyomo.core.expr import (
 
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
-import pyomo.core.kernel
 from pyomo.kernel.util import generate_names, preorder_traversal, pprint
 from pyomo.core.kernel.variable import (
     variable,

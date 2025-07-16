@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -15,8 +15,7 @@ from pyomo.common.modeling import unique_component_name
 
 
 def rename_components(model, component_list, prefix):
-    """
-    Rename components in component_list using the prefix AND
+    """Rename components in component_list using the prefix AND
     unique_component_name
 
     Parameters
@@ -30,8 +29,13 @@ def rename_components(model, component_list, prefix):
 
     Examples
     --------
-    >>> c_list = list(model.component_objects(ctype=Var, descend_into=True))
-    >>> rename_components(model, component_list=c_list, prefix='special_')
+    >>> model = pyo.ConcreteModel()
+    >>> model.x = pyo.Var()
+    >>> model.y = pyo.Var()
+    >>> c_list = list(model.component_objects(ctype=pyo.Var, descend_into=True))
+    >>> new = rename_components(model, component_list=c_list, prefix='special_')
+    >>> str(new)
+    "ComponentMap({'special_x (key=...)': 'x', 'special_y (key=...)': 'y'})"
 
     Returns
     -------
@@ -40,7 +44,8 @@ def rename_components(model, component_list, prefix):
 
     ToDo
     ----
-    - need to add a check to see if someone accidentally passes a generator since this can lead to an infinite loop
+    - need to add a check to see if someone accidentally passes a
+      generator since this can lead to an infinite loop
 
     """
     # Need to collect any Reference first so that we can record the old mapping of data objects before renaming
@@ -99,18 +104,20 @@ def rename_components(model, component_list, prefix):
 
 
 def iter_component(obj):
-    """
-    Yield "child" objects from a component that is defined with either the `base` or `kernel` APIs.
-    If the component is not indexed, it returns itself.
+    """Yield "child" objects from a component that is defined with either
+    the `base` or `kernel` APIs.  If the component is not indexed, it
+    returns itself.
 
     Parameters
     ----------
     obj : ComponentType
-        eg. `TupleContainer`, `ListContainer`, `DictContainer`, `IndexedComponent`, or `Component`
+        eg. `TupleContainer`, `ListContainer`, `DictContainer`,
+        `IndexedComponent`, or `Component`
 
     Returns
     -------
     Iterator[ComponentType] : Iterator of the component data objects.
+
     """
     try:
         # catches `IndexedComponent`, and kernel's `_dict`

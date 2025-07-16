@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,6 +10,8 @@
 #  ___________________________________________________________________________
 
 # These classes are for checking types consistently and raising errors
+
+from ..dependencies import numpy as np
 
 
 class BaseBlockVector(object):
@@ -177,3 +179,128 @@ class BaseBlockMatrix(object):
     def tostring(self, order='C'):
         msg = "tostring not implemented for {}".format(self.__class__.__name__)
         raise NotImplementedError(msg)
+
+
+#: NumPy ufuncs that take one vector and are compatible with pyNumero vectors
+vec_unary_ufuncs = {
+    ## MATH ufuncs
+    np.negative,
+    np.positive,
+    np.absolute,
+    np.fabs,
+    np.rint,
+    np.sign,
+    np.conj,
+    np.conjugate,
+    np.exp,
+    np.exp2,
+    np.log,
+    np.log2,
+    np.log10,
+    np.expm1,
+    np.log1p,
+    np.sqrt,
+    np.square,
+    np.cbrt,
+    np.reciprocal,
+    ## TRIG ufuncs
+    np.sin,
+    np.cos,
+    np.tan,
+    np.arcsin,
+    np.arccos,
+    np.arctan,
+    np.sinh,
+    np.cosh,
+    np.tanh,
+    np.arcsinh,
+    np.arccosh,
+    np.arctanh,
+    np.degrees,
+    np.radians,
+    np.deg2rad,
+    np.rad2deg,
+    ## COMPARISON ufuncs
+    np.logical_not,
+    ## BIT-TWIDDLING ufuncs
+    np.invert,
+    ## FLOATING ufuncs
+    np.isfinite,
+    np.isinf,
+    np.isnan,
+    # np.isnat,  # only defined for datetime
+    np.fabs,  # numpy docs list here and in MATH
+    np.signbit,
+    np.spacing,
+    # np.modf, # disabled because shape is not preserved
+    # np.frexp, # disabled because shape is not preserved
+    np.floor,
+    np.ceil,
+    np.trunc,
+    # OTHER (not listed in ufuncs docs)
+    np.abs,
+}
+
+#: NumPy ufuncs that take two vectors and are compatible with pyNumero vectors
+vec_binary_ufuncs = {
+    ## MATH ufuncs
+    np.add,
+    np.subtract,
+    np.multiply,
+    # np.matmult, # disabled because shape is not preserved
+    np.divide,
+    np.logaddexp,
+    np.logaddexp2,
+    np.true_divide,
+    np.floor_divide,
+    np.power,
+    np.float_power,
+    np.remainder,
+    np.mod,
+    np.fmod,
+    # np.divmod,  # disabled because shape is not preserved
+    np.heaviside,
+    np.gcd,
+    np.lcm,
+    ## TRIG ufuncs
+    np.arctan2,
+    np.hypot,
+    ## BIT-TWIDDLING ufuncs
+    np.bitwise_and,
+    np.bitwise_or,
+    np.bitwise_xor,
+    np.left_shift,
+    np.right_shift,
+    ## COMPARISON ufuncs
+    np.greater,
+    np.greater_equal,
+    np.less,
+    np.less_equal,
+    np.not_equal,
+    np.equal,
+    np.logical_and,
+    np.logical_or,
+    np.logical_xor,
+    np.maximum,
+    np.minimum,
+    np.fmax,
+    np.fmin,
+    ## FLOATING ufincs
+    np.copysign,
+    np.nextafter,
+    np.ldexp,
+    np.fmod,  # numpy docs list here and in MATH
+}
+
+#: NumPy ufuncs can be used as reductions for pyNumero vectors
+vec_associative_reductions = {
+    np.add,
+    np.multiply,
+    np.bitwise_and,
+    np.bitwise_or,
+    np.bitwise_xor,
+    np.maximum,
+    np.minimum,
+    np.fmax,
+    np.fmin,
+}

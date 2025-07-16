@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -45,6 +45,8 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     ExactlyExpression require special treatment if they are not the root
     node, or if their children are not atoms, e.g.
 
+    .. code::
+
         atmost(2, Y1, Y1 | Y2, Y2, Y3)
 
     As a result, the model may need to be augmented with
@@ -54,13 +56,13 @@ def to_cnf(expr, bool_varlist=None, bool_var_to_special_atoms=None):
     and augmented variables are needed.
 
     This function will return a list of CNF logical constraints, including:
-    - CNF of original statement, including possible substitutions
-    - Additional CNF statements (for enforcing equivalence to augmented variables)
+       - CNF of original statement, including possible substitutions
+       - Additional CNF statements (for enforcing equivalence to augmented variables)
 
     In addition, the function will have side effects:
-    - augmented variables are added to the passed bool_varlist
-    - mapping from augmented variables to equivalent special atoms (see note above)
-      with only literals as logical arguments
+       - augmented variables are added to the passed bool_varlist
+       - mapping from augmented variables to equivalent special atoms
+         (see note above) with only literals as logical arguments
 
     """
     if type(expr) in special_boolean_atom_types:

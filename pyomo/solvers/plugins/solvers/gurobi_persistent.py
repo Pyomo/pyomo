@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -500,13 +500,13 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             .. math::
                :nowrap:
 
-               \begin{array}{ll}
-               \min          & 2x + y           \\
-               \mathrm{s.t.} & y \geq (x-2)^2   \\
-                             & 0 \leq x \leq 4  \\
-                             & y \geq 0         \\
-                             & y \in \mathbb{Z}
-               \end{array}
+               \[\begin{array}{ll}
+                 \min          & 2x + y           \\
+                 \mathrm{s.t.} & y \geq (x-2)^2   \\
+                               & 0 \leq x \leq 4  \\
+                               & y \geq 0         \\
+                               & y \in \mathbb{Z}
+               \end{array}\]
 
             as an MILP using extended cutting planes in callbacks.
 
@@ -514,14 +514,14 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                :skipif: not gurobipy_available
 
                from gurobipy import GRB
-               import pyomo.environ as pe
+               import pyomo.environ as pyo
                from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-               m = pe.ConcreteModel()
-               m.x = pe.Var(bounds=(0, 4))
-               m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-               m.obj = pe.Objective(expr=2*m.x + m.y)
-               m.cons = pe.ConstraintList()  # for the cutting planes
+               m = pyo.ConcreteModel()
+               m.x = pyo.Var(bounds=(0, 4))
+               m.y = pyo.Var(within=pyo.Integers, bounds=(0, None))
+               m.obj = pyo.Objective(expr=2*m.x + m.y)
+               m.cons = pyo.ConstraintList()  # for the cutting planes
 
                def _add_cut(xval):
                    # a function to generate the cut
@@ -531,7 +531,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
                _add_cut(0)  # start with 2 cuts at the bounds of x
                _add_cut(4)  # this is an arbitrary choice
 
-               opt = pe.SolverFactory('gurobi_persistent')
+               opt = pyo.SolverFactory('gurobi_persistent')
                opt.set_instance(m)
                opt.set_gurobi_param('PreCrush', 1)
                opt.set_gurobi_param('LazyConstraints', 1)

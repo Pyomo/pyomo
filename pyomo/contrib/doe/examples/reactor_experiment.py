@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -116,9 +116,11 @@ class ReactorExperiment(Experiment):
         """
         Example finalize model function. There are two main tasks
         here:
+
             1. Extracting useful information for the model to align
                with the experiment. (Here: CA0, t_final, t_control)
             2. Discretizing the model subject to this information.
+
         """
         m = self.model
 

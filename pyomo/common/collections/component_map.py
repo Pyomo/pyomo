@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -47,6 +47,18 @@ class _Hasher(collections.defaultdict):
     def _tuple(self, val):
         return tuple(self[i.__class__](i) for i in val)
 
+    def hashable(self, obj, hashable=None):
+        if isinstance(obj, type):
+            cls = obj
+        else:
+            cls = type(obj)
+        if hashable is None:
+            fcn = self.get(cls, None)
+            if fcn is None:
+                raise KeyError(obj)
+            return fcn is self._hashable
+        self[cls] = self._hashable if hashable else self._unhashable
+
 
 _hasher = _Hasher()
 
@@ -78,6 +90,8 @@ class ComponentMap(AutoSlots.Mixin, collections.abc.MutableMapping):
 
     __slots__ = ("_dict",)
     __autoslot_mappers__ = {'_dict': _rehash_keys}
+    # Expose a "public" interface to the global _hasher dict
+    hasher = _hasher
 
     def __init__(self, *args, **kwds):
         # maps id_hash(obj) -> (obj,val)

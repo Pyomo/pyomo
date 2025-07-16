@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -23,6 +23,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -157,6 +158,10 @@ class ParamData(ComponentData, NumericValue):
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
     def set_value(self, value, idx=NOTSET):
+        """Set the value of this ParamData object, performing unit conversion
+        and validation as necessary.
+
+        """
         #
         # If this param has units, then we need to check the incoming
         # value and see if it is "units compatible".  We only need to
@@ -197,10 +202,12 @@ class ParamData(ComponentData, NumericValue):
             self._value = old_value
             raise
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Return the value of this object.
         """
+        exception = _type_check_exception_arg(self, exception)
+
         if self._value is Param.NoValue:
             if exception:
                 raise ValueError(
@@ -894,8 +901,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             dataGen = lambda k, v: [v._value]
         else:
             dataGen = lambda k, v: [v]
+        if self.index_set().isfinite() or self._default_val is Param.NoValue:
+            _len = len(self)
+        else:
+            _len = 'inf'
         headers = [
-            ("Size", len(self)),
+            ("Size", _len),
             ("Index", self._index_set if self.is_indexed() else None),
             ("Domain", self.domain.name),
             ("Default", default),
@@ -921,10 +932,12 @@ class ScalarParam(ParamData, Param):
     # up both the Component and Data base classes.
     #
 
-    def __call__(self, exception=True):
+    def __call__(self, exception=NOTSET):
         """
         Return the value of this parameter.
         """
+        exception = _type_check_exception_arg(self, exception)
+
         if self._constructed:
             if not self._data:
                 if self._mutable:
@@ -968,13 +981,6 @@ class SimpleParam(metaclass=RenamedClass):
 
 
 class IndexedParam(Param):
-    def __call__(self, exception=True):
-        """Compute the value of the parameter"""
-        if exception:
-            raise TypeError(
-                'Cannot compute the value of an indexed Param (%s)' % (self.name,)
-            )
-
     # Because IndexedParam can use a non-standard data store (i.e., the
     # values in the _data dict may not be ComponentData objects), we
     # need to override the normal scheme for pre-allocating
@@ -988,7 +994,7 @@ class IndexedParam(Param):
         _new = self.__class__.__new__(self.__class__)
         _ans = memo.setdefault(id(self), _new)
         if _ans is _new:
-            component_list.append(self)
+            component_list.append((self, _new))
         return _ans
 
     # Because CP supports indirection [the ability to index objects by

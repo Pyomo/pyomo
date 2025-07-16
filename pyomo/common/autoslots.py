@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,22 +9,23 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections
 import types
-from collections import namedtuple
 from copy import deepcopy
 from weakref import ref as _weakref_ref
 
-_autoslot_info = namedtuple(
+_autoslot_info = collections.namedtuple(
     '_autoslot_info', ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
 
 
 def _deepcopy_tuple(obj, memo, _id):
     ans = []
+    _append = ans.append
     unchanged = True
     for item in obj:
         new_item = fast_deepcopy(item, memo)
-        ans.append(new_item)
+        _append(new_item)
         if new_item is not item:
             unchanged = False
     if unchanged:
@@ -46,22 +47,43 @@ def _deepcopy_tuple(obj, memo, _id):
 def _deepcopy_list(obj, memo, _id):
     # Two steps here because a list can include itself
     memo[_id] = ans = []
-    ans.extend(fast_deepcopy(x, memo) for x in obj)
+    _append = ans.append
+    for x in obj:
+        _append(fast_deepcopy(x, memo))
     return ans
 
 
 def _deepcopy_dict(obj, memo, _id):
     # Two steps here because a dict can include itself
     memo[_id] = ans = {}
+    _setter = ans.__setitem__
     for key, val in obj.items():
-        ans[fast_deepcopy(key, memo)] = fast_deepcopy(val, memo)
+        _setter(fast_deepcopy(key, memo), fast_deepcopy(val, memo))
     return ans
 
 
-def _deepcopier(obj, memo, _id):
+def _deepcopy_dunder_deepcopy(obj, memo, _id):
+    ans = memo[_id] = obj.__deepcopy__(memo)
+    return ans
+
+
+def _deepcopy(obj, memo, _id):
     return deepcopy(obj, memo)
 
 
+class _DeepcopyDispatcher(collections.defaultdict):
+    def __missing__(self, key):
+        if hasattr(key, '__deepcopy__'):
+            ans = _deepcopy_dunder_deepcopy
+        else:
+            ans = _deepcopy
+        self[key] = ans
+        return ans
+
+
+_deepcopy_dispatcher = _DeepcopyDispatcher(
+    None, {tuple: _deepcopy_tuple, list: _deepcopy_list, dict: _deepcopy_dict}
+)
 _atomic_types = {
     int,
     float,
@@ -76,8 +98,6 @@ _atomic_types = {
     types.FunctionType,
 }
 
-_deepcopy_mapper = {tuple: _deepcopy_tuple, list: _deepcopy_list, dict: _deepcopy_dict}
-
 
 def fast_deepcopy(obj, memo):
     """A faster implementation of copy.deepcopy()
@@ -87,6 +107,29 @@ def fast_deepcopy(obj, memo):
     deepcopy that provides special handling to circumvent some of the
     slowest parts of deepcopy().
 
+    Note
+    ----
+
+    This implementation is not as aggressive about keeping the copied
+    state alive until the end of the deepcopy operation.  In particular,
+    the ``dict``, ``list`` and ``tuple`` handlers do not register their
+    source objects with the memo.  This is acceptable, as
+    fast_deepcopy() is only called in situations where we are ensuring
+    that the source object will persist:
+
+    - :meth:`AutoSlots.__deepcopy_state__` explicitly preserved the
+      source state
+    - :meth:`Component.__deepcopy_field__` is only called by
+      :meth:`AutoSlots.__deepcopy_state__` -
+    - :meth:`IndexedComponent._create_objects_for_deepcopy` is
+      deepcopying the raw keys from the source ``_data`` dict (which is
+      not a temporary object and will persist)
+
+    If other consumers wish to make use of this function (e.g., within
+    their implementation of ``__deepcopy__``), they must remember that
+    they are responsible to ensure that any temporary source ``obj``
+    persists.
+
     """
     if obj.__class__ in _atomic_types:
         return obj
@@ -94,7 +137,7 @@ def fast_deepcopy(obj, memo):
     if _id in memo:
         return memo[_id]
     else:
-        return _deepcopy_mapper.get(obj.__class__, _deepcopier)(obj, memo, _id)
+        return _deepcopy_dispatcher[obj.__class__](obj, memo, _id)
 
 
 class AutoSlots(type):
@@ -269,11 +312,103 @@ class AutoSlots(type):
             """
             # Note: this implementation avoids deepcopying the temporary
             # 'state' list, significantly speeding things up.
-            memo[id(self)] = ans = self.__class__.__new__(self.__class__)
-            ans.__setstate__(
-                [fast_deepcopy(field, memo) for field in self.__getstate__()]
-            )
+            ans = self.__class__.__new__(self.__class__)
+            self.__deepcopy_state__(memo, ans)
             return ans
+
+        def __deepcopy_state__(self, memo, new_object):
+            """This implements the state copy from a source object to the new
+            instance in the deepcopy memo.
+
+            This splits out the logic for actually duplicating the
+            object state from the "boilerplate" that creates a new
+            object and registers the object in the memo.  This allows us
+            to create new schemes for duplicating / registering objects
+            that reuse all the logic here for copying the state.
+
+            """
+            #
+            # At this point we know we need to deepcopy this object.
+            # But, we can't do the "obvious", since this is a
+            # (partially) slot-ized class and the __dict__ structure is
+            # nonauthoritative:
+            #
+            # for key, val in self.__dict__.iteritems():
+            #     object.__setattr__(ans, key, deepcopy(val, memo))
+            #
+            # Further, __slots__ is also nonauthoritative (this may be a
+            # derived class that also has a __dict__), or this may be a
+            # derived class with several layers of slots.  So, we will
+            # piggyback on the __getstate__/__setstate__ logic and
+            # resort to partially "pickling" the object, deepcopying the
+            # state, and then restoring the copy into the new instance.
+            #
+            # [JDS 7/7/14] I worry about the efficiency of using both
+            # getstate/setstate *and* deepcopy, but we need to update
+            # fields like weakrefs correctly (and that logic is all in
+            # __getstate__/__setstate__).
+            #
+            # There is a particularly subtle bug with 'uncopyable'
+            # attributes: if the exception is thrown while copying a
+            # complex data structure, we can be in a state where objects
+            # have been created and assigned to the memo in the try
+            # block, but they haven't had their state set yet.  When the
+            # exception moves us into the except block, we need to
+            # effectively "undo" those partially copied classes.  The
+            # only way is to restore the memo to the state it was in
+            # before we started.  We will make use of the knowledge that
+            # 1) memo entries are never reassigned during a deepcopy(),
+            # and 2) dict are ordered by insertion order in Python >=
+            # 3.7.  As a result, we do not need to preserve the whole
+            # memo before calling __getstate__/__setstate__, and can get
+            # away with only remembering the number of items in the
+            # memo.
+            #
+            state = self.__getstate__()
+            # It is important to keep this temporary state alive (which
+            # in turn keeps things like the temporary fields dict alive)
+            # until after deepcopy is finished in order to prevent
+            # accidentally recycling id()'s for temporary objects that
+            # were recorded in the memo.  We will follow the pattern
+            # used by copy._keep_alive():
+            try:
+                memo['__auto_slots__'].append(state)
+            except KeyError:
+                memo['__auto_slots__'] = [state]
+
+            memo_size = len(memo)
+            try:
+                new_state = [fast_deepcopy(field, memo) for field in state]
+            except:
+                # We hit an error deepcopying the state.  Attempt to
+                # reset things and try again, but in a more cautious
+                # manner.
+                #
+                # We want to remove any new entries added to the memo
+                # during the failed try above.
+                for _ in range(len(memo) - memo_size):
+                    memo.popitem()
+                #
+                # Now we are going to continue on, but in a more
+                # cautious manner: we will clone entries field at a time
+                # so that we can get the most "complete" copy possible.
+                #
+                # Note: if has_dict, then __auto_slots__.slots will be 1
+                # shorter than the state (the last element is the
+                # __dict__).  Zip will ignore it.
+                _copier = getattr(self, '__deepcopy_field__', _deepcopy)
+                new_state = [
+                    _copier(value, memo, slot)
+                    for slot, value in zip(self.__auto_slots__.slots, state)
+                ]
+                if self.__auto_slots__.has_dict:
+                    new_state.append(
+                        {
+                            slot: _copier(value, memo, slot)
+                            for slot, value in state[-1].items()
+                        }
+                    )
+            new_object.__setstate__(new_state)
 
         def __getstate__(self):
             """Generic implementation of `__getstate__`
@@ -300,7 +435,7 @@ class AutoSlots(type):
             if self.__auto_slots__.has_dict:
                 fields = dict(self.__dict__)
                 # Map (encode) any field values.  It is not an error if
-                # the field if not present.
+                # the field is not present.
                 for name, mapper in self.__auto_slots__.field_mappers.items():
                     if name in fields:
                         fields[name] = mapper(True, fields[name])

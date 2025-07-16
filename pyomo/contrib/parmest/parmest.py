@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -284,13 +284,13 @@ class Estimator(object):
         try:
             outputs = [k.name for k, v in model.experiment_outputs.items()]
         except:
-            RuntimeError(
+            raise RuntimeError(
                 'Experiment list model does not have suffix ' + '"experiment_outputs".'
             )
         try:
             params = [k.name for k, v in model.unknown_parameters.items()]
         except:
-            RuntimeError(
+            raise RuntimeError(
                 'Experiment list model does not have suffix ' + '"unknown_parameters".'
             )
 
@@ -309,7 +309,10 @@ class Estimator(object):
         for experiment in self.exp_list:
             model = experiment.get_labeled_model()
             theta_names.extend([k.name for k, v in model.unknown_parameters.items()])
-        self.estimator_theta_names = list(set(theta_names))
+        # Utilize list(dict.fromkeys(theta_names)) to preserve parameter
+        # order compared with list(set(theta_names)), which had
+        # nondeterministic ordering of parameters
+        self.estimator_theta_names = list(dict.fromkeys(theta_names))
 
         self._second_stage_cost_exp = "SecondStageCost"
         # boolean to indicate if model is initialized using a square solve
@@ -404,7 +407,6 @@ class Estimator(object):
 
         # Add objective function (optional)
         if self.obj_function:
-
             # Check for component naming conflicts
             reserved_names = [
                 'Total_Cost_Objective',
@@ -1120,13 +1122,14 @@ class Estimator(object):
 
             obj, theta = self.theta_est()
 
-            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
+            bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples, seed=seed)
 
             training, test = self.confidence_region_test(
                 bootstrap_theta,
                 distribution=distribution,
                 alphas=alphas,
                 test_theta_values=theta,
+                seed=seed,
             )
 
             results.append((sample, test, training))
@@ -1284,7 +1287,7 @@ class Estimator(object):
             return LR
 
     def confidence_region_test(
-        self, theta_values, distribution, alphas, test_theta_values=None
+        self, theta_values, distribution, alphas, test_theta_values=None, seed=None
     ):
         """
         Confidence region test to determine if theta values are within a
@@ -1338,6 +1341,9 @@ class Estimator(object):
         if test_theta_values is not None:
             test_result = test_theta_values.copy()
 
+        if seed is not None:
+            np.random.seed(seed)
+
         for a in alphas:
             if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
@@ -1352,7 +1358,7 @@ class Estimator(object):
                     ).all(axis=1)
 
             elif distribution == 'MVN':
-                dist = graphics.fit_mvn_dist(theta_values)
+                dist = graphics.fit_mvn_dist(theta_values, seed=seed)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
                 training_results[a] = Z >= score
@@ -1363,7 +1369,7 @@ class Estimator(object):
                     test_result[a] = Z >= score
 
             elif distribution == 'KDE':
-                dist = graphics.fit_kde_dist(theta_values)
+                dist = graphics.fit_kde_dist(theta_values, seed=seed)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1 - a) * 100)
                 training_results[a] = Z >= score

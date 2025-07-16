@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -173,11 +173,18 @@ class MAiNGO(PersistentBase, PersistentSolver):
         return self._available
 
     def version(self):
-        import pkg_resources
+        import importlib.metadata
 
-        version = pkg_resources.get_distribution('maingopy').version
-
-        return tuple(int(k) for k in version.split('.'))
+        try:
+            version = importlib.metadata.version('maingopy').split('.')
+        except ImportError:
+            return None
+        for i, n in enumerate(version):
+            try:
+                version[i] = int(version[i])
+            except:
+                pass
+        return tuple(version)
 
     @property
     def config(self) -> MAiNGOConfig:
@@ -217,30 +224,29 @@ class MAiNGO(PersistentBase, PersistentSolver):
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
-        with TeeStream(*ostreams) as t:
-            with capture_output(output=t.STDOUT, capture_fd=False):
-                config = self.config
-                options = self.maingo_options
+        with capture_output(output=TeeStream(*ostreams), capture_fd=False):
+            config = self.config
+            options = self.maingo_options
 
-                self._mymaingo = maingopy.MAiNGO(self._solver_model)
+            self._mymaingo = maingopy.MAiNGO(self._solver_model)
 
-                self._mymaingo.set_option("loggingDestination", 2)
-                self._mymaingo.set_log_file_name(config.logfile)
-                self._mymaingo.set_option("epsilonA", config.tolerances.epsilonA)
-                self._mymaingo.set_option("epsilonR", config.tolerances.epsilonR)
-                self._mymaingo.set_option("deltaEq", config.tolerances.deltaEq)
-                self._mymaingo.set_option("deltaIneq", config.tolerances.deltaIneq)
+            self._mymaingo.set_option("loggingDestination", 2)
+            self._mymaingo.set_log_file_name(config.logfile)
+            self._mymaingo.set_option("epsilonA", config.tolerances.epsilonA)
+            self._mymaingo.set_option("epsilonR", config.tolerances.epsilonR)
+            self._mymaingo.set_option("deltaEq", config.tolerances.deltaEq)
+            self._mymaingo.set_option("deltaIneq", config.tolerances.deltaIneq)
 
-                if config.time_limit is not None:
-                    self._mymaingo.set_option("maxTime", config.time_limit)
-                if config.mip_gap is not None:
-                    self._mymaingo.set_option("epsilonR", config.mip_gap)
-                for key, option in options.items():
-                    self._mymaingo.set_option(key, option)
+            if config.time_limit is not None:
+                self._mymaingo.set_option("maxTime", config.time_limit)
+            if config.mip_gap is not None:
+                self._mymaingo.set_option("epsilonR", config.mip_gap)
+            for key, option in options.items():
+                self._mymaingo.set_option(key, option)
 
-                timer.start("MAiNGO solve")
-                self._mymaingo.solve()
-                timer.stop("MAiNGO solve")
+            timer.start("MAiNGO solve")
+            self._mymaingo.solve()
+            timer.stop("MAiNGO solve")
 
         return self._postsolve(timer)
 

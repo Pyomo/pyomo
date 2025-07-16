@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,9 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import os
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np,
@@ -41,6 +41,11 @@ from pyomo.contrib.pynumero.interfaces.tests.compare_utils import (
     check_sparse_matrix_specific_order,
 )
 import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
+from pyomo.contrib.pynumero.examples.external_grey_box.external_with_objective import (
+    solve_unconstrained,
+    solve_constrained,
+    solve_constrained_with_hessian,
+)
 
 
 class TestExternalGreyBoxAsNLP(unittest.TestCase):
@@ -134,17 +139,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([-22], dtype=np.float64)
@@ -293,17 +287,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([22], dtype=np.float64)
@@ -458,17 +441,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21, 5], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21, 5], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([-16, -22], dtype=np.float64)
@@ -629,17 +601,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21, 5], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21, 5], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([16, 6], dtype=np.float64)
@@ -812,17 +773,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         egb_nlp.set_duals(np.asarray([21, 5, 6, 7], dtype=np.float64))
         y = egb_nlp.get_duals()
         self.assertTrue(np.array_equal(y, np.asarray([21, 5, 6, 7], dtype=np.float64)))
-
-        with self.assertRaises(NotImplementedError):
-            fac = egb_nlp.get_obj_factor()
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(42)
-        with self.assertRaises(NotImplementedError):
-            egb_nlp.set_obj_factor(1)
-        with self.assertRaises(NotImplementedError):
-            f = egb_nlp.evaluate_objective()
-        with self.assertRaises(NotImplementedError):
-            gradf = egb_nlp.evaluate_grad_objective()
 
         c = egb_nlp.evaluate_constraints()
         comparison_c = np.asarray([-2, 26, -13, -22], dtype=np.float64)
@@ -2495,24 +2445,23 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.scaling_factor[m.mu] = 1.9
         m.scaling_factor[m.pincon] = 2.2
 
-        solver = pyo.SolverFactory('cyipopt')
-        solver.config.options = {
-            'hessian_approximation': 'limited-memory',
-            'nlp_scaling_method': 'user-scaling',
-            'output_file': '_cyipopt-external-greybox-scaling.log',
-            'file_print_level': 10,
-            'max_iter': 0,
-        }
-        status = solver.solve(m, tee=False)
+        with TempfileManager.new_context() as temp:
+            logfile = temp.create_tempfile('_cyipopt-external-greybox-scaling.log')
+            solver = pyo.SolverFactory('cyipopt')
+            solver.config.options = {
+                'hessian_approximation': 'limited-memory',
+                'nlp_scaling_method': 'user-scaling',
+                'output_file': logfile,
+                'file_print_level': 10,
+                'max_iter': 0,
+            }
+            status = solver.solve(m, tee=False)
 
-        with open('_cyipopt-external-greybox-scaling.log', 'r') as fd:
-            solver_trace = fd.read()
-        os.remove('_cyipopt-external-greybox-scaling.log')
+            with open(logfile, 'r') as fd:
+                solver_trace = fd.read()
 
         self.assertIn('nlp_scaling_method = user-scaling', solver_trace)
-        self.assertIn(
-            'output_file = _cyipopt-external-greybox-scaling.log', solver_trace
-        )
+        self.assertIn(f'output_file = {logfile}', solver_trace)
         self.assertIn('objective scaling factor = 0.1', solver_trace)
         self.assertIn('x scaling provided', solver_trace)
         self.assertIn('c scaling provided', solver_trace)
@@ -2638,6 +2587,20 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             m.dual[m.egb]['egb.output_constraints[o]'], -25.0, places=3
         )
         self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
+
+
+class TestGreyBoxObjectives(unittest.TestCase):
+    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
+    def test_unconstrained(self):
+        solve_unconstrained()
+
+    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
+    def test_constrained(self):
+        solve_constrained()
+
+    @unittest.skipIf(not cyipopt_available, "CyIpopt needed to run tests with solve")
+    def test_constrained_with_hessian(self):
+        solve_constrained_with_hessian()
 
 
 if __name__ == '__main__':

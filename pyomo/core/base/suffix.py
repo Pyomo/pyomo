@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,12 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import enum
 import logging
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import In
 from pyomo.common.deprecation import deprecated
+from pyomo.common.enums import IntEnum
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.pyomo_typing import overload
@@ -92,7 +92,7 @@ def active_suffix_generator(a_block, datatype=NOTSET):
     return suffix_generator(a_block, datatype, active=True)
 
 
-class SuffixDataType(enum.IntEnum):
+class SuffixDataType(IntEnum):
     """Suffix data types
 
     AMPL only supports two data types for Suffixes: int and float.  The
@@ -105,7 +105,7 @@ class SuffixDataType(enum.IntEnum):
     FLOAT = 4
 
 
-class SuffixDirection(enum.IntEnum):
+class SuffixDirection(IntEnum):
     """Suffix data flow definition.
 
     This identifies if the specific Suffix is to be sent to the solver,

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -28,24 +28,36 @@ __author__ = "John Eslick"
 import os
 import logging
 
-_log = logging.getLogger(__name__)
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.flags import building_documentation
+from pyomo.contrib.viewer.report import value_no_exception, get_residual
 
 import pyomo.contrib.viewer.qt as myqt
-from pyomo.contrib.viewer.report import value_no_exception, get_residual
 import pyomo.environ as pyo
-from pyomo.common.fileutils import this_file_dir
 
-mypath = this_file_dir()
-try:
-    _ResidualTableUI, _ResidualTable = myqt.uic.loadUiType(
-        os.path.join(mypath, "residual_table.ui")
-    )
-except:
+_log = logging.getLogger(__name__)
 
-    class _ResidualTableUI(object):
-        pass
 
-    class _ResidualTable(object):
+# This lets the file be imported when the Qt UI is not available (or
+# when building docs), but you won't be able to use it
+class _ResidualTableUI(object):
+    pass
+
+
+class _ResidualTable(object):
+    pass
+
+
+# Note that the classes loaded here have signatures that are not
+# parsable by Sphinx, so we won't attempt to import them if we are
+# building the API documentation.
+if not building_documentation():
+    mypath = this_file_dir()
+    try:
+        _ResidualTableUI, _ResidualTable = myqt.uic.loadUiType(
+            os.path.join(mypath, "residual_table.ui")
+        )
+    except:
         pass
 
 

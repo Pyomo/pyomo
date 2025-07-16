@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -38,7 +38,7 @@ from pyomo.core.expr.boolean_value import (
 from pyomo.core.base.component import name, Component, ModelComponentFactory
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.enums import SortComponents, TraversalStrategy
+from pyomo.core.base.enums import SortComponents, TraversalStrategy, VarCollector
 from pyomo.core.base.label import (
     CuidLabeler,
     CounterLabeler,
@@ -152,7 +152,42 @@ from pyomo.core.base.instance2dat import instance2dat
 #
 from pyomo.core.base.set import set_options, RealSet, IntegerSet, BooleanSet
 
-from pyomo.common.deprecation import relocated_module_attribute
+#
+# declare deprecation paths for removed modules and attributes
+#
+from pyomo.common.deprecation import relocated_module_attribute, moved_module
+
+moved_module(
+    "pyomo.core.base.plugin",
+    "pyomo._archive.plugin",
+    msg="The pyomo.core.base.plugin module is deprecated.  "
+    "See pyomo.core.base.transformation for Transformation and "
+    "TransformationFactory, pyomo.core.base.component for "
+    "ModelComponentFactory and pyomo.scripting.interface for "
+    "IPyomoScript* interfaces.",
+    version='6.0',
+)
+moved_module(
+    "pyomo.core.base.rangeset",
+    "pyomo._archive.rangeset",
+    msg='The pyomo.core.base.rangeset module is deprecated.  '
+    'Import RangeSet objects from pyomo.core.base.set or pyomo.core.',
+    version='5.7',
+)
+moved_module(
+    "pyomo.core.base.sets",
+    "pyomo._archive.sets",
+    msg='The pyomo.core.base.sets module is deprecated.  '
+    'Import Set objects from pyomo.core.base.set or pyomo.core.',
+    version='5.7',
+)
+moved_module(
+    "pyomo.core.base.template_expr",
+    "pyomo._archive.template_expr",
+    msg='The pyomo.core.base.template_expr module is deprecated.  '
+    'Import expression template objects from pyomo.core.expr.template_expr.',
+    version='5.7',
+)
 
 relocated_module_attribute(
     'SimpleBlock', 'pyomo.core.base.block.SimpleBlock', version='6.0'
@@ -181,5 +216,5 @@ for _cdata in (
     relocated_module_attribute(
         f'_{_cdata}', f'pyomo.core.base.{_cdata}', version='6.7.2'
     )
-del _cdata
-del relocated_module_attribute
+
+del _cdata, relocated_module_attribute, moved_module

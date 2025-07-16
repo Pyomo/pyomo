@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -285,8 +285,17 @@ for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
 #
 # KNITROAMPL
 #
-# NO EXPECTED FAILURES
-#
+for prob in ('LP_trivial_constraints', 'LP_trivial_constraints_kernel'):
+    ExpectedFailures['knitroampl', 'nl', prob] = (
+        lambda v: True,
+        'Knitro does not consider tight trivial constraints to have zero dual value',
+    )
+
+for prob in ('MILP_unbounded', 'MILP_unbounded_kernel'):
+    ExpectedFailures['knitroampl', 'nl', prob] = (
+        lambda v: v[:2] <= (14, 2),
+        'Unbounded MILP detection not operational in Knitro, fixed in 15.0',
+    )
 
 
 def generate_scenarios(arg=None):
@@ -355,7 +364,7 @@ def run_scenarios(options):
 
     for key, test_case in generate_scenarios():
         model, solver, io = key
-        if len(solvers) > 0 and not solver in solvers:
+        if len(solvers) > 0 and solver not in solvers:
             continue
         if test_case.status == 'skip':
             continue
@@ -381,7 +390,7 @@ def run_scenarios(options):
         # Validate solution status
         try:
             model_class.post_solve_test_validation(None, results)
-        except:
+        except Exception:
             if test_case.status == 'expected failure':
                 stat[key] = (True, "Expected failure")
             else:
@@ -431,7 +440,7 @@ def run_scenarios(options):
     total = Bunch(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
     for key in stat:
         model, solver, io = key
-        if not solver in summary:
+        if solver not in summary:
             summary[solver] = Bunch(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
         _pass, _str = stat[key]
         if _pass:

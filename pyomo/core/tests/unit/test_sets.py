@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -2979,7 +2979,7 @@ class TestSetsInPython3(unittest.TestCase):
         #
         # While deepcopying a model is generally not supported, this is
         # an easy way to ensure that this simple model is cleanly
-        # able to be cloned.
+        # cloneable.
         ref = """1 Set Declarations
     INDEX : Size=1, Index=None, Ordered=Insertion
         Key  : Dimen : Domain : Size : Members

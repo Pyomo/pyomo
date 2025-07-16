@@ -2,7 +2,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -471,11 +471,14 @@ class AndExpression(NaryBooleanExpression):
         return all(result)
 
     def add(self, new_arg):
+        # FIXME: we should probably NOT perform this simplification
+        # here, and instead use a dispatcher-based expression generation
+        # system
         if new_arg.__class__ in native_logical_types:
-            if new_arg is False:
-                return BooleanConstant(False)
-            elif new_arg is True:
+            if new_arg:
                 return self
+            else:
+                return BooleanConstant(False)
         return _add_to_and_or_expression(self, new_arg)
 
 
@@ -498,11 +501,14 @@ class OrExpression(NaryBooleanExpression):
         return any(result)
 
     def add(self, new_arg):
+        # FIXME: we should probably NOT perform this simplification
+        # here, and instead use a dispatcher-based expression generation
+        # system
         if new_arg.__class__ in native_logical_types:
-            if new_arg is False:
-                return self
-            elif new_arg is True:
+            if new_arg:
                 return BooleanConstant(True)
+            else:
+                return self
         return _add_to_and_or_expression(self, new_arg)
 
 

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,13 +19,8 @@ from . import (
 )
 
 #
-# FIXME: remove circular dependencies between relational_expr and numeric_expr
+# FIXME: remove circular dependencies between logical_expr and numeric_expr
 #
-
-# Initialize relational expression functions
-numeric_expr._generate_relational_expression = (
-    relational_expr._generate_relational_expression
-)
 
 # Initialize logicalvalue functions
 boolean_value._generate_logical_proposition = logical_expr._generate_logical_proposition
@@ -202,3 +197,17 @@ from .visitor import (
 
 from .calculus.derivatives import differentiate
 from .taylor_series import taylor_series_expansion
+
+#
+# declare deprecation paths for removed modules and attributes
+#
+from pyomo.common.deprecation import moved_module
+
+moved_module(
+    "pyomo.core.expr.current",
+    "pyomo._archive.current",
+    msg="pyomo.core.expr.current is deprecated.  "
+    "Please import expression symbols from pyomo.core.expr",
+    version='6.6.2',
+)
+del moved_module

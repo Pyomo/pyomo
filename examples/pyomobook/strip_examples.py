@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -21,9 +21,10 @@ def f(file):
     if prefix.endswith('_strip'):
         return
 
-    with open(base + '/' + prefix + '_strip.py', 'w') as OUTPUT, open(
-        file, 'r'
-    ) as INPUT:
+    with (
+        open(base + '/' + prefix + '_strip.py', 'w') as OUTPUT,
+        open(file, 'r') as INPUT,
+    ):
         for line in INPUT:
             if line[0] == '#' and '@' in line:
                 continue

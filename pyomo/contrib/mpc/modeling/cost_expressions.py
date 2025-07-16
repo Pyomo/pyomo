@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -48,9 +48,9 @@ def get_penalty_from_constant_target(
     time: iterable
         Set of variable indices for which a cost expression will be
         created
-    setpoint_data: ScalarData, dict, or ComponentMap
+    setpoint_data: ~scalar_data.ScalarData, dict, or ComponentMap
         Maps variable names to setpoint values
-    weight_data: ScalarData, dict, or ComponentMap
+    weight_data: ~scalar_data.ScalarData, dict, or ComponentMap
         Optional. Maps variable names to tracking cost weights. If not
         provided, weights of one are used.
     variable_set: Set
@@ -123,7 +123,7 @@ def get_penalty_from_piecewise_constant_target(
     setpoint_data: IntervalData
         Holds the piecewise constant values that will be used as
         setpoints
-    weight_data: ScalarData (optional)
+    weight_data: ~scalar_data.ScalarData (optional)
         Weights for variables. Default is all ones.
     tolerance: Float (optional)
         Tolerance used for determining whether a time point
@@ -220,7 +220,7 @@ def get_penalty_from_time_varying_target(
         Index used for the cost expression
     setpoint_data: TimeSeriesData
         Holds the trajectory values that will be used as a setpoint
-    weight_data: ScalarData (optional)
+    weight_data: ~scalar_data.ScalarData (optional)
         Weights for variables. Default is all ones.
     variable_set: Set (optional)
         Set indexing the list of provided variables, if one exists already.
@@ -262,11 +262,13 @@ def get_penalty_from_target(
     """A function to get a penalty expression for specified variables from
     a target that is constant, piecewise constant, or time-varying.
 
-    This function accepts ScalarData, IntervalData, or TimeSeriesData objects,
-    or compatible mappings/tuples as the target, and builds the appropriate
-    penalty expression for each. Mappings are converted to ScalarData, and
-    tuples (of data dict, time list) are unpacked and converted to IntervalData
-    or TimeSeriesData depending on the contents of the time list.
+    This function accepts :class:`~.scalar_data.ScalarData`,
+    :class:`.IntervalData`, or :class:`.TimeSeriesData` objects, or
+    compatible mappings/tuples as the target, and builds the appropriate
+    penalty expression for each. Mappings are converted to ScalarData,
+    and tuples (of data dict, time list) are unpacked and converted to
+    IntervalData or TimeSeriesData depending on the contents of the time
+    list.
 
     Arguments
     ---------
@@ -275,10 +277,10 @@ def get_penalty_from_target(
     time: Set
         Set of time points at which to construct penalty expressions.
         Also indexes the returned Expression.
-    setpoint_data: ScalarData, TimeSeriesData, or IntervalData
+    setpoint_data: ~scalar_data.ScalarData, TimeSeriesData, or IntervalData
         Data structure representing the possibly time-varying or piecewise
         constant setpoint
-    weight_data: ScalarData (optional)
+    weight_data: ~scalar_data.ScalarData (optional)
         Data structure holding the weights to be applied to each variable
     variable_set: Set (optional)
         Set indexing the provided variables, if one already exists. Also

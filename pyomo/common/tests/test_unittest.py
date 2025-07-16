@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -13,7 +13,6 @@ import datetime
 import multiprocessing
 import os
 import time
-from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
@@ -190,7 +189,7 @@ class TestPyomoUnittest(unittest.TestCase):
     @unittest.timeout(0.01)
     def test_timeout_timeout(self):
         time.sleep(1)
-        self.assertEqual(0, 1)
+        self.assertEqual(0, 0)
 
     @unittest.timeout(10)
     def test_timeout_skip(self):
@@ -218,8 +217,7 @@ class TestPyomoUnittest(unittest.TestCase):
         if multiprocessing.get_start_method() == 'fork':
             self.bound_function()
             return
-        LOG = StringIO()
-        with LoggingIntercept(LOG):
+        with LoggingIntercept() as LOG:
             with self.assertRaises((TypeError, EOFError, AttributeError)):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())
@@ -234,7 +232,7 @@ class TestPyomoUnittest(unittest.TestCase):
             self.bound_function_require_fork()
             return
         with self.assertRaisesRegex(
-            unittest.SkipTest, "timeout requires unavailable fork interface"
+            unittest.SkipTest, r"timeout\(\) requires unavailable fork interface"
         ):
             self.bound_function_require_fork()
 

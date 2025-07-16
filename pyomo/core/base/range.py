@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -12,6 +12,7 @@
 import math
 from collections.abc import Sequence
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.numeric_types import check_if_numeric_type
 
 try:
@@ -33,7 +34,7 @@ class RangeDifferenceError(ValueError):
     pass
 
 
-class NumericRange(object):
+class NumericRange(AutoSlots.Mixin):
     """A representation of a numeric range.
 
     This class represents a contiguous range of numbers.  The class
@@ -125,29 +126,6 @@ class NumericRange(object):
                 "NumericRange %s is discrete, but passed closed=%s."
                 "  Discrete ranges must be closed." % (self, self.closed)
             )
-
-    def __getstate__(self):
-        """
-        Retrieve the state of this object as a dictionary.
-
-        This method must be defined because this class uses slots.
-        """
-        state = {}  # super(NumericRange, self).__getstate__()
-        for i in NumericRange.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    def __setstate__(self, state):
-        """
-        Set the state of this object using values from a state dictionary.
-
-        This method must be defined because this class uses slots.
-        """
-        for key, val in state.items():
-            # Note: per the Python data model docs, we explicitly
-            # set the attribute using object.__setattr__() instead
-            # of setting self.__dict__[key] = val.
-            object.__setattr__(self, key, val)
 
     def __str__(self):
         if not self.isdiscrete():

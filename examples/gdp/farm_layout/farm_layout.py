@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -11,10 +11,10 @@
 
 """
 Farm layout example from Sawaya (2006). The goal is to determine optimal placements and dimensions for farm
-plots of specified areas to minimize the perimeter of a minimal enclosing fence. This is a GDP problem with 
-some hyperbolic constraints to establish consistency of areas with length and width. The FLay05 and FLay06 
-instances may take some time to solve; the others should be fast. Note that the Sawaya paper contains a 
-little bit of nonclarity: it references "height" variables which do not exist - we use "length" for the x-axis 
+plots of specified areas to minimize the perimeter of a minimal enclosing fence. This is a GDP problem with
+some hyperbolic constraints to establish consistency of areas with length and width. The FLay05 and FLay06
+instances may take some time to solve; the others should be fast. Note that the Sawaya paper contains a
+little bit of nonclarity: it references "height" variables which do not exist - we use "length" for the x-axis
 and "width" on the y-axis, and it also is unclear on the way the coordinates define the rectangles; we have
 decided that they are on the bottom-left and adapted the disjunction constraints to match.
 """

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -51,7 +51,7 @@ def define_model(**kwds):
         pw_pts=DOMAIN_PTS,
         f_rule=F,
         unbounded_domain_var=True,
-        **kwds
+        **kwds,
     )
 
     # Fix the answer for testing purposes

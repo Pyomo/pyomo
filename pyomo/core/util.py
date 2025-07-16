@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -221,10 +221,12 @@ def sequence(*args):
 
     Return a generator that containing an arithmetic
     progression of integers.
-       sequence(i, j) returns [i, i+1, i+2, ..., j];
-       start defaults to 1.
-       step specifies the increment (or decrement)
-    For example, sequence(4) returns [1, 2, 3, 4].
+
+       - ``sequence(i, j)`` returns ``[i, i+1, i+2, ..., j]``;
+       - start defaults to 1.
+       - step specifies the increment (or decrement)
+
+    For example, ``sequence(4)`` returns ``[1, 2, 3, 4]``.
     """
     if len(args) == 0:
         raise ValueError('sequence expected at least 1 arguments, got 0')

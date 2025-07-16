@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -100,24 +100,25 @@ class TempfileManagerClass(object):
     def shutdown(self, remove=True):
         if not self._context_stack:
             return
-        if any(ctx.tempfiles for ctx in self._context_stack):
-            logger.error(
-                "Temporary files created through TempfileManager "
-                "contexts have not been deleted (observed during "
-                "TempfileManager instance shutdown).\n"
-                "Undeleted entries:\n\t"
-                + "\n\t".join(
-                    fname if isinstance(fname, str) else fname.decode()
-                    for ctx in self._context_stack
-                    for fd, fname in ctx.tempfiles
+        if logger is not None:
+            if any(ctx.tempfiles for ctx in self._context_stack):
+                logger.error(
+                    "Temporary files created through TempfileManager "
+                    "contexts have not been deleted (observed during "
+                    "TempfileManager instance shutdown).\n"
+                    "Undeleted entries:\n\t"
+                    + "\n\t".join(
+                        fname if isinstance(fname, str) else fname.decode()
+                        for ctx in self._context_stack
+                        for fd, fname in ctx.tempfiles
+                    )
                 )
-            )
-        if self._context_stack:
-            logger.warning(
-                "TempfileManagerClass instance: un-popped tempfile "
-                "contexts still exist during TempfileManager instance "
-                "shutdown"
-            )
+            if self._context_stack:
+                logger.warning(
+                    "TempfileManagerClass instance: un-popped tempfile "
+                    "contexts still exist during TempfileManager instance "
+                    "shutdown"
+                )
         self.clear_tempfiles(remove)
         # Delete the stack so that subsequent operations generate an
         # exception
@@ -252,6 +253,13 @@ class TempfileContext:
         self.manager = weakref.ref(manager)
         self.tempfiles = []
         self.tempdir = None
+        # Create a local reference from the TempfileContext to the os
+        # and shutil modules so that this object is deleted before the
+        # os and shutil modules are deallocated (since
+        # TempfileContext.__del__ can call methods in those modules
+        # through TempfileContext.release()).
+        self.os = os
+        self.shutil = shutil
 
     def __del__(self):
         self.release()
@@ -410,11 +418,11 @@ class TempfileContext:
         remove: bool
             If ``True``, delete all managed files / directories
         """
-        if remove:
+        if remove and self.tempfiles:
             for fd, name in reversed(self.tempfiles):
                 if fd is not None:
                     try:
-                        os.close(fd)
+                        self.os.close(fd)
                     except OSError:
                         pass
                 self._remove_filesystem_object(name)
@@ -443,11 +451,11 @@ class TempfileContext:
         return None
 
     def _remove_filesystem_object(self, name):
-        if not os.path.exists(name):
+        if not self.os.path.exists(name):
             return
-        if os.path.isfile(name) or os.path.islink(name):
+        if self.os.path.isfile(name) or self.os.path.islink(name):
             try:
-                os.remove(name)
+                self.os.remove(name)
             except WindowsError:
                 # Sometimes Windows doesn't release the
                 # file lock immediately when the process
@@ -455,7 +463,7 @@ class TempfileContext:
                 # second and try again.
                 try:
                     time.sleep(1)
-                    os.remove(name)
+                    self.os.remove(name)
                 except WindowsError:
                     if deletion_errors_are_fatal:
                         raise
@@ -465,8 +473,8 @@ class TempfileContext:
                         logger = logging.getLogger(__name__)
                         logger.warning("Unable to delete temporary file %s" % (name,))
             return
-        assert os.path.isdir(name)
-        shutil.rmtree(name, ignore_errors=not deletion_errors_are_fatal)
+        assert self.os.path.isdir(name)
+        self.shutil.rmtree(name, ignore_errors=not deletion_errors_are_fatal)
 
 
 # The global Pyomo TempfileManager instance

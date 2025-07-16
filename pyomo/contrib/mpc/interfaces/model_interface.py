@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -180,13 +180,14 @@ class DynamicModelInterface(object):
 
         Arguments
         ---------
-        data: ScalarData, TimeSeriesData, or mapping
-            If ScalarData, loads values into indicated variables at
-            all (or specified) time points. If TimeSeriesData, loads
-            lists of values into time points.
-            If mapping, checks whether each variable and value is
-            indexed or iterable and correspondingly loads data into
+        data: ~scalar_data.ScalarData, TimeSeriesData, or mapping
+            If :class:`ScalarData`, loads values into indicated
+            variables at all (or specified) time points. If
+            :class:`TimeSeriesData`, loads lists of values into time
+            points.  If mapping, checks whether each variable and value
+            is indexed or iterable and correspondingly loads data into
             variables.
+
         time_points: Iterable (optional)
             Subset of time points into which data should be loaded.
             Default of None corresponds to loading into all time points.
@@ -299,7 +300,7 @@ class DynamicModelInterface(object):
 
         Parameters
         ----------
-        target_data: ScalarData, TimeSeriesData, or IntervalData
+        target_data: ~scalar_data.ScalarData, TimeSeriesData, or IntervalData
             Holds target values for variables
         time: Set (optional)
             Points at which to apply the tracking cost. Default will use
@@ -307,7 +308,7 @@ class DynamicModelInterface(object):
         variables: List of Pyomo VarData (optional)
             Subset of variables supplied in setpoint_data to use in the
             tracking cost. Default is to use all variables supplied.
-        weight_data: ScalarData (optional)
+        weight_data: ~scalar_data.ScalarData (optional)
             Holds the weights to use in the tracking cost for each variable
         variable_set: Set (optional)
             A set indexing the list of provided variables, if one already

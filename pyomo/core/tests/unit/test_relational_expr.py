@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -77,14 +77,14 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         with self.assertRaisesRegex(
             TypeError,
-            "Attempting to use a non-numeric type "
-            r"\(EqualityExpression\) in a numeric expression context.",
+            "Cannot create an EqualityExpression where one of the "
+            "sub-expressions is a relational expression:",
         ):
             e == m.a
         with self.assertRaisesRegex(
             TypeError,
-            "Attempting to use a non-numeric type "
-            r"\(EqualityExpression\) in a numeric expression context.",
+            "Cannot create an EqualityExpression where one of the "
+            "sub-expressions is a relational expression:",
         ):
             m.a == e
 

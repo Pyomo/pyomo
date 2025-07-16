@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -829,11 +829,14 @@ class TestArrayVar(TestSimpleVar):
         self.assertIs(m.x[1].domain, Reals)
         self.assertIs(m.x[2].domain, Integers)
         self.assertIs(m.x[3].domain, NonNegativeReals)
-        with LoggingIntercept() as LOG, self.assertRaisesRegex(
-            TypeError,
-            'Cannot create a Set from data that does not support __contains__.  '
-            'Expected set-like object supporting collections.abc.Collection '
-            "interface, but received 'NoneType'",
+        with (
+            LoggingIntercept() as LOG,
+            self.assertRaisesRegex(
+                TypeError,
+                'Cannot create a Set from data that does not support __contains__.  '
+                'Expected set-like object supporting collections.abc.Collection '
+                "interface, but received 'NoneType'",
+            ),
         ):
             m.x.domain = {1: None, 2: None, 3: None}
         self.assertIn(

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -312,6 +312,62 @@ class MOSEKDirectTests(unittest.TestCase):
                 self.assertAlmostEqual(
                     results.Solution.constraint['x11']['Dual'][i], check[i], 5
                 )
+
+    def test_solver_parameters(self):
+        import mosek
+
+        solver = pyo.SolverFactory('mosek_direct')
+        model = self._test_model()
+        solver.solve(
+            model,
+            options={
+                'dparam.optimizer_max_time': 1.0,
+                'iparam.intpnt_solve_form': mosek.solveform.dual,
+                'mosek.iparam.intpnt_max_iterations': 10,
+                'MSK_DPAR_INTPNT_CO_TOL_REL_GAP': '1.0e-7',
+                'MSK_IPAR_PRESOLVE_USE': '0',
+                'sparam.param_comment_sign': '##',
+            },
+        )
+        # Check if iparams were set correctly
+        self.assertEqual(
+            solver._solver_model.getintparam(mosek.iparam.intpnt_solve_form),
+            mosek.solveform.dual,
+        )
+        self.assertEqual(
+            solver._solver_model.getintparam(mosek.iparam.intpnt_max_iterations), 10
+        )
+        self.assertEqual(
+            solver._solver_model.getintparam(mosek.iparam.presolve_use),
+            mosek.presolvemode.off,
+        )
+        # Check if dparams were set correctly
+        self.assertEqual(
+            solver._solver_model.getdouparam(mosek.dparam.optimizer_max_time), 1.0
+        )
+        self.assertEqual(
+            solver._solver_model.getdouparam(mosek.dparam.intpnt_co_tol_rel_gap), 1.0e-7
+        )
+        # Check if sparam is set correctly
+        self.assertEqual(
+            solver._solver_model.getstrparam(mosek.sparam.param_comment_sign)[1], '##'
+        )
+        # Check for TypeErrors
+        with self.assertRaises(TypeError) as typeCheck:
+            solver.solve(model, options={'mosek.dparam.intpnt_co_tol_rel_gap': '1.4'})
+        with self.assertRaises(TypeError) as typeCheck:
+            solver.solve(model, options={'iparam.log': 1.2})
+        # Check for AttributeError
+        with self.assertRaises(AttributeError) as assertCheck:
+            solver.solve(model, options={'wrong.name': '1'})
+        with self.assertRaises(AttributeError) as typeCheck:
+            solver.solve(model, options={'mosek.iparam.log': 'mosek.wrong.input'})
+        # Check for wrong parameter name (but valid MOSEK attribute)
+        with self.assertRaises(ValueError) as typeCheck:
+            solver.solve(model, options={'mosek.mark.up': 'wrong.val'})
+        # Check for parameter names with wrong length
+        with self.assertRaises(AssertionError) as typeCheck:
+            solver.solve(model, options={'mosek.iparam.log.level': 10})
 
 
 if __name__ == "__main__":

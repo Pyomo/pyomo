@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -53,7 +53,8 @@ class TestQuadraticModels(unittest.TestCase):
         return m
 
     @unittest.skipUnless(
-        gurobi_lp.available(exception_flag=False), "needs Gurobi LP interface"
+        gurobi_lp.available(exception_flag=False) and gurobi_lp.license_is_valid(),
+        "needs Gurobi LP interface",
     )
     def test_qp_objective_gurobi_lp(self):
         m = self._qp_model()
@@ -61,7 +62,8 @@ class TestQuadraticModels(unittest.TestCase):
         self.assertEqual(m.obj(), results['Problem'][0]['Upper bound'])
 
     @unittest.skipUnless(
-        gurobi_nl.available(exception_flag=False), "needs Gurobi NL interface"
+        gurobi_nl.available(exception_flag=False) and gurobi_nl.license_is_valid(),
+        "needs Gurobi NL interface",
     )
     def test_qp_objective_gurobi_nl(self):
         m = self._qp_model()

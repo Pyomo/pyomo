@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -50,9 +50,12 @@ def global_option(function, name, value):
 
     Example use:
 
-    @global_option('config.foo.bar', 1)
-    def functor():
-        ...
+    .. code::
+
+       @global_option('config.foo.bar', 1)
+       def functor():
+           # ...
+
     """
     PyomoConfig._option[tuple(name.split('.'))] = value
 
@@ -640,7 +643,7 @@ class Model(ScalarBlock):
         namespaces=None,
         profile_memory=0,
         report_timing=False,
-        **kwds
+        **kwds,
     ):
         """
         Create a concrete instance of an abstract model, possibly using data

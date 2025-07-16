@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -43,7 +43,7 @@ nonpyomo_leaf_types = set()
 #: like numpy, which may be registered by users.
 #:
 #: Note that :data:`native_numeric_types` does NOT include
-#: :py:`complex`, as that is not a valid constant in Pyomo numeric
+#: :py:class:`complex`, as that is not a valid constant in Pyomo numeric
 #: expressions.
 native_numeric_types = {int, float}
 native_integer_types = {int}
@@ -98,8 +98,8 @@ def RegisterNumericType(new_type: type):
 
     Parameters
     ----------
-    new_type: type
-        The new numeric type (e.g, numpy.float64)
+    new_type : type
+        The new numeric type (e.g, `numpy.float64`)
 
     """
     native_numeric_types.add(new_type)
@@ -122,8 +122,8 @@ def RegisterIntegerType(new_type: type):
 
     Parameters
     ----------
-    new_type: type
-        The new integer type (e.g, numpy.int64)
+    new_type : type
+        The new integer type (e.g, `numpy.int64`)
 
     """
     native_numeric_types.add(new_type)
@@ -149,8 +149,8 @@ def RegisterBooleanType(new_type: type):
 
     Parameters
     ----------
-    new_type: type
-        The new logical type (e.g, numpy.bool_)
+    new_type : type
+        The new logical type (e.g, `numpy.bool_`)
 
     """
     _native_boolean_types.add(new_type)
@@ -171,8 +171,8 @@ def RegisterComplexType(new_type: type):
 
     Parameters
     ----------
-    new_type: type
-        The new complex type (e.g, numpy.complex128)
+    new_type : type
+        The new complex type (e.g, `numpy.complex128`)
 
     """
     native_types.add(new_type)
@@ -192,8 +192,8 @@ def RegisterLogicalType(new_type: type):
 
     Parameters
     ----------
-    new_type: type
-        The new logical type (e.g, numpy.bool_)
+    new_type : type
+        The new logical type (e.g, `numpy.bool_`)
 
     """
     _native_boolean_types.add(new_type)
@@ -382,7 +382,8 @@ def value(obj, exception=True):
             tmp = obj(exception=True)
             if tmp is None:
                 raise ValueError(
-                    "No value for uninitialized NumericValue object %s" % (obj.name,)
+                    "No value for uninitialized %s object %s"
+                    % (type(obj).__name__, obj.name)
                 )
             return tmp
         except TemplateExpressionError:

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -24,6 +24,9 @@ if not (numpy_available and scipy_available):
 from pyomo.contrib.pynumero.sparse.block_vector import (
     BlockVector,
     NotFullyDefinedBlockVectorError,
+    vec_associative_reductions,
+    vec_unary_ufuncs,
+    vec_binary_ufuncs,
 )
 
 
@@ -201,6 +204,7 @@ class TestBlockVector(unittest.TestCase):
         for bid, blk in enumerate(n[0]):
             self.assertTrue(np.allclose(blk, v2.get_block(bid)))
 
+    @unittest.skipUnless(np.__version__[0] == "1", "PTP only included in Numpy 1.x")
     def test_ptp(self):
         v = BlockVector(2)
         a = np.arange(5)
@@ -1023,64 +1027,34 @@ class TestBlockVector(unittest.TestCase):
         self.assertEqual(v.get_block(1).size, v2.get_block(1).size)
 
     def test_unary_ufuncs(self):
-        v = BlockVector(2)
         a = np.ones(3) * 0.5
         b = np.ones(2) * 0.8
+        v = BlockVector(2)
         v.set_block(0, a)
         v.set_block(1, b)
+        # Some operations only accept integers
+        ai = np.ones(3, dtype='i') * 5
+        bi = np.ones(2, dtype='i') * 8
+        vi = BlockVector(2)
+        vi.set_block(0, ai)
+        vi.set_block(1, bi)
+
+        _int_ufuncs = {np.invert, np.arccosh}
 
         v2 = BlockVector(2)
-
-        unary_funcs = [
-            np.log10,
-            np.sin,
-            np.cos,
-            np.exp,
-            np.ceil,
-            np.floor,
-            np.tan,
-            np.arctan,
-            np.arcsin,
-            np.arccos,
-            np.sinh,
-            np.cosh,
-            np.abs,
-            np.tanh,
-            np.arcsinh,
-            np.arctanh,
-            np.fabs,
-            np.sqrt,
-            np.log,
-            np.log2,
-            np.absolute,
-            np.isfinite,
-            np.isinf,
-            np.isnan,
-            np.log1p,
-            np.logical_not,
-            np.exp2,
-            np.expm1,
-            np.sign,
-            np.rint,
-            np.square,
-            np.positive,
-            np.negative,
-            np.rad2deg,
-            np.deg2rad,
-            np.conjugate,
-            np.reciprocal,
-        ]
-
-        for fun in unary_funcs:
-            v2.set_block(0, fun(v.get_block(0)))
-            v2.set_block(1, fun(v.get_block(1)))
-            res = fun(v)
+        for fun in vec_unary_ufuncs:
+            _v = vi if fun in _int_ufuncs else v
+            v2.set_block(0, fun(_v.get_block(0)))
+            v2.set_block(1, fun(_v.get_block(1)))
+            res = fun(_v)
             self.assertIsInstance(res, BlockVector)
             self.assertEqual(res.nblocks, 2)
             for i in range(2):
                 self.assertTrue(np.allclose(res.get_block(i), v2.get_block(i)))
 
-        other_funcs = [np.cumsum, np.cumprod, np.cumproduct]
+        other_funcs = [np.cumsum, np.cumprod]
+        if np.__version__[0] == '1':
+            other_funcs.append(np.cumproduct)
 
         for fun in other_funcs:
             res = fun(v)
@@ -1088,15 +1062,19 @@ class TestBlockVector(unittest.TestCase):
             self.assertEqual(res.nblocks, 2)
             self.assertTrue(np.allclose(fun(v.flatten()), res.flatten()))
 
-        with self.assertRaises(Exception) as context:
-            np.cbrt(v)
+        with self.assertRaises(TypeError):
+            np.modf(v)
 
     def test_reduce_ufuncs(self):
         v = BlockVector(2)
-        a = np.ones(3) * 0.5
-        b = np.ones(2) * 0.8
+        # Some operations only accept integers, so we will test with integers
+        a = np.ones(3, dtype='i') * 5
+        b = np.ones(2, dtype='i') * 8
         v.set_block(0, a)
         v.set_block(1, b)
+
+        for fun in vec_associative_reductions:
+            self.assertAlmostEqual(fun.reduce(v), fun.reduce(v.flatten()))
 
         reduce_funcs = [np.sum, np.max, np.min, np.prod, np.mean]
         for fun in reduce_funcs:
@@ -1108,56 +1086,45 @@ class TestBlockVector(unittest.TestCase):
 
     def test_binary_ufuncs(self):
         v = BlockVector(2)
-        a = np.ones(3) * 0.5
-        b = np.ones(2) * 0.8
-        v.set_block(0, a)
-        v.set_block(1, b)
-
+        v.set_blocks([np.ones(3) * 0.5, np.ones(2) * 0.8])
         v2 = BlockVector(2)
-        a2 = np.ones(3) * 3.0
-        b2 = np.ones(2) * 2.8
-        v2.set_block(0, a2)
-        v2.set_block(1, b2)
+        v2.set_blocks([np.ones(3) * 3.0, np.ones(2) * 2.8])
 
-        binary_ufuncs = [
-            np.add,
-            np.multiply,
-            np.divide,
-            np.subtract,
-            np.greater,
-            np.greater_equal,
-            np.less,
-            np.less_equal,
-            np.not_equal,
-            np.maximum,
-            np.minimum,
-            np.fmax,
-            np.fmin,
-            np.equal,
-            np.logaddexp,
-            np.logaddexp2,
-            np.remainder,
-            np.heaviside,
-            np.hypot,
-        ]
+        vi = BlockVector(2)
+        vi.set_blocks([np.ones(3, dtype='i') * 5, np.ones(2, dtype='i') * 8])
+        v2i = BlockVector(2)
+        v2i.set_blocks([np.ones(3, dtype='i') * 3, np.ones(2, dtype='i') * 2])
 
-        for fun in binary_ufuncs:
-            flat_res = fun(v.flatten(), v2.flatten())
-            res = fun(v, v2)
+        _int_ufuncs = {
+            np.gcd,
+            np.lcm,
+            np.ldexp,
+            np.left_shift,
+            np.right_shift,
+            np.bitwise_and,
+            np.bitwise_or,
+            np.bitwise_xor,
+        }
+
+        for fun in vec_binary_ufuncs:
+            _v, _v2, _s = (vi, v2i, 3) if fun in _int_ufuncs else (v, v2, 3.0)
+
+            flat_res = fun(_v.flatten(), _v2.flatten())
+            res = fun(_v, _v2)
             self.assertTrue(np.allclose(flat_res, res.flatten()))
 
-            res = fun(v, v2.flatten())
+            res = fun(_v, _v2.flatten())
             self.assertTrue(np.allclose(flat_res, res.flatten()))
 
-            res = fun(v.flatten(), v2)
+            res = fun(_v.flatten(), _v2)
             self.assertTrue(np.allclose(flat_res, res.flatten()))
 
-            flat_res = fun(v.flatten(), 5)
-            res = fun(v, 5)
+            flat_res = fun(_v.flatten(), 5)
+            res = fun(_v, 5)
             self.assertTrue(np.allclose(flat_res, res.flatten()))
 
-            flat_res = fun(3.0, v2.flatten())
-            res = fun(3.0, v2)
+            flat_res = fun(_s, _v2.flatten())
+            res = fun(_s, _v2)
             self.assertTrue(np.allclose(flat_res, res.flatten()))
 
         v = BlockVector(2)

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -347,6 +347,11 @@ class TicTocTimer(object):
             level (int): an optional logging output level.
         """
 
+        # Note: important to do this first so that we don't add a random
+        # amount of time for I/O operations or extracting the stack.
+        # This helps ensure that the timing tests are less fragile.
+        now = default_timer()
+
         if msg is _NotSpecified:
             msg = 'File "%s", line %s in %s' % traceback.extract_stack(limit=2)[0][:3]
         if args and msg is not None and '%' not in msg:
@@ -365,11 +370,10 @@ class TicTocTimer(object):
             if args:
                 logger, *args = args
 
-        now = default_timer()
         if self._start_count or self._lastTime is None:
             ans = self._cumul
             if self._lastTime:
-                ans += default_timer() - self._lastTime
+                ans += now - self._lastTime
             if msg is not None:
                 fmt = "[%8.2f|%4d] %s"
                 data = (ans, self._start_count, msg)

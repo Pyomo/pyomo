@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -28,3 +28,12 @@ from . import config, dependencies, shutdown, timing
 from .deprecation import deprecated
 from .errors import DeveloperError
 from ._command import pyomo_command, get_pyomo_commands
+
+#
+# declare deprecation paths for removed modules
+#
+from .deprecation import moved_module
+
+moved_module('pyomo.common.getGSL', 'pyomo.common.gsl', version='6.5.0')
+moved_module('pyomo.common.plugin', 'pyomo.common.plugin_base', version='6.5.0')
+del moved_module

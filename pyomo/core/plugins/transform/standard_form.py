@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -19,14 +19,16 @@ from pyomo.core.plugins.transform.equality_transform import EqualityTransform
     "core.standard_form", doc="Create an equivalent LP model in standard form."
 )
 class StandardForm(IsomorphicTransformation):
-    """
+    r"""
     Produces a standard-form representation of the model. This form has
     the coefficient matrix (A), the cost vector (c), and the
     constraint vector (b), where the 'standard form' problem is
 
-    min/max c'x
-    s.t.    Ax = b
-            x >= 0
+    .. math::
+
+        \min/\max\ & c'x \\
+        s.t.\      &  Ax = b \\
+                   & x >= 0
 
     Options
         slack_names         Default auxiliary_slack
@@ -35,6 +37,7 @@ class StandardForm(IsomorphicTransformation):
         up_names            Default _upper_bound
         pos_suffix          Default _plus
         neg_suffix          Default _neg
+
     """
 
     def __init__(self, **kwds):

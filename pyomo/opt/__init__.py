@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.opt.base.opt_config
-import pyomo.opt.solver
 
 from pyomo.opt.base import (
     check_available_solvers,
@@ -38,9 +36,6 @@ from pyomo.opt.results import (
     container,
     problem,
     solution,
-    ScalarData,
-    ScalarType,
-    default_print_options,
     ListContainer,
     MapContainer,
     UndefinedData,
@@ -66,3 +61,12 @@ from pyomo.opt.parallel import (
     SolverManagerFactory,
     AsynchronousSolverManager,
 )
+
+from pyomo.common.deprecation import relocated_module_attribute
+
+for _attr in ('ScalarData', 'ScalarType', 'default_print_options'):
+    relocated_module_attribute(
+        _attr, 'pyomo.opt.results.container.' + _attr, version='6.0'
+    )
+del _attr
+del relocated_module_attribute

@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -26,6 +26,8 @@ def define_homogeneous_container_type(
     is equivalent to placing the following class definition
     within that module:
 
+    .. code::
+
         class <name>(<container_class>):
             <doc>
             _ctype = <ctype>
@@ -43,6 +45,7 @@ def define_homogeneous_container_type(
                 self._storage_key = None
                 self._active = True
                 super(<name>, self).__init__(*args, **kwds)
+
     """
     assert name not in namespace
     cls_dict = {}

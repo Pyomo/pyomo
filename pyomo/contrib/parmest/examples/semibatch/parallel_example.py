@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 """
-The following script can be used to run semibatch parameter estimation in 
+The following script can be used to run semibatch parameter estimation in
 parallel and save results to files for later analysis and graphics.
 Example command: mpiexec -n 4 python parallel_example.py
 """

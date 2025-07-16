@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008-2024
+#  Copyright (c) 2008-2025
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
@@ -277,7 +277,7 @@ class block(IBlock):
         format=None,
         _solver_capability=None,
         _called_by_solver=False,
-        **kwds
+        **kwds,
     ):
         """
         Write the model to a file, with a given format.
