@@ -466,7 +466,7 @@ for this model, a toy data file (in AMPL "``.dat``" format) would be:
 
    >>> inst = model.create_instance('src/scripting/Isinglecomm.dat')
 
-A similar result can be accomplished more efficiently (becaue we only
+A similar result can be accomplished more efficiently (because we only
 iterate over the Arcs twice) using initialization functions that accept
 only a model block and return a ``dict`` with all the information needed
 for the indexed set:
