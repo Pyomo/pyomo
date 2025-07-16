@@ -779,17 +779,20 @@ class Estimator(object):
             except ValueError:
                 raise ValueError(
                     f"Invalid objective function: '{obj_function}'. "
-                    f"Choose from {[e.value for e in ObjectiveLib]}."
+                    f"Choose from: {[e.value for e in ObjectiveLib]}."
                 )
         else:
-            deprecation_warning(
-                "You're using a deprecated input to the `obj_function` argument by "
-                "passing a custom function. This usage will be removed in a "
-                "future release. Please update to the new parmest interface using "
-                "the built-in 'SSE' and 'SSE_weighted' objectives.",
-                version="6.9.3.dev0",
-            )
-            self.obj_function = obj_function
+            if obj_function is None:
+                self.obj_function = obj_function
+            else:
+                deprecation_warning(
+                    "You're using a deprecated input to the `obj_function` argument by "
+                    "passing a custom function. This usage will be removed in a "
+                    "future release. Please update to the new parmest interface using "
+                    "the built-in 'SSE' and 'SSE_weighted' objectives.",
+                    version="6.9.3.dev0",
+                )
+                self.obj_function = obj_function
 
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
@@ -923,13 +926,8 @@ class Estimator(object):
             if isinstance(self.obj_function, Enum):
                 if self.obj_function == ObjectiveLib.SSE:
                     second_stage_rule = SSE
-                elif self.obj_function == ObjectiveLib.SSE_weighted:
-                    second_stage_rule = SSE_weighted
                 else:
-                    raise ValueError(
-                        f"Invalid objective function: '{self.obj_function.value}'. "
-                        f"Choose from {[e.value for e in ObjectiveLib]}."
-                    )
+                    second_stage_rule = SSE_weighted
             else:
                 # A custom function uses model.experiment_outputs as data
                 second_stage_rule = self.obj_function
@@ -1246,8 +1244,9 @@ class Estimator(object):
                 sse_expr = SSE_weighted(model)
             else:
                 raise ValueError(
-                    f"Invalid objective function: '{self.obj_function.value}'. "
-                    f"Choose from {[e.value for e in ObjectiveLib]}."
+                    f"Invalid objective function for covariance calculation: "
+                    f"{self.obj_function}. Choose from: "
+                    f"{[e.value for e in ObjectiveLib]} in the Estimator object."
                 )
 
             # evaluate the numerical SSE and store it
@@ -1272,7 +1271,7 @@ class Estimator(object):
         except ValueError:
             raise ValueError(
                 f"Invalid method: '{method}'. Choose "
-                f"from {[e.value for e in CovarianceMethodLib]}."
+                f"from: {[e.value for e in CovarianceMethodLib]}."
             )
 
         # check if the user specified 'SSE' or 'SSE_weighted' as the objective function

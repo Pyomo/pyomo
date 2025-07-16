@@ -16,19 +16,21 @@ the model and the observations (typically defined as the sum of squared
 deviation between model values and observed values).
 
 If the Pyomo model is not formatted as a two-stage stochastic
-programming problem in this format, the user can supply a custom
-function to use as the second stage cost and the Pyomo model will be
+programming problem in this format, the user can choose either the
+built-in "SSE" or "SSE_weighted" objective functions, or supply a custom
+objective function to use as the second stage cost. The Pyomo model will then be
 modified within parmest to match the required specifications.
-The stochastic programming callback function is also defined within parmest.  The callback
-function returns a populated and initialized model for each scenario.
+The stochastic programming callback function is also defined within parmest.
+The callback function returns a populated and initialized model for each scenario.
 
-To use parmest, the user creates a :class:`~pyomo.contrib.parmest.parmest.Estimator` object 
-which includes the following methods:
+To use parmest, the user creates a :class:`~pyomo.contrib.parmest.parmest.Estimator`
+object which includes the following methods:
 
 .. autosummary::
    :nosignatures:
 
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est
+   ~pyomo.contrib.parmest.parmest.Estimator.cov_est
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_bootstrap
    ~pyomo.contrib.parmest.parmest.Estimator.theta_est_leaveNout
    ~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta
@@ -65,14 +67,6 @@ Section.
         columns=['hour', 'y'],
     )
 
-    # Sum of squared error function
-    def SSE(model):
-        expr = (
-            model.experiment_outputs[model.y]
-            - model.response_function[model.experiment_outputs[model.hour]]
-        ) ** 2
-        return expr
-
     # Create an experiment list
     from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
     exp_list = []
@@ -83,7 +77,8 @@ Section.
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> import pyomo.contrib.parmest.parmest as parmest
-    >>> pest = parmest.Estimator(exp_list, obj_function=SSE)
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
+    >>> obj_val, theta_val = pest.theta_est()
 
 Optionally, solver options can be supplied, e.g.,
 
@@ -91,14 +86,15 @@ Optionally, solver options can be supplied, e.g.,
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
     >>> solver_options = {"max_iter": 6000}
-    >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=solver_options)
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE", solver_options=solver_options)
+    >>> obj_val, theta_val = pest.theta_est()
 
 
 List of experiment objects
 --------------------------
 
 The first argument is a list of experiment objects which is used to
-create one labeled model for each expeirment. 
+create one labeled model for each experiment.
 The template :class:`~pyomo.contrib.parmest.experiment.Experiment` 
 can be used to generate a list of experiment objects.
 
@@ -137,17 +133,20 @@ expressions that are used to build an objective for the two-stage
 stochastic programming problem.  
 
 If the Pyomo model is not written as a two-stage stochastic programming problem in
-this format, and/or if the user wants to use an objective that is
-different than the original model, a custom objective function can be
-defined for parameter estimation.  The objective function has a single argument, 
-which is the model from a single experiment.
+this format, the user can select the "SSE" or "SSE_weighted" built-in objective
+functions. If the user wants to use an objective that is different from the built-in
+options, a custom objective function can be defined for parameter estimation. However,
+covariance estimation will not support this custom objective function. The objective
+function (built-in or custom) has a single argument, which is the model from a single
+experiment.
 The objective function returns a Pyomo
 expression which is used to define "SecondStageCost".  The objective
 function can be used to customize data points and weights that are used
 in parameter estimation.
 
-Parmest includes one built in objective function to compute the sum of squared errors ("SSE") between the 
-``m.experiment_outputs`` model values and data values.
+Parmest includes two built-in objective functions ("SSE" and "SSE_weighted") to compute
+the sum of squared errors between the ``m.experiment_outputs`` model values and
+data values.
 
 Suggested initialization procedure for parameter estimation problems
 --------------------------------------------------------------------
