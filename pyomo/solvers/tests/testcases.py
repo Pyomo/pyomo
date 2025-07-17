@@ -291,7 +291,7 @@ for prob in (
     'QP_simple',
 ):
     ExpectedFailures['baron', 'bar', prob] = (
-        lambda v: v == (25, 7, 16, 0),
+        lambda v: (25, 7, 10) <= v[:3] <= (25, 7, 16),
         "BARON 25.7.16 returns 0 for duals/rc for models solved in preprocessing",
     )
 
