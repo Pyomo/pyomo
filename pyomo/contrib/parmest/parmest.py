@@ -41,6 +41,7 @@ from enum import Enum
 import re
 import importlib as im
 import logging
+import warnings
 import types
 import json
 from collections.abc import Callable
@@ -259,9 +260,7 @@ def SSE_weighted(model):
     _check_model_labels_helper(model, logging_level=logging.ERROR)
 
     # Check that measurement errors exist
-    if hasattr(model, "measurement_error"):
-        pass
-    else:
+    if not hasattr(model, "measurement_error"):
         raise AttributeError(
             'Experiment model does not have suffix "measurement_error". '
             '"measurement_error" is a required suffix for the "SSE_weighted" '
@@ -270,16 +269,24 @@ def SSE_weighted(model):
 
     # check if all the values of the measurement error standard deviation
     # have been supplied
-    if all(
+    all_known_errors = all(
         model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    ):
-        # calculate the weighted SSE between the prediction and observation of the
-        # measured variables
-        expr = (1 / 2) * sum(
-            ((y - y_hat) / model.measurement_error[y_hat]) ** 2
-            for y_hat, y in model.experiment_outputs.items()
-        )
-        return expr
+    )
+
+    if all_known_errors:
+        # calculate the weighted SSE between the prediction
+        # and observation of the measured variables
+        try:
+            expr = (1 / 2) * sum(
+                ((y - y_hat) / model.measurement_error[y_hat]) ** 2
+                for y_hat, y in model.experiment_outputs.items()
+            )
+            return expr
+        except ZeroDivisionError:
+            raise ValueError(
+                'Division by zero encountered in the "SSE_weighted" objective. '
+                'One or more values of the measurement error are zero.'
+            )
     else:
         raise ValueError(
             'One or more values are missing from "measurement_error". All values of '
@@ -582,9 +589,7 @@ def _finite_difference_FIM(
     # computing the condition number of the Jacobian matrix
     cond_number_jac = np.linalg.cond(J)
     if logging_level == logging.INFO:
-        logger.info(
-            f"The condition number of the Jacobian matrix " f"is {cond_number_jac}"
-        )
+        logger.info(f"The condition number of the Jacobian matrix is {cond_number_jac}")
 
     # grab the model
     model = _get_labeled_model_helper(experiment)
@@ -592,26 +597,35 @@ def _finite_difference_FIM(
     # extract the measured variables and measurement errors
     y_hat_list = [y_hat for y_hat, y in model.experiment_outputs.items()]
 
-    # check if the model has a 'measurement_error' attribute and the measurement
-    # error standard deviation has been supplied
-    if hasattr(model, "measurement_error") and all(
+    # check if the model has a 'measurement_error' attribute and
+    # the measurement error standard deviation has been supplied
+    all_known_errors = all(
         model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
-    ):
+    )
+
+    if hasattr(model, "measurement_error") and all_known_errors:
         error_list = [
             model.measurement_error[y_hat] for y_hat in model.experiment_outputs
         ]
 
-        # compute the matrix of the inverse of the measurement variance
-        # the following assumes independent measurement errors
-        W = np.diag([1 / (err**2) for err in error_list])
+        # compute the matrix of the inverse of the measurement error variance
+        # the following assumes independent and identically distributed
+        # measurement errors
+        try:
+            W = np.diag([1 / (err**2) for err in error_list])
+        except ZeroDivisionError:
+            raise ValueError(
+                'Division by zero encountered in computing the covariance matrix. '
+                'One or more values of the measurement error are zero.'
+            )
 
-        # check if error list is consistent
+        # check if the error list is consistent
         if len(error_list) == 0 or len(y_hat_list) == 0:
             raise ValueError(
                 "Experiment outputs and measurement errors cannot be empty."
             )
 
-        # check if the dimension of error_list is same with that of y_hat_list
+        # check if the dimension of error_list is the same with that of y_hat_list
         if len(error_list) != len(y_hat_list):
             raise ValueError(
                 "Experiment outputs and measurement errors are not the same length."
@@ -717,16 +731,24 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     kaug_jac = np.array(jac).T
 
     # compute FIM
-    # compute matrix of the inverse of the measurement variance
-    # The following assumes independent measurement error.
+    # compute the matrix of the inverse of the measurement error variance
+    # the following assumes independent and identically distributed
+    # measurement errors
     W = np.zeros((len(model.measurement_error), len(model.measurement_error)))
     all_known_errors = all(
         model.measurement_error[y_hat] is not None for y_hat in model.experiment_outputs
     )
+
     count = 0
     for k, v in model.measurement_error.items():
         if all_known_errors:
-            W[count, count] = 1 / (v**2)
+            try:
+                W[count, count] = 1 / (v**2)
+            except ZeroDivisionError:
+                raise ValueError(
+                    'Division by zero encountered in computing the covariance matrix. '
+                    'One or more values of the measurement error are zero.'
+                )
         else:
             W[count, count] = 1 / estimated_var
         count += 1
