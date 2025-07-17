@@ -1811,9 +1811,7 @@ class TestCardinalitySet(unittest.TestCase):
 
         # check when values are not finite
         cardinality_set.origin[0] = np.nan
-        exc_str = (
-            r"Entry 'nan' of the argument `origin` is not a finite numeric value"
-        )
+        exc_str = r"Entry 'nan' of the argument `origin` is not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
 
@@ -2244,9 +2242,7 @@ class TestAxisAlignedEllipsoidalSet(unittest.TestCase):
 
         # check when values are not finite
         a_ellipsoid_set.center[0] = np.nan
-        exc_str = (
-            r"Entry 'nan' of the argument `center` is not a finite numeric value"
-        )
+        exc_str = r"Entry 'nan' of the argument `center` is not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             a_ellipsoid_set.validate(config=CONFIG)
         a_ellipsoid_set.center[0] = 0
@@ -2630,9 +2626,7 @@ class TestEllipsoidalSet(unittest.TestCase):
 
         # check when values are not finite
         ellipsoid_set.center[0] = np.nan
-        exc_str = (
-            r"Entry 'nan' of the argument `center` is not a finite numeric value"
-        )
+        exc_str = r"Entry 'nan' of the argument `center` is not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             ellipsoid_set.validate(config=CONFIG)
 
@@ -2927,9 +2921,7 @@ class TestPolyhedralSet(unittest.TestCase):
 
         # check when values are not finite
         polyhedral_set.rhs_vec[0] = np.nan
-        exc_str = (
-            r"Entry 'nan' of the argument `rhs_vec` is not a finite numeric value"
-        )
+        exc_str = r"Entry 'nan' of the argument `rhs_vec` is not a finite numeric value"
         with self.assertRaisesRegex(ValueError, exc_str):
             polyhedral_set.validate(config=CONFIG)
 
