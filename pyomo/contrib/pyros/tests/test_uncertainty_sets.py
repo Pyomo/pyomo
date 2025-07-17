@@ -2928,7 +2928,7 @@ class TestPolyhedralSet(unittest.TestCase):
         # check when values are not finite
         polyhedral_set.rhs_vec[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `rhs_vec` " r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `rhs_vec` is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             polyhedral_set.validate(config=CONFIG)
