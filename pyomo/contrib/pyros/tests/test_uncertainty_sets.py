@@ -1812,7 +1812,7 @@ class TestCardinalitySet(unittest.TestCase):
         # check when values are not finite
         cardinality_set.origin[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `origin` " r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `origin` is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             cardinality_set.validate(config=CONFIG)
