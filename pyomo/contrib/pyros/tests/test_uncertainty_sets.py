@@ -2631,7 +2631,7 @@ class TestEllipsoidalSet(unittest.TestCase):
         # check when values are not finite
         ellipsoid_set.center[0] = np.nan
         exc_str = (
-            r"Entry 'nan' of the argument `center` " r"is not a finite numeric value"
+            r"Entry 'nan' of the argument `center` is not a finite numeric value"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             ellipsoid_set.validate(config=CONFIG)
