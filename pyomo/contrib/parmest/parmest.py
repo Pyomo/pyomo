@@ -478,6 +478,7 @@ class Estimator(object):
 
         return parmest_model
 
+    # TODO: Make so this generates the initial DATAFRAME, not the entire list of values.
     # Make new private method, _generate_initial_theta:
     # This method will be used to generate the initial theta values for multistart
     # optimization. It will take the theta names and the initial theta values
@@ -614,6 +615,11 @@ class Estimator(object):
         model = self._create_parmest_model(experiment_number)
         return model
 
+    # TODO: Add a way to pass in a parmest_model to this function, currently cannot 
+    # access the model within the build function.
+
+    # I need to check, if I use the update model utility BEFORE calling _Q_opt, does it still
+    # work? If so, then I can remove the parmest_model argument.
     def _Q_opt(
         self,
         ThetaVals=None,
@@ -1088,12 +1094,16 @@ class Estimator(object):
             cov_n=cov_n,
         )
 
+    # TODO: Make the user provide a list of values, not the whole data frame
+    # TODO: Add a way to print the empty data_frame before solve so it can be previewed beforehand
+    # TODO: Fix so the theta values are generated at each iteration, not all beforehand in _generate_initial_theta
+    # Fix _generate_initial_theta to return an empty DataFrame first
+    # TODO: Add save model option to save the model after each iteration or at the end of the multistart
     def theta_est_multistart(
         self,
         n_restarts=20,
-        buffer=10,
         multistart_sampling_method="uniform_random",
-        user_provided_df=None,
+        user_provided_list=None,
         seed=None,
         save_results=False,
         theta_vals=None,
