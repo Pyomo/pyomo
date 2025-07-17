@@ -1234,23 +1234,24 @@ class Estimator(object):
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
         """
-        # compute the inverse reduced hessian to be used
-        # in the "reduced_hessian" method
-        # parmest makes the fitted parameters stage 1 variables
-        ind_vars = []
-        for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
-            ind_vars.append(Var)
-        # calculate the reduced hessian
-        (solve_result, inv_red_hes) = (
-            inverse_reduced_hessian.inv_reduced_hessian_barrier(
-                self.ef_instance,
-                independent_variables=ind_vars,
-                solver_options=self.solver_options,
-                tee=self.tee,
+        if method == CovarianceMethodLib.reduced_hessian.value:
+            # compute the inverse reduced hessian to be used
+            # in the "reduced_hessian" method
+            # parmest makes the fitted parameters stage 1 variables
+            ind_vars = []
+            for nd_name, Var, sol_val in ef_nonants(self.ef_instance):
+                ind_vars.append(Var)
+            # calculate the reduced hessian
+            (solve_result, inv_red_hes) = (
+                inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                    self.ef_instance,
+                    independent_variables=ind_vars,
+                    solver_options=self.solver_options,
+                    tee=self.tee,
+                )
             )
-        )
 
-        self.inv_red_hes = inv_red_hes
+            self.inv_red_hes = inv_red_hes
 
         # Number of data points considered
         n = cov_n
