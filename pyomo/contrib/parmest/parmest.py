@@ -239,7 +239,7 @@ def SSE(model):
         model: annotated Pyomo model
     """
     # check if the model has all the required suffixes
-    _check_model_labels_helper(model)
+    _check_model_labels_helper(model, logging_level=logging.ERROR)
 
     # SSE between the prediction and observation of the measured variables
     expr = sum((y - y_hat) ** 2 for y_hat, y in model.experiment_outputs.items())
@@ -256,7 +256,7 @@ def SSE_weighted(model):
         model: annotated Pyomo model
     """
     # check if the model has all the required suffixes
-    _check_model_labels_helper(model)
+    _check_model_labels_helper(model, logging_level=logging.ERROR)
 
     # Check that measurement errors exist
     if hasattr(model, "measurement_error"):
@@ -287,12 +287,13 @@ def SSE_weighted(model):
         )
 
 
-def _check_model_labels_helper(model):
+def _check_model_labels_helper(model, logging_level):
     """
     Checks if the annotated Pyomo model contains the necessary suffixes
 
     Argument:
         model: annotated Pyomo model for suffix checking
+        logging_level: logging level specified by the user, e.g., logging.INFO
     """
     required_attrs = ("experiment_outputs", "unknown_parameters")
 
@@ -304,8 +305,10 @@ def _check_model_labels_helper(model):
             f"Experiment model is missing required attribute(s): {missing_str}"
         )
 
-    logger.setLevel(level=logging.INFO)
-    logger.info("Model has expected labels.")
+    # set the logging
+    logger.setLevel(level=logging_level)
+    if logging_level == logging.INFO:
+        logger.info("Model has expected labels.")
 
 
 def _get_labeled_model_helper(experiment):
@@ -313,8 +316,8 @@ def _get_labeled_model_helper(experiment):
     Checks if the Experiment class object has a "get_labeled_model" function
 
     Argument:
-        experiment: Estimator class object that contains the model for a particular
-                    experimental condition
+        experiment: Estimator class object that contains the Pyomo model
+            for a particular experimental condition
 
     Returns:
         Annotated Pyomo model
@@ -348,19 +351,20 @@ class UnsupportedArgsLib(Enum):
 
 
 # Compute the Jacobian matrix of measured variables with respect to the parameters
-def _compute_jacobian(experiment, theta_vals, step, solver, tee):
+def _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level):
     """
     Computes the Jacobian matrix of the measured variables with respect to the
     parameters using the central finite difference scheme
 
     Arguments:
-        experiment: Estimator class object that contains the model for a particular
-                    experimental condition
+        experiment: Estimator class object that contains the Pyomo model
+            for a particular experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
         step: float used for relative perturbation of the parameters,
-              e.g., step=0.02 is a 2% perturbation
+            e.g., step=0.02 is a 2% perturbation
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
+        logging_level: logging level specified by the user, e.g., logging.INFO
 
     Returns:
         J: Jacobian matrix
@@ -369,7 +373,7 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
     model = _get_labeled_model_helper(experiment)
 
     # check if the model has all the required suffixes
-    _check_model_labels_helper(model)
+    _check_model_labels_helper(model, logging_level)
 
     # fix the value of the unknown parameters to the estimated values
     params = [k for k, v in model.unknown_parameters.items()]
@@ -452,36 +456,37 @@ def _compute_jacobian(experiment, theta_vals, step, solver, tee):
 
 # Compute the covariance matrix of the estimated parameters
 def compute_covariance_matrix(
-    experiment_list, method, theta_vals, step, solver, tee, estimated_var=None
+    experiment_list,
+    method,
+    theta_vals,
+    step,
+    solver,
+    tee,
+    logging_level,
+    estimated_var=None,
 ):
     """
     Computes the covariance matrix of the estimated parameters using
     'finite_difference' and 'automatic_differentiation_kaug' methods
 
     Arguments:
-        experiment_list: list of Estimator class objects containing the model for
-                         different experimental conditions
+        experiment_list: list of Estimator class objects containing the Pyomo model
+            for different experimental conditions
         method: string ``method`` object specified by the user,
-                e.g., 'finite_difference'
+            e.g., 'finite_difference'
         theta_vals: dictionary containing the estimates of the unknown parameters
         step: float used for relative perturbation of the parameters,
-              e.g., step=0.02 is a 2% perturbation
+            e.g., step=0.02 is a 2% perturbation
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
+        logging_level: logging level specified by the user, e.g., logging.INFO
         estimated_var: value of the estimated variance of the measurement error
-                       in cases where the user does not supply the measurement
-                       error standard deviation
+            in cases where the user does not supply the
+            measurement error standard deviation
 
     Returns:
         cov: covariance matrix of the estimated parameters
     """
-    # get the supported methods
-    supported_methods = [e.value for e in CovarianceMethodLib]
-    if method not in supported_methods:
-        raise ValueError(
-            f"Invalid method: '{method}'. " f"Choose from {supported_methods}."
-        )
-
     if method == CovarianceMethodLib.finite_difference.value:
         # store the FIM of all experiments
         FIM_all_exp = []
@@ -495,6 +500,7 @@ def compute_covariance_matrix(
                     step=step,
                     solver=solver,
                     tee=tee,
+                    logging_level=logging_level,
                     estimated_var=estimated_var,
                 )
             )
@@ -506,7 +512,10 @@ def compute_covariance_matrix(
             cov = np.linalg.inv(FIM)
         except np.linalg.LinAlgError:
             cov = np.linalg.pinv(FIM)
-            logger.info("The FIM is singular. Using pseudo-inverse instead.")
+            if logging_level == logging.INFO:
+                logger.info("The FIM is singular. Using pseudo-inverse instead.")
+            else:
+                print("The FIM is singular. Using pseudo-inverse instead.")
 
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
     elif method == CovarianceMethodLib.automatic_differentiation_kaug.value:
@@ -532,7 +541,10 @@ def compute_covariance_matrix(
             cov = np.linalg.inv(FIM)
         except np.linalg.LinAlgError:
             cov = np.linalg.pinv(FIM)
-            logger.info("The FIM is singular. Using pseudo-inverse instead.")
+            if logging_level == logging.INFO:
+                logger.info("The FIM is singular. Using pseudo-inverse instead.")
+            else:
+                print("The FIM is singular. Using pseudo-inverse instead.")
 
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
 
@@ -542,35 +554,37 @@ def compute_covariance_matrix(
 # compute the Fisher information matrix of the estimated parameters using
 # 'finite_difference'
 def _finite_difference_FIM(
-    experiment, theta_vals, step, solver, tee, estimated_var=None
+    experiment, theta_vals, step, solver, tee, logging_level, estimated_var=None
 ):
     """
     Computes the Fisher information matrix from 'finite_difference' Jacobian matrix
     and measurement errors standard deviation defined in the annotated Pyomo model
 
     Arguments:
-        experiment: Estimator class object that contains the model for a particular
-                    experimental condition
+        experiment: Estimator class object that contains the Pyomo model
+            for a particular experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
         step: float used for relative perturbation of the parameters,
-              e.g., step=0.02 is a 2% perturbation
+            e.g., step=0.02 is a 2% perturbation
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
+        logging_level: logging level specified by the user, e.g., logging.INFO
         estimated_var: value of the estimated variance of the measurement error in
-                       cases where the user does not supply the measurement error
-                       standard deviation
+            cases where the user does not supply the
+            measurement error standard deviation
 
     Returns:
         FIM: Fisher information matrix about the parameters
     """
     # compute the Jacobian matrix using finite difference
-    J = _compute_jacobian(experiment, theta_vals, step, solver, tee)
+    J = _compute_jacobian(experiment, theta_vals, step, solver, tee, logging_level)
 
     # computing the condition number of the Jacobian matrix
     cond_number_jac = np.linalg.cond(J)
-
-    # set up logging
-    logger.info(f"The condition number of the Jacobian matrix is {cond_number_jac}")
+    if logging_level == logging.INFO:
+        logger.info(
+            f"The condition number of the Jacobian matrix " f"is {cond_number_jac}"
+        )
 
     # grab the model
     model = _get_labeled_model_helper(experiment)
@@ -623,14 +637,14 @@ def _kaug_FIM(experiment, theta_vals, solver, tee, estimated_var=None):
     Disclaimer - code adopted from the kaug function implemented in Pyomo.DoE
 
     Arguments:
-        experiment: Estimator class object that contains the model for a particular
-                    experimental condition
+        experiment: Estimator class object that contains the Pyomo model
+            for a particular experimental condition
         theta_vals: dictionary containing the estimates of the unknown parameters
         solver: string ``solver`` object specified by the user, e.g., 'ipopt'
         tee: boolean solver option to be passed for verbose output
         estimated_var: value of the estimated variance of the measurement error in
-                       cases where the user does not supply the measurement error
-                       standard deviation
+            cases where the user does not supply the
+            measurement error standard deviation
 
     Returns:
         FIM: Fisher information matrix about the parameters
@@ -732,14 +746,16 @@ class Estimator(object):
         A list of experiment objects which creates one labeled model for
         each experiment
     obj_function: string or function (optional)
-        Built in objective (currently only "SSE") or custom function used to
-        formulate parameter estimation objective.
+        Built-in objective ("SSE" or "SSE_weighted") or custom function
+        used to formulate parameter estimation objective.
         If no function is specified, the model is used
         "as is" and should be defined with a "FirstStageCost" and
         "SecondStageCost" expression that are used to build an objective.
         Default is None.
     tee: bool, optional
         If True, print the solver output to the screen. Default is False.
+    logging_level: logging level, optional
+        e.g., logging.INFO. Default is logging.ERROR.
     diagnostic_mode: bool, optional
         If True, print diagnostics from the solver. Default is False.
     solver_options: dict, optional
@@ -758,6 +774,7 @@ class Estimator(object):
         experiment_list,
         obj_function=None,
         tee=False,
+        logging_level=logging.ERROR,
         diagnostic_mode=False,
         solver_options=None,
     ):
@@ -770,7 +787,7 @@ class Estimator(object):
         model = _get_labeled_model_helper(self.exp_list[0])
 
         # check if the model has all the required suffixes
-        _check_model_labels_helper(model)
+        _check_model_labels_helper(model, logging_level)
 
         # populate keyword argument options
         if isinstance(obj_function, str):
@@ -795,6 +812,7 @@ class Estimator(object):
                 self.obj_function = obj_function
 
         self.tee = tee
+        self.logging_level = logging_level
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
 
@@ -1184,12 +1202,12 @@ class Estimator(object):
 
         Argument:
             method: string ``method`` object specified by the user,
-                    e.g., 'finite_difference'
+                e.g., 'finite_difference'
             solver: string ``solver`` object specified by the user, e.g., 'ipopt'
             cov_n: integer, number of datapoints specified by the user which is used
-                   in the objective function
+                in the objective function
             step: float used for relative perturbation of the parameters,
-                  e.g., step=0.02 is a 2% perturbation
+                e.g., step=0.02 is a 2% perturbation
 
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
@@ -1306,6 +1324,7 @@ class Estimator(object):
                             solver=solver,
                             step=step,
                             tee=self.tee,
+                            logging_level=self.logging_level,
                             estimated_var=measurement_var,
                         )
                 elif all(item is not None for item in meas_error):
@@ -1324,6 +1343,7 @@ class Estimator(object):
                             solver=solver,
                             step=step,
                             tee=self.tee,
+                            logging_level=self.logging_level,
                         )
                 else:
                     raise ValueError(
@@ -1356,6 +1376,7 @@ class Estimator(object):
                             step=step,
                             solver=solver,
                             tee=self.tee,
+                            logging_level=self.logging_level,
                         )
                     else:
                         cov = self.inv_red_hes

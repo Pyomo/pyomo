@@ -42,13 +42,6 @@ The following example returns model values from a Pyomo Expression.
    >>> for i in range(data.shape[0]):
    ...     exp_list.append(RooneyBieglerExperiment(data.loc[i, :]))
 
-   >>> # Define objective
-   >>> def SSE(model):
-   ...     expr = (model.experiment_outputs[model.y]
-   ...             - model.response_function[model.experiment_outputs[model.hour]]
-   ...            ) ** 2
-   ...     return expr
-
-   >>> pest = parmest.Estimator(exp_list, obj_function=SSE, solver_options=None)
+   >>> pest = parmest.Estimator(exp_list, obj_function="SSE", solver_options=None)
    >>> obj, theta, var_values = pest.theta_est(return_values=['response_function'])
    >>> #print(var_values)

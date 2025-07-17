@@ -78,7 +78,6 @@ Section.
 
     >>> import pyomo.contrib.parmest.parmest as parmest
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
-    >>> obj_val, theta_val = pest.theta_est()
 
 Optionally, solver options can be supplied, e.g.,
 
@@ -87,7 +86,6 @@ Optionally, solver options can be supplied, e.g.,
 
     >>> solver_options = {"max_iter": 6000}
     >>> pest = parmest.Estimator(exp_list, obj_function="SSE", solver_options=solver_options)
-    >>> obj_val, theta_val = pest.theta_est()
 
 
 List of experiment objects
@@ -136,7 +134,7 @@ If the Pyomo model is not written as a two-stage stochastic programming problem 
 this format, the user can select the "SSE" or "SSE_weighted" built-in objective
 functions. If the user wants to use an objective that is different from the built-in
 options, a custom objective function can be defined for parameter estimation. However,
-covariance estimation will not support this custom objective function. The objective
+covariance matrix estimation will not support this custom objective function. The objective
 function (built-in or custom) has a single argument, which is the model from a single
 experiment.
 The objective function returns a Pyomo
@@ -161,4 +159,10 @@ estimation solve from the square problem solution, set optional argument ``solve
 argument ``(initialize_parmest_model=True)``. Different initial guess values for the fitted 
 parameters can be provided using optional argument `theta_values` (**Pandas Dataframe**)
 
-3. Solve parameter estimation problem by calling :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`
+3. Solve parameter estimation problem by calling
+:class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`, e.g.,
+
+.. doctest::
+    :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
+
+    >>> obj_val, theta_val = pest.theta_est()

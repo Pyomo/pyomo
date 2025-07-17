@@ -174,12 +174,12 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
         expected values and agree with the results of the Rooney-Biegler paper
 
         Argument:
-            obj_val: the objective value of the annotated Pyomo model
+            obj_val: float or integer value of the objective function
             theta_vals: dictionary of the estimated parameters
-            obj_function: a string of the objective function supplied by the user,
-                          e.g., 'SSE'
+            obj_function: string objective function supplied by the user,
+                e.g., 'SSE'
             measurement_error: float or integer value of the measurement error
-                               standard deviation
+                standard deviation
         """
         if obj_function == "SSE":
             self.assertAlmostEqual(obj_val, 4.33171, places=2)
@@ -203,12 +203,12 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
         Argument:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
             cov_method: string ``method`` object specified by the user
-                        options - 'finite_difference', 'reduced_hessian',
+                Options - 'finite_difference', 'reduced_hessian',
                         and 'automatic_differentiation_kaug'
-            obj_function: a string of the objective function supplied by the user,
-                          e.g., 'SSE'
+            obj_function: string objective function supplied by the user,
+                e.g., 'SSE'
             measurement_error: float or integer value of the measurement error
-                               standard deviation
+                standard deviation
         """
 
         # get indices in covariance matrix
@@ -322,9 +322,9 @@ class TestRooneyBieglerWSSE(unittest.TestCase):
         with the results of the Rooney-Biegler paper
 
         Argument:
-            cov_method: string ``method`` object specified by the user
-                        options - 'finite_difference', 'reduced_hessian',
-                        and 'automatic_differentiation_kaug'
+            cov_method: string ``method`` specified by the user
+                Options - 'finite_difference', 'reduced_hessian',
+                and 'automatic_differentiation_kaug'
         """
         if self.measurement_std is None:
             if self.objective_function == "SSE":
