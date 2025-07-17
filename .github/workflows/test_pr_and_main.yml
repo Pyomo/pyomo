@@ -55,9 +55,10 @@ jobs:
         python-version: '3.10'
     - name: Black Formatting Check
       run: |
-        # Note v24.4.1 fails due to a bug in the parser
+        # Note v24.4.1 fails due to a bug in the parser. Project-level
+        # configuration is inherited from pyproject.toml.
         pip install 'black!=24.4.1'
-        black . -S -C --check --diff --exclude examples/pyomobook/python-ch/BadIndent.py
+        black . --check --diff
     - name: Spell Check
       uses: crate-ci/typos@master
       with: 
