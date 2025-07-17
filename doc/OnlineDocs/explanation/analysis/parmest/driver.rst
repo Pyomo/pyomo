@@ -165,4 +165,5 @@ parameters can be provided using optional argument `theta_values` (**Pandas Data
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
     >>> obj_val, theta_val = pest.theta_est()
