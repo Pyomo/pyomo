@@ -78,7 +78,7 @@ of data points, e.g.,
     >>> cov = pest.cov_est(cov_n=num_data)
 
 Optionally, one of the three methods; "reduced_hessian", "finite_difference",
-and "automatic_differenciation_kaug" can be supplied for the covariance calculation,
+and "automatic_differentiation_kaug" can be supplied for the covariance calculation,
 e.g.,
 
 .. doctest::
