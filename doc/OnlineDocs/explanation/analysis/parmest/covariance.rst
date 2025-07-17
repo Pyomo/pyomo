@@ -84,5 +84,8 @@ e.g.,
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
 
+    >>> import pyomo.contrib.parmest.parmest as parmest
+    >>> pest = parmest.Estimator(exp_list, obj_function="SSE")
+    >>> obj_val, theta_val = pest.theta_est()
     >>> cov_method = "reduced_hessian"
     >>> cov = pest.cov_est(cov_n=num_data, method=cov_method)
