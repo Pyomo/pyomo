@@ -67,77 +67,30 @@ Section.
         columns=['hour', 'y'],
     )
 
-    # Create the Rooney-Biegler model
-    def rooney_biegler_model():
-        """
-        Formulates the Pyomo model of the Rooney-Biegler example
-
-        Returns:
-            m: Pyomo model
-        """
-        m = pyo.ConcreteModel()
-
-        m.asymptote = pyo.Var(within=pyo.NonNegativeReals, initialize=10)
-        m.rate_constant = pyo.Var(within=pyo.NonNegativeReals, initialize=0.2)
-
-        m.hour = pyo.Var(within=pyo.PositiveReals, initialize=0.1)
-        m.y = pyo.Var(within=pyo.NonNegativeReals)
-
-        @m.Constraint()
-        def response_rule(m):
-            return m.y == m.asymptote * (1 - pyo.exp(-m.rate_constant * m.hour))
-
-        return m
-
-    # Create the Experiment class
-    from pyomo.contrib.parmest.experiment import Experiment
-    class RooneyBieglerExperiment(Experiment):
-        def __init__(self, hour, y):
-            self.y = y
-            self.hour = hour
-            self.model = None
-
-        def get_labeled_model(self):
-            self.create_model()
-            self.finalize_model()
-            self.label_model()
-
-            return self.model
-
-        def create_model(self):
-            m = self.model = rooney_biegler_model()
-
-            return m
-
-        def finalize_model(self):
-            m = self.model
-
-            # fix the input variable
-            m.hour.fix(self.hour)
-
-            return m
-
-        def label_model(self):
-            m = self.model
-
-            # add experiment outputs
-            m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-            m.experiment_outputs.update([(m.y, self.y)])
-
-            # add unknown parameters
-            m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
-            m.unknown_parameters.update(
-                (k, pyo.value(k)) for k in [m.asymptote, m.rate_constant]
-            )
-
-            # create the measurement error
-            m.measurement_error = pyo.Suffix(direction = pyo.Suffix.LOCAL)
-            m.measurement_error.update([(m.y, None)])
-
     # Create an experiment list
+    from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import RooneyBieglerExperiment
+
+    class NewRooneyBieglerExperiment(RooneyBieglerExperiment):
+    def label_model(self):
+        m = self.model
+
+        # create the experiment outputs
+        m.experiment_outputs = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.experiment_outputs.update(
+            [(m.response_function[self.data['hour']], self.data['y'])]
+        )
+
+        # create the unknown parameters
+        m.unknown_parameters = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+        m.unknown_parameters.update((k, pyo.value(k)) for k in [m.asymptote, m.rate_constant])
+
+        # create the measurement error
+        m.measurement_error = pyo.Suffix(direction = pyo.Suffix.LOCAL)
+        m.measurement_error.update([(m.response_function[self.data['hour']], None)])
+
     exp_list = []
     for i in range(data.shape[0]):
-        exp_list.append(RooneyBieglerExperiment(data["hour"][i], data["y"][i]))
+        exp_list.append(NewRooneyBieglerExperiment(data.loc[i, :]))
 
 .. doctest::
     :skipif: not __import__('pyomo.contrib.parmest.parmest').contrib.parmest.parmest.parmest_available
