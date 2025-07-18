@@ -28,6 +28,7 @@ from pyomo.core.base import (
     Constraint,
     Objective,
 )
+from pyomo.core.base.block import SubclassOf
 from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -66,7 +67,7 @@ class RelaxIntegerVars(Transformation):
             doc="""
             This argument should be the reverse transformation token
             returned by a previous call to this transformation to transform
-            fixed disjunctive state in the given model.
+            fixed discrete state in the given model.
             If this argument is specified, this call to the transformation
             will reverse what the transformation did in the call that returned
             the token. Note that if there are intermediate changes to the model
@@ -116,7 +117,7 @@ class RelaxIntegerVars(Transformation):
         super().__init__()
 
     def _apply_to(self, model, **kwds):
-        if not model.ctype in (Block, Disjunct):
+        if model.ctype not in SubclassOf(Block):
             raise ValueError(
                 "Transformation called on %s of type %s. 'model' "
                 "must be a ConcreteModel or Block." % (model.name, model.ctype)

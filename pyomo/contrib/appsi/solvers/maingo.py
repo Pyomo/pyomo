@@ -173,11 +173,18 @@ class MAiNGO(PersistentBase, PersistentSolver):
         return self._available
 
     def version(self):
-        import pkg_resources
+        import importlib.metadata
 
-        version = pkg_resources.get_distribution('maingopy').version
-
-        return tuple(int(k) for k in version.split('.'))
+        try:
+            version = importlib.metadata.version('maingopy').split('.')
+        except ImportError:
+            return None
+        for i, n in enumerate(version):
+            try:
+                version[i] = int(version[i])
+            except:
+                pass
+        return tuple(version)
 
     @property
     def config(self) -> MAiNGOConfig:
