@@ -32,6 +32,7 @@ from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
 from pyomo.core.base.global_set import UnindexedComponent_index
+from pyomo.core.base.initializer import PartialInitializer
 
 logger = logging.getLogger('pyomo.core')
 
@@ -451,10 +452,15 @@ class Component(ComponentBase):
         self.doc = kwds.pop('doc', None)
         self._name = kwds.pop('name', None)
         if kwds:
-            raise ValueError(
-                "Unexpected keyword options found while constructing '%s':\n\t%s"
-                % (type(self).__name__, ','.join(sorted(kwds.keys())))
-            )
+            # If there are leftover keywords, and the component has a
+            # rule, pass those keywords on to the rule
+            if getattr(self, '_rule', None) is not None:
+                self._rule = PartialInitializer(self._rule, **kwds)
+            else:
+                raise ValueError(
+                    "Unexpected keyword options found while constructing '%s':\n\t%s"
+                    % (type(self).__name__, ','.join(sorted(kwds.keys())))
+                )
         #
         # Verify that ctype has been specified.
         #

@@ -1221,6 +1221,17 @@ class MiscParamTests(unittest.TestCase):
         model.a = Param(initialize={None: 3.3})
         instance = model.create_instance()
 
+    def test_rule_args(self):
+        m = ConcreteModel()
+
+        @m.Param([1, 2, 3], multiplier=5)
+        def p(m, i, multiplier):
+            return i * multiplier
+
+        self.assertEqual(m.p[1], 5)
+        self.assertEqual(m.p[2], 10)
+        self.assertEqual(m.p[3], 15)
+
     def test_empty_index(self):
         # Verify that we can initialize a parameter with an empty set.
         model = ConcreteModel()
