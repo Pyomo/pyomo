@@ -474,7 +474,7 @@ class TestGenerators(unittest.TestCase):
             self.assertIs(a, b)
 
 
-class HierarchicalModel(object):
+class HierarchicalModel:
     def __init__(self):
         m = self.model = ConcreteModel()
         m.a1_IDX = Set(initialize=[5, 4], ordered=True)
@@ -671,7 +671,7 @@ class HierarchicalModel(object):
         ]
 
 
-class MixedHierarchicalModel(object):
+class MixedHierarchicalModel:
     def __init__(self):
         m = self.model = ConcreteModel()
         m.a = Block()
@@ -2533,7 +2533,7 @@ class TestBlock(unittest.TestCase):
             self.assertIs(m.d[i].parent_block(), m)
 
     def test_clone_unclonable_attribute(self):
-        class foo(object):
+        class foo:
             def __deepcopy__(bogus):
                 pass
 

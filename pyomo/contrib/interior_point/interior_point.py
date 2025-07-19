@@ -39,7 +39,7 @@ class InteriorPointStatus(enum.Enum):
     error = 1
 
 
-class LinearSolveContext(object):
+class LinearSolveContext:
     def __init__(
         self,
         interior_point_logger,
@@ -76,7 +76,7 @@ class LinearSolveContext(object):
 #
 #       Define a method for logging IP_reg_info to the linear solver log
 #       Method can be called within linear_solve_context
-class FactorizationContext(object):
+class FactorizationContext:
     def __init__(self, logger):
         # Any reason to pass in a logging level here?
         # ^ So the "regularization log" can have its own outlvl
@@ -126,7 +126,7 @@ class FactorizationContext(object):
         )
 
 
-class InteriorPointSolver(object):
+class InteriorPointSolver:
     """
     Class for creating interior point solvers with different options
     """

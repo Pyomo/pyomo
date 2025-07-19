@@ -51,7 +51,7 @@ import pyomo.environ as pyo
 nan = float('nan')
 
 
-class INFO(object):
+class INFO:
     def __init__(self, symbolic=False):
         self.subexpression_cache = {}
         self.external_functions = {}

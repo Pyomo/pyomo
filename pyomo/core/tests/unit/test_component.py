@@ -105,7 +105,7 @@ class TestComponent(unittest.TestCase):
     def test_is_reference(self):
         m = ConcreteModel()
 
-        class _NotSpecified(object):
+        class _NotSpecified:
             pass
 
         m.comp = Component(ctype=_NotSpecified)

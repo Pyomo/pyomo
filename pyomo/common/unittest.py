@@ -687,7 +687,7 @@ TestCase.assertStructuredAlmostEqual.__doc__ = re.sub(
 )
 
 
-class BaselineTestDriver(object):
+class BaselineTestDriver:
     """Generic driver for performing baseline tests in bulk
 
     This test driver was originally crafted for testing the examples in

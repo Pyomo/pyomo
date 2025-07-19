@@ -363,7 +363,7 @@ class ParameterizedIndexedCallInitializer(IndexedCallInitializer):
             return self._fcn(parent, *args, idx)
 
 
-class CountedCallGenerator(object):
+class CountedCallGenerator:
     """Generator implementing the "counted call" initialization scheme
 
     This generator implements the older "counted call" scheme, where the

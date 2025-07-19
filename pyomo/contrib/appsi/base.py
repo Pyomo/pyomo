@@ -379,7 +379,7 @@ class SolutionLoader(SolutionLoaderBase):
         return rc
 
 
-class Results(object):
+class Results:
     """
     Base class for all APPSI solver results
 
@@ -1512,7 +1512,7 @@ legacy_solution_status_map = {
 }
 
 
-class LegacySolverInterface(object):
+class LegacySolverInterface:
     def solve(
         self,
         model: BlockData,

@@ -56,7 +56,7 @@ from pyomo.opt import WriterFactory
 logger = logging.getLogger('pyomo.core')
 
 
-class _generic_component_decorator(object):
+class _generic_component_decorator:
     """A generic decorator that wraps Block.__setattr__()
 
     Arguments
@@ -83,7 +83,7 @@ class _generic_component_decorator(object):
         return rule
 
 
-class _component_decorator(object):
+class _component_decorator:
     """A class that wraps the _generic_component_decorator, which remembers
     and provides the Block and component type to the decorator.
 
@@ -102,7 +102,7 @@ class _component_decorator(object):
         return _generic_component_decorator(self._component, self._block, *args, **kwds)
 
 
-class SubclassOf(object):
+class SubclassOf:
     """This mocks up a tuple-like interface based on subclass relationship.
 
     Instances of this class present a somewhat tuple-like interface for
@@ -133,7 +133,7 @@ class SubclassOf(object):
         return iter((self,))
 
 
-class _DeduplicateInfo(object):
+class _DeduplicateInfo:
     """Class implementing a unique component data object filter
 
     This class implements :py:meth:`unique()`, which is an efficient
@@ -243,7 +243,7 @@ def _isNotNone(val):
     return val is not None
 
 
-class _BlockConstruction(object):
+class _BlockConstruction:
     """
     This class holds a "global" dict used when constructing
     (hierarchical) models.
@@ -2401,7 +2401,7 @@ def components_data(block, ctype, sort=None, sort_by_keys=False, sort_by_names=F
 BlockData._Block_reserved_words = set(dir(Block()))
 
 
-class ScalarCustomBlockMixin(object):
+class ScalarCustomBlockMixin:
     def __init__(self, *args, **kwargs):
         # __bases__ for the ScalarCustomBlock is
         #

@@ -13,5 +13,5 @@
 # This is a simple module used as part of testing import callbacks
 
 
-class Foo(object):
+class Foo:
     data = 42

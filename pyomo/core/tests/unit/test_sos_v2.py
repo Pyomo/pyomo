@@ -28,7 +28,7 @@ solver_available = bool(check_available_solvers(solver_name))
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_nonindexed(object):
+class SOSProblem_nonindexed:
     "Test non-indexed SOS using a single pyomo Var component."
 
     def verify(
@@ -505,7 +505,7 @@ class TestSOS_noindex_028(SOSProblem_nonindexed, unittest.TestCase):
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_nonindexed_multivar(object):
+class SOSProblem_nonindexed_multivar:
     "Test non-indexed SOS made up of different Var components."
 
     def verify(self, model, sos, exp_res, abs_tol, show_output: bool = False):
@@ -599,7 +599,7 @@ class TestSOS_noindexmulti_001(SOSProblem_nonindexed_multivar, unittest.TestCase
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_indexed(object):
+class SOSProblem_indexed:
     "Test indexed SOS using a single pyomo Var component."
 
     def verify(
@@ -970,7 +970,7 @@ class TestSOS_indexed_017(SOSProblem_indexed, unittest.TestCase):
 
 
 @unittest.skipIf(not solver_available, "The solver is not available.")
-class SOSProblem_indexedmultivar(object):
+class SOSProblem_indexedmultivar:
     "Test indexed SOS made up of different Var components."
 
     def verify(self, model, sos, exp_res, abs_tol, show_output: bool = False):

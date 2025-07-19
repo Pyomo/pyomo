@@ -75,7 +75,7 @@ class TimingHandler(logging.Handler):
             cat_data[name] = val
 
 
-class DataRecorder(object):
+class DataRecorder:
     """pytest plugin to add a 'testdata' attribute to all tests
 
     This plugin adds an OrderedDict `testdata` attribute to all tests,
