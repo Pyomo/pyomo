@@ -13,13 +13,15 @@ import pyomo.opt
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 import pyomo.contrib.alternative_solutions.aos_utils as au
-from pyomo.contrib.alternative_solutions import Solution
+from pyomo.contrib.alternative_solutions import PyomoSolution
+from pyomo.contrib.alternative_solutions import enumerate_binary_solutions
 
-mip_solver = "gurobi"
-mip_available = pyomo.opt.check_available_solvers(mip_solver)
+solvers = list(pyomo.opt.check_available_solvers("glpk", "gurobi"))
+pytestmark = unittest.pytest.mark.parametrize("mip_solver", solvers)
 
 
-class TestSolutionUnit(unittest.TestCase):
+@unittest.pytest.mark.default
+class TestSolutionUnit:
 
     def get_model(self):
         """
@@ -40,8 +42,7 @@ class TestSolutionUnit(unittest.TestCase):
         m.con_z = pyo.Constraint(expr=m.z <= 3)
         return m
 
-    @unittest.skipUnless(mip_available, "MIP solver not available")
-    def test_solution(self):
+    def test_solution(self, mip_solver):
         """
         Create a Solution Object, call its functions, and ensure the correct
         data is returned.
@@ -49,44 +50,131 @@ class TestSolutionUnit(unittest.TestCase):
         model = self.get_model()
         opt = pyo.SolverFactory(mip_solver)
         opt.solve(model)
-        all_vars = au.get_model_variables(model, include_fixed=True)
+        all_vars = au.get_model_variables(model, include_fixed=False)
+        obj = au.get_active_objective(model)
 
-        solution = Solution(model, all_vars, include_fixed=False)
+        solution = PyomoSolution(variables=all_vars, objective=obj)
         sol_str = """{
-    "fixed_variables": [
-        "f"
+    "id": null,
+    "objectives": [
+        {
+            "index": 0,
+            "name": "obj",
+            "suffix": {},
+            "value": 6.5
+        }
     ],
-    "objective": "obj",
-    "objective_value": 6.5,
-    "solution": {
-        "x": 1.5,
-        "y": 1,
-        "z": 3
-    }
+    "suffix": {},
+    "variables": [
+        {
+            "discrete": false,
+            "fixed": false,
+            "index": 0,
+            "name": "x",
+            "suffix": {},
+            "value": 1.5
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 1,
+            "name": "y",
+            "suffix": {},
+            "value": 1
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 2,
+            "name": "z",
+            "suffix": {},
+            "value": 3
+        }
+    ]
 }"""
         assert str(solution) == sol_str
 
-        solution = Solution(model, all_vars)
+        all_vars = au.get_model_variables(model, include_fixed=True)
+        solution = PyomoSolution(variables=all_vars, objective=obj)
         sol_str = """{
-    "fixed_variables": [
-        "f"
+    "id": null,
+    "objectives": [
+        {
+            "index": 0,
+            "name": "obj",
+            "suffix": {},
+            "value": 6.5
+        }
     ],
-    "objective": "obj",
-    "objective_value": 6.5,
-    "solution": {
-        "f": 1,
-        "x": 1.5,
-        "y": 1,
-        "z": 3
-    }
+    "suffix": {},
+    "variables": [
+        {
+            "discrete": false,
+            "fixed": false,
+            "index": 0,
+            "name": "x",
+            "suffix": {},
+            "value": 1.5
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 1,
+            "name": "y",
+            "suffix": {},
+            "value": 1
+        },
+        {
+            "discrete": true,
+            "fixed": false,
+            "index": 2,
+            "name": "z",
+            "suffix": {},
+            "value": 3
+        },
+        {
+            "discrete": false,
+            "fixed": true,
+            "index": 3,
+            "name": "f",
+            "suffix": {},
+            "value": 1
+        }
+    ]
 }"""
-        assert solution.to_string(round_discrete=True) == sol_str
+        assert solution.to_string() == sol_str
 
-        sol_val = solution.get_variable_name_values(
-            include_fixed=True, round_discrete=True
+        sol_val = solution.name_to_variable
+        assert set(sol_val.keys()) == {"x", "y", "z", "f"}
+        assert set(solution.fixed_variable_names) == {"f"}
+
+    def test_soln_order(self, mip_solver):
+        """ """
+        values = [10, 9, 2, 1, 1]
+        weights = [10, 9, 2, 1, 1]
+
+        K = len(values)
+        capacity = 12
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(range(K), within=pyo.Binary)
+        m.o = pyo.Objective(
+            expr=sum(values[i] * m.x[i] for i in range(K)), sense=pyo.maximize
         )
-        self.assertEqual(set(sol_val.keys()), {"x", "y", "z", "f"})
-        self.assertEqual(set(solution.get_fixed_variable_names()), {"f"})
+        m.c = pyo.Constraint(
+            expr=sum(weights[i] * m.x[i] for i in range(K)) <= capacity
+        )
+
+        solns = enumerate_binary_solutions(
+            m, num_solutions=10, solver=mip_solver, abs_opt_gap=0.5
+        )
+        assert len(solns) == 4
+        assert [[v.value for v in soln.variables()] for soln in sorted(solns)] == [
+            [0, 1, 1, 0, 1],
+            [0, 1, 1, 1, 0],
+            [1, 0, 0, 1, 1],
+            [1, 0, 1, 0, 0],
+        ]
 
 
 if __name__ == "__main__":
