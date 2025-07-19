@@ -8,7 +8,7 @@ Modeling Utilities
    latex_printer
    preprocessing
    scaling
-
+   external_functions/index
 
 
 ..

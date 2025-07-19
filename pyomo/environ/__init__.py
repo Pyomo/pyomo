@@ -41,6 +41,7 @@ _packages = [
     'pyomo.contrib.cp',
     'pyomo.contrib.cspline_external',
     'pyomo.contrib.example',
+    'pyomo.contrib.external_functions',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.gdpopt',
