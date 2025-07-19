@@ -62,7 +62,7 @@ def get_dsdp_dfdp(model, theta):
     Returns
     -------
     scipy.sparse.csc_matrix, csc_matrix, ComponentMap, ComponentMap
-        ds/dp (ns by np), df/dp (1 by np), row map, column map.
+        ds/dp (ns + np by np), df/dp (1 by np), row map, column map.
         The column map maps Pyomo variables p to columns and the
         row map maps Pyomo variables s to rows.
     """
@@ -98,6 +98,15 @@ def get_dsdp_dfdp(model, theta):
     _coo_reorder_cols(dfdx, remap=col_remap)
     dfdx = dfdx.tocsc()
     dfdp = dfdx[0, :ns] @ dsdp + dfdx[0, ns:]
+
+    # Add independent variables to the rows as the end
+    dsdp = scipy.sparse.vstack(
+        [dsdp, scipy.sparse.identity(len(column_map), format="csc")]
+    )
+    n = len(row_map)
+    for p, i in column_map.items():
+        row_map[p] = i + n
+
     # return sensitivity of the outputs to p and component maps
     return dsdp, dfdp, row_map, column_map
 
