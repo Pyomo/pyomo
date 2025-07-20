@@ -1244,9 +1244,8 @@ class RegressionTest(unittest.TestCase):
     )
     def test_pyros_math_domain_error(self):
         """
-        Test PyROS on a two-stage problem, discrete
-        set type with a math domain error evaluating
-        second-stage inequality constraint expressions in separation.
+        Test PyROS behavior is as expected when there are errors
+        encountered while evaluating separation problem objectives.
         """
         m = ConcreteModel()
         m.q = Param(initialize=1, mutable=True)
@@ -1261,16 +1260,35 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         with self.assertRaisesRegex(
-            expected_exception=ArithmeticError,
-            expected_regex=(
-                "Evaluation of second-stage inequality constraint.*math domain error.*"
-            ),
-            msg="ValueError arising from math domain error not raised",
+            expected_exception=ValueError,
+            expected_regex="math domain error",
+            msg="Exception arising from math domain error not raised",
         ):
             # should raise math domain error:
             # (1) lower bounding constraint on x2 solved first
-            #     in separation, q = 0 in worst case
-            # (2) now tries to evaluate log(q), but q = 0
+            #     in separation. Solution has q = 0
+            # (2) upon solution of the first separation problem,
+            #     evaluation of x2 - log(q) at q = 0
+            #     results in exception
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[m.x2],
+                uncertain_params=[m.q],
+                uncertainty_set=box_set,
+                local_solver=local_solver,
+                global_solver=global_solver,
+                decision_rule_order=1,
+                tee=True,
+            )
+
+        # this should result in error stemming from division by zero
+        m.x2.setub(1 / m.q)
+        with self.assertRaisesRegex(
+            expected_exception=ZeroDivisionError,
+            expected_regex="float division by zero",
+            msg="Exception arising from math domain error not raised",
+        ):
             pyros_solver.solve(
                 model=m,
                 first_stage_variables=[m.x1],

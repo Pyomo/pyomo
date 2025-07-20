@@ -930,8 +930,7 @@ def validate_uncertainty_specification(model, config):
           `config.second_stage_variables`
         - dimension of uncertainty set does not equal number of
           uncertain parameters
-        - uncertainty set `is_valid()` method does not return
-          true.
+        - uncertainty set `validate()` method fails.
         - nominal parameter realization is not in the uncertainty set.
     """
     check_components_descended_from_model(
@@ -968,13 +967,6 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != {config.uncertainty_set.dim})."
         )
 
-    # validate uncertainty set
-    if not config.uncertainty_set.is_valid(config=config):
-        raise ValueError(
-            f"Uncertainty set {config.uncertainty_set} is invalid, "
-            "as it is either empty or unbounded."
-        )
-
     # fill-in nominal point as necessary, if not provided.
     # otherwise, check length matches uncertainty dimension
     if not config.nominal_uncertain_param_vals:
@@ -996,6 +988,9 @@ def validate_uncertainty_specification(model, config):
             f"({len(config.uncertain_params)} != "
             f"{len(config.nominal_uncertain_param_vals)})."
         )
+
+    # validate uncertainty set
+    config.uncertainty_set.validate(config=config)
 
     # uncertainty set should contain nominal point
     nominal_point_in_set = config.uncertainty_set.point_in_set(

@@ -16,6 +16,7 @@ from typing import List, Optional
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import ApplicationError
+from pyomo.common.flags import NOTSET
 from pyomo.common.tee import TeeStream, capture_output
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base.var import VarData
@@ -583,9 +584,13 @@ class Highs(PersistentSolverMixin, PersistentSolverUtils, PersistentSolverBase):
             results.termination_condition = TerminationCondition.maxTimeLimit
         elif status == highspy.HighsModelStatus.kIterationLimit:
             results.termination_condition = TerminationCondition.iterationLimit
+        elif status == getattr(highspy.HighsModelStatus, "kSolutionLimit", NOTSET):
+            # kSolutionLimit was introduced in HiGHS v1.5.3 for MIP-related limits
+            results.termination_condition = TerminationCondition.iterationLimit
         elif status == highspy.HighsModelStatus.kUnknown:
             results.termination_condition = TerminationCondition.unknown
         else:
+            logger.warning(f'Received unhandled {status=} from solver HiGHS.')
             results.termination_condition = TerminationCondition.unknown
 
         if (
