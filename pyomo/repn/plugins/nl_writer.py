@@ -1905,7 +1905,7 @@ class _NLWriter_impl(object):
 
         # Note: the ASL will (silently) produce incorrect answers if the
         # nonlinear portion of a defined variable is a constant
-        # expression.  This may not be the case if all the variables in
+        # expression.  This may now be the case if all the variables in
         # the original nonlinear expression have been fixed.
         for _id, (expr, info, sub) in self.subexpression_cache.items():
             if info.nonlinear:
