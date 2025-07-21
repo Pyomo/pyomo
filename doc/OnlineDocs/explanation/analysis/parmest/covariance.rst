@@ -9,12 +9,22 @@ methods which have been implemented in parmest.
 
 1. Reduced Hessian Method
 
+    When the objective function is "SSE":
+
     .. math::
        V_{\boldsymbol{\theta}} = 2 \sigma^2 \left(\frac{\partial^2 \text{SSE}}
         {\partial \boldsymbol{\theta} \partial \boldsymbol{\theta}}\right)^{-1}_{\boldsymbol{\theta}
         = \boldsymbol{\theta}^*}
 
-    Where SSE is the sum of squared errors, WSSE is the weighted SSE,
+    When the objective function is "SSE_weighted":
+
+    .. math::
+       V_{\boldsymbol{\theta}} = 2 \sigma^2 \left(\frac{\partial^2 \text{WSSE}}
+        {\partial \boldsymbol{\theta} \partial \boldsymbol{\theta}}\right)^{-1}_{\boldsymbol{\theta}
+        = \boldsymbol{\theta}^*}
+
+    Where SSE is the sum of squared errors between the observed (data) and predicted
+    values of the measured variables, WSSE is the weighted SSE,
     :math:`\boldsymbol{\theta}` are the unknown parameters, :math:`\boldsymbol{\theta^*}`
     are the estimate of the unknown parameters, and :math:`\sigma^2` is the variance of
     the measurement error. When the standard deviation of the measurement error is not
@@ -31,7 +41,7 @@ methods which have been implemented in parmest.
 
     This method uses central finite difference to compute the Jacobian matrix,
     :math:`\mathbf{G}_{r}`, which is the sensitivity of the measured variables with
-    respect to the parameters, `\boldsymbol{\theta}`. :math:`\mathbf{W}` is a diagonal
+    respect to the parameters, :math:`\boldsymbol{\theta}`. :math:`\mathbf{W}` is a diagonal
     matrix containing the inverse of the variance of the measurement errors,
     :math:`\sigma^2`.
 
