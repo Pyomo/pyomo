@@ -1634,6 +1634,16 @@ class MiscConTests(unittest.TestCase):
         except ValueError:
             pass
 
+    def test_rule_kwargs(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        @m.Constraint(rhs=5)
+        def c(m, *, rhs):
+            return m.x <= rhs
+
+        self.assertExpressionsEqual(m.c.expr, m.x <= 5)
+
     def test_tuple_constraint_create(self):
         def rule1(model):
             return (0.0, model.x)
