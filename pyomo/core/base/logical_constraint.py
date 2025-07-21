@@ -13,7 +13,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.common.deprecation import RenamedClass
+from pyomo.common.deprecation import RenamedClass, deprecated
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -227,7 +227,7 @@ class LogicalConstraint(ActiveIndexedComponent):
 
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs('Constraint', kwargs, ('rule', 'expr'), None)
-        self.rule = Initializer(_init)
+        self._rule = Initializer(_init)
 
         kwargs.setdefault('ctype', LogicalConstraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
@@ -248,7 +248,7 @@ class LogicalConstraint(ActiveIndexedComponent):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        rule = self.rule
+        rule = self._rule
         try:
             # We do not (currently) accept data for constructing LogicalConstraints
             index = None
@@ -292,9 +292,9 @@ class LogicalConstraint(ActiveIndexedComponent):
             timer.report()
 
     def _getitem_when_not_present(self, idx):
-        if self.rule is None:
+        if self._rule is None:
             raise KeyError(idx)
-        con = self._setitem_when_not_present(idx, self.rule(self.parent_block(), idx))
+        con = self._setitem_when_not_present(idx, self._rule(self.parent_block(), idx))
         if con is None:
             raise KeyError(idx)
         return con
@@ -313,6 +313,19 @@ class LogicalConstraint(ActiveIndexedComponent):
             ("Body", "Active"),
             lambda k, v: [v.body, v.active],
         )
+
+    @property
+    def rule(self):
+        return self._rule
+
+    @rule.setter
+    @deprecated(
+        f"The 'LogicalConstraint.rule' attribute will be made read-only",
+        version='6.9.3.dev0',
+        remove_in='6.11',
+    )
+    def rule(self, rule):
+        self._rule = rule
 
     def display(self, prefix="", ostream=None):
         """
@@ -446,7 +459,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
 
         super().__init__(Set(dimen=1), **kwargs)
 
-        self.rule = Initializer(
+        self._rule = Initializer(
             _rule, treat_sequences_as_mappings=False, allow_generators=True
         )
 
@@ -465,8 +478,8 @@ class LogicalConstraintList(IndexedLogicalConstraint):
             for _set in self._anonymous_sets:
                 _set.construct()
 
-        if self.rule is not None:
-            _rule = self.rule(self.parent_block(), ())
+        if self._rule is not None:
+            _rule = self._rule(self.parent_block(), ())
             for cc in iter(_rule):
                 if cc is LogicalConstraintList.End:
                     break
