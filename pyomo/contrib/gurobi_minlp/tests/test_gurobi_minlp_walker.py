@@ -62,7 +62,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(e)
+        _, expr = visitor.walk_expression(e)
 
         # We don't call update in walk expression for performance reasons, but
         # we need to update here in order to be able to test expr.
@@ -115,7 +115,7 @@ class TestGurobiMINLPWalker(CommonTest):
 
         e = m.x1 + m.x2 + m.x3 + m.y1 + m.y2 + m.y3 + m.z1
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(e)
+        _, expr = visitor.walk_expression(e)
 
         # We don't call update in walk expression for performance reasons, but
         # we need to update here in order to be able to test expr.
@@ -149,7 +149,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1 + m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
@@ -166,7 +166,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1 - m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
@@ -183,7 +183,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1 * m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
@@ -202,7 +202,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m.c = Constraint(expr=m.x1 * m.x2 == 1)
 
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x1 = visitor.var_map[id(m.x1)]
 
@@ -212,12 +212,56 @@ class TestGurobiMINLPWalker(CommonTest):
         self.assertIs(expr.getVar(0), x1)
         self.assertEqual(expr.getConstant(), 0.0)
 
+    def test_write_product_with_0(self):
+        m = self.get_model()
+        m.c = Constraint(expr=(0 * m.x1 * m.x2) * m.x3 == 0)
+
+        visitor = self.get_visitor()
+        _, expr = visitor.walk_expression(m.c.body)
+
+        x1 = visitor.var_map[m.x1]
+        x2 = visitor.var_map[m.x2]
+        x3 = visitor.var_map[m.x3]
+
+        # this is a "nonlinear"
+        opcode, data, parent = self._get_nl_expr_tree(visitor, expr)
+
+        self.assertEqual(len(opcode), 6)
+        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(opcode[0], GRB.OPCODE_MULTIPLY)
+        self.assertEqual(data[0], -1) # no additional data
+
+        # first arg is another multiply with three children
+        self.assertEqual(parent[1], 0)
+        self.assertEqual(opcode[1], GRB.OPCODE_MULTIPLY)
+        self.assertEqual(data[0], -1)
+
+        # second arg is the constant
+        self.assertEqual(parent[2], 1)
+        self.assertEqual(opcode[2], GRB.OPCODE_CONSTANT)
+        self.assertEqual(data[2], 0)
+
+        # third arg is x1
+        self.assertEqual(parent[3], 1)
+        self.assertEqual(opcode[3], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[3], x1)
+
+        # fourth arg is x2
+        self.assertEqual(parent[4], 1)
+        self.assertEqual(opcode[4], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[4], x2)
+
+        # fifth arg is x3, whose parent is the root
+        self.assertEqual(parent[5], 0)
+        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[5], x3)
+
     def test_write_division(self):
         m = self.get_model()
         m.c = Constraint(expr=1 / m.x1 == 1)
 
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x1 = visitor.var_map[id(m.x1)]
 
@@ -247,7 +291,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m.c = Constraint(expr=(m.x1 + m.x2) * m.p / 10 == 1)
 
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x1 = visitor.var_map[id(m.x1)]
         x2 = visitor.var_map[id(m.x2)]
@@ -264,7 +308,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # This is also quadratic
         x1 = visitor.var_map[id(m.x1)]
@@ -296,7 +340,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**3 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # This is general nonlinear
         x1 = visitor.var_map[id(m.x1)]
@@ -326,7 +370,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=m.x1**m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # You can't actually use this in a model in Gurobi 12, but you can build the
         # expression... (It fails during the solve for some reason.)
@@ -359,7 +403,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=2**m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         x2 = visitor.var_map[id(m.x2)]
 
@@ -390,7 +434,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=abs(m.x1) >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # expr is actually an auxiliary variable. We should
         # get a constraint:
@@ -416,7 +460,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m = self.get_model()
         m.c = Constraint(expr=abs(m.x1 + 2 * m.x2) >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # expr is actually an auxiliary variable. We should
         # get three constraints:
@@ -461,7 +505,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m.p = Param(initialize=4, mutable=True)
         m.c = Constraint(expr=m.p**m.x2 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # expr is nonlinear
         x2 = visitor.var_map[id(m.x2)]
@@ -496,20 +540,20 @@ class TestGurobiMINLPWalker(CommonTest):
         pow_expr = (m.p ** (0.5)) * m.x1
 
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(const_expr)
+        _, expr = visitor.walk_expression(const_expr)
         x1 = visitor.var_map[id(m.x1)]
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 0.0)
         self.assertIs(expr.getVar(0), x1)
         self.assertEqual(expr.getCoeff(0), 3)
 
-        expr = visitor.walk_expression(nested_expr)
+        _, expr = visitor.walk_expression(nested_expr)
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 0.0)
         self.assertIs(expr.getVar(0), x1)
         self.assertAlmostEqual(expr.getCoeff(0), 1 / 4)
 
-        expr = visitor.walk_expression(pow_expr)
+        _, expr = visitor.walk_expression(pow_expr)
         self.assertEqual(expr.size(), 1)
         self.assertEqual(expr.getConstant(), 0.0)
         self.assertIs(expr.getVar(0), x1)
@@ -520,7 +564,7 @@ class TestGurobiMINLPWalker(CommonTest):
         m.c = Constraint(expr=log(m.x1) >= 3)
         m.pprint()
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
         # expr is nonlinear
         x1 = visitor.var_map[id(m.x1)]
@@ -547,6 +591,8 @@ class TestGurobiMINLPWalker(CommonTest):
         m.p = Param(initialize=3, mutable=True)
         m.c = Constraint(expr=sqrt(-m.p) + m.x1 >= 3)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression(m.c.body)
+        _, expr = visitor.walk_expression(m.c.body)
 
-        # TODO
+        # TODO: What did I want to happen here? We should probably catch
+        # this in the writer?
+        self.assertTrue(False)

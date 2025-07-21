@@ -368,7 +368,7 @@ class GurobiMINLPVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         #self.grb_model.update()
-        return result[1]
+        return result
 
     # ESJ TODO: THIS IS COPIED FROM THE LINEAR WALKER--CAN WE PUT IT IN UTIL OR
     # SOMETHING?
@@ -431,13 +431,11 @@ class GurobiMINLPWriter():
         nonlinear (non-quadratic) expression, and returns a gurobipy representation
         of the expression
         """
-        repn = quadratic_visitor.walk_expression(expr)
-        if repn.nonlinear is None:
-            grb_expr = grb_visitor.walk_expression(expr)
+        #repn = quadratic_visitor.walk_expression(expr)
+        expr_type, grb_expr = grb_visitor.walk_expression(expr)
+        if expr_type is not _GENERAL:
             return grb_expr, False, None
         else:
-            # It's general nonlinear
-            grb_expr = grb_visitor.walk_expression(expr)
             aux = grb_model.addVar()
             return grb_expr, True, aux
 

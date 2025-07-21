@@ -37,6 +37,7 @@ from pyomo.contrib.gurobi_minlp.repn.gurobi_direct_minlp import (
     GurobiMINLPVisitor,
 )
 from pyomo.contrib.solver.common.factory import SolverFactory
+from pyomo.contrib.solver.common.results import TerminationCondition
 from pyomo.contrib.gurobi_minlp.tests.test_gurobi_minlp_walker import CommonTest
 
 ## DEBUG
@@ -346,6 +347,104 @@ class TestGurobiMINLPWriter(CommonTest):
 
         self.assertEqual(results.incumbent_objective, 2)
         self.assertEqual(results.objective_bound, 2)
+
+    def test_unbounded_because_of_multplying_by_0(self):
+        # Gurobi belives that the expression in m.c is nonlinear, so we have
+        # to pass it that way for this to work. Because this is in fact an
+        # unbounded model.
+
+        m = ConcreteModel()
+        m.x1 = Var()
+        m.x2 = Var()
+        m.x3 = Var()
+        m.c = Constraint(expr=(0 * m.x1 * m.x2) * m.x3 == 0)
+        m.obj = Objective(expr=m.x1)
+
+        grb_model, var_map, obj = WriterFactory('gurobi_minlp').write(
+            m, symbolic_solver_labels=True
+        )
+
+        self.assertEqual(len(var_map), 3)
+        x1 = var_map[id(m.x1)]
+        x2 = var_map[id(m.x2)]
+        x3 = var_map[id(m.x3)]
+
+        self.assertEqual(grb_model.numVars, 4)
+        self.assertEqual(grb_model.numIntVars, 0)
+        self.assertEqual(grb_model.numBinVars, 0)
+
+        lin_constrs = grb_model.getConstrs()
+        self.assertEqual(len(lin_constrs), 1)
+        quad_constrs = grb_model.getQConstrs()
+        self.assertEqual(len(quad_constrs), 0)
+        nonlinear_constrs = grb_model.getGenConstrs()
+        self.assertEqual(len(nonlinear_constrs), 1)
+
+        # this is the auxiliary variable equality
+        c = lin_constrs[0]
+        c_expr = grb_model.getRow(c)
+        self.assertEqual(c.RHS, 0)
+        self.assertEqual(c.Sense, '=')
+        self.assertEqual(c_expr.size(), 1)
+        self.assertEqual(c_expr.getCoeff(0), 1)
+        self.assertEqual(c_expr.getConstant(), 0)
+        aux_var = c_expr.getVar(0)
+
+        # this is the nonlinear equality
+        c = nonlinear_constrs[0]
+        res_var, opcode, data, parent = grb_model.getGenConstrNLAdv(c)
+        # This is where we link into the linear inequality constraint
+        self.assertIs(res_var, aux_var)
+
+        self.assertEqual(len(opcode), 6)
+        self.assertEqual(parent[0], -1) # root
+        self.assertEqual(opcode[0], GRB.OPCODE_MULTIPLY)
+        self.assertEqual(data[0], -1) # no additional data
+
+        # first arg is another multiply with three children
+        self.assertEqual(parent[1], 0)
+        self.assertEqual(opcode[1], GRB.OPCODE_MULTIPLY)
+        self.assertEqual(data[0], -1)
+
+        # second arg is the constant
+        self.assertEqual(parent[2], 1)
+        self.assertEqual(opcode[2], GRB.OPCODE_CONSTANT)
+        self.assertEqual(data[2], 0)
+
+        # third arg is x1
+        self.assertEqual(parent[3], 1)
+        self.assertEqual(opcode[3], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[3], x1)
+
+        # fourth arg is x2
+        self.assertEqual(parent[4], 1)
+        self.assertEqual(opcode[4], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[4], x2)
+
+        # fifth arg is x3, whose parent is the root
+        self.assertEqual(parent[5], 0)
+        self.assertEqual(opcode[5], GRB.OPCODE_VARIABLE)
+        self.assertIs(data[5], x3)
+        
+        opt = SolverFactory('gurobi_direct_minlp')
+        opt.config.raise_exception_on_nonoptimal_result = False
+        results = opt.solve(m)
+        # model is unbounded
+        self.assertEqual(results.termination_condition, TerminationCondition.unbounded)
+        
+    def test_soren_example2(self):
+        import numpy as np
+
+        m = ConcreteModel()
+        m.x1 = Var()
+        m.x2 = Var()
+        m.x1.fix(np.float64(0))
+        m.x2.fix(np.float64(0))
+        m.c = Constraint(expr=m.x1 == m.x2)
+        m.obj = Objective(expr=m.x1)
+        m.pprint()
+        results = SolverFactory('gurobi_direct_minlp').solve(m)
+        results.display()
 
 
 # ESJ: Note: It appears they don't allow x1 ** x2...?  Well, they wait and give the
