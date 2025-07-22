@@ -17,7 +17,7 @@ from pyomo.contrib.fbbt.expression_bounds_walker import ExpressionBoundsVisitor
 import pyomo.contrib.fbbt.interval as interval
 from pyomo.core import Suffix
 
-logger = logging.getLogger('pyomo.gdp.bigm')
+logger = logging.getLogger(__name__)
 
 
 def _convert_M_to_tuple(M, constraint, disjunct=None):

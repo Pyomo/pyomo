@@ -15,9 +15,10 @@ import math
 import multiprocessing
 import os
 import threading
+import enum
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.common.config import ConfigDict, ConfigValue, InEnum, PositiveInt
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import dill, dill_available
@@ -94,11 +95,10 @@ def Solver(val):
     return val
 
 
-def ProcessStartMethod(val):
-    if val in {'spawn', 'fork', 'forkserver', None}:
-        return val
-    else:
-        raise ValueError("Expected one of 'spawn', 'fork', or 'forkserver', or None.")
+class ProcessStartMethod(str, enum.Enum):
+    spawn = 'spawn'
+    fork = 'fork'
+    forkserver = 'forkserver'
 
 
 @TransformationFactory.register(
@@ -242,11 +242,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         'threads',
         ConfigValue(
             default=None,
-            domain=int,
+            domain=PositiveInt,
             description="Number of worker processes to use when estimating M values",
             doc="""
             If not specified, use up to the number of available cores, minus
-            one. If set to one or less, do not spawn processes, and revert to
+            one. If set to 1, do not spawn processes, and revert to
             single-threaded operation.
             """,
         ),
@@ -255,18 +255,19 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         'process_start_method',
         ConfigValue(
             default=None,
-            domain=ProcessStartMethod,
+            domain=InEnum(ProcessStartMethod),
             description="Start method used for spawning processes during M calculation",
             doc="""
-            Options are 'fork', 'spawn', and 'forkserver', or None. See the Python
+            Options are the elements of the enum ProcessStartMethod, or equivalently the
+            strings 'fork', 'spawn', or 'forkserver', or None. See the Python
             multiprocessing documentation for a full description of each of these. When
             None is passed, we determine a reasonable default. On POSIX, the default is
             'fork', unless we detect that Python has multiple threads at the time the
             process pool is created, in which case we instead use 'forkserver'. On
             Windows, the default and only possible option is 'spawn'. Note that if
             'spawn' or 'forkserver' are selected, we depend on the `dill` module for
-            pickling, and model instances must be pickleable using `dill`. This option
-            is ignored if `threads` is set to one or less.
+            pickling, and model instances must be pickleable using `dill`. This option is
+            ignored if `threads` is set to 1.
             """,
         ),
     )
@@ -417,7 +418,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 disjunction_setup[t] = (transBlock, algebraic_constraint) = (
                     self._setup_transform_disjunctionData(t, gdp_tree.root_disjunct(t))
                 )
-
+                # Unlike python set(), ComponentSet keeps a stable
+                # ordering, so we use it for the sake of determinism.
                 active_disjuncts[t] = ComponentSet(
                     disj for disj in t.disjuncts if disj.active
                 )
@@ -532,9 +534,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             )
             disjunction.deactivate()
 
-    # Do the inner work setting up M calculation jobs for one
-    # disjunction. This mutates the parameters Ms, jobs,
-    # transBlock._mbm_values, and also self.used_args.
     def _setup_jobs_for_disjunction(
         self,
         disjunction,
@@ -545,6 +544,26 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         jobs,
         transBlock,
     ):
+        """
+        Do the inner work setting up or skipping M calculation jobs for a
+        disjunction. Mutate the parameters Ms, jobs, transBlock._mbm_values,
+        and self.used_args.
+
+        Args:
+            self: self.used_args map from (constraint, disjunct) to M tuple
+                updated with the keys used from arg_Ms
+            disjunction: disjunction to set up the jobs for
+            active_disjuncts: map from disjunctions to ComponentSets of active
+                disjuncts
+            arg_Ms: user-provided map from (constraint, disjunct) to M value
+                or tuple
+            Ms: working map from (constraint, disjunct) to M tuples to update
+            jobs: working list of (constraint, other_disjunct,
+                unsuccessful_solve_msg, is_upper) job tuples to update
+            transBlock: working transformation block. Update the
+                transBlock._mbigm_values map from (constraint, disjunct) to
+                M tuples
+        """
         for disjunct, other_disjunct in itertools.product(
             active_disjuncts[disjunction], active_disjuncts[disjunction]
         ):
@@ -796,23 +815,30 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             self._config.process_start_method
             if self._config.process_start_method is not None
             else (
-                'spawn'
+                ProcessStartMethod.spawn
                 if os.name == 'nt'
-                else 'forkserver' if len(threading.enumerate()) > 1 else 'fork'
+                else (
+                    ProcessStartMethod.forkserver
+                    if len(threading.enumerate()) > 1
+                    else ProcessStartMethod.fork
+                )
             )
         )
         logger.info(
             f"Running {num_jobs} jobs on {threads} worker "
             f"processes with process start method {method}."
         )
-        if method == 'spawn' or method == 'forkserver':
+        if (
+            method == ProcessStartMethod.spawn
+            or method == ProcessStartMethod.forkserver
+        ):
             if not dill_available:
                 raise GDP_Error(
                     "Dill is required when spawning processes using "
                     "methods 'spawn' or 'forkserver', but it could "
                     "not be imported."
                 )
-            pool = multiprocessing.get_context(method).Pool(
+            pool = multiprocessing.get_context(method.value).Pool(
                 processes=threads,
                 initializer=_setup_spawn,
                 initargs=(
@@ -822,7 +848,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                     self._config.use_primal_bound,
                 ),
             )
-        elif method == 'fork':
+        elif method == ProcessStartMethod.fork:
             _thread_local.model = instance
             _thread_local.solver = self._config.solver
             _thread_local.config_use_primal_bound = self._config.use_primal_bound
