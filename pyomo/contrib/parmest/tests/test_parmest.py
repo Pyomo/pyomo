@@ -37,8 +37,9 @@ _RANDOM_SEED_FOR_TESTING = 524
 
 
 # Test class for the built-in "SSE" and "SSE_weighted" objective functions
-# validated the results using the Rooney-Biegler paper example
-# Rooney-Biegler paper example is the case when the measurement error is None
+# validated the results using the Rooney-Biegler paper example linked below
+# https://doi.org/10.1002/aic.690470811
+# The Rooney-Biegler paper example is the case when the measurement error is None
 # we considered another case when the user supplies the value of the measurement error
 @unittest.skipIf(
     not parmest.parmest_available,

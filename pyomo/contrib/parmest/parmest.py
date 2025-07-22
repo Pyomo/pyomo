@@ -41,7 +41,6 @@ from enum import Enum
 import re
 import importlib as im
 import logging
-import warnings
 import types
 import json
 from collections.abc import Callable
@@ -1056,13 +1055,6 @@ class Estimator(object):
                         solver.options[key] = self.solver_options[key]
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
-
-                # The import error will be raised when we attempt to use
-                # inv_reduced_hessian_barrier below.
-                #
-                # elif not asl_available:
-                #    raise ImportError("parmest requires ASL to calculate the "
-                #                      "covariance matrix with solver 'ipopt'")
             elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
                 deprecation_warning(
                     "You're using a deprecated call to the `theta_est()` function "
@@ -1086,13 +1078,6 @@ class Estimator(object):
                             solver.options[key] = self.solver_options[key]
 
                     solve_result = solver.solve(self.ef_instance, tee=self.tee)
-
-                    # The import error will be raised when we attempt to use
-                    # inv_reduced_hessian_barrier below.
-                    #
-                    # elif not asl_available:
-                    #    raise ImportError("parmest requires ASL to calculate the "
-                    #                      "covariance matrix with solver 'ipopt'")
                 else:
                     # parmest makes the fitted parameters stage 1 variables
                     ind_vars = []
