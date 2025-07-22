@@ -306,7 +306,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         Apply the transformation to the given model.
         """
         return super().apply_to(model, **kwds)
-        
+
     def _apply_to(self, instance, **kwds):
         # check for the rather implausible error case that
         # solver.solve() is a metasolver that indirectly calls this
