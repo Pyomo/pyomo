@@ -906,13 +906,13 @@ Observe that the log contains the following information:
   information, (UTC) time at which the solver was invoked,
   and, if available, information on the local Git branch and
   commit hash.
-* **Summary of solver options** (lines 19--38).
-* **Preprocessing information** (lines 39--41).
+* **Summary of solver options** (lines 19--40).
+* **Preprocessing information** (lines 41--43).
   Wall time required for preprocessing
   the deterministic model and associated components,
   i.e., standardizing model components and adding the decision rule
   variables and equations.
-* **Model component statistics** (lines 42--58).
+* **Model component statistics** (lines 44--61).
   Breakdown of model component statistics.
   Includes components added by PyROS, such as the decision rule variables
   and equations.
@@ -927,7 +927,7 @@ Observe that the log contains the following information:
   The number of truly uncertain parameters detected during preprocessing
   is also noted in parentheses
   (in which "eff." is an abbreviation for "effective").
-* **Iteration log table** (lines 59--69).
+* **Iteration log table** (lines 62--69).
   Summary information on the problem iterates and subproblem outcomes.
   The constituent columns are defined in detail in
   :ref:`the table following the snippet <table-iteration-log-columns>`.
@@ -953,7 +953,7 @@ Observe that the log contains the following information:
 
 * **Termination statistics** (lines 89--94). Summary of statistics related to the
   iterate at which PyROS terminates.
-* **Exit message** (lines 95--96).
+* **Exit message** (lines 95--97).
 
 
 .. _solver-log-snippet:
@@ -963,10 +963,10 @@ Observe that the log contains the following information:
    :linenos:
 
    ==============================================================================
-   PyROS: The Pyomo Robust Optimization Solver, v1.3.8.
+   PyROS: The Pyomo Robust Optimization Solver, v1.3.9.
           Pyomo version: 6.9.3dev0
           Commit hash: unknown
-          Invoked at UTC 2025-05-05T00:00:00.000000+00:00
+          Invoked at UTC 2025-07-21T00:00:00.000000+00:00
 
    Developed by: Natalie M. Isenberg (1), Jason A. F. Sherman (1),
                  John D. Siirola (2), Chrysanthos E. Gounaris (1)
@@ -977,7 +977,7 @@ Observe that the log contains the following information:
    of Energy's Institute for the Design of Advanced Energy Systems (IDAES).
    ==============================================================================
    ================================= DISCLAIMER =================================
-   PyROS is still under development. 
+   PyROS is still under development.
    Please provide feedback and/or report any issues by creating a ticket at
    https://github.com/Pyomo/pyomo/issues/new/choose
    ==============================================================================
@@ -998,6 +998,7 @@ Observe that the log contains the following information:
     backup_local_solvers=[]
     backup_global_solvers=[]
     subproblem_file_directory=None
+    subproblem_format_options={'bar': {'symbolic_solver_labels': True}}
     bypass_local_separation=False
     bypass_global_separation=False
     p_robustness={}
@@ -1025,33 +1026,34 @@ Observe that the log contains the following information:
    ------------------------------------------------------------------------------
    Itn  Objective    1-Stg Shift  2-Stg Shift  #CViol  Max Viol     Wall Time (s)
    ------------------------------------------------------------------------------
-   0     3.5838e+07  -            -            5       1.8832e+04   0.759
-   1     3.5838e+07  2.9329e-09   5.0030e-10   5       2.1295e+04   1.573
-   2     3.6285e+07  7.6526e-01   2.0398e-01   2       2.2457e+02   2.272
-   3     3.6285e+07  7.7212e-13   1.2525e-10   0       7.2940e-08g  5.280
+   0     3.5838e+07  -            -            5       1.8832e+04   0.611
+   1     3.5838e+07  1.2289e-09   1.5886e-12   5       2.8919e+02   1.702
+   2     3.6269e+07  3.1647e-01   1.0432e-01   4       2.9020e+02   3.407
+   3     3.6285e+07  7.6526e-01   1.4596e-04   7       7.5966e+03   5.919
+   4     3.6285e+07  1.1608e-11   2.2270e-01   0       1.5084e-12g  8.823
    ------------------------------------------------------------------------------
    Robust optimal solution identified.
    ------------------------------------------------------------------------------
    Timing breakdown:
-   
+
    Identifier                ncalls   cumtime   percall      %
    -----------------------------------------------------------
-   main                           1     5.281     5.281  100.0
+   main                           1     8.824     8.824  100.0
         ------------------------------------------------------
-        dr_polishing              3     0.155     0.052    2.9
-        global_separation        27     1.280     0.047   24.2
-        local_separation        108     2.200     0.020   41.7
-        master                    4     0.727     0.182   13.8
-        master_feasibility        3     0.103     0.034    1.9
-        preprocessing             1     0.021     0.021    0.4
-        other                   n/a     0.794       n/a   15.0
+        dr_polishing              4     0.547     0.137    6.2
+        global_separation        27     0.978     0.036   11.1
+        local_separation        135     4.645     0.034   52.6
+        master                    5     1.720     0.344   19.5
+        master_feasibility        4     0.239     0.060    2.7
+        preprocessing             1     0.013     0.013    0.2
+        other                   n/a     0.681       n/a    7.7
         ======================================================
    ===========================================================
-   
+
    ------------------------------------------------------------------------------
    Termination stats:
-    Iterations            : 4
-    Solve time (wall s)   : 5.281
+    Iterations            : 5
+    Solve time (wall s)   : 8.824
     Final objective value : 3.6285e+07
     Termination condition : pyrosTerminationCondition.robust_optimal
    ------------------------------------------------------------------------------

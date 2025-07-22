@@ -37,13 +37,17 @@ run:
 
     # Auto-apply correct formatting
    pip install black
-   black -S -C <path> --exclude examples/pyomobook/python-ch/BadIndent.py
+   black <path>
    # Find typos in files
    conda install typos
    typos --config .github/workflows/typos.toml <path>
    
-If the spell-checker returns a failure for a word that is spelled correctly,
-please add the word to the ``.github/workflows/typos.toml`` file.
+If the spell-checker returns a failure for a word that is spelled
+correctly, please add the word to the ``.github/workflows/typos.toml``
+file. Note also that ``black`` reads from ``pyproject.toml`` to
+determine correct configuration, so if you are running ``black``
+indirectly (for example, using an IDE integration), please ensure you
+are not overriding the project-level configuration set in that file.
 
 Online Pyomo documentation is generated using `Sphinx <https://www.sphinx-doc.org/en/master/>`_
 with the ``napoleon`` extension enabled. For API documentation we use of one of these 
