@@ -18,7 +18,13 @@ import threading
 import enum
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import ConfigDict, ConfigValue, InEnum, PositiveInt
+from pyomo.common.config import (
+    ConfigDict,
+    ConfigValue,
+    InEnum,
+    PositiveInt,
+    document_kwargs_from_configdict,
+)
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.dependencies import dill, dill_available
@@ -294,6 +300,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         self._set_up_expr_bound_visitor()
         self.handlers[Suffix] = self._warn_for_active_suffix
 
+    @document_kwargs_from_configdict(CONFIG)
+    def apply_to(self, model, **kwds):
+        """
+        Apply the transformation to the given model.
+        """
+        return super().apply_to(model, **kwds)
+        
     def _apply_to(self, instance, **kwds):
         # check for the rather implausible error case that
         # solver.solve() is a metasolver that indirectly calls this
