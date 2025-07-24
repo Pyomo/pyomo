@@ -93,7 +93,7 @@ This function is a signed square root approximation defined as:
 
 .. math::
 
-    \text{sgnsqr}(x) = \begin{cases}
+    \text{sgnsqrt_c4}(x) = \begin{cases}
         \text{sgn}(x)|x|^{0.5} & \text{if } |x| \ge 0.1 \\
         \sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
     \end{cases}
