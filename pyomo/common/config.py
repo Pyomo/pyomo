@@ -16,7 +16,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
 
-__doc__ = """The Pyomo configuration system.
+"""The Pyomo configuration system.
 
 This module provides classes and methods for building standardized
 hierarchical configuration objects based on the :class:`ConfgiDict`,
