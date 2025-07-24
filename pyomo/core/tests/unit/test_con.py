@@ -38,6 +38,7 @@ from pyomo.environ import (
     simple_constraint_rule,
     inequality,
 )
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import (
     SumExpression,
     EqualityExpression,
@@ -1570,6 +1571,26 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(a.strict_lower, False)
         self.assertEqual(a.strict_upper, False)
 
+    def test_deprecated_rule_attribute(self):
+        def rule(m):
+            return m.x <= 0
+
+        def new_rule(m):
+            return m.x >= 0
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.con = Constraint(rule=rule)
+
+        self.assertIs(m.con.rule._fcn, rule)
+        with LoggingIntercept() as LOG:
+            m.con.rule = new_rule
+        self.assertIn(
+            "DEPRECATED: The 'Constraint.rule' attribute will be made read-only",
+            LOG.getvalue(),
+        )
+        self.assertIs(m.con.rule, new_rule)
+
     def test_rule(self):
         def rule1(model):
             return Constraint.Skip
@@ -1612,6 +1633,16 @@ class MiscConTests(unittest.TestCase):
             self.fail("Can only return tuples of length 2 or 3")
         except ValueError:
             pass
+
+    def test_rule_kwargs(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        @m.Constraint(rhs=5)
+        def c(m, *, rhs):
+            return m.x <= rhs
+
+        self.assertExpressionsEqual(m.c.expr, m.x <= 5)
 
     def test_tuple_constraint_create(self):
         def rule1(model):
