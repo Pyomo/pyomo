@@ -70,7 +70,7 @@ This function is defined as:
 
 .. math::
 
-    \text{sgnsqr}(x) = \begin{cases}
+    \text{sgnsqr_c4}(x) = \begin{cases}
         \text{sgn}(x)x^2 & \text{if } |x| \ge 0.1 \\
         \sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
     \end{cases}
