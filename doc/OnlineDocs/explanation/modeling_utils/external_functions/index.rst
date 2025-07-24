@@ -100,7 +100,7 @@ This function is a signed square root approximation defined as:
 
 This function is :math:`C^4` smooth.  The region :math:`-0.1 < x < 0.1` is replaced by an 11th order polynomial that approximates :math:`\text{sgn}(x)|x|^{0.5}`.  This function has well behaved derivatives at :math:`x=0`.  If you need to use this function with very small numbers and high accuracy is important, you can scale the argument up (e.g. :math:`\text{sgnsqrt_c4}(sx)/s^{0.5}`).
 
-These figures show the signed square root function compared to the smooth approximation sgnsqr_c4(x).
+These figures show the signed square root function compared to the smooth approximation sgnsqrt_c4(x).
 
 .. image:: figs/sgnsqrt_c4_err.png
 
