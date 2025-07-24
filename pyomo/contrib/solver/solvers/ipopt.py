@@ -21,7 +21,7 @@ from typing import Optional, Tuple, Union, Mapping, List, Dict, Any, Sequence
 from pyomo.common import Executable
 from pyomo.common.config import (
     ConfigValue,
-    document_kwargs_from_configdict,
+    document_class_CONFIG,
     ConfigDict,
     ADVANCED_OPTION,
 )
@@ -210,7 +210,11 @@ ipopt_command_line_options = {
 }
 
 
+@document_class_CONFIG(methods=['solve'])
 class Ipopt(SolverBase):
+    """Interface to the Ipopt NLP solver (NL file based)"""
+
+    #: Global class configuration; see :ref:`Ipopt_CONFIG`
     CONFIG = IpoptConfig()
 
     def __init__(self, **kwds: Any) -> None:
@@ -309,7 +313,6 @@ class Ipopt(SolverBase):
                 cmd.append(str(k) + '=' + str(val))
         return cmd
 
-    @document_kwargs_from_configdict(CONFIG)
     def solve(self, model, **kwds) -> Results:
         "Solve a model using Ipopt"
         # Begin time tracking

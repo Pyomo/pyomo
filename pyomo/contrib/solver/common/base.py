@@ -85,6 +85,8 @@ class SolverBase:
             self.name = kwds.pop('name')
         elif not hasattr(self, 'name'):
             self.name = type(self).__name__.lower()
+
+        #: Instance configuration; see :ref:`Ipopt_CONFIG`
         self.config = self.CONFIG(value=kwds)
 
     def __enter__(self):
