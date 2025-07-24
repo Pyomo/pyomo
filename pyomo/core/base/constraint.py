@@ -973,7 +973,7 @@ class ConstraintList(IndexedConstraint):
     added an index value is not specified.
     """
 
-    class End(object):
+    class End:
         pass
 
     def __init__(self, **kwargs):

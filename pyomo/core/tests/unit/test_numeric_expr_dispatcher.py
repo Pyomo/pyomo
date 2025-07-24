@@ -59,7 +59,7 @@ from pyomo.gdp import Disjunct
 logger = logging.getLogger(__name__)
 
 
-class Base(object):
+class Base:
     class SKIP:
         pass
 

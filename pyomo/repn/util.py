@@ -758,7 +758,7 @@ def ordered_active_constraints(model, config):
     return sorted(constraints, key=lambda x: _row_getter(id(x), _n))
 
 
-class VarRecorder(object):
+class VarRecorder:
     def __init__(self, var_map, sorter):
         self.var_map = var_map
         self.sorter = sorter
@@ -781,7 +781,7 @@ class VarRecorder(object):
                 vm[id(v)] = v
 
 
-class OrderedVarRecorder(object):
+class OrderedVarRecorder:
     def __init__(self, var_map, var_order, sorter):
         self.var_map = var_map
         self.var_order = var_order
@@ -808,7 +808,7 @@ class OrderedVarRecorder(object):
                 vm[vid] = v
 
 
-class TemplateVarRecorder(object):
+class TemplateVarRecorder:
     def __init__(self, var_map, var_order, sorter):
         self.var_map = var_map
         self._var_order = var_order

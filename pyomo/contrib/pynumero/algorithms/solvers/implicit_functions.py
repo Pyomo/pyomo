@@ -38,7 +38,7 @@ from pyomo.contrib.incidence_analysis.scc_solver import (
 )
 
 
-class NlpSolverBase(object):
+class NlpSolverBase:
     """A base class that solves an NLP object
 
     Subclasses should implement this interface for compatibility with
@@ -118,7 +118,7 @@ class ScipySolverWrapper(NlpSolverBase):
         return res
 
 
-class PyomoImplicitFunctionBase(object):
+class PyomoImplicitFunctionBase:
     """A base class defining an API for implicit functions defined using
     Pyomo components. In particular, this is the API required by
     ExternalPyomoModel.

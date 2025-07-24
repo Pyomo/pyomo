@@ -12,7 +12,7 @@
 from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
 
 
-class DynamicVarLinker(object):
+class DynamicVarLinker:
     """
     The purpose of this class is so that we do not have
     to call find_component or construct ComponentUIDs in a loop

@@ -127,65 +127,65 @@ logger = logging.getLogger('pyomo.contrib.cp')
 
 
 # These are things that don't need special handling:
-class _GENERAL(object):
+class _GENERAL:
     pass
 
 
 # These are operations that need to be deferred sometimes, usually because of
 # indirection:
-class _START_TIME(object):
+class _START_TIME:
     pass
 
 
-class _END_TIME(object):
+class _END_TIME:
     pass
 
 
-class _DEFERRED_ELEMENT_CONSTRAINT(object):
+class _DEFERRED_ELEMENT_CONSTRAINT:
     pass
 
 
-class _ELEMENT_CONSTRAINT(object):
+class _ELEMENT_CONSTRAINT:
     pass
 
 
-class _DEFERRED_BEFORE(object):
+class _DEFERRED_BEFORE:
     pass
 
 
-class _DEFERRED_AFTER(object):
+class _DEFERRED_AFTER:
     pass
 
 
-class _DEFERRED_AT(object):
+class _DEFERRED_AT:
     pass
 
 
-class _BEFORE(object):
+class _BEFORE:
     pass
 
 
-class _AT(object):
+class _AT:
     pass
 
 
-class _IMPLIES(object):
+class _IMPLIES:
     pass
 
 
-class _LAND(object):
+class _LAND:
     pass
 
 
-class _LOR(object):
+class _LOR:
     pass
 
 
-class _XOR(object):
+class _XOR:
     pass
 
 
-class _EQUIVALENT_TO(object):
+class _EQUIVALENT_TO:
     pass
 
 
@@ -1130,7 +1130,7 @@ def collect_valid_components(model, active=True, sort=None, valid=set(), targets
 @WriterFactory.register(
     'docplex_model', 'Generate the corresponding docplex model object'
 )
-class DocplexWriter(object):
+class DocplexWriter:
     CONFIG = ConfigDict('docplex_model_writer')
     CONFIG.declare(
         'symbolic_solver_labels',
@@ -1247,7 +1247,7 @@ class DocplexWriter(object):
 
 
 @SolverFactory.register('cp_optimizer', doc='Direct interface to CPLEX CP Optimizer')
-class CPOptimizerSolver(object):
+class CPOptimizerSolver:
     CONFIG = ConfigDict("cp_optimizer_solver")
     CONFIG.declare(
         'symbolic_solver_labels',

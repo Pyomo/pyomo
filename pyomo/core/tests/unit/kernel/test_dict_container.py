@@ -36,11 +36,11 @@ from pyomo.core.kernel.block import block, block_dict
 _pickle_test_protocol = pickle.HIGHEST_PROTOCOL
 
 
-class _bad_ctype(object):
+class _bad_ctype:
     ctype = "_this_is_definitely_not_the_ctype_being_tested"
 
 
-class _TestDictContainerBase(object):
+class _TestDictContainerBase:
     # set by derived class
     _container_type = None
     _ctype_factory = None

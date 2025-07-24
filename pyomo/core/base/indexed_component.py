@@ -100,11 +100,11 @@ def normalize_index(x):
 normalize_index.flatten = True
 
 
-class _NotFound(object):
+class _NotFound:
     pass
 
 
-class _NotSpecified(object):
+class _NotSpecified:
     pass
 
 
@@ -289,7 +289,7 @@ class IndexedComponent(Component):
 
     """
 
-    class Skip(object):
+    class Skip:
         pass
 
     #
@@ -1188,7 +1188,7 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
 # Ideally, this would inherit from np.lib.mixins.NDArrayOperatorsMixin,
 # but doing so overrides things like __contains__ in addition to the
 # operators that we are interested in.
-class IndexedComponent_NDArrayMixin(object):
+class IndexedComponent_NDArrayMixin:
     """Support using IndexedComponent with numpy.ndarray
 
     This IndexedComponent mixin class adds support for implicitly using

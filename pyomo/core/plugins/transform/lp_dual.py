@@ -47,7 +47,7 @@ Block.register_private_data_initializer(_LPDualData)
 @TransformationFactory.register(
     'core.lp_dual', 'Generate the linear programming dual of the given model'
 )
-class LinearProgrammingDual(object):
+class LinearProgrammingDual:
     CONFIG = ConfigDict("core.lp_dual")
     CONFIG.declare(
         'parameterize_wrt',

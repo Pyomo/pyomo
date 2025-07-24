@@ -133,7 +133,7 @@ def _add_sensitivity_suffixes(block):
             block.add_component(name, Suffix(direction=direction))
 
 
-class _NotAnIndex(object):
+class _NotAnIndex:
     pass
 
 
@@ -509,7 +509,7 @@ def line_num(file_name, target):
     raise Exception(file_name + " does not include " + target)
 
 
-class SensitivityInterface(object):
+class SensitivityInterface:
     def __init__(self, instance, clone_model=True):
         """Constructor clones model if necessary and attaches
         to this object.

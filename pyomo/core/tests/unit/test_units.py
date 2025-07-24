@@ -1146,7 +1146,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertIs(q.__class__, bool)
         self.assertEqual(q, True)
 
-        class UnknownPyomoType(object):
+        class UnknownPyomoType:
             def is_expression_type(self, expression_system=None):
                 return False
 

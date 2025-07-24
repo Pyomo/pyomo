@@ -20,7 +20,7 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 
-class _PyomoOptions(object):
+class _PyomoOptions:
     def __init__(self):
         self._options_stack = [default_pyomo_config()]
 

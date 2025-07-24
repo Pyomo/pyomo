@@ -39,7 +39,7 @@ _GENERAL = linear.ExprType.GENERAL
 _QUADRATIC = linear.ExprType.QUADRATIC
 
 
-class QuadraticRepn(object):
+class QuadraticRepn:
     __slots__ = ("multiplier", "constant", "linear", "quadratic", "nonlinear")
 
     def __init__(self):

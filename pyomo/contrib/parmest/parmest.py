@@ -235,7 +235,7 @@ def SSE(model):
     return expr
 
 
-class Estimator(object):
+class Estimator:
     """
     Parameter estimation class
 
@@ -1428,7 +1428,7 @@ def group_data(data, groupby_column_name, use_mean=None):
     return grouped_data
 
 
-class _DeprecatedSecondStageCostExpr(object):
+class _DeprecatedSecondStageCostExpr:
     """
     Class to pass objective expression into the Pyomo model
     """
@@ -1441,7 +1441,7 @@ class _DeprecatedSecondStageCostExpr(object):
         return self._ssc_function(model, self._data)
 
 
-class _DeprecatedEstimator(object):
+class _DeprecatedEstimator:
     """
     Parameter estimation class
 

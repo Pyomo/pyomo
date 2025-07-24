@@ -17,7 +17,7 @@ from pyomo.dataportal.process_data import _process_include
 
 
 @DataManagerFactory.register("dat", "Pyomo data command file interface")
-class PyomoDataCommands(object):
+class PyomoDataCommands:
     def __init__(self):
         self._info = []
         self.options = Bunch()
