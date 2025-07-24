@@ -90,24 +90,24 @@ validators for common use cases:
 
 .. autosummary::
 
-   ~pyomo.common.config.Bool
-   ~pyomo.common.config.Integer
-   ~pyomo.common.config.PositiveInt
-   ~pyomo.common.config.NegativeInt
-   ~pyomo.common.config.NonNegativeInt
-   ~pyomo.common.config.NonPositiveInt
-   ~pyomo.common.config.PositiveFloat
-   ~pyomo.common.config.NegativeFloat
-   ~pyomo.common.config.NonPositiveFloat
-   ~pyomo.common.config.NonNegativeFloat
-   ~pyomo.common.config.In
-   ~pyomo.common.config.InEnum
-   ~pyomo.common.config.IsInstance
-   ~pyomo.common.config.ListOf
-   ~pyomo.common.config.Module
-   ~pyomo.common.config.Path
-   ~pyomo.common.config.PathList
-   ~pyomo.common.config.DynamicImplicitDomain
+   Bool
+   Integer
+   PositiveInt
+   NegativeInt
+   NonNegativeInt
+   NonPositiveInt
+   PositiveFloat
+   NegativeFloat
+   NonPositiveFloat
+   NonNegativeFloat
+   In
+   InEnum
+   IsInstance
+   ListOf
+   Module
+   Path
+   PathList
+   DynamicImplicitDomain
 
 .. _class_config:
 
