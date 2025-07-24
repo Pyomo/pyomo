@@ -60,7 +60,7 @@ This function is defined as:
 
     \text{sgnsqr}(x) = \text{sgn}(x)x^2
 
-This function is only $C^1$ smooth because at 0 the second derivative is undefined and the jumps from -2 to 2.  
+This function is only :math:`C^1` smooth because at 0 the second derivative is undefined and the jumps from -2 to 2.  
 
 sgnsqr_c4(x)
 ~~~~~~~~~~~~
