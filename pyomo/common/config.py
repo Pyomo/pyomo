@@ -19,6 +19,7 @@
 import argparse
 import builtins
 import enum
+import functools
 import importlib
 import inspect
 import io
@@ -798,6 +799,8 @@ validators for common use cases:
    Path
    PathList
    DynamicImplicitDomain
+
+.. _class_config:
 
 Configuring class hierarchies
 =============================
@@ -1639,8 +1642,9 @@ class document_kwargs_from_configdict(object):
         width=78,
         visibility=None,
         doc=None,
+        preamble=None,
     ):
-        if '\n' not in section:
+        if section and '\n' not in section:
             section += '\n' + '-' * len(section) + '\n'
         self.config = config
         self.section = section
@@ -1648,6 +1652,7 @@ class document_kwargs_from_configdict(object):
         self.width = width
         self.visibility = visibility
         self.doc = doc
+        self.preamble = preamble
 
     def __call__(self, fcn):
         if isinstance(self.config, str):
@@ -1658,11 +1663,9 @@ class document_kwargs_from_configdict(object):
             doc = inspect.cleandoc(fcn.__doc__)
         else:
             doc = ""
-        if doc:
-            if not doc.endswith('\n'):
-                doc += '\n\n'
-            else:
-                doc += '\n'
+        doc = self._ensure_blank_line(doc)
+        if self.preamble:
+            doc += self._ensure_blank_line(inspect.cleandoc(self.preamble))
         fcn.__doc__ = (
             doc
             + f'{self.section}'
@@ -1674,6 +1677,85 @@ class document_kwargs_from_configdict(object):
             )
         )
         return fcn
+
+    def _ensure_blank_line(self, val):
+        if not val:
+            return val
+        if not val.endswith('\n'):
+            return val + '\n\n'
+        return val + '\n'
+
+
+def _method_wrapper(func):
+    """A simplified :class:`functools.partialmethod` that duplicated the __doc__
+
+    Ideally we could use :class:`functools.partialmethod` to copy a
+    method from a base class to a derived class so that we can set a
+    docstring that is customized for the derived class.  Unfortunately,
+    :class:`functools.partialmethod` returns a method descriptor.  Here
+    we will declare a new method (with a generic signature) and then
+    leverage :func:`functools.wraps` to copy over the original signature
+    and docstring.
+
+    """
+
+    @functools.wraps(func)
+    def method(self, *args, **kwargs):
+        return func(self, *args, **kwargs)
+
+    return method
+
+
+class document_class_CONFIG(document_kwargs_from_configdict):
+    def __init__(
+        self,
+        section='CONFIG',
+        indent_spacing=4,
+        width=78,
+        visibility=None,
+        doc=None,
+        preamble=None,
+        methods=None,
+    ):
+        self.methods = methods
+        return super().__init__(
+            config=None,
+            section=section,
+            indent_spacing=indent_spacing,
+            width=width,
+            visibility=visibility,
+            doc=doc,
+            preamble=preamble,
+        )
+
+    def __call__(self, cls):
+        self.config = cls.CONFIG
+        if self.preamble is None:
+            self.preamble = f"""**Class configuration**
+
+This class leverages the Pyomo Configuration System for managing
+configuration options.  See the discussion on :ref:`configuring class
+hierarchies <class_config>` for more information on how configuration
+class attributes, instance attributes, and method keyword arguments
+interact.
+
+.. _{cls.__name__}_CONFIG:
+"""
+        if self.methods:
+            for method in self.methods:
+                if method not in vars(cls):
+                    # If this method is inherited, we need to make a
+                    # "local" version of it so we don't change the
+                    # docstring on the base class.
+                    setattr(cls, method, _method_wrapper(getattr(cls, method)))
+                document_kwargs_from_configdict(
+                    self.config,
+                    indent_spacing=self.indent_spacing,
+                    width=self.width,
+                    visibility=self.visibility,
+                    doc=self.doc,
+                )(getattr(cls, method))
+        return super().__call__(cls)
 
 
 class UninitializedMixin(object):
