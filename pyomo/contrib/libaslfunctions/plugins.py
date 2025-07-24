@@ -10,8 +10,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.extensions import ExtensionBuilderFactory
-from pyomo.contrib.external_functions.build import ExternalFunctionBuilder
+from pyomo.contrib.libaslfunctions.build import LibASLFunctionsBuilder
 
 
 def load():
-    ExtensionBuilderFactory.register("external_functions")(ExternalFunctionBuilder)
+    ExtensionBuilderFactory.register("libaslfunctions")(LibASLFunctionsBuilder)

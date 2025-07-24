@@ -13,20 +13,20 @@ import sys
 from pyomo.common.cmake_builder import build_cmake_project
 
 
-def build_external_functions(user_args=[], parallel=None):
+def build_libaslfunctions(user_args=[], parallel=None):
     return build_cmake_project(
         targets=["src"],
-        package_name="external_functions",
-        description="Useful external function",
+        package_name="libaslfunctions",
+        description="Useful AMPL external functions",
         user_args=["-DBUILD_AMPLASL_IF_NEEDED=ON"] + user_args,
         parallel=parallel,
     )
 
 
-class ExternalFunctionBuilder(object):
+class LibASLFunctionsBuilder(object):
     def __call__(self, parallel):
-        return build_external_functions(parallel=parallel)
+        return build_libaslfunctions(parallel=parallel)
 
 
 if __name__ == "__main__":
-    build_external_functions(sys.argv[1:])
+    build_libaslfunctions(sys.argv[1:])
