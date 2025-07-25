@@ -39,7 +39,7 @@ def main():
     obj, theta = pest.theta_est()
 
     # Parameter estimation with bootstrap resampling
-    bootstrap_theta = pest.theta_est_bootstrap(50)
+    bootstrap_theta = pest.theta_est_bootstrap(50, seed=524)
 
     # Plot results
     parmest.graphics.pairwise_plot(bootstrap_theta, title="Bootstrap theta")

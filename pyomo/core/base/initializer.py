@@ -340,15 +340,15 @@ class IndexedCallInitializer(InitializerBase):
     def __init__(self, _fcn):
         self._fcn = _fcn
 
-    def __call__(self, parent, idx):
+    def __call__(self, parent, idx, **kwargs):
         # Note: this is called by a component using data from a Set (so
         # any tuple-like type should have already been checked and
         # converted to a tuple; or flattening is turned off and it is
         # the user's responsibility to sort things out.
         if idx.__class__ is tuple:
-            return self._fcn(parent, *idx)
+            return self._fcn(parent, *idx, **kwargs)
         else:
-            return self._fcn(parent, idx)
+            return self._fcn(parent, idx, **kwargs)
 
 
 class ParameterizedIndexedCallInitializer(IndexedCallInitializer):
@@ -356,11 +356,11 @@ class ParameterizedIndexedCallInitializer(IndexedCallInitializer):
 
     __slots__ = ()
 
-    def __call__(self, parent, idx, *args):
+    def __call__(self, parent, idx, *args, **kwargs):
         if idx.__class__ is tuple:
-            return self._fcn(parent, *args, *idx)
+            return self._fcn(parent, *args, *idx, **kwargs)
         else:
-            return self._fcn(parent, *args, idx)
+            return self._fcn(parent, *args, idx, **kwargs)
 
 
 class CountedCallGenerator(object):
@@ -481,8 +481,8 @@ class ScalarCallInitializer(InitializerBase):
         self._fcn = _fcn
         self._constant = constant
 
-    def __call__(self, parent, idx):
-        return self._fcn(parent)
+    def __call__(self, parent, idx, **kwargs):
+        return self._fcn(parent, **kwargs)
 
     def constant(self):
         """Return True if this initializer is constant across all indices"""
@@ -494,8 +494,8 @@ class ParameterizedScalarCallInitializer(ScalarCallInitializer):
 
     __slots__ = ()
 
-    def __call__(self, parent, idx, *args):
-        return self._fcn(parent, *args)
+    def __call__(self, parent, idx, *args, **kwargs):
+        return self._fcn(parent, *args, **kwargs)
 
 
 class DefaultInitializer(InitializerBase):
@@ -523,9 +523,9 @@ class DefaultInitializer(InitializerBase):
         self._default = default
         self._exceptions = exceptions
 
-    def __call__(self, parent, index):
+    def __call__(self, parent, index, **kwargs):
         try:
-            return self._initializer(parent, index)
+            return self._initializer(parent, index, **kwargs)
         except self._exceptions:
             return self._default
 
@@ -542,7 +542,7 @@ class DefaultInitializer(InitializerBase):
 
 
 class ParameterizedInitializer(InitializerBase):
-    """Base class for all Initializer objects"""
+    """Wrapper to provide additional positional arguments to Initializer objects"""
 
     __slots__ = ('_base_initializer',)
 
@@ -565,8 +565,33 @@ class ParameterizedInitializer(InitializerBase):
         """
         return self._base_initializer.indices()
 
-    def __call__(self, parent, idx, *args):
-        return self._base_initializer(parent, idx)(parent, *args)
+    def __call__(self, parent, idx, *args, **kwargs):
+        return self._base_initializer(parent, idx)(parent, *args, **kwargs)
+
+
+class PartialInitializer(InitializerBase):
+    """Partial wrapper of an InitializerBase that supplies additional arguments"""
+
+    __slots__ = ('_fcn',)
+
+    def __init__(self, _fcn, *args, **kwargs):
+        self._fcn = functools.partial(_fcn, *args, **kwargs)
+
+    def constant(self):
+        return self._fcn.func.constant()
+
+    def contains_indices(self):
+        return self._fcn.func.contains_indices()
+
+    def indices(self):
+        return self._fcn.func.indices()
+
+    def __call__(self, parent, idx, *args, **kwargs):
+        # Note that the Initializer.__call__ API is different from the
+        # rule API.  As a result, we cannot just inherit from
+        # IndexedCallInitializer and must instead implement our own
+        # __call__ here.
+        return self._fcn(parent, idx, *args, **kwargs)
 
 
 _bound_sequence_types = collections.defaultdict(None.__class__)
@@ -618,8 +643,8 @@ class BoundInitializer(InitializerBase):
             arg, treat_sequences_as_mappings=treat_sequences_as_mappings
         )
 
-    def __call__(self, parent, index):
-        val = self._initializer(parent, index)
+    def __call__(self, parent, index, **kwargs):
+        val = self._initializer(parent, index, **kwargs)
         if _bound_sequence_types[val.__class__]:
             return val
         if _bound_sequence_types[val.__class__] is None:

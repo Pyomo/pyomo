@@ -20,6 +20,8 @@ from pyomo.common.tee import capture_output
 from pyomo.contrib.appsi.solvers.highs import Highs
 from pyomo.contrib.appsi.base import TerminationCondition
 
+from pyomo.contrib.solver.tests.solvers import instances
+
 
 opt = Highs()
 if not opt.available():
@@ -183,3 +185,10 @@ class TestBugs(unittest.TestCase):
             pyo.SolverFactory("appsi_highs").solve(m, tee=True, warmstart=True)
         log = output.getvalue()
         self.assertIn("MIP start solution is feasible, objective value is 25", log)
+
+    def test_node_limit_term_cond(self):
+        opt = Highs()
+        opt.highs_options.update({"mip_max_nodes": 1})
+        mod = instances.multi_knapsack()
+        res = opt.solve(mod)
+        assert res.termination_condition == TerminationCondition.maxIterations
