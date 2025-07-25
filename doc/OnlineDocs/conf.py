@@ -165,9 +165,9 @@ numfig = True
 
 # We want to be able to document the CONFIG class attribute in a special
 # section.  Nominally, we would use the napoleon_custom_sections hook.
-# Unfortunately, there isn't a generic "kwargs_style", and aliasinf
-# 'Keyword Arguments' would render the section in the documentation as
-# 'Keyword Arguments'.
+# Unfortunately, there isn't a generic "kwargs_style", and aliasing
+# 'Keyword Arguments' would render the section header in the
+# documentation as 'Keyword Arguments'.
 #
 # Our solution is to declare a new PyObject field type (:config:) and
 # define a new parser that generates :config: fields.  We register the

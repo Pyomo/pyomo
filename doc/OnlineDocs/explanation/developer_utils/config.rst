@@ -229,23 +229,24 @@ attributes:
 
    >>> print(MySolver.__doc__)
    Interface to My Solver
-
+   <BLANKLINE>
    **Class configuration**
-
+   <BLANKLINE>
    This class leverages the Pyomo Configuration System for managing
    configuration options.  See the discussion on :ref:`configuring class
    hierarchies <class_config>` for more information on how configuration
    class attributes, instance attributes, and method keyword arguments
    interact.
-
+   <BLANKLINE>
    .. _MySolver_CONFIG:
-
+   <BLANKLINE>
    CONFIG
    ------
    iterlim: int, default=10
+
    >>> print(MySolver.solve.__doc__)
    Solve `model` using My Solver
-
+   <BLANKLINE>
    Keyword Arguments
    -----------------
    iterlim: int, default=10
@@ -450,25 +451,25 @@ The defaults generate LaTeX documentation:
 .. doctest::
 
     >>> print(config.generate_documentation())
-    \\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
-      \\item[{output}]\\hfill
-        \\\\output results filename
-      \\item[{verbose}]\\hfill
-        \\\\This sets the system verbosity.  The default (0) only logs warnings and
+    \begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
+      \item[{output}]\hfill
+        \\output results filename
+      \item[{verbose}]\hfill
+        \\This sets the system verbosity.  The default (0) only logs warnings and
         errors.  Larger integer values will produce additional log messages.
-      \\item[{solvers}]\\hfill
-        \\\\list of solvers to apply
-      \\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
-        \\item[{iterlim}]\\hfill
-          \\\\iteration limit
-        \\item[{lbfgs}]\\hfill
-          \\\\use limited memory BFGS update
-        \\item[{linesearch}]\\hfill
-          \\\\use line search
-        \\item[{relative tolerance}]\\hfill
-          \\\\relative convergence tolerance
-        \\item[{absolute tolerance}]\\hfill
-          \\\\absolute convergence tolerance
-      \\end{description}
-    \\end{description}
+      \item[{solvers}]\hfill
+        \\list of solvers to apply
+      \begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
+        \item[{iterlim}]\hfill
+          \\iteration limit
+        \item[{lbfgs}]\hfill
+          \\use limited memory BFGS update
+        \item[{linesearch}]\hfill
+          \\use line search
+        \item[{relative tolerance}]\hfill
+          \\relative convergence tolerance
+        \item[{absolute tolerance}]\hfill
+          \\absolute convergence tolerance
+      \end{description}
+    \end{description}
     <BLANKLINE>

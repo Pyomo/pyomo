@@ -19,7 +19,7 @@
 """The Pyomo configuration system.
 
 This module provides classes and methods for building standardized
-hierarchical configuration objects based on the :class:`ConfgiDict`,
+hierarchical configuration objects based on the :class:`ConfigDict`,
 :class:`ConfigList`, and :class:`ConfigValue` classes.
 
 See the :doc:`Pyomo Configuration System
