@@ -82,7 +82,8 @@ class IpoptConfig(SolverConfig):
         self.executable: Executable = self.declare(
             'executable',
             ConfigValue(
-                default=Executable('ipopt'),
+                domain=Executable,
+                default='ipopt',
                 description="Preferred executable for ipopt. Defaults to searching the "
                 "``PATH`` for the first available ``ipopt``.",
             ),
