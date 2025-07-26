@@ -176,14 +176,43 @@ def _monkey_patch_napoleon():
     from sphinx.ext.napoleon.docstring import GoogleDocstring
     from sphinx.domains.python._object import PyObject, PyTypedField
     from sphinx.locale import _
+    from sphinx import addnodes
+
+    class PyConfigDomainField(PyTypedField):
+        def make_xref(
+            self,
+            rolename: str,
+            domain: str,
+            target: str,
+            innernode=addnodes.literal_emphasis,
+            contnode=None,
+            env=None,
+            inliner=None,
+            location=None,
+        ):
+            ans = super().make_xref(
+                rolename=rolename,
+                domain=domain,
+                target=target,
+                innernode=innernode,
+                contnode=contnode,
+                env=env,
+                inliner=inliner,
+                location=location,
+            )
+            # Part of the call stack will override the reftype to
+            # "class".  We want to support a broader set of domain
+            # types, so we will set it to "anything" (i.e., object)
+            ans['reftype'] = 'obj'
+            return ans
 
     PyObject.doc_field_types.append(
-        PyTypedField(
+        PyConfigDomainField(
             'config',
             label=_('CONFIG'),
             names=('config',),
-            typerolename='class',
-            typenames=('paramtype', 'kwtype', 'cfgtype'),
+            typerolename='obj',
+            typenames=('paramtype', 'kwtype', 'configtype'),
             can_collapse=True,
         )
     )
@@ -192,7 +221,7 @@ def _monkey_patch_napoleon():
         fields = self._consume_fields()
         if self._config.napoleon_use_keyword:
             return self._format_docutils_params(
-                fields, field_role='config', type_role='cfgtype'
+                fields, field_role='config', type_role='configtype'
             )
         else:
             return self._format_fields(_(section), fields)
