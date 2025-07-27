@@ -160,6 +160,8 @@ class NLWriterInfo(object):
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
 @document_class_CONFIG(methods=['write'])
 class NLWriter(object):
+    #: Global class configuration;
+    #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
     CONFIG = ConfigDict('nlwriter')
     CONFIG.declare(
         'show_section_timing',
@@ -279,6 +281,8 @@ class NLWriter(object):
     )
 
     def __init__(self):
+        #: Instance configuration;
+        #: see :ref:`pyomo.repn.plugins.nl_writer.NLWriter::CONFIG`.
         self.config = self.CONFIG()
 
     def __call__(self, model, filename, solver_capability, io_options):
