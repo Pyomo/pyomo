@@ -297,9 +297,7 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
 
         expr = m.y + m.x + m.z + ((3 * m.z * m.x) / m.p) / m.y
         cfg = VisitorConfig()
-        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(
-            expr
-        )
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(expr)
 
         self.assertEqual(repn.multiplier, 1)
         assertExpressionsEqual(self, repn.constant, 1 + m.z)
@@ -331,14 +329,12 @@ class TestParameterizedLinearRepnVisitor(unittest.TestCase):
         assertExpressionsEqual(self, repn.constant, m.y + m.z)
         self.assertEqual(len(repn.linear), 1)
         self.assertIsInstance(repn.linear[id(m.x)], InvalidNumber)
-        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan')/m.y)
+        assertExpressionsEqual(self, repn.linear[id(m.x)].value, 1 + float('nan') / m.y)
         self.assertEqual(repn.nonlinear, None)
 
         m.y.fix(None)
         expr = m.z * log(m.y) + 3
-        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(
-            expr
-        )
+        repn = ParameterizedLinearRepnVisitor(**cfg, wrt=[m.z]).walk_expression(expr)
         self.assertEqual(repn.multiplier, 1)
         self.assertIsInstance(repn.constant, InvalidNumber)
         assertExpressionsEqual(self, repn.constant.value, float('nan') * m.z + 3)
