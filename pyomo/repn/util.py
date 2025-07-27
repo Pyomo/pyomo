@@ -129,7 +129,9 @@ def val2str(val):
     """
     if hasattr(val, '_str'):
         return val._str()
-    return str(val)
+    if hasattr(val, 'to_string'):
+        return val.to_string()
+    return repr(val)
 
 
 class InvalidNumber(PyomoObject):

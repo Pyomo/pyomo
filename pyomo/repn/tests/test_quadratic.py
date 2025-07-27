@@ -408,3 +408,78 @@ class TestQuadratic(unittest.TestCase):
             {(id(m.x[1]), id(m.x[2])): InvalidNumber(None)},
         )
         self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+        e = (
+            m.p * m.x[0]
+            + m.p * m.x[1]
+            + m.p * m.x[1] * m.x[2]
+            + m.p * m.x[2] ** 2
+            + m.p * log(m.x[3])
+        )
+        f = 1 + m.x[0] + m.x[2] ** 2 + 0 * e
+
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(**cfg).walk_expression(f)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(
+            repn.linear,
+            {id(m.x[0]): InvalidNumber(None), id(m.x[1]): InvalidNumber(None)},
+        )
+        self.assertEqual(len(repn.quadratic), 2)
+        self.assertEqual(
+            cfg.order_quadratic(repn.quadratic),
+            {
+                (id(m.x[1]), id(m.x[2])): InvalidNumber(None),
+                (id(m.x[2]), id(m.x[2])): InvalidNumber(None),
+            },
+        )
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))
+
+        f = 1 + m.p + 0 * e
+
+        cfg = VisitorConfig()
+        repn = QuadraticRepnVisitor(**cfg).walk_expression(f)
+        self.assertEqual(cfg.subexpr, {})
+        self.assertEqual(
+            cfg.var_map,
+            {
+                id(m.x[0]): m.x[0],
+                id(m.x[1]): m.x[1],
+                id(m.x[2]): m.x[2],
+                id(m.x[3]): m.x[3],
+            },
+        )
+        self.assertEqual(
+            cfg.var_order, {id(m.x[0]): 0, id(m.x[1]): 1, id(m.x[2]): 2, id(m.x[3]): 3}
+        )
+        self.assertEqual(repn.multiplier, 1)
+        self.assertEqual(repn.constant, InvalidNumber(None))
+        self.assertEqual(len(repn.linear), 2)
+        self.assertEqual(
+            repn.linear,
+            {id(m.x[0]): InvalidNumber(None), id(m.x[1]): InvalidNumber(None)},
+        )
+        self.assertEqual(len(repn.quadratic), 2)
+        self.assertEqual(
+            cfg.order_quadratic(repn.quadratic),
+            {
+                (id(m.x[1]), id(m.x[2])): InvalidNumber(None),
+                (id(m.x[2]), id(m.x[2])): InvalidNumber(None),
+            },
+        )
+        self.assertEqual(repn.nonlinear, InvalidNumber(None))
