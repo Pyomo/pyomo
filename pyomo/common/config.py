@@ -1243,7 +1243,7 @@ class document_kwargs_from_configdict(object):
     def __init__(
         self,
         config,
-        section=None,
+        section='Keyword Arguments',
         indent_spacing=4,
         width=78,
         visibility=None,
@@ -1263,12 +1263,6 @@ class document_kwargs_from_configdict(object):
         section = self.section
         if isinstance(config, str):
             config = getattr(fcn, config)
-        if config is None and issubclass(fcn, ConfigDict):
-            config = fcn()
-            if section is None:
-                section = 'Options'
-        if section is None:
-            section = 'Keyword Arguments'
         if section and '\n' not in section:
             section += '\n' + '-' * len(section) + '\n'
         if self.doc is not None:
@@ -1328,7 +1322,7 @@ class document_configdict(document_kwargs_from_configdict):
 
     def __init__(
         self,
-        section=None,
+        section='Options',
         indent_spacing=4,
         width=78,
         visibility=None,
@@ -1344,6 +1338,10 @@ class document_configdict(document_kwargs_from_configdict):
             doc=doc,
             preamble=preamble,
         )
+
+    def __call__(self, fcn):
+        self.config = fcn()
+        return super().__call__(fcn)
 
 
 class document_class_CONFIG(document_kwargs_from_configdict):
