@@ -1229,16 +1229,14 @@ class document_kwargs_from_configdict(object):
 
     def __init__(
         self,
-        config,
-        section='Keyword Arguments',
+        config=None,
+        section=None,
         indent_spacing=4,
         width=78,
         visibility=None,
         doc=None,
         preamble=None,
     ):
-        if section and '\n' not in section:
-            section += '\n' + '-' * len(section) + '\n'
         self.config = config
         self.section = section
         self.indent_spacing = indent_spacing
@@ -1248,8 +1246,18 @@ class document_kwargs_from_configdict(object):
         self.preamble = preamble
 
     def __call__(self, fcn):
-        if isinstance(self.config, str):
-            self.config = getattr(fcn, self.config)
+        config = self.config
+        section = self.section
+        if isinstance(config, str):
+            config = getattr(fcn, config)
+        if config is None and issubclass(fcn, ConfigDict):
+            config = fcn()
+            if section is None:
+                section = 'Options'
+        if section is None:
+            section = 'Keyword Arguments'
+        if section and '\n' not in section:
+            section += '\n' + '-' * len(section) + '\n'
         if self.doc is not None:
             doc = inspect.cleandoc(self.doc)
         elif fcn.__doc__:
@@ -1261,8 +1269,8 @@ class document_kwargs_from_configdict(object):
             doc += self._ensure_blank_line(inspect.cleandoc(self.preamble))
         fcn.__doc__ = (
             doc
-            + f'{self.section}'
-            + self.config.generate_documentation(
+            + f'{section}'
+            + config.generate_documentation(
                 indent_spacing=self.indent_spacing,
                 width=self.width,
                 visibility=self.visibility,

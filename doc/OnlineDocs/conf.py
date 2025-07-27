@@ -177,6 +177,7 @@ def _monkey_patch_napoleon():
     from sphinx.domains.python._object import PyObject, PyTypedField
     from sphinx.locale import _
     from sphinx import addnodes
+    from functools import partial
 
     class PyConfigDomainField(PyTypedField):
         def make_xref(
@@ -212,16 +213,26 @@ def _monkey_patch_napoleon():
             label=_('CONFIG'),
             names=('config',),
             typerolename='obj',
-            typenames=('paramtype', 'kwtype', 'configtype'),
+            typenames=('configtype',),
+            can_collapse=True,
+        )
+    )
+    PyObject.doc_field_types.append(
+        PyConfigDomainField(
+            'option',
+            label=_('Options'),
+            names=('option',),
+            typerolename='obj',
+            typenames=('optiontype',),
             can_collapse=True,
         )
     )
 
-    def _parse_config_section(self, section: str) -> list[str]:
+    def _parse_config_section(self, field: str, section: str) -> list[str]:
         fields = self._consume_fields()
         if self._config.napoleon_use_keyword:
             return self._format_docutils_params(
-                fields, field_role='config', type_role='configtype'
+                fields, field_role=field, type_role=field + 'type'
             )
         else:
             return self._format_fields(_(section), fields)
@@ -229,7 +240,8 @@ def _monkey_patch_napoleon():
     original_loader = GoogleDocstring._load_custom_sections
 
     def _load_custom_sections(self):
-        self._sections['config'] = self._parse_config_section
+        self._sections['config'] = partial(self._parse_config_section, 'config')
+        self._sections['options'] = partial(self._parse_config_section, 'option')
         return original_loader(self)
 
     GoogleDocstring._parse_config_section = _parse_config_section
