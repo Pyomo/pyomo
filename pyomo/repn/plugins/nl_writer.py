@@ -18,12 +18,7 @@ from math import log10 as _log10
 from operator import itemgetter, attrgetter
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import (
-    ConfigDict,
-    ConfigValue,
-    InEnum,
-    document_kwargs_from_configdict,
-)
+from pyomo.common.config import ConfigDict, ConfigValue, InEnum, document_class_CONFIG
 from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.common.errors import DeveloperError, InfeasibleConstraintException
 from pyomo.common.gc_manager import PauseGC
@@ -163,6 +158,7 @@ class NLWriterInfo(object):
 
 
 @WriterFactory.register('nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
+@document_class_CONFIG(methods=['write'])
 class NLWriter(object):
     CONFIG = ConfigDict('nlwriter')
     CONFIG.declare(
@@ -337,7 +333,6 @@ class NLWriter(object):
         # was generated and the symbol_map
         return filename, symbol_map
 
-    @document_kwargs_from_configdict(CONFIG)
     def write(
         self, model, ostream, rowstream=None, colstream=None, **options
     ) -> NLWriterInfo:
