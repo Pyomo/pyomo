@@ -29,6 +29,7 @@ from pyomo.core.base import SymbolMap
 from pyomo.core.base.label import NumericLabeler
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.scripting.solve_config import default_config_block
+from pyomo.contrib.solver.common.config import SolverConfig, PersistentSolverConfig
 from pyomo.contrib.solver.common.util import get_objective
 from pyomo.contrib.solver.common.results import (
     Results,
@@ -87,7 +88,7 @@ class SolverBase:
 
     """
 
-    # CONFIG = SolverConfig()
+    CONFIG = SolverConfig()
 
     def __init__(self, **kwds) -> None:
         if "name" in kwds:
@@ -184,7 +185,7 @@ class PersistentSolverBase(SolverBase):
     Example usage can be seen in the Gurobi interface.
     """
 
-    # CONFIG = PersistentSolverConfig()
+    CONFIG = PersistentSolverConfig()
 
     def __init__(self, **kwds) -> None:
         super().__init__(**kwds)
