@@ -23,7 +23,7 @@ from pyomo.common.config import (
     NonNegativeInt,
     Bool,
     Path,
-    document_kwargs_from_configdict,
+    document_configdict,
 )
 from pyomo.common.log import LogStream
 from pyomo.common.numeric_types import native_logical_types
@@ -74,7 +74,7 @@ def TextIO_or_Logger(val):
     return ans
 
 
-@document_kwargs_from_configdict()
+@document_configdict()
 class SolverConfig(ConfigDict):
     """
     Common configuration options for all solver interfaces
@@ -171,7 +171,7 @@ class SolverConfig(ConfigDict):
         )
 
 
-@document_kwargs_from_configdict()
+@document_configdict()
 class BranchAndBoundConfig(SolverConfig):
     """Base config for all direct MIP solver interfaces"""
 
@@ -209,7 +209,7 @@ class BranchAndBoundConfig(SolverConfig):
         )
 
 
-@document_kwargs_from_configdict()
+@document_configdict()
 class AutoUpdateConfig(ConfigDict):
     """Control which parts of the model are automatically checked and/or
     updated upon re-solve
@@ -343,7 +343,7 @@ class AutoUpdateConfig(ConfigDict):
         )
 
 
-@document_kwargs_from_configdict()
+@document_configdict()
 class PersistentSolverConfig(SolverConfig):
     """Base config for all persistent solver interfaces"""
 
@@ -368,7 +368,7 @@ class PersistentSolverConfig(SolverConfig):
         )
 
 
-@document_kwargs_from_configdict()
+@document_configdict()
 class PersistentBranchAndBoundConfig(PersistentSolverConfig, BranchAndBoundConfig):
     """Base config for all persistent MIP solver interfaces"""
 

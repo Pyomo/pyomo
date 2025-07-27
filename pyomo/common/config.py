@@ -1242,7 +1242,7 @@ class document_kwargs_from_configdict(object):
 
     def __init__(
         self,
-        config=None,
+        config,
         section=None,
         indent_spacing=4,
         width=78,
@@ -1318,6 +1318,32 @@ def _method_wrapper(func):
         return func(self, *args, **kwargs)
 
     return method
+
+
+class document_configdict(document_kwargs_from_configdict):
+    """A simplified wrapper around :class:`document_kwargs_from_configdict`
+    for documenting classes derived from ConfigDict.
+
+    """
+
+    def __init__(
+        self,
+        section=None,
+        indent_spacing=4,
+        width=78,
+        visibility=None,
+        doc=None,
+        preamble=None,
+    ):
+        return super().__init__(
+            config=None,
+            section=section,
+            indent_spacing=indent_spacing,
+            width=width,
+            visibility=visibility,
+            doc=doc,
+            preamble=preamble,
+        )
 
 
 class document_class_CONFIG(document_kwargs_from_configdict):
