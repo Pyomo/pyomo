@@ -1301,7 +1301,7 @@ class document_kwargs_from_configdict(object):
 
 
 def _method_wrapper(func):
-    """A simplified :class:`functools.partialmethod` that duplicated the __doc__
+    """A simplified :class:`functools.partialmethod` that duplicates the __doc__
 
     Ideally we could use :class:`functools.partialmethod` to copy a
     method from a base class to a derived class so that we can set a

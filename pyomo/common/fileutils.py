@@ -769,6 +769,7 @@ class Executable(object):
     object and return instances of :class:`ExecutableData`.
 
     """
+
     _manager = PathManager(find_executable, ExecutableData)
 
     def __new__(cls, path) -> ExecutableData:
@@ -785,6 +786,7 @@ class Executable(object):
         """
         return cls._manager.rehash()
 
+
 class Library(object):
     """Singleton library registry
 
@@ -793,6 +795,7 @@ class Library(object):
     object and return instances of :class:`PathData`.
 
     """
+
     _manager = PathManager(find_library, PathData)
 
     def __new__(cls, path) -> PathData:
