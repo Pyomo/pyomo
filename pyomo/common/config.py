@@ -731,6 +731,8 @@ def _munge_name(name, space_to_dash=True):
 def _domain_name(domain):
     if domain is None:
         return ""
+    if isinstance(domain, str):
+        return domain
     if hasattr(domain, 'domain_name') and not isinstance(domain, type):
         dn = domain.domain_name
         if hasattr(dn, '__call__'):
@@ -1033,7 +1035,7 @@ class ConfigFormatter(object):
 
     def generate(self, config, indent_spacing=2, width=78, visibility=None):
         self._initialize(indent_spacing, width, visibility)
-        level = []
+        self._level = level = []
         lastObj = config
         indent = ''
         for lvl, pre, val, obj in config._data_collector(1, '', visibility, True):
@@ -1085,13 +1087,24 @@ class numpydoc_ConfigFormatter(ConfigFormatter):
     def _initialize(self, *args):
         super()._initialize(*args)
         self.wrapper = textwrap.TextWrapper(width=self.width)
+        self.suppress = None
+
+    def _block_start(self, indent, obj):
+        if len(self._level) > 1 and obj.domain_name() != "dict":
+            self.suppress = obj
+
+    def _block_end(self, indent, obj):
+        if self.suppress is obj:
+            self.suppress = None
 
     def _item_body(self, indent, obj):
+        if self.suppress is not None:
+            return
         typeinfo = ', '.join(
             filter(
                 None,
                 [
-                    'dict' if isinstance(obj, ConfigDict) else obj.domain_name(),
+                    obj.domain_name(),
                     (
                         'optional'
                         if obj._default is None
@@ -1545,6 +1558,7 @@ class ConfigBase(object):
 
         if isinstance(self, ConfigDict):
             # Copy over any Dict definitions
+            ans._domain = self._domain
             for k, v in self._data.items():
                 if preserve_implicit or k in self._declared:
                     ans._data[k] = _tmp = v(preserve_implicit=preserve_implicit)
@@ -2314,11 +2328,15 @@ class ConfigDict(ConfigBase, Mapping):
             self._implicit_domain = implicit_domain
         else:
             self._implicit_domain = ConfigValue(None, domain=implicit_domain)
-        ConfigBase.__init__(self, None, {}, description, doc, visibility)
+        ConfigBase.__init__(
+            self,
+            None,
+            dict if self.__class__ is ConfigDict else self.__class__,
+            description,
+            doc,
+            visibility,
+        )
         self._data = {}
-
-    def domain_name(self):
-        return _munge_name(self.name(), False)
 
     def __getstate__(self):
         state = super().__getstate__()

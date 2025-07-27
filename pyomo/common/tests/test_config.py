@@ -2658,11 +2658,11 @@ Node information:
 
     def test_argparse_lists(self):
         c = ConfigDict()
-        self.assertEqual(c.domain_name(), '')
+        self.assertEqual(c.domain_name(), 'dict')
         sub_dict = c.declare('sub_dict', ConfigDict())
         sub_dict.declare('a', ConfigValue(domain=int))
         sub_dict.declare('b', ConfigValue())
-        self.assertEqual(c.sub_dict.domain_name(), 'sub-dict')
+        self.assertEqual(c.sub_dict.domain_name(), 'dict')
         self.assertEqual(c.sub_dict.get('a').domain_name(), 'int')
         self.assertEqual(c.sub_dict.get('b').domain_name(), '')
         c.declare('lst', ConfigList(domain=int)).declare_as_argument(action='append')
@@ -2681,7 +2681,7 @@ Node information:
             """
   -h, --help            show this help message and exit
   --lst INT
-  --sub SUB-DICT
+  --sub DICT
   --listof LISTOF[INT]""".strip(),
             parser.format_help(),
         )
