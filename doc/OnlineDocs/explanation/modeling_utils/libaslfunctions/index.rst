@@ -87,7 +87,7 @@ These figures show the sgnsqr(x) function compared to the smooth approximation s
 
 
 sgnsqrt_c4(x)
-~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 This function is a signed square root approximation defined as:
 
