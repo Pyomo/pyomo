@@ -1344,6 +1344,8 @@ class document_class_CONFIG(document_kwargs_from_configdict):
 
     def __call__(self, cls):
         self.config = cls.CONFIG
+        ref = f"{cls.__module__}.{cls.__name__}::CONFIG"
+        self.config.set_domain(f":ref:`{cls.__name__}.CONFIG <{ref}>`")
         if self.preamble is None:
             self.preamble = f"""**Class configuration**
 
@@ -1352,9 +1354,8 @@ configuration options.  See the discussion on :ref:`configuring class
 hierarchies <class_config>` for more information on how configuration
 class attributes, instance attributes, and method keyword arguments
 interact.
-
-.. _{cls.__module__}.{cls.__name__}::CONFIG:
 """
+        self.preamble += f"\n\n.. _{ref}:\n"
         if self.methods:
             for method in self.methods:
                 if method not in vars(cls):
