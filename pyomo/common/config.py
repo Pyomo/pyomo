@@ -1340,7 +1340,7 @@ hierarchies <class_config>` for more information on how configuration
 class attributes, instance attributes, and method keyword arguments
 interact.
 
-.. _{cls.__name__}_CONFIG:
+.. _{cls.__module__}.{cls.__name__}::CONFIG:
 """
         if self.methods:
             for method in self.methods:

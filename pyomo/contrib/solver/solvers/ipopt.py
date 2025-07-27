@@ -215,7 +215,8 @@ ipopt_command_line_options = {
 class Ipopt(SolverBase):
     """Interface to the Ipopt NLP solver (NL file based)"""
 
-    #: Global class configuration; see :ref:`Ipopt_CONFIG`
+    #: Global class configuration;
+    #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
     CONFIG = IpoptConfig()
 
     def __init__(self, **kwds: Any) -> None:
@@ -224,6 +225,10 @@ class Ipopt(SolverBase):
         self._available_cache = None
         self._version_cache = None
         self._version_timeout = 2
+
+        #: Instance configuration;
+        #: see :ref:`pyomo.contrib.solver.solvers.ipopt.Ipopt::CONFIG`.
+        self.config = self.config
 
     def available(self, config: Optional[IpoptConfig] = None) -> Availability:
         if config is None:
