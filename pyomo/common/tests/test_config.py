@@ -3389,7 +3389,6 @@ hierarchies <class_config>` for more information on how configuration
 class attributes, instance attributes, and method keyword arguments
 interact.
 
-
 .. _pyomo.common.tests.test_config._derived::CONFIG:
 
 CONFIG

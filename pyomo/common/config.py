@@ -1377,8 +1377,8 @@ This class leverages the Pyomo Configuration System for managing
 configuration options.  See the discussion on :ref:`configuring class
 hierarchies <class_config>` for more information on how configuration
 class attributes, instance attributes, and method keyword arguments
-interact.
-"""
+interact."""
+
         self.preamble += f"\n\n.. _{ref}:\n"
         if self.methods:
             for method in self.methods:
