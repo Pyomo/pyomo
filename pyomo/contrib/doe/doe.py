@@ -1625,7 +1625,7 @@ class DesignOfExperiments:
     def compute_FIM_factorial(
         self,
         model=None,
-        design_vals: list = None,
+        design_vals: dict = None,
         abs_change: list = None,
         rel_change: list = None,
         n_designs: int = 5,
@@ -1643,11 +1643,19 @@ class DesignOfExperiments:
         ----------
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
-        design_vals : list, optional
-            A list of design values to use for the full factorial exploration. If
-            provided, will use this value to generate the design values and ignore
-            `abs_change`, `rel_change`, and `n_designs`. Default: None
-            Default: None
+        design_values : dict,
+            dict of lists or other array-like objects, of the form
+            {"var_name": <var_values>}. Default: None.
+            The `design_values` should have the key(s) passed as strings that is a
+            subset of the `experiment_inputs`. If one or more design variables are not
+            to be changed, then they should not be passed in the `design_values`
+            dictionary, but if they are passed in the dictionary, then they must be a
+            array-like object of floats. For example, if our experiment has 4 design variables
+            (i.e., `experiment_inputs`): model.x1, model.x2, model.x3, and model.x4,
+            their values may be passed as, design_values= {"x1": [1, 2, 3], "x3": [7],
+            "x4": [-10, 20]}. In this case, x2 will not be changed and will be fixed at
+            the value in the model.
+            If design_values is provided, then `abs_change` and `rel_change` are ignored.
         abs_change : list, optional
             Absolute change in the design variable values. Default: None.
             If provided, will use this value to generate the design values.
@@ -1715,20 +1723,30 @@ class DesignOfExperiments:
         ).clone()
         model = self.factorial_model
 
-        design_keys = [k for k in model.experiment_inputs.keys()]
-
-        # check if design_values, abs_change and rel_change are provided and have the
-        # same length as design_keys
-        # Design values are of higher priority than abs_change and rel_change.
         if design_vals is not None:
-            if len(design_vals) != len(design_keys):
+            # Check whether the design_ranges keys are in the experiment_inputs
+            design_keys = set(design_vals.keys())
+            map_keys = set([k.name for k in model.experiment_inputs.keys()])
+            if not design_keys.issubset(map_keys):
+                incorrect_given_keys = design_keys - map_keys
+                suggested_keys = map_keys - design_keys
                 raise ValueError(
-                    "`design_values` must have the same length of "
-                    f"`{len(design_keys)}` as `design_keys`."
+                    f"design_values keys: {incorrect_given_keys} are incorrect."
+                    f"The keys should be from the following keys: {suggested_keys}."
                 )
-            design_values = design_vals
+
+            # Get the design map keys that match the design_values keys
+            design_map_keys = [
+                k
+                for k in model.experiment_inputs.keys()
+                if k.name in design_vals.keys()
+            ]
+            # This ensures that the order of the design_values keys matches the order of the
+            # design_map_keys so that design_point can be constructed correctly in the loop.
+            design_values = [design_vals[k.name] for k in design_map_keys]
 
         else:
+            design_keys = [k for k in model.experiment_inputs.keys()]
             if abs_change:
                 if len(abs_change) != len(design_keys):
                     raise ValueError(
@@ -1834,15 +1852,12 @@ class DesignOfExperiments:
         time_set = []
         curr_point = 1  # Initial current point
         for design_point in factorial_points_list:
-            # kept (commented out) the following code to check later whether it will
-            # be considerably faster for complex models.
-            # In a simple model, this code took 15.9s to compute 125 points in JN.
-            # For the same condition, `update_model_from_suffix` took 16.5s in JN
-            # Fix design variables at fixed experimental design point
-            # for i in range(len(design_point)):
-            #     design_keys[i].fix(design_point[i])
-
-            update_model_from_suffix(model, "experiment_inputs", design_point)
+            if design_vals:
+                for i in range(len(design_point)):
+                    # Set the design variable value from the design_vals dictionary
+                    design_map_keys[i].set_value(design_point[i])
+            else:
+                update_model_from_suffix(model.experiment_inputs, design_point)
 
             # Timing and logging objects
             self.logger.info(f"=======Iteration Number: {curr_point} =======")
