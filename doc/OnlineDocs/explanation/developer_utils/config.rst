@@ -212,6 +212,7 @@ attributes:
        CONFIG.declare('iterlim', ConfigValue(
            default=10,
            domain=int,
+           doc="Solver iteration limit",
        ))
        #
        def __init__(self, **kwds):
@@ -238,11 +239,13 @@ attributes:
    class attributes, instance attributes, and method keyword arguments
    interact.
    <BLANKLINE>
-   .. _MySolver_CONFIG:
+   .. _MySolver::CONFIG:
    <BLANKLINE>
    CONFIG
    ------
    iterlim: int, default=10
+   <BLANKLINE>
+       Solver iteration limit
 
    >>> print(MySolver.solve.__doc__)
    Solve `model` using My Solver
@@ -250,6 +253,8 @@ attributes:
    Keyword Arguments
    -----------------
    iterlim: int, default=10
+   <BLANKLINE>
+       Solver iteration limit
 
 
 Interacting with argparse
