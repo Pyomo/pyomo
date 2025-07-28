@@ -427,6 +427,6 @@ class TestLPDual(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError,
             "Model 'unknown' has no variables in the active Constraints "
-            "or Objective."
+            "or Objective.",
         ):
             dual = lp_dual.create_using(m)
