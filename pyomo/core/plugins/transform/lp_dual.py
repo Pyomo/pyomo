@@ -126,7 +126,7 @@ class LinearProgrammingDual(object):
             # We need to check this constraint isn't trivial due to the
             # parameterization, which we can detect if the row is all 0's.
             # TODO: How do I do this efficiently?
-            row = A.todense()[j,:]
+            row = A.todense()[j, :]
             trivial = True
             for coef in row:
                 if type(coef) not in native_numeric_types or coef != 0:
@@ -149,7 +149,7 @@ class LinearProgrammingDual(object):
                     # checked compiling the standard form, so we can safely ignore
                     # it.
                     pass
-            
+
             # maximize is -1 and minimize is +1 and ineq is +1 for <= and -1 for
             # >=, so we need to change domain to NonPositiveReals if the product
             # of these is +1.
