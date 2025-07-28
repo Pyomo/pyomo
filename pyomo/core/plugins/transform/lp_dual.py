@@ -122,17 +122,12 @@ class LinearProgrammingDual(object):
         dual_cols = range(A.shape[0])
         dual.x = Var(dual_cols, domain=NonNegativeReals)
         trans_info = dual.private_data()
+        A_csr = A.tocsr()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
             # We need to check this constraint isn't trivial due to the
             # parameterization, which we can detect if the row is all 0's.
-            # TODO: How do I do this efficiently?
-            row = A.todense()[j, :]
-            trivial = True
-            for coef in row:
-                if type(coef) not in native_numeric_types or coef != 0:
-                    trivial = False
-                    break
-            if trivial:
+            if A_csr.indptr[j] == A_csr.indptr[j + 1]:
+                # All 0's in the coefficient matrix: check what's on the RHS
                 b = std_form.rhs[j]
                 if type(b) not in native_numeric_types:
                     # The parameterization made this trivial. I'm not sure what's

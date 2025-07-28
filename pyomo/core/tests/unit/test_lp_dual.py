@@ -398,3 +398,17 @@ class TestLPDual(unittest.TestCase):
             "on model 'primal'",
         ):
             thing = lp_dual.get_dual_var(m, m.c_new)
+
+    def test_parameterization_makes_constraint_trivial(self):
+        m = self.get_bilevel_model()
+        m.budgetish = Constraint(expr=m.outer[2] + m.outer[3] == 1)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        with self.assertRaisesRegex(
+            ValueError,
+            "The primal model constains a constraint that that the "
+            "parameterization makes trivial: 'budgetish'"
+            "\nPlease deactivate it or declare it on another Block "
+            "before taking the dual."
+        ):
+            dual = lp_dual.create_using(m, parameterize_wrt=m.outer)
