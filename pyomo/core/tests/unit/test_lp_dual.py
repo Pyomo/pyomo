@@ -20,6 +20,7 @@ from pyomo.environ import (
     NonNegativeReals,
     NonPositiveReals,
     Objective,
+    Param,
     Reals,
     Suffix,
     TerminationCondition,
@@ -412,3 +413,20 @@ class TestLPDual(unittest.TestCase):
             "before taking the dual.",
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=m.outer)
+
+    def test_normal_trivial_constraint_goes_through(self):
+        m = ConcreteModel()
+        m.p = Param(initialize=3, mutable=True)
+        m.x = Var(bounds=(0, 9))
+        m.c = Constraint(expr=m.x * m.p <= 8)
+        m.x.fix(2)
+
+        m.obj = Objective(expr=m.x)
+
+        lp_dual = TransformationFactory('core.lp_dual')
+        with self.assertRaisesRegex(
+            ValueError,
+            "Model 'unknown' has no variables in the active Constraints "
+            "or Objective."
+        ):
+            dual = lp_dual.create_using(m)

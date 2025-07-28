@@ -111,6 +111,11 @@ class LinearProgrammingDual(object):
                 "Model '%s' has no objective or multiple active objectives. Can "
                 "only take dual with exactly one active objective!" % model.name
             )
+        if len(std_form.columns) == 0 and std_form.c[0,:].shape[0] == 0:
+            raise ValueError(
+                f"Model '{model.name}' has no variables in the active Constraints "
+                f"or Objective."
+            )
         primal_sense = std_form.objectives[0].sense
 
         dual = ConcreteModel(name="%s dual" % model.name)
