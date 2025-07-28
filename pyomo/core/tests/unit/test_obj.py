@@ -21,7 +21,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
 import pyomo.common.unittest as unittest
-
+from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     ConcreteModel,
     AbstractModel,
@@ -816,6 +816,26 @@ class MiscObjTests(unittest.TestCase):
             model.o = Objective(model.a, rule=rule1)
         except Exception:
             self.fail("Error generating objective")
+
+    def test_deprecated_rule_attribute(self):
+        def rule(m):
+            return m.x
+
+        def new_rule(m):
+            return -m.x
+
+        m = ConcreteModel()
+        m.x = Var()
+        m.obj = Objective(rule=rule)
+
+        self.assertIs(m.obj.rule._fcn, rule)
+        with LoggingIntercept() as LOG:
+            m.obj.rule = new_rule
+        self.assertIn(
+            "DEPRECATED: The 'Objective.rule' attribute will be made read-only",
+            LOG.getvalue(),
+        )
+        self.assertIs(m.obj.rule, new_rule)
 
     def test_abstract_index(self):
         model = AbstractModel()

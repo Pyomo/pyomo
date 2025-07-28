@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 import copy
+import functools
 import logging
 import sys
 import weakref
@@ -2120,7 +2121,6 @@ class Block(ActiveIndexedComponent):
         # initializer
         self._dense = kwargs.pop('dense', True)
         kwargs.setdefault('ctype', Block)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _options is not None:
             deprecation_warning(
                 "The Block 'options=' keyword is deprecated.  "
@@ -2129,19 +2129,10 @@ class Block(ActiveIndexedComponent):
                 "the function arguments",
                 version='5.7.2',
             )
-            if self.is_indexed():
-
-                def rule_wrapper(model, *_idx):
-                    return _rule(model, *_idx, **_options)
-
-            else:
-
-                def rule_wrapper(model):
-                    return _rule(model, **_options)
-
-            self._rule = Initializer(rule_wrapper)
+            self._rule = Initializer(functools.partial(_rule, **_options))
         else:
             self._rule = Initializer(_rule)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
@@ -2426,6 +2417,7 @@ class CustomBlock(Block):
     def __init__(self, *args, **kwargs):
         if self._default_ctype is not None:
             kwargs.setdefault('ctype', self._default_ctype)
+        kwargs.setdefault("rule", getattr(self, '_default_rule', None))
         Block.__init__(self, *args, **kwargs)
 
     def __new__(cls, *args, **kwargs):
@@ -2446,13 +2438,56 @@ class CustomBlock(Block):
             return super().__new__(cls._indexed_custom_block, *args, **kwargs)
 
 
-def declare_custom_block(name, new_ctype=None):
+class _custom_block_rule_redirect(object):
+    """Functor to redirect the default rule to a BlockData method"""
+
+    def __init__(self, cls, name):
+        self.cls = cls
+        self.name = name
+
+    def __call__(self, block, *args, **kwargs):
+        return getattr(self.cls, self.name)(block, *args, **kwargs)
+
+
+def declare_custom_block(name, new_ctype=None, rule=None):
     """Decorator to declare components for a custom block data class
+
+    This decorator simplifies the definition of custom derived Block
+    classes.  With this decorator, developers must only implement the
+    derived "Data" class.  The decorator automatically creates the
+    derived containers using the provided name, and adds them to the
+    current module:
 
     >>> @declare_custom_block(name="FooBlock")
     ... class FooBlockData(BlockData):
-    ...    # custom block data class
     ...    pass
+
+    >>> s = FooBlock()
+    >>> type(s)
+    <class 'ScalarFooBlock'>
+
+    >>> s = FooBlock([1,2])
+    >>> type(s)
+    <class 'IndexedFooBlock'>
+
+    It is frequently desirable for the custom class to have a default
+    ``rule`` for constructing and populating new instances.  The default
+    rule can be provided either as an explicit function or a string.  If
+    a string, the rule is obtained by attribute lookup on the derived
+    Data class:
+
+    >>> @declare_custom_block(name="BarBlock", rule="build")
+    ... class BarBlockData(BlockData):
+    ...    def build(self, *args):
+    ...        self.x = Var(initialize=5)
+
+    >>> m = pyo.ConcreteModel()
+    >>> m.b = BarBlock([1,2])
+    >>> print(m.b[1].x.value)
+    5
+    >>> print(m.b[2].x.value)
+    5
+
     """
 
     def block_data_decorator(block_data):
@@ -2476,8 +2511,15 @@ def declare_custom_block(name, new_ctype=None):
                 "_ComponentDataClass": block_data,
                 # By default this new block does not declare a new ctype
                 "_default_ctype": None,
+                # Define the default rule (may be None)
+                "_default_rule": rule,
             },
         )
+
+        # If the default rule is a string, then replace it with a
+        # function that will look up the attribute on the data class.
+        if type(rule) is str:
+            comp._default_rule = _custom_block_rule_redirect(block_data, rule)
 
         if new_ctype is not None:
             if new_ctype is True:
