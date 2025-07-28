@@ -1368,7 +1368,13 @@ class document_class_CONFIG(document_kwargs_from_configdict):
 
     def __call__(self, cls):
         self.config = cls.CONFIG
-        ref = f"{cls.__module__}.{cls.__name__}::CONFIG"
+        if cls.__module__ == 'builtins':
+            # Suppress "builtins" module (appears as part of
+            # documentation tests)
+            module = ""
+        else:
+            module = cls.__module__ + '.'
+        ref = f"{module}{cls.__name__}::CONFIG"
         self.config.set_domain(f":ref:`{cls.__name__}.CONFIG <{ref}>`")
         if self.preamble is None:
             self.preamble = f"""**Class configuration**
