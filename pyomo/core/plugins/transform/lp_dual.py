@@ -26,6 +26,7 @@ from pyomo.core import (
     minimize,
     Reals,
 )
+from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.opt import WriterFactory
 from pyomo.repn.standard_repn import isclose_const
 from pyomo.util.config_domains import ComponentDataSet
@@ -122,6 +123,33 @@ class LinearProgrammingDual(object):
         dual.x = Var(dual_cols, domain=NonNegativeReals)
         trans_info = dual.private_data()
         for j, (primal_cons, ineq) in enumerate(std_form.rows):
+            # We need to check this constraint isn't trivial due to the
+            # parameterization, which we can detect if the row is all 0's.
+            # TODO: How do I do this efficiently?
+            row = A.todense()[j,:]
+            trivial = True
+            for coef in row:
+                if type(coef) not in native_numeric_types or coef != 0:
+                    trivial = False
+                    break
+            if trivial:
+                b = std_form.rhs[j]
+                if type(b) not in native_numeric_types:
+                    # The parameterization made this trivial. I'm not sure what's
+                    # really expected here, so maybe we just scream? Or we leave
+                    # the constraint in the model as it is written...
+                    raise ValueError(
+                        f"The primal model constains a constraint that that the "
+                        f"parameterization makes trivial: '{primal_cons.name}'"
+                        f"\nPlease deactivate it or declare it on another Block "
+                        f"before taking the dual."
+                    )
+                else:
+                    # The whole constraint is trivial--it will already have been
+                    # checked compiling the standard form, so we can safely ignore
+                    # it.
+                    pass
+            
             # maximize is -1 and minimize is +1 and ineq is +1 for <= and -1 for
             # >=, so we need to change domain to NonPositiveReals if the product
             # of these is +1.
