@@ -409,6 +409,6 @@ class TestLPDual(unittest.TestCase):
             "The primal model constains a constraint that that the "
             "parameterization makes trivial: 'budgetish'"
             "\nPlease deactivate it or declare it on another Block "
-            "before taking the dual."
+            "before taking the dual.",
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=m.outer)
