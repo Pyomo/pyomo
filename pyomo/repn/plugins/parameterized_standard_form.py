@@ -269,7 +269,7 @@ class _CSCMatrix(_SparseMatrixBase):
                 # for nonzeros through the columns rather than through the rows.
                 csr_data[dest] = csc_data[j]
 
-                row_index_ptr[col] += 1
+                row_index_ptr[row] += 1
 
         # Fix the row index pointer by inserting 0 at the beginning. The
         # row_index_ptr currently holds pointers to 1 past the last element of

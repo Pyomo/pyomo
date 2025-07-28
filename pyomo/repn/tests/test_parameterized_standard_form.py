@@ -51,6 +51,11 @@ class TestSparseMatrixRepresentations(unittest.TestCase):
         self.assertTrue(np.all(thing.indices == np.array([0, 1, 3, 2])))
         self.assertTrue(np.all(thing.indptr == np.array([0, 1, 3, 4, 4])))
 
+        should_be_A = thing.tocsr()
+        self.assertTrue(np.all(should_be_A.data == A.data))
+        self.assertTrue(np.all(should_be_A.indices == A.indices))
+        self.assertTrue(np.all(should_be_A.indptr == A.indptr))
+
     def test_csr_to_csc_pyomo_exprs(self):
         m = ConcreteModel()
         m.x = Var()
