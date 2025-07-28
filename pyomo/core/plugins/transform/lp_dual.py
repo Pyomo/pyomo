@@ -134,7 +134,7 @@ class LinearProgrammingDual(object):
                     # really expected here, so maybe we just scream? Or we leave
                     # the constraint in the model as it is written...
                     raise ValueError(
-                        f"The primal model constains a constraint that that the "
+                        f"The primal model contains a constraint that that the "
                         f"parameterization makes trivial: '{primal_cons.name}'"
                         f"\nPlease deactivate it or declare it on another Block "
                         f"before taking the dual."
