@@ -1153,7 +1153,7 @@ class TestSolvers(unittest.TestCase):
         m.p3 = pyo.Param(initialize=4, mutable=True)
 
         m.obj = pyo.Objective(
-            expr=m.p1*(m.x1 - 1)**2 + m.p2*(m.x2 - 6)**2 - m.p3*m.x2
+            expr=m.p1 * (m.x1 - 1) ** 2 + m.p2 * (m.x2 - 6) ** 2 - m.p3 * m.x2
         )
 
         m.con = pyo.Constraint(expr=m.x1 >= m.x2)
@@ -1172,7 +1172,7 @@ class TestSolvers(unittest.TestCase):
         m.x3 = pyo.Var()
         del m.obj
         m.obj = pyo.Objective(
-            expr=m.p2*(m.x2 - 6)**2 - m.p3*m.x2 + m.p1*(m.x3 - 1)**2
+            expr=m.p2 * (m.x2 - 6) ** 2 - m.p3 * m.x2 + m.p1 * (m.x3 - 1) ** 2
         )
         m.con2 = pyo.Constraint(expr=m.x3 >= m.x1)
 
@@ -1183,13 +1183,11 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(results.incumbent_objective, -2, 4)
 
         if opt_class is Highs:
-            """
-            This assertions is not important by iteself. 
-            We just need it to make sure that removing the 
-            variable below is actually testing what we think
-            (which is that the mutable quadratic coefficients
-            work correctly even when the column changes)
-            """
+            # This assertions is not important by iteself.
+            # We just need it to make sure that removing the
+            # variable below is actually testing what we think
+            # (which is that the mutable quadratic coefficients
+            # work correctly even when the column changes)
             self.assertIn(opt._pyomo_var_to_solver_var_map[id(m.x1)], {0, 1})
             self.assertIn(opt._pyomo_var_to_solver_var_map[id(m.x2)], {0, 1})
             self.assertEqual(opt._pyomo_var_to_solver_var_map[id(m.x3)], 2)
