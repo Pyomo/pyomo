@@ -1183,7 +1183,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(results.incumbent_objective, -2, 4)
 
         if opt_class is Highs:
-            # This assertions is not important by iteself.
+            # This assertions is not important by itself.
             # We just need it to make sure that removing the
             # variable below is actually testing what we think
             # (which is that the mutable quadratic coefficients
