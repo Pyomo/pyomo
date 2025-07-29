@@ -24,6 +24,7 @@ from pyomo.core import (
     NonPositiveReals,
     maximize,
     minimize,
+    RangeSet,
     Reals,
 )
 from pyomo.core.expr.numvalue import native_numeric_types
@@ -169,17 +170,27 @@ class LinearProgrammingDual(object):
                 primal_row = A.indices[j]
                 lhs += coef * dual.x[primal_row]
 
-            if primal.domain is Reals:
+            domain = primal.domain
+            lb, ub = domain.bounds()
+            if not domain == RangeSet(*domain.bounds(), 0):
+                raise ValueError(
+                    f"The domain of the primal variable '{primal.name}' "
+                    f"is not continuous."
+                )
+            unrestricted = (lb is None or lb < 0) and (ub is None or ub > 0)
+            nonneg = (lb is not None) and lb >= 0
+            
+            if unrestricted:
                 dual.constraints[i] = lhs == c[i]
             elif primal_sense is minimize:
-                if primal.domain is NonNegativeReals:
+                if nonneg:
                     dual.constraints[i] = lhs <= c[i]
-                else:  # primal.domain is NonPositiveReals
+                else:  # primal domain is nonpositive
                     dual.constraints[i] = lhs >= c[i]
             else:
-                if primal.domain is NonNegativeReals:
+                if nonneg:
                     dual.constraints[i] = lhs >= c[i]
-                else:  # primal.domain is NonPositiveReals
+                else:  # primal domain is nonpositive
                     dual.constraints[i] = lhs <= c[i]
             trans_info.dual_constraint[primal] = dual.constraints[i]
             trans_info.primal_var[dual.constraints[i]] = primal

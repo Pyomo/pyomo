@@ -17,6 +17,7 @@ from pyomo.environ import (
     Constraint,
     maximize,
     minimize,
+    NonNegativeIntegers,
     NonNegativeReals,
     NonPositiveReals,
     Objective,
@@ -414,7 +415,7 @@ class TestLPDual(unittest.TestCase):
         ):
             dual = lp_dual.create_using(m, parameterize_wrt=m.outer)
 
-    def test_normal_trivial_constraint_goes_through(self):
+    def test_normal_trivial_constraint_error(self):
         m = ConcreteModel()
         m.p = Param(initialize=3, mutable=True)
         m.x = Var(bounds=(0, 9))
@@ -430,3 +431,16 @@ class TestLPDual(unittest.TestCase):
             "or Objective.",
         ):
             dual = lp_dual.create_using(m)
+
+    def test_discrete_primal_var_error(self):
+        m = self.get_bilevel_model()
+        m.x.domain = NonNegativeIntegers
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "The domain of the primal variable 'x' is not continuous"
+        ):
+            dual = TransformationFactory('core.lp_dual').create_using(
+                m,
+                parameterize_wrt=[m.outer, m.outer1]
+            )
