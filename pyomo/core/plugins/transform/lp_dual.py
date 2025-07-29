@@ -179,7 +179,7 @@ class LinearProgrammingDual(object):
                 )
             unrestricted = (lb is None or lb < 0) and (ub is None or ub > 0)
             nonneg = (lb is not None) and lb >= 0
-            
+
             if unrestricted:
                 dual.constraints[i] = lhs == c[i]
             elif primal_sense is minimize:

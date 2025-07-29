@@ -437,10 +437,8 @@ class TestLPDual(unittest.TestCase):
         m.x.domain = NonNegativeIntegers
 
         with self.assertRaisesRegex(
-            ValueError,
-            "The domain of the primal variable 'x' is not continuous"
+            ValueError, "The domain of the primal variable 'x' is not continuous"
         ):
             dual = TransformationFactory('core.lp_dual').create_using(
-                m,
-                parameterize_wrt=[m.outer, m.outer1]
+                m, parameterize_wrt=[m.outer, m.outer1]
             )
