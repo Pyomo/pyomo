@@ -1643,7 +1643,7 @@ class DesignOfExperiments:
         ----------
         model : DoE model, optional
             The model to perform the full factorial exploration on. Default: None
-        design_values : dict,
+        design_vals : dict,
             dict of lists or other array-like objects, of the form
             {"var_name": <var_values>}. Default: None.
             The `design_values` should have the key(s) passed as strings that is a
@@ -1744,6 +1744,10 @@ class DesignOfExperiments:
             # This ensures that the order of the design_values keys matches the order of the
             # design_map_keys so that design_point can be constructed correctly in the loop.
             design_values = [design_vals[k.name] for k in design_map_keys]
+
+            # Create a temporary suffix to pass in `update_model_from_suffix`
+            design_suff = pyo.Suffix(direction=pyo.Suffix.LOCAL)
+            design_suff.update((k, None) for k in design_map_keys)
 
         else:
             design_keys = [k for k in model.experiment_inputs.keys()]
@@ -1853,9 +1857,7 @@ class DesignOfExperiments:
         curr_point = 1  # Initial current point
         for design_point in factorial_points_list:
             if design_vals:
-                for i in range(len(design_point)):
-                    # Set the design variable value from the design_vals dictionary
-                    design_map_keys[i].set_value(design_point[i])
+                update_model_from_suffix(design_suff, design_point)
             else:
                 update_model_from_suffix(model.experiment_inputs, design_point)
 
