@@ -4,16 +4,17 @@ The Pyomo Configuration System
 
 .. py:currentmodule:: pyomo.common.config
 
-The Pyomo config system provides a set of three classes
+The Pyomo configuration system provides a set of three classes
 (:py:class:`ConfigDict`, :py:class:`ConfigList`, and
 :py:class:`ConfigValue`) for managing and documenting structured
 configuration information and user input.  The system is based around
-the ConfigValue class, which provides storage for a single configuration
-entry.  ConfigValue objects can be grouped using two containers
-(ConfigDict and ConfigList), which provide functionality analogous to
-Python's dict and list classes, respectively.
+the :class:`ConfigValue` class, which provides storage for a single
+configuration entry.  :class:`ConfigValue` objects can be grouped using
+two containers (:class:`ConfigDict` and :class:`ConfigList`), which
+provide functionality analogous to Python's dict and list classes,
+respectively.
 
-At its simplest, the Config system allows for developers to specify a
+At its simplest, the configuration system allows for developers to specify a
 dictionary of documented configuration entries:
 
 .. testcode::
@@ -51,7 +52,7 @@ current values:
     >>> print(config['iteration limit'])
     30
 
-For convenience, ConfigDict objects support read/write access via
+For convenience, :class:`ConfigDict` objects support read/write access via
 attributes (with spaces in the declaration names replaced by
 underscores):
 
@@ -84,9 +85,9 @@ inputs without "cluttering" the code with input validation:
     >>> print(type(config.iteration_limit).__name__)
     int
 
-In addition to common types (like ``int``, ``float``, ``bool``, and
-``str``), the config system profides a number of custom domain
-validators for common use cases:
+In addition to common types (like :class:`int`, :class:`float`,
+:class:`bool`, and :class:`str`), the configuration system provides a
+number of custom domain validators for common use cases:
 
 .. autosummary::
 
@@ -114,11 +115,12 @@ validators for common use cases:
 Configuring class hierarchies
 =============================
 
-A feature of the Config system is that the core classes all implement
+A feature of the configuration system is that the core classes all implement
 ``__call__``, and can themselves be used as ``domain`` values.  Beyond
 providing domain verification for complex hierarchical structures, this
-feature allows ConfigDicts to cleanly support the configuration of
-derived objects.  Consider the following example:
+feature allows :class:`ConfigDict` objects to cleanly support extension
+and the configuration of
+derived classes.  Consider the following example:
 
 .. doctest::
 
@@ -145,13 +147,13 @@ derived objects.  Consider the following example:
     filename: input.txt
     pattern: .*warning
 
-Here, the base class ``Base`` declares a class-level attribute CONFIG as a
-ConfigDict containing a single entry (``filename``).  The derived class
+Here, the base class ``Base`` declares a class-level attribute ``CONFIG`` as a
+:class:`ConfigDict` containing a single entry (``filename``).  The derived class
 (``Derived``) then starts by making a copy of the base class' ``CONFIG``,
-and then defines an additional entry (`pattern`).  Instances of the base
-class will still create ``c`` instances that only have the single
+and then defines an additional entry (``pattern``).  Instances of the base
+class will still create ``c`` attributes that only have the single
 ``filename`` entry, whereas instances of the derived class will have ``c``
-instances with two entries: the ``pattern`` entry declared by the derived
+attributes with two entries: the ``pattern`` entry declared by the derived
 class, and the ``filename`` entry "inherited" from the base class.
 
 An extension of this design pattern provides a clean approach for
@@ -260,11 +262,11 @@ attributes:
 Interacting with argparse
 =========================
 
-In addition to basic storage and retrieval, the Config system provides
+In addition to basic storage and retrieval, the configuration system provides
 hooks to the argparse command-line argument parsing system.  Individual
-Config entries can be declared as argparse arguments using the
+configuration entries can be declared as :mod:`argparse` arguments using the
 :py:meth:`~ConfigBase.declare_as_argument` method.  To make declaration
-simpler, the :py:meth:`declare` method returns the declared Config
+simpler, the :py:meth:`declare` method returns the declared configuration
 object so that the argument declaration can be done inline:
 
 .. testcode::
@@ -294,8 +296,8 @@ object so that the argument declaration can be done inline:
         description="absolute convergence tolerance",
     )).declare_as_argument('--abstol', '-a', group='Tolerances')
 
-The ConfigDict can then be used to initialize (or augment) an argparse
-ArgumentParser object:
+The :class:`ConfigDict` can then be used to initialize (or augment) an
+:class:`argparse.ArgumentParser` object:
 
 .. testcode::
 
@@ -303,8 +305,8 @@ ArgumentParser object:
     config.initialize_argparse(parser)
 
 
-Key information from the ConfigDict is automatically transferred over
-to the ArgumentParser object:
+Key information from the :class:`ConfigDict` is automatically transferred over
+to the :class:`~argparse.ArgumentParser` object:
 
 .. doctest::
    :hide:
@@ -334,7 +336,7 @@ to the ArgumentParser object:
 
     >>> os.environ = original_environ
 
-Parsed arguments can then be imported back into the ConfigDict:
+Parsed arguments can then be imported back into the :class:`ConfigDict`:
 
 .. doctest::
 
@@ -373,7 +375,7 @@ documentation: :py:meth:`display()`,
 :py:meth:`generate_yaml_template()`, and
 :py:meth:`generate_documentation()`.  The simplest is
 :py:meth:`display()`, which prints out the current values of the
-configuration object (and if it is a container type, all of it's
+configuration object (and if it is a container type, all of its
 children).  :py:meth:`generate_yaml_template` is similar to
 :py:meth:`display`, but also includes the description fields as
 formatted comments.
@@ -413,7 +415,7 @@ formatted comments.
     <BLANKLINE>
 
 It is important to note that both methods document the current state of
-the configuration object.  So, in the example above, since the `solvers`
+the configuration object.  So, in the example above, since the ``solvers``
 list is empty, you will not get any information on the elements in the
 list.  Of course, if you add a value to the list, then the data will be
 output:
@@ -446,8 +448,8 @@ output:
 
 The third method (:py:meth:`generate_documentation`) behaves
 differently.  This method is designed to generate reference
-documentation.  For each configuration item, the `doc` field is output.
-If the item has no `doc`, then the `description` field is used.
+documentation.  For each configuration item, the ``doc`` field is output.
+If the item has no ``doc``, then the ``description`` field is used.
 
 List containers have their *domain* documented and not their current
 values.  The documentation can be configured through optional arguments.
