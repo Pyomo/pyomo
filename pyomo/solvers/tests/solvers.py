@@ -274,13 +274,6 @@ def test_solver_cases(*args):
             io_options={"skip_objective_sense": True},
         )
 
-        _test_solver_cases['glpk', 'python'] = initialize(
-            name='glpk',
-            io='python',
-            capabilities=_glpk_capabilities,
-            import_suffixes=[],
-        )
-
         #
         # CBC
         #

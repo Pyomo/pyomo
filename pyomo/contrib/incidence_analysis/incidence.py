@@ -58,7 +58,7 @@ def _get_incident_via_standard_repn(
         except ValueError as err:
             # Catch error evaluating expression with uninitialized variables
             # TODO: Suppress logged error?
-            if "No value for uninitialized NumericValue" not in str(err):
+            if "No value for uninitialized VarData" not in str(err):
                 raise err
             value = None
         if value != 0:

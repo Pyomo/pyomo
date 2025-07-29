@@ -27,8 +27,10 @@ from pyomo.core import (
     ModelComponentFactory,
     Binary,
     Block,
+    Constraint,
     ConstraintList,
     Any,
+    LogicalConstraint,
     LogicalConstraintList,
     BooleanValue,
     ScalarBooleanVar,
@@ -575,19 +577,32 @@ class DisjunctionData(ActiveComponentData):
             # The user was lazy and gave us a single constraint
             # expression or an iterable of expressions
             expressions = []
-            for _tmpe in e_iter:
+            propositions = []
+            for _tmp_e in e_iter:
                 try:
-                    if _tmpe.is_expression_type():
-                        expressions.append(_tmpe)
+                    if _tmp_e.is_expression_type(ExpressionType.RELATIONAL):
+                        expressions.append(_tmp_e)
+                        continue
+                    if _tmp_e.is_expression_type(ExpressionType.LOGICAL):
+                        propositions.append(_tmp_e)
                         continue
                 except AttributeError:
                     pass
+                # Note: Constraint.(In)Feasible is now a full relational
+                # expression, so we don't need to check for it.
+                # LogicalConstraint.(In)Feasible is a BooleanConstant,
+                # so is not an expression and needs to be explicitly
+                # checked for.
+                if _tmp_e in (LogicalConstraint.Feasible, LogicalConstraint.Infeasible):
+                    propositions.append(_tmp_e)
+                    continue
                 msg = " in '%s'" % (type(e).__name__,) if e_iter is e else ""
                 raise ValueError(
-                    "Unexpected term for Disjunction '%s'.\n"
-                    "    Expected a Disjunct object, relational expression, "
-                    "or iterable of\n    relational expressions but got '%s'%s"
-                    % (self.name, type(_tmpe).__name__, msg)
+                    "Unexpected term for Disjunction '%s'.\n    "
+                    "Expected a Disjunct object, relational or logical "
+                    "expression, or\n    iterable of relational/logical "
+                    "expressions but got '%s'%s"
+                    % (self.name, type(_tmp_e).__name__, msg)
                 )
 
             comp = self.parent_component()
@@ -603,19 +618,8 @@ class DisjunctionData(ActiveComponentData):
                 # happen automatically.
                 comp._autodisjuncts.construct()
             disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
-            disjunct.constraint = c = ConstraintList()
-            disjunct.propositions = p = LogicalConstraintList()
-            for e in expressions:
-                if e.is_expression_type(ExpressionType.RELATIONAL):
-                    c.add(e)
-                elif e.is_expression_type(ExpressionType.LOGICAL):
-                    p.add(e)
-                else:
-                    raise RuntimeError(
-                        "Unsupported expression type on Disjunct "
-                        f"{disjunct.name}: expected either relational or "
-                        f"logical expression, found {e.__class__.__name__}"
-                    )
+            disjunct.constraint = ConstraintList(rule=expressions)
+            disjunct.propositions = LogicalConstraintList(rule=propositions)
             self.disjuncts.append(disjunct)
 
 

@@ -38,7 +38,7 @@ from pyomo.core.expr.boolean_value import (
 from pyomo.core.base.component import name, Component, ModelComponentFactory
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.config import PyomoOptions
-from pyomo.core.base.enums import SortComponents, TraversalStrategy
+from pyomo.core.base.enums import SortComponents, TraversalStrategy, VarCollector
 from pyomo.core.base.label import (
     CuidLabeler,
     CounterLabeler,

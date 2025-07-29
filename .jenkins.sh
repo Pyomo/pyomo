@@ -28,7 +28,7 @@
 #
 # DISABLE_COVERAGE: if nonempty, then coverage analysis is disabled
 #
-# PYOMO_SETUP_ARGS: passed to the 'python setup.py develop' command
+# PYOMO_SETUP_ARGS: passed to the 'pip install' command
 #     (e.g., to specify --with-cython)
 #
 # PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions' command
@@ -94,7 +94,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
         echo "PyUtilib not found; skipping"
     fi
     pushd "$WORKSPACE/pyomo" || exit 1
-    python setup.py develop $PYOMO_SETUP_ARGS || exit 1
+    pip install -e . || exit 1
     popd
     #
     # DO NOT install pyomo-model-libraries

@@ -20,17 +20,17 @@ class Tests(unittest.TestCase):
 
     def test_version(self):
         try:
-            import pkg_resources
+            from importlib.metadata import version
 
-            version = pkg_resources.get_distribution('pyomo').version
+            pyomo_version = version('pyomo')
         except:
-            self.skipTest('pkg_resources is not available')
+            self.skipTest('importlib.metadata is not available')
 
         if pyomo_ver.version_info[3] == 'final':
-            self.assertEqual(pyomo_ver.version, version)
+            self.assertEqual(pyomo_ver.version, pyomo_version)
 
         else:
-            tmp_ = version.split('.')
+            tmp_ = pyomo_version.split('.')
             self.assertEqual(str(tmp_[0]), str(pyomo_ver.version_info[0]))
             self.assertEqual(str(tmp_[1]), str(pyomo_ver.version_info[1]))
             if tmp_[-1].startswith('dev'):

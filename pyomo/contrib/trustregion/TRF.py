@@ -470,7 +470,7 @@ class TrustRegionSolver(object):
         model,
         degrees_of_freedom_variables,
         ext_fcn_surrogate_map_rule=None,
-        **kwds
+        **kwds,
     ):
         """
         This method calls the TRF algorithm.

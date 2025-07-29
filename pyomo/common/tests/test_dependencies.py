@@ -31,6 +31,7 @@ from pyomo.common.dependencies import (
     dill,
     dill_available,
     mpi4py_available,
+    packaging_available,
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
@@ -125,6 +126,9 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(dep_mod.bogus_nonexisting_module_available, False)
         self.assertIs(type(dep_mod.bogus_nonexisting_module), ModuleUnavailable)
 
+    @unittest.skipUnless(
+        packaging_available, "min_version tests require packaging module"
+    )
     def test_min_version(self):
         mod, avail = attempt_import(
             'pyomo.common.tests.dep_mod', minimum_version='1.0', defer_import=False
@@ -177,6 +181,9 @@ class TestDependencies(unittest.TestCase):
         mod, avail = attempt_import('pyomo.common.tests.bogus', minimum_version='1.0')
         self.assertFalse(check_min_version(mod, '1.0'))
 
+    @unittest.skipUnless(
+        packaging_available, "min_version tests require packaging module"
+    )
     def test_and_or(self):
         mod0, avail0 = attempt_import('ply', defer_import=True)
         mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod', defer_import=True)
@@ -231,6 +238,9 @@ class TestDependencies(unittest.TestCase):
         self.assertIsInstance(_ror, _DeferredOr)
         self.assertTrue(_ror)
 
+    @unittest.skipUnless(
+        packaging_available, "min_version tests require packaging module"
+    )
     def test_callbacks(self):
         ans = []
 

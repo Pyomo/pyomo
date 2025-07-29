@@ -169,7 +169,7 @@ class redirect_fd(object):
 
         if self.synchronize and self.std:
             # Cause Python's stdout to point to our new file
-            self.target_file = os.fdopen(self.fd, 'w', closefd=False)
+            self.target_file = os.fdopen(self.fd, "w", closefd=False)
             setattr(sys, self.std, self.target_file)
 
         return self
@@ -358,7 +358,7 @@ class capture_output(object):
             self._enter_context(LoggingIntercept(log_stream, logger=logger, level=None))
 
             if isinstance(self.output, str):
-                self.output_stream = self._enter_context(open(self.output, 'w'))
+                self.output_stream = self._enter_context(open(self.output, "a"))
             elif self.output is None:
                 self.output_stream = io.StringIO()
             else:
@@ -673,7 +673,7 @@ class TeeStream(object):
             self._stderr = self.open(buffering=b)
         return self._stderr
 
-    def open(self, mode='w', buffering=-1, encoding=None, newline=None):
+    def open(self, mode="w", buffering=-1, encoding=None, newline=None):
         if encoding is None:
             encoding = self.encoding
         handle = _StreamHandle(mode, buffering, encoding, newline)

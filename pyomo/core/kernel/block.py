@@ -277,7 +277,7 @@ class block(IBlock):
         format=None,
         _solver_capability=None,
         _called_by_solver=False,
-        **kwds
+        **kwds,
     ):
         """
         Write the model to a file, with a given format.

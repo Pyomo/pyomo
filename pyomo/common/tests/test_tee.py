@@ -679,8 +679,9 @@ class TestCapture(unittest.TestCase):
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
         try:
-            with LoggingIntercept() as LOG, self.assertRaisesRegex(
-                RuntimeError, 'deadlock'
+            with (
+                LoggingIntercept() as LOG,
+                self.assertRaisesRegex(RuntimeError, 'deadlock'),
             ):
                 with tee.TeeStream(MockStream()) as t:
                     t.STDERR.write('*')
@@ -697,8 +698,9 @@ class TestCapture(unittest.TestCase):
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
         tee._poll_timeout_deadlock = tee._poll_interval * 2**7  # 0.0128
         try:
-            with LoggingIntercept() as LOG, self.assertRaisesRegex(
-                ValueError, 'testing'
+            with (
+                LoggingIntercept() as LOG,
+                self.assertRaisesRegex(ValueError, 'testing'),
             ):
                 with tee.TeeStream(MockStream()) as t:
                     t.STDERR.write('*')

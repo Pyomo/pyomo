@@ -14,7 +14,7 @@ to import the Pyomo package for use in the code.  The next step is to create an 
 
 {{{
 #!python
-model = pyo.AbstractModel() 
+model = pyo.AbstractModel()
 }}}
 The rest of our work will be contained within this object.
 
@@ -79,7 +79,7 @@ We restrict our domain to the non-negative reals.  If we accepted negative numbe
 
 At this point we must start defining the rules associated with our parameters and variables.  We begin with the most important rule, the cost rule, which will tell the model to try and minimize the overall cost.  Logically, the total cost is going to be the sum of how much is spent on each food, and that value in turn is going to be determined by the cost of the food and how much of it is purchased.  For example, if three !$5 hamburgers and two !$1 apples are purchased, than the total cost would be 3*5 + 2*1 = 17.  Note that this process is the same as taking the dot product of the amounts vector and the costs vector.
 
-To input this, we must define the cost rule, which we creatively call costRule as 
+To input this, we must define the cost rule, which we creatively call costRule as
 
 {{{
 #!python
@@ -95,7 +95,7 @@ model.cost=pyo.Objective(rule=costRule
 
 This line defines the objective of the model as the costRule,  which Pyomo interprets as the value it needs to minimize; in this case it will minimize our costs.  Also, as a note, we defined the objective as "model.cost" which is not to be confused with the parameter we defined earlier as `"model.costs" despite their similar names.  These are two different values and accidentally giving them the same name will cause problems when trying to solve the problem.
 
-We must also create a rule for the volume consumed.  The construction of this rule is similar to the cost rule as once again we take the dot product, this time between the volume and amount vectors. 
+We must also create a rule for the volume consumed.  The construction of this rule is similar to the cost rule as once again we take the dot product, this time between the volume and amount vectors.
 
 {{{
 #!python
@@ -112,7 +112,7 @@ Finally, we need to add the constraint that ensures we obtain proper amounts of 
 {{{
 #!python
 def nutrientRule(n, model):
-    value = sum(model.nutrient_value[n,f]*model.amount[f] 
+    value = sum(model.nutrient_value[n,f]*model.amount[f]
         for f in model.foods)
     return (model.min_nutrient[n], value, model.max_nutrient[n])
 
@@ -179,7 +179,7 @@ vc          0     30    0;
 
 The amount of spaces between each element is irrelevant (as long as there is at least one) so the matrix should be formatted for ease of reading.
 
-Now that we have finished both the model and the data file save them both. It's convention to give the model file a .py extension and the data file a .dat extension.  
+Now that we have finished both the model and the data file save them both. It's convention to give the model file a .py extension and the data file a .dat extension.
 
 == Solution ==
 
@@ -193,7 +193,7 @@ Using Pyomo we quickly find the solution to our diet problem.  Simply run Pyomo 
 # ----------------------------------------------------------
 #   Problem Information
 # ----------------------------------------------------------
-Problem: 
+Problem:
 - Lower bound: 29.44055944
   Upper bound: inf
   Number of objectives: 1
@@ -205,7 +205,7 @@ Problem:
 # ----------------------------------------------------------
 #   Solver Information
 # ----------------------------------------------------------
-Solver: 
+Solver:
 - Status: ok
   Termination condition: unknown
   Error rc: 0
@@ -213,20 +213,20 @@ Solver:
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
-Solution: 
+Solution:
 - number of solutions: 1
   number of solutions displayed: 1
 - Gap: 0.0
   Status: optimal
-  Objective: 
-    f: 
+  Objective:
+    f:
       Id: 0
       Value: 29.44055944
-  Variable: 
-    amount[rice]: 
+  Variable:
+    amount[rice]:
       Id: 0
       Value: 9.44056
-    amount[apple]: 
+    amount[apple]:
       Id: 2
       Value: 10
 

@@ -119,9 +119,10 @@ class Test(unittest.TestCase):
             (join(currdir, "test3.mod"),), None, [ProblemFormat.cpxlp]
         )
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        with open(ans[0][0], 'r') as f1, open(
-            join(currdir, "test2_convert.lp"), 'r'
-        ) as f2:
+        with (
+            open(ans[0][0], 'r') as f1,
+            open(join(currdir, "test2_convert.lp"), 'r') as f2,
+        ):
             for line1, line2 in zip_longest(f1, f2):
                 if 'Problem' in line1:
                     continue
@@ -136,9 +137,10 @@ class Test(unittest.TestCase):
             [ProblemFormat.cpxlp],
         )
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        with open(ans[0][0], 'r') as f1, open(
-            join(currdir, "test3_convert.lp"), 'r'
-        ) as f2:
+        with (
+            open(ans[0][0], 'r') as f1,
+            open(join(currdir, "test3_convert.lp"), 'r') as f2,
+        ):
             for line1, line2 in zip_longest(f1, f2):
                 if 'Problem' in line1:
                     continue
