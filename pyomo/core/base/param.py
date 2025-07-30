@@ -13,15 +13,15 @@ from __future__ import annotations
 import sys
 import types
 import logging
-from weakref import ref as weakref_ref
-from pyomo.common.pyomo_typing import overload
 from typing import Union, Type
+from weakref import ref as weakref_ref
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.numeric_types import native_types, value as expr_value
+from pyomo.common.pyomo_typing import overload
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.expr_common import _type_check_exception_arg
 from pyomo.core.expr.numvalue import NumericValue
@@ -32,13 +32,17 @@ from pyomo.core.base.indexed_component import (
     UnindexedComponent_set,
     IndexedComponent_NDArrayMixin,
 )
-from pyomo.core.base.initializer import Initializer
+from pyomo.core.base.initializer import Initializer, PartialInitializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.set import Reals, _AnySet, SetInitializer
 from pyomo.core.base.units_container import units
 from pyomo.core.expr import GetItemExpression
 
 logger = logging.getLogger('pyomo.core')
+
+
+def _placeholder_rule(*args, **kwargs):
+    pass
 
 
 def _raise_modifying_immutable_error(obj, index):
@@ -358,6 +362,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # expression simplification does not remove units from
                 # the expression.
                 self._mutable = True
+        if _init is not NOTSET:
+            # We need a placeholder rule on the Param because the base
+            # class will wrap it to pass in any unrecognized keyword
+            # arguments.  We can't just pass the actual rule because
+            # we want to use is_indexed() to change how we process the rule.
+            self._rule = _placeholder_rule
+        else:
+            self._rule = None
 
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
@@ -370,11 +382,18 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             self.domain = SetInitializer(_domain_rule)(self.parent_block(), None, self)
         # After IndexedComponent.__init__ so we can call is_indexed().
-        self._rule = Initializer(
+        _rule = Initializer(
             _init,
             treat_sequences_as_mappings=self.is_indexed(),
             arg_not_specified=NOTSET,
         )
+        if self._rule.__class__ is PartialInitializer:
+            # Replace the _placeholder_rule with the user-specified rule
+            self._rule = PartialInitializer(
+                _rule, *self._rule._fcn.args, **self._rule._fcn.keywords
+            )
+        else:
+            self._rule = _rule
 
     def __len__(self):
         """

@@ -15,7 +15,6 @@ and related objects.
 """
 
 from itertools import product
-import os
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
@@ -39,6 +38,7 @@ from pyomo.contrib.pyros.util import (
     call_solver,
     check_time_limit_reached,
     get_all_first_stage_eq_cons,
+    write_subproblem,
 )
 
 
@@ -193,27 +193,23 @@ def get_sep_objective_values(separation_data, ss_ineq_cons):
     con_to_obj_map = separation_data.separation_model.second_stage_ineq_con_to_obj_map
     violations = ComponentMap()
 
-    user_var_partitioning = separation_data.separation_model.user_var_partitioning
-    first_stage_variables = user_var_partitioning.first_stage_variables
-    second_stage_variables = user_var_partitioning.second_stage_variables
-
     for ss_ineq_con in ss_ineq_cons:
         obj = con_to_obj_map[ss_ineq_con]
         try:
             violations[ss_ineq_con] = value(obj.expr)
-        except ValueError:
-            for v in first_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            for v in second_stage_variables:
-                config.progress_logger.info(v.name + " " + str(v.value))
-            raise ArithmeticError(
-                f"Evaluation of second-stage inequality constraint {ss_ineq_con.name} "
-                f"(separation objective {obj.name}) "
-                "led to a math domain error. "
-                "Does the constraint expression "
-                "contain log(x) or 1/x functions "
+        except (ValueError, ArithmeticError):
+            vars_in_expr_str = ",\n  ".join(
+                f"{var.name}={var.value}" for var in identify_variables(obj.expr)
+            )
+            config.progress_logger.error(
+                "PyROS encountered an exception evaluating "
+                "expression of second-stage inequality constraint with name "
+                f"{ss_ineq_con.name!r} (separation objective {obj.name!r}) "
+                f"at variable values:\n  {vars_in_expr_str}\n"
+                "Does the expression contain log(x) or 1/x functions "
                 "or others with tricky domains?"
             )
+            raise
 
     return violations
 
@@ -1097,30 +1093,6 @@ def solver_call_separation(
     # termination condition. PyROS will terminate with subsolver
     # error. At this point, export model if desired
     solve_call_results.subsolver_error = True
-    save_dir = config.subproblem_file_directory
-    serialization_msg = ""
-    if save_dir and config.keepfiles:
-        objective = separation_obj.name
-        output_problem_path = os.path.join(
-            save_dir,
-            (
-                config.uncertainty_set.type
-                + "_"
-                + separation_model.name
-                + "_separation_"
-                + str(separation_data.iteration)
-                + "_obj_"
-                + objective
-                + ".bar"
-            ),
-        )
-        separation_model.write(
-            output_problem_path, io_options={'symbolic_solver_labels': True}
-        )
-        serialization_msg = (
-            " For debugging, problem has been serialized to the file "
-            f"{output_problem_path!r}."
-        )
     solve_call_results.message = (
         "Could not successfully solve separation problem of iteration "
         f"{separation_data.iteration} "
@@ -1128,9 +1100,19 @@ def solver_call_separation(
         f"provided subordinate {solve_mode} optimizers. "
         f"(Termination statuses: "
         f"{[str(term_cond) for term_cond in solver_status_dict.values()]}.)"
-        f"{serialization_msg}"
     )
     config.progress_logger.warning(solve_call_results.message)
+
+    if config.keepfiles and config.subproblem_file_directory is not None:
+        write_subproblem(
+            model=separation_model,
+            fname=(
+                f"{config.uncertainty_set.type}_{separation_model.name}"
+                f"_separation_{separation_data.iteration}"
+                f"_obj_{separation_obj.name}"
+            ),
+            config=config,
+        )
 
     separation_obj.deactivate()
 
