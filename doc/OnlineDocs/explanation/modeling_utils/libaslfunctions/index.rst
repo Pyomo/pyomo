@@ -35,11 +35,10 @@ This function is defined as:
 
 .. math::
 
-   \operatorname{sgnsqr\_c4}(x) =
-   \begin{cases}
-       \operatorname{sgn}(x)\,x^2 & \text{if } |x| \ge 0.1, \\
-       \displaystyle\sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
-   \end{cases}
+    \text{sinc}(x) = \begin{cases}
+        \sin(x) / x & \text{if } x \neq 0 \\
+        1 & \text{if } x = 0
+    \end{cases}
 
 In this implementation, the region :math:`-0.1 < x < 0.1` is replaced by a Taylor series with enough terms that the function should be at least :math:`C^2` smooth.  The difference between the function and the Tayor series is near the limits of machine precision, about :math:`1 \times 10^{-16}` for the function value,  :math:`1 \times 10^{-16}` for the first derivative, and :math:`1 \times 10^{-14}` for the second derivative.
 
@@ -71,9 +70,9 @@ This function is defined as:
 
 .. math::
 
-   \operatorname{sgnsqrt\_c4}(x) =
+   \operatorname{sgnsqr\_c4}(x) =
    \begin{cases}
-       \operatorname{sgn}(x)\,|x|^{0.5} & \text{if } |x| \ge 0.1, \\
+       \operatorname{sgn}(x)\,x^2 & \text{if } |x| \ge 0.1, \\
        \displaystyle\sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
    \end{cases}
 
@@ -95,10 +94,11 @@ This function is a signed square root approximation defined as:
 
 .. math::
 
-    \text{sgnsqrt\_c4}(x) = \begin{cases}
-        \text{sgn}(x)|x|^{0.5} & \text{if } |x| \ge 0.1 \\
-        \sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
-    \end{cases}
+   \operatorname{sgnsqrt\_c4}(x) =
+   \begin{cases}
+       \operatorname{sgn}(x)\,|x|^{0.5} & \text{if } |x| \ge 0.1, \\
+       \displaystyle\sum_{i=0}^{11} c_i x^i & \text{if } |x| < 0.1
+   \end{cases}
 
 This function is :math:`C^4` smooth.  The region :math:`-0.1 < x < 0.1` is replaced by an 11th order polynomial that approximates :math:`\text{sgn}(x)|x|^{0.5}`.  This function has well behaved derivatives at :math:`x=0`.  If you need to use this function with very small numbers and high accuracy is important, you can scale the argument up (e.g. :math:`\text{sgnsqrt\_c4}(sx)/s^{0.5}`).
 
