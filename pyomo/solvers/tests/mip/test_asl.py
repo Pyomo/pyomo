@@ -77,7 +77,6 @@ class mock_all(unittest.TestCase):
 
     def test_solve4(self):
         """Test ASL - test4.nl"""
-        TempfileManager.push()
         _log = TempfileManager.create_tempfile(".test_solve4.log")
         _out = TempfileManager.create_tempfile(".test_solve4.txt")
         TempfileManager.add_tempfile(join(currdir, 'test4.soln'), exists=False)
@@ -91,7 +90,6 @@ class mock_all(unittest.TestCase):
             self.assertStructuredAlmostEqual(
                 json.load(txt), json.load(out), abstol=1e-4, allow_second_superset=True
             )
-        TempfileManager.pop()
 
     #
     # This test is disabled, but it's useful for interactively exercising
