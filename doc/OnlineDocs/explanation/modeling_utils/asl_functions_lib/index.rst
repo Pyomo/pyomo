@@ -1,5 +1,5 @@
 asl_functions_lib
-===============
+=================
 
 Pyomo provides a set of AMPL user-defined functions that commonly occur but cannot be easily written as Pyomo expressions. 
 
