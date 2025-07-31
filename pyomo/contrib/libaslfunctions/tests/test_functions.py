@@ -19,7 +19,7 @@ flib = find_library("libaslfunctions")
 is_pypy = platform.python_implementation().lower().startswith("pypy")
 
 
-@unittest.skipUnless(flib, 'Could not find the "external" library')
+@unittest.skipUnless(not flib, 'Could not find the "external" library')
 @unittest.skipIf(is_pypy, "Cannot evaluate external functions under pypy")
 class TestAMPLExternalFunction(unittest.TestCase):
 
