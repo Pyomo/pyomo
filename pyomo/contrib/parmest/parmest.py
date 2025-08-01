@@ -351,7 +351,7 @@ class ObjectiveType(Enum):
     SSE_weighted = "SSE_weighted"
 
 
-class UnsupportedArgsLib(Enum):
+class UnsupportedArgs(Enum):
     calc_cov = "calc_cov"
     cov_n = "cov_n"
 
@@ -493,7 +493,7 @@ def compute_covariance_matrix(
     Returns:
         cov: covariance matrix of the estimated parameters
     """
-    if method == CovarianceMethodLib.finite_difference.value:
+    if method == CovarianceMethod.finite_difference.value:
         # store the FIM of all experiments
         FIM_all_exp = []
         for (
@@ -524,7 +524,7 @@ def compute_covariance_matrix(
                 print("The FIM is singular. Using pseudo-inverse instead.")
 
         cov = pd.DataFrame(cov, index=theta_vals.keys(), columns=theta_vals.keys())
-    elif method == CovarianceMethodLib.automatic_differentiation_kaug.value:
+    elif method == CovarianceMethod.automatic_differentiation_kaug.value:
         # store the FIM of all experiments
         FIM_all_exp = []
         for (
@@ -813,11 +813,11 @@ class Estimator(object):
         # populate keyword argument options
         if isinstance(obj_function, str):
             try:
-                self.obj_function = ObjectiveLib(obj_function)
+                self.obj_function = ObjectiveType(obj_function)
             except ValueError:
                 raise ValueError(
                     f"Invalid objective function: '{obj_function}'. "
-                    f"Choose from: {[e.value for e in ObjectiveLib]}."
+                    f"Choose from: {[e.value for e in ObjectiveType]}."
                 )
         else:
             if obj_function is None:
@@ -963,7 +963,7 @@ class Estimator(object):
             # TODO, this needs to be turned into an enum class of options that still support
             # custom functions
             if isinstance(self.obj_function, Enum):
-                if self.obj_function == ObjectiveLib.SSE:
+                if self.obj_function == ObjectiveType.SSE:
                     second_stage_rule = SSE
                 else:
                     second_stage_rule = SSE_weighted
@@ -1055,7 +1055,7 @@ class Estimator(object):
                         solver.options[key] = self.solver_options[key]
 
                 solve_result = solver.solve(self.ef_instance, tee=self.tee)
-            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
                 deprecation_warning(
                     "You're using a deprecated call to the `theta_est()` function "
                     "with the `calc_cov` and `cov_n` arguments. This usage will be "
@@ -1064,8 +1064,8 @@ class Estimator(object):
                     version="6.9.3.dev0",
                 )
 
-                calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
-                cov_n = kwargs[UnsupportedArgsLib.cov_n.value]
+                calc_cov = kwargs[UnsupportedArgs.calc_cov.value]
+                cov_n = kwargs[UnsupportedArgs.cov_n.value]
                 if not isinstance(calc_cov, bool):
                     raise TypeError("Expected a boolean for 'calc_cov' argument.")
 
@@ -1112,7 +1112,7 @@ class Estimator(object):
             # add the estimated theta to the class
             self.estimated_theta = theta_vals
 
-            if kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+            if kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
                 if calc_cov:
                     if not isinstance(cov_n, int):
                         raise TypeError("Expected an integer for 'cov_n' argument.")
@@ -1186,7 +1186,7 @@ class Estimator(object):
 
                 if not kwargs:
                     return obj_val, theta_vals, var_values
-                elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+                elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
                     if calc_cov:
                         return obj_val, theta_vals, var_values, cov
                     else:
@@ -1194,7 +1194,7 @@ class Estimator(object):
 
             if not kwargs:
                 return obj_val, theta_vals
-            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
+            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
                 if calc_cov:
                     return obj_val, theta_vals, cov
                 else:
@@ -1219,7 +1219,7 @@ class Estimator(object):
         Returns:
             cov: pd.DataFrame, covariance matrix of the estimated parameters
         """
-        if method == CovarianceMethodLib.reduced_hessian.value:
+        if method == CovarianceMethod.reduced_hessian.value:
             # compute the inverse reduced hessian to be used
             # in the "reduced_hessian" method
             # parmest makes the fitted parameters stage 1 variables
@@ -1264,15 +1264,15 @@ class Estimator(object):
                 )
 
             # choose and evaluate the sum of squared errors expression
-            if self.obj_function == ObjectiveLib.SSE:
+            if self.obj_function == ObjectiveType.SSE:
                 sse_expr = SSE(model)
-            elif self.obj_function == ObjectiveLib.SSE_weighted:
+            elif self.obj_function == ObjectiveType.SSE_weighted:
                 sse_expr = SSE_weighted(model)
             else:
                 raise ValueError(
                     f"Invalid objective function for covariance calculation: "
                     f"{self.obj_function}. Choose from: "
-                    f"{[e.value for e in ObjectiveLib]} in the Estimator object."
+                    f"{[e.value for e in ObjectiveType]} in the Estimator object."
                 )
 
             # evaluate the numerical SSE and store it
@@ -1293,15 +1293,15 @@ class Estimator(object):
         """
         # check if the user-supplied covariance method is supported
         try:
-            cov_method = CovarianceMethodLib(method)
+            cov_method = CovarianceMethod(method)
         except ValueError:
             raise ValueError(
                 f"Invalid method: '{method}'. Choose "
-                f"from: {[e.value for e in CovarianceMethodLib]}."
+                f"from: {[e.value for e in CovarianceMethod]}."
             )
 
         # check if the user specified 'SSE' or 'SSE_weighted' as the objective function
-        if self.obj_function == ObjectiveLib.SSE:
+        if self.obj_function == ObjectiveType.SSE:
             # check if the user defined the 'measurement_error' attribute
             if hasattr(model, "measurement_error"):
                 # get the measurement errors
@@ -1315,7 +1315,7 @@ class Estimator(object):
                     measurement_var = sse / (
                         n - l
                     )  # estimate of the measurement variance
-                    if cov_method == CovarianceMethodLib.reduced_hessian:
+                    if cov_method == CovarianceMethod.reduced_hessian:
                         cov = (
                             2 * measurement_var * self.inv_red_hes
                         )  # covariance matrix
@@ -1336,7 +1336,7 @@ class Estimator(object):
                             estimated_var=measurement_var,
                         )
                 elif all(item is not None for item in meas_error):
-                    if cov_method == CovarianceMethodLib.reduced_hessian:
+                    if cov_method == CovarianceMethod.reduced_hessian:
                         cov = 2 * (meas_error[0] ** 2) * self.inv_red_hes
                         cov = pd.DataFrame(
                             cov,
@@ -1362,7 +1362,7 @@ class Estimator(object):
                 raise AttributeError(
                     'Experiment model does not have suffix "measurement_error".'
                 )
-        elif self.obj_function == ObjectiveLib.SSE_weighted:
+        elif self.obj_function == ObjectiveType.SSE_weighted:
             # check if the user defined the 'measurement_error' attribute
             if hasattr(model, "measurement_error"):
                 meas_error = [
@@ -1373,9 +1373,9 @@ class Estimator(object):
                 # check if the user supplied the values for the measurement errors
                 if all(item is not None for item in meas_error):
                     if (
-                        cov_method == CovarianceMethodLib.finite_difference
+                        cov_method == CovarianceMethod.finite_difference
                         or cov_method
-                        == CovarianceMethodLib.automatic_differentiation_kaug
+                        == CovarianceMethod.automatic_differentiation_kaug
                     ):
                         cov = compute_covariance_matrix(
                             self.exp_list,
@@ -1667,9 +1667,9 @@ class Estimator(object):
                 return self.pest_deprecated.theta_est(
                     solver=solver, return_values=return_values
                 )
-            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgsLib):
-                calc_cov = kwargs[UnsupportedArgsLib.calc_cov.value]
-                cov_n = kwargs[UnsupportedArgsLib.cov_n.value]
+            elif kwargs and all(arg.value in kwargs for arg in UnsupportedArgs):
+                calc_cov = kwargs[UnsupportedArgs.calc_cov.value]
+                cov_n = kwargs[UnsupportedArgs.cov_n.value]
                 return self.pest_deprecated.theta_est(
                     solver=solver,
                     return_values=return_values,
