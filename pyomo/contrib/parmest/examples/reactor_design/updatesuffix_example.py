@@ -32,28 +32,30 @@ def main():
     # Call the experiment's model using get_labeled_model
     reactor_model = experiment.get_labeled_model()
 
-    # Update the model to change the values of the desired component
-    # Here we will update the unknown parameters of the reactor model
     example_suffix = "unknown_parameters"
     suffix_obj = reactor_model.unknown_parameters
     var_list = list(suffix_obj.keys())  # components
-    orig_var_vals = np.array([pyo.value(v) for v in var_list])
+    orig_var_vals = np.array(list(suffix_obj.values()))
 
     # Original values
-    print(f"Original values of {example_suffix}: \n")
-    for v in suffix_obj:
-        v.display()  # prints “v : <value>”
+    print("Original sigma values")
+    print("----------------------")
+    suffix_obj.display()
 
     # Update the suffix with new values
     new_vals = orig_var_vals + 0.5
+
     # Here we are updating the values of the unknown parameters
     # You must know the length of the list and order of the suffix items to update them correctly
     update_model_from_suffix(suffix_obj, new_vals)
 
     # Updated values
-    print(f"\nUpdated values of {example_suffix}: \n")
-    for v in suffix_obj:
-        v.display()  # prints “v : <value>”
+    print("Updated sigma values :")
+    print("-----------------------")
+    suffix_obj.display()
+
+    # Return the suffix obj, original and new values for further use if needed
+    return suffix_obj, orig_var_vals, new_vals
 
 
 if __name__ == "__main__":

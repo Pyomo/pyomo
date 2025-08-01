@@ -481,7 +481,11 @@ class TestReactorExampleBuild(unittest.TestCase):
         )
 
         # Run the reactor update suffix items example
-        run_reactor_update_suffix_items()
+        suffix_obj, _, new_vals = run_reactor_update_suffix_items()
+
+        # Check that the suffix object has been updated correctly
+        for i, v in enumerate(suffix_obj.values()):
+            self.assertAlmostEqual(v, new_vals[i], places=6)
 
 
 if __name__ == "__main__":

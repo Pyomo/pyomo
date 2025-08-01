@@ -98,7 +98,7 @@ class TestUtils(unittest.TestCase):
 
         # ── Check results ────────────────────────────────────────────────────
         new_var_vals = np.array([pyo.value(v) for v in var_list])
-        new_suffix_val = np.array([tag for _, tag in suffix_obj.items()])
+        new_suffix_val = np.array(list(suffix_obj.values()))
 
         # (1) Variables have been overwritten with `new_vals`
         self.assertTrue(np.allclose(new_var_vals, new_vals))
@@ -182,8 +182,7 @@ class TestUtils(unittest.TestCase):
             update_model_from_suffix(m.unknown_parameters, [42])
 
     def test_update_model_from_suffix_unsupported_component(self):
-        experiment = FullReactorExperiment(data_ex, 10, 3)
-        m = experiment.get_labeled_model()
+        m = pyo.ConcreteModel()
 
         # Create a suffix with a ConstraintData component
         m.x = pyo.Var(initialize=0.0)

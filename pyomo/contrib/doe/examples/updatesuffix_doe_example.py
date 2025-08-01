@@ -44,23 +44,28 @@ def run_reactor_update_suffix_items():
 
     # Show the model
     reactor_model.pprint()
-    # Update the model to change the values of the desired component
-    # Here we will update the unknown parameters of the reactor model
-    example_suffix = "measurement_error"
+    # The suffix object 'measurement_error' stores measurement error values for each component.
+    # Here, we retrieve the original values from the suffix for inspection.
     suffix_obj = reactor_model.measurement_error
     me_vars = list(suffix_obj.keys())  # components
-    orig_vals = np.array([suffix_obj[v] for v in me_vars])
+    orig_vals = np.array(list(suffix_obj.values()))
 
     # Original values
-    print("Original sigma values:", orig_vals)
+    print("Original sigma values")
+    print("-----------------------")
+    suffix_obj.display()
+
     # Update the suffix with new values
     new_vals = orig_vals + 1
-    # Here we are updating the values of the unknown parameters
+    # Here we are updating the values of the measurement error
     # You must know the length of the list and order of the suffix items to update them correctly
     update_model_from_suffix(suffix_obj, new_vals)
 
     # Updated values
-    print("Updated sigma values :", [suffix_obj[v] for v in me_vars])
+    print("Updated sigma values :")
+    print("-----------------------")
+    suffix_obj.display()
+    return suffix_obj, orig_vals, new_vals
 
 
 if __name__ == "__main__":
