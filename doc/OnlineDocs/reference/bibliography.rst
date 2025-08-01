@@ -154,5 +154,9 @@ Bibliography
    Models for Non-separable Piecewise Linear Optimization: Unifying
    framework and Extensions", *Operations Research* 58(2), 303-315. 2010.
 
+.. [Vie15] J. P. Vielma. "Mixed Integer Linear Programming Formluation
+   Techniques", *SIAM Review*, 57(1), 3-57.  2015.  DOI
+   `10.1137/130915303 <https://doi.org/10.1137/130915303>`_
+
 .. [NW99] Nocedal, Jorge, and Stephen J. Wright, eds. Numerical
    optimization. New York, NY: Springer New York, 1999.
