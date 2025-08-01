@@ -114,14 +114,10 @@ class ProcessStartMethod(str, enum.Enum):
 @document_class_CONFIG(methods=['apply_to', 'create_using'])
 class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     """
-    Implements the multiple big-M transformation from [1]. Note that this
+    Implements the multiple big-M transformation from [TG15]_. Note that this
     transformation is no different than the big-M transformation for two-
     term disjunctions, but that it may provide a tighter relaxation for
     models containing some disjunctions with three or more terms.
-
-    [1] Francisco Trespalaios and Ignacio E. Grossmann, "Improved Big-M
-        reformulation for generalized disjunctive programs," Computers and
-        Chemical Engineering, vol. 76, 2015, pp. 98-103.
     """
 
     #: Global class configuration;
@@ -221,16 +217,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         This relaxation is as tight and has fewer constraints. This option is
         a flag to tell the mbigm transformation to detect this structure and
         handle it specially. Note that this is a special case of the 'Hybrid
-        Big-M Formulation' from [2] that takes advantage of the common left-
+        Big-M Formulation' from [Vie15]_ that takes advantage of the common left-
         hand side matrix for disjunctive constraints that bound a single
         variable.
 
         Note that we do not use user-specified M values for these constraints
         when this flag is set to True: If tighter bounds exist then they
         they should be put in the constraints.
-
-        [2] Juan Pablo Vielma, "Mixed Integer Linear Programming Formluation
-            Techniques," SIAM Review, vol. 57, no. 1, 2015, pp. 3-57.
         """,
         ),
     )
