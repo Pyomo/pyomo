@@ -1,5 +1,5 @@
 Covariance Matrix Estimation
-=================================
+============================
 
 The uncertainty in the estimated parameters is quantified using the covariance matrix.
 The diagonal of the covariance matrix contains the variance of the estimated parameters.
