@@ -23,6 +23,7 @@ from pyomo.common.config import (
     NonNegativeInt,
     Bool,
     Path,
+    document_configdict,
 )
 from pyomo.common.log import LogStream
 from pyomo.common.numeric_types import native_logical_types
@@ -30,21 +31,24 @@ from pyomo.common.timing import HierarchicalTimer
 
 
 def TextIO_or_Logger(val):
-    """
-
-    Validates and converts input into a list of valid output streams.
+    """Validates and converts input into a list of valid output streams.
 
     Accepts:
-      - sys.stdout
-      - Instances of io.TextIOBase
-      - logging.Logger (wrapped as LogStream)
-      - Boolean values (`True` -> sys.stdout)
+      - :obj:`sys.stdout`
+      - :class:`io.TextIOBase`
+      - :class:`logging.Logger`
+      - ``True`` (alias for :obj:`sys.stdout`)
 
-    Returns:
-      - A list of validated output streams.
+    Returns
+    -------
+    List[io.TextIOBase]
+        A list of validated output streams.
 
-    Raises:
-      - ValueError if an invalid type is provided.
+    Raises
+    ------
+    ValueError
+        If an invalid type is provided.
+
     """
     if isinstance(val, Sequence) and not isinstance(val, (str, bytes)):
         val = list(val)
@@ -70,6 +74,7 @@ def TextIO_or_Logger(val):
     return ans
 
 
+@document_configdict()
 class SolverConfig(ConfigDict):
     """
     Common configuration options for all solver interfaces
@@ -166,17 +171,9 @@ class SolverConfig(ConfigDict):
         )
 
 
+@document_configdict()
 class BranchAndBoundConfig(SolverConfig):
-    """
-    Base config for all direct MIP solver interfaces
-
-    Attributes
-    ----------
-    rel_gap: float
-        The relative value of the gap in relation to the best bound
-    abs_gap: float
-        The absolute value of the difference between the incumbent and best bound
-    """
+    """Base config for all direct MIP solver interfaces"""
 
     def __init__(
         self,
@@ -212,9 +209,11 @@ class BranchAndBoundConfig(SolverConfig):
         )
 
 
+@document_configdict()
 class AutoUpdateConfig(ConfigDict):
-    """
-    Control which parts of the model are automatically checked and/or updated upon re-solve
+    """Control which parts of the model are automatically checked and/or
+    updated upon re-solve
+
     """
 
     def __init__(
@@ -344,10 +343,9 @@ class AutoUpdateConfig(ConfigDict):
         )
 
 
+@document_configdict()
 class PersistentSolverConfig(SolverConfig):
-    """
-    Base config for all persistent solver interfaces
-    """
+    """Base config for all persistent solver interfaces"""
 
     def __init__(
         self,
@@ -370,10 +368,9 @@ class PersistentSolverConfig(SolverConfig):
         )
 
 
+@document_configdict()
 class PersistentBranchAndBoundConfig(PersistentSolverConfig, BranchAndBoundConfig):
-    """
-    Base config for all persistent MIP solver interfaces
-    """
+    """Base config for all persistent MIP solver interfaces"""
 
     def __init__(
         self,
