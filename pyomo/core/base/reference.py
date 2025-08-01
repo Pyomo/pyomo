@@ -44,7 +44,7 @@ DeclareGlobalSet(
 )
 
 
-class _fill_in_known_wildcards(object):
+class _fill_in_known_wildcards:
     """Variant of "six.advance_iterator" that substitutes wildcard values
 
     This object is initialized with a tuple of index values.  Calling

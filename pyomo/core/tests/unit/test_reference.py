@@ -652,7 +652,7 @@ class TestReference(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1, 2])
 
-        class Foo(object):
+        class Foo:
             pass
 
         self.assertRaisesRegex(

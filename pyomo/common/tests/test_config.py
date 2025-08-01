@@ -86,7 +86,7 @@ def _display(obj, *args):
     return test.getvalue()
 
 
-class GlobalClass(object):
+class GlobalClass:
     "test class for test_known_types"
 
     pass
@@ -409,7 +409,7 @@ class TestConfigDomains(unittest.TestCase):
         c.b = '1'
         self.assertEqual(c.b, 1)
 
-        class Container(object):
+        class Container:
             def __init__(self, vals):
                 self._vals = vals
 
@@ -1427,7 +1427,7 @@ bar:
         )
 
     def test_display_nondata_type(self):
-        class NOOP(object):
+        class NOOP:
             def __getattr__(self, attr):
                 def noop(*args, **kwargs):
                     pass
@@ -2898,7 +2898,7 @@ c: 1.0
         self.assertEqual(mod_copy._visibility, 0)
 
     def test_template_nondata(self):
-        class NOOP(object):
+        class NOOP:
             def __getattr__(self, attr):
                 def noop(*args, **kwargs):
                     pass
@@ -3014,7 +3014,7 @@ c: 1.0
 
     def test_known_types(self):
         def local_fcn():
-            class LocalClass(object):
+            class LocalClass:
                 pass
 
             return LocalClass
@@ -3097,7 +3097,7 @@ c: 1.0
 
     def test_docstring_decorator(self):
         @document_kwargs_from_configdict('CONFIG')
-        class ExampleClass(object):
+        class ExampleClass:
             CONFIG = ExampleConfig()
 
             @document_kwargs_from_configdict(CONFIG)
@@ -3302,7 +3302,7 @@ option_2: int, default=5
         self.assertEqual(cfg.get('type').domain_name(), 'int')
 
     def test_deferred_initialization(self):
-        class Accumulator(object):
+        class Accumulator:
             def __init__(self):
                 self.data = []
 

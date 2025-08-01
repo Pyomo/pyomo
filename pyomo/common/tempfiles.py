@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 pyutilib_tempfiles, _ = attempt_import('pyutilib.component.config.tempfiles')
 
 
-class TempfileManagerClass(object):
+class TempfileManagerClass:
     """A class for managing tempfile contexts
 
     Pyomo declares a global instance of this class as ``TempfileManager``:

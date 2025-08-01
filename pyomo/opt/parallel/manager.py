@@ -44,7 +44,7 @@ class ActionManagerError(Exception):
         Exception.__init__(self, *args, **kargs)  # pragma:nocover
 
 
-class ActionHandle(object):
+class ActionHandle:
     id_counter = 0
 
     def __init__(self, error=False, explanation=""):
@@ -85,7 +85,7 @@ class ActionHandle(object):
 FailedActionHandle = ActionHandle(error=True)
 
 
-class AsynchronousActionManager(object):
+class AsynchronousActionManager:
     @staticmethod
     def _flatten(*args):
         ahs = set()
