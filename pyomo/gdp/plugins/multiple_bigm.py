@@ -23,7 +23,7 @@ from pyomo.common.config import (
     ConfigValue,
     InEnum,
     PositiveInt,
-    document_kwargs_from_configdict,
+    document_class_CONFIG,
 )
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.modeling import unique_component_name
@@ -111,6 +111,7 @@ class ProcessStartMethod(str, enum.Enum):
     'gdp.mbigm',
     doc="Relax disjunctive model using big-M terms specific to each disjunct",
 )
+@document_class_CONFIG(methods=['apply_to', 'create_using'])
 class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     """
     Implements the multiple big-M transformation from [1]. Note that this
@@ -123,7 +124,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         Chemical Engineering, vol. 76, 2015, pp. 98-103.
     """
 
+    #: Global class configuration;
+    #: see :ref:`pyomo.gdp.plugins.multiple_bigm.MultipleBigMTransformation::CONFIG`.
     CONFIG = ConfigDict('gdp.mbigm')
+
     CONFIG.declare(
         'targets',
         ConfigValue(
@@ -299,13 +303,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         self._arg_list = {}
         self._set_up_expr_bound_visitor()
         self.handlers[Suffix] = self._warn_for_active_suffix
-
-    @document_kwargs_from_configdict(CONFIG)
-    def apply_to(self, model, **kwds):
-        """
-        Apply the transformation to the given model.
-        """
-        return super().apply_to(model, **kwds)
 
     def _apply_to(self, instance, **kwds):
         # check for the rather implausible error case that
