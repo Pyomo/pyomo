@@ -147,10 +147,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         ConfigValue(
             default=False,
             domain=bool,
-            description="Boolean indicating whether or not to transform so that "
-            "the transformed model will still be valid when fixed Vars are "
-            "unfixed.",
+            description="If False, transformed models will still be valid "
+            "after unfixing fixed Vars",
             doc="""
+        Boolean indicating whether or not to transform so that
+        the transformed model will still be valid when fixed Vars are
+        unfixed.
+
         This is only relevant when the transformation will be calculating M
         values. If True, the transformation will calculate M values assuming
         that fixed variables will always be fixed to their current values. This
@@ -179,6 +182,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             domain=_to_dict,
             description="Big-M values to use while relaxing constraints",
             doc="""
+        Big-M values to use while relaxing constraints.
+
         A user-specified dict or ComponentMap mapping tuples of Constraints
         and Disjuncts to Big-M values valid for relaxing the constraint if
         the Disjunct is chosen.
@@ -196,10 +201,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         ConfigValue(
             default=True,
             domain=bool,
-            description="Flag indicating whether or not to handle disjunctive "
-            "constraints that bound a single variable in a single (tighter) "
-            "constraint, rather than one per Disjunct.",
+            description="Combine constraints in multiple disjuncts that "
+            "bound a single variable into a single constraint",
             doc="""
+        Flag indicating whether or not to handle disjunctive
+        constraints that bound a single variable in a single (tighter)
+        constraint, rather than one per Disjunct.
+
         Given the not-uncommon special structure:
 
         [l_1 <= x <= u_1] v [l_2 <= x <= u_2] v ... v [l_K <= x <= u_K],
@@ -231,10 +239,12 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         ConfigValue(
             default=False,
             domain=bool,
-            description="Flag indicating if only bound constraints should be "
-            "transformed with multiple-bigm, or if all the disjunctive "
-            "constraints should.",
+            description="If True, only transform univariate bound constraints.",
             doc="""
+        Flag indicating if only bound constraints should be transformed
+        with multiple-bigm, or if all the disjunctive constraints
+        should.
+
         Sometimes it is only computationally advantageous to apply multiple-
         bigm to disjunctive constraints with the special structure:
 
@@ -255,6 +265,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             domain=PositiveInt,
             description="Number of worker processes to use when estimating M values",
             doc="""
+            Number of worker processes to use when estimating M values.
+
             If not specified, use up to the number of available cores, minus
             one. If set to 1, do not spawn processes, and revert to
             single-threaded operation.
@@ -268,6 +280,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             domain=InEnum(ProcessStartMethod),
             description="Start method used for spawning processes during M calculation",
             doc="""
+            Start method used for spawning processes during M calculation.
+
             Options are the elements of the enum ProcessStartMethod, or equivalently the
             strings 'fork', 'spawn', or 'forkserver', or None. See the Python
             multiprocessing documentation for a full description of each of these. When
@@ -289,6 +303,8 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             description="When estimating M values, use the primal bound "
             "instead of the dual bound.",
             doc="""
+            When estimating M values, use the primal bound instead of the dual bound.
+
             This is necessary when using a local solver such as ipopt, but be
             aware that interior feasible points for this subproblem do not give
             valid values for M. That is, in the presence of numerical error,
