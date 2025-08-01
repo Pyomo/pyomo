@@ -327,8 +327,8 @@ to the :class:`~argparse.ArgumentParser` object:
       --disable-linesearch  [DON'T] use line search
     <BLANKLINE>
     Tolerances:
-      --reltol... -r FLOAT  relative convergence tolerance
-      --abstol... -a FLOAT  absolute convergence tolerance
+      --reltol FLOAT, -r FLOAT  relative convergence tolerance
+      --abstol FLOAT, -a FLOAT  absolute convergence tolerance
     <BLANKLINE>
 
 .. doctest::
