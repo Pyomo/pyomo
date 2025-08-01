@@ -195,9 +195,7 @@ class TestReactorDesignExamples(unittest.TestCase):
         datarec_example.main()
 
     def test_reactor_design_updatesuffix(self):
-        from pyomo.contrib.parmest.examples.reactor_design import (
-            updatesuffix_example,
-        )
+        from pyomo.contrib.parmest.examples.reactor_design import updatesuffix_example
 
         updatesuffix_example.main()
 

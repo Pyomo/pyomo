@@ -483,5 +483,6 @@ class TestReactorExampleBuild(unittest.TestCase):
         # Run the reactor update suffix items example
         run_reactor_update_suffix_items()
 
+
 if __name__ == "__main__":
     unittest.main()
