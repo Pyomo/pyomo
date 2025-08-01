@@ -131,8 +131,8 @@ derived classes.  Consider the following example:
     ...         domain=str,
     ...     ))
     ...     def __init__(self, **kwds):
-    ...         c = self.CONFIG(kwds)
-    ...         c.display()
+    ...         self.cfg = self.CONFIG(kwds)
+    ...         self.cfg.display()
     ...
     >>> class Derived(Base):
     ...     CONFIG = Base.CONFIG()
@@ -151,8 +151,8 @@ Here, the base class ``Base`` declares a class-level attribute ``CONFIG`` as a
 :class:`ConfigDict` containing a single entry (``filename``).  The derived class
 (``Derived``) then starts by making a copy of the base class' ``CONFIG``,
 and then defines an additional entry (``pattern``).  Instances of the base
-class will still create ``c`` attributes that only have the single
-``filename`` entry, whereas instances of the derived class will have ``c``
+class will still create ``cfg`` attributes that only have the single
+``filename`` entry, whereas instances of the derived class will have ``cfg``
 attributes with two entries: the ``pattern`` entry declared by the derived
 class, and the ``filename`` entry "inherited" from the base class.
 
